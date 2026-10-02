@@ -25,6 +25,12 @@
     "@fontsource-variable/dm-sans": "5.3.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
+    "@tiptap/extension-mention": "3.31.4",
+    "@tiptap/markdown": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
+    "@tiptap/suggestion": "3.31.4",
     "next": "16.3.8",
     "react": "19.3.0",
     "react-dom": "19.3.0"

@@ -230,7 +230,12 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
 ## 5. Instructions, Autocomplete, and Recipe Linking
 
 ### 5.1 Instructions Editor and `#` Mentions
-- Instructions are stored as ordered step blocks written in markdown. A confirmed ingredient mention is stored as a structured marker inside the markdown; its syntax is chosen in the instruction editor proof slice.
+- Instructions are stored as ordered step blocks written in Markdown. Confirmed
+  ingredient mentions serialize as
+  `[[ingredient:<stable-id>|<slug>]]` and render in the editor as `#<slug>`.
+  Literal unconfirmed `#` text remains plain text and is not indexed as a
+  structured mention. The editor's plain-text projection uses the readable
+  `#<slug>` form and omits the stored marker.
 - **`#` Autocomplete Behavior:**
   - Typing `#` triggers an inline autocomplete menu.
   - Autocomplete shows existing ingredients on the current recipe.
@@ -575,6 +580,10 @@ and [AG Grid license comparison](https://www.ag-grid.com/license-pricing/).
 ## 14. Technology Stack and Hosting Architecture
 
 - **Frontend / Fullstack:** Next.js (App Router), React, TypeScript, Tailwind CSS.
+- **Instruction editor:** Tiptap 3.31.4 with its Markdown extension and custom
+  ingredient-mention node/tokenizer. The Markdown extension is early release;
+  parser/serializer compatibility remains covered by automated tests in the
+  instruction-editor implementation slice.
 - **Hosting:** Vercel (Production and Preview deployments).
 - **Database:** Supabase Postgres.
 - **Auth:** Supabase Auth (Email/Password + Google OAuth).

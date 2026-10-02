@@ -40,7 +40,7 @@ the product specification or a task list. The canonical behavior remains in
 | Changing State clears Verdict, Enthusiasm, Occasion detail, and Reason. | A new state means a new reaction, so stale answers must not linger. |
 | Unit display uses a default system per dimension, with per-ingredient view-time overrides. | Readers choose US customary or metric for volume and weight, and can still switch one ingredient. |
 | Magazine recipes use a `+ Site` button for a secondary Site listing. | The recipe's online URL lives with the site while the issue stays primary. |
-| Instructions and notes are markdown, and `#` triggers ingredient mentions on every platform. | Phones lack a convenient non-alphanumeric key, and `#` is a familiar convention. |
+| Instructions and notes are Markdown; Tiptap 3.31.4 handles editing, and confirmed `#` mentions serialize as `[[ingredient:<stable-id>|<slug>]]`. | The proof passed keyboard selection, Escape-to-plain-text, new-mention insertion, Markdown/plain-text round-trip, and mobile accessibility. The Markdown extension is early release, so the product editor must keep parser/serializer tests. |
 | Ingredients are managed with the other picklists and require a replacement when deleted. | A recipe row cannot exist without an ingredient. |
 | Version restore is excluded; history is forensic only. | Restore adds snapshots and transactional complexity. |
 | Ingredient-first is a viewer preference; Standard reads Amount, Ingredient, Preparation. | Recipe content stays stable while presentation suits the reader. |
