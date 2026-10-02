@@ -16,6 +16,9 @@
 
 # Node.js and browser test output
 .next/
+.next-e2e/
+.next-build/
+.next-preview/
 out/
 coverage/
 playwright-report/

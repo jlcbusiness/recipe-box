@@ -1,9 +1,9 @@
 # Recipe Box
 
 Recipe Box is a private recipe library built with Next.js and Supabase. The
-first development slice provides a reproducible local app, database, and test
-environment; product features are delivered in the order described by the
-[delivery roadmap](plans/delivery-roadmap.md).
+first slices provide a reproducible local app, authentication, account
+isolation, and test environment; product features are delivered in the order
+described by the [delivery roadmap](plans/delivery-roadmap.md).
 
 ## Prerequisites
 
@@ -21,7 +21,8 @@ npm install
 npx playwright install chromium
 ```
 
-Start the application and local Supabase services together:
+Start the application and local Supabase services together. The local command
+resets the database before starting Next.js:
 
 ```bash
 npm run dev:local
@@ -37,9 +38,10 @@ the versioned migrations and seed script, then starts Next.js.
 - Local email inbox (Mailpit): <http://127.0.0.1:55424>
 - Local Postgres: `postgresql://postgres:postgres@127.0.0.1:55422/postgres`
 
-The baseline has no product tables yet, so its seed script intentionally adds
-no sample recipe records. Domain migrations and realistic seed fixtures belong
-with the slices that define those entities.
+Slice 1 creates the minimal Auth-linked `accounts` table and private
+`recipe-media` bucket with owner-scoped row-level security. The seed script
+intentionally adds no sample recipe records; recipe and other domain schemas
+and fixtures belong with their owning slices.
 
 Stop Next.js with `Ctrl+C`, then stop Supabase:
 
@@ -57,12 +59,15 @@ npm test
 ```
 
 `npm test` runs unit tests, Chromium end-to-end tests, and axe accessibility
-checks. Playwright starts and stops the Next.js test server automatically.
-Source and type checks are available separately:
+checks. Playwright starts its app server on port `3001` with a separate
+`.next-e2e` build directory, so it can run alongside the development app on
+port `3000`. The tests use local Auth users and Mailpit; no hosted service is
+required. Source, type, and production build checks are available separately:
 
 ```bash
 npm run lint
 npm run typecheck
+npm run build
 ```
 
 ## Environment and secrets

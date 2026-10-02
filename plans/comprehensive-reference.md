@@ -443,6 +443,27 @@ When an unauthenticated guest accesses a valid public recipe link:
 - Invites are sent by email, not copied by hand.
 - An invite is bound to the email address the admin enters. A Google sign-in must use that same email. Supabase links same-email identities automatically, so enforcing one method per account (likely an application-side check) is settled in the Invites slice.
 
+### 10.4 Slice 1 account boundary and deterministic auth testing
+- Slice 1 establishes the account-owned data boundary with a minimal Account
+  record linked to the authenticated user's identity. It is the first concrete
+  owner-scoped resource and proves the row-level security pattern before any
+  recipe, publication, picklist, or other product schema exists.
+- Tests create their local Auth users directly through a test-only local setup
+  path. They do not exercise or depend on invitations, admin provisioning,
+  production sign-up restrictions, or external email delivery to arrange their
+  fixtures.
+- The slice must prove that an authenticated account can access only its own
+  Account record and private storage path; another authenticated account and an
+  anonymous request cannot read or modify them. The storage bucket remains
+  private.
+- Next.js sessions use Supabase's SSR cookie client. The Next.js proxy refreshes
+  and verifies session claims; protected server-rendered routes verify the
+  current Auth user before rendering private content.
+- This test-fixture convenience does not define the product sign-up policy.
+  Slice 2 owns invitations, admin behavior, production invite-only enforcement,
+  and the one-sign-in-method rule. Recipe and other domain tables remain
+  deferred to their owning slices, beginning with Slice 4.
+
 ---
 
 ## 11. Import, Export, and Backup Bundles

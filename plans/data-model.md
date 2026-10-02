@@ -26,6 +26,11 @@ An account owns its recipes, publications, configuration, media, saved views,
 and history. All private data access is scoped to its owning account. Public
 recipe access is limited to the recipe's public-link route and permitted media.
 
+Slice 1 first implements this boundary with the minimal Account record linked
+to the authenticated user's identity. It is intentionally the only
+account-owned product record in that slice: it establishes and tests row-level
+security without prematurely creating recipe or other domain tables.
+
 ## Core Entities
 
 | Entity | Responsibility |
@@ -43,7 +48,7 @@ recipe access is limited to the recipe's public-link route and permitted media.
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Saved view | A persisted recipe or publication search, filter, sort, and column configuration. |
 | Preference | Account-level defaults: ingredient presentation, volume and weight unit systems, and ingredient-mention style. |
-| Account | The sign-in identity, its single sign-in method, and an admin flag. |
+| Account | The account record linked to the sign-in identity; it owns private data and later carries the single sign-in method and admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. |
 | History event | An append-only forensic record of a saved change. |
@@ -92,3 +97,9 @@ trash/purge behavior, record versioning for edit-conflict detection, uniqueness,
 validation, and Supabase row-level security policies. Record those verified
 choices in the relevant slice brief rather than treating this document as a
 ready-to-run schema.
+
+For Slice 1, the brief must define the minimal Account record, its one-to-one
+link to the authenticated user, private storage-path ownership, and RLS
+policies. Its deterministic tests create local Auth users directly only to
+arrange fixtures; invitations, admin status, production sign-up enforcement,
+and recipe tables are out of scope until their assigned slices.
