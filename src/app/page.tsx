@@ -1,6 +1,7 @@
+import { isSelfSignupAllowed } from '../lib/auth/signup-mode';
 import { SignInForm } from './sign-in-form';
 
-export default function HomePage() {
+export function HomePageView({ selfSignupAllowed }: { selfSignupAllowed: boolean }) {
   return (
     <div className="workspace-shell">
       <header className="topbar">
@@ -19,9 +20,10 @@ export default function HomePage() {
           <h1 id="page-title">Sign in</h1>
           <p className="welcome-copy">Open your private recipe library.</p>
           <SignInForm />
-          <a className="recovery-link" href="/forgot-password">
-            Forgot password?
-          </a>
+          <div className="auth-secondary-actions">
+            <a href="/forgot-password">Forgot password?</a>
+            {selfSignupAllowed && <a href="/sign-up">Create an account</a>}
+          </div>
         </section>
       </main>
 
@@ -31,4 +33,8 @@ export default function HomePage() {
       </footer>
     </div>
   );
+}
+
+export default function HomePage() {
+  return <HomePageView selfSignupAllowed={isSelfSignupAllowed()} />;
 }

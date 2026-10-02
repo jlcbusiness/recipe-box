@@ -15,7 +15,7 @@ test('rejected credentials produce an accessible sign-in error @e2e', async ({ p
   await expect(page).toHaveURL(/\/$/);
 });
 
-test('a user can reset their password through the local recovery email @e2e @a11y', async ({
+test('a user can reset their password through the local recovery email @e2e', async ({
   page,
   request,
 }) => {
@@ -40,7 +40,7 @@ test('a user can reset their password through the local recovery email @e2e @a11
       .poll(
         async () => {
           const searchResponse = await request.get(
-            `http://127.0.0.1:55424/api/v1/search?query=${encodeURIComponent(`to:${user.email}`)}`,
+            `http://127.0.0.1:55425/api/v1/search?query=${encodeURIComponent(`to:${user.email}`)}`,
           );
           if (!searchResponse.ok()) {
             return null;
@@ -57,7 +57,7 @@ test('a user can reset their password through the local recovery email @e2e @a11
       )
       .not.toBeNull();
 
-    const messageResponse = await request.get(`http://127.0.0.1:55424/api/v1/message/${messageId}`);
+    const messageResponse = await request.get(`http://127.0.0.1:55425/api/v1/message/${messageId}`);
     expect(messageResponse.ok()).toBeTruthy();
     const message = await messageResponse.json();
     const emailContent = `${message.HTML ?? ''}\n${message.Text ?? ''}`;
@@ -82,6 +82,33 @@ test('a user can reset their password through the local recovery email @e2e @a11
     await page.getByLabel('Password').fill('replacement-password-84');
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/app$/);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('recovery and reset screens are accessible @a11y', async ({ page, request }) => {
+  const user = await createTestUser(request);
+
+  try {
+    await page.goto('/forgot-password');
+    const recoveryA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(recoveryA11y.violations).toEqual([]);
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/app$/);
+
+    await page.goto('/reset-password');
+    await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
+    const resetA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(resetA11y.violations).toEqual([]);
   } finally {
     await deleteTestUser(request, user);
   }

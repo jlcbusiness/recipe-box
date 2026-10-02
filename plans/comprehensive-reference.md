@@ -441,7 +441,10 @@ When an unauthenticated guest accesses a valid public recipe link:
 - In development, sign-up is open. A per-environment switch controls this; development runs locally and production is set up last (14).
 - **Admin:** Admin is an account flag that existing admins can grant. Production starts with a pre-created admin invite to the owner's email address, supplied through configuration and not committed to the repository. This prevents a stranger from claiming the first account. Admins send all later invites.
 - Invites are sent by email, not copied by hand.
-- An invite is bound to the email address the admin enters. A Google sign-in must use that same email. Supabase links same-email identities automatically, so enforcing one method per account (likely an application-side check) is settled in the Invites slice.
+- An invite is bound to the email address the admin enters. Slice 2 supports
+  email/password accounts and stores the chosen method immutably. Before Google
+  sign-in is enabled in Slice 25, tests must prove that Supabase's same-email
+  identity linking cannot combine providers on one account.
 
 ### 10.4 Slice 1 account boundary and deterministic auth testing
 - Slice 1 establishes the account-owned data boundary with a minimal Account
@@ -463,6 +466,26 @@ When an unauthenticated guest accesses a valid public recipe link:
   Slice 2 owns invitations, admin behavior, production invite-only enforcement,
   and the one-sign-in-method rule. Recipe and other domain tables remain
   deferred to their owning slices, beginning with Slice 4.
+
+### 10.5 Slice 2 sign-up and invitation boundary
+- The application uses an environment-controlled sign-up mode. Local development
+  is open and does not require email verification. Invite-only mode hides
+  self-registration and rejects sign-up actions; production also disables
+  Supabase Auth sign-up directly when production is configured in Slice 25.
+- Supabase Auth is the source of truth for invitation creation, email binding,
+  single use, and expiry. An existing admin sends an invite from the trusted
+  server, Supabase sends the email, and the invitee confirms it before choosing
+  a password. Local invitation links use the configured email OTP expiry of
+  3,600 seconds (one hour).
+- `accounts.is_admin` defaults to false. Account owners cannot modify
+  `is_admin` or `sign_in_method` through PostgREST. Authenticated update
+  privileges are column-scoped; administrative changes use a server-only
+  Supabase secret key only after the request's Auth user and admin flag are
+  verified.
+- Slice 2 accepts email/password accounts only and records the method as
+  `email_password`. Google sign-in and the same-email identity-linking conflict
+  are verified before Google is enabled in Slice 25; accounts must not combine
+  providers.
 
 ---
 

@@ -10,12 +10,19 @@ export default async function WorkspacePage() {
     redirect('/');
   }
 
+  const { data: account } = await supabase
+    .from('accounts')
+    .select('is_admin')
+    .eq('id', data.user.id)
+    .maybeSingle();
+
   return (
     <div className="private-shell">
       <nav aria-label="Main navigation" className="private-nav">
         <a aria-current="page" href="/app">
           Workspace
         </a>
+        {account?.is_admin && <a href="/admin">Administration</a>}
       </nav>
       <div className="private-content">
         <header className="private-header">

@@ -48,7 +48,7 @@ security without prematurely creating recipe or other domain tables.
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Saved view | A persisted recipe or publication search, filter, sort, and column configuration. |
 | Preference | Account-level defaults: ingredient presentation, volume and weight unit systems, and ingredient-mention style. |
-| Account | The account record linked to the sign-in identity; it owns private data and later carries the single sign-in method and admin flag. |
+| Account | The account record linked to the sign-in identity; it owns private data and carries an immutable sign-in method plus a server-managed admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. |
 | History event | An append-only forensic record of a saved change. |
@@ -103,3 +103,9 @@ link to the authenticated user, private storage-path ownership, and RLS
 policies. Its deterministic tests create local Auth users directly only to
 arrange fixtures; invitations, admin status, production sign-up enforcement,
 and recipe tables are out of scope until their assigned slices.
+
+Slice 2 adds `is_admin` and `sign_in_method` to Account. Normal authenticated
+clients cannot update those columns. Server-side administrative operations
+must verify the current Auth user and `is_admin` before using the Supabase
+secret-key client. Invitation state remains owned by Supabase Auth rather than
+being duplicated in an application table.

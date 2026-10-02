@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { isSelfSignupAllowed } from '../../lib/auth/signup-mode';
 import { createClient } from '../../lib/supabase/server';
 
 export type AuthFormState = {
@@ -28,6 +29,35 @@ export async function signIn(
 
   if (error) {
     return { error: 'Email or password is incorrect.' };
+  }
+
+  redirect('/app');
+}
+
+export async function signUp(
+  _previousState: AuthFormState | undefined,
+  formData: FormData,
+): Promise<AuthFormState> {
+  if (!isSelfSignupAllowed()) {
+    return { error: 'Self sign-up is closed. Ask an admin for an invitation.' };
+  }
+
+  const email = String(formData.get('email') ?? '').trim();
+  const password = String(formData.get('password') ?? '');
+
+  if (!email || password.length < 8) {
+    return { error: 'Enter an email and a password with at least 8 characters.' };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({ email, password });
+
+  if (error) {
+    return { error: 'Unable to create an account with those details.' };
+  }
+
+  if (!data.session) {
+    return { error: 'Check your email to finish creating your account.' };
   }
 
   redirect('/app');

@@ -6,6 +6,7 @@ import type { APIRequestContext } from '@playwright/test';
 export type LocalSupabaseConfig = {
   apiUrl: string;
   anonKey: string;
+  serviceRoleKey: string;
 };
 
 export type TestUser = {
@@ -21,12 +22,15 @@ export async function getLocalSupabaseConfig(): Promise<LocalSupabaseConfig> {
   });
   let apiUrl: string | undefined;
   let anonKey: string | undefined;
+  let serviceRoleKey: string | undefined;
 
   for await (const line of createInterface({ input: process.stdout })) {
     if (line.startsWith('API_URL=')) {
       apiUrl = line.slice('API_URL='.length).replace(/^"|"$/g, '');
     } else if (line.startsWith('ANON_KEY=')) {
       anonKey = line.slice('ANON_KEY='.length).replace(/^"|"$/g, '');
+    } else if (line.startsWith('SERVICE_ROLE_KEY=')) {
+      serviceRoleKey = line.slice('SERVICE_ROLE_KEY='.length).replace(/^"|"$/g, '');
     }
   }
 
@@ -34,11 +38,11 @@ export async function getLocalSupabaseConfig(): Promise<LocalSupabaseConfig> {
     process.once('close', resolve);
   });
 
-  if (exitCode !== 0 || !apiUrl || !anonKey) {
+  if (exitCode !== 0 || !apiUrl || !anonKey || !serviceRoleKey) {
     throw new Error('Local Supabase must be running before integration tests.');
   }
 
-  return { apiUrl, anonKey };
+  return { apiUrl, anonKey, serviceRoleKey };
 }
 
 export async function createTestUser(request: APIRequestContext): Promise<TestUser> {
@@ -64,11 +68,99 @@ export async function createTestUser(request: APIRequestContext): Promise<TestUs
 }
 
 export async function deleteTestUser(request: APIRequestContext, user: TestUser): Promise<void> {
-  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
-  await request.delete(`${apiUrl}/auth/v1/user`, {
+  const { apiUrl, serviceRoleKey } = await getLocalSupabaseConfig();
+  const response = await request.delete(`${apiUrl}/auth/v1/admin/users/${user.id}`, {
     headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${user.accessToken}`,
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
     },
   });
+
+  if (!response.ok()) {
+    throw new Error(`Local Auth test user cleanup failed with HTTP ${response.status()}.`);
+  }
+}
+
+export async function deleteTestUserByEmail(
+  request: APIRequestContext,
+  email: string,
+): Promise<void> {
+  const { apiUrl, serviceRoleKey } = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+  };
+  const response = await request.get(`${apiUrl}/auth/v1/admin/users?page=1&per_page=1000`, {
+    headers,
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Local Auth cleanup lookup failed with HTTP ${response.status()}.`);
+  }
+
+  const result = await response.json();
+  const user = result.users.find(
+    (candidate: { email?: string }) => candidate.email?.toLowerCase() === email.toLowerCase(),
+  );
+
+  if (!user) {
+    return;
+  }
+
+  const deletion = await request.delete(`${apiUrl}/auth/v1/admin/users/${user.id}`, { headers });
+  if (!deletion.ok()) {
+    throw new Error(`Local Auth test user cleanup failed with HTTP ${deletion.status()}.`);
+  }
+}
+
+export async function createAdminTestUser(request: APIRequestContext): Promise<TestUser> {
+  const user = await createTestUser(request);
+  const { apiUrl, serviceRoleKey } = await getLocalSupabaseConfig();
+  const response = await request.patch(`${apiUrl}/rest/v1/accounts?id=eq.${user.id}`, {
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Prefer: 'return=representation',
+    },
+    data: { is_admin: true },
+  });
+
+  if (!response.ok()) {
+    await deleteTestUser(request, user);
+    throw new Error(`Local admin fixture setup failed with HTTP ${response.status()}.`);
+  }
+
+  return user;
+}
+
+export async function deletePendingInviteTestUsers(request: APIRequestContext): Promise<void> {
+  const { apiUrl, serviceRoleKey } = await getLocalSupabaseConfig();
+  const response = await request.get(`${apiUrl}/auth/v1/admin/users?page=1&per_page=1000`, {
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Local invitation fixture lookup failed with HTTP ${response.status()}.`);
+  }
+
+  const result = await response.json();
+  const pendingUsers = result.users.filter(
+    (user: { email?: string; app_metadata?: { invitation_pending?: boolean } }) =>
+      user.email?.startsWith('invite-') && user.app_metadata?.invitation_pending === true,
+  );
+
+  for (const user of pendingUsers) {
+    const deletion = await request.delete(`${apiUrl}/auth/v1/admin/users/${user.id}`, {
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+    });
+    if (!deletion.ok()) {
+      throw new Error(`Local invitation fixture cleanup failed with HTTP ${deletion.status()}.`);
+    }
+  }
 }

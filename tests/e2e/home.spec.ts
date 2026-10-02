@@ -9,7 +9,12 @@ test('the home route serves the email and password sign-in screen @e2e', async (
   await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible();
   await expect(page.getByLabel('Password')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeVisible();
+  const secondaryActions = page.locator('.auth-secondary-actions');
+  await expect(secondaryActions.getByRole('link', { name: 'Forgot password?' })).toBeVisible();
+  await expect(secondaryActions.getByRole('link', { name: 'Create an account' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in' }).locator('..')).not.toHaveClass(
+    /auth-secondary-actions/,
+  );
   await expect(page.getByRole('main')).toBeVisible();
 });
 

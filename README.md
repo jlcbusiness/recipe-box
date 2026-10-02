@@ -35,13 +35,31 @@ the versioned migrations and seed script, then starts Next.js.
 - App: <http://localhost:3000>
 - Supabase API: <http://127.0.0.1:55421>
 - Supabase Studio: <http://127.0.0.1:55423>
-- Local email inbox (Mailpit): <http://127.0.0.1:55424>
+- Local email inbox (Mailpit): <http://127.0.0.1:55425>
 - Local Postgres: `postgresql://postgres:postgres@127.0.0.1:55422/postgres`
 
-Slice 1 creates the minimal Auth-linked `accounts` table and private
-`recipe-media` bucket with owner-scoped row-level security. The seed script
-intentionally adds no sample recipe records; recipe and other domain schemas
-and fixtures belong with their owning slices.
+Slices 1 and 2 provide an Auth-linked `accounts` table with owner-scoped
+row-level security, a private `recipe-media` bucket, local email/password
+registration, and admin invitations. The seed script intentionally adds no
+sample recipe records; recipe and other domain schemas and fixtures belong with
+their owning slices.
+
+Local self-sign-up is open by default. To run the app in invite-only mode for a
+manual check, set `SIGNUP_MODE=invite_only` before starting `npm run dev`.
+To bootstrap a local admin, create the account first, then use Supabase Studio's
+SQL editor with the account email:
+
+```sql
+update public.accounts as account
+set is_admin = true
+from auth.users as auth_user
+where auth_user.id = account.id
+	and lower(auth_user.email) = lower('owner@example.com');
+```
+
+This direct role update is for local setup only. In the app, only an existing
+admin can grant admin status. Production's first admin invite is configured in
+Slice 25.
 
 Stop Next.js with `Ctrl+C`, then stop Supabase:
 
@@ -58,11 +76,12 @@ npm run test:unit
 npm test
 ```
 
-`npm test` runs unit tests, Chromium end-to-end tests, and axe accessibility
-checks. Playwright starts its app server on port `3001` with a separate
-`.next-e2e` build directory, so it can run alongside the development app on
-port `3000`. The tests use local Auth users and Mailpit; no hosted service is
-required. Source, type, and production build checks are available separately:
+`npm test` runs unit tests, Chromium end-to-end tests, RLS/storage checks, and
+axe accessibility checks. Playwright starts its app server on port `3001` with
+a separate `.next-e2e` build directory, so it can run alongside the
+development app on port `3000`. The tests use local Auth users and Mailpit; no
+hosted service is required. Source, type, and production build checks are
+available separately:
 
 ```bash
 npm run lint
@@ -72,6 +91,9 @@ npm run build
 
 ## Environment and secrets
 
-This slice requires no hosted account, production environment file, or secret.
-Keep local environment files out of version control. Never commit Supabase
-service-role/secret keys; only use a publishable/anonymous key in browser code.
+Local development requires no hosted account or production environment file.
+The local runner reads Supabase's generated keys at runtime. The
+publishable/anonymous key is used by browser-facing clients; the service-role
+key is passed only to trusted Next.js server code for administrative actions and
+is never sent to the browser. Keep it out of source control and logs. Production
+secrets belong in server-side deployment configuration, not repository files.

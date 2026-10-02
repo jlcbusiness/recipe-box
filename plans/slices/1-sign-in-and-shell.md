@@ -62,8 +62,9 @@ to inspect the local password-recovery email after the fixture user exists.
   `src/proxy.ts` refreshes the session and verifies claims; protected pages call
   Supabase Auth to verify the user before rendering private content.
 - Local public Supabase settings are read from `supabase status --output env`
-  by the local runner and passed to Next.js at runtime. The service-role key is
-  not passed to the application or browser.
+  by the local runner and passed to Next.js at runtime. Slice 1 does not need
+  the service-role key; Slice 2 passes it only to trusted server-side admin
+  code, never to browser code.
 - The Auth-user trigger creates the corresponding Account record. RLS permits
   only the owning authenticated identity to access it. The private
   `recipe-media` bucket requires the authenticated user's UUID as the first

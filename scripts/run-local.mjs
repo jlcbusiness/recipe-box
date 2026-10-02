@@ -19,12 +19,15 @@ async function getLocalSupabaseConfig() {
   });
   let apiUrl;
   let anonKey;
+  let serviceRoleKey;
 
   for await (const line of createInterface({ input: status.stdout })) {
     if (line.startsWith('API_URL=')) {
       apiUrl = line.slice('API_URL='.length).replace(/^"|"$/g, '');
     } else if (line.startsWith('ANON_KEY=')) {
       anonKey = line.slice('ANON_KEY='.length).replace(/^"|"$/g, '');
+    } else if (line.startsWith('SERVICE_ROLE_KEY=')) {
+      serviceRoleKey = line.slice('SERVICE_ROLE_KEY='.length).replace(/^"|"$/g, '');
     }
   }
 
@@ -32,12 +35,12 @@ async function getLocalSupabaseConfig() {
     status.once('close', resolveExit);
   });
 
-  if (exitCode !== 0 || !apiUrl || !anonKey) {
+  if (exitCode !== 0 || !apiUrl || !anonKey || !serviceRoleKey) {
     console.error('Could not read local Supabase public settings.');
     process.exit(1);
   }
 
-  return { apiUrl, anonKey };
+  return { apiUrl, anonKey, serviceRoleKey };
 }
 
 const args = process.argv.slice(2);
@@ -51,7 +54,7 @@ const nextExecutable = resolve('node_modules/next/dist/bin/next');
 runSupabase(['start']);
 runSupabase(shouldReset ? ['db', 'reset'] : ['migration', 'up']);
 
-const { apiUrl, anonKey } = await getLocalSupabaseConfig();
+const { apiUrl, anonKey, serviceRoleKey } = await getLocalSupabaseConfig();
 const nextProcess = spawn(process.execPath, [nextExecutable, 'dev', ...nextArgs], {
   stdio: 'inherit',
   env: {
@@ -59,6 +62,8 @@ const nextProcess = spawn(process.execPath, [nextExecutable, 'dev', ...nextArgs]
     NEXT_PUBLIC_SUPABASE_URL: apiUrl,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
     NEXT_PUBLIC_SITE_URL: `http://localhost:${port}`,
+    SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+    SIGNUP_MODE: testMode ? 'open' : (process.env.SIGNUP_MODE ?? 'open'),
     ...(testMode ? { NEXT_DIST_DIR: '.next-e2e' } : {}),
   },
 });

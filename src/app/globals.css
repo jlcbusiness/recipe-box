@@ -141,6 +141,20 @@ a {
   cursor: pointer;
 }
 
+.auth-secondary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.auth-secondary-actions a {
+  color: var(--leaf);
+  font-weight: 700;
+  text-underline-offset: 4px;
+}
+
 .auth-form button:disabled {
   cursor: wait;
   opacity: 0.75;
@@ -159,6 +173,7 @@ a {
 
 .auth-form input:focus-visible,
 .auth-form button:focus-visible,
+.auth-secondary-actions a:focus-visible,
 .recovery-link:focus-visible {
   outline: 3px solid var(--gold);
   outline-offset: 3px;
@@ -203,17 +218,29 @@ a {
 .private-header {
   display: flex;
   min-height: 52px;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
+}
+
+.private-header > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .private-header form {
   margin: 0;
 }
 
+.private-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .private-header button {
-  min-height: 44px;
+  min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 3px;
   padding: 8px 14px;
@@ -222,6 +249,66 @@ a {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.private-content section {
+  width: 100%;
+  min-width: 0;
+  margin-top: 28px;
+}
+
+.private-content h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.admin-table-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.admin-table-scroll table {
+  min-width: 540px;
+  border-collapse: collapse;
+}
+
+.admin-table-scroll th,
+.admin-table-scroll td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-table-scroll th {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.admin-table-scroll tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-table-scroll button {
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 8px 12px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-table-scroll button:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
 }
 
 .private-header button:focus-visible,
@@ -266,6 +353,18 @@ h1 {
 
   .private-content {
     padding: 16px 20px;
+  }
+
+  .private-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-block: 8px;
+  }
+
+  .private-header-actions {
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .private-content h1 {
