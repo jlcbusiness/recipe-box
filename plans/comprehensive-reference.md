@@ -508,6 +508,24 @@ History events are recorded on save (never on individual keystrokes):
 - Focus outlines visible on all interactive components.
 - Dual visual encoding: Density auto-fills use a subtle tint *and* a text/badge label; color is never the sole conveyor of status.
 
+### 13.4 Accessible controls and editable grids
+- Prefer native semantic HTML for ordinary page structure, forms, and controls.
+- Use React Aria Components when a custom interactive control needs managed
+  keyboard and assistive-technology behavior. Keep styling application-owned.
+- Use AG Grid Community for the spreadsheet-style ingredient editor only; its
+  built-in keyboard navigation and cell editors match the arrow-key and inline
+  editing requirements. Read-only data lists remain semantic tables.
+- AG Grid Community is MIT-licensed and provides core accessibility, keyboard
+  navigation, and cell editing. Do not depend on Enterprise-only features.
+  Application-defined cell editors and actions still require focused keyboard,
+  screen-reader, and automated accessibility tests. Evaluate screen-reader
+  behavior and DOM ordering when the ingredient grid is implemented.
+
+References: [React Aria Table](https://react-aria.adobe.com/Table), [AG Grid
+keyboard interaction](https://www.ag-grid.com/react-data-grid/keyboard-navigation/),
+[AG Grid accessibility](https://www.ag-grid.com/react-data-grid/accessibility/),
+and [AG Grid license comparison](https://www.ag-grid.com/license-pricing/).
+
 ---
 
 ## 14. Technology Stack and Hosting Architecture

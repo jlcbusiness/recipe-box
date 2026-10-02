@@ -10,6 +10,17 @@
 *.userosscache
 *.sln.docstates
 *.env
+.env
+.env.*
+!.env.example
+
+# Node.js and browser test output
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

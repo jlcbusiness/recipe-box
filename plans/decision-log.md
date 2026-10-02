@@ -25,6 +25,10 @@ the product specification or a task list. The canonical behavior remains in
 | Deliberate save only; no autosave. | Avoids runaway history events and mid-edit version increments; history logs on explicit save. |
 | Delivery is vertical slices, not one full implementation plan. | Each slice can be tested and adjusted before later complexity is added. |
 | Testability is a non-negotiable architecture constraint, and automated tests are written before production code. | Every requirement needs deterministic automated acceptance coverage; test-first delivery prevents untestable designs and makes demonstrations repeatable. |
+| The local test gate uses Vitest, Playwright with Chromium, and axe. | One reproducible command covers unit behavior, browser workflows, and automated accessibility without a hosted service. |
+| Domain seed records are introduced with the schema that defines them, not in the schema-free baseline. | Avoids a throwaway fixture table and keeps local migrations representative of the real product model. |
+| The Recipe Box Supabase stack uses ports 55420–55429. | The machine already runs other Supabase projects on the default and 654xx ranges; a separate range avoids disrupting them. |
+| Use native HTML by default, React Aria Components for custom controls, and AG Grid Community only for the editable ingredient grid. | This keeps ordinary controls semantic, supplies accessible keyboard behavior for custom widgets, and provides proven cell navigation/editors without Enterprise licensing; custom grid behavior remains covered by automated tests. |
 | The comprehensive reference is the master document; the spec summarizes it and defers to it. | One authority prevents drift, while the shorter spec stays the first thing read. |
 | Deleted items go to the trash and are purged after 30 days. "Archive" is not used. | One clear lifecycle: delete, restore within 30 days, or purge. |
 | Count has no unit. | A count is how many of the ingredient; a 14 oz can is entered as 14 oz. |

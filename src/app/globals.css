@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --ink: #242820;
+  --muted: #62695d;
+  --paper: #f7f9f4;
+  --line: #d9dfd3;
+  --tomato: #b43e32;
+  --leaf: #386044;
+  --gold: #bf8f2f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--paper);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--ink);
+  font-family: "DM Sans Variable", sans-serif;
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 31px,
+    rgb(56 96 68 / 3%) 32px
+  );
+}
+
+a {
+  color: inherit;
+}
+
+.workspace-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  padding-inline: max(24px, calc((100vw - 1240px) / 2));
+}
+
+.topbar {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.wordmark-mark {
+  display: grid;
+  width: 32px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 3px;
+  background: var(--tomato);
+  color: white;
+  font-family: Georgia, serif;
+  font-size: 20px;
+}
+
+.workspace-label,
+.eyebrow {
+  color: var(--leaf);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.workspace-label {
+  letter-spacing: 0.08em;
+}
+
+.welcome {
+  display: grid;
+  width: min(100%, 680px);
+  flex: 1;
+  align-content: center;
+  justify-items: start;
+  padding-block: 80px;
+}
+
+.eyebrow {
+  margin: 0 0 18px;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 64px;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.welcome-copy {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.welcome-rule {
+  width: min(100%, 420px);
+  height: 1px;
+  margin-top: 42px;
+  background: var(--line);
+}
+
+.welcome-rule span {
+  display: block;
+  width: 56px;
+  height: 2px;
+  background: var(--gold);
+}
+
+.footer {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .workspace-shell {
+    padding-inline: 20px;
+  }
+
+  .topbar {
+    min-height: 64px;
+  }
+
+  .workspace-label {
+    font-size: 10px;
+  }
+
+  .welcome {
+    padding-block: 56px;
+  }
+
+  h1 {
+    font-size: 48px;
+  }
+
+  .welcome-copy {
+    font-size: 16px;
+  }
+}

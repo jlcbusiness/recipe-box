@@ -1,0 +1,1 @@
+-- Domain fixtures will be added with the first application schema.
