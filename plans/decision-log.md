@@ -54,6 +54,20 @@ the product specification or a task list. The canonical behavior remains in
 | Settings shows the last export date and a reminder after 30 days. | Export is the only backup, so forgetting it is the main risk. |
 | Every picklist is seeded from the documented examples; Specific occasion is protected. | A usable start, while the value that reveals Occasion Details cannot be removed. |
 | The first release has one light theme. | Dark theme is deferred to avoid doubling visual verification. |
+| New recipes default to Want to try; State, its active response, and optional integer Serves share the row below Name. | The most common capture path is considering a recipe; State remains visible and editable rather than silently hidden in secondary metadata, while its response and serving count stay visually attached. |
+| Recipe metadata uses content-sized controls and flex-wrap rows, not a field grid. | Compact controls preserve scannability; widths follow the longest option or useful text length, fields wrap naturally, and time inputs fit their labels/value with 8px gaps. |
+| Multi-picklists are dropdown menus with stable-width triggers, checkmark-only selected options, and pale green bold emphasis. | Selection must read as an item choice, not browser text selection or a checklist; the checkmark keeps selection clear without relying on color. |
+| Verdict order places Specific occasion immediately before Once-a-year-rich and So-so. | Occasion context and its related cadence options are adjacent during entry. |
+| Recipe Tin lists replace Last saved with Opinion (active Enthusiasm, Verdict, or Reason); mobile shows only Name and Opinion. | The list surfaces the recipe owner's current response and keeps the small-screen view focused on identification and decision. |
+| Recipe detail uses State/response, Serves, Total Time, Equipment, a dedicated desktop classification row, remaining times, and Notes; mobile Edit sits beside the title. | View mode prioritizes serving and total duration before secondary classification, while keeping the title action compact on small screens. |
+| Serves is one optional positive integer at the end of the State row, with Equipment immediately after it; Yield is removed. | A single count of people is simpler to capture and scale than separate serving and free-text yield fields, while keeping related capture fields together. |
+| Recipe detail uses content-sized flex-wrap metadata like the edit form, ordered State/response, Serves, Equipment, classification, times, and Notes. | The same field order and wrapping behavior make entering and scanning metadata predictable across viewports. |
+| Single- and multi-picklists use identical label typography and regular-weight trigger text; Reason matches the adjacent picker height. | Equal label size and control weight avoid visual misalignment; matching Reason height preserves a coherent tap and scan rhythm. |
+| The mobile `Σ` control has a compact visible 30px square inside a 48px hit target. | The control stays visually light without sacrificing touch accessibility. |
+| Serves text is centered; its field is 36px high on desktop and 48px on mobile. | Centering the count improves scanability, while the mobile field aligns with the touch-sized picklist triggers. |
+| The desktop Edit control is 36px tall; the mobile “Edit” control is 32px tall, 18px small caps, and aligned to the right edge of the title row. | The desktop action keeps its right-side position while the mobile title row uses the available width without moving the action beneath the name. |
+| Desktop Recipe Tin content grows by about 192px, to 1172px for the list and 1012px for detail metadata. | The existing centered layout remains, with more room for the list and recipe fields on wide screens. |
+| The shared account menu sits at the bottom of desktop navigation and appears as a circular initials control on mobile. | One account-options menu works consistently across the private shell while using space appropriate to each layout. |
 
 ## Recording New Decisions
 

@@ -77,7 +77,9 @@ export async function deleteTestUser(request: APIRequestContext, user: TestUser)
   });
 
   if (!response.ok()) {
-    throw new Error(`Local Auth test user cleanup failed with HTTP ${response.status()}.`);
+    throw new Error(
+      `Local Auth test user cleanup failed with HTTP ${response.status()}: ${await response.text()}`,
+    );
   }
 }
 

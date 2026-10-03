@@ -1,0 +1,2 @@
+alter table public.recipe_picklist_assignments
+  drop constraint if exists recipe_picklist_assignments_account_id_category_picklist_v_fkey;

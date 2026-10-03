@@ -7,13 +7,16 @@
 > - [comprehensive-reference.md § 6 (Publications & Recipe Tin Metaphor)](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
 > - [comprehensive-reference.md § 7 (Library Explorer & Query UI)](comprehensive-reference.md#7-queries-search-and-library-explorer)
 > - [comprehensive-reference.md § 13 (Interaction, Keyboard-First & Accessibility)](comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
+> - [comprehensive-reference.md § 2.4 (Recipe Metadata Entry)](comprehensive-reference.md#24-recipe-metadata-entry-presentation)
 
 ## Purpose
 
-This document preserves the visual and interaction direction. It is not a
-finished component specification. Before a UI slice is built, make wireframes
-or a clickable prototype for that slice and verify layout, states, content
-density, keyboard operation, and mobile behavior.
+This document preserves visual and interaction direction and records decisions
+as they are validated in delivery slices. Design proceeds with each slice:
+define the screen hierarchy and behavior, implement a testable first pass, then
+refine it against the running desktop and mobile UI. Create a wireframe or
+clickable prototype when the layout is not yet clear; it is not a separate phase
+that blocks routine iteration.
 
 Each UI behavior and state must be automatable. Before production UI code is
 written, define focused automated tests for its acceptance behavior, including
@@ -34,9 +37,96 @@ review support those tests but do not replace them.
   border background instead of a standard clean rounded card background.
   Ordinary publication and recipe cards remain clean, crisp, and restrained.
 
+## Recipe Metadata Entry (Slice 4)
+
+Recipe forms use content-sized controls and wrapping rows rather than a tiled
+grid. Fields should be only as wide as their content requires, with longer
+text fields capped to a readable line length. Keep about 4px vertical and 7px
+horizontal control padding on desktop; do not add large gaps between compact
+time fields.
+
+### Guiding concepts
+
+- **Text-fit, not equal-width:** Single-choice selects fit their longest option.
+  Metadata and time controls flow left to right and wrap when the viewport runs
+  out of room.
+- **A choice is not text selection:** Multi-picklists open a compact dropdown.
+  Options are buttons, not checkboxes or selectable text. One menu is open at a
+  time; Escape closes it.
+- **State is explicit:** Name occupies the first row. State defaults to Want to
+  try; its active Enthusiasm, Verdict, Reason, or Occasion Details field shares
+  the next row with State, with Serves at the end of that row. The following row
+  holds Food Type, Meal Type, and Cuisine. Equipment follows Serves on the
+  State row.
+- **Time is deliberate:** Component minutes are small, spinner-free numeric
+  inputs. Total Time is separate and changes only through the adjacent sigma
+  action.
+
+### Picklist behavior
+
+Single-choice Food Type, State, Verdict, and Enthusiasm controls use custom
+anchored dropdowns with the same trigger height as multi-picklists. Menus open
+below and align to their own trigger on desktop and mobile. Meal Type, Cuisine,
+and Equipment use a narrow trigger whose width is reserved for the longest
+option including its checkmark, so selecting or clearing an option cannot
+resize it. The popup lists options vertically in configured order. A selected
+option shows a checkmark and bold leaf-green text on a pale green background;
+color is supplementary to the checkmark, never the only selection signal. The
+picker does not display native checkboxes or blue text-selection highlighting.
+Single- and multi-picklist labels share the same 13px bold typography. Trigger
+text stays regular-weight whether selected or not, so neither control type
+looks heavier by default.
+
+The visible single-choice prompt for Enthusiasm is “What am I feeling?” while
+the field label remains “Enthusiasm.” Verdict order places Specific occasion
+immediately before Once-a-year-rich and So-so. Reason is a single-line field.
+
+### Serves and times
+
+Serves is one optional positive integer with no group heading. Equipment follows
+it on the State row. Center the numeric text in its field. The Serves input is
+36px high on desktop and matches the 48px picklist trigger height on mobile.
+Times are grouped under “Times (min)” and wrap naturally.
+Each numeric input is sized to five characters or its visible label, whichever
+needs more room, with 8px gaps. Total occupies its own final row, with a square
+icon-only `Σ` button beside it and an accessible name and tooltip of “Calculate
+total time.” On mobile, keep a 48px hit target around the visibly compact 30px
+square. Hide numeric spinner controls; values are entered by typing. The
+single-line Reason input matches its adjacent picklist height, including on
+mobile.
+
+### Recipe list, detail, and headings
+
+The recipe list uses an Opinion column for the active Enthusiasm, Verdict, or
+Reason instead of a last-saved timestamp. Desktop also shows Food Type and State;
+mobile shows only Name and Opinion. Recipe detail follows the edit-form order
+but uses a distinct view order: State and its active response, Occasion Details
+when present, Serves, Total Time, Equipment, Food Type, Meal Type, Cuisine,
+remaining times, then Notes. On desktop, Food Type, Meal Type, and Cuisine share
+their own full-width row. On mobile, “Edit” uses 18px small caps at the right
+edge of the title row; on desktop “Edit recipe” remains to the right of the
+heading. The desktop Edit control is 36px high and the mobile control is 32px
+high. Do not repeat Recipe Tin as a page breadcrumb or attribution when the
+selected navigation item already names the Recipe Tin. Recipe-page headings,
+including detail titles and section headings, use 16pt (about 21.33px). The
+desktop Recipe Tin list content can expand to about 1172px and the detail
+metadata area to about 1012px.
+
+### Account menu
+
+The private-shell account menu uses the same options everywhere. On desktop, show
+the account email at the bottom of the left navigation, below its navigation
+links (and directly below Settings when that destination is available). On
+mobile, show a 48px circular initials button at the right of the navigation.
+Both controls open the same account menu with the email and Sign out action.
+
+On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
+compact, while their labeled rows, picklist triggers, popup options, and action
+buttons retain touch targets of at least 48px.
+
 ## Desktop
 
-Recipe detail has a strong title and compact metadata area, followed by the
+Recipe detail has a compact title and metadata area, followed by the
 working body: the ingredient list beside the instructions. Related
 recipes (Pairs with) and notes sit at the bottom.
 

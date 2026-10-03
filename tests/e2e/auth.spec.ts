@@ -77,6 +77,7 @@ test('a user can reset their password through the local recovery email @e2e', as
     await page.getByRole('button', { name: 'Save password' }).click();
     await expect(page).toHaveURL(/\/app$/);
 
+    await page.locator('.account-menu-trigger').click();
     await page.getByRole('button', { name: 'Sign out' }).click();
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill('replacement-password-84');
@@ -131,6 +132,22 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByRole('heading', { name: 'Your private workspace' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    const accountTrigger = page.locator('.account-menu-trigger');
+    await expect(accountTrigger).toHaveAttribute('aria-label', `Account options for ${user.email}`);
+    await expect(accountTrigger).toContainText(user.email);
+    const desktopNavBounds = await page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .boundingBox();
+    const desktopAccountBounds = await accountTrigger.boundingBox();
+    expect(
+      (desktopNavBounds?.y ?? 0) +
+        (desktopNavBounds?.height ?? 0) -
+        ((desktopAccountBounds?.y ?? 0) + (desktopAccountBounds?.height ?? 0)),
+    ).toBeLessThanOrEqual(24);
+    await accountTrigger.click();
+    await expect(page.locator('.account-menu-panel').getByText(user.email)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await accountTrigger.click();
 
     const desktopA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -141,6 +158,21 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
+    const mobileNavBounds = await page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .boundingBox();
+    const mobileAccountBounds = await accountTrigger.boundingBox();
+    await expect(accountTrigger.locator('.account-avatar')).toBeVisible();
+    await expect(accountTrigger.locator('.account-menu-email')).toBeHidden();
+    expect(mobileAccountBounds?.width).toBeGreaterThanOrEqual(48);
+    expect(mobileAccountBounds?.height).toBeGreaterThanOrEqual(48);
+    expect(
+      (mobileNavBounds?.x ?? 0) +
+        (mobileNavBounds?.width ?? 0) -
+        ((mobileAccountBounds?.x ?? 0) + (mobileAccountBounds?.width ?? 0)),
+    ).toBeLessThanOrEqual(20);
+    await accountTrigger.click();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
     const mobileA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();

@@ -40,7 +40,7 @@ test('local self-sign-up creates a regular email/password account @e2e @a11y', a
 
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByRole('heading', { name: 'Your private workspace' })).toBeVisible();
-    await expect(page.getByText(email)).toBeVisible();
+    await expect(page.locator('.account-avatar')).toBeVisible();
 
     const config = await getLocalSupabaseConfig();
     const usersResponse = await request.get(
@@ -196,7 +196,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.getByLabel('Create password').fill(recipientPassword);
     await page.getByRole('button', { name: 'Set password' }).click();
     await expect(page).toHaveURL(/\/app$/);
-    await expect(page.getByText(recipient)).toBeVisible();
+    await expect(page.locator('.account-avatar')).toBeVisible();
 
     const invitedAccount = await request.get(
       `${config.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method&id=eq.${recipientUserId}`,
@@ -211,6 +211,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
       { id: recipientUserId, is_admin: false, sign_in_method: 'email_password' },
     ]);
 
+    await page.locator('.account-menu-trigger').click();
     await page.getByRole('button', { name: 'Sign out' }).click();
     await page.getByLabel('Email').fill(recipient);
     await page.getByLabel('Password').fill(recipientPassword);
@@ -256,6 +257,7 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await expect(memberRow).toContainText('Admin');
     await expect(memberRow.getByRole('button', { name: 'Grant admin' })).toHaveCount(0);
 
+    await page.locator('.account-menu-trigger').click();
     await page.getByRole('button', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.getByLabel('Email').fill(member.email);
@@ -284,6 +286,7 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/app$/);
     await page.goto('/admin');
+    await page.locator('.account-menu-trigger').click();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
     const desktopA11y = await new AxeBuilder({ page })

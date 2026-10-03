@@ -51,24 +51,33 @@ Recipes include name, primary publication, page or recipe URL, food type
 (e.g., roast, pie, galette, casserole, pasta, soup, sauce, cake, cocktail),
 multi-select meal type (e.g., breakfast, lunch, dinner, appetizer, side dish,
 snack, dessert, drink, booze, sauce), multi-select cuisine (e.g., American,
-Italian, Chinese, Mexican, French, Fusion), tags, equipment (e.g., small/medium/large
-pan, bowl, baking sheet, skillet, spatula, whisk, peeler), base servings
-and/or yield (e.g., "Serves 4" or "Makes 24 cookies"), notes, and separate optional
-times for chill, freeze, marinate, prep, mix, cook, bake, cool, rest, and total.
+Italian, Chinese, Mexican, French, Fusion), tags, equipment (e.g. small/medium/large
+pan, bowl, baking sheet, skillet, spatula, whisk, peeler), an optional positive
+integer Serves count, notes, and separate
+optional times for chill, freeze, marinate, prep, mix, cook, bake, cool, rest,
+and total.
 
 Food type describes what is made. Meal type describes when or how it is used.
-Total time is manual. An explicit calculate control (sigma/math icon) visibly
+New recipes default to Want to try; State and its active response appear
+immediately below Name, with Serves at the end of that row. Food Type, Meal Type,
+and Cuisine occupy the next wrapping row; Equipment follows Serves on the State
+row.
+Multi-value picklists use compact checkmark dropdowns with a stable trigger width,
+not checklists. Selected values use a checkmark and pale green, bold text.
+Total time is manual. An explicit calculate control (`Σ`) visibly
 replaces total time with the sum of entered time fields only after the user invokes it.
 
-State is Want to try, Tried, or Will not try. State conditionally shows
-Enthusiasm, Verdict, or Reason:
-- Verdict (when Tried): concepts such as favorite, delicious, staple,
-  once-a-year-rich, practice, try again, occasionally, so-so, no, hell no,
-  MISTAKE, specific occasion.
+State is Want to try, Tried, or Will not try. State conditionally shows Enthusiasm,
+Verdict, or Reason:
+- Verdict (when Tried): concepts such as favorite, delicious, staple, practice,
+  try again, occasionally, specific occasion, once-a-year-rich, so-so, no,
+  hell no, MISTAKE. `Specific occasion`, `Once-a-year-rich`, and `So-so` appear
+  consecutively in that order.
 - Enthusiasm (when Want to try): concepts such as absolutely, sounds good!,
   try, specific occasion, maybe, eh.
+- The empty Enthusiasm prompt is "What am I feeling?".
 - Occasion detail: text field shown when Verdict or Enthusiasm is Specific occasion.
-- Reason: free text explaining why the recipe will not be tried.
+- Reason: single-line text explaining why the recipe will not be tried.
 
 Changing State clears the Verdict, Enthusiasm, Occasion detail, and Reason
 values that no longer apply. Recipes can also carry photos; the add-photo
@@ -221,7 +230,7 @@ public image bucket.
 
 A private or trashed recipe URL returns a custom unavailable page with HTTP
 `404` and `Cache-Control: no-store`. A permanently purged recipe returns HTTP
-`410`. The public payload allow-list permits title, yield/servings, timings,
+`410`. The public payload allow-list permits title, Serves, timings,
 equipment, ingredients, instructions, and static publication attribution, while
 strictly omitting personal fields (verdict, enthusiasm, reason, notes, gotchas)
 and change history.

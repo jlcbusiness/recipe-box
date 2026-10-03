@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
 import { PrivateShell } from '../private-shell';
 
-export default async function WorkspacePage() {
+export default async function RecipesLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
 
@@ -19,17 +19,14 @@ export default async function WorkspacePage() {
   return (
     <PrivateShell
       email={data.user.email ?? 'Unknown email'}
+      wideContent
       navigation={[
-        { href: '/app', label: 'Workspace', current: true },
-        { href: '/recipes', label: 'Recipe Tin' },
+        { href: '/app', label: 'Workspace' },
+        { href: '/recipes', label: 'Recipe Tin', current: true },
         ...(account?.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}
     >
-      <main aria-labelledby="page-title">
-        <p className="eyebrow">YOUR COOKBOOK SHELF</p>
-        <h1 id="page-title">Your private workspace</h1>
-        <p className="welcome-copy">Your library is ready for its first recipe.</p>
-      </main>
+      {children}
     </PrivateShell>
   );
 }

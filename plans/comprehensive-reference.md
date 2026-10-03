@@ -58,17 +58,17 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Name** | Text | Free text | Primary recipe title. |
 | **Primary Publication** | Single-select picker | Searchable list of all user publications + "Add new publication" button | Clickable in view mode; navigates directly to the publication page. Unparented recipes display as belonging to the "Recipe Tin". |
 | **Location** | Text / URL | Page number (integer/text) OR URL (clickable link) | Mutually exclusive display based on publication type: Books show page number; Sites show recipe URL; Magazines show no page number, and the recipe's online URL is entered through the `+ Site` secondary listing (see 6.2). |
-| **Food Type** | Single-select picklist | Casserole, roast, pie, galette, pasta, soup, sauce, cake, cocktail, bread, stew, salad, etc. | "What kind of dish is this?" Settings-managed picklist; user can add new values inline or in settings. |
-| **Meal Type** | Multi-select picklist | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc. | "When or how do I serve this?" Settings-managed multi-select picklist. Multiple types allowed (e.g., a dish can be both `side dish` and `dinner`). |
-| **Cuisine** | Multi-select picklist | American, Italian, Chinese, Mexican, French, Thai, Indian, Fusion, etc. | Settings-managed multi-select picklist to cleanly support fusion cooking. |
+| **Food Type** | Single-select picklist | Casserole, roast, pie, galette, pasta, soup, sauce, cake, cocktail, bread, stew, salad, etc. | "What kind of dish is this?" Settings-managed picklist; use a compact custom dropdown aligned with the other picklist triggers. |
+| **Meal Type** | Multi-select picklist | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc. | "When or how do I serve this?" Settings-managed multi-select dropdown. Multiple values are toggled with buttons; selected values show a checkmark, leaf-green text, and a pale green background. |
+| **Cuisine** | Multi-select picklist | American, Italian, Chinese, Mexican, French, Thai, Indian, Fusion, etc. | Settings-managed multi-select dropdown to cleanly support fusion cooking. |
 | **Main Ingredients** | Derived index | Derived from ingredient rows | Not an independent metadata input. Automatically compiled from ingredient rows marked with the `Main` checkbox. |
-| **State** | Single-select enum | `Want to try`, `Tried`, `Will not try` | Determines conditional visibility of verdict, enthusiasm, and reason fields. Changing State clears the Verdict, Enthusiasm, Occasion Details, and Reason values that no longer apply. |
-| **Verdict** | Single-select picklist | Favorite, delicious, staple, once-a-year-rich, practice, try again, occasionally, so-so, no, hell no, MISTAKE, specific occasion | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. |
-| **Enthusiasm** | Single-select picklist | Absolutely, sounds good!, try, specific occasion, maybe, eh | Visible **only** when `State == Want to try`. User-customizable in settings. |
+| **State** | Single-select enum | `Want to try`, `Tried`, `Will not try` | New recipes default to `Want to try`. Place State immediately after Name; its active Enthusiasm, Verdict, or Reason, Serves, and Equipment share its row. Food Type, Meal Type, and Cuisine follow on the next wrapping row. Changing State clears stale conditional values. |
+| **Verdict** | Single-select picklist | Favorite, delicious, staple, practice, try again, occasionally, specific occasion, once-a-year-rich, so-so, no, hell no, MISTAKE | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. |
+| **Enthusiasm** | Single-select picklist | Absolutely, sounds good!, try, specific occasion, maybe, eh | Visible **only** when `State == Want to try`. The empty prompt reads “What am I feeling?” User-customizable in settings. |
 | **Occasion Details** | Free text | Text string describing the occasion | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected. |
-| **Reason** | Free text | Text string explaining rejection | Visible **only** when `State == Will not try`. |
-| **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Renamed from "tools". Settings-managed picklist you can add to. |
-| **Servings / Yield** | Structured record | Number of servings (e.g., `4`) and/or discrete yield text (e.g., `Makes 24 cookies`) | Serves as the base calculation denominator for recipe scaling. |
+| **Reason** | Single-line text | Text string explaining rejection | Visible **only** when `State == Will not try`. |
+| **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Renamed from "tools". Settings-managed multi-select dropdown; follows Serves on the State row. |
+| **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears at the end of the State row, immediately before Equipment. It is the base serving count for recipe scaling; discrete-item Yield is not captured in this field. |
 | **Tags** | Multi-select text tags | Freeform user tags | Color-neutral tags searchable across all recipes and publications. |
 | **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
 
@@ -89,12 +89,55 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 - **Card Display Rule:** Only non-zero/applicable times are displayed on the recipe card.
 - **Total Time Calculation Behavior:**
   - Total time is stored as a distinct manual field. It is **never** auto-updated silently in the background, because steps often overlap (e.g., chopping ingredients while an oven preheats, or dough rising while sauce simmers).
-  - An explicit **Auto-calculate button** (math/sigma icon `Σ`) sits beside the Total Time input in edit mode. When clicked, it sums all entered durations and visibly replaces the Total Time value, leaving the user in control.
+  - Component times use compact, spinner-free numeric inputs sized to five-character values or their visible labels, whichever needs more room, with 8 px gaps. Total Time appears on its own final row.
+  - A compact square **Auto-calculate** control showing only the `Σ` icon sits beside Total Time. It has the accessible name and tooltip `Calculate total time`. When clicked, it sums all entered component durations and visibly replaces Total Time, leaving the user in control.
 
 ### 2.3 Recipe Photos
 
 - A recipe may have photos in addition to publication covers (6.1). Photos use the same private media pipeline (9.4) and are included in exports.
 - The add-photo mechanism is specified in the Images slice brief. It must settle at least: capture from device camera or library, accepted formats (including iPhone HEIC), size limits and resizing, removal of EXIF and location metadata, photo order and primary photo, thumbnails, and whether public pages show photos.
+
+### 2.4 Recipe Metadata Entry Presentation
+
+- The metadata form uses wrapping flex rows, not a CSS grid. Name occupies row
+  one; State, its active response, and Serves occupy row two; Food Type, Meal
+  Type, and Cuisine occupy the following row, with Equipment after Serves.
+  Controls use content-sized widths; longer text fields have a readable maximum
+  width.
+- Food Type, State, Verdict, and Enthusiasm use custom anchored single-choice
+  dropdowns with the same trigger height as multi-picklists. Menus align to their
+  trigger on both desktop and mobile.
+- Single- and multi-picklist labels use the same 13px bold typography. All
+  trigger text is regular weight by default, regardless of selection.
+- Meal Type, Cuisine, and Equipment use narrow dropdown triggers sized once to
+  the longest option plus its checkmark. Selecting options never resizes the
+  trigger. Each popup option is a button with `aria-pressed`; one popup is open
+  at a time and Escape closes it.
+- Selected multi-picklist options show a checkmark, bold leaf-green text, and a
+  pale green background. The checkmark remains the selection cue when color is
+  unavailable or indistinguishable.
+- Desktop controls are approximately 30–36 px tall with 4 px vertical and 7 px
+  horizontal padding. Mobile inputs remain visually compact inside labeled
+  touch rows of at least 48 px; menu options and triggers are at least 48 px.
+- The single-line Reason input matches its adjacent picklist height, including
+  on mobile. The mobile `Σ` control keeps a 48px hit target around a visibly
+  compact 30px square.
+- The mobile Serves input matches the 48px height of adjacent picklist triggers.
+- Center the Serves number within its input. Its desktop field height is 36px;
+  mobile height is 48px to match picklist triggers.
+- The list replaces Last saved with Opinion, showing the active Enthusiasm,
+  Verdict, or Reason. Mobile shows only Name and Opinion. Detail view uses
+  content-sized wrapping metadata in this order: State/response, Occasion
+  Details when present, Serves, Total Time, Equipment, Food Type, Meal Type,
+  Cuisine, remaining times, then Notes. On desktop, Food Type, Meal Type, and
+  Cuisine occupy a dedicated full-width row. Omit duplicate Recipe Tin
+  breadcrumbs and attribution when Recipe Tin is already selected in
+  navigation. Recipe-page headings are about 16pt (about 21.33px).
+- The detail Edit action is 36px tall on desktop and remains at the right of the
+  title. On mobile it is 32px tall, uses 18px small-caps “Edit” text, and aligns
+  to the right edge of the title row.
+- Expand the desktop Recipe Tin content width by about 192px: the list can use
+  up to 1172px and the detail metadata section up to 1012px.
 
 ---
 
@@ -574,6 +617,14 @@ References: [React Aria Table](https://react-aria.adobe.com/Table), [AG Grid
 keyboard interaction](https://www.ag-grid.com/react-data-grid/keyboard-navigation/),
 [AG Grid accessibility](https://www.ag-grid.com/react-data-grid/accessibility/),
 and [AG Grid license comparison](https://www.ag-grid.com/license-pricing/).
+
+### 13.5 Private shell account menu
+
+Use one account menu throughout the private shell. On desktop, place the account
+email at the bottom of the left navigation, below navigation links (and directly
+below Settings when available). On mobile, use a 48px circular initials control
+at the right of the navigation. Both controls open the same menu with the email
+and Sign out action.
 
 ---
 

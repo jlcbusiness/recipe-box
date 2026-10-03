@@ -35,7 +35,7 @@ security without prematurely creating recipe or other domain tables.
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, yield, timings, notes, primary publication, privacy, and public-link ID. |
+| Recipe | The recipe's metadata, state, optional integer Serves count, timings, notes, primary publication, privacy, and public-link ID. |
 | Publication | A Book, Magazine issue, or Site that can list recipes. |
 | Ingredient | A canonical account-owned ingredient and optional trusted density. |
 | Recipe ingredient | An ordered ingredient row with persistent manual order, Main flag, detail, preparation, and measurements. |
