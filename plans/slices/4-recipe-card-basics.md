@@ -127,8 +127,8 @@ recipe routes, or components:
   aligned label boxes,
   Equipment after Serves, and a compact mobile Sigma mark with a 48px hit
   target. Browser checks cover view-specific Total Time order, a dedicated
-  desktop classification row, 36px desktop and 32px mobile Edit controls,
-  right alignment on mobile,
+  desktop classification row, 32px desktop and mobile Edit controls, a 48px
+  mobile Edit hit area, right alignment on mobile,
   and the wider desktop list/detail content.
 - An integration test creates two Auth users and verifies each gets the exact
   per-account seed sets, cannot read or use the other's picklist values, and
@@ -173,6 +173,8 @@ recipe routes, or components:
   padding. Mobile controls remain visually compact while labeled hit rows and
   picklist options preserve 48px touch targets. Serves is 36px high on desktop,
   48px on mobile, with centered numeric text.
+- Labeled action buttons use 48px for standalone actions and 32px for actions
+  placed beside text. Compact inline actions keep a 48px mobile hit area.
 - Use custom anchored single-choice menus with the same height as multi-select
   triggers on desktop and mobile. Keep single- and multi-picklist labels the same
   size and weight, and all trigger text regular-weight. Show Opinion (active
@@ -184,10 +186,10 @@ recipe routes, or components:
   dedicated Food Type, Meal Type, and Cuisine row. Recipe-page headings are
   about 16pt (about 21.33px), and Recipe Tin is not repeated as a breadcrumb or
   attribution.
-- In detail view, keep Edit at title-row height on desktop; on mobile, show
-  “Edit” at the right end of the title row in 18px small caps. The desktop Edit
-  control is 36px high and the mobile control is 32px. The desktop list can use
-  up to 1172px and the detail section up to 1012px.
+- In detail view, show “Edit” at the right end of the title row on desktop and
+  mobile. The inline Edit control is 32px high in both layouts; use normal text
+  on desktop and 18px small caps on mobile, with a 48px mobile hit area. The
+  desktop list can use up to 1172px and the detail section up to 1012px.
 - Put Equipment directly after Serves in the State row. Give the mobile Sigma
   control a compact visible square inside its 48px hit area. Match Reason input
   height to its adjacent picklist.

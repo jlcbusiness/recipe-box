@@ -134,9 +134,11 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   Cuisine occupy a dedicated full-width row. Recipe Tin does not appear as a
   duplicate breadcrumb or attribution when it is already selected in navigation.
   Recipe-page headings are about 16pt (about 21.33px).
-- The detail Edit action is 36px tall on desktop and remains at the right of the
-  title. On mobile it is 32px tall, uses 18px small-caps “Edit” text, and aligns
-  to the right edge of the title row.
+- Labeled action buttons use two visual sizes: 48px for standalone actions and
+  32px for compact actions beside text. The detail Edit action is 32px tall on
+  desktop and mobile and is labeled “Edit” in both. Mobile uses 18px small-caps
+  text and a 48px hit area at the right edge of the title row. Picklist triggers
+  and icon-only controls have separate sizing rules.
 - The desktop Recipe Tin list is up to 1172px wide and its detail metadata
   section is up to 1012px wide.
 

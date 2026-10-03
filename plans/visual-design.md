@@ -31,6 +31,10 @@ review support those tests but do not replace them.
 - Do not reproduce Azure portal's pane-heavy layout or its visual language.
 - Preserve a calm, work-focused interface for repeated recipe entry and lookup.
 - Ship a single light theme in the first release; dark theme is deferred.
+- Labeled action buttons use two visual sizes: 48px for standalone actions such
+  as Save, and 32px for compact actions placed beside text, such as Edit.
+  Compact mobile actions retain a 48px hit area without changing their visible
+  height. Picklist triggers and icon-only controls have their own sizing rules.
 - Give the Recipe Tin its own visual identity: a vintage metal tin box with a
   hinged lid, containing dog-eared 3x5 index cards with handwritten notes.
   Recipes residing in the Recipe Tin render with a textured, ragged/deckled paper
@@ -104,13 +108,13 @@ but uses a distinct view order: State and its active response, Occasion Details
 when present, Serves, Total Time, Equipment, Food Type, Meal Type, Cuisine,
 remaining times, then Notes. On desktop, Food Type, Meal Type, and Cuisine share
 their own full-width row. On mobile, “Edit” uses 18px small caps at the right
-edge of the title row; on desktop “Edit recipe” remains to the right of the
-heading. The desktop Edit control is 36px high and the mobile control is 32px
-high. Do not repeat Recipe Tin as a page breadcrumb or attribution when the
-selected navigation item already names the Recipe Tin. Recipe-page headings,
-including detail titles and section headings, use 16pt (about 21.33px). The
-desktop Recipe Tin list content is up to about 1172px wide and the detail
-metadata area is up to about 1012px wide.
+edge of the title row; the “Edit” label is the same on desktop and mobile, with
+small caps used only on mobile. The inline Edit button is 32px high on desktop
+and mobile. On mobile, its hit area is 48px high. Do not repeat Recipe Tin as a page breadcrumb or
+attribution when the selected navigation item already names the Recipe Tin.
+Recipe-page headings, including detail titles and section headings, use 16pt
+(about 21.33px). The desktop Recipe Tin list content is up to about 1172px wide
+and the detail metadata area is up to about 1012px wide.
 
 ### Account menu
 
@@ -121,8 +125,9 @@ mobile, show a 48px circular initials button at the right of the navigation.
 Both controls open the same account menu with the email and Sign out action.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
-compact, while their labeled rows, picklist triggers, popup options, and action
-buttons retain touch targets of at least 48px.
+compact, while labeled rows, picklist triggers, popup options, standalone
+actions, and compact inline action hit areas retain touch targets of at least
+48px.
 
 ## Desktop
 
@@ -213,5 +218,8 @@ implemented UI slice.
 
 Before building a UI slice, document the screen's information hierarchy,
 responsive behavior, key states, destructive confirmations, component anatomy,
-and acceptance screenshots. Establish typography, color tokens, icon usage, and
-spacing only when the first wireframes reveal the needed system.
+and acceptance screenshots. The current visual foundation is a working
+direction, not a locked design system: DM Sans Variable, a light paper surface
+with a subtle ruled texture, dark ink, leaf green, tomato red, and muted gold.
+Refine typography, color, icon usage, and spacing as screens are designed; do
+not treat these initial choices as final tokens.

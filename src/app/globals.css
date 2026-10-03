@@ -271,7 +271,7 @@ a {
 }
 
 .account-menu-panel button {
-  min-height: 40px;
+  min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 3px;
   padding: 8px 12px;
@@ -546,9 +546,10 @@ h1 {
 }
 
 .recipe-page-heading .recipe-edit-link {
-  height: 36px;
-  min-height: 36px;
-  padding: 6px 14px;
+  position: relative;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px 14px;
 }
 
 .recipe-edit-mobile {
@@ -1088,6 +1089,12 @@ h1 {
     padding: 6px 12px;
     font-size: 18px;
     font-variant-caps: all-small-caps;
+  }
+
+  .recipe-page-heading .recipe-edit-link::before {
+    position: absolute;
+    inset: -8px -4px;
+    content: "";
   }
 
   .recipe-edit-desktop {

@@ -186,14 +186,14 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
 
     await expect(page.getByRole('heading', { name: 'Sunday tomato soup' })).toBeVisible();
     await page.setViewportSize({ width: 1600, height: 1000 });
-    const desktopEditLink = page.getByRole('link', { name: 'Edit recipe' });
+    const desktopEditLink = page.getByRole('link', { name: 'Edit' });
     await expect(desktopEditLink.locator('.recipe-edit-desktop')).toBeVisible();
     await expect(desktopEditLink.locator('.recipe-edit-mobile')).toBeHidden();
     const desktopTitleBounds = await page
       .getByRole('heading', { name: 'Sunday tomato soup' })
       .boundingBox();
     const desktopEditBounds = await desktopEditLink.boundingBox();
-    expect(desktopEditBounds?.height).toBe(36);
+    expect(desktopEditBounds?.height).toBe(32);
     expect(
       Math.abs(
         (desktopEditBounds?.y ?? 0) +
@@ -283,7 +283,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(recipeRow.locator('td:visible')).toHaveCount(2);
     await recipeRow.getByRole('link', { name: 'Sunday tomato soup' }).click();
 
-    const mobileEditLink = page.getByRole('link', { name: 'Edit recipe' });
+    const mobileEditLink = page.getByRole('link', { name: 'Edit' });
     await expect(mobileEditLink.locator('.recipe-edit-mobile')).toBeVisible();
     await expect(mobileEditLink.locator('.recipe-edit-desktop')).toBeHidden();
     await expect(mobileEditLink).toHaveCSS('font-variant-caps', 'all-small-caps');
@@ -293,6 +293,14 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     const mobileEditBounds = await mobileEditLink.boundingBox();
     const mobileHeadingBounds = await page.locator('.recipe-detail-heading').boundingBox();
     expect(mobileEditBounds?.height).toBe(32);
+    await expect(mobileEditLink).toHaveCSS('position', 'relative');
+    await expect(mobileEditLink).toHaveCSS('height', '32px');
+    const mobileEditHitArea = await mobileEditLink.evaluate((element) =>
+      getComputedStyle(element, '::before'),
+    );
+    expect(mobileEditHitArea.position).toBe('absolute');
+    expect(mobileEditHitArea.top).toBe('-8px');
+    expect(mobileEditHitArea.bottom).toBe('-8px');
     expect(
       Math.abs(
         (mobileHeadingBounds?.x ?? 0) +
@@ -378,7 +386,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       { event_type: 'recipe.updated', actor_user_id: user.id },
     ]);
 
-    await page.getByRole('link', { name: 'Edit recipe' }).click();
+    await page.getByRole('link', { name: 'Edit' }).click();
     await selectSinglePicklist(page, 'State', 'Will not try');
     await page.getByLabel('Reason').fill('Contains an ingredient I avoid.');
     await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -779,7 +787,7 @@ test('stale recipe versions are rejected without overwriting the first save @e2e
     await expect(firstPage.getByRole('heading', { name: 'Concurrent edit soup' })).toBeVisible();
     const detailPath = new URL(firstPage.url()).pathname;
 
-    await firstPage.getByRole('link', { name: 'Edit recipe' }).click();
+    await firstPage.getByRole('link', { name: 'Edit' }).click();
     const secondPage = await browser.newPage();
     await signIn(secondPage, user.email, user.password);
     await secondPage.goto(`${detailPath}/edit`);
@@ -874,7 +882,7 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
       .analyze();
     expect(detailA11y.violations).toEqual([]);
 
-    await page.getByRole('link', { name: 'Edit recipe' }).click();
+    await page.getByRole('link', { name: 'Edit' }).click();
     const editA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();

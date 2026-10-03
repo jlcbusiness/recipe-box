@@ -78,11 +78,11 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           <h1 id="page-title">{recipe.name}</h1>
         </div>
         <Link
-          aria-label="Edit recipe"
+          aria-label="Edit"
           className="recipe-primary-link recipe-edit-link"
           href={`/recipes/${recipe.id}/edit`}
         >
-          <span className="recipe-edit-desktop">Edit recipe</span>
+          <span className="recipe-edit-desktop">Edit</span>
           <span aria-hidden="true" className="recipe-edit-mobile">
             Edit
           </span>
