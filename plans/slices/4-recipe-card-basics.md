@@ -25,10 +25,10 @@ An authenticated owner can create, view, edit, and explicitly save a Recipe Tin
 recipe with its basic metadata. New recipes default to Want to try, with State
 immediately below Name. Its active response and optional integer Serves field
 share the State row; Equipment follows Serves. Food Type, Meal Type, and Cuisine
-occupy the following wrapping row. The list shows Opinion instead of Last saved, with
-only Name and Opinion visible on mobile. Detail metadata has a distinct view
-order, with Total Time after Serves and classification values in their own
-desktop row.
+occupy the following wrapping row. The desktop list shows Name, Food Type, State,
+and Opinion; mobile shows Name and Opinion. Detail metadata has a distinct view
+order, with Total Time after Serves and classification values in their own desktop
+row.
 Picklists are seeded per account and isolated by RLS. Conditional State fields
 clear stale values, time totals change only when the user invokes the calculate
 control, and recipe creation/update history is recorded transactionally.
@@ -44,8 +44,9 @@ control, and recipe creation/update history is recorded transactionally.
   The calculate control sums the nine component durations only, excluding the
   Total Time field. Total Time is never changed as a side effect of editing a
   component duration.
-- Store Serves as an optional positive integer; remove the prior numeric
-  Servings and free-text Yield fields. Scaling behavior belongs to Slice 13.
+- Store Serves as an optional positive integer. Slice 4 does not store separate
+  numeric Servings or free-text Yield fields; scaling behavior belongs to Slice
+  13.
 - State is required and has the stable values `want_to_try`, `tried`, and
   `will_not_try`. New recipes default to `want_to_try`; the user can change it
   immediately below Name.
@@ -175,9 +176,10 @@ recipe routes, or components:
 - Use custom anchored single-choice menus with the same height as multi-select
   triggers on desktop and mobile. Keep single- and multi-picklist labels the same
   size and weight, and all trigger text regular-weight. Show Opinion (active
-  Enthusiasm, Verdict, or Reason) in the list instead of Last saved; mobile shows
-  only Name and Opinion. Detail view uses its own content-sized order: State and
-  response, Occasion Details when present, Serves, Total Time, Equipment,
+  Enthusiasm, Verdict, or Reason) alongside Name, Food Type, and State in the
+  desktop list; mobile shows Name and Opinion. Detail view uses its own
+  content-sized order: State and response, Occasion Details when present, Serves,
+  Total Time, Equipment,
   classification, remaining times, then Notes. On desktop, classification is a
   dedicated Food Type, Meal Type, and Cuisine row. Recipe-page headings are
   about 16pt (about 21.33px), and Recipe Tin is not repeated as a breadcrumb or

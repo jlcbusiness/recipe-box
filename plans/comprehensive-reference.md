@@ -67,7 +67,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Enthusiasm** | Single-select picklist | Absolutely, sounds good!, try, specific occasion, maybe, eh | Visible **only** when `State == Want to try`. The empty prompt reads “What am I feeling?” User-customizable in settings. |
 | **Occasion Details** | Free text | Text string describing the occasion | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected. |
 | **Reason** | Single-line text | Text string explaining rejection | Visible **only** when `State == Will not try`. |
-| **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Renamed from "tools". Settings-managed multi-select dropdown; follows Serves on the State row. |
+| **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Settings-managed multi-select dropdown; follows Serves on the State row. |
 | **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears at the end of the State row, immediately before Equipment. It is the base serving count for recipe scaling; discrete-item Yield is not captured in this field. |
 | **Tags** | Multi-select text tags | Freeform user tags | Color-neutral tags searchable across all recipes and publications. |
 | **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
@@ -125,19 +125,20 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 - The mobile Serves input matches the 48px height of adjacent picklist triggers.
 - Center the Serves number within its input. Its desktop field height is 36px;
   mobile height is 48px to match picklist triggers.
-- The list replaces Last saved with Opinion, showing the active Enthusiasm,
-  Verdict, or Reason. Mobile shows only Name and Opinion. Detail view uses
-  content-sized wrapping metadata in this order: State/response, Occasion
+- On desktop, the recipe list shows Name, Food Type, State, and Opinion, which
+  shows the active Enthusiasm, Verdict, or Reason. On mobile, the list shows
+  Name and Opinion. Detail view uses content-sized wrapping metadata in this
+  order: State/response, Occasion
   Details when present, Serves, Total Time, Equipment, Food Type, Meal Type,
   Cuisine, remaining times, then Notes. On desktop, Food Type, Meal Type, and
-  Cuisine occupy a dedicated full-width row. Omit duplicate Recipe Tin
-  breadcrumbs and attribution when Recipe Tin is already selected in
-  navigation. Recipe-page headings are about 16pt (about 21.33px).
+  Cuisine occupy a dedicated full-width row. Recipe Tin does not appear as a
+  duplicate breadcrumb or attribution when it is already selected in navigation.
+  Recipe-page headings are about 16pt (about 21.33px).
 - The detail Edit action is 36px tall on desktop and remains at the right of the
   title. On mobile it is 32px tall, uses 18px small-caps “Edit” text, and aligns
   to the right edge of the title row.
-- Expand the desktop Recipe Tin content width by about 192px: the list can use
-  up to 1172px and the detail metadata section up to 1012px.
+- The desktop Recipe Tin list is up to 1172px wide and its detail metadata
+  section is up to 1012px wide.
 
 ---
 

@@ -97,9 +97,9 @@ mobile.
 
 ### Recipe list, detail, and headings
 
-The recipe list uses an Opinion column for the active Enthusiasm, Verdict, or
-Reason instead of a last-saved timestamp. Desktop also shows Food Type and State;
-mobile shows only Name and Opinion. Recipe detail follows the edit-form order
+On desktop, the recipe list shows Name, Food Type, State, and an Opinion column
+for the active Enthusiasm, Verdict, or Reason. On mobile, it shows Name and
+Opinion. Recipe detail follows the edit-form order
 but uses a distinct view order: State and its active response, Occasion Details
 when present, Serves, Total Time, Equipment, Food Type, Meal Type, Cuisine,
 remaining times, then Notes. On desktop, Food Type, Meal Type, and Cuisine share
@@ -109,8 +109,8 @@ heading. The desktop Edit control is 36px high and the mobile control is 32px
 high. Do not repeat Recipe Tin as a page breadcrumb or attribution when the
 selected navigation item already names the Recipe Tin. Recipe-page headings,
 including detail titles and section headings, use 16pt (about 21.33px). The
-desktop Recipe Tin list content can expand to about 1172px and the detail
-metadata area to about 1012px.
+desktop Recipe Tin list content is up to about 1172px wide and the detail
+metadata area is up to about 1012px wide.
 
 ### Account menu
 
