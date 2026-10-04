@@ -131,7 +131,9 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   order: State/response, Occasion
   Details when present, Serves, Total Time, Equipment, Food Type, Meal Type,
   Cuisine, remaining times, then Notes. On desktop, Food Type, Meal Type, and
-  Cuisine occupy a dedicated full-width row. Recipe Tin does not appear as a
+  Cuisine occupy a dedicated full-width row. On mobile, component times appear
+  in a separate subsection with a divider and small-caps “Times” title; Total
+  Time remains in the main metadata. Recipe Tin does not appear as a
   duplicate breadcrumb or attribution when it is already selected in navigation.
   Recipe-page headings are about 16pt (about 21.33px).
 - Labeled action buttons use two visual sizes: 48px for standalone actions and
@@ -147,16 +149,14 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 ## 3. Ingredient Rows, Measurements, and Density
 
 ### 3.1 Ingredient Row Structure
-An ingredient and its quantities are permanently tied together in a single relational row. The desktop edit grid consists of six columns:
+An ingredient and its quantities are permanently tied together in a single
+relational row. In Slice 5, the desktop edit table displays Ingredient, Detail,
+and Preparation values; the Main checkbox and 12px drag handle sit in a narrow
+control rail outside the table. The table always has one trailing empty row.
+Measurement columns arrive in Slice 6.
 
-```
-+------+------------+----------+------+--------+-------------+
-| Main | Ingredient | Quantity | Unit | Detail | Preparation |
-+------+------------+----------+------+--------+-------------+
-```
-
-1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon in lemon bars). Populates the recipe's `Main Ingredients` query index.
-2. **Ingredient (Picker):** Combobox connected to the user's canonical ingredients. Allows searching existing ingredients or adding a new ingredient on the fly.
+1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon in lemon bars). Populates the recipe's `Main Ingredients` query index. The checkbox sits outside the table in the row control rail and is edit-only.
+2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside its row editor popover; menus remain within the viewport and use the available space above or below the field.
 3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4`), ranges (`2-3`), or integers. Blank for unmeasured ingredients.
 4. **Unit (Type Selector + Picklist):**
    - **Segmented Type Selector:** `Volume`, `Weight`, `Count`, `Informal`, `Unmeasured`.
@@ -166,7 +166,7 @@ An ingredient and its quantities are permanently tied together in a single relat
    - **Informal Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk, sheet, stick, slice, pinch, dash, handful. Informal amounts scale but never convert and never take part in density. Packaging words (can, bag, package) are not seeded.
    - **Unmeasured Picker:** Approved culinary phrases: `to taste`, `as needed`, `for garnish`, `to serve`, `divided`.
 5. **Detail (Text):** Qualitative specification or size qualification. Subtitled under the ingredient name in Ingredient-First view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for butter), `Brummel & Brown` (for margarine).
-6. **Preparation (Text):** Processing instructions performed on the ingredient before or during cooking. Examples: `diced`, `minced`, `cubed`, `melted`, `room-temperature`, `crushed`, `sliced`, `divided`.
+6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or during cooking. Examples: `diced`, `minced`, `cubed`, `melted`, `room-temperature`, `crushed`, `sliced`, `divided`. Users can add a preparation while editing; saved values appear in future suggestions.
 
 ### 3.2 Dual Measurement (Volume + Weight)
 - In edit mode, each row allows entering both volume and weight side-by-side (via an `+ Add measurement` button).
@@ -263,11 +263,20 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
 4. **Order Entered:** The exact sequential order established when editing the recipe.
 
 ### 4.3 Manual Reordering
-- Every ingredient row has a visible drag handle at its left edge in edit mode.
-  Dragging updates the persistent manual order used by **Order Entered**.
-- Dragging is a convenience, not a required interaction. Keyboard users can
-  focus a row and use explicit Move up / Move down commands; an accessible
-  order input or menu provides an equivalent non-drag path.
+- Every ingredient row has a 12px drag handle at its left edge, outside the
+  table, beside its Main checkbox. Dragging updates the persistent manual order
+  used by **Order Entered**.
+- Mobile uses a pale 24px grip. Handles accept pointer dragging onto either
+  another row's cells or its control rail.
+- Keyboard users focus a row and press `Ctrl+ArrowUp` or `Ctrl+ArrowDown` to
+  move it. No generic row actions are shown; a compact delete `x` is available
+  for populated rows on hover or keyboard focus, and remains visible on mobile.
+- In Ingredient and Preparation picklists, Enter selects the active option and
+  a second Enter commits the field. Tab accepts a typed or keyboard-selected
+  suggestion and commits it. Ingredient Tab advances to same-row Detail;
+  Preparation Tab advances to the next row's Ingredient. Enter commits a
+  Detail edit directly; clearing Ingredient and leaving the field removes the
+  nameless row.
 - Reordering changes only the canonical entered order. Temporary view sorts do
   not rewrite it.
 
@@ -603,23 +612,24 @@ History events are recorded on save (never on individual keystrokes):
 - Focus outlines visible on all interactive components.
 - Dual visual encoding: Density auto-fills use a subtle tint *and* a text/badge label; color is never the sole conveyor of status.
 
-### 13.4 Accessible controls and editable grids
+### 13.4 Accessible controls and ingredient editing
 - Prefer native semantic HTML for ordinary page structure, forms, and controls.
 - Use React Aria Components when a custom interactive control needs managed
   keyboard and assistive-technology behavior. Keep styling application-owned.
-- Use AG Grid Community for the spreadsheet-style ingredient editor only; its
-  built-in keyboard navigation and cell editors match the arrow-key and inline
-  editing requirements. Read-only data lists remain semantic tables.
-- AG Grid Community is MIT-licensed and provides core accessibility, keyboard
-  navigation, and cell editing. Do not depend on Enterprise-only features.
-  Application-defined cell editors and actions still require focused keyboard,
-  screen-reader, and automated accessibility tests. Evaluate screen-reader
-  behavior and DOM ordering when the ingredient grid is implemented.
-
-References: [React Aria Table](https://react-aria.adobe.com/Table), [AG Grid
-keyboard interaction](https://www.ag-grid.com/react-data-grid/keyboard-navigation/),
-[AG Grid accessibility](https://www.ag-grid.com/react-data-grid/accessibility/),
-and [AG Grid license comparison](https://www.ag-grid.com/license-pricing/).
+- The ingredient editor is a semantic text-first table. Values become compact
+  editors only when activated. A control rail keeps Main checkboxes and 12px
+  drag handles outside the data columns; `Ctrl+ArrowUp` and `Ctrl+ArrowDown`
+  provide keyboard reordering. The only row action is a compact delete `x` for
+  populated rows, revealed on desktop hover or focus and visible on mobile.
+- Picklist Enter selects the active option without committing; a second Enter
+  commits. Tab accepts a typed or keyboard-selected suggestion and commits it;
+  Ingredient advances to same-row Detail, and Preparation advances to the next
+  row's Ingredient. Detail remains a direct text edit, so Enter commits it
+  immediately.
+- Mobile uses a one-column ingredient list and a compact row editor popover.
+  Keep its controls compact and accessible.
+- Custom cell editors, suggestions, and popovers require focused keyboard,
+  screen-reader, and automated accessibility tests.
 
 ### 13.5 Private shell account menu
 

@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getRecipe, getRecipePicklists } from '../../../../lib/recipes/data';
+import {
+  getIngredients,
+  getPreparationOptions,
+  getRecipe,
+  getRecipePicklists,
+} from '../../../../lib/recipes/data';
 import { createClient } from '../../../../lib/supabase/server';
 import { RecipeForm } from '../../recipe-form';
 
@@ -11,9 +16,11 @@ type EditRecipePageProps = {
 export default async function EditRecipePage({ params }: EditRecipePageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const [recipe, picklists] = await Promise.all([
+  const [recipe, picklists, ingredients, preparationOptions] = await Promise.all([
     getRecipe(supabase, id),
     getRecipePicklists(supabase),
+    getIngredients(supabase),
+    getPreparationOptions(supabase),
   ]);
   if (!recipe) {
     notFound();
@@ -26,7 +33,12 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
       </Link>
       <p className="eyebrow">UPDATE YOUR RECIPE</p>
       <h1 id="page-title">Edit Recipe</h1>
-      <RecipeForm picklists={picklists} recipe={recipe} />
+      <RecipeForm
+        ingredients={ingredients}
+        picklists={picklists}
+        preparationOptions={preparationOptions}
+        recipe={recipe}
+      />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
+import { formatIngredientDisplay } from '../../../lib/recipes/ingredient-rules';
 import { createClient } from '../../../lib/supabase/server';
 
 type RecipeDetailPageProps = {
@@ -111,16 +112,33 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           </dl>
         )}
         {times.length > 0 && (
-          <dl className="recipe-metadata recipe-time-list">
-            {times.map(([label, value]) => (
-              <div key={label}>
-                <dt>{label} time</dt>
-                <dd>{value} min</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="recipe-detail-times">
+            <h3 className="recipe-detail-times-title">Times</h3>
+            <dl className="recipe-metadata recipe-time-list">
+              {times.map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value} min</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         )}
       </section>
+      {recipe.ingredients.length > 0 && (
+        <section className="recipe-detail-section" aria-labelledby="ingredients-title">
+          <h2 id="ingredients-title">Ingredients</h2>
+          <ol className="recipe-ingredient-list">
+            {recipe.ingredients.map((ingredient) => (
+              <li key={ingredient.id}>
+                <span className="recipe-ingredient-name">
+                  {formatIngredientDisplay(ingredient)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       {recipe.notes_markdown && (
         <section className="recipe-detail-section" aria-labelledby="notes-title">
           <h2 id="notes-title">Notes</h2>

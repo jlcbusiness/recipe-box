@@ -101,6 +101,14 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await selectSinglePicklist(page, 'Food Type', 'Soup');
     await expect(page.getByRole('group', { name: 'Times (min)' })).toBeVisible();
     await expect(page.getByLabel('Serves')).toBeVisible();
+    for (const integerInput of await page.locator('.recipe-form input[type="number"]').all()) {
+      await expect(integerInput).toHaveCSS('text-align', 'center');
+    }
+    for (const integerLabel of await page
+      .locator('.recipe-form label[for="serves"] > span, .recipe-form .recipe-time-field > span')
+      .all()) {
+      await expect(integerLabel).toHaveCSS('text-align', 'center');
+    }
     const mealTriggerBounds = await page
       .getByRole('button', { name: 'Meal Type: Select' })
       .boundingBox();
@@ -227,6 +235,11 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     const detailMetadata = page.locator('.recipe-metadata:not(.recipe-time-list)').first();
     await expect(detailMetadata).toHaveCSS('display', 'flex');
     await expect(detailMetadata).toHaveCSS('flex-wrap', 'wrap');
+    await expect(detailMetadata).toHaveCSS('row-gap', '11px');
+    await expect(page.locator('.recipe-detail-classification')).toHaveCSS('margin-top', '11px');
+    await expect(page.locator('.recipe-detail-times')).toHaveCSS('margin-top', '11px');
+    await expect(page.locator('.recipe-time-list')).toHaveCSS('margin-top', '0px');
+    await expect(page.locator('.recipe-time-list dt')).toHaveText(['Prep', 'Mixing', 'Cook']);
     const detailSectionBounds = await page.locator('.recipe-detail-section').first().boundingBox();
     const classificationBounds = await page.locator('.recipe-detail-classification').boundingBox();
     expect(
@@ -247,7 +260,23 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       'Meal Type',
       'Cuisine',
     ]);
+    await expect(page.getByRole('heading', { name: 'Times', exact: true })).toBeHidden();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const timesSection = page.locator('.recipe-detail-times');
+    const timesHeading = page.getByRole('heading', { name: 'Times', exact: true });
+    await expect(timesHeading).toBeVisible();
+    await expect(timesHeading).toHaveCSS('font-size', '18px');
+    await expect(timesHeading).toHaveCSS('color', 'rgb(4, 31, 85)');
+    await expect(timesHeading).toHaveCSS('font-variant-caps', 'all-small-caps');
+    await expect(timesSection).toHaveCSS('border-top-width', '1px');
+    await expect(timesSection).toHaveCSS('border-top-style', 'solid');
+    await expect(timesSection).toContainText('Prep');
+    await expect(timesSection).not.toContainText('Total time');
+    await expect(
+      page.locator('.recipe-metadata:not(.recipe-time-list) dt').filter({ hasText: 'Total time' }),
+    ).toHaveCount(1);
     await expect(page.getByText('Add fresh basil at the end.')).toBeVisible();
+    await page.setViewportSize({ width: 1600, height: 1000 });
 
     const recipeId = new URL(page.url()).pathname.split('/').at(-1);
     expect(recipeId).toBeTruthy();
@@ -495,6 +524,7 @@ test('recipes and history are isolated to their owning account @e2e', async ({ r
         p_rest_time_minutes: null,
         p_total_time_minutes: null,
         p_notes_markdown: '',
+        p_ingredient_rows: [],
         p_meal_type_ids: [],
         p_cuisine_ids: [],
         p_equipment_ids: [],
@@ -613,6 +643,7 @@ test('recipe saves preserve conditional data and reject stale versions atomicall
       p_rest_time_minutes: null,
       p_total_time_minutes: null,
       p_notes_markdown: '',
+      p_ingredient_rows: [],
       p_meal_type_ids: [dinnerId],
       p_cuisine_ids: [],
       p_equipment_ids: [],

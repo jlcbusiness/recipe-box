@@ -61,23 +61,16 @@ sign-in and the actual application shell belong to slice 1.
 
 ## UI foundation decision
 
-Use native semantic HTML for ordinary structures and controls. Adopt React Aria
-Components for custom interactive controls that need managed keyboard and
-assistive-technology behavior. Use AG Grid Community only for the editable
-ingredient grid; keep read-only lists as semantic tables. Add either UI package
-only when a slice first uses it, and pin the verified version in the lockfile.
+Use native semantic HTML for ordinary structures and controls. Add React Aria
+Components only when a custom interaction benefits from managed keyboard and
+assistive-technology behavior.
 
-AG Grid Community provides core keyboard navigation, accessibility, and cell
-editors under the MIT license. Custom cell editors and application-specific
-actions remain our responsibility. Slice 5 must test arrow navigation, edit
-entry/exit, adding a row from the final cell, custom-editor focus, and axe
-accessibility before treating the grid as complete. Screen-reader behavior and
-DOM order must be evaluated on that real grid.
-
-References: [React Aria Table](https://react-aria.adobe.com/Table), [AG Grid
-keyboard interaction](https://www.ag-grid.com/react-data-grid/keyboard-navigation/),
-[AG Grid accessibility](https://www.ag-grid.com/react-data-grid/accessibility/),
-and [AG Grid license comparison](https://www.ag-grid.com/license-pricing/).
+Slice 5 uses a semantic, text-first ingredient table with a persistent trailing
+blank row. Main checkboxes and compact drag handles sit in an outside rail;
+`Ctrl+ArrowUp` and `Ctrl+ArrowDown` reorder rows. Mobile uses a one-column list
+with a compact row editor popover. Slice 5 tests cell editing, pointer and
+keyboard reordering, mobile behavior, screen-reader semantics, and axe
+accessibility. Read-only lists remain semantic HTML.
 
 ## Local commands
 

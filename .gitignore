@@ -442,3 +442,5 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+temp/

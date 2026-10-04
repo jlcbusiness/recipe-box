@@ -23,6 +23,11 @@ written, define focused automated tests for its acceptance behavior, including
 keyboard and assistive-technology-relevant semantics; screenshots and manual
 review support those tests but do not replace them.
 
+This guide records both implemented UI and future product direction. Sections
+marked **Current implementation** describe behavior present in the app; sections
+marked **Planned direction** are aspirational and are not claims about shipped
+screens. Treat a slice as current after implementation and validation.
+
 ## Design Direction
 
 - Take inspiration from Azure DevOps work items: clear hierarchy, compact
@@ -35,11 +40,46 @@ review support those tests but do not replace them.
   as Save, and 32px for compact actions placed beside text, such as Edit.
   Compact mobile actions retain a 48px hit area without changing their visible
   height. Picklist triggers and icon-only controls have their own sizing rules.
-- Give the Recipe Tin its own visual identity: a vintage metal tin box with a
-  hinged lid, containing dog-eared 3x5 index cards with handwritten notes.
-  Recipes residing in the Recipe Tin render with a textured, ragged/deckled paper
-  border background instead of a standard clean rounded card background.
+- **Planned Recipe Tin identity:** Give the Recipe Tin a vintage metal tin box
+  with a hinged lid, containing dog-eared 3x5 index cards with handwritten
+  notes. Recipes residing in the Recipe Tin would render with a textured,
+  ragged/deckled paper border instead of a standard clean rounded card
+  background.
   Ordinary publication and recipe cards remain clean, crisp, and restrained.
+
+### When details are unspecified
+
+Treat Recipe Box as a calm working tool for people who repeatedly collect,
+organize, and cook from recipes. New UI should feel deliberate, compact, and
+familiar rather than promotional, decorative, or app-like for its own sake.
+Prefer a clear information hierarchy, natural recipe language, and direct
+manipulation of the thing being edited over explanatory copy or a separate
+control surface.
+
+- **Favor the smallest useful control:** Use compact fields, ordinary
+  checkboxes, small drag grips, and modest inline actions. Do not add a button,
+  card, toolbar, or visible instruction when direct interaction with the item
+  already expresses the action.
+- **Reveal complexity in context:** Show the full established choice set when a
+  picker is activated. Filter or offer creation only after the person starts
+  typing. Use a compact pane or popover when a narrow screen cannot sustain the
+  desktop editing anatomy.
+- **Use space to clarify, not decorate:** Keep dense edit workflows compact,
+  but give reading-mode content enough consistent separation to scan. Preserve
+  stable dimensions and avoid oversized fields, excessive gaps, nested cards,
+  ornamental panels, or empty visual weight.
+- **Respect the recipe mental model:** Display ingredients and other recipe
+  content in natural, readable order and phrasing. Prefer conventions people
+  already know from a recipe card or recipe site over database-shaped labels or
+  concatenated values.
+- **Adapt the workflow, not just the scale:** Desktop can expose structured,
+  keyboard-efficient data entry. Mobile should retain the same capability with
+  a simpler one-column or focused-pane interaction, touch-safe targets, no
+  horizontal overflow, and viewport-aware overlays.
+- **Make visual polish support operation:** Center compact numeric labels and
+  values for scanning, keep text legible and controls visually quiet, and use
+  color as reinforcement rather than the only signal. Keyboard, pointer, and
+  touch paths must be equally complete.
 
 ## Recipe Metadata Entry (Slice 4)
 
@@ -48,6 +88,10 @@ grid. Fields should be only as wide as their content requires, with longer
 text fields capped to a readable line length. Keep about 4px vertical and 7px
 horizontal control padding on desktop; do not add large gaps between compact
 time fields.
+
+Edit-form metadata and time controls keep compact row spacing as they wrap.
+View-mode metadata uses consistent 11px vertical spacing between wrapped rows
+and full-width metadata groups.
 
 ### Guiding concepts
 
@@ -65,6 +109,10 @@ time fields.
 - **Time is deliberate:** Component minutes are small, spinner-free numeric
   inputs. Total Time is separate and changes only through the adjacent sigma
   action.
+- **Group mobile view times:** Keep Total Time in the main recipe metadata. Show
+  component times in a separate subsection with a divider and small-caps
+  “Times” title on mobile. The current title is 18px navy small caps; component
+  labels remain muted.
 
 ### Picklist behavior
 
@@ -88,7 +136,8 @@ immediately before Once-a-year-rich and So-so. Reason is a single-line field.
 ### Serves and times
 
 Serves is one optional positive integer with no group heading. Equipment follows
-it on the State row. Center the numeric text in its field. The Serves input is
+it on the State row. Center the numeric text and label text for Serves and time
+fields. The Serves input is
 36px high on desktop and matches the 48px picklist trigger height on mobile.
 Times are grouped under “Times (min)” and wrap naturally.
 Each numeric input is sized to five characters or its visible label, whichever
@@ -112,9 +161,10 @@ edge of the title row; the “Edit” label is the same on desktop and mobile, w
 small caps used only on mobile. The inline Edit button is 32px high on desktop
 and mobile. On mobile, its hit area is 48px high. Do not repeat Recipe Tin as a page breadcrumb or
 attribution when the selected navigation item already names the Recipe Tin.
-Recipe-page headings, including detail titles and section headings, use 16pt
-(about 21.33px). The desktop Recipe Tin list content is up to about 1172px wide
-and the detail metadata area is up to about 1012px wide.
+Recipe titles and major detail section headings use 16pt (about 21.33px). The
+mobile Times subsection title is 18px navy small caps. The desktop Recipe Tin
+list content is up to about 1172px wide and the detail metadata area is up to
+about 1012px wide.
 
 ### Account menu
 
@@ -131,40 +181,61 @@ actions, and compact inline action hit areas retain touch targets of at least
 
 ## Desktop
 
-Recipe detail has a compact title and metadata area, followed by the
-working body: the ingredient list beside the instructions. Related
-recipes (Pairs with) and notes sit at the bottom.
+### Current implementation
 
-The Library supports Windows Explorer-like grid and details views, sorting,
-filtering by publication type (All, Books, Magazines, Sites), and an optional
-preview pane displaying publication metadata and lookup URLs without listing
-all recipes. Recipe and publication lists support dense, scannable rows and
-configurable columns.
+The Recipe Tin list is a compact table with Name, Food Type, State, and Opinion
+columns; mobile hides Food Type and State. Recipe details show metadata, the
+ordered ingredient list, and notes. The desktop ingredient editor uses a
+keyboard-operable table with a trailing blank row, compact cell editors, and a
+separate control rail.
 
-Desktop workflows are keyboard-first. Entry, autocomplete, focus movement,
-editing, and saving must work without drag-and-drop or a mouse. Tab/arrow traversal
-moves through the ingredient grid; Enter in the final column creates a new row;
-`Ctrl+S` / `Cmd+S` saves.
+Ingredient rows open compact cell editors. Ingredient and Preparation open
+their full picklists on activation; typing filters options and offers an
+add-new suggestion when there is no exact match. The Main checkbox and 12px
+drag handle sit outside the table. Dragging reorders rows; keyboard users press
+`Ctrl+ArrowUp` or `Ctrl+ArrowDown`. A compact delete `x` appears on populated
+rows when hovered or keyboard-focused; on mobile it remains visible with a
+48px hit area.
+For Ingredient and Preparation picklists, Enter selects the active option and a
+second Enter commits; Tab accepts and commits the active suggestion, moving
+from Ingredient to same-row Detail and from Preparation to the next row's
+Ingredient. Enter commits Detail text directly.
+`Ctrl+S` / `Cmd+S` saves the recipe.
 
-Every ingredient row has a left-edge drag handle in edit mode for fast manual
-reordering. It is a pointer shortcut only: keyboard-accessible Move up / Move
-down controls and a non-drag ordering control provide the same capability.
+### Planned direction
+
+Recipe detail will place the ingredient list beside instructions, with related
+recipes (Pairs with) and notes at the bottom. The Library will support
+Windows-Explorer-like grid and details views, sorting, filtering by publication
+type, and an optional publication preview pane. Recipe and publication lists
+will support dense, scannable rows and configurable columns.
 
 ## Mobile
 
-Mobile is not a shrunken desktop view. It prioritizes lookup, cooking,
+### Current implementation
+
+The mobile Recipe Tin list shows Name and Opinion. Recipe details show the
+recipe title, metadata, component times in their own subsection, ingredients,
+and notes. Ingredient editing uses a one-column list with the Main checkbox and
+a pale 24px drag grip in a slim rail. Tapping a row opens a compact popover for
+Ingredient, Detail, and Preparation. Picklists, overlay placement, and the
+48px Submit hit area adapt to the viewport; the page does not scroll
+horizontally.
+
+### Planned direction
+
+Mobile is not a shrunken desktop view. It should prioritize lookup, cooking,
 quantities, scaling, and short-form entry. Recipe reading should lead with the
-title, scaling, ingredient list, and steps. Secondary metadata is compact or
-progressively disclosed without obscuring cooking content.
+title, scaling, ingredient list, and steps; secondary metadata should stay
+compact or be progressively disclosed.
 
-Cooking ergonomics:
-- Touch targets strictly $\ge 48\times 48\text{ px}$.
-- High-contrast text legible under kitchen lighting.
-- Ingredient check-off state (interactive temporary strikethrough/checkbox in
-  cooking mode to track ingredients added to the pot/pan).
-- Screen wake lock / cook mode to keep the display active while cooking.
+Cooking mode should provide touch targets of at least 48px, high-contrast text
+for kitchen lighting, temporary ingredient check-off, and a screen wake lock.
 
-## Ingredient Presentation
+## Planned Ingredient Presentation
+
+The quantity and presentation options below are future direction; Slice 5 does
+not include amounts or units.
 
 Standard presentation lists each ingredient in the familiar recipe-book reading
 order: Amount, Ingredient and Detail, then Preparation. The list sits beside the
@@ -198,7 +269,7 @@ are easy to scan. User Settings offers a dedicated styling configuration:
 - Color presets are tested to ensure $\ge 4.5:1$ contrast against the app background.
 Public and printed recipes always use the default bold dark-red styling.
 
-## Publication Cover Fallbacks
+## Planned Publication Cover Fallbacks
 
 When a Book has no cover image, show a light-blue book-shaped rectangle with a
 dark-blue border and italic title text sized to fit. When a Magazine Issue has
@@ -220,6 +291,7 @@ Before building a UI slice, document the screen's information hierarchy,
 responsive behavior, key states, destructive confirmations, component anatomy,
 and acceptance screenshots. The current visual foundation is a working
 direction, not a locked design system: DM Sans Variable, a light paper surface
-with a subtle ruled texture, dark ink, leaf green, tomato red, and muted gold.
+with a subtle ruled texture, dark ink, navy, leaf green, tomato red, and muted
+gold.
 Refine typography, color, icon usage, and spacing as screens are designed; do
 not treat these initial choices as final tokens.

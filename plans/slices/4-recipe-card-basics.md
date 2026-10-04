@@ -183,7 +183,9 @@ recipe routes, or components:
   content-sized order: State and response, Occasion Details when present, Serves,
   Total Time, Equipment,
   classification, remaining times, then Notes. On desktop, classification is a
-  dedicated Food Type, Meal Type, and Cuisine row. Recipe-page headings are
+  dedicated Food Type, Meal Type, and Cuisine row. On mobile, component times
+  appear after the main metadata in a subsection with a divider and small-caps
+  “Times” title; Total Time stays in the main metadata. Recipe-page headings are
   about 16pt (about 21.33px), and Recipe Tin is not repeated as a breadcrumb or
   attribution.
 - In detail view, show “Edit” at the right end of the title row on desktop and

@@ -2,22 +2,34 @@
 
 import {
   type FocusEvent,
+  type FormEvent,
   type KeyboardEvent,
   useActionState,
   useEffect,
   useRef,
   useState,
 } from 'react';
-import type { RecipePicklistValue, RecipeRecord, RecipeState } from '../../lib/recipes/data';
+import type {
+  IngredientOption,
+  RecipePicklistValue,
+  RecipeRecord,
+  RecipeState,
+} from '../../lib/recipes/data';
+import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
+import { serializeIngredientRows } from '../../lib/recipes/ingredient-rules';
+import { formatQuantityRange } from '../../lib/recipes/measurement-rules';
 import {
   calculateTotalMinutes,
   clearConditionalValuesForStateChange,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
 import { saveRecipe } from './actions';
+import { IngredientRowsEditor } from './ingredient-rows-editor';
 
 type RecipeFormProps = {
+  ingredients: IngredientOption[];
   picklists: RecipePicklistValue[];
+  preparationOptions: string[];
   recipe?: RecipeRecord;
 };
 
@@ -288,9 +300,36 @@ function MultiPicklist({
   );
 }
 
-export function RecipeForm({ picklists, recipe }: RecipeFormProps) {
+export function RecipeForm({
+  ingredients,
+  picklists,
+  preparationOptions,
+  recipe,
+}: RecipeFormProps) {
   const [actionState, formAction, pending] = useActionState(saveRecipe, undefined);
   const formRef = useRef<HTMLFormElement>(null);
+  const [ingredientRows, setIngredientRows] = useState<IngredientRowDraft[]>(
+    () =>
+      recipe?.ingredients.map((row) => ({
+        id: row.id,
+        ingredientId: row.ingredient_id,
+        ingredientName: row.ingredient_name,
+        isMain: row.is_main,
+        detail: row.detail,
+        preparation: row.preparation,
+        measurements: row.measurements.map((measurement) => ({
+          id: measurement.id,
+          type: measurement.measurement_type,
+          quantity:
+            measurement.amount_min === null
+              ? ''
+              : formatQuantityRange(measurement.amount_min, measurement.amount_max),
+          unitCode: measurement.unit_code ?? '',
+          picklistValueId: measurement.picklist_value_id ?? '',
+        })),
+      })) ?? [],
+  );
+  const [ingredientRowsError, setIngredientRowsError] = useState('');
   const [state, setState] = useState<RecipeState>(recipe?.state ?? 'want_to_try');
   const [foodTypeId, setFoodTypeId] = useState(recipe?.food_type_id ?? '');
   const [serves, setServes] = useState<number | null>(recipe?.serves ?? null);
@@ -368,8 +407,25 @@ export function RecipeForm({ picklists, recipe }: RecipeFormProps) {
     }
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    try {
+      const payload = serializeIngredientRows(ingredientRows);
+      const input = event.currentTarget.elements.namedItem('ingredient_rows');
+      if (input instanceof HTMLInputElement) {
+        input.value = JSON.stringify(payload);
+      }
+      setIngredientRowsError('');
+    } catch (error) {
+      event.preventDefault();
+      setIngredientRowsError(
+        error instanceof Error ? error.message : 'Check the ingredient rows before saving.',
+      );
+    }
+  }
+
   return (
-    <form action={formAction} className="recipe-form" ref={formRef}>
+    <form action={formAction} className="recipe-form" onSubmit={handleSubmit} ref={formRef}>
+      <input name="ingredient_rows" type="hidden" defaultValue="[]" />
       {recipe && (
         <>
           <input name="recipe_id" type="hidden" value={recipe.id} />
@@ -514,6 +570,22 @@ export function RecipeForm({ picklists, recipe }: RecipeFormProps) {
             onClose={() => setOpenPicklist(null)}
           />
         </div>
+      </fieldset>
+      <fieldset className="recipe-ingredient-section">
+        <legend>Ingredients</legend>
+        <IngredientRowsEditor
+          ingredients={ingredients}
+          picklists={picklists}
+          preparationOptions={preparationOptions}
+          rows={ingredientRows}
+          validateMeasurements={Boolean(ingredientRowsError)}
+          onRowsChange={setIngredientRows}
+        />
+        {ingredientRowsError && (
+          <p className="recipe-form-error" role="alert">
+            {ingredientRowsError}
+          </p>
+        )}
       </fieldset>
       <fieldset className="recipe-time-fieldset">
         <legend>Times (min)</legend>

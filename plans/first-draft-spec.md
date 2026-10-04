@@ -90,9 +90,14 @@ An ingredient and its measurements are one ordered row.
 See [comprehensive-reference.md § 3](comprehensive-reference.md#3-ingredient-rows-measurements-and-density).
 The edit grid is:
 
-| Main | Ingredient | Quantity | Unit | Detail | Preparation |
-| ---- | ---------- | -------- | ---- | ------ | ----------- |
-| Checkbox | Ingredient picker | Numeric amount | Unit picker (not used for Count) | Optional text | Optional text |
+| Ingredient | Quantity | Unit | Detail | Preparation |
+| ---------- | -------- | ---- | ------ | ----------- |
+| Canonical ingredient | Numeric amount | Unit picker (not used for Count) | Optional text | Addable single-value suggestion |
+
+The Main checkbox and a compact drag handle sit in a rail beside the table.
+Desktop starts with one trailing empty row; activating a value opens a compact
+cell editor. Mobile shows one ingredient column and opens a compact row popover
+when tapped. The Main checkbox is edit-only and is not a table column.
 
 The Main checkbox builds the searchable main-ingredient index. It does not need
 to appear in read-only recipe views.
@@ -107,7 +112,7 @@ approved phrases such as `to taste`, `as needed`, and `for garnish`.
 A row may have both volume and weight measurements. The second is added on
 demand and displays as, for example, `1 cup / 120 g`. Detail is free text and
 renders as an Ingredient subtitle in Ingredient-first view. Preparation is a
-separate free-text field.
+single-value suggestion list that accepts new user-entered values.
 
 Numeric values accept integers, ranges, decimals, fractions, and mixed numbers.
 Store precise values. Display common fractions with denominators 2, 3, 4, and 8

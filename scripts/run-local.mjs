@@ -52,7 +52,7 @@ const port = portIndex === -1 ? '3000' : nextArgs[portIndex + 1];
 const nextExecutable = resolve('node_modules/next/dist/bin/next');
 
 runSupabase(['start']);
-runSupabase(shouldReset ? ['db', 'reset'] : ['migration', 'up']);
+runSupabase(shouldReset ? ['db', 'reset'] : ['migration', 'up', '--local']);
 
 const { apiUrl, anonKey, serviceRoleKey } = await getLocalSupabaseConfig();
 const nextProcess = spawn(process.execPath, [nextExecutable, 'dev', ...nextArgs], {

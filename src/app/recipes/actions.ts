@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { RecipeState } from '../../lib/recipes/data';
+import type { IngredientRowPayload } from '../../lib/recipes/ingredient-rules';
 import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
@@ -31,6 +32,35 @@ function selectedIds(formData: FormData, name: string): string[] {
   return formData.getAll(name).map(String).filter(Boolean);
 }
 
+function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null {
+  const raw = formData.get('ingredient_rows');
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  try {
+    const rows: unknown = JSON.parse(raw);
+    if (!Array.isArray(rows)) {
+      return null;
+    }
+
+    return rows.every(
+      (row) =>
+        row !== null &&
+        typeof row === 'object' &&
+        (row.ingredient_id === null || typeof row.ingredient_id === 'string') &&
+        (row.ingredient_name === null || typeof row.ingredient_name === 'string') &&
+        typeof row.is_main === 'boolean' &&
+        typeof row.detail === 'string' &&
+        typeof row.preparation === 'string',
+    )
+      ? (rows as IngredientRowPayload[])
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveRecipe(
   _previousState: RecipeActionState | undefined,
   formData: FormData,
@@ -48,6 +78,10 @@ export async function saveRecipe(
   }
   if (!['want_to_try', 'tried', 'will_not_try'].includes(state)) {
     return { error: 'Choose a State before saving.' };
+  }
+  const ingredientRows = parseIngredientRows(formData);
+  if (!ingredientRows) {
+    return { error: 'Check the ingredient rows before saving.' };
   }
 
   const timeFields = [
@@ -110,6 +144,7 @@ export async function saveRecipe(
     p_meal_type_ids: selectedIds(formData, 'meal_type_ids'),
     p_cuisine_ids: selectedIds(formData, 'cuisine_ids'),
     p_equipment_ids: selectedIds(formData, 'equipment_ids'),
+    p_ingredient_rows: ingredientRows,
   });
 
   if (error) {
