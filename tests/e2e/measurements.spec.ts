@@ -74,6 +74,13 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
     )?.id;
     expect(bunchId).toBeTruthy();
     expect(tasteId).toBeTruthy();
+    const otherPicklistsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id&account_id=eq.${other.id}&category=eq.informal_unit&value=eq.Bunch`,
+      { headers: otherHeaders },
+    );
+    expect(otherPicklistsResponse.ok()).toBeTruthy();
+    const [otherBunch] = (await otherPicklistsResponse.json()) as { id: string }[];
+    expect(otherBunch).toBeTruthy();
 
     const ingredientRows = [
       {
@@ -161,11 +168,10 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
       { headers: ownerHeaders },
     );
     const recipeRows = (await rowResponse.json()) as { id: string; position: number }[];
-    const allMeasurements = await request.get(
-      `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=recipe_ingredient_id,position,measurement_type,amount_min,amount_max,unit_code,picklist_value_id&recipe_ingredient_id=in.(${recipeRows.map((row) => row.id).join(',')})&order=recipe_ingredient_id.asc,position.asc`,
-      { headers: ownerHeaders },
-    );
-    expect(await allMeasurements.json()).toEqual(
+    const measurementRowsUrl = `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=recipe_ingredient_id,position,measurement_type,amount_min,amount_max,unit_code,picklist_value_id&recipe_ingredient_id=in.(${recipeRows.map((row) => row.id).join(',')})&order=recipe_ingredient_id.asc,position.asc`;
+    const allMeasurements = await request.get(measurementRowsUrl, { headers: ownerHeaders });
+    const initialMeasurements = await allMeasurements.json();
+    expect(initialMeasurements).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           measurement_type: 'volume',
@@ -236,6 +242,26 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
         ],
       },
       {
+        name: 'missing required amount',
+        rows: [
+          {
+            ...ingredientRows[0],
+            measurements: [{ ...ingredientRows[0].measurements[0], amount_min: null }],
+          },
+        ],
+      },
+      {
+        name: 'cross-account picklist reference',
+        rows: [
+          {
+            ...ingredientRows[2],
+            measurements: [
+              { ...ingredientRows[2].measurements[0], picklist_value_id: otherBunch?.id ?? '' },
+            ],
+          },
+        ],
+      },
+      {
         name: 'duplicate type',
         rows: [
           {
@@ -274,6 +300,24 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
           },
         ],
       },
+      ...['NaN', 'Infinity', '-Infinity'].map((amount_min) => ({
+        name: `non-finite lower bound ${amount_min}`,
+        rows: [
+          {
+            ...ingredientRows[0],
+            measurements: [{ ...ingredientRows[0].measurements[0], amount_min }],
+          },
+        ],
+      })),
+      ...['NaN', 'Infinity', '-Infinity'].map((amount_max) => ({
+        name: `non-finite upper bound ${amount_max}`,
+        rows: [
+          {
+            ...ingredientRows[0],
+            measurements: [{ ...ingredientRows[0].measurements[0], amount_min: 1, amount_max }],
+          },
+        ],
+      })),
     ];
 
     for (const invalidCase of invalidRows) {
@@ -292,14 +336,64 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
         { headers: ownerHeaders },
       );
       expect(await savedRecipe.json()).toEqual([{ name: 'Measurement fixture', version: 1 }]);
+      const unchangedRows = await request.get(
+        `${config.apiUrl}/rest/v1/recipe_ingredients?select=id,position&recipe_id=eq.${created.id}&order=position.asc`,
+        { headers: ownerHeaders },
+      );
+      expect(await unchangedRows.json()).toEqual(recipeRows);
+      const unchangedMeasurements = await request.get(measurementRowsUrl, {
+        headers: ownerHeaders,
+      });
+      expect(await unchangedMeasurements.json()).toEqual(initialMeasurements);
     }
     const historyResponse = await request.get(
-      `${config.apiUrl}/rest/v1/recipe_history?select=event_type,before_data,after_data&record_id=eq.${created.id}`,
+      `${config.apiUrl}/rest/v1/recipe_history?select=event_type,before_data,after_data&record_id=eq.${created.id}&order=created_at.asc`,
       { headers: ownerHeaders },
     );
     const history = await historyResponse.json();
     expect(history).toHaveLength(1);
     expect(history[0].after_data.ingredients[0].measurements).toHaveLength(2);
+    expect(history[0].after_data.ingredients[0].measurements[0]).toMatchObject({
+      measurement_type: 'volume',
+      amount_min: 1.5,
+      unit_code: 'cup',
+    });
+
+    const updatedIngredientRows = ingredientRows.map((row, index) =>
+      index === 0
+        ? {
+            ...row,
+            measurements: [{ ...row.measurements[0], amount_min: 2 }, row.measurements[1]],
+          }
+        : row,
+    );
+    const updateResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: ownerHeaders,
+      data: {
+        ...recipePayload('Measurement fixture edited', updatedIngredientRows),
+        p_recipe_id: created.id,
+        p_expected_version: 1,
+      },
+    });
+    const updateError = updateResponse.ok() ? '' : await updateResponse.text();
+    expect(updateResponse.ok(), `Recipe update failed: ${updateError}`).toBeTruthy();
+
+    const updatedHistoryResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_history?select=event_type,before_data,after_data&record_id=eq.${created.id}&order=created_at.asc`,
+      { headers: ownerHeaders },
+    );
+    const updatedHistory = await updatedHistoryResponse.json();
+    expect(updatedHistory).toHaveLength(2);
+    expect(updatedHistory[1].before_data.ingredients[0].measurements[0]).toMatchObject({
+      measurement_type: 'volume',
+      amount_min: 1.5,
+      unit_code: 'cup',
+    });
+    expect(updatedHistory[1].after_data.ingredients[0].measurements[0]).toMatchObject({
+      measurement_type: 'volume',
+      amount_min: 2,
+      unit_code: 'cup',
+    });
   } finally {
     await deleteTestUser(request, other);
     await deleteTestUser(request, owner);
@@ -504,6 +598,14 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       grid.locator('tbody tr').first().locator('.recipe-measurement-desktop-fields'),
     ).toHaveCSS('flex-wrap', 'nowrap');
 
+    const volumeAmount = page.getByRole('textbox', { name: 'Volume amount, row 1' });
+    await volumeAmount.fill('Infinity');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(volumeAmount).toHaveAttribute('aria-invalid', 'true');
+    await expect(grid.locator('.recipe-measurement-error[role="alert"]')).toContainText(
+      'Enter a positive whole number, decimal, fraction, mixed number, or range.',
+    );
+    await volumeAmount.fill('1 1/2');
     await expect(page.getByRole('button', { name: 'Save recipe' })).toBeVisible();
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Measured recipe' })).toBeVisible();
@@ -660,13 +762,30 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     });
     expect(mobileUnitMenuBounds.top).toBeGreaterThanOrEqual(0);
     expect(mobileUnitMenuBounds.bottom).toBeLessThanOrEqual(500);
+    await volumeUnitPicker.press('End');
+    await expect(mobileUnitMenu.getByRole('option', { name: 'L', exact: true })).toHaveClass(
+      /is-active/,
+    );
+    await volumeUnitPicker.press('Space');
+    await expect(volumeUnitPicker).toHaveText('L');
+    await volumeUnitPicker.click();
+    await volumeUnitPicker.press('Home');
+    await expect(mobileUnitMenu.getByRole('option', { name: 'tsp', exact: true })).toHaveClass(
+      /is-active/,
+    );
+    await volumeUnitPicker.press('Space');
+    await expect(volumeUnitPicker).toHaveText('tsp');
+    await volumeUnitPicker.click();
+    await mobileUnitMenu.getByRole('option', { name: 'cup', exact: true }).click();
+    await expect(volumeUnitPicker).toHaveText('cup');
+    await volumeUnitPicker.click();
     await volumeUnitPicker.press('ArrowDown');
     await expect(mobileUnitMenu.getByRole('option', { name: 'pt', exact: true })).toHaveClass(
       /is-active/,
     );
     await volumeUnitPicker.press('Enter');
     await expect(volumeUnitPicker).toHaveText('pt');
-    await volumeUnitPicker.press('ArrowUp');
+    await volumeUnitPicker.click();
     await volumeUnitPicker.press('ArrowUp');
     await expect(mobileUnitMenu.getByRole('option', { name: 'cup', exact: true })).toHaveClass(
       /is-active/,

@@ -65,10 +65,10 @@ describe('ingredient row rules', () => {
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Cheese',
-        detail: 'Yellow',
+        detail: 'YELLOW Cheddar',
         preparation: 'Diced',
       }),
-    ).toBe('yellow cheese, diced');
+    ).toBe('yellow cheddar cheese, diced');
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Flour',

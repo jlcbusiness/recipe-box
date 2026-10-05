@@ -91,7 +91,9 @@ export function formatIngredientDisplay(ingredient: {
   const detail = ingredient.detail.trim();
   const preparation = ingredient.preparation.trim();
   const displayName = /^[\p{Lu}][\p{Ll}]+$/u.test(name) ? lowercaseFirst(name) : name;
-  const mainText = [detail ? lowercaseFirst(detail) : '', displayName].filter(Boolean).join(' ');
+  const mainText = [detail ? detail.toLocaleLowerCase() : '', displayName]
+    .filter(Boolean)
+    .join(' ');
   const amountText = [...(ingredient.measurements ?? [])]
     .filter((measurement) => measurement.measurement_type !== 'unmeasured')
     .sort((left, right) => {

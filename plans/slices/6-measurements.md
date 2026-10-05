@@ -111,10 +111,12 @@ Excluded:
 ## Save and data contract
 
 Add an owner-scoped `recipe_ingredient_measurements` table with a foreign key to
-its recipe ingredient. Define row-local checks for valid type, positive bounds,
-non-reversed ranges, legal fixed units, unitless Count, and the required
-picklist category for Informal or Unmeasured values. The owner ID must match the
-parent ingredient row and referenced picklist value.
+its recipe ingredient. Define row-local checks for valid type, finite positive
+bounds, non-reversed ranges, legal fixed units, unitless Count, and the required
+picklist category for Informal or Unmeasured values. Reject PostgreSQL numeric
+`NaN` and positive or negative `Infinity` at this boundary as well as in the
+client parser. The owner ID must match the parent ingredient row and referenced
+picklist value.
 
 Extend each `p_ingredient_rows` payload item with a `measurements` array. Each
 entry identifies its type, parsed lower and optional upper numeric bound, fixed
@@ -141,8 +143,8 @@ Write these tests before production code:
   unit/picklist ownership, and history snapshots; and prove direct measurement
   writes and cross-account references are denied.
 - Database/API tests reject invalid units, missing required values, duplicated
-  measurement types, unsupported pairs, and invalid ranges without changing
-  recipe version, ingredients, measurements, or history.
+  measurement types, unsupported pairs, invalid ranges, and non-finite bounds
+  without changing recipe version, ingredients, measurements, or history.
 - End-to-end tests select each of the four fixed categories, enter measurements
   in desktop and mobile editors, save, view formatted ingredient text, reopen
   edit mode, and verify values, units, and order persist. Include volume-only,

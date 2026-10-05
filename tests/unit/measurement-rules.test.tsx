@@ -30,12 +30,21 @@ describe('measurement rules', () => {
     expect(parseQuantityInput(input)).toEqual(expected);
   });
 
-  it.each(['', '0', '-1', '1/0', '1 / 2', '1 2/3/4', '3-2', '2--3', 'Infinity'])(
-    'rejects invalid quantity %s',
-    (input) => {
-      expect(parseQuantityInput(input)).toBeNull();
-    },
-  );
+  it.each([
+    '',
+    '0',
+    '-1',
+    '1/0',
+    '1 / 2',
+    '1 2/3/4',
+    '3-2',
+    '2--3',
+    'Infinity',
+    'NaN',
+    '-Infinity',
+  ])('rejects invalid quantity %s', (input) => {
+    expect(parseQuantityInput(input)).toBeNull();
+  });
 
   it('formats common fractions and falls back to concise decimals', () => {
     expect(formatQuantity(1.5)).toBe('1 1/2');

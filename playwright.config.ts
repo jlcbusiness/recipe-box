@@ -19,7 +19,7 @@ export default defineConfig({
     },
     {
       name: 'Fold 6',
-      use: { 
+      use: {
         ...fold6Preset,
       },
     },
