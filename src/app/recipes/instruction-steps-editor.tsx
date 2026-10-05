@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { type InstructionStepDraft, ingredientSlug } from '../../lib/recipes/instruction-rules';
+import { useReorderDrag } from './use-reorder-drag';
 
 type InstructionIngredient = {
   id: string;
@@ -27,7 +28,6 @@ export function InstructionStepsEditor({
   onChange,
   onAddIngredient,
 }: InstructionStepsEditorProps) {
-  const draggedStepId = useRef<string | null>(null);
   const stepsRef = useRef(steps);
   stepsRef.current = steps;
   const newStepIds = useRef(new Set<string>());
@@ -42,6 +42,12 @@ export function InstructionStepsEditor({
     selectionEnd: number;
   } | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [dropOffsets, setDropOffsets] = useState<Map<string, number>>(() => new Map());
+  const [dropCommitPending, setDropCommitPending] = useState(false);
+  const [settlingSourceId, setSettlingSourceId] = useState<string | null>(null);
+  const pendingDrop = useRef<{ sourceId: string; stepTops: Map<string, number> } | null>(null);
+  const reorderDrag = useReorderDrag();
+  const dragPreview = reorderDrag.preview;
   const [suggestion, setSuggestion] = useState<{
     stepId: string;
     start: number;
@@ -52,6 +58,43 @@ export function InstructionStepsEditor({
   const placeholder = { id: 'instruction-draft', markdown: '', plainText: '' };
   const editableSteps = steps.filter((step) => step.id !== placeholder.id);
   const visibleSteps = [...editableSteps, placeholder];
+
+  useLayoutEffect(() => {
+    if (dragPreview) {
+      return;
+    }
+    const pending = pendingDrop.current;
+    if (!pending) {
+      return;
+    }
+    pendingDrop.current = null;
+
+    const editor = document.querySelector('.recipe-instruction-editor');
+    const offsets = new Map<string, number>();
+    for (const step of Array.from(
+      editor?.querySelectorAll<HTMLElement>(
+        '.recipe-instruction-edit-step[data-instruction-step-id]',
+      ) ?? [],
+    )) {
+      const stepId = step.dataset.instructionStepId;
+      const startingTop = stepId ? pending.stepTops.get(stepId) : undefined;
+      if (stepId && startingTop !== undefined && step.getBoundingClientRect().height > 0) {
+        offsets.set(stepId, startingTop - step.getBoundingClientRect().top);
+      }
+    }
+    if (!offsets.size) {
+      setDropCommitPending(false);
+      return;
+    }
+
+    setDropOffsets(offsets);
+    setDropCommitPending(false);
+    const canAnimate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setSettlingSourceId(
+      canAnimate && Math.abs(offsets.get(pending.sourceId) ?? 0) > 0.5 ? pending.sourceId : null,
+    );
+    window.requestAnimationFrame(() => setDropOffsets(new Map()));
+  }, [dragPreview]);
 
   function resizeTextarea(textarea: HTMLTextAreaElement) {
     textarea.style.height = 'auto';
@@ -189,9 +232,7 @@ export function InstructionStepsEditor({
     setAnnouncement(`New instruction step ${sourceIndex + 2}.`);
   }
 
-  function moveDraggedStep(targetStepId: string) {
-    const sourceStepId = draggedStepId.current;
-    draggedStepId.current = null;
+  function moveDraggedStep(sourceStepId: string, targetStepId: string) {
     if (!sourceStepId || sourceStepId === targetStepId) {
       return;
     }
@@ -217,11 +258,45 @@ export function InstructionStepsEditor({
       <ol className="recipe-instruction-edit-list">
         {visibleSteps.map((step, index) => {
           const isPlaceholder = step.id === placeholder.id;
+          const sourceIndex = dragPreview
+            ? visibleSteps.findIndex((item) => item.id === dragPreview.sourceId)
+            : -1;
+          const targetIndex = dragPreview
+            ? visibleSteps.findIndex((item) => item.id === dragPreview.targetId)
+            : -1;
+          const reorderState =
+            dragPreview?.sourceId === step.id
+              ? 'dragging'
+              : dragPreview &&
+                  ((sourceIndex < targetIndex && index > sourceIndex && index <= targetIndex) ||
+                    (sourceIndex > targetIndex && index >= targetIndex && index < sourceIndex))
+                ? 'displaced'
+                : settlingSourceId === step.id
+                  ? 'settling'
+                  : undefined;
+          const transform =
+            dragPreview && reorderState === 'dragging'
+              ? `translateY(${dragPreview.pointerOffset}px)`
+              : dragPreview && reorderState === 'displaced'
+                ? `translateY(${sourceIndex < targetIndex ? -dragPreview.offset : dragPreview.offset}px)`
+                : dropOffsets.has(step.id)
+                  ? `translateY(${dropOffsets.get(step.id)}px)`
+                  : undefined;
           return (
             <li
               className={`recipe-instruction-edit-step${isPlaceholder ? ' is-empty' : ''}`}
               data-instruction-step-id={step.id}
+              data-reorder-state={reorderState}
+              style={{
+                transform,
+                transition: dropCommitPending || dropOffsets.has(step.id) ? 'none' : undefined,
+              }}
               key={step.id}
+              onTransitionEnd={(event) => {
+                if (event.propertyName === 'transform' && settlingSourceId === step.id) {
+                  setSettlingSourceId(null);
+                }
+              }}
             >
               {isPlaceholder ? (
                 <>
@@ -236,33 +311,84 @@ export function InstructionStepsEditor({
                   <button
                     aria-label={`Reorder instruction step ${index + 1}`}
                     className="recipe-instruction-drag-handle"
-                    draggable={false}
                     title="Drag to reorder. Use Ctrl+Up or Ctrl+Down to move by keyboard."
                     type="button"
                     onPointerDown={(event) => {
                       if (event.button !== 0) {
                         return;
                       }
-                      draggedStepId.current = step.id;
+                      const rowElements = event.currentTarget
+                        .closest('.recipe-instruction-editor')
+                        ?.querySelectorAll<HTMLElement>('.recipe-instruction-edit-step');
+                      const rowBounds = Array.from(rowElements ?? []).flatMap((rowElement) => {
+                        const stepId = rowElement.dataset.instructionStepId;
+                        if (!stepId || stepId === placeholder.id) {
+                          return [];
+                        }
+                        const bounds = rowElement.getBoundingClientRect();
+                        return [
+                          {
+                            id: stepId,
+                            top: bounds.top + window.scrollY,
+                            bottom: bounds.bottom + window.scrollY,
+                          },
+                        ];
+                      });
+                      const sourceElement = event.currentTarget.closest<HTMLElement>(
+                        '.recipe-instruction-edit-step',
+                      );
+                      reorderDrag.start(
+                        step.id,
+                        event.clientY,
+                        sourceElement?.getBoundingClientRect().height ?? 48,
+                        rowBounds,
+                      );
                       event.currentTarget.setPointerCapture(event.pointerId);
                     }}
+                    onPointerMove={(event) => reorderDrag.move(event.clientY)}
                     onPointerUp={(event) => {
-                      const sourceStepId = draggedStepId.current;
-                      if (!sourceStepId) {
-                        return;
-                      }
-                      const targetStepId = document
+                      const hitTargetStepId = document
                         .elementFromPoint(event.clientX, event.clientY)
                         ?.closest<HTMLElement>('[data-instruction-step-id]')
                         ?.dataset.instructionStepId;
-                      if (targetStepId) {
-                        moveDraggedStep(targetStepId);
-                      } else {
-                        draggedStepId.current = null;
+                      const draggedStep = reorderDrag.finish(
+                        hitTargetStepId === placeholder.id ? undefined : hitTargetStepId,
+                      );
+                      if (draggedStep) {
+                        if (draggedStep.sourceId !== draggedStep.targetId) {
+                          const instructionRows = Array.from(
+                            event.currentTarget
+                              .closest('.recipe-instruction-editor')
+                              ?.querySelectorAll<HTMLElement>(
+                                '.recipe-instruction-edit-step[data-instruction-step-id]',
+                              ) ?? [],
+                          ).filter((row) => row.getBoundingClientRect().height > 0);
+                          pendingDrop.current = {
+                            sourceId: draggedStep.sourceId,
+                            stepTops: new Map(
+                              instructionRows.flatMap((row) => {
+                                const stepId = row.dataset.instructionStepId;
+                                return stepId && stepId !== placeholder.id
+                                  ? [[stepId, row.getBoundingClientRect().top] as const]
+                                  : [];
+                              }),
+                            ),
+                          };
+                          setDropCommitPending(true);
+                          moveDraggedStep(draggedStep.sourceId, draggedStep.targetId);
+                        }
                       }
                     }}
-                    onPointerCancel={() => {
-                      draggedStepId.current = null;
+                    onPointerCancel={(event) => {
+                      reorderDrag.cancel();
+                      event.currentTarget.focus();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape' && reorderDrag.preview) {
+                        event.preventDefault();
+                        reorderDrag.cancel();
+                        event.currentTarget.focus();
+                      }
                     }}
                   >
                     <span aria-hidden="true" className="recipe-instruction-grip" />

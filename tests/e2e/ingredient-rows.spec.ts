@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
 function recipePayload(name: string, ingredientRows: unknown[]) {
@@ -31,13 +31,111 @@ function recipePayload(name: string, ingredientRows: unknown[]) {
     p_ingredient_rows: ingredientRows,
   };
 }
-
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
   await page.goto('/');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
+}
+
+async function dragByPointer(page: Page, source: Locator, target: Locator) {
+  const sourceRowId = await source.evaluate(
+    (element) => element.closest<HTMLElement>('[data-row-id]')?.dataset.rowId,
+  );
+  const targetRowId = await target.evaluate(
+    (element) => element.closest<HTMLElement>('[data-row-id]')?.dataset.rowId,
+  );
+  const sourceBounds = await source.boundingBox();
+  const targetBounds = await target.boundingBox();
+  if (!sourceRowId || !targetRowId || !sourceBounds || !targetBounds) {
+    throw new Error('Both pointer drag targets must be visible.');
+  }
+  const rows = page.locator('.recipe-ingredient-table tbody tr[data-row-id]');
+  const rowIds = await rows.evaluateAll((elements) =>
+    elements
+      .map((element) => element.getAttribute('data-row-id'))
+      .filter((rowId): rowId is string => rowId !== null),
+  );
+  const sourceIndex = rowIds.indexOf(sourceRowId);
+  const targetIndex = rowIds.indexOf(targetRowId);
+  const sourceRow = page.locator(`.recipe-ingredient-table tbody tr[data-row-id="${sourceRowId}"]`);
+  const sourceRowBounds = await sourceRow.boundingBox();
+  if (sourceIndex < 0 || targetIndex < 0 || !sourceRowBounds) {
+    throw new Error('Both pointer drag targets must belong to visible ingredient rows.');
+  }
+  const displacedIds =
+    sourceIndex < targetIndex
+      ? rowIds.slice(sourceIndex + 1, targetIndex + 1)
+      : rowIds.slice(targetIndex, sourceIndex);
+  const initialTops = new Map(
+    await Promise.all(
+      displacedIds.map(async (rowId) => {
+        const bounds = await rows
+          .filter({ has: page.locator(`[data-row-id="${rowId}"]`) })
+          .boundingBox();
+        if (!bounds) {
+          throw new Error('Displaced ingredient rows must be visible before dragging.');
+        }
+        return [rowId, bounds.y] as const;
+      }),
+    ),
+  );
+
+  await page.mouse.move(
+    sourceBounds.x + sourceBounds.width / 2,
+    sourceBounds.y + sourceBounds.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    targetBounds.x + targetBounds.width / 2,
+    targetBounds.y + targetBounds.height / 2,
+    { steps: 8 },
+  );
+  await expect(sourceRow).toHaveAttribute('data-reorder-state', 'dragging');
+  const expectedDisplacement = (sourceIndex < targetIndex ? -1 : 1) * sourceRowBounds.height;
+  await expect
+    .poll(async () => {
+      const differences = await Promise.all(
+        displacedIds.map(async (rowId) => {
+          const bounds = await page
+            .locator(`.recipe-ingredient-table tbody tr[data-row-id="${rowId}"]`)
+            .boundingBox();
+          return bounds
+            ? Math.abs(bounds.y - (initialTops.get(rowId) ?? bounds.y) - expectedDisplacement)
+            : Number.POSITIVE_INFINITY;
+        }),
+      );
+      return Math.max(...differences);
+    })
+    .toBeLessThanOrEqual(2);
+  const previewTops = new Map(
+    await Promise.all(
+      displacedIds.map(async (rowId) => {
+        const bounds = await page
+          .locator(`.recipe-ingredient-table tbody tr[data-row-id="${rowId}"]`)
+          .boundingBox();
+        if (!bounds) {
+          throw new Error('Displaced ingredient rows must remain visible while dragging.');
+        }
+        return [rowId, bounds.y] as const;
+      }),
+    ),
+  );
+  const sourcePreviewTop = (await sourceRow.boundingBox())?.y;
+  expect(sourcePreviewTop).toBeDefined();
+  await page.mouse.up();
+  await expect(sourceRow).toHaveCSS('transform', 'none');
+  for (const [rowId, previewTop] of previewTops) {
+    const displacedRow = page.locator(`.recipe-ingredient-table tbody tr[data-row-id="${rowId}"]`);
+    await expect(displacedRow).toHaveCSS('transform', 'none');
+    const finalTop = (await displacedRow.boundingBox())?.y;
+    expect(finalTop).toBeDefined();
+    expect(Math.abs((finalTop ?? 0) - previewTop)).toBeLessThanOrEqual(2);
+  }
+  const finalSourceTop = (await sourceRow.boundingBox())?.y;
+  expect(finalSourceTop).toBeDefined();
+  expect(Math.abs((finalSourceTop ?? 0) - (sourcePreviewTop ?? 0))).toBeLessThanOrEqual(2);
 }
 
 test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows', async ({
@@ -262,7 +360,11 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
 test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingredientRows', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'Fold 6',
+    'The desktop ingredient table is hidden on Fold 6.',
+  );
   const user = await createTestUser(request);
 
   try {
@@ -378,27 +480,119 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(grid.getByRole('row')).toHaveCount(3);
     await page.keyboard.press('Enter');
     await expect(grid.getByRole('row')).toHaveCount(4);
+    await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+    const thirdIngredient = page.getByRole('combobox', { name: 'Ingredient, row 3' });
+    await thirdIngredient.fill('Onion');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(thirdIngredient).toHaveValue('Onion');
+    await page.keyboard.press('Enter');
+    await expect(grid.getByRole('row')).toHaveCount(5);
     await grid.locator('[aria-label="Specifics, row 2"]').click();
     const secondDetail = page.getByRole('textbox', { name: 'Specifics, row 2' });
     await secondDetail.fill('ripe');
     await page.keyboard.press('Enter');
     await page.locator('[aria-label="Ingredient, row 2"]').focus();
     await page.keyboard.press('Control+ArrowUp');
+    await expect(page.locator('.recipe-ingredient-editor [aria-live="polite"]')).toHaveText(
+      'Tomato moved to row 1.',
+    );
     await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
     await page.keyboard.press('Control+ArrowDown');
+    await expect(page.locator('.recipe-ingredient-editor [aria-live="polite"]')).toHaveText(
+      'Tomato moved to row 2.',
+    );
     await expect(grid.getByRole('row').nth(2)).toContainText('Tomato');
     const dragHandle = page.getByRole('button', { name: 'Reorder ingredient row 1' });
-    await dragHandle.dragTo(grid.getByRole('row').nth(2).getByRole('cell').first());
+    await dragByPointer(page, dragHandle, grid.getByRole('row').nth(2).getByRole('cell').first());
     await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
     await expect(grid.getByRole('row').nth(2)).toContainText('Basil');
-    await page
-      .getByRole('button', { name: 'Reorder ingredient row 2' })
-      .dragTo(page.getByRole('button', { name: 'Reorder ingredient row 1' }));
+    await dragByPointer(
+      page,
+      page.getByRole('button', { name: 'Reorder ingredient row 2' }),
+      page.getByRole('button', { name: 'Reorder ingredient row 1' }),
+    );
     await expect(grid.getByRole('row').nth(1)).toContainText('Basil');
-    await page
-      .getByRole('button', { name: 'Reorder ingredient row 1' })
-      .dragTo(page.getByRole('button', { name: 'Reorder ingredient row 2' }));
+    await dragByPointer(
+      page,
+      page.getByRole('button', { name: 'Reorder ingredient row 1' }),
+      page.getByRole('button', { name: 'Reorder ingredient row 2' }),
+    );
     await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
+    const idleA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-editor')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(idleA11y.violations).toEqual([]);
+
+    const scrollSourceRow = grid.locator('tbody tr[data-row-id]').nth(0);
+    const scrollTargetRow = grid.locator('tbody tr[data-row-id]').nth(2);
+    const scrollSourceId = await scrollSourceRow.getAttribute('data-row-id');
+    const scrollTargetId = await scrollTargetRow.getAttribute('data-row-id');
+    const scrollSourceBounds = await scrollSourceRow.boundingBox();
+    const scrollTargetBounds = await scrollTargetRow.boundingBox();
+    const scrollSourceHandle = page.getByRole('button', { name: 'Reorder ingredient row 1' });
+    const scrollHandleBounds = await scrollSourceHandle.boundingBox();
+    if (
+      !scrollSourceId ||
+      !scrollTargetId ||
+      !scrollSourceBounds ||
+      !scrollTargetBounds ||
+      !scrollHandleBounds
+    ) {
+      throw new Error('Ingredient rows must be visible for scroll-during-drag coverage.');
+    }
+    const scrollSource = page.locator(
+      `.recipe-ingredient-table tbody tr[data-row-id="${scrollSourceId}"]`,
+    );
+    const scrollTarget = page.locator(
+      `.recipe-ingredient-table tbody tr[data-row-id="${scrollTargetId}"]`,
+    );
+    const dragStartX = scrollHandleBounds.x + scrollHandleBounds.width / 2;
+    const dragStartY = scrollHandleBounds.y + scrollHandleBounds.height / 2;
+    const targetDocumentY = scrollTargetBounds.y + scrollTargetBounds.height / 2;
+    const initialScrollY = await page.evaluate(() => window.scrollY);
+    const scrollDistance = Math.max(8, Math.round((targetDocumentY - dragStartY) / 2));
+    await page.mouse.move(dragStartX, dragStartY);
+    await page.mouse.down();
+    await page.evaluate((distance) => {
+      window.scrollTo({ top: window.scrollY + distance, behavior: 'instant' });
+    }, scrollDistance);
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBe(initialScrollY + scrollDistance);
+    const scrolledTargetBounds = await scrollTarget.boundingBox();
+    if (!scrolledTargetBounds) {
+      throw new Error('The ingredient drop target must remain visible after scrolling.');
+    }
+    const scrolledPointerY = scrolledTargetBounds.y + scrolledTargetBounds.height / 2;
+    await page.mouse.move(dragStartX, scrolledPointerY, { steps: 4 });
+    await expect(scrollSource).toHaveAttribute('data-reorder-state', 'dragging');
+    await expect(scrollTarget).toHaveAttribute('data-reorder-state', 'displaced');
+    await expect
+      .poll(async () => {
+        const bounds = await scrollSource.boundingBox();
+        return bounds
+          ? Math.abs(bounds.y - (scrollSourceBounds.y + scrolledPointerY - dragStartY))
+          : Number.POSITIVE_INFINITY;
+      })
+      .toBeLessThanOrEqual(2);
+    await page.mouse.up();
+    await expect(scrollSource).toHaveCSS('transform', 'none');
+    await expect(grid.locator('tbody tr[data-row-id]').nth(2)).toHaveAttribute(
+      'data-row-id',
+      scrollSourceId,
+    );
+    await page.evaluate((scrollY) => window.scrollTo(0, scrollY), initialScrollY);
+    await dragByPointer(
+      page,
+      page.getByRole('button', { name: 'Reorder ingredient row 3' }),
+      page.getByRole('button', { name: 'Reorder ingredient row 1' }),
+    );
+    await expect(grid.locator('tbody tr[data-row-id]').nth(0)).toHaveAttribute(
+      'data-row-id',
+      scrollSourceId,
+    );
 
     const mouseSource = await page
       .getByRole('button', { name: 'Reorder ingredient row 1' })
@@ -419,12 +613,93 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
       mouseTarget.y + mouseTarget.height / 2,
       { steps: 12 },
     );
+    await expect(grid.locator('tbody tr[data-row-id]').nth(0)).toHaveAttribute(
+      'data-reorder-state',
+      'dragging',
+    );
+    await expect
+      .poll(() =>
+        grid
+          .locator('tbody tr[data-reorder-state="dragging"]')
+          .evaluate((row) => getComputedStyle(row).transform),
+      )
+      .not.toBe('none');
+    await expect(grid.locator('tbody tr[data-row-id]').nth(1)).toHaveAttribute(
+      'data-reorder-state',
+      'displaced',
+    );
+    await expect(
+      page.locator(
+        '.recipe-ingredient-desktop .recipe-ingredient-rail-row[data-reorder-state="dragging"]',
+      ),
+    ).toHaveCount(1);
+    await expect(
+      page.locator(
+        '.recipe-ingredient-desktop .recipe-ingredient-rail-row[data-reorder-state="displaced"]',
+      ),
+    ).toHaveCount(1);
+    const draggingA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-editor')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(draggingA11y.violations).toEqual([]);
+    await expect(grid.locator('tbody tr[data-reorder-state="dragging"]')).toHaveCount(1);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect
+      .poll(() =>
+        grid
+          .locator('tbody tr[data-reorder-state="displaced"]')
+          .evaluate((row) => getComputedStyle(row).transitionDuration),
+      )
+      .toBe('0s');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.mouse.up();
     await expect(grid.getByRole('row').nth(1)).toContainText('Basil');
+    const droppedA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-editor')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(droppedA11y.violations).toEqual([]);
+    await dragByPointer(
+      page,
+      page.getByRole('button', { name: 'Reorder ingredient row 1' }),
+      page.getByRole('button', { name: 'Reorder ingredient row 2' }),
+    );
+    await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
+
+    const firstRowIdBeforeCancel = await grid
+      .locator('tbody tr[data-row-id]')
+      .nth(0)
+      .getAttribute('data-row-id');
+    const cancelSource = await page
+      .getByRole('button', { name: 'Reorder ingredient row 1' })
+      .boundingBox();
+    const cancelTarget = await page
+      .getByRole('button', { name: 'Reorder ingredient row 3' })
+      .boundingBox();
+    if (!cancelSource || !cancelTarget) {
+      throw new Error('Both ingredient drag handles must be visible for cancellation.');
+    }
+    await page.mouse.move(
+      cancelSource.x + cancelSource.width / 2,
+      cancelSource.y + cancelSource.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      cancelTarget.x + cancelTarget.width / 2,
+      cancelTarget.y + cancelTarget.height / 2,
+      { steps: 4 },
+    );
+    await expect(grid.locator('tbody tr[data-reorder-state="displaced"]')).toHaveCount(2);
     await page
       .getByRole('button', { name: 'Reorder ingredient row 1' })
-      .dragTo(page.getByRole('button', { name: 'Reorder ingredient row 2' }));
-    await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
+      .dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' });
+    await page.mouse.up();
+    await expect(grid.locator('[data-reorder-state]')).toHaveCount(0);
+    await expect(grid.locator('tbody tr[data-row-id]').nth(0)).toHaveAttribute(
+      'data-row-id',
+      firstRowIdBeforeCancel ?? '',
+    );
 
     const axeResults = await new AxeBuilder({ page })
       .include('.recipe-ingredient-editor')
@@ -438,10 +713,12 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(page.getByRole('heading', { name: 'Ingredients' })).toBeVisible();
     await expect(page.locator('.recipe-ingredient-list')).toContainText('ripe tomato');
     await expect(page.locator('.recipe-ingredient-list')).toContainText('fresh basil, chopped');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('onion');
     await page.getByRole('link', { name: 'Edit' }).click();
     const reloadedGrid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
     await expect(reloadedGrid.getByRole('row').nth(1)).toContainText('Tomato');
     await expect(reloadedGrid.getByRole('row').nth(2)).toContainText('Basil');
+    await expect(reloadedGrid.getByRole('row').nth(3)).toContainText('Onion');
     await expect(reloadedGrid.locator('[aria-label="Specifics, row 1"]')).toHaveText('ripe');
     await expect(reloadedGrid.locator('[aria-label="Preparation, row 1"]')).toHaveText('');
     await expect(reloadedGrid.locator('[aria-label="Specifics, row 2"]')).toHaveText('fresh');
@@ -453,13 +730,14 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await reloadedGrid.getByRole('row').nth(2).hover();
     await expect(deleteBasil).toHaveCSS('opacity', '1');
     await deleteBasil.click();
-    await expect(reloadedGrid.getByRole('row')).toHaveCount(3);
+    await expect(reloadedGrid.getByRole('row')).toHaveCount(4);
     await expect(reloadedGrid).not.toContainText('Basil');
     await expect(reloadedGrid).toContainText('Tomato');
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Keyboard ingredient rows' })).toBeVisible();
     await expect(page.locator('.recipe-ingredient-list')).not.toContainText('Basil');
     await expect(page.locator('.recipe-ingredient-list')).toContainText('ripe tomato');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('onion');
   } finally {
     await deleteTestUser(request, user);
   }
@@ -481,6 +759,11 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
       exact: true,
     });
     await expect(mobileList).toBeVisible();
+    const idleMobileA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-mobile')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(idleMobileA11y.violations).toEqual([]);
     expect(
       (await mobileList.locator('.recipe-ingredient-drag-handle').first().boundingBox())?.width,
     ).toBe(24);
@@ -566,28 +849,327 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await expect(editor).toBeHidden();
     await mobileList.getByRole('button', { name: 'Enter ingredient' }).click();
     await editor.getByRole('combobox', { name: 'Ingredient', exact: true }).fill('Flour');
-    await editor.getByRole('textbox', { name: 'Specifics' }).fill('White');
+    await editor
+      .getByRole('textbox', { name: 'Specifics' })
+      .fill('White flour, stone-ground and finely milled for pastry baking');
     await editor.getByRole('combobox', { name: 'Preparation' }).fill('sifted');
     await editor.getByRole('button', { name: 'Submit' }).click();
     const sourceHandle = mobileList.getByRole('button', { name: 'Reorder ingredient row 1' });
-    const destination = await mobileList.getByRole('row').nth(1).boundingBox();
-    if (!destination) {
-      throw new Error('The mobile destination row must be visible.');
+    const sourceRowId = await sourceHandle.evaluate((handle) =>
+      handle.closest('tr')?.getAttribute('data-row-id'),
+    );
+    if (!sourceRowId) {
+      throw new Error('The source ingredient row must have a stable id.');
     }
-    await sourceHandle.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'touch' });
-    await sourceHandle.dispatchEvent('pointerup', {
-      pointerId: 1,
-      pointerType: 'touch',
-      clientX: destination.x + destination.width / 2,
-      clientY: destination.y + destination.height / 2,
+    const sourceRow = mobileList.locator(
+      `.recipe-ingredient-mobile-row[data-row-id="${sourceRowId}"]`,
+    );
+    const sourceRowBounds = await sourceRow.boundingBox();
+    const sourceHandleBounds = await sourceHandle.boundingBox();
+    const destination = await mobileList.getByRole('row').nth(1).boundingBox();
+    if (!sourceRowBounds || !sourceHandleBounds || !destination) {
+      throw new Error('The mobile drag targets must be visible.');
+    }
+    expect(destination.height - sourceRowBounds.height).toBeGreaterThan(12);
+    const touchSession = await page.context().newCDPSession(page);
+    await touchSession.send('Emulation.setTouchEmulationEnabled', {
+      enabled: true,
+      maxTouchPoints: 1,
     });
-    await expect(mobileList.getByRole('row').first()).toContainText('white flour, sifted');
+    const touchPoint = (id: number, x: number, y: number) => ({
+      id,
+      x,
+      y,
+      radiusX: 5,
+      radiusY: 5,
+      force: 1,
+    });
+    const sourceX = sourceHandleBounds.x + sourceHandleBounds.width / 2;
+    const sourceY = sourceHandleBounds.y + sourceHandleBounds.height / 2;
+    const targetX = destination.x + destination.width / 2;
+    const targetY = destination.y + destination.height / 2;
+    await touchSession.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [touchPoint(1, sourceX, sourceY)],
+    });
+    await touchSession.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [touchPoint(1, targetX, targetY)],
+    });
+    await expect(mobileList.locator('.recipe-ingredient-mobile-row').first()).toHaveAttribute(
+      'data-reorder-state',
+      'dragging',
+    );
+    await expect(mobileList.locator('.recipe-ingredient-mobile-row').nth(1)).toHaveAttribute(
+      'data-reorder-state',
+      'displaced',
+    );
+    const draggingMobileA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-mobile')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(draggingMobileA11y.violations).toEqual([]);
+    await expect(
+      mobileList.locator('.recipe-ingredient-mobile-row[data-reorder-state="dragging"]'),
+    ).toHaveCount(1);
+    await expect(sourceRow.locator('.recipe-ingredient-mobile-cell')).not.toHaveCSS(
+      'background-color',
+      'rgba(0, 0, 0, 0)',
+    );
+    const displacedRow = mobileList.locator(
+      '.recipe-ingredient-mobile-row[data-reorder-state="displaced"]',
+    );
+    const displacedRowId = await displacedRow.getAttribute('data-row-id');
+    if (!displacedRowId) {
+      throw new Error('The displaced ingredient row must have a stable id.');
+    }
+    const stableDisplacedRow = mobileList.locator(
+      `.recipe-ingredient-mobile-row[data-row-id="${displacedRowId}"]`,
+    );
+    await expect
+      .poll(async () => {
+        const sourceBounds = await sourceRow.boundingBox();
+        const displacedBounds = await displacedRow.boundingBox();
+        return sourceBounds && displacedBounds
+          ? Math.abs(sourceBounds.y - (displacedBounds.y + displacedBounds.height))
+          : Number.POSITIVE_INFINITY;
+      })
+      .toBeLessThanOrEqual(2);
+    await expect(sourceRow.locator('.recipe-ingredient-rail-row')).toHaveCSS('transform', 'none');
+    await expect(displacedRow.locator('.recipe-ingredient-rail-row')).toHaveCSS(
+      'transform',
+      'none',
+    );
+    const previewTop = (await sourceRow.boundingBox())?.y;
+    const displacedPreviewTop = (await stableDisplacedRow.boundingBox())?.y;
+    expect(previewTop).toBeDefined();
+    expect(displacedPreviewTop).toBeDefined();
+    await touchSession.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    const releasedTop = (await sourceRow.boundingBox())?.y;
+    const displacedReleasedTop = (await stableDisplacedRow.boundingBox())?.y;
+    expect(releasedTop).toBeDefined();
+    expect(displacedReleasedTop).toBeDefined();
+    expect(Math.abs((releasedTop ?? 0) - (previewTop ?? 0))).toBeLessThanOrEqual(2);
+    expect(Math.abs((displacedReleasedTop ?? 0) - (displacedPreviewTop ?? 0))).toBeLessThanOrEqual(
+      2,
+    );
+    await expect(sourceRow).not.toHaveAttribute('data-reorder-state', 'settling');
+    await expect(mobileList.getByRole('row').first()).toContainText(
+      'white flour, stone-ground and finely milled for pastry baking flour, sifted',
+    );
+    await expect(mobileList.getByRole('row').nth(1)).toContainText('yellow cheese, diced');
+    await expect(sourceRow).toHaveCSS('transform', 'none');
+    await expect(stableDisplacedRow).toHaveCSS('transform', 'none');
+    const finalSourceBounds = await sourceRow.boundingBox();
+    const finalDisplacedBounds = await stableDisplacedRow.boundingBox();
+    const finalFirstBounds = await mobileList.getByRole('row').first().boundingBox();
+    expect(finalSourceBounds).not.toBeNull();
+    expect(finalDisplacedBounds).not.toBeNull();
+    expect(finalFirstBounds).not.toBeNull();
+    expect(
+      Math.abs((finalDisplacedBounds?.y ?? 0) - (displacedPreviewTop ?? 0)),
+    ).toBeLessThanOrEqual(2);
+    expect(
+      Math.abs(
+        (finalSourceBounds?.y ?? 0) -
+          ((finalFirstBounds?.y ?? 0) + (finalFirstBounds?.height ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(2);
+    await expect(mobileList.getByRole('row').first()).toHaveCSS('transform', 'none');
+    await expect(
+      mobileList
+        .locator('.recipe-ingredient-mobile-row')
+        .first()
+        .locator('.recipe-ingredient-rail-row'),
+    ).toHaveCSS('transform', 'none');
+    const droppedMobileA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-mobile')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(droppedMobileA11y.violations).toEqual([]);
+    const cancelSourceBounds = await sourceHandle.boundingBox();
+    const cancelTargetBounds = await mobileList.getByRole('row').nth(1).boundingBox();
+    if (!cancelSourceBounds || !cancelTargetBounds) {
+      throw new Error('The mobile rows must be visible for touch cancellation.');
+    }
+    await touchSession.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [
+        touchPoint(
+          2,
+          cancelSourceBounds.x + cancelSourceBounds.width / 2,
+          cancelSourceBounds.y + cancelSourceBounds.height / 2,
+        ),
+      ],
+    });
+    await touchSession.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [
+        touchPoint(
+          2,
+          cancelTargetBounds.x + cancelTargetBounds.width / 2,
+          cancelTargetBounds.y + cancelTargetBounds.height / 2,
+        ),
+      ],
+    });
+    await expect(mobileList.locator('.recipe-ingredient-mobile-row').first()).toHaveAttribute(
+      'data-reorder-state',
+      'dragging',
+    );
+    await expect(mobileList.locator('.recipe-ingredient-mobile-row').nth(1)).toHaveAttribute(
+      'data-reorder-state',
+      'displaced',
+    );
+    await touchSession.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    await expect(mobileList.locator('[data-reorder-state]')).toHaveCount(0);
+    await expect(mobileList.getByRole('row').first()).toContainText(
+      'white flour, stone-ground and finely milled for pastry baking flour, sifted',
+    );
+
+    for (const ingredientName of ['Pepper', 'Salt']) {
+      await mobileList.getByRole('button', { name: 'Enter ingredient' }).click();
+      await editor.getByRole('combobox', { name: 'Ingredient', exact: true }).fill(ingredientName);
+      await page.getByRole('option', { name: `Add "${ingredientName}"` }).click();
+      await editor.getByRole('button', { name: 'Submit' }).click();
+    }
+
+    const verifyTouchReorder = async (
+      sourceIndex: number,
+      targetIndex: number,
+      touchId: number,
+    ) => {
+      const rows = mobileList.locator('.recipe-ingredient-mobile-row');
+      const source = rows.nth(sourceIndex);
+      const target = rows.nth(targetIndex);
+      const sourceRowId = await source.getAttribute('data-row-id');
+      if (!sourceRowId) {
+        throw new Error('The source ingredient row must have a stable id.');
+      }
+      const stableSource = mobileList.locator(
+        `.recipe-ingredient-mobile-row[data-row-id="${sourceRowId}"]`,
+      );
+      const sourceHandle = stableSource.getByRole('button', {
+        name: `Reorder ingredient row ${sourceIndex + 1}`,
+      });
+      const sourceHandleBounds = await sourceHandle.boundingBox();
+      const sourceRowBounds = await source.boundingBox();
+      const targetBounds = await target.boundingBox();
+      if (!sourceHandleBounds || !sourceRowBounds || !targetBounds) {
+        throw new Error('The multi-row touch reorder targets must be visible.');
+      }
+
+      const affectedIndices =
+        sourceIndex < targetIndex
+          ? Array.from({ length: targetIndex - sourceIndex }, (_, index) => sourceIndex + index + 1)
+          : Array.from({ length: sourceIndex - targetIndex }, (_, index) => targetIndex + index);
+      const originalTops = new Map(
+        await Promise.all(
+          affectedIndices.map(async (index) => {
+            const row = rows.nth(index);
+            const rowId = await row.getAttribute('data-row-id');
+            const bounds = await row.boundingBox();
+            if (!rowId || !bounds) {
+              throw new Error('Each displaced ingredient row must have a stable position.');
+            }
+            return [rowId, bounds.y] as const;
+          }),
+        ),
+      );
+      const displacedRows = mobileList.locator(
+        '.recipe-ingredient-mobile-row[data-reorder-state="displaced"]',
+      );
+      const expectedDisplacedCount = Math.abs(targetIndex - sourceIndex);
+      await touchSession.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [
+          touchPoint(
+            touchId,
+            sourceHandleBounds.x + sourceHandleBounds.width / 2,
+            sourceHandleBounds.y + sourceHandleBounds.height / 2,
+          ),
+        ],
+      });
+      await touchSession.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          touchPoint(
+            touchId,
+            targetBounds.x + targetBounds.width / 2,
+            targetBounds.y + targetBounds.height / 2,
+          ),
+        ],
+      });
+      await expect(displacedRows).toHaveCount(expectedDisplacedCount);
+      const displacedIds = await displacedRows.evaluateAll((elements) =>
+        elements
+          .map((element) => element.getAttribute('data-row-id'))
+          .filter((rowId): rowId is string => rowId !== null),
+      );
+      const expectedDisplacement = (sourceIndex < targetIndex ? -1 : 1) * sourceRowBounds.height;
+      await expect
+        .poll(async () => {
+          const differences = await Promise.all(
+            displacedIds.map(async (rowId) => {
+              const bounds = await mobileList
+                .locator(`.recipe-ingredient-mobile-row[data-row-id="${rowId}"]`)
+                .boundingBox();
+              return bounds
+                ? Math.abs(bounds.y - (originalTops.get(rowId) ?? bounds.y) - expectedDisplacement)
+                : Number.POSITIVE_INFINITY;
+            }),
+          );
+          return Math.max(...differences);
+        })
+        .toBeLessThanOrEqual(2);
+      const previewTops = new Map(
+        await Promise.all(
+          displacedIds.map(async (rowId) => {
+            const bounds = await mobileList
+              .locator(`.recipe-ingredient-mobile-row[data-row-id="${rowId}"]`)
+              .boundingBox();
+            if (!bounds) {
+              throw new Error('Each displaced ingredient row must remain visible.');
+            }
+            return [rowId, bounds.y] as const;
+          }),
+        ),
+      );
+      const sourceTop = (await stableSource.boundingBox())?.y;
+      expect(sourceTop).toBeDefined();
+
+      await touchSession.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect(stableSource).toHaveCSS('transform', 'none');
+      for (const [rowId, previewTop] of previewTops) {
+        const displaced = mobileList.locator(
+          `.recipe-ingredient-mobile-row[data-row-id="${rowId}"]`,
+        );
+        await expect(displaced).toHaveCSS('transform', 'none');
+        const finalTop = (await displaced.boundingBox())?.y;
+        expect(finalTop).toBeDefined();
+        expect(Math.abs((finalTop ?? 0) - previewTop)).toBeLessThanOrEqual(2);
+      }
+      const finalSourceTop = (await stableSource.boundingBox())?.y;
+      expect(finalSourceTop).toBeDefined();
+      expect(Math.abs((finalSourceTop ?? 0) - (sourceTop ?? 0))).toBeLessThanOrEqual(2);
+    };
+
+    await verifyTouchReorder(0, 3, 3);
+    await verifyTouchReorder(3, 0, 4);
+    await expect(mobileList.getByRole('row').first()).toContainText(
+      'white flour, stone-ground and finely milled for pastry baking flour, sifted',
+    );
+    await touchSession.detach();
     const deleteMobileIngredient = mobileList.getByRole('button', {
       name: 'Delete ingredient row 1',
     });
     await expect(deleteMobileIngredient).toBeVisible();
     await deleteMobileIngredient.click();
-    await expect(mobileList).not.toContainText('white flour, sifted');
+    await expect(mobileList).not.toContainText(
+      'white flour, stone-ground and finely milled for pastry baking flour, sifted',
+    );
     await expect(mobileList).toContainText('yellow cheese, diced');
     const axeResults = await new AxeBuilder({ page })
       .include('.recipe-ingredient-mobile')

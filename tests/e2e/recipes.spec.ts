@@ -1001,15 +1001,36 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
     await thirdInstruction.pressSequentially('Finish with lemon.');
     await expect(thirdInstruction).toHaveValue('Finish with lemon.');
     await expect(page.locator('.recipe-instruction-edit-step')).toHaveCount(4);
+    const fourthDraft = page.getByPlaceholder('Add instruction…');
+    await fourthDraft.fill('Let everything rest.');
+    await expect(page.getByRole('textbox', { name: 'Instruction step 4' })).toHaveValue(
+      'Let everything rest.',
+    );
+    await expect(page.locator('.recipe-instruction-edit-step')).toHaveCount(5);
+    const instructionRows = page.locator('.recipe-instruction-edit-step');
     const firstDragHandle = page.getByRole('button', { name: 'Reorder instruction step 1' });
     const firstDragHandleBox = await firstDragHandle.boundingBox();
-    const secondInstructionRowBox = await page
-      .locator('.recipe-instruction-edit-step')
-      .nth(1)
-      .boundingBox();
+    const firstStepId = await instructionRows.nth(0).getAttribute('data-instruction-step-id');
+    const secondStepId = await instructionRows.nth(1).getAttribute('data-instruction-step-id');
+    const firstStepTop = (await instructionRows.nth(0).boundingBox())?.y;
+    const secondInstructionRowBox = await instructionRows.nth(1).boundingBox();
     if (!firstDragHandleBox || !secondInstructionRowBox) {
       throw new Error('Instruction rows are missing drag targets.');
     }
+    if (!firstStepId || !secondStepId || firstStepTop === undefined) {
+      throw new Error('Instruction rows must have stable IDs and positions.');
+    }
+    const stableFirstStep = page.locator(
+      `.recipe-instruction-edit-step[data-instruction-step-id="${firstStepId}"]`,
+    );
+    const stableSecondStep = page.locator(
+      `.recipe-instruction-edit-step[data-instruction-step-id="${secondStepId}"]`,
+    );
+    const idleInstructionA11y = await new AxeBuilder({ page })
+      .include('.recipe-instruction-editor')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(idleInstructionA11y.violations).toEqual([]);
     await page.mouse.move(
       firstDragHandleBox.x + firstDragHandleBox.width / 2,
       firstDragHandleBox.y + firstDragHandleBox.height / 2,
@@ -1020,11 +1041,60 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
       secondInstructionRowBox.y + secondInstructionRowBox.height / 2,
       { steps: 4 },
     );
+    await expect(page.locator('.recipe-instruction-edit-step').nth(0)).toHaveAttribute(
+      'data-reorder-state',
+      'dragging',
+    );
+    await expect
+      .poll(() =>
+        page
+          .locator('.recipe-instruction-edit-step[data-reorder-state="dragging"]')
+          .evaluate((row) => getComputedStyle(row).transform),
+      )
+      .not.toBe('none');
+    await expect(page.locator('.recipe-instruction-edit-step').nth(1)).toHaveAttribute(
+      'data-reorder-state',
+      'displaced',
+    );
+    const draggingInstructionA11y = await new AxeBuilder({ page })
+      .include('.recipe-instruction-editor')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(draggingInstructionA11y.violations).toEqual([]);
+    await expect(
+      page.locator('.recipe-instruction-edit-step[data-reorder-state="dragging"]'),
+    ).toHaveCount(1);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect
+      .poll(() =>
+        page
+          .locator('.recipe-instruction-edit-step[data-reorder-state="displaced"]')
+          .evaluate((row) => getComputedStyle(row).transitionDuration),
+      )
+      .toBe('0s');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect
+      .poll(async () => {
+        const bounds = await stableSecondStep.boundingBox();
+        return bounds ? Math.abs(bounds.y - firstStepTop) : Number.POSITIVE_INFINITY;
+      })
+      .toBeLessThanOrEqual(2);
+    const firstPreviewTop = (await stableFirstStep.boundingBox())?.y;
+    const secondPreviewTop = (await stableSecondStep.boundingBox())?.y;
+    expect(firstPreviewTop).toBeDefined();
+    expect(secondPreviewTop).toBeDefined();
     await page.mouse.up();
+    const firstReleasedTop = (await stableFirstStep.boundingBox())?.y;
+    const secondReleasedTop = (await stableSecondStep.boundingBox())?.y;
+    expect(firstReleasedTop).toBeDefined();
+    expect(secondReleasedTop).toBeDefined();
+    expect(Math.abs((firstReleasedTop ?? 0) - (firstPreviewTop ?? 0))).toBeLessThanOrEqual(2);
+    expect(Math.abs((secondReleasedTop ?? 0) - (secondPreviewTop ?? 0))).toBeLessThanOrEqual(2);
+    await expect(stableFirstStep).toHaveCSS('transform', 'none');
+    await expect(stableSecondStep).toHaveCSS('transform', 'none');
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
       'Stir in chickpeas and simmer.',
     );
-    const instructionRows = page.locator('.recipe-instruction-edit-step');
     await expect(instructionRows.nth(0).locator('.recipe-instruction-step-number')).toHaveText('1');
     await expect(instructionRows.nth(0).getByRole('textbox')).toHaveValue(
       'Stir in chickpeas and simmer.',
@@ -1033,14 +1103,176 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
     await expect(instructionRows.nth(1).getByRole('textbox')).toHaveValue(
       'Warm the oil and add **garlic**.',
     );
+    const droppedInstructionA11y = await new AxeBuilder({ page })
+      .include('.recipe-instruction-editor')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(droppedInstructionA11y.violations).toEqual([]);
     await page.getByRole('textbox', { name: 'Instruction step 1' }).press('Control+ArrowDown');
+    await expect(page.locator('.recipe-instruction-editor [aria-live="polite"]')).toHaveText(
+      'Instruction step moved to position 2.',
+    );
     await page.getByRole('textbox', { name: 'Instruction step 2' }).press('Control+ArrowUp');
+    await expect(page.locator('.recipe-instruction-editor [aria-live="polite"]')).toHaveText(
+      'Instruction step moved to position 1.',
+    );
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
       'Stir in chickpeas and simmer.',
     );
     await expect(page.getByRole('textbox', { name: 'Instruction step 2' })).toHaveValue(
       'Warm the oil and add **garlic**.',
     );
+    const dragInstructionAndCheckContinuity = async (sourceIndex: number, targetIndex: number) => {
+      const sourceRow = instructionRows.nth(sourceIndex);
+      const targetRow = instructionRows.nth(targetIndex);
+      const sourceId = await sourceRow.getAttribute('data-instruction-step-id');
+      const targetId = await targetRow.getAttribute('data-instruction-step-id');
+      const sourceHandle = sourceRow.getByRole('button', {
+        name: `Reorder instruction step ${sourceIndex + 1}`,
+      });
+      const handleBounds = await sourceHandle.boundingBox();
+      const sourceBounds = await sourceRow.boundingBox();
+      const targetBounds = await targetRow.boundingBox();
+      if (!sourceId || !targetId || !handleBounds || !sourceBounds || !targetBounds) {
+        throw new Error('Instruction rows must be visible for multi-row reordering.');
+      }
+      const stableSource = page.locator(
+        `.recipe-instruction-edit-step[data-instruction-step-id="${sourceId}"]`,
+      );
+      const displacedIds =
+        sourceIndex < targetIndex
+          ? Array.from({ length: targetIndex - sourceIndex }, (_, index) => sourceIndex + index + 1)
+          : Array.from({ length: sourceIndex - targetIndex }, (_, index) => targetIndex + index);
+      const originalTops = new Map(
+        await Promise.all(
+          displacedIds.map(async (index) => {
+            const row = instructionRows.nth(index);
+            const id = await row.getAttribute('data-instruction-step-id');
+            const bounds = await row.boundingBox();
+            if (!id || !bounds) {
+              throw new Error('Displaced instruction rows must have stable positions.');
+            }
+            return [id, bounds.y] as const;
+          }),
+        ),
+      );
+      await page.mouse.move(
+        handleBounds.x + handleBounds.width / 2,
+        handleBounds.y + handleBounds.height / 2,
+      );
+      await page.mouse.down();
+      await page.mouse.move(
+        targetBounds.x + targetBounds.width / 2,
+        targetBounds.y + targetBounds.height / 2,
+        { steps: 8 },
+      );
+      await expect(
+        page.locator('.recipe-instruction-edit-step[data-reorder-state="displaced"]'),
+      ).toHaveCount(Math.abs(targetIndex - sourceIndex));
+      const expectedDisplacement = (sourceIndex < targetIndex ? -1 : 1) * sourceBounds.height;
+      await expect
+        .poll(async () => {
+          const differences = await Promise.all(
+            Array.from(originalTops, async ([id, top]) => {
+              const bounds = await page
+                .locator(`.recipe-instruction-edit-step[data-instruction-step-id="${id}"]`)
+                .boundingBox();
+              return bounds
+                ? Math.abs(bounds.y - top - expectedDisplacement)
+                : Number.POSITIVE_INFINITY;
+            }),
+          );
+          return Math.max(...differences);
+        })
+        .toBeLessThanOrEqual(2);
+      const previewTops = new Map(
+        await Promise.all(
+          Array.from(originalTops.keys(), async (id) => {
+            const bounds = await page
+              .locator(`.recipe-instruction-edit-step[data-instruction-step-id="${id}"]`)
+              .boundingBox();
+            if (!bounds) {
+              throw new Error('Displaced instruction rows must remain visible while dragging.');
+            }
+            return [id, bounds.y] as const;
+          }),
+        ),
+      );
+      const sourcePreviewTop = (await stableSource.boundingBox())?.y;
+      expect(sourcePreviewTop).toBeDefined();
+      await page.mouse.up();
+      const sourceReleasedTop = (await stableSource.boundingBox())?.y;
+      expect(sourceReleasedTop).toBeDefined();
+      expect(Math.abs((sourceReleasedTop ?? 0) - (sourcePreviewTop ?? 0))).toBeLessThanOrEqual(2);
+      for (const [id, previewTop] of previewTops) {
+        const releasedTop = (
+          await page
+            .locator(`.recipe-instruction-edit-step[data-instruction-step-id="${id}"]`)
+            .boundingBox()
+        )?.y;
+        expect(releasedTop).toBeDefined();
+        expect(Math.abs((releasedTop ?? 0) - previewTop)).toBeLessThanOrEqual(2);
+      }
+      await expect(stableSource).toHaveCSS('transform', 'none');
+      for (const id of previewTops.keys()) {
+        const displaced = page.locator(
+          `.recipe-instruction-edit-step[data-instruction-step-id="${id}"]`,
+        );
+        await expect(displaced).toHaveCSS('transform', 'none');
+      }
+    };
+
+    await dragInstructionAndCheckContinuity(3, 0);
+    await dragInstructionAndCheckContinuity(0, 3);
+    const firstStepBeforeCancel = await instructionRows.nth(0).getByRole('textbox').inputValue();
+    const cancelHandle = await page
+      .getByRole('button', { name: 'Reorder instruction step 1' })
+      .boundingBox();
+    const cancelTarget = await instructionRows.nth(2).boundingBox();
+    if (!cancelHandle || !cancelTarget) {
+      throw new Error('Instruction rows must be visible for cancellation.');
+    }
+    await page.mouse.move(
+      cancelHandle.x + cancelHandle.width / 2,
+      cancelHandle.y + cancelHandle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      cancelTarget.x + cancelTarget.width / 2,
+      cancelTarget.y + cancelTarget.height / 2,
+      { steps: 4 },
+    );
+    await expect(
+      page.locator('.recipe-instruction-edit-step[data-reorder-state="displaced"]'),
+    ).toHaveCount(2);
+    await page
+      .getByRole('button', { name: 'Reorder instruction step 1' })
+      .dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' });
+    await page.mouse.up();
+    await expect(page.locator('.recipe-instruction-edit-step[data-reorder-state]')).toHaveCount(0);
+    await expect(instructionRows.nth(0).getByRole('textbox')).toHaveValue(firstStepBeforeCancel);
+    const escapeDragHandle = page.getByRole('button', { name: 'Reorder instruction step 1' });
+    const escapeHandle = await escapeDragHandle.boundingBox();
+    const escapeTarget = await instructionRows.nth(2).boundingBox();
+    if (!escapeHandle || !escapeTarget) {
+      throw new Error('Instruction rows must be visible for Escape cancellation.');
+    }
+    await escapeDragHandle.focus();
+    await page.mouse.move(
+      escapeHandle.x + escapeHandle.width / 2,
+      escapeHandle.y + escapeHandle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      escapeTarget.x + escapeTarget.width / 2,
+      escapeTarget.y + escapeTarget.height / 2,
+      { steps: 4 },
+    );
+    await escapeDragHandle.press('Escape');
+    await expect(page.locator('.recipe-instruction-edit-step[data-reorder-state]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Reorder instruction step 1' })).toBeFocused();
+    await page.mouse.up();
+    await expect(instructionRows.nth(0).getByRole('textbox')).toHaveValue(firstStepBeforeCancel);
     const thirdInstructionRow = page
       .locator('.recipe-instruction-edit-step')
       .filter({ has: page.getByRole('textbox', { name: 'Instruction step 3' }) });
@@ -1060,11 +1292,12 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
 
     await expect(page.getByRole('heading', { name: 'Instructions' })).toBeVisible();
     const steps = page.locator('.recipe-instruction-list > li');
-    await expect(steps).toHaveCount(3);
+    await expect(steps).toHaveCount(4);
     await expect(steps.nth(0)).toHaveText('Stir in chickpeas and simmer.');
     await expect(steps.nth(1)).toContainText('Warm the oil and add garlic.');
     await expect(steps.nth(1).locator('strong')).toHaveText('garlic');
-    await expect(steps.nth(2)).toHaveText('Finish with lemon.');
+    await expect(steps.nth(2)).toHaveText('Let everything rest.');
+    await expect(steps.nth(3)).toHaveText('Finish with lemon.');
 
     await page.getByRole('link', { name: 'Edit' }).click();
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
@@ -1074,6 +1307,9 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
       'Warm the oil and add **garlic**.',
     );
     await expect(page.getByRole('textbox', { name: 'Instruction step 3' })).toHaveValue(
+      'Let everything rest.',
+    );
+    await expect(page.getByRole('textbox', { name: 'Instruction step 4' })).toHaveValue(
       'Finish with lemon.',
     );
     const persistedFirstInstruction = page.getByRole('textbox', {
