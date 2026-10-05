@@ -16,7 +16,14 @@ import type {
   RecipeState,
 } from '../../lib/recipes/data';
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
-import { serializeIngredientRows } from '../../lib/recipes/ingredient-rules';
+import { isEmptyIngredientRow, serializeIngredientRows } from '../../lib/recipes/ingredient-rules';
+import {
+  type InstructionStepDraft,
+  instructionPlainText,
+  parseIngredientMentions,
+  serializeInstructionSteps,
+  unlinkIngredientMentions,
+} from '../../lib/recipes/instruction-rules';
 import { formatQuantityRange } from '../../lib/recipes/measurement-rules';
 import {
   calculateTotalMinutes,
@@ -25,6 +32,7 @@ import {
 } from '../../lib/recipes/recipe-rules';
 import { saveRecipe } from './actions';
 import { IngredientRowsEditor } from './ingredient-rows-editor';
+import { InstructionStepsEditor } from './instruction-steps-editor';
 
 type RecipeFormProps = {
   ingredients: IngredientOption[];
@@ -330,6 +338,18 @@ export function RecipeForm({
       })) ?? [],
   );
   const [ingredientRowsError, setIngredientRowsError] = useState('');
+  const [instructionSteps, setInstructionSteps] = useState<InstructionStepDraft[]>(
+    () =>
+      recipe?.steps.map((step) => ({
+        id: step.id,
+        markdown: step.content_markdown,
+        plainText: step.plain_text,
+      })) ?? [{ id: 'instruction-draft', markdown: '', plainText: '' }],
+  );
+  const [instructionStepsError, setInstructionStepsError] = useState('');
+  const [pendingIngredientDeletion, setPendingIngredientDeletion] =
+    useState<IngredientRowDraft | null>(null);
+  const ingredientDeletionDialogRef = useRef<HTMLDialogElement>(null);
   const [state, setState] = useState<RecipeState>(recipe?.state ?? 'want_to_try');
   const [foodTypeId, setFoodTypeId] = useState(recipe?.food_type_id ?? '');
   const [serves, setServes] = useState<number | null>(recipe?.serves ?? null);
@@ -346,6 +366,18 @@ export function RecipeForm({
   const showOccasion = shouldShowOccasionDetails(
     picklistValue(selectedResponse)?.toLowerCase().replaceAll(' ', '_') ?? null,
   );
+
+  useEffect(() => {
+    const dialog = ingredientDeletionDialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (pendingIngredientDeletion && !dialog.open) {
+      dialog.showModal();
+    } else if (!pendingIngredientDeletion && dialog.open) {
+      dialog.close();
+    }
+  }, [pendingIngredientDeletion]);
 
   function togglePicklist(category: RecipePicklistKey) {
     setOpenPicklist((current) => (current === category ? null : category));
@@ -378,6 +410,57 @@ export function RecipeForm({
     }
   }
 
+  function addInstructionIngredient(name: string, ingredientId: string | null) {
+    const ingredient = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+    };
+    const ingredientRow: IngredientRowDraft = {
+      id: ingredient.id,
+      ingredientId,
+      ingredientName: ingredient.name,
+      isMain: false,
+      detail: '',
+      preparation: '',
+      measurements: [],
+    };
+    setIngredientRows((currentRows) => [
+      ...currentRows.filter((row) => !isEmptyIngredientRow(row)),
+      ingredientRow,
+      ...currentRows.filter(isEmptyIngredientRow).slice(0, 1),
+    ]);
+    return ingredient;
+  }
+
+  function requestIngredientDeletion(row: IngredientRowDraft) {
+    const isMentioned = instructionSteps.some((step) =>
+      parseIngredientMentions(step.markdown).some(
+        (mention) => mention.recipeIngredientId === row.id.toLocaleLowerCase(),
+      ),
+    );
+    if (isMentioned) {
+      setPendingIngredientDeletion(row);
+      return;
+    }
+    setIngredientRows((currentRows) => currentRows.filter((current) => current.id !== row.id));
+  }
+
+  function confirmIngredientDeletion() {
+    const row = pendingIngredientDeletion;
+    if (!row) {
+      return;
+    }
+    ingredientDeletionDialogRef.current?.close();
+    setInstructionSteps((currentSteps) =>
+      currentSteps.map((step) => ({
+        ...step,
+        markdown: unlinkIngredientMentions(step.markdown, row.id, row.ingredientName),
+      })),
+    );
+    setIngredientRows((currentRows) => currentRows.filter((current) => current.id !== row.id));
+    setPendingIngredientDeletion(null);
+  }
+
   function calculateTotal() {
     const form = formRef.current;
     if (!form) {
@@ -408,24 +491,51 @@ export function RecipeForm({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    let ingredientPayload: ReturnType<typeof serializeIngredientRows>;
     try {
-      const payload = serializeIngredientRows(ingredientRows);
-      const input = event.currentTarget.elements.namedItem('ingredient_rows');
-      if (input instanceof HTMLInputElement) {
-        input.value = JSON.stringify(payload);
-      }
-      setIngredientRowsError('');
+      ingredientPayload = serializeIngredientRows(ingredientRows);
     } catch (error) {
       event.preventDefault();
       setIngredientRowsError(
         error instanceof Error ? error.message : 'Check the ingredient rows before saving.',
       );
+      return;
     }
+
+    let instructionPayload: ReturnType<typeof serializeInstructionSteps>;
+    try {
+      instructionPayload = serializeInstructionSteps(
+        instructionSteps.map((step) => ({
+          ...step,
+          id: step.id === 'instruction-draft' ? crypto.randomUUID() : step.id,
+          plainText: instructionPlainText(step.markdown),
+        })),
+        ingredientRows.map((row) => row.id),
+      );
+    } catch (error) {
+      event.preventDefault();
+      setInstructionStepsError(
+        error instanceof Error ? error.message : 'Check the instruction steps before saving.',
+      );
+      return;
+    }
+
+    const ingredientInput = event.currentTarget.elements.namedItem('ingredient_rows');
+    const instructionInput = event.currentTarget.elements.namedItem('instruction_steps');
+    if (ingredientInput instanceof HTMLInputElement) {
+      ingredientInput.value = JSON.stringify(ingredientPayload);
+    }
+    if (instructionInput instanceof HTMLInputElement) {
+      instructionInput.value = JSON.stringify(instructionPayload);
+    }
+    setIngredientRowsError('');
+    setInstructionStepsError('');
   }
 
   return (
     <form action={formAction} className="recipe-form" onSubmit={handleSubmit} ref={formRef}>
       <input name="ingredient_rows" type="hidden" defaultValue="[]" />
+      <input name="instruction_steps" type="hidden" defaultValue="[]" />
       {recipe && (
         <>
           <input name="recipe_id" type="hidden" value={recipe.id} />
@@ -579,6 +689,7 @@ export function RecipeForm({
           preparationOptions={preparationOptions}
           rows={ingredientRows}
           validateMeasurements={Boolean(ingredientRowsError)}
+          onDeleteRequested={requestIngredientDeletion}
           onRowsChange={setIngredientRows}
         />
         {ingredientRowsError && (
@@ -587,6 +698,56 @@ export function RecipeForm({
           </p>
         )}
       </fieldset>
+      <fieldset className="recipe-instruction-section">
+        <legend>Instructions</legend>
+        <InstructionStepsEditor
+          ingredients={ingredientRows
+            .filter((row) => row.ingredientName.trim())
+            .map((row) => ({ id: row.id, name: row.ingredientName }))}
+          availableIngredients={ingredients}
+          steps={instructionSteps}
+          onChange={setInstructionSteps}
+          onAddIngredient={addInstructionIngredient}
+        />
+        {instructionStepsError && (
+          <p className="recipe-form-error" role="alert">
+            {instructionStepsError}
+          </p>
+        )}
+      </fieldset>
+      {pendingIngredientDeletion && (
+        <dialog
+          aria-describedby="mentioned-ingredient-delete-description"
+          aria-labelledby="mentioned-ingredient-delete-title"
+          className="recipe-confirmation-dialog"
+          ref={ingredientDeletionDialogRef}
+          onCancel={(event) => {
+            event.preventDefault();
+            event.currentTarget.close();
+            setPendingIngredientDeletion(null);
+          }}
+        >
+          <h2 id="mentioned-ingredient-delete-title">Remove ingredient?</h2>
+          <p id="mentioned-ingredient-delete-description">
+            Removing {pendingIngredientDeletion.ingredientName} will turn its instruction links into
+            ordinary # text.
+          </p>
+          <div className="recipe-confirmation-actions">
+            <button
+              type="button"
+              onClick={() => {
+                ingredientDeletionDialogRef.current?.close();
+                setPendingIngredientDeletion(null);
+              }}
+            >
+              Cancel
+            </button>
+            <button type="button" onClick={confirmIngredientDeletion}>
+              Remove ingredient
+            </button>
+          </div>
+        </dialog>
+      )}
       <fieldset className="recipe-time-fieldset">
         <legend>Times (min)</legend>
         <div className="recipe-time-fields">

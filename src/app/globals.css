@@ -705,6 +705,172 @@ h1 {
   width: 100%;
 }
 
+.recipe-instruction-editor {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.recipe-instruction-edit-list {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe-instruction-edit-step {
+  position: relative;
+  display: grid;
+  min-height: 48px;
+  grid-template-columns: 28px 24px minmax(0, 1fr) 28px;
+  align-items: start;
+  gap: 4px;
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.recipe-instruction-edit-step:hover,
+.recipe-instruction-edit-step:focus-within {
+  background: rgb(247 249 244 / 55%);
+}
+
+.recipe-instruction-drag-handle,
+.recipe-instruction-drag-spacer {
+  display: inline-flex;
+  width: 24px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+}
+
+.recipe-instruction-step-number,
+.recipe-instruction-step-number-spacer {
+  display: inline-flex;
+  width: 28px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+}
+
+.recipe-instruction-step-number {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.recipe-instruction-drag-handle {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.recipe-instruction-drag-handle:active {
+  cursor: grabbing;
+}
+
+.recipe-instruction-grip {
+  width: 8px;
+  height: 14px;
+  border-right: 2px dotted #a7b2a1;
+  border-left: 2px dotted #a7b2a1;
+  pointer-events: none;
+}
+
+.recipe-form textarea.recipe-instruction-textarea {
+  min-height: 48px;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 7px;
+  background: transparent;
+  line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.recipe-instruction-edit-step:focus-within .recipe-instruction-textarea {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.recipe-instruction-delete-button {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 2px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.recipe-instruction-edit-step:hover .recipe-instruction-delete-button,
+.recipe-instruction-edit-step:focus-within .recipe-instruction-delete-button,
+.recipe-instruction-delete-button:focus-visible {
+  opacity: 1;
+}
+
+.recipe-instruction-delete-button:hover {
+  background: #edf4e9;
+  color: var(--leaf);
+}
+
+.recipe-instruction-delete-button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.recipe-instruction-suggestions {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 2px);
+  left: 56px;
+  display: flex;
+  width: min(20rem, calc(100% - 60px));
+  max-height: 12rem;
+  flex-direction: column;
+  overflow-y: auto;
+  border: 1px solid #9ba596;
+  background: white;
+  box-shadow: 0 4px 10px rgb(35 45 31 / 15%);
+}
+
+.recipe-instruction-suggestion {
+  min-height: 36px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 7px 9px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recipe-instruction-suggestion:last-child {
+  border-bottom: 0;
+}
+
+.recipe-instruction-suggestion[aria-selected="true"],
+.recipe-instruction-suggestion:hover {
+  background: #edf4e9;
+  color: var(--leaf);
+}
+
 .recipe-classification-fields {
   column-gap: 4px;
   row-gap: 6px;
@@ -1661,6 +1827,62 @@ h1 {
   white-space: pre-wrap;
 }
 
+.recipe-instruction-list {
+  display: block;
+  list-style-type: decimal;
+  margin: 0;
+  padding-left: 28px;
+  line-height: 1.7;
+}
+
+.recipe-instruction-list li {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.recipe-instruction-list li + li {
+  margin-top: 14px;
+}
+
+.recipe-instruction-mention {
+  color: #7c1f25;
+  font-weight: 700;
+}
+
+.recipe-instruction-link {
+  color: #174a78;
+  text-decoration: none;
+}
+
+.recipe-instruction-link:hover,
+.recipe-instruction-link:focus-visible {
+  text-decoration: underline;
+}
+
+.recipe-confirmation-dialog {
+  position: fixed;
+  z-index: 10;
+  top: 50%;
+  left: 50%;
+  width: min(28rem, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--line);
+  background: white;
+  padding: 20px;
+  box-shadow: 0 12px 28px rgb(35 45 31 / 24%);
+}
+
+.recipe-confirmation-dialog h2,
+.recipe-confirmation-dialog p {
+  margin-top: 0;
+}
+
+.recipe-confirmation-actions {
+  display: flex;
+  justify-content: end;
+  gap: 8px;
+}
+
 @media (max-width: 760px) {
   .recipe-ingredient-desktop {
     display: none;
@@ -1684,6 +1906,13 @@ h1 {
 
   .recipe-page-heading .recipe-primary-link {
     width: 100%;
+  }
+
+  .recipe-instruction-delete-button {
+    width: 40px;
+    height: 48px;
+    margin-top: 0;
+    opacity: 1;
   }
 
   .recipe-page-heading.recipe-detail-heading {

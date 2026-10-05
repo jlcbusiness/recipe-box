@@ -408,6 +408,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
 
   try {
     await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 800, height: 900 });
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('Measured recipe');
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });

@@ -49,6 +49,13 @@ export type RecipeMeasurement = {
   picklist_value: string | null;
 };
 
+export type RecipeInstructionStep = {
+  id: string;
+  position: number;
+  content_markdown: string;
+  plain_text: string;
+};
+
 type RecipeMeasurementRecord = Omit<RecipeMeasurement, 'picklist_value'> & {
   recipe_ingredient_id: string;
 };
@@ -81,6 +88,7 @@ export type RecipeRecord = {
   cuisine_ids: string[];
   equipment_ids: string[];
   ingredients: RecipeIngredient[];
+  steps: RecipeInstructionStep[];
 };
 
 export type RecipeSupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -150,6 +158,16 @@ export async function getRecipe(
     .eq('recipe_id', recipeId);
 
   if (assignmentError) {
+    throw new Error('Unable to load this recipe.');
+  }
+
+  const { data: recipeSteps, error: recipeStepsError } = await supabase
+    .from('recipe_steps')
+    .select('id, position, content_markdown, plain_text')
+    .eq('recipe_id', recipeId)
+    .order('position');
+
+  if (recipeStepsError) {
     throw new Error('Unable to load this recipe.');
   }
 
@@ -247,6 +265,7 @@ export async function getRecipe(
       ingredient_name: ingredientNames.get(row.ingredient_id) ?? '',
       measurements: measurementsByIngredient.get(row.id) ?? [],
     })),
+    steps: (recipeSteps ?? []) as RecipeInstructionStep[],
   } as RecipeRecord;
 }
 

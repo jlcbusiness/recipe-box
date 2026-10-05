@@ -23,6 +23,8 @@ delivered in the order described by the
 See the [comprehensive reference](plans/comprehensive-reference.md) for
 implemented behavior and later-slice direction, and the
 [visual design guide](plans/visual-design.md) for the interface principles.
+See the [keyboard guide](docs/keyboard-guide.md) for keyboard controls and
+shortcuts.
 
 ## Prerequisites
 

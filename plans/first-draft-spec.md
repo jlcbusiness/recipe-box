@@ -148,12 +148,15 @@ to the recipe.
 
 Instructions are ordered markdown blocks, and notes are markdown too.
 See [comprehensive-reference.md § 5](comprehensive-reference.md#5-instructions-autocomplete-and-recipe-linking).
-Typing `#` starts ingredient-link
-autocomplete. The user can select an existing ingredient row, create and link a
-new one, or press Escape to cancel. The editor accepts lookup tokens such as
-`#all-purpose-flour` but renders readable text. Structured references determine
-the default ingredient sort by first instruction appearance. Only selected or
-newly created structured ingredient references count; ordinary text does not.
+Typing `#` starts ingredient-link autocomplete. A bare `#` shows ingredients
+already on the recipe; typing a query searches the account-wide ingredient
+catalog, including when `#` is inserted directly before an existing word.
+Selecting a catalog ingredient adds it to the recipe if needed; the user can
+also create and link an unmatched name or press Escape to cancel. The editor
+accepts lookup tokens such as `#all-purpose-flour` but renders readable text.
+Structured references determine the default ingredient sort by first
+instruction appearance. Only selected or newly created structured ingredient
+references count; ordinary text does not.
 
 Recipes support Pairs with entries as ordinary text or directional recipe links.
 Typing `#` in Pairs with searches existing recipes and creates a link; a tooltip

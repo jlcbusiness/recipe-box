@@ -143,7 +143,7 @@ describe('ingredient row rules', () => {
           },
         ],
       }),
-    ).toBe('1.5 l / 0.33-1.67 g flour');
+    ).toBe('1.5 L / 0.33-1.67 g flour');
   });
 
   it('pluralizes cups above one while leaving unit abbreviations unchanged', () => {
@@ -172,6 +172,7 @@ describe('ingredient row rules', () => {
     expect(display(1.5, null, 'cup', 'volume')).toBe('1 1/2 cups flour');
     expect(display(1, 2, 'cup', 'volume')).toBe('1-2 cups flour');
     expect(display(2, null, 'tsp', 'volume')).toBe('2 tsp flour');
+    expect(display(1, null, 'tbsp', 'volume')).toBe('1 TBSP flour');
     expect(display(2, null, 'oz', 'weight')).toBe('2 oz flour');
   });
 
@@ -219,6 +220,7 @@ describe('ingredient row rules', () => {
     expect(serializeIngredientRows([])).toEqual([]);
     expect(serializeIngredientRows(rows)).toEqual([
       {
+        recipe_ingredient_id: 'row-onion',
         ingredient_id: 'ingredient-onion',
         ingredient_name: null,
         is_main: true,
@@ -227,6 +229,7 @@ describe('ingredient row rules', () => {
         measurements: [],
       },
       {
+        recipe_ingredient_id: 'row-salt',
         ingredient_id: null,
         ingredient_name: 'Sea salt',
         is_main: false,
@@ -255,6 +258,7 @@ describe('ingredient row rules', () => {
       ]),
     ).toEqual([
       {
+        recipe_ingredient_id: 'row-onion',
         ingredient_id: 'ingredient-onion',
         ingredient_name: null,
         is_main: true,

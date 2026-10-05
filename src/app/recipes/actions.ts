@@ -4,6 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { RecipeState } from '../../lib/recipes/data';
 import type { IngredientRowPayload } from '../../lib/recipes/ingredient-rules';
+import {
+  type InstructionStepDraft,
+  type InstructionStepPayload,
+  instructionPlainText,
+  serializeInstructionSteps,
+} from '../../lib/recipes/instruction-rules';
 import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
@@ -48,6 +54,7 @@ function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null 
       (row) =>
         row !== null &&
         typeof row === 'object' &&
+        typeof row.recipe_ingredient_id === 'string' &&
         (row.ingredient_id === null || typeof row.ingredient_id === 'string') &&
         (row.ingredient_name === null || typeof row.ingredient_name === 'string') &&
         typeof row.is_main === 'boolean' &&
@@ -56,6 +63,55 @@ function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null 
     )
       ? (rows as IngredientRowPayload[])
       : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseInstructionSteps(
+  formData: FormData,
+  ingredientRows: IngredientRowPayload[],
+): InstructionStepPayload[] | null {
+  const raw = formData.get('instruction_steps');
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  try {
+    const steps: unknown = JSON.parse(raw);
+    if (!Array.isArray(steps)) {
+      return null;
+    }
+
+    const drafts: InstructionStepDraft[] = [];
+    for (const [index, value] of steps.entries()) {
+      if (value === null || typeof value !== 'object') {
+        return null;
+      }
+      const step = value as Record<string, unknown>;
+      if (
+        Object.keys(step).some(
+          (key) => !['id', 'position', 'content_markdown', 'plain_text'].includes(key),
+        ) ||
+        typeof step.id !== 'string' ||
+        step.position !== index ||
+        typeof step.content_markdown !== 'string' ||
+        typeof step.plain_text !== 'string'
+      ) {
+        return null;
+      }
+
+      drafts.push({
+        id: step.id,
+        markdown: step.content_markdown,
+        plainText: instructionPlainText(step.content_markdown),
+      });
+    }
+
+    return serializeInstructionSteps(
+      drafts,
+      ingredientRows.map((row) => row.recipe_ingredient_id),
+    );
   } catch {
     return null;
   }
@@ -82,6 +138,10 @@ export async function saveRecipe(
   const ingredientRows = parseIngredientRows(formData);
   if (!ingredientRows) {
     return { error: 'Check the ingredient rows before saving.' };
+  }
+  const instructionSteps = parseInstructionSteps(formData, ingredientRows);
+  if (!instructionSteps) {
+    return { error: 'Check the instruction steps before saving.' };
   }
 
   const timeFields = [
@@ -145,6 +205,7 @@ export async function saveRecipe(
     p_cuisine_ids: selectedIds(formData, 'cuisine_ids'),
     p_equipment_ids: selectedIds(formData, 'equipment_ids'),
     p_ingredient_rows: ingredientRows,
+    p_instruction_steps: instructionSteps,
   });
 
   if (error) {

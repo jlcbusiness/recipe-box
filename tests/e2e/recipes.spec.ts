@@ -22,7 +22,7 @@ async function selectSinglePicklist(
 test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
 
@@ -82,18 +82,29 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     expect(Math.abs(stateBounds.y - enthusiasmBounds.y)).toBeLessThanOrEqual(1);
     expect(foodTypeBounds.y).toBeGreaterThan(stateBounds.y);
     const servesBounds = await page.getByLabel('Serves').boundingBox();
-    expect(Math.abs((servesBounds?.y ?? 0) - stateBounds.y)).toBeLessThanOrEqual(4);
     expect(servesBounds?.height).toBe(stateBounds.height);
     await expect(page.getByLabel('Serves')).toHaveCSS('text-align', 'center');
-    expect(Math.abs(stateEquipmentBounds.y - stateBounds.y)).toBeLessThanOrEqual(4);
-    expect(stateEquipmentBounds.x).toBeGreaterThan(servesBounds?.x ?? 0);
+    if (testInfo.project.name === 'Fold 6') {
+      expect(servesBounds?.y).toBeGreaterThan(stateBounds.y);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        352,
+      );
+    } else {
+      expect(Math.abs((servesBounds?.y ?? 0) - stateBounds.y)).toBeLessThanOrEqual(4);
+      expect(Math.abs(stateEquipmentBounds.y - stateBounds.y)).toBeLessThanOrEqual(4);
+      expect(stateEquipmentBounds.x).toBeGreaterThan(servesBounds?.x ?? 0);
+    }
     await expect(page.getByLabel('Serves')).toHaveAttribute('step', '1');
     await expect(page.getByLabel('Serves')).toHaveAttribute('name', 'serves');
     await expect(page.getByRole('button', { name: 'Enthusiasm', exact: true })).toContainText(
       'What am I feeling?',
     );
     expect(foodTypeBounds?.width).toBeLessThanOrEqual(220);
-    expect(foodTypeBounds?.height).toBeLessThanOrEqual(40);
+    if (testInfo.project.name === 'Fold 6') {
+      expect(foodTypeBounds?.height).toBeGreaterThanOrEqual(48);
+    } else {
+      expect(foodTypeBounds?.height).toBeLessThanOrEqual(40);
+    }
     const formBounds = await page.locator('.recipe-form').boundingBox();
     const notesBounds = await page.getByLabel('Notes (Markdown)').boundingBox();
     expect(Math.abs((notesBounds?.width ?? 0) - (formBounds?.width ?? 0))).toBeLessThanOrEqual(1);
@@ -119,9 +130,18 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       .getByRole('button', { name: 'Equipment: Select' })
       .boundingBox();
     expect(mealTriggerBounds?.height).toBe(stateBounds.height);
-    expect(Math.abs((mealTriggerBounds?.y ?? 0) - foodTypeBounds.y)).toBeLessThanOrEqual(4);
-    expect(Math.abs((cuisineTriggerBounds?.y ?? 0) - foodTypeBounds.y)).toBeLessThanOrEqual(4);
-    expect(Math.abs((equipmentTriggerBounds?.y ?? 0) - stateBounds.y)).toBeLessThanOrEqual(4);
+    if (testInfo.project.name === 'Fold 6') {
+      expect(mealTriggerBounds?.height).toBeGreaterThanOrEqual(48);
+      expect(cuisineTriggerBounds?.height).toBeGreaterThanOrEqual(48);
+      expect(equipmentTriggerBounds?.height).toBeGreaterThanOrEqual(48);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        352,
+      );
+    } else {
+      expect(Math.abs((mealTriggerBounds?.y ?? 0) - foodTypeBounds.y)).toBeLessThanOrEqual(4);
+      expect(Math.abs((cuisineTriggerBounds?.y ?? 0) - foodTypeBounds.y)).toBeLessThanOrEqual(4);
+      expect(Math.abs((equipmentTriggerBounds?.y ?? 0) - stateBounds.y)).toBeLessThanOrEqual(4);
+    }
     const prepBounds = await page.getByLabel('Prep time (minutes)').boundingBox();
     const mixingBounds = await page.getByLabel('Mixing time (minutes)').boundingBox();
     await expect(page.locator('.recipe-time-fields')).toHaveCSS('display', 'flex');
@@ -169,18 +189,30 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       ),
     );
     const totalTimeBounds = await page.getByLabel('Total time (minutes)').boundingBox();
-    expect(totalTimeBounds?.y).toBeGreaterThan(Math.max(...componentTimeBottoms));
+    expect(Math.max(...componentTimeBottoms)).toBeLessThan(totalTimeBounds?.y ?? 0);
     const calculateButton = page.getByRole('button', { name: 'Calculate total time' });
     await expect(calculateButton).toHaveText('Σ');
     const totalRow = page.locator('.recipe-time-total-row');
     await expect(totalRow).toBeVisible();
     const calculateBounds = await calculateButton.boundingBox();
-    expect(calculateBounds?.y).toBe(totalTimeBounds?.y);
-    expect(calculateBounds?.x).toBeGreaterThan(totalTimeBounds?.x ?? 0);
-    expect(calculateBounds?.width).toBeLessThanOrEqual(34);
-    expect(
-      Math.abs((calculateBounds?.width ?? 0) - (calculateBounds?.height ?? 0)),
-    ).toBeLessThanOrEqual(1);
+    if (testInfo.project.name === 'Fold 6') {
+      expect(
+        Math.abs(
+          (calculateBounds?.y ?? 0) +
+            (calculateBounds?.height ?? 0) / 2 -
+            ((totalTimeBounds?.y ?? 0) + (totalTimeBounds?.height ?? 0) / 2),
+        ),
+      ).toBeLessThanOrEqual(8);
+      expect(calculateBounds?.width).toBeGreaterThanOrEqual(48);
+      expect(calculateBounds?.height).toBeGreaterThanOrEqual(48);
+    } else {
+      expect(calculateBounds?.y).toBe(totalTimeBounds?.y);
+      expect(calculateBounds?.x).toBeGreaterThan(totalTimeBounds?.x ?? 0);
+      expect(calculateBounds?.width).toBeLessThanOrEqual(34);
+      expect(
+        Math.abs((calculateBounds?.width ?? 0) - (calculateBounds?.height ?? 0)),
+      ).toBeLessThanOrEqual(1);
+    }
     await page.getByRole('button', { name: 'Equipment: Select' }).click();
     await page.getByRole('button', { name: 'Medium skillet', exact: true }).click();
     await page.getByLabel('Notes (Markdown)').fill('Add **fresh** basil at the end.');
@@ -918,6 +950,427 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
     expect(editA11y.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('owners can save and reload ordered Markdown instruction steps @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Braised chickpeas');
+    await expect(page.getByRole('group', { name: 'Instructions' })).toBeVisible();
+    const firstInstruction = page.getByRole('textbox', { name: 'Instruction step 1' });
+    const initialHeight = (await firstInstruction.boundingBox())?.height ?? 0;
+    await firstInstruction.fill(
+      'Add the drained chickpeas and stir until each one is coated. '.repeat(8),
+    );
+    await expect
+      .poll(() => firstInstruction.evaluate((element) => element.getBoundingClientRect().height))
+      .toBeGreaterThan(initialHeight);
+    await firstInstruction.fill('Warm the oil and add **garlic**.');
+    await expect(page.getByPlaceholder('Add instruction…')).toBeVisible();
+    const instructionDraft = page.getByPlaceholder('Add instruction…');
+    await instructionDraft.click();
+    await instructionDraft.pressSequentially('Stir in chickpeas and simmer.');
+    await expect(page.getByRole('textbox', { name: 'Instruction step 2' })).toHaveValue(
+      'Stir in chickpeas and simmer.',
+    );
+    await page.getByRole('textbox', { name: 'Instruction step 2' }).press('Escape');
+    await expect(instructionDraft).toBeVisible();
+    await expect(page.locator('.recipe-instruction-edit-step')).toHaveCount(2);
+    await instructionDraft.pressSequentially('Stir in chickpeas and simmer.');
+    await expect(page.getByRole('textbox', { name: 'Instruction step 2' })).toHaveValue(
+      'Stir in chickpeas and simmer.',
+    );
+    const typedInstructionBox = await page
+      .getByRole('textbox', { name: 'Instruction step 2' })
+      .boundingBox();
+    expect(typedInstructionBox?.width).toBeGreaterThan(120);
+    expect(typedInstructionBox?.height).toBeLessThan(100);
+    await expect(page.locator('.recipe-instruction-edit-step')).toHaveCount(3);
+    await page.getByRole('textbox', { name: 'Instruction step 2' }).press('Enter');
+    const thirdInstruction = page.getByRole('textbox', { name: 'Instruction step 3' });
+    await expect(thirdInstruction).toBeFocused();
+    await thirdInstruction.pressSequentially('Finish with lemon.');
+    await expect(thirdInstruction).toHaveValue('Finish with lemon.');
+    await expect(page.locator('.recipe-instruction-edit-step')).toHaveCount(4);
+    const firstDragHandle = page.getByRole('button', { name: 'Reorder instruction step 1' });
+    const firstDragHandleBox = await firstDragHandle.boundingBox();
+    const secondInstructionRowBox = await page
+      .locator('.recipe-instruction-edit-step')
+      .nth(1)
+      .boundingBox();
+    if (!firstDragHandleBox || !secondInstructionRowBox) {
+      throw new Error('Instruction rows are missing drag targets.');
+    }
+    await page.mouse.move(
+      firstDragHandleBox.x + firstDragHandleBox.width / 2,
+      firstDragHandleBox.y + firstDragHandleBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      secondInstructionRowBox.x + secondInstructionRowBox.width / 2,
+      secondInstructionRowBox.y + secondInstructionRowBox.height / 2,
+      { steps: 4 },
+    );
+    await page.mouse.up();
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      'Stir in chickpeas and simmer.',
+    );
+    const instructionRows = page.locator('.recipe-instruction-edit-step');
+    await expect(instructionRows.nth(0).locator('.recipe-instruction-step-number')).toHaveText('1');
+    await expect(instructionRows.nth(0).getByRole('textbox')).toHaveValue(
+      'Stir in chickpeas and simmer.',
+    );
+    await expect(instructionRows.nth(1).locator('.recipe-instruction-step-number')).toHaveText('2');
+    await expect(instructionRows.nth(1).getByRole('textbox')).toHaveValue(
+      'Warm the oil and add **garlic**.',
+    );
+    await page.getByRole('textbox', { name: 'Instruction step 1' }).press('Control+ArrowDown');
+    await page.getByRole('textbox', { name: 'Instruction step 2' }).press('Control+ArrowUp');
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      'Stir in chickpeas and simmer.',
+    );
+    await expect(page.getByRole('textbox', { name: 'Instruction step 2' })).toHaveValue(
+      'Warm the oil and add **garlic**.',
+    );
+    const thirdInstructionRow = page
+      .locator('.recipe-instruction-edit-step')
+      .filter({ has: page.getByRole('textbox', { name: 'Instruction step 3' }) });
+    const removeThirdInstruction = page.getByRole('button', {
+      name: 'Remove instruction step 3',
+    });
+    await page.mouse.move(0, 0);
+    await expect(removeThirdInstruction).toHaveCSS(
+      'opacity',
+      testInfo.project.name === 'Fold 6' ? '1' : '0',
+    );
+    await thirdInstructionRow.hover();
+    await expect(removeThirdInstruction).toHaveCSS('opacity', '1');
+    await removeThirdInstruction.click();
+    await page.getByPlaceholder('Add instruction…').fill('Finish with lemon.');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Instructions' })).toBeVisible();
+    const steps = page.locator('.recipe-instruction-list > li');
+    await expect(steps).toHaveCount(3);
+    await expect(steps.nth(0)).toHaveText('Stir in chickpeas and simmer.');
+    await expect(steps.nth(1)).toContainText('Warm the oil and add garlic.');
+    await expect(steps.nth(1).locator('strong')).toHaveText('garlic');
+    await expect(steps.nth(2)).toHaveText('Finish with lemon.');
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      'Stir in chickpeas and simmer.',
+    );
+    await expect(page.getByRole('textbox', { name: 'Instruction step 2' })).toHaveValue(
+      'Warm the oil and add **garlic**.',
+    );
+    await expect(page.getByRole('textbox', { name: 'Instruction step 3' })).toHaveValue(
+      'Finish with lemon.',
+    );
+    const persistedFirstInstruction = page.getByRole('textbox', {
+      name: 'Instruction step 1',
+    });
+    await persistedFirstInstruction.fill('Discard this accidental change.');
+    await persistedFirstInstruction.press('Escape');
+    await expect(persistedFirstInstruction).toHaveValue('Stir in chickpeas and simmer.');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('owners can create an ingredient mention from an instruction # query @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Iron skillet vegetables');
+    const instruction = page.getByPlaceholder('Add instruction…');
+    await instruction.pressSequentially('## Heat\n\nAdd #iron');
+    const suggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    await expect(suggestions).toBeVisible();
+    await expect(suggestions.getByRole('option')).toHaveText('Create ingredient “iron”');
+    const focusedInstruction = page.locator('.recipe-instruction-textarea:focus');
+    await page.keyboard.press('Enter');
+    await expect(focusedInstruction).toHaveValue(/\[\[ingredient:[^|]+\|iron\]\]/);
+    await focusedInstruction.fill(
+      `${await focusedInstruction.inputValue()} with **care**.\n\n- Stir gently`,
+    );
+    await expect(page.getByRole('table', { name: 'Recipe ingredients' })).toContainText('iron');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Instructions' })).toBeVisible();
+    await expect(
+      page.locator('.recipe-instruction-list > li').first().getByRole('heading', { name: 'Heat' }),
+    ).toBeVisible();
+    const renderedMentionInstruction = page
+      .locator('.recipe-instruction-list > li')
+      .filter({ has: page.locator('.recipe-instruction-mention') });
+    await expect(renderedMentionInstruction.locator('.recipe-instruction-mention')).toHaveText(
+      'iron',
+    );
+    await expect(renderedMentionInstruction.locator('strong')).toHaveText('care');
+    await expect(renderedMentionInstruction.locator('ul > li')).toHaveText('Stir gently');
+    await expect(page.getByRole('heading', { name: 'Ingredients' })).toBeVisible();
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('iron');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('instruction mentions search the ingredient catalog and render as sentence-aware links @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const catalogIngredient = await request.post(`${config.apiUrl}/rest/v1/ingredients`, {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+      },
+      data: { account_id: user.id, name: 'Bread' },
+    });
+    expect(catalogIngredient.ok(), await catalogIngredient.text()).toBeTruthy();
+
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Catalog mention behavior');
+    await page.getByPlaceholder('Add instruction…').fill('#');
+    const firstStep = page.getByRole('textbox', { name: 'Instruction step 1' });
+    const suggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    await expect(suggestions).toHaveCount(0);
+    await firstStep.fill('bread');
+    await firstStep.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(0, 0));
+    await firstStep.pressSequentially('#');
+    await expect(firstStep).toHaveValue('#bread');
+    await expect(suggestions.getByRole('option')).toHaveText('Bread');
+    await expect(suggestions.getByRole('option', { name: /^Create ingredient/ })).toHaveCount(0);
+    await page.keyboard.press('Enter');
+    await expect(firstStep).toHaveValue(/^\[\[ingredient:[^|]+\|bread\]\]$/);
+
+    await firstStep.fill('Add #bread');
+    await expect(suggestions.getByRole('option')).toHaveText('Bread');
+    await expect(suggestions.getByRole('option', { name: /^Create ingredient/ })).toHaveCount(0);
+    await page.keyboard.press('Enter');
+    await expect(firstStep).toHaveValue(/\[\[ingredient:[^|]+\|bread\]\]/);
+    await firstStep.pressSequentially(' with [the mixing guide](example.test/mixing).');
+
+    await firstStep.press('Enter');
+    await page.getByRole('textbox', { name: 'Instruction step 2' }).fill('#');
+    const secondStep = page.getByRole('textbox', { name: 'Instruction step 2' });
+    await expect(suggestions.getByRole('option')).toHaveText('Bread');
+    await expect(suggestions.getByRole('option', { name: /^Create ingredient/ })).toHaveCount(0);
+    await page.keyboard.press('Enter');
+    await expect(secondStep).toHaveValue(/\[\[ingredient:[^|]+\|bread\]\]/);
+
+    await secondStep.press('Enter');
+    const thirdStep = page.getByRole('textbox', { name: 'Instruction step 3' });
+    await thirdStep.fill('Add #miso');
+    await expect(
+      suggestions.getByRole('option', { name: 'Create ingredient “miso”' }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(thirdStep).toHaveValue('Add #miso');
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    const steps = page.locator('.recipe-instruction-list > li');
+    await expect(steps).toHaveCount(3);
+    await expect(steps.nth(0)).toContainText('Add bread with the mixing guide.');
+    const guideLink = steps.nth(0).getByRole('link', { name: 'the mixing guide' });
+    await expect(guideLink).toHaveAttribute('href', 'https://example.test/mixing');
+    await expect(guideLink).toHaveCSS('color', 'rgb(23, 74, 120)');
+    await guideLink.hover();
+    await expect(guideLink).toHaveCSS('text-decoration-line', 'underline');
+    await expect(steps.nth(1)).toHaveText('Bread');
+    await expect(steps.nth(2)).toHaveText('Add #miso');
+    await expect(page.locator('.recipe-instruction-list')).toHaveCSS('list-style-type', 'decimal');
+
+    await page.route('https://example.test/mixing', (route) =>
+      route.fulfill({ body: '<title>External guide</title>', contentType: 'text/html' }),
+    );
+    await guideLink.click();
+    await expect(page).toHaveURL('https://example.test/mixing');
+    await expect(page).toHaveTitle('External guide');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('mobile users can tap an instruction ingredient suggestion @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== 'Fold 6',
+    'Touch selection is exercised in the Fold 6 project.',
+  );
+
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const catalogIngredient = await request.post(`${config.apiUrl}/rest/v1/ingredients`, {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+      },
+      data: { account_id: user.id, name: 'Paprika' },
+    });
+    expect(catalogIngredient.ok(), await catalogIngredient.text()).toBeTruthy();
+
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Touch-selected ingredient');
+    const instruction = page.getByPlaceholder('Add instruction…');
+    await instruction.tap();
+    await instruction.pressSequentially('Add #paprika');
+
+    const suggestion = page.getByRole('option', { name: 'Paprika' });
+    await expect(suggestion).toBeVisible();
+    await suggestion.tap();
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      /Add\s+\[\[ingredient:[^|]+\|paprika\]\]/,
+    );
+    await expect(page.getByRole('table', { name: 'Recipe ingredients' })).toContainText('paprika');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Ctrl+. inserts a degree symbol at the instruction caret @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Oven temperature');
+    await page.getByPlaceholder('Add instruction…').fill('Bake at 350F.');
+    const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
+    await instruction.evaluate((element: HTMLTextAreaElement) => {
+      const insertionPoint = element.value.indexOf('F');
+      element.setSelectionRange(insertionPoint, insertionPoint);
+    });
+    await instruction.press('Control+.');
+    await expect(instruction).toHaveValue('Bake at 350°F.');
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.locator('.recipe-instruction-list > li')).toHaveText('Bake at 350°F.');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('instruction mention suggestions stay in the viewport and Escape preserves literal text @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Responsive mention suggestions');
+    await page.setViewportSize({ width: 352, height: 844 });
+    const instruction = page.getByPlaceholder('Add instruction…');
+    await instruction.pressSequentially('Add #iron');
+    const suggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    await expect(suggestions).toBeVisible();
+
+    for (const viewportWidth of [352, 390]) {
+      if (viewportWidth === 390) {
+        await page.keyboard.press('Escape');
+        await page.reload();
+        await page.getByLabel('Name').fill('Responsive mention suggestions');
+        await page.setViewportSize({ width: viewportWidth, height: 844 });
+        await page.getByPlaceholder('Add instruction…').pressSequentially('Add #iron');
+        await expect(suggestions).toBeVisible();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        viewportWidth,
+      );
+      const suggestionBounds = await suggestions.boundingBox();
+      expect(suggestionBounds?.x).toBeGreaterThanOrEqual(0);
+      expect((suggestionBounds?.x ?? 0) + (suggestionBounds?.width ?? 0)).toBeLessThanOrEqual(
+        viewportWidth,
+      );
+    }
+
+    await page.keyboard.press('Escape');
+    await expect(suggestions).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      'Add #iron',
+    );
+    await expect(page.getByRole('table', { name: 'Recipe ingredients' })).not.toContainText('iron');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('owners confirm before removing an ingredient referenced by instructions @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Linked ingredient removal');
+    await page.getByPlaceholder('Add instruction…').pressSequentially('Heat #iron');
+    await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await page.getByRole('link', { name: 'Edit' }).click();
+
+    const ingredientGrid = page.getByRole('table', { name: 'Recipe ingredients' });
+    const deleteIngredient = page.getByRole('button', { name: 'Delete ingredient row 1' });
+    await ingredientGrid.getByRole('row').nth(1).hover();
+    await deleteIngredient.click();
+    const confirmation = page.getByRole('dialog', { name: 'Remove ingredient?' });
+    await expect(confirmation).toContainText('ordinary # text');
+    const dialogA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(dialogA11y.violations).toEqual([]);
+    await expect(confirmation.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(confirmation).toHaveCount(0);
+    await expect(deleteIngredient).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      /\[\[ingredient:[^|]+\|iron\]\]/,
+    );
+    await expect(ingredientGrid).toContainText('iron');
+
+    await deleteIngredient.click();
+    await expect(confirmation).toBeVisible();
+    await confirmation.getByRole('button', { name: 'Cancel' }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(ingredientGrid).toContainText('iron');
+
+    await ingredientGrid.getByRole('row').nth(1).hover();
+    await deleteIngredient.click();
+    await confirmation.getByRole('button', { name: 'Remove ingredient' }).click();
+    await expect(ingredientGrid).not.toContainText('iron');
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      'Heat #iron',
+    );
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.locator('.recipe-instruction-list > li')).toHaveText('Heat #iron');
+    await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
   } finally {
     await deleteTestUser(request, user);
   }

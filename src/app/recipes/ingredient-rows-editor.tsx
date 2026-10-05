@@ -558,6 +558,7 @@ export function IngredientRowsEditor({
   preparationOptions,
   rows,
   validateMeasurements,
+  onDeleteRequested,
   onRowsChange,
 }: {
   ingredients: IngredientOption[];
@@ -565,6 +566,7 @@ export function IngredientRowsEditor({
   preparationOptions: string[];
   rows: IngredientRowDraft[];
   validateMeasurements: boolean;
+  onDeleteRequested?: (row: IngredientRowDraft) => void;
   onRowsChange: (rows: IngredientRowDraft[]) => void;
 }) {
   const [draftRows, setDraftRows] = useState(() =>
@@ -580,6 +582,7 @@ export function IngredientRowsEditor({
   const [announcement, setAnnouncement] = useState('');
   const ingredientTableRef = useRef<HTMLTableElement>(null);
   const pendingFocusCell = useRef<{ rowId: string; field: IngredientField } | null>(null);
+  const promotedRowIds = useRef(new Map<string, string>());
   const dragRowId = useRef<string | null>(null);
   const touchDragRowId = useRef<string | null>(null);
   const rowsRef = useRef(draftRows);
@@ -593,11 +596,16 @@ export function IngredientRowsEditor({
   }, [rows]);
 
   useLayoutEffect(() => {
-    const focusTarget = pendingFocusCell.current;
-    if (!focusTarget) {
+    const requestedFocusTarget = pendingFocusCell.current;
+    if (!requestedFocusTarget) {
       return;
     }
     pendingFocusCell.current = null;
+    const focusTarget = {
+      ...requestedFocusTarget,
+      rowId: promotedRowIds.current.get(requestedFocusTarget.rowId) ?? requestedFocusTarget.rowId,
+    };
+    promotedRowIds.current.delete(requestedFocusTarget.rowId);
     if (!draftRows.some((row) => row.id === focusTarget.rowId)) {
       return;
     }
@@ -629,6 +637,11 @@ export function IngredientRowsEditor({
       return;
     }
 
+    if (onDeleteRequested) {
+      onDeleteRequested(row);
+      return;
+    }
+
     if (activeCell?.rowId === rowId) {
       setActiveCell(null);
     }
@@ -647,29 +660,47 @@ export function IngredientRowsEditor({
       return;
     }
 
-    const updatedRows = updateIngredientRow(currentRows, rowId, {
-      [field]: value,
-      ...(field === 'ingredientName'
+    const persistedRowId =
+      field === 'ingredientName' && value.trim() && rowId === 'ingredient-placeholder'
+        ? crypto.randomUUID()
+        : rowId;
+    if (pendingFocusCell.current?.rowId === rowId && persistedRowId !== rowId) {
+      pendingFocusCell.current = { ...pendingFocusCell.current, rowId: persistedRowId };
+    }
+    if (persistedRowId !== rowId) {
+      promotedRowIds.current.set(rowId, persistedRowId);
+    }
+    const updatedRows = currentRows.map((row) =>
+      row.id === rowId
         ? {
-            ingredientId:
-              ingredients.find(
-                (ingredient) => ingredient.name.toLocaleLowerCase() === value.toLocaleLowerCase(),
-              )?.id ?? null,
+            ...row,
+            id: persistedRowId,
+            [field]: value,
+            ...(field === 'ingredientName'
+              ? {
+                  ingredientId:
+                    ingredients.find(
+                      (ingredient) =>
+                        ingredient.name.toLocaleLowerCase() === value.toLocaleLowerCase(),
+                    )?.id ?? null,
+                }
+              : {}),
           }
-        : {}),
-    });
+        : row,
+    );
     commitRows(updatedRows);
     setActiveCell(null);
   };
 
   const focusNextCell = (rowId: string, field: IngredientField) => {
-    const currentIndex = rowsRef.current.findIndex((row) => row.id === rowId);
+    const persistedRowId = promotedRowIds.current.get(rowId) ?? rowId;
+    const currentIndex = rowsRef.current.findIndex((row) => row.id === persistedRowId);
     if (currentIndex < 0) {
       return;
     }
 
     if (field === 'ingredientName') {
-      pendingFocusCell.current = { rowId, field: 'detail' };
+      pendingFocusCell.current = { rowId: persistedRowId, field: 'detail' };
       return;
     }
 
@@ -899,11 +930,15 @@ export function IngredientRowsEditor({
   }
 
   function submitMobileRow(row: IngredientRowDraft) {
+    const submittedRow =
+      row.id === 'ingredient-placeholder' && row.ingredientName.trim()
+        ? { ...row, id: crypto.randomUUID() }
+        : row;
     const rowExists = rowsRef.current.some((current) => current.id === row.id);
-    const nextRows = row.ingredientName.trim()
+    const nextRows = submittedRow.ingredientName.trim()
       ? rowExists
-        ? updateIngredientRow(rowsRef.current, row.id, row)
-        : [...rowsRef.current, row]
+        ? updateIngredientRow(rowsRef.current, row.id, submittedRow)
+        : [...rowsRef.current, submittedRow]
       : rowsRef.current.filter((current) => current.id !== row.id);
     commitRows(nextRows);
     closeMobileEditor();

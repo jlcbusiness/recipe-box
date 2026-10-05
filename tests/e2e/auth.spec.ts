@@ -147,7 +147,8 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await accountTrigger.click();
     await expect(page.locator('.account-menu-panel').getByText(user.email)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
-    await accountTrigger.click();
+    await page.getByRole('heading', { name: 'Your private workspace' }).click();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
 
     const desktopA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

@@ -294,15 +294,21 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
   structured mention. The editor's plain-text projection uses the readable
   `#<slug>` form and omits the stored marker.
 - **`#` Autocomplete Behavior:**
-  - Typing `#` triggers an inline autocomplete menu.
-  - Autocomplete shows existing ingredients on the current recipe.
-  - Typing filters the list in real time. Multi-word ingredients are typed with hyphens in the token (e.g., `#all-purpose-flour`).
+  - Typing `#` triggers an inline autocomplete menu. A bare `#` shows existing
+    ingredients on the current recipe.
+  - Once a query is typed, suggestions search the account-wide ingredient
+    catalog in real time. This includes typing `#` directly before an existing
+    word. Multi-word ingredients use hyphens in the token (e.g.,
+    `#all-purpose-flour`).
+  - Selecting a catalog ingredient adds it to the current recipe if needed,
+    then creates a structured mention to that recipe's ingredient row.
   - **Menu Options:**
     1. Select an existing ingredient row.
     2. Select **Create new ingredient** (adds row to ingredients table and links it).
     3. Press `Escape` to cancel autocomplete and leave `#` as plain text.
   - **Rendered Output:** Renders cleanly as normal readable text (e.g., "Add the all-purpose flour and mix").
   - **Trigger Symbol:** `#` on every platform. Phone keyboards have no convenient non-alphanumeric key, and `#` is a familiar mention convention.
+  - **Degree Symbol Shortcut:** `Ctrl+.` inserts `°` at the caret and replaces any selected text.
   - **Ingredient Mention Style:** In-app instruction mentions default to bold
     dark red to make referenced ingredients easy to scan. User Settings offers
     a dedicated styling control:
@@ -600,7 +606,7 @@ History events are recorded on save (never on individual keystrokes):
 
 ### 13.1 Desktop Ergonomics
 - **Keyboard Navigation:** Tab and arrow key traversal through the ingredient edit grid.
-- **Shortcut Actions:** Shortcuts for quick save (`Ctrl+S` / `Cmd+S`), adding ingredient rows (`Enter` in the last column), and triggering autocomplete (`#`).
+  - **Shortcut Actions:** Shortcuts for quick save (`Ctrl+S` / `Cmd+S`), adding ingredient rows (`Enter` in the last column), triggering autocomplete (`#`), and inserting a degree symbol in an instruction (`Ctrl+.`).
 - **No Drag-and-Drop Reliance:** Reordering ingredients and steps uses explicit keyboard-friendly up/down buttons or index input fields.
 
 ### 13.2 Mobile Kitchen Ergonomics

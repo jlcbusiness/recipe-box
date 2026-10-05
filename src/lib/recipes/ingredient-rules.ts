@@ -19,6 +19,7 @@ export type IngredientRowDraft = {
 };
 
 export type IngredientRowPayload = {
+  recipe_ingredient_id: string;
   ingredient_id: string | null;
   ingredient_name: string | null;
   is_main: boolean;
@@ -134,7 +135,7 @@ export function formatIngredientDisplay(ingredient: {
               (measurement.amount_max ?? measurement.amount_min) > 1
             ? 'cups'
             : unitLabel
-              ? lowercaseFirst(unitLabel)
+              ? (unit?.abbreviation ?? lowercaseFirst(unitLabel))
               : '';
       return [[quantity, unitText].filter(Boolean).join(' ')];
     })
@@ -200,6 +201,7 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
     }
 
     payload.push({
+      recipe_ingredient_id: row.id,
       ingredient_id: row.ingredientId,
       ingredient_name: row.ingredientId ? null : ingredientName,
       is_main: row.isMain,

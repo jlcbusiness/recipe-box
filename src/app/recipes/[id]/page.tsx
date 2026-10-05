@@ -2,6 +2,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
 import { formatIngredientDisplay } from '../../../lib/recipes/ingredient-rules';
+import {
+  getSafeInstructionHref,
+  type InstructionInlineToken,
+  parseInstructionMarkdown,
+} from '../../../lib/recipes/instruction-markdown';
 import { createClient } from '../../../lib/supabase/server';
 
 type RecipeDetailPageProps = {
@@ -18,6 +23,103 @@ function renderMarkdown(value: string) {
     const occurrence = occurrences.get(part) ?? 0;
     occurrences.set(part, occurrence + 1);
     return <strong key={`${part}-${occurrence}`}>{part.slice(2, -2)}</strong>;
+  });
+}
+
+function renderInstructionMarkdown(
+  value: string,
+  ingredients: readonly { id: string; name: string }[],
+) {
+  const namesById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient.name]));
+  const headingTags = [null, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
+  const lowercaseFirst = (value: string) =>
+    value ? `${value[0].toLocaleLowerCase()}${value.slice(1)}` : '';
+  const renderInline = (tokens: InstructionInlineToken[], prefix: string) => {
+    let precedingText = '';
+    return tokens.map((token, index) => {
+      const key = `${prefix}-${index}`;
+      switch (token.type) {
+        case 'text': {
+          precedingText += token.value;
+          return token.value;
+        }
+        case 'strong':
+          precedingText += token.value;
+          return <strong key={key}>{token.value}</strong>;
+        case 'emphasis':
+          precedingText += token.value;
+          return <em key={key}>{token.value}</em>;
+        case 'strike':
+          precedingText += token.value;
+          return <del key={key}>{token.value}</del>;
+        case 'code':
+          precedingText += token.value;
+          return <code key={key}>{token.value}</code>;
+        case 'link': {
+          precedingText += token.label;
+          const href = getSafeInstructionHref(token.url);
+          return href ? (
+            <a className="recipe-instruction-link" href={href} key={key}>
+              {token.label}
+            </a>
+          ) : (
+            token.label
+          );
+        }
+        case 'mention': {
+          const name = namesById.get(token.id);
+          if (!name) {
+            throw new Error(
+              'Instruction mentions must reference an ingredient row in this recipe.',
+            );
+          }
+          const startsSentence = !precedingText || /[.!?]["')\]]*\s*$/u.test(precedingText);
+          const displayName = startsSentence ? name : lowercaseFirst(name);
+          precedingText += displayName;
+          return (
+            <span className="recipe-instruction-mention" key={key}>
+              {displayName}
+            </span>
+          );
+        }
+        default: {
+          const exhaustiveToken: never = token;
+          return exhaustiveToken;
+        }
+      }
+    });
+  };
+
+  return parseInstructionMarkdown(value).map((block, index) => {
+    const key = `block-${index}`;
+    if (block.type === 'heading') {
+      const Heading = headingTags[block.level] ?? 'p';
+      return <Heading key={key}>{renderInline(block.content, key)}</Heading>;
+    }
+    if (block.type === 'list') {
+      const List = block.ordered ? 'ol' : 'ul';
+      const occurrences = new Map<string, number>();
+      return (
+        <List key={key}>
+          {block.items.map((item) => {
+            const signature = item
+              .map((token) =>
+                token.type === 'mention'
+                  ? `${token.type}:${token.id}`
+                  : token.type === 'link'
+                    ? `${token.type}:${token.url}:${token.label}`
+                    : `${token.type}:${token.value}`,
+              )
+              .join('|');
+            const occurrence = occurrences.get(signature) ?? 0;
+            occurrences.set(signature, occurrence + 1);
+            const itemKey = `${key}-${signature}-${occurrence}`;
+            return <li key={itemKey}>{renderInline(item, itemKey)}</li>;
+          })}
+        </List>
+      );
+    }
+    return <p key={key}>{renderInline(block.content, key)}</p>;
   });
 }
 
@@ -134,6 +236,24 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                 <span className="recipe-ingredient-name">
                   {formatIngredientDisplay(ingredient)}
                 </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {recipe.steps.length > 0 && (
+        <section className="recipe-detail-section" aria-labelledby="instructions-title">
+          <h2 id="instructions-title">Instructions</h2>
+          <ol className="recipe-instruction-list">
+            {recipe.steps.map((step) => (
+              <li key={step.id}>
+                {renderInstructionMarkdown(
+                  step.content_markdown,
+                  recipe.ingredients.map((ingredient) => ({
+                    id: ingredient.id,
+                    name: ingredient.ingredient_name,
+                  })),
+                )}
               </li>
             ))}
           </ol>

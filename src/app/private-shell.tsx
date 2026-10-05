@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { signOut } from './actions/auth';
+import { AccountMenu } from './account-menu';
 
 export type PrivateNavItem = {
   href: string;
@@ -39,20 +39,7 @@ export function PrivateShell({
             </a>
           ))}
         </div>
-        <details className="account-menu">
-          <summary aria-label={`Account options for ${email}`} className="account-menu-trigger">
-            <span className="account-menu-email">{email}</span>
-            <span aria-hidden="true" className="account-avatar">
-              {initials}
-            </span>
-          </summary>
-          <div className="account-menu-panel">
-            <p>{email}</p>
-            <form action={signOut}>
-              <button type="submit">Sign out</button>
-            </form>
-          </div>
-        </details>
+        <AccountMenu email={email} initials={initials} />
       </nav>
       <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>
         {children}
