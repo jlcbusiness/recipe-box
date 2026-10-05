@@ -995,7 +995,8 @@ h1 {
 .recipe-ingredient-desktop {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 3px;
   background: white;
@@ -1003,7 +1004,7 @@ h1 {
 
 .recipe-ingredient-desktop-layout {
   display: grid;
-  min-width: 1012px;
+  min-width: 0;
   grid-template-columns: 32px minmax(0, 1fr);
 }
 
@@ -1026,9 +1027,9 @@ h1 {
 
 .recipe-ingredient-rail-row {
   display: flex;
-  height: 64px;
-  min-height: 64px;
-  flex: 0 0 64px;
+  height: 48px;
+  min-height: 48px;
+  flex: 0 0 48px;
   align-items: center;
   justify-content: center;
   gap: 2px;
@@ -1038,7 +1039,7 @@ h1 {
 .recipe-ingredient-drag-handle {
   display: inline-flex;
   width: 12px;
-  height: 64px;
+  height: 48px;
   flex: 0 0 12px;
   align-items: center;
   justify-content: center;
@@ -1078,7 +1079,7 @@ h1 {
 
 .recipe-ingredient-table {
   width: 100%;
-  min-width: 948px;
+  min-width: 0;
   table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
@@ -1094,20 +1095,33 @@ h1 {
   text-transform: uppercase;
 }
 
-.recipe-ingredient-table th:first-child {
+.recipe-ingredient-amount-group {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.recipe-ingredient-name-col {
   width: 22%;
 }
 
-.recipe-ingredient-table th:nth-child(2) {
-  width: 46%;
+.recipe-ingredient-type-col {
+  width: 68px;
 }
 
-.recipe-ingredient-table th:nth-child(3) {
-  width: 14%;
+.recipe-ingredient-measurements-col {
+  width: calc(51% - 100px);
 }
 
-.recipe-ingredient-table th:nth-child(4) {
-  width: 18%;
+.recipe-ingredient-detail-col {
+  width: 12%;
+}
+
+.recipe-ingredient-preparation-col {
+  width: 15%;
+}
+
+.recipe-ingredient-actions-col {
+  width: 32px;
 }
 
 .recipe-ingredient-delete-header {
@@ -1116,7 +1130,7 @@ h1 {
 
 .private-content .recipe-ingredient-table tr td {
   position: relative;
-  height: 64px;
+  height: 48px;
   border-bottom: 1px solid var(--line);
   padding: 1px 7px;
   vertical-align: middle;
@@ -1173,79 +1187,86 @@ h1 {
   background: rgb(247 249 244 / 55%);
 }
 
-.recipe-ingredient-amount-cell {
+.recipe-ingredient-measurement-cell {
   vertical-align: middle;
+}
+
+.recipe-ingredient-type-cell,
+.recipe-ingredient-amount-cell {
+  overflow: hidden;
+}
+
+.recipe-form .recipe-ingredient-desktop .recipe-ingredient-type-cell {
+  padding-right: 0;
+}
+
+.recipe-form .recipe-ingredient-desktop .recipe-ingredient-amount-cell {
+  padding-left: 0;
 }
 
 .recipe-measurement-editor {
   display: grid;
+  width: 100%;
   min-width: 0;
   gap: 4px;
 }
 
-.recipe-measurement-entry {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: max-content minmax(60px, 0.55fr) minmax(88px, 1fr) 26px;
-  align-items: center;
-  gap: 4px;
-}
-
-.recipe-measurement-types {
+.recipe-measurement-desktop-fields,
+.recipe-measurement-desktop-pair {
   display: flex;
   min-width: 0;
+  align-items: center;
   flex-wrap: nowrap;
-  gap: 1px;
-  margin: 0;
-  border: 0;
-  padding: 0;
-}
-
-.recipe-measurement-type-option {
-  position: relative;
-  display: inline-flex;
-  min-height: 25px;
-  align-items: center;
-  cursor: pointer;
-}
-
-.recipe-measurement-type-option input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  min-height: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-.recipe-form .recipe-measurement-types .recipe-measurement-type-option > span {
-  display: inline-flex;
-  min-height: 25px;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 2px 3px;
-  background: white;
-  color: var(--ink);
-  font-size: 9px;
-  font-weight: 600;
   white-space: nowrap;
 }
 
-.recipe-form .recipe-measurement-types .recipe-measurement-type-option input:checked + span {
-  border-color: var(--leaf);
-  background: var(--leaf);
-  color: white;
+.recipe-measurement-desktop-fields {
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.recipe-form .recipe-measurement-types .recipe-measurement-type-option input:focus-visible + span {
-  outline: 2px solid var(--gold);
-  outline-offset: 1px;
+.recipe-measurement-desktop-pair {
+  flex: 0 1 auto;
+  gap: 7px;
 }
 
 .recipe-measurement-control {
   display: block;
   min-width: 0;
+}
+
+.recipe-form .recipe-measurement-control input.recipe-measurement-quantity {
+  text-align: center;
+}
+
+.recipe-form
+  .recipe-ingredient-desktop
+  .recipe-measurement-control
+  input.recipe-measurement-quantity {
+  width: auto;
+  max-width: 5.5em;
+}
+
+.recipe-measurement-units {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+}
+
+.recipe-measurement-dimension {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(54px, 0.55fr) minmax(80px, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-measurement-slash {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .recipe-form .recipe-ingredient-mobile-popover input {
@@ -1276,49 +1297,12 @@ h1 {
   font-weight: 400;
 }
 
-.recipe-form .recipe-measurement-control:first-of-type input {
-  min-width: 68px;
-}
-
 .recipe-form .recipe-measurement-control select {
   max-width: 150px;
 }
 
-.recipe-measurement-add {
-  justify-self: start;
-  min-height: 25px;
-  border: 0;
-  border-radius: 2px;
-  padding: 2px 4px;
-  background: transparent;
-  color: var(--leaf);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.recipe-measurement-add:hover,
-.recipe-measurement-remove:hover {
-  background: #edf4e9;
-}
-
-.recipe-measurement-remove {
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: 2px;
-  padding: 0;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 18px;
-  cursor: pointer;
-}
-
 .recipe-measurement-error {
-  grid-column: 1 / -1;
-  margin: 0;
+  margin: 3px 0 0;
   color: #8e2f28;
   font-size: 11px;
   font-weight: 600;
@@ -1343,6 +1327,7 @@ h1 {
 .ingredient-cell-editor {
   position: relative;
   width: 100%;
+  min-width: 0;
 }
 
 .recipe-form .ingredient-cell-input {
@@ -1356,6 +1341,38 @@ h1 {
   background: white;
   color: var(--ink);
   font: inherit;
+}
+
+.recipe-form .recipe-measurement-picklist-trigger {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
+}
+
+.recipe-form .recipe-measurement-picklist-trigger.recipe-measurement-unit-trigger {
+  box-sizing: border-box;
+  width: calc(4ch + 16px);
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.recipe-form .recipe-measurement-picklist-trigger.recipe-measurement-weight-trigger {
+  width: calc(2ch + 16px);
+  padding-right: 2px;
+  padding-left: 6px;
+}
+
+.recipe-form .recipe-measurement-picklist-trigger:not(.recipe-measurement-unit-trigger) {
+  width: max-content;
+}
+
+.recipe-form
+  .recipe-ingredient-desktop
+  .recipe-measurement-category
+  .recipe-measurement-picklist-trigger {
+  box-sizing: border-box;
+  width: calc(4.6ch + 1mm + 14px);
 }
 
 .ingredient-cell-options {
@@ -1385,8 +1402,20 @@ h1 {
   cursor: pointer;
 }
 
+.ingredient-cell-option-group {
+  min-height: 26px;
+  padding: 5px 8px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 4px;
+}
+
 .ingredient-cell-option:hover,
-.ingredient-cell-option[aria-selected="true"] {
+.ingredient-cell-option[aria-selected="true"],
+.ingredient-cell-option.is-active {
   background: #edf4e9;
   color: var(--leaf);
 }
@@ -1476,12 +1505,15 @@ h1 {
   position: fixed;
   z-index: 50;
   display: grid;
-  width: min(340px, calc(100vw - 80px));
+  grid-template-columns: minmax(0, 1fr);
+  width: min(364px, calc(100vw - 56px));
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   gap: 8px;
   border: 1px solid var(--line);
   border-radius: 3px;
-  padding: 12px;
+  padding: 12px 24px 12px 12px;
   background: white;
   box-shadow: 0 6px 18px rgb(36 40 32 / 18%);
 }
@@ -1490,13 +1522,23 @@ h1 {
   min-width: 0;
 }
 
+.recipe-form .recipe-ingredient-mobile-popover fieldset.recipe-measurement-editor {
+  border-top: 0;
+  padding: 0;
+}
+
 .recipe-ingredient-mobile-popover label,
 .recipe-mobile-picker-field {
   display: grid;
+  min-width: 0;
   gap: 3px;
   color: var(--ink);
   font-size: 12px;
   font-weight: 700;
+}
+
+.recipe-ingredient-mobile-popover > * {
+  min-width: 0;
 }
 
 .recipe-form .recipe-ingredient-mobile-popover .recipe-measurement-type-option input {
@@ -1617,6 +1659,16 @@ h1 {
   line-height: 1.7;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+  .recipe-ingredient-desktop {
+    display: none;
+  }
+
+  .recipe-ingredient-mobile {
+    display: block;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1774,37 +1826,51 @@ h1 {
     display: block;
   }
 
-  .recipe-measurement-types {
-    display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .recipe-form .recipe-measurement-editor {
+    display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
-  }
-
-  .recipe-measurement-type-option,
-  .recipe-form .recipe-measurement-type-option span {
-    width: 100%;
-    min-height: 48px;
-    justify-content: center;
-    white-space: normal;
-    text-align: center;
-  }
-
-  .recipe-measurement-entry {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+    align-items: center;
     gap: 6px;
   }
 
-  .recipe-form .recipe-ingredient-mobile-popover .recipe-measurement-control input,
-  .recipe-form .recipe-ingredient-mobile-popover .recipe-measurement-control select {
-    height: 48px;
-    min-height: 48px;
-    max-width: none;
+  .recipe-measurement-dimension {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
   }
 
-  .recipe-measurement-add,
-  .recipe-measurement-remove {
-    min-width: 48px;
-    min-height: 48px;
+  .recipe-measurement-units {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .recipe-form
+    .recipe-ingredient-mobile-popover
+    .recipe-measurement-control
+    input.recipe-measurement-quantity {
+    width: auto;
+    max-width: 5.5em;
+  }
+
+  .recipe-form
+    .recipe-ingredient-mobile-popover
+    .recipe-measurement-control
+    .recipe-measurement-picklist-trigger {
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .recipe-form
+    .recipe-ingredient-mobile-popover
+    .recipe-measurement-control
+    input.recipe-measurement-quantity {
+    height: 34px;
+    min-height: 34px;
+    padding: 5px 3.5px;
   }
 }

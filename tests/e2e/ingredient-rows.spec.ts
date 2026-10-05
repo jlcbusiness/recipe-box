@@ -274,7 +274,9 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(grid.getByRole('row')).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Add ingredient row' })).toHaveCount(0);
     await expect(
-      page.locator('.recipe-ingredient-desktop button:not(.recipe-ingredient-drag-handle)'),
+      page.locator(
+        '.recipe-ingredient-desktop button:not(.recipe-ingredient-drag-handle):not(.recipe-measurement-picklist-trigger)',
+      ),
     ).toHaveCount(0);
     await expect(page.getByRole('checkbox', { name: 'Main, row 1' })).toBeDisabled();
     expect(
@@ -305,16 +307,27 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.keyboard.press('Tab');
     await expect(grid.getByRole('row')).toHaveCount(3);
     await expect(grid.getByRole('row').nth(1)).toContainText('Basil');
-    await expect(grid.locator('[aria-label="Detail, row 1"]')).toBeFocused();
+    await expect(grid.locator('[aria-label="Specifics, row 1"]')).toBeFocused();
     await grid.locator('[aria-label="Ingredient, row 1"]').focus();
     await page.keyboard.press('Tab');
-    const firstDetailCell = grid.locator('[aria-label="Detail, row 1"]');
+    const firstDetailCell = grid.locator('[aria-label="Specifics, row 1"]');
     await expect(firstDetailCell).toBeFocused();
     await page.keyboard.press('f');
-    const firstDetail = page.getByRole('textbox', { name: 'Detail, row 1' });
+    const firstDetail = page.getByRole('textbox', { name: 'Specifics, row 1' });
     await expect(firstDetail).toBeFocused();
     await expect(firstDetail).toHaveValue('f');
     await firstDetail.pressSequentially('resh');
+    await page.keyboard.press('Tab');
+    const firstTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
+    await expect(firstTypePicker).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('combobox', { name: 'Volume unit, row 1' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('textbox', { name: 'Weight amount, row 1' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('combobox', { name: 'Weight unit, row 1' })).toBeFocused();
     await page.keyboard.press('Tab');
     const firstPreparationCell = grid.locator('[aria-label="Preparation, row 1"]');
     await expect(firstPreparationCell).toBeFocused();
@@ -338,8 +351,8 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     const mainCheckbox = page.getByRole('checkbox', { name: 'Main, row 1' });
     await mainCheckbox.focus();
     await page.keyboard.press('Space');
-    await grid.locator('[aria-label="Detail, row 1"]').click();
-    const firstDetailEditor = page.getByRole('textbox', { name: 'Detail, row 1' });
+    await grid.locator('[aria-label="Specifics, row 1"]').click();
+    const firstDetailEditor = page.getByRole('textbox', { name: 'Specifics, row 1' });
     await firstDetailEditor.fill('fresh');
     await page.keyboard.press('Enter');
     await grid.locator('[aria-label="Preparation, row 1"]').click();
@@ -365,8 +378,8 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(grid.getByRole('row')).toHaveCount(3);
     await page.keyboard.press('Enter');
     await expect(grid.getByRole('row')).toHaveCount(4);
-    await grid.locator('[aria-label="Detail, row 2"]').click();
-    const secondDetail = page.getByRole('textbox', { name: 'Detail, row 2' });
+    await grid.locator('[aria-label="Specifics, row 2"]').click();
+    const secondDetail = page.getByRole('textbox', { name: 'Specifics, row 2' });
     await secondDetail.fill('ripe');
     await page.keyboard.press('Enter');
     await page.locator('[aria-label="Ingredient, row 2"]').focus();
@@ -423,15 +436,15 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { name: 'Keyboard ingredient rows' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Ingredients' })).toBeVisible();
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('Ripe tomato');
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('Fresh basil, chopped');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('ripe tomato');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('fresh basil, chopped');
     await page.getByRole('link', { name: 'Edit' }).click();
     const reloadedGrid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
     await expect(reloadedGrid.getByRole('row').nth(1)).toContainText('Tomato');
     await expect(reloadedGrid.getByRole('row').nth(2)).toContainText('Basil');
-    await expect(reloadedGrid.locator('[aria-label="Detail, row 1"]')).toHaveText('ripe');
+    await expect(reloadedGrid.locator('[aria-label="Specifics, row 1"]')).toHaveText('ripe');
     await expect(reloadedGrid.locator('[aria-label="Preparation, row 1"]')).toHaveText('');
-    await expect(reloadedGrid.locator('[aria-label="Detail, row 2"]')).toHaveText('fresh');
+    await expect(reloadedGrid.locator('[aria-label="Specifics, row 2"]')).toHaveText('fresh');
     await expect(reloadedGrid.locator('[aria-label="Preparation, row 2"]')).toHaveText('chopped');
     await expect(page.getByRole('checkbox', { name: 'Main, row 1' })).not.toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'Main, row 2' })).toBeChecked();
@@ -446,7 +459,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Keyboard ingredient rows' })).toBeVisible();
     await expect(page.locator('.recipe-ingredient-list')).not.toContainText('Basil');
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('Ripe tomato');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('ripe tomato');
   } finally {
     await deleteTestUser(request, user);
   }
@@ -495,19 +508,42 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     const triggerBounds = await enterIngredient.boundingBox();
     expect(editorBounds).not.toBeNull();
     expect(triggerBounds).not.toBeNull();
+    expect(editorBounds?.width).toBe(334);
     expect(editorBounds?.y).toBeLessThan(triggerBounds?.y ?? 0);
     expect(editorBounds?.y).toBeGreaterThanOrEqual(0);
     expect((editorBounds?.y ?? 0) + (editorBounds?.height ?? 0)).toBeLessThanOrEqual(520);
+    await editor.getByRole('combobox', { name: 'Ingredient type, row 1' }).click();
+    await page.getByRole('option', { name: 'Unit', exact: true }).click();
+    const mobileAmountFields = [
+      editor.getByRole('combobox', { name: 'Ingredient type, row 1' }),
+      editor.getByRole('textbox', { name: 'Volume amount, row 1' }),
+      editor.getByRole('combobox', { name: 'Volume unit, row 1' }),
+      editor.getByRole('textbox', { name: 'Weight amount, row 1' }),
+      editor.getByRole('combobox', { name: 'Weight unit, row 1' }),
+    ];
+    await editor.getByRole('textbox', { name: 'Volume amount, row 1' }).fill('1 1/2');
+    await editor.getByRole('textbox', { name: 'Weight amount, row 1' }).fill('1 1/2');
+    const amountFieldCenters = await Promise.all(
+      mobileAmountFields.map((field) =>
+        field.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top + bounds.height / 2;
+        }),
+      ),
+    );
+    expect(Math.max(...amountFieldCenters) - Math.min(...amountFieldCenters)).toBeLessThanOrEqual(
+      1,
+    );
     await page.getByLabel('Name').click();
     await expect(editor).toBeHidden();
     await enterIngredient.click();
-    const ingredientInput = editor.getByRole('combobox', { name: 'Ingredient' });
+    const ingredientInput = editor.getByRole('combobox', { name: 'Ingredient', exact: true });
     await expect(ingredientInput).not.toHaveAttribute('list', /.+/);
     await expect(page.getByRole('listbox')).toHaveCount(0);
     await ingredientInput.fill('Cheese');
     await expect(page.getByRole('listbox')).toBeVisible();
     await page.getByRole('option', { name: 'Add "Cheese"' }).click();
-    await editor.getByRole('textbox', { name: 'Detail' }).fill('Yellow');
+    await editor.getByRole('textbox', { name: 'Specifics' }).fill('Yellow');
     const preparation = editor.getByRole('combobox', { name: 'Preparation' });
     await expect(preparation).not.toHaveAttribute('list', /.+/);
     await preparation.focus();
@@ -526,11 +562,11 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await expect(preparation).toHaveValue('diced');
     await editor.getByRole('button', { name: 'Submit' }).click();
 
-    await expect(mobileList).toContainText('Yellow cheese, diced');
+    await expect(mobileList).toContainText('yellow cheese, diced');
     await expect(editor).toBeHidden();
     await mobileList.getByRole('button', { name: 'Enter ingredient' }).click();
-    await editor.getByRole('combobox', { name: 'Ingredient' }).fill('Flour');
-    await editor.getByRole('textbox', { name: 'Detail' }).fill('White');
+    await editor.getByRole('combobox', { name: 'Ingredient', exact: true }).fill('Flour');
+    await editor.getByRole('textbox', { name: 'Specifics' }).fill('White');
     await editor.getByRole('combobox', { name: 'Preparation' }).fill('sifted');
     await editor.getByRole('button', { name: 'Submit' }).click();
     const sourceHandle = mobileList.getByRole('button', { name: 'Reorder ingredient row 1' });
@@ -545,14 +581,14 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
       clientX: destination.x + destination.width / 2,
       clientY: destination.y + destination.height / 2,
     });
-    await expect(mobileList.getByRole('row').first()).toContainText('White flour, sifted');
+    await expect(mobileList.getByRole('row').first()).toContainText('white flour, sifted');
     const deleteMobileIngredient = mobileList.getByRole('button', {
       name: 'Delete ingredient row 1',
     });
     await expect(deleteMobileIngredient).toBeVisible();
     await deleteMobileIngredient.click();
-    await expect(mobileList).not.toContainText('White flour, sifted');
-    await expect(mobileList).toContainText('Yellow cheese, diced');
+    await expect(mobileList).not.toContainText('white flour, sifted');
+    await expect(mobileList).toContainText('yellow cheese, diced');
     const axeResults = await new AxeBuilder({ page })
       .include('.recipe-ingredient-mobile')
       .analyze();

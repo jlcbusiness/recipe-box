@@ -138,9 +138,16 @@ function fractionText(value: number): string | null {
   return whole > 0 ? `${whole} ${fractionPart}` : fractionPart;
 }
 
-export function formatQuantity(value: number): string {
+export function formatQuantity(value: number, system: MeasurementSystem = 'us_customary'): string {
   if (!Number.isFinite(value) || value <= 0) {
     return '';
+  }
+
+  if (system === 'metric') {
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 2,
+      useGrouping: false,
+    }).format(value);
   }
 
   const fraction = fractionText(value);
@@ -151,9 +158,13 @@ export function formatQuantity(value: number): string {
   return Number(value.toFixed(2)).toString();
 }
 
-export function formatQuantityRange(minimum: number, maximum: number | null): string {
-  const lower = formatQuantity(minimum);
-  return maximum === null ? lower : `${lower}-${formatQuantity(maximum)}`;
+export function formatQuantityRange(
+  minimum: number,
+  maximum: number | null,
+  system: MeasurementSystem = 'us_customary',
+): string {
+  const lower = formatQuantity(minimum, system);
+  return maximum === null ? lower : `${lower}-${formatQuantity(maximum, system)}`;
 }
 
 export function validateMeasurementSet(measurements: MeasurementInput[]): string | null {
@@ -218,9 +229,21 @@ export function validateMeasurementSet(measurements: MeasurementInput[]): string
 }
 
 export function serializeMeasurements(drafts: MeasurementDraft[]): MeasurementPayload[] {
-  const selected = drafts.filter(
-    (draft) => draft.type || draft.quantity.trim() || draft.unitCode || draft.picklistValueId,
-  );
+  const unitDrafts = drafts.filter((draft) => draft.type === 'volume' || draft.type === 'weight');
+  const enteredUnitDrafts = unitDrafts.filter((draft) => draft.quantity.trim());
+  if (unitDrafts.length > 0 && enteredUnitDrafts.length === 0) {
+    throw new Error('Enter a volume or weight amount.');
+  }
+
+  const selected = [
+    ...enteredUnitDrafts,
+    ...drafts.filter(
+      (draft) =>
+        draft.type !== 'volume' &&
+        draft.type !== 'weight' &&
+        (draft.type || draft.quantity.trim() || draft.unitCode || draft.picklistValueId),
+    ),
+  ];
   const inputs: MeasurementInput[] = selected.map((draft) => {
     if (!draft.type) {
       throw new Error('Choose a measurement type.');

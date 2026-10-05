@@ -317,11 +317,38 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('Measured recipe');
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+    const amountHeader = grid.getByRole('columnheader', { name: 'Amount', exact: true });
+    await expect(amountHeader).toHaveAttribute('colspan', '2');
+    await expect(amountHeader).toHaveCSS('text-align', 'left');
+    await expect(grid.getByRole('columnheader', { name: 'Type', exact: true })).toHaveCount(0);
+    await expect(grid.getByRole('columnheader', { name: 'Amt', exact: true })).toHaveCount(0);
+    await expect(grid.getByRole('columnheader', { name: 'Unit', exact: true })).toHaveCount(0);
+    await expect(
+      grid
+        .locator('thead tr')
+        .first()
+        .locator('th')
+        .evaluateAll((headers) => headers.slice(0, 4).map((header) => header.textContent?.trim())),
+    ).resolves.toEqual(['Ingredient', 'Specifics', 'Amount', 'Preparation']);
+    await expect(page.getByRole('combobox', { name: 'Ingredient type, row 1' })).toHaveText('Unit');
+    await expect(grid.locator('tbody tr').first().locator('td')).toHaveCount(6);
+    await expect(grid.locator('tbody tr').first().locator('td').nth(0)).toHaveCSS('height', '48px');
+
+    async function chooseMeasurementOption(label: string, value: string) {
+      await page.getByRole('combobox', { name: label }).click();
+      await page.getByRole('listbox').getByRole('option', { name: value, exact: true }).click();
+    }
+
+    const initialTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
+    await initialTypePicker.click();
+    const typeOptions = page.getByRole('listbox').getByRole('option');
+    await expect(typeOptions).toHaveText(['Unit', 'Count', 'Things', 'Feel']);
+    await initialTypePicker.press('Escape');
 
     async function addIngredientRow(
       row: number,
       name: string,
-      type: 'volume' | 'weight' | 'count' | 'informal' | 'unmeasured',
+      type: 'units' | 'count' | 'informal' | 'judgment',
       quantity: string,
       unitValue: string,
     ) {
@@ -330,69 +357,330 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       await ingredientInput.fill(name);
       await ingredientInput.press('Enter');
       await ingredientInput.press('Enter');
-      await page.getByRole('button', { name: `Add measurement, row ${row}` }).click();
-      const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-      const measurementType = page.getByRole('radio', {
-        name: `${typeLabel}, row ${row}, measurement 1`,
-      });
-      if (type === 'count') {
-        await measurementType.focus();
-        await measurementType.press('Space');
-      } else {
-        await measurementType.locator('..').click();
-      }
-      await expect(measurementType).toBeChecked();
-      if (quantity) {
-        await page
-          .getByRole('textbox', { name: `Amount, row ${row}, measurement 1` })
-          .fill(quantity);
-      }
-      if (type === 'volume' || type === 'weight') {
-        await page
-          .getByRole('combobox', { name: `Measurement unit, row ${row}, measurement 1` })
-          .selectOption(unitValue);
+      const typePicker = page.getByRole('combobox', { name: `Ingredient type, row ${row}` });
+      const typeLabel = {
+        units: 'Unit',
+        count: 'Count',
+        informal: 'Things',
+        judgment: 'Feel',
+      }[type];
+      await chooseMeasurementOption(`Ingredient type, row ${row}`, typeLabel);
+      await expect(typePicker).toHaveText(typeLabel);
+      if (type === 'units') {
+        const volumeAmount = page.getByRole('textbox', { name: `Volume amount, row ${row}` });
+        await expect(volumeAmount).toHaveAttribute('size', '2');
+        await expect(volumeAmount).toHaveCSS('text-align', 'center');
+        await expect
+          .poll(() =>
+            grid
+              .locator('tbody tr')
+              .nth(row - 1)
+              .locator('.recipe-measurement-slash')
+              .textContent(),
+          )
+          .toBe('/');
+        if (quantity) {
+          await volumeAmount.fill(quantity);
+        }
+        if (unitValue) {
+          const volumeUnit = page.getByRole('combobox', { name: `Volume unit, row ${row}` });
+          await chooseMeasurementOption(`Volume unit, row ${row}`, unitValue);
+          await expect
+            .poll(() => volumeUnit.evaluate((select) => select.getBoundingClientRect().width))
+            .toBeLessThanOrEqual(90);
+        }
       } else if (type === 'informal') {
-        await page
-          .getByRole('combobox', { name: `Informal unit, row ${row}, measurement 1` })
-          .selectOption({ label: unitValue });
-      } else if (type === 'unmeasured') {
-        await page
-          .getByRole('combobox', { name: `Unmeasured phrase, row ${row}, measurement 1` })
-          .selectOption({ label: unitValue });
+        await page.getByRole('textbox', { name: `Informal amount, row ${row}` }).fill(quantity);
+        const unitPicker = page.getByRole('combobox', { name: `Informal unit, row ${row}` });
+        await unitPicker.click();
+        await page.getByRole('listbox').getByRole('option', { name: unitValue }).click();
+      } else if (type === 'judgment') {
+        const phrasePicker = page.getByRole('combobox', { name: `Judgment phrase, row ${row}` });
+        await phrasePicker.click();
+        await page.getByRole('listbox').getByRole('option', { name: unitValue }).click();
+      } else {
+        await page.getByRole('textbox', { name: `Count amount, row ${row}` }).fill(quantity);
       }
     }
 
-    await addIngredientRow(1, 'Flour', 'volume', '1 1/2', 'cup');
-    await page.getByRole('button', { name: 'Add measurement, row 1' }).click();
-    const weightRadio = page.getByRole('radio', { name: 'Weight, row 1, measurement 2' });
-    await weightRadio.locator('..').click();
-    await expect(weightRadio).toBeChecked();
-    await page.getByRole('textbox', { name: 'Amount, row 1, measurement 2' }).fill('120');
-    await page
-      .getByRole('combobox', { name: 'Measurement unit, row 1, measurement 2' })
-      .selectOption('g');
-    await addIngredientRow(2, 'Eggs', 'count', '2-3', '');
-    await addIngredientRow(3, 'Cilantro', 'informal', '1', 'Bunch');
-    await addIngredientRow(4, 'Salt', 'unmeasured', '', 'To taste');
+    await addIngredientRow(1, 'Flour', 'units', '1 1/2', 'cup');
+    await page.getByRole('textbox', { name: 'Weight amount, row 1' }).fill('120');
+    await chooseMeasurementOption('Weight unit, row 1', 'g');
+    const volumeUnitWidth = await page
+      .getByRole('combobox', { name: 'Volume unit, row 1' })
+      .evaluate((select) => select.getBoundingClientRect().width);
+    const weightUnitWidth = await page
+      .getByRole('combobox', { name: 'Weight unit, row 1' })
+      .evaluate((select) => select.getBoundingClientRect().width);
+    expect(volumeUnitWidth).toBeLessThanOrEqual(50);
+    expect(weightUnitWidth).toBeLessThanOrEqual(36);
+    expect(volumeUnitWidth).toBeGreaterThan(weightUnitWidth);
+    await expect(page.getByRole('combobox', { name: 'Weight unit, row 1' })).toHaveCSS(
+      'padding-left',
+      '6px',
+    );
+    expect(
+      await page
+        .getByRole('combobox', { name: 'Ingredient type, row 1' })
+        .evaluate((select) => select.getBoundingClientRect().width),
+    ).toBeLessThanOrEqual(80);
+    await addIngredientRow(2, 'Milk', 'units', '1', 'cup');
+    await addIngredientRow(3, 'Butter', 'units', '', '');
+    await page.getByRole('textbox', { name: 'Weight amount, row 3' }).fill('4');
+    await chooseMeasurementOption('Weight unit, row 3', 'oz');
+    await addIngredientRow(4, 'Eggs', 'count', '2-3', '');
+    await expect(page.getByRole('textbox', { name: 'Count amount, row 4' })).toHaveCSS(
+      'text-align',
+      'center',
+    );
+    await expect(page.getByRole('textbox', { name: 'Weight amount, row 4' })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Weight unit, row 4' })).toHaveCount(0);
+    await addIngredientRow(5, 'Cilantro', 'informal', '2', 'Bunch');
+    await expect(page.getByRole('combobox', { name: 'Ingredient type, row 5' })).toHaveText(
+      'Things',
+    );
+    await expect(page.getByRole('combobox', { name: 'Informal unit, row 5' })).toHaveText('Bunch');
+    await expect(page.getByRole('textbox', { name: 'Weight amount, row 5' })).toHaveCount(0);
+    await addIngredientRow(6, 'Salt', 'judgment', '', 'To taste');
+    await expect(page.getByRole('combobox', { name: 'Ingredient type, row 6' })).toHaveText('Feel');
+    await expect(page.getByRole('combobox', { name: 'Judgment phrase, row 6' })).toHaveText(
+      'To taste',
+    );
+    await expect(page.getByRole('textbox', { name: 'Count amount, row 6' })).toHaveCount(0);
+
+    const firstDesktopRow = grid.locator('tbody tr').first();
+    const initialTypeBounds = await firstDesktopRow
+      .getByRole('combobox', { name: 'Ingredient type, row 1' })
+      .boundingBox();
+    const initialAmountBounds = await firstDesktopRow
+      .getByRole('textbox', { name: 'Volume amount, row 1' })
+      .boundingBox();
+    expect(initialTypeBounds).not.toBeNull();
+    expect(initialAmountBounds).not.toBeNull();
+    expect(
+      (initialAmountBounds?.x ?? 0) -
+        ((initialTypeBounds?.x ?? 0) + (initialTypeBounds?.width ?? 0)),
+    ).toBeLessThanOrEqual(8);
+
+    await page.setViewportSize({ width: 800, height: 900 });
+    const desktopEditor = page.locator('.recipe-ingredient-desktop');
+    await expect
+      .poll(() => desktopEditor.evaluate((element) => element.scrollWidth - element.clientWidth))
+      .toBeLessThanOrEqual(0);
+    const typeFieldBounds = await firstDesktopRow
+      .getByRole('combobox', { name: 'Ingredient type, row 1' })
+      .boundingBox();
+    const firstAmountBounds = await firstDesktopRow
+      .getByRole('textbox', { name: 'Volume amount, row 1' })
+      .boundingBox();
+    const thingsTypePicker = grid.getByRole('combobox', { name: 'Ingredient type, row 5' });
+    const thingsPickerWidth = await thingsTypePicker.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const styles = getComputedStyle(element);
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Canvas text measurement is unavailable.');
+      }
+      context.font = styles.font;
+      return {
+        actual: bounds.width,
+        expected:
+          context.measureText('Things').width +
+          Number.parseFloat(styles.paddingLeft) +
+          Number.parseFloat(styles.paddingRight) +
+          Number.parseFloat(styles.borderLeftWidth) +
+          Number.parseFloat(styles.borderRightWidth) +
+          96 / 25.4,
+      };
+    });
+    expect(typeFieldBounds).not.toBeNull();
+    expect(firstAmountBounds).not.toBeNull();
+    expect(Math.abs(thingsPickerWidth.actual - thingsPickerWidth.expected)).toBeLessThanOrEqual(2);
+    expect(
+      (firstAmountBounds?.x ?? 0) - ((typeFieldBounds?.x ?? 0) + (typeFieldBounds?.width ?? 0)),
+    ).toBeLessThanOrEqual(8);
+    await expect(
+      grid.locator('tbody tr').first().locator('.recipe-measurement-desktop-fields'),
+    ).toHaveCSS('flex-wrap', 'nowrap');
 
     await expect(page.getByRole('button', { name: 'Save recipe' })).toBeVisible();
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Measured recipe' })).toBeVisible();
-    await expect(page.getByText('1 1/2 cup / 120 g flour', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 1/2 cups / 120 g flour', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 cup milk', { exact: true })).toBeVisible();
+    await expect(page.getByText('4 oz butter', { exact: true })).toBeVisible();
     await expect(page.getByText('2-3 eggs', { exact: true })).toBeVisible();
-    await expect(page.getByText('1 bunch cilantro', { exact: true })).toBeVisible();
+    await expect(page.getByText('2 bunches cilantro', { exact: true })).toBeVisible();
     await expect(page.getByText('salt to taste', { exact: true })).toBeVisible();
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 390, height: 500 });
     await page.getByRole('link', { name: 'Edit' }).click();
-    await page.getByRole('button', { name: /Edit 1 1\/2 cup \/ 120 g flour/ }).click();
+    await page.getByRole('button', { name: /Edit 1 1\/2 cups \/ 120 g flour/ }).click();
     await expect(page.getByRole('dialog', { name: 'Ingredient details' })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Amount, row 1, measurement 1' })).toHaveValue(
-      '1 1/2',
+    const mobilePane = page.getByRole('dialog', { name: 'Ingredient details' });
+    await expect(
+      mobilePane.locator(':scope > .recipe-mobile-picker-field > span, :scope > label > span'),
+    ).toHaveText(['Ingredient', 'Specifics', 'Amount', 'Preparation']);
+    const overflowingFields = await mobilePane.evaluate((element) => {
+      const paneBounds = element.getBoundingClientRect();
+      const contentRight =
+        paneBounds.right - Number.parseFloat(getComputedStyle(element).paddingRight);
+      return Array.from(element.querySelectorAll('input, button.ingredient-cell-input, fieldset'))
+        .filter((field) => field.getBoundingClientRect().right > contentRight + 1)
+        .map((field) => ({
+          className: field.className,
+          right: field.getBoundingClientRect().right,
+        }));
+    });
+    expect(overflowingFields).toEqual([]);
+    const ingredientPicker = page.getByRole('combobox', { name: 'Ingredient', exact: true });
+    await expect(ingredientPicker).toBeFocused();
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+    await ingredientPicker.click();
+    const ingredientOptions = page.getByRole('listbox');
+    await expect(ingredientOptions).toHaveClass(/ingredient-cell-options/);
+    await ingredientOptions.getByRole('option', { name: 'Flour', exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Ingredient type, row 1' })).toHaveText('Unit');
+    await expect(page.getByRole('combobox', { name: 'Ingredient type, row 1' })).toHaveCSS(
+      'font-weight',
+      '400',
     );
-    await expect(page.getByRole('textbox', { name: 'Amount, row 1, measurement 2' })).toHaveValue(
-      '120',
+    await expect(page.getByRole('combobox', { name: 'Volume unit, row 1' })).toHaveCSS(
+      'font-weight',
+      '400',
     );
+    await expect(page.locator('.recipe-measurement-editor')).toHaveCSS('border-top-width', '0px');
+    await expect(page.locator('.recipe-measurement-dimension').first()).toHaveCSS('gap', '8px');
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveValue('1 1/2');
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveCSS(
+      'text-align',
+      'center',
+    );
+    await expect(page.getByRole('textbox', { name: 'Weight amount, row 1' })).toHaveValue('120');
+    await expect(page.getByRole('combobox', { name: 'Volume unit, row 1' })).toHaveCSS(
+      'height',
+      '34px',
+    );
+    await expect(page.getByRole('combobox', { name: 'Volume unit, row 1' })).toHaveCSS(
+      'height',
+      await page
+        .getByRole('textbox', { name: 'Volume amount, row 1' })
+        .evaluate((element) => getComputedStyle(element).height),
+    );
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveCSS(
+      'height',
+      '34px',
+    );
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveCSS(
+      'padding',
+      '5px 3.5px',
+    );
+    const mobileCategoryPicker = page.getByRole('combobox', {
+      name: 'Ingredient type, row 1',
+    });
+    await mobileCategoryPicker.click();
+    const mobileTypeMenu = page.getByRole('listbox');
+    await expect(mobileTypeMenu.getByRole('option')).toHaveText([
+      'Unit',
+      'Count',
+      'Things',
+      'Feel',
+    ]);
+    const mobileTypeMenuBounds = await mobileTypeMenu.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { bottom: bounds.bottom, top: bounds.top };
+    });
+    expect(mobileTypeMenuBounds.top).toBeGreaterThanOrEqual(0);
+    expect(mobileTypeMenuBounds.bottom).toBeLessThanOrEqual(500);
+    await mobileTypeMenu.getByRole('option', { name: 'Things', exact: true }).click();
+    const thingPicker = page.getByRole('combobox', { name: 'Informal unit, row 1' });
+    await thingPicker.click();
+    const mobilePicklist = page.getByRole('listbox');
+    await expect(mobilePicklist).toHaveClass(/ingredient-cell-options/);
+    await expect(mobilePicklist.getByRole('option', { name: 'Bunch' })).toHaveClass(
+      /ingredient-cell-option/,
+    );
+    const mobilePicklistBounds = await mobilePicklist.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { bottom: bounds.bottom, top: bounds.top };
+    });
+    expect(mobilePicklistBounds.top).toBeGreaterThanOrEqual(0);
+    expect(mobilePicklistBounds.bottom).toBeLessThanOrEqual(500);
+    await mobilePicklist.getByRole('option', { name: 'Bunch' }).click();
+    const thingsType = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
+    const thingsAmount = page.getByRole('textbox', { name: 'Informal amount, row 1' });
+    const thingsUnit = page.getByRole('combobox', { name: 'Informal unit, row 1' });
+    await expect(thingsAmount).toHaveAttribute('size', '2');
+    const thingsAmountWidth = await thingsAmount.evaluate(
+      (element) => element.getBoundingClientRect().width,
+    );
+    expect(thingsAmountWidth).toBeLessThanOrEqual(36);
+    const thingsFieldCenters = await Promise.all(
+      [thingsType, thingsAmount, thingsUnit].map((field) =>
+        field.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top + bounds.height / 2;
+        }),
+      ),
+    );
+    expect(Math.max(...thingsFieldCenters) - Math.min(...thingsFieldCenters)).toBeLessThanOrEqual(
+      1,
+    );
+    await chooseMeasurementOption('Ingredient type, row 1', 'Count');
+    const countAmount = page.getByRole('textbox', { name: 'Count amount, row 1' });
+    await expect(countAmount).toHaveAttribute('size', '2');
+    const countType = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
+    const countFieldCenters = await Promise.all(
+      [countType, countAmount].map((field) =>
+        field.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top + bounds.height / 2;
+        }),
+      ),
+    );
+    expect(Math.max(...countFieldCenters) - Math.min(...countFieldCenters)).toBeLessThanOrEqual(1);
+    await chooseMeasurementOption('Ingredient type, row 1', 'Unit');
+    const volumeUnitPicker = page.getByRole('combobox', { name: 'Volume unit, row 1' });
+    await volumeUnitPicker.click();
+    const mobileUnitMenu = page.getByRole('listbox');
+    await expect(mobileUnitMenu.locator('.ingredient-cell-option-group').first()).toHaveText('US');
+    await expect(mobileUnitMenu.locator('.ingredient-cell-option-group').first()).toHaveCSS(
+      'text-decoration-line',
+      'underline',
+    );
+    await expect(mobileUnitMenu.locator('.ingredient-cell-option-group').first()).toHaveCSS(
+      'text-decoration-color',
+      'rgb(98, 105, 93)',
+    );
+    await expect(mobileUnitMenu.getByRole('option', { name: 'cup', exact: true })).toBeVisible();
+    const mobileUnitMenuBounds = await mobileUnitMenu.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { bottom: bounds.bottom, top: bounds.top };
+    });
+    expect(mobileUnitMenuBounds.top).toBeGreaterThanOrEqual(0);
+    expect(mobileUnitMenuBounds.bottom).toBeLessThanOrEqual(500);
+    await volumeUnitPicker.press('ArrowDown');
+    await expect(mobileUnitMenu.getByRole('option', { name: 'pt', exact: true })).toHaveClass(
+      /is-active/,
+    );
+    await volumeUnitPicker.press('Enter');
+    await expect(volumeUnitPicker).toHaveText('pt');
+    await volumeUnitPicker.press('ArrowUp');
+    await volumeUnitPicker.press('ArrowUp');
+    await expect(mobileUnitMenu.getByRole('option', { name: 'cup', exact: true })).toHaveClass(
+      /is-active/,
+    );
+    await volumeUnitPicker.press('Enter');
+    await expect(volumeUnitPicker).toHaveText('cup');
+    const mobilePopoverBounds = await page
+      .getByRole('dialog', { name: 'Ingredient details' })
+      .evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return { bottom: bounds.bottom, top: bounds.top };
+      });
+    expect(mobilePopoverBounds.top).toBeGreaterThanOrEqual(0);
+    expect(mobilePopoverBounds.bottom).toBeLessThanOrEqual(500);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);

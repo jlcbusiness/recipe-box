@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { fold6Preset } from './playwright.fold6';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -15,6 +16,12 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'Fold 6',
+      use: { 
+        ...fold6Preset,
+      },
     },
   ],
   webServer: {

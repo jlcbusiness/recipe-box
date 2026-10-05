@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the definitive master reference for the Recipe Box application, capturing every concept, requirement, UI behavior, field specification, visual metaphor, and decision established across the planning discussions (`plans/discussion/0.napkin.md` through `7a.response.md`).
+This document is the definitive master reference for the Recipe Box application, capturing every concept, requirement, UI behavior, field specification, visual metaphor, and decision established across the planning discussions and subsequent implementation refinements.
 
 It serves as the exhaustive encyclopedia for implementation slices, slice briefs, and technical specifications. Where high-level documents (`first-draft-spec.md`, `data-model.md`, `visual-design.md`, `delivery-roadmap.md`) provide concise rules, this document provides the complete context, background rationale, and granular specifications.
 
@@ -150,29 +150,31 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 
 ### 3.1 Ingredient Row Structure
 An ingredient and its quantities are permanently tied together in a single
-relational row. In Slice 5, the desktop edit table displays Ingredient, Detail,
-and Preparation values; the Main checkbox and 12px drag handle sit in a narrow
-control rail outside the table. The table always has one trailing empty row.
-Measurement columns arrive in Slice 6.
+relational row. The desktop edit table displays Ingredient, Specifics, Amount,
+and Preparation values in that order; the Main checkbox and 12px drag handle
+sit in a narrow control rail outside the table. The table always has one
+trailing empty row.
 
 1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon in lemon bars). Populates the recipe's `Main Ingredients` query index. The checkbox sits outside the table in the row control rail and is edit-only.
-2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside its row editor popover; menus remain within the viewport and use the available space above or below the field.
-3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4`), ranges (`2-3`), or integers. Blank for unmeasured ingredients.
-4. **Unit (Type Selector + Picklist):**
-   - **Segmented Type Selector:** `Volume`, `Weight`, `Count`, `Informal`, `Unmeasured`.
+2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside its row editor pane; menus remain within the viewport and use the available space above or below the field.
+3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4`), ranges (`2-3`), or integers. Blank for Feel phrases.
+4. **Measurement Category (fixed selector and fields):**
+   - **Unit:** The default category. Shows separate Volume amount/unit and Weight amount/unit fields. Either or both dimensions may be entered; a slash separates them visually and in recipe display.
    - **Volume Picker:** Predefined, immutable convertible units: teaspoon (tsp), tablespoon (TBSP), fluid ounce (fl oz), cup, pint (pt), quart (qt), gallon (gal), milliliter (ml), liter (L).
    - **Weight Picker:** Predefined, immutable convertible units: gram (g), kilogram (kg), ounce (oz), pound (lb).
-   - **Count:** A count has no unit. The quantity is simply how many of the ingredient (`2` eggs, `1` cucumber). Packaging and portion words such as can or bag are not units: a 14 oz can is entered as 14 oz Weight.
-   - **Informal Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk, sheet, stick, slice, pinch, dash, handful. Informal amounts scale but never convert and never take part in density. Packaging words (can, bag, package) are not seeded.
-   - **Unmeasured Picker:** Approved culinary phrases: `to taste`, `as needed`, `for garnish`, `to serve`, `divided`.
-5. **Detail (Text):** Qualitative specification or size qualification. Subtitled under the ingredient name in Ingredient-First view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for butter), `Brummel & Brown` (for margarine).
+   - **Count:** A count has no unit. The quantity is simply how many of the ingredient (`2` eggs, `1` cucumber). Packaging and portion words such as can or bag are not units: a 14 oz can is entered as 14 oz under Units.
+   - **Things Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk, sheet, stick, slice, pinch, dash, handful. Amounts in this category scale but never convert and never take part in density; display pluralizes the unit when the amount (or range maximum) exceeds one. Packaging words (can, bag, package) are not seeded.
+   - **Feel Picker:** Approved culinary phrases: `to taste`, `as needed`, `for garnish`, `to serve`, `divided`. Feel is stored using the existing Unmeasured measurement type and phrase list.
+   - On desktop, the edit column order is Ingredient, Specifics, Amount, Preparation. Type has its own cell and all quantity/unit controls share one Amount cell. Unit displays volume and weight amount/unit pairs separated by a slash; Count, Things, and Feel display only their relevant controls. Keep controls on one line and constrain the table to available width, switching to the mobile row list at narrow widths. One left-aligned Amount header spans Type and the Amount cell without subheaders. Quantity inputs start at two characters wide, grow with their contents, and center their text; Things and Feel picklists use short `Unit` and `Phrase` prompts. The weight-unit picker uses compact horizontal padding. On mobile, the editor field order is Ingredient, Specifics, Amount, Preparation; Type, quantity, and unit controls share a compact wrapping line, and paired Unit dimensions may wrap as needed without page-level horizontal scrolling.
+5. **Specifics (Text):** Qualitative specification or size qualification. Displayed in lowercase after the amount in recipe view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for butter), `Brummel & Brown` (for margarine).
 6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or during cooking. Examples: `diced`, `minced`, `cubed`, `melted`, `room-temperature`, `crushed`, `sliced`, `divided`. Users can add a preparation while editing; saved values appear in future suggestions.
 
 ### 3.2 Dual Measurement (Volume + Weight)
-- In edit mode, each row allows entering both volume and weight side-by-side (via an `+ Add measurement` button).
+- In edit mode, each row selects one fixed category. Selecting Units immediately exposes optional volume and weight fields side-by-side; there is no add-measurement action.
 - In view mode:
   - If only volume or weight is present: displays single value (e.g., `1 cup flour` or `250 g flour`).
   - If both are present: displays both separated by a slash (e.g., `1 cup / 120 g all-purpose flour`).
+  - Pluralize `cup` as `cups` when the amount or range maximum is greater than one; keep unit abbreviations unchanged.
 
 ### 3.3 Trusted Ingredient Density
 - **Settings-Only Configuration:** Density is defined formally in Settings per canonical ingredient, never on an ad-hoc recipe card.
@@ -190,13 +192,13 @@ Measurement columns arrive in Slice 6.
   - **Multiply:** Enter integer or decimal $j$. Multiplier $M = j$ (displays as $jx$).
   - **Divide:** Enter integer $j$. Multiplier $M = 1/j$ (displays as $1/j$).
 - **Quantities Scaled:**
-  - All numeric Volume, Weight, Count, and Informal quantities multiply by $M$.
+  - All numeric Volume, Weight, Count, and Things quantities multiply by $M$.
   - Ranges scale both boundaries (e.g., `2-3` eggs at $2x$ becomes `4-6` eggs).
-  - Unmeasured items (`to taste`, `as needed`) are not scaled.
+  - Feel items (`to taste`, `as needed`) are not scaled.
 - **Rounding and Fractions:**
   - Internally, values are preserved as high-precision floating numbers.
-  - Display uses common cooking fractions with denominators 2, 3, 4, and 8 when within $0.03$ of the fraction (e.g., $0.25 \rightarrow 1/4$, $0.333 \rightarrow 1/3$, $1.625 \rightarrow 1\ 5/8$).
-  - When outside common fractions, display falls back to a clean decimal rounded to two decimal places (e.g., $1.17$ cups).
+  - US customary measurements display common cooking fractions with denominators 2, 3, 4, and 8 when within $0.03$ of the fraction (e.g., $0.25 \rightarrow 1/4$, $0.333 \rightarrow 1/3$, $1.625 \rightarrow 1\ 5/8$). Otherwise, they display as decimals rounded to two places (e.g., $1.17$ cups).
+  - Metric measurements always display as decimals rounded to at most two decimal places (e.g., $1.5$ L, $0.33$ g, $1.625$ g displayed as $1.63$ g); never display metric quantities as fractions.
 
 ### 3.5 Unit Display Preferences
 - **Default unit systems (Settings):** The user chooses US customary or metric for volume and, separately, for weight.
@@ -214,7 +216,7 @@ The recipe card supports two distinct view presentations. This is a reader/devic
 
 #### A. Standard View (Amount-First)
 Inspired by work items and classical cookbooks:
-- **Ingredient-row reading order:** Amount, Ingredient (and Detail), then
+- **Ingredient-row reading order:** Amount, Ingredient (and Specifics), then
   Preparation, following conventional recipe-book notation such as
   `1 cup all-purpose flour, sifted`.
 - **Desktop layout:** The structured ingredient area sits alongside the
@@ -223,7 +225,7 @@ Inspired by work items and classical cookbooks:
 
 #### B. Ingredient-First View ("Mine")
 Organized by how a cook actually operates in the kitchen ("get the item, check the amount, prep it"):
-- **Column 1: Ingredient** (with Detail rendered as a distinct subtitle beneath the name).
+- **Column 1: Ingredient** (with Specifics rendered as a distinct subtitle beneath the name).
 - **Column 2: Amount** (quantity and unit, formatted as volume / weight if dual).
 - **Column 3: Preparation** (diced, melted, minced, etc.).
 
@@ -256,8 +258,8 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
    - Strictly partitioned into four sequential, independent groups:
      1. Volume items (normalized to milliliters/cups for relative comparison).
      2. Weight items (normalized to grams for relative comparison).
-     3. Count and Informal items (e.g., `2` eggs, `1 bunch` cilantro).
-     4. Unmeasured items (e.g., `salt to taste`).
+     3. Count and Things items (e.g., `2` eggs, `1 bunch` cilantro).
+     4. Feel items (e.g., `salt to taste`).
    - Ascending or descending sorts *within* each group. Volume and weight are never mixed into an arbitrary single scale.
    - A row that has both a volume and a weight measurement sorts by its volume measurement.
 4. **Order Entered:** The exact sequential order established when editing the recipe.
@@ -273,9 +275,9 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
   for populated rows on hover or keyboard focus, and remains visible on mobile.
 - In Ingredient and Preparation picklists, Enter selects the active option and
   a second Enter commits the field. Tab accepts a typed or keyboard-selected
-  suggestion and commits it. Ingredient Tab advances to same-row Detail;
+  suggestion and commits it. Ingredient Tab advances to same-row Specifics;
   Preparation Tab advances to the next row's Ingredient. Enter commits a
-  Detail edit directly; clearing Ingredient and leaving the field removes the
+  Specifics edit directly; clearing Ingredient and leaving the field removes the
   nameless row.
 - Reordering changes only the canonical entered order. Temporary view sorts do
   not rewrite it.
@@ -623,8 +625,8 @@ History events are recorded on save (never on individual keystrokes):
   populated rows, revealed on desktop hover or focus and visible on mobile.
 - Picklist Enter selects the active option without committing; a second Enter
   commits. Tab accepts a typed or keyboard-selected suggestion and commits it;
-  Ingredient advances to same-row Detail, and Preparation advances to the next
-  row's Ingredient. Detail remains a direct text edit, so Enter commits it
+  Ingredient advances to same-row Specifics, and Preparation advances to the next
+  row's Ingredient. Specifics remains a direct text edit, so Enter commits it
   immediately.
 - Mobile uses a one-column ingredient list and a compact row editor popover.
   Keep its controls compact and accessible.

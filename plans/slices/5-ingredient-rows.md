@@ -10,18 +10,24 @@ with related boundaries in [the data model](../data-model.md),
 ## Outcome
 
 A recipe owner can add canonical ingredients and ordered rows containing Main,
-Detail, and Preparation. Rows can be created and reordered by keyboard; pointer
+Specifics, and Preparation. Rows can be created and reordered by keyboard; pointer
 dragging is an additional shortcut. Saving a new or edited recipe persists the
 recipe and rows together, and opening the edit page restores the rows in their
 saved order.
 
 ## Scope
 
+This is the completed Slice 5 foundation. Slice 6 now extends each row with the
+Amount interaction; its current behavior is specified in
+[Slice 6: Measurements](6-measurements.md). This brief intentionally retains
+the original Slice 5 boundary so later work can distinguish row mechanics from
+measurement rules.
+
 Included:
 
 - Account-owned canonical ingredient names, searchable from the recipe editor.
 - Inline creation of a canonical ingredient when a user enters a new name.
-- Ordered recipe-ingredient rows with Main, Detail, and Preparation.
+- Ordered recipe-ingredient rows with Main, Specifics, and Preparation.
 - Add, remove, and persistent reorder operations.
 - Recipe detail display of saved ingredient names and row properties.
 - One recipe version increment and one append-only history event per explicit
@@ -49,14 +55,16 @@ duplicate.
 
 Add `public.recipe_ingredients` with a UUID primary key, account and recipe
 ownership, canonical ingredient reference, zero-based persistent position,
-Main boolean, Detail text, and Preparation text. Enforce one row per position
+Main boolean, internal `detail` text (labeled **Specifics** in the UI), and
+Preparation text. Enforce one row per position
 within a recipe, nonnegative positions, and composite foreign keys that keep
 the account, recipe, and ingredient ownership aligned. A recipe may contain the
 same canonical ingredient more than once.
 
 Extend the existing versioned `public.save_recipe` RPC with a JSON ingredient
 row payload. A row identifies either an existing ingredient ID or a new
-trimmed name, plus Main, Detail, and Preparation. Resolve new names inside the
+trimmed name, plus Main, internal `detail`/visible Specifics, and Preparation.
+Resolve new names inside the
 transaction. Replacing, adding, removing, or reordering rows is part of the same
 RPC transaction as the parent recipe and picklist assignments. Stale versions,
 invalid rows, and cross-account ingredient IDs must reject the entire save.
@@ -74,7 +82,7 @@ child data.
 
 ## Interface and states
 
-Use a text-first semantic table on desktop. Ingredient, Detail, and Preparation
+Use a text-first semantic table on desktop. Ingredient, Specifics, and Preparation
 cells display their values until activated; editing opens a compact control in
 that cell. The table always has exactly one trailing empty row, which becomes a
 populated row when an ingredient is submitted. Do not add a separate Add
@@ -91,16 +99,16 @@ typing filters the list and offers an add-new option when there is no exact
 match. For Ingredient and Preparation, Enter selects the active suggestion
 without committing the field; Enter again commits it. Tab accepts a typed or
 keyboard-selected suggestion and commits the field. Ingredient Tab advances to
-Detail in the same row; Preparation Tab advances to Ingredient in the next row.
+Specifics in the same row; Preparation Tab advances to Ingredient in the next row.
 Clicking a suggestion fills the editor; leaving the field commits it. Enter
-commits a Detail text edit directly. Clearing Ingredient and leaving the field
+commits a Specifics text edit directly. Clearing Ingredient and leaving the field
 removes that row because an ingredient row cannot be nameless. Preparation is a
 single-value picklist seeded with common and account-used values; users can add
 a value by typing it.
 
 On mobile, show a one-column ingredient list with a normal Main checkbox and
 a pale 24px drag grip. Tapping a row opens a compact popover for Ingredient,
-Detail, and Preparation. Activating Ingredient or Preparation shows its full
+Specifics, and Preparation. Activating Ingredient or Preparation shows its full
 existing option list; typing filters options and exposes add-new suggestions.
 Menus support touch, mouse, and keyboard selection, align to their field, and
 stay inside the viewport, opening below where space permits or above when
@@ -110,7 +118,7 @@ show a horizontal ingredient table on mobile.
 Save errors remain visible without discarding the current draft. An empty
 ingredient list is valid.
 
-On recipe detail, display rows in saved order with Ingredient, Detail, and
+On recipe detail, display rows in saved order with Ingredient, Specifics, and
 Preparation. Main is an edit-only classification and is not shown as a
 read-only checkbox. Do not expose edit controls or measurement content in view
 mode.
@@ -130,8 +138,8 @@ Write these tests before production code:
   behavior. They also verify the delete control is hidden until hover or focus,
   removes the selected row, and preserves the trailing blank row. Keyboard
   tests verify Enter selects a picklist option before a second Enter commits,
-  Ingredient Tab accepts and moves to same-row Detail, Preparation Tab accepts
-  and moves to the next row, and Detail Enter commits immediately.
+  Ingredient Tab accepts and moves to same-row Specifics, Preparation Tab accepts
+  and moves to the next row, and Specifics Enter commits immediately.
 - Mobile tests verify the one-column list, full picklists on activation,
   typed and addable Ingredient and Preparation suggestions, viewport-contained
   options, a 24px grip, compact row popover,

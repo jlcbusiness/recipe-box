@@ -47,12 +47,32 @@ export function ensureTrailingIngredientRow(
   return [...populatedRows, trailingEmptyRow ?? createEmptyRow()];
 }
 
-function uppercaseFirst(value: string): string {
-  return value ? `${value[0].toLocaleUpperCase()}${value.slice(1)}` : '';
-}
-
 function lowercaseFirst(value: string): string {
   return value ? `${value[0].toLocaleLowerCase()}${value.slice(1)}` : '';
+}
+
+function pluralizeUnit(value: string): string {
+  const displayValue = lowercaseFirst(value.trim());
+  const words = [...displayValue.matchAll(/\p{L}+/gu)];
+  const ofIndex = words.findIndex((match) => match[0].toLocaleLowerCase() === 'of');
+  const wordMatch = words[ofIndex > 0 ? ofIndex - 1 : words.length - 1];
+  if (!wordMatch) {
+    return displayValue;
+  }
+
+  const word = wordMatch[0];
+  const lowerWord = word.toLocaleLowerCase();
+  let plural: string;
+  if (/(?:s|x|z|ch|sh)$/u.test(lowerWord)) {
+    plural = `${word}es`;
+  } else if (/[^aeiou]y$/u.test(lowerWord)) {
+    plural = `${word.slice(0, -1)}ies`;
+  } else {
+    plural = `${word}s`;
+  }
+
+  const start = wordMatch.index;
+  return `${displayValue.slice(0, start)}${plural}${displayValue.slice(start + word.length)}`;
 }
 
 export function formatIngredientDisplay(ingredient: {
@@ -71,7 +91,7 @@ export function formatIngredientDisplay(ingredient: {
   const detail = ingredient.detail.trim();
   const preparation = ingredient.preparation.trim();
   const displayName = /^[\p{Lu}][\p{Ll}]+$/u.test(name) ? lowercaseFirst(name) : name;
-  const mainText = [detail ? uppercaseFirst(detail) : '', displayName].filter(Boolean).join(' ');
+  const mainText = [detail ? lowercaseFirst(detail) : '', displayName].filter(Boolean).join(' ');
   const amountText = [...(ingredient.measurements ?? [])]
     .filter((measurement) => measurement.measurement_type !== 'unmeasured')
     .sort((left, right) => {
@@ -88,15 +108,33 @@ export function formatIngredientDisplay(ingredient: {
       if (measurement.amount_min === null) {
         return [];
       }
-      const quantity = formatQuantityRange(measurement.amount_min, measurement.amount_max);
       const unitCode = measurement.unit_code;
       const unit =
         measurement.measurement_type === 'volume'
-          ? volumeUnits.find((option) => option.code === unitCode)?.abbreviation
+          ? volumeUnits.find((option) => option.code === unitCode)
           : measurement.measurement_type === 'weight'
-            ? weightUnits.find((option) => option.code === unitCode)?.abbreviation
-            : measurement.picklist_value;
-      return [[quantity, unit ? lowercaseFirst(unit) : ''].filter(Boolean).join(' ')];
+            ? weightUnits.find((option) => option.code === unitCode)
+            : undefined;
+      const quantity = formatQuantityRange(
+        measurement.amount_min,
+        measurement.amount_max,
+        unit?.system,
+      );
+      const unitLabel = unit?.abbreviation ?? measurement.picklist_value;
+      const unitText =
+        unitLabel && measurement.measurement_type === 'informal'
+          ? (measurement.amount_max ?? measurement.amount_min) > 1
+            ? pluralizeUnit(unitLabel)
+            : lowercaseFirst(unitLabel)
+          : unitLabel &&
+              measurement.measurement_type === 'volume' &&
+              unitCode === 'cup' &&
+              (measurement.amount_max ?? measurement.amount_min) > 1
+            ? 'cups'
+            : unitLabel
+              ? lowercaseFirst(unitLabel)
+              : '';
+      return [[quantity, unitText].filter(Boolean).join(' ')];
     })
     .join(' / ');
   const unmeasuredPhrase = (ingredient.measurements ?? []).find(

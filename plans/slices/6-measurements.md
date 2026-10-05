@@ -10,10 +10,11 @@ Related boundaries are in the [data model](../data-model.md),
 
 ## Outcome
 
-A recipe owner can give an ingredient row a Volume, Weight, Count, Informal, or
-Unmeasured value, optionally add its complementary Volume or Weight value, save
-it with the ingredient row, and see the amount rendered in recipe order. Editing
-and reloading preserves the measurement values and their type.
+A recipe owner can choose one fixed measurement category per ingredient row:
+Unit, Count, Things, or Feel. Unit provides independent optional volume
+and weight amounts; the other categories expose only their relevant fields.
+Saved values render in recipe order and persist when the recipe is edited again.
+This slice is implemented and validated locally.
 
 ## Scope
 
@@ -23,11 +24,13 @@ Included:
 - Validation and normalized numeric range storage.
 - Fixed Volume and Weight unit catalogs, each identifying US customary or metric
   units. This slice records units but does not convert them.
-- Unitless Count, account-managed Informal units, and approved Unmeasured
+- Unitless Count, account-managed Things units, and approved Feel
   phrases.
-- One measurement or a Volume-plus-Weight pair per ingredient row.
-- Compact desktop table and mobile row-editor controls for measurements.
-- Amount-first recipe detail rendering, including dual amounts and unmeasured
+- One category per ingredient row; Unit may contain a volume amount, a weight
+  amount, or both.
+- Compact desktop table and mobile row-editor controls for measurements,
+  including viewport-aware custom picklists with keyboard navigation.
+- Amount-first recipe detail rendering, including dual amounts and Feel
   phrases.
 - Measurement ownership, save atomicity, edit-version conflicts, and history
   snapshots through the existing recipe save RPC.
@@ -45,10 +48,11 @@ Excluded:
 - Store measurements in a child table owned by `recipe_ingredients`. Each record
   contains the measurement type, lower numeric bound, optional upper bound,
   fixed unit code or account picklist reference, and display position.
-- A row may have no measurement, one measurement of any type, or exactly one
-  Volume and one Weight measurement. Count, Informal, and Unmeasured cannot be
-  paired with another measurement. Enforce the contract in both the save RPC
-  and database constraints where row-local constraints permit.
+- The editor exposes one fixed category at a time: Unit, Count, Things, or
+  Feel. Unit allows a volume amount, a weight amount, or both; Count, Things,
+  and Feel each allow one value. The existing storage contract
+  remains one Volume row, one Weight row, or the existing single Count,
+  Informal, or Unmeasured row.
 - Store range endpoints separately as PostgreSQL `numeric`; fractions and mixed
   numbers are parsed to high-precision numeric values before persistence.
   Reject empty, malformed, zero, negative, reversed, non-finite, or unsupported
@@ -59,24 +63,47 @@ Excluded:
   - Volume, metric: `ml` (milliliter), `l` (liter).
   - Weight, US customary: `oz` (ounce), `lb` (pound).
   - Weight, metric: `g` (gram), `kg` (kilogram).
-- Informal units and Unmeasured phrases reference the existing account-owned
+- Unit names in the Things category display in plural form when the numeric
+  amount (or range maximum) is greater than one; stored account picklist values
+  remain singular.
+- Things units and Feel phrases reference the existing account-owned
   `recipe_picklist_values` records in the `informal_unit` and
   `unmeasured_phrase` categories. The baseline already seeds both categories;
   Slice 6 adds no duplicate seed path.
-- A measurement editor presents the type selector and only the fields valid for
-  that type. Volume and Weight can expose `+ Add measurement` for the other
-  dimension. Count has no unit control; Informal and Unmeasured use their
-  account picklists. All fields have row-specific accessible names and invalid
-  quantities expose an associated error.
-- The desktop editor adds an Amount column. The mobile row popover includes the
-  same measurement controls without introducing horizontal page scrolling.
-- Recipe detail places formatted amounts before ingredient/detail text. Volume
+- The non-editable category picklist shows only Unit, Count, Things, and Feel,
+  and defaults to Unit. Unit presents volume amount/unit and weight amount/unit
+  controls side-by-side with a visual slash; either dimension may be left blank
+  as long as the other has an amount. Count has no unit control. The Things
+  category uses its account unit picklist and Feel uses its approved phrase
+  picklist.
+- In the desktop edit table, Type has its own cell and all quantity/unit
+  controls share one Amount cell. Unit displays volume and weight amount/unit
+  pairs separated by a slash; Count, Things, and Feel display only their
+  relevant controls. Keep the controls on one line and constrain the table to
+  the available width; the compact Type picker is sized to `Things` plus 1mm
+  and sits directly beside the Amount controls without an expanded blank
+  column. Switch to the mobile row list at narrow widths. The
+  left-aligned Amount header spans Type and the Amount cell without subheaders.
+  Quantity inputs start at two characters wide, grow with their contents, and
+  center their text. Things and Feel picklists use short `Unit` and `Phrase`
+  prompts. The weight-unit picker uses compact horizontal padding. The mobile
+  row popover keeps Type, quantity, and unit controls on a compact wrapping
+  line; paired Unit dimensions may wrap as needed. Quantity inputs retain
+  content-based widths and the layout must not introduce horizontal page
+  scrolling. Mobile quantity fields use short horizontal padding and keep a
+  deliberate small amount-to-unit gap; the row pane is sized to accommodate
+  paired fractional Unit values at supported mobile widths.
+- Recipe detail places formatted amounts before ingredient/specifics text.
+  Specifics text is lowercase. Volume
   and Weight use catalog abbreviations; dual amounts are separated by ` / `.
-  Unmeasured phrases follow the ingredient name (for example, `salt to taste`);
-  Preparation remains after the ingredient text. Common fractions use
-  denominators 2, 3, 4, and 8 when within 0.03; other values display as decimals
-  rounded to at most two places. Ranges format both endpoints using the same
-  rule.
+  Feel phrases follow the ingredient name (for example, `salt to taste`);
+  Preparation remains after the ingredient text. US customary values use common
+  fractions with denominators 2, 3, 4, and 8 when within 0.03; other values
+  display as decimals rounded to at most two places. Metric values always display
+  as decimals rounded to at most two decimal places. Ranges format both endpoints
+  using the applicable unit-system rule. In view mode, pluralize `cup` as `cups`
+  when the amount or range maximum is greater than one; leave abbreviated units
+  unchanged.
 - Ingredient rows, measurements, recipe version, and before/after history
   snapshots commit atomically in the existing versioned `save_recipe` RPC.
   Owners can read their measurements; direct writes remain denied.
@@ -109,19 +136,20 @@ Write these tests before production code:
   ranges; format common fractions and decimal fallbacks; reject malformed,
   zero, negative, reversed, and non-finite values; and validate every type/unit
   combination and dual-measurement rule.
-- Database/API tests save Volume, Weight, Count, Informal, Unmeasured, and a
-  Volume-plus-Weight pair; verify stored bounds, unit/picklist ownership, and
-  history snapshots; and prove direct measurement writes and cross-account
-  references are denied.
+- Database/API tests save Volume, Weight, Count, Informal, and Unmeasured
+  records, including a Volume-plus-Weight pair; verify stored bounds,
+  unit/picklist ownership, and history snapshots; and prove direct measurement
+  writes and cross-account references are denied.
 - Database/API tests reject invalid units, missing required values, duplicated
   measurement types, unsupported pairs, and invalid ranges without changing
   recipe version, ingredients, measurements, or history.
-- End-to-end tests enter measurements in desktop and mobile editors, save, view
-  formatted ingredient text, reopen edit mode, and verify type, value, unit, and
-  order persist. Include the dual-measurement display and at least one value of
-  each measurement type.
+- End-to-end tests select each of the four fixed categories, enter measurements
+  in desktop and mobile editors, save, view formatted ingredient text, reopen
+  edit mode, and verify values, units, and order persist. Include volume-only,
+  weight-only, and dual Units amounts.
 - Accessibility checks cover type controls, amount/unit labels, validation
-  feedback, keyboard operation, and mobile layout.
+  feedback, keyboard operation (Arrow keys, Home, End, Enter, Space, and
+  Escape for custom listboxes), and mobile layout.
 
 ## Verification
 
@@ -134,7 +162,8 @@ run TypeScript typecheck, Biome, and the focused recipe suite.
 
 - Each measurement type can be entered, saved, reloaded, and displayed
   according to the acceptance behavior above.
-- A row can have a Volume-plus-Weight pair and cannot have any other pair.
+- The editor offers only the four fixed categories; Units accepts a volume
+  amount, a weight amount, or both, and no other category can be paired.
 - Owner isolation, input validation, atomic rollback, and history snapshots are
   verified by deterministic automated tests.
 - Focused unit, database/API, end-to-end, and accessibility tests pass, as do

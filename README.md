@@ -1,9 +1,28 @@
 # Recipe Box
 
 Recipe Box is a private recipe library built with Next.js and Supabase. The
-first slices provide a reproducible local app, authentication, account
-isolation, and test environment; product features are delivered in the order
-described by the [delivery roadmap](plans/delivery-roadmap.md).
+current local app includes authentication, account isolation, recipe metadata,
+ordered ingredient rows, and validated measurements. Product features are
+delivered in the order described by the
+[delivery roadmap](plans/delivery-roadmap.md).
+
+### Current product state
+
+- Create, edit, and view recipes with state, metadata picklists, servings,
+  component times, equipment, and Markdown notes.
+- Add, reorder, and remove account-owned ingredient rows. Desktop uses a
+  keyboard-operable table; mobile uses a focused row editor pane.
+- Enter one ingredient amount category: **Unit**, **Count**, **Things**, or
+  **Feel**. Unit accepts optional volume and weight pairs; the other categories
+  expose only their applicable controls.
+- Save ingredient amounts as positive numbers, decimals, fractions, mixed
+  numbers, or ranges. Recipe detail uses conventional US-customary fractions,
+  decimal metric quantities, natural Things plurals, and plural `cups` above
+  one.
+
+See the [comprehensive reference](plans/comprehensive-reference.md) for
+implemented behavior and later-slice direction, and the
+[visual design guide](plans/visual-design.md) for the interface principles.
 
 ## Prerequisites
 

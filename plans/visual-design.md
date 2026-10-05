@@ -28,24 +28,73 @@ marked **Current implementation** describe behavior present in the app; sections
 marked **Planned direction** are aspirational and are not claims about shipped
 screens. Treat a slice as current after implementation and validation.
 
-## Design Direction
+## Design Philosophy
 
-- Take inspiration from Azure DevOps work items: clear hierarchy, compact
-  metadata, dense but legible data, powerful list/query views, and strong
-  keyboard operation.
-- Do not reproduce Azure portal's pane-heavy layout or its visual language.
-- Preserve a calm, work-focused interface for repeated recipe entry and lookup.
-- Ship a single light theme in the first release; dark theme is deferred.
+Recipe Box is a **working recipe library**, not a marketing surface, a
+skeuomorphic kitchen, or a generic productivity dashboard. Its visual language
+starts with the useful parts of dense work-item software—stable hierarchy,
+scan-friendly data, direct editing, and strong keyboard support—then replaces
+its cold, portal-like visual complexity with a quiet paper-and-ink workspace.
+The app should make a frequently edited recipe feel trustworthy and easy to
+read, not theatrical.
+
+### Principles
+
+- **Dense, but never cramped.** Information density is valuable when it makes
+  recipe entry and scanning faster. Give each field only the width it needs,
+  align related values, and remove unused columns or controls. Do not fill
+  space just because a table or pane has it.
+- **Recipe language over database language.** A saved ingredient should read
+  like a recipe: `1 1/2 cups flour`, `120 g flour`, `2 bunches cilantro`, or
+  `salt to taste`. Labels and controls may expose structure in edit mode, but
+  view mode should turn that structure into familiar cooking prose.
+- **Direct manipulation before chrome.** Make a cell editable in place, expose
+  a trailing blank ingredient row rather than an Add button, and keep one
+  compact delete action. Avoid extra toolbars, cards, explanatory copy, and
+  modal steps when an action can live with the item it changes.
+- **Structure is responsive, not merely smaller.** Desktop optimizes for
+  keyboard-efficient, aligned row entry. Mobile keeps the same data model but
+  edits one ingredient in a focused pane with touch-safe controls and
+  viewport-contained menus. It is a different interaction anatomy, not a
+  compressed table.
+- **A little warmth, no nostalgia costume.** The paper surface, faint ruled
+  texture, restrained rounded corners, and DM Sans typography give the
+  application a domestic editorial character. They must never compromise
+  legibility, scanability, or form behavior. The planned Recipe Tin motif is
+  reserved for a later, bounded treatment; the current product is deliberately
+  crisp and functional.
+- **Polish serves operation.** Center short quantities, use quiet borders and
+  regular-weight control text, preserve consistent field heights, and use color
+  as reinforcement rather than instruction. A visual refinement is successful
+  only if it also preserves keyboard, pointer, touch, and assistive-technology
+  operation.
+
+### Current visual foundation
+
+- A single light theme uses a pale paper surface with a subtle green ruled
+  texture; dark ink, muted gray-green, navy, leaf green, tomato red, and muted
+  gold provide the limited accent palette.
+- DM Sans Variable carries application text. Major headings are direct and
+  modest rather than display-like; small caps distinguish compact labels and
+  selected mobile actions.
+- White editable surfaces, 1px quiet borders, and 3px corners distinguish
+  controls without turning each field into a card. Empty editable cells use a
+  faint paper tint rather than a separate empty-state panel.
+- The layout relies on a wide, restrained content column, wrapping form rows,
+  compact tables, and modest separators. It avoids nested cards, oversized
+  gutters, persistent side panes, and decorative shadows.
 - Labeled action buttons use two visual sizes: 48px for standalone actions such
   as Save, and 32px for compact actions placed beside text, such as Edit.
   Compact mobile actions retain a 48px hit area without changing their visible
   height. Picklist triggers and icon-only controls have their own sizing rules.
-- **Planned Recipe Tin identity:** Give the Recipe Tin a vintage metal tin box
-  with a hinged lid, containing dog-eared 3x5 index cards with handwritten
-  notes. Recipes residing in the Recipe Tin would render with a textured,
-  ragged/deckled paper border instead of a standard clean rounded card
-  background.
-  Ordinary publication and recipe cards remain clean, crisp, and restrained.
+
+### Planned Recipe Tin identity
+
+The Recipe Tin may later gain a carefully bounded vintage metal-tin and index
+card treatment. It must remain distinct from the everyday editor: ordinary
+publication and recipe screens stay clean, crisp, and restrained, and any
+textured or deckled treatment must preserve accessibility, printing, and
+scannability.
 
 ### When details are unspecified
 
@@ -80,6 +129,21 @@ control surface.
   values for scanning, keep text legible and controls visually quiet, and use
   color as reinforcement rather than the only signal. Keyboard, pointer, and
   touch paths must be equally complete.
+
+### Current implementation conventions
+
+- Prefer visible labels and semantic controls over icon-only or placeholder-only
+  forms. A control's appearance must not be its only explanation.
+- Custom picklists use an ordinary compact trigger and a portal-rendered
+  listbox. The listbox is anchored near its trigger, remains inside the
+  viewport, shows the active keyboard option, and keeps selection visible
+  without relying only on color.
+- Popovers and menus are part of the workflow, not floating decoration: they
+  have a clear anchor, controlled maximum height, explicit dismissal, visible
+  focus, and no page-level horizontal overflow.
+- Static reading mode is calmer than editing mode. Editing may show labels,
+  field structure, rails, and pickers; reading mode reduces those mechanics to
+  concise natural language.
 
 ## Recipe Metadata Entry (Slice 4)
 
@@ -187,7 +251,9 @@ The Recipe Tin list is a compact table with Name, Food Type, State, and Opinion
 columns; mobile hides Food Type and State. Recipe details show metadata, the
 ordered ingredient list, and notes. The desktop ingredient editor uses a
 keyboard-operable table with a trailing blank row, compact cell editors, and a
-separate control rail.
+separate control rail. Its visible order is Ingredient, Specifics, Amount, and
+Preparation. The Amount heading spans a compact Type control and its matching
+amount controls; it does not introduce database-shaped subheaders.
 
 Ingredient rows open compact cell editors. Ingredient and Preparation open
 their full picklists on activation; typing filters options and offers an
@@ -198,9 +264,19 @@ rows when hovered or keyboard-focused; on mobile it remains visible with a
 48px hit area.
 For Ingredient and Preparation picklists, Enter selects the active option and a
 second Enter commits; Tab accepts and commits the active suggestion, moving
-from Ingredient to same-row Detail and from Preparation to the next row's
-Ingredient. Enter commits Detail text directly.
+from Ingredient to same-row Specifics and from Preparation to the next row's
+Ingredient. Enter commits Specifics text directly.
 `Ctrl+S` / `Cmd+S` saves the recipe.
+
+The desktop Amount interaction has one fixed category picker—**Unit**, **Count**,
+**Things**, or **Feel**—and a single adjacent Amount area. The picker is only
+as wide as its longest visible label plus a small breathing margin; its column
+does not expand to consume the table. Unit keeps optional volume and weight
+amount/unit pairs on one line with a slash between them. Count shows a single
+quantity, Things places a quantity beside its account-managed unit, and Feel
+shows its phrase picker. Quantity fields begin at two characters, grow only for
+entered content, and center their text. Units and category values use compact
+custom listboxes; US and Metric groups are visibly underlined in unit menus.
 
 ### Planned direction
 
@@ -218,9 +294,13 @@ The mobile Recipe Tin list shows Name and Opinion. Recipe details show the
 recipe title, metadata, component times in their own subsection, ingredients,
 and notes. Ingredient editing uses a one-column list with the Main checkbox and
 a pale 24px drag grip in a slim rail. Tapping a row opens a compact popover for
-Ingredient, Detail, and Preparation. Picklists, overlay placement, and the
-48px Submit hit area adapt to the viewport; the page does not scroll
-horizontally.
+Ingredient, Specifics, Amount, and Preparation in that order. The Amount
+section keeps its category, quantity, and unit controls in a compact wrapping
+line; paired Unit dimensions remain together when space permits. Its pane is
+wide enough for fractional paired values at the supported mobile width, with
+short quantity padding and deliberate amount-to-unit spacing. Picklists,
+overlay placement, and the 48px Submit hit area adapt to the viewport; the page
+does not scroll horizontally.
 
 ### Planned direction
 
@@ -232,17 +312,26 @@ compact or be progressively disclosed.
 Cooking mode should provide touch targets of at least 48px, high-contrast text
 for kitchen lighting, temporary ingredient check-off, and a screen wake lock.
 
-## Planned Ingredient Presentation
+## Ingredient Presentation
 
-The quantity and presentation options below are future direction; Slice 5 does
-not include amounts or units.
+### Current implementation
+
+Recipe detail renders ingredient rows in their saved order as amount, lowercase
+Specifics and ingredient name, then Preparation. Unit can display volume,
+weight, or both with ` / ` separating the dimensions. Things pluralize from
+their maximum range value; `cup` becomes `cups` above one while abbreviated
+fixed units remain unchanged. US customary quantities use familiar fractions
+when close to halves, thirds, quarters, or eighths; metric quantities never use
+fractions and display at most two decimal places.
+
+### Planned direction
 
 Standard presentation lists each ingredient in the familiar recipe-book reading
-order: Amount, Ingredient and Detail, then Preparation. The list sits beside the
+order: Amount, Ingredient and Specifics, then Preparation. The list sits beside the
 instructions.
 
 Ingredient-first presentation ("mine") shows Ingredient, Amount, and Preparation.
-Detail is rendered as a distinct subtitle beneath the Ingredient name:
+Specifics is rendered as a distinct subtitle beneath the Ingredient name:
 
 ```text
 +---------------------------+----------------+---------------+

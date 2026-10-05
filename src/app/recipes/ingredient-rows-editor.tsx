@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { IngredientOption, RecipePicklistValue } from '../../lib/recipes/data';
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
@@ -103,6 +103,7 @@ function SuggestionCellEditor({
   onTabCommit,
   placement = 'above',
   focusOnMount = true,
+  openOnFocus = true,
 }: {
   label: string;
   value: string;
@@ -114,6 +115,7 @@ function SuggestionCellEditor({
   onTabCommit?: () => void;
   placement?: 'above' | 'below';
   focusOnMount?: boolean;
+  openOnFocus?: boolean;
 }) {
   const [draft, setDraft] = useState(initialCharacter ?? value);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -263,7 +265,9 @@ function SuggestionCellEditor({
             initialFocusPending.current = false;
             return;
           }
-          showAllOptions();
+          if (openOnFocus) {
+            showAllOptions();
+          }
         }}
         onClick={showAllOptions}
         onBlur={() => {
@@ -396,42 +400,55 @@ function MobileIngredientEditor({
   );
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  const positionPopover = useCallback(() => {
+    const popover = popoverRef.current;
+    if (!popover) {
+      return;
+    }
+
+    const anchorBounds = anchorElement.getBoundingClientRect();
+    const popoverBounds = popover.getBoundingClientRect();
+    const naturalHeight = popover.scrollHeight + popover.offsetHeight - popover.clientHeight;
+    const margin = 8;
+    const gap = 4;
+    const belowSpace = Math.max(0, window.innerHeight - anchorBounds.bottom - gap - margin);
+    const aboveSpace = Math.max(0, anchorBounds.top - gap - margin);
+    const placeAbove = naturalHeight > belowSpace && aboveSpace > belowSpace;
+    const availableSpace = placeAbove ? aboveSpace : belowSpace;
+    const maxHeight = Math.min(naturalHeight, availableSpace);
+    const width = Math.min(popoverBounds.width, window.innerWidth - margin * 2);
+
+    setPosition({
+      left: Math.max(margin, Math.min(anchorBounds.left, window.innerWidth - width - margin)),
+      top: placeAbove
+        ? Math.max(margin, anchorBounds.top - maxHeight - gap)
+        : Math.min(anchorBounds.bottom + gap, window.innerHeight - margin - maxHeight),
+      maxHeight,
+    });
+  }, [anchorElement]);
+
   useLayoutEffect(() => {
-    const positionPopover = () => {
-      const popover = popoverRef.current;
-      if (!popover) {
-        return;
-      }
-
-      const anchorBounds = anchorElement.getBoundingClientRect();
-      const popoverBounds = popover.getBoundingClientRect();
-      const margin = 8;
-      const gap = 4;
-      const belowSpace = Math.max(0, window.innerHeight - anchorBounds.bottom - gap - margin);
-      const aboveSpace = Math.max(0, anchorBounds.top - gap - margin);
-      const placeAbove = popoverBounds.height > belowSpace && aboveSpace > belowSpace;
-      const availableSpace = placeAbove ? aboveSpace : belowSpace;
-      const maxHeight = Math.min(popoverBounds.height, availableSpace);
-      const height = Math.min(popoverBounds.height, maxHeight);
-      const width = Math.min(popoverBounds.width, window.innerWidth - margin * 2);
-
-      setPosition({
-        left: Math.max(margin, Math.min(anchorBounds.left, window.innerWidth - width - margin)),
-        top: placeAbove
-          ? Math.max(margin, anchorBounds.top - height - gap)
-          : Math.min(anchorBounds.bottom + gap, window.innerHeight - margin - height),
-        maxHeight,
-      });
-    };
+    const popover = popoverRef.current;
+    if (!popover) {
+      return;
+    }
 
     positionPopover();
     window.addEventListener('resize', positionPopover);
     window.addEventListener('scroll', positionPopover, true);
+    const resizeObserver = new ResizeObserver(positionPopover);
+    resizeObserver.observe(popover);
+    const measurementEditor = popover.querySelector('.recipe-measurement-editor');
+    if (measurementEditor) {
+      resizeObserver.observe(measurementEditor);
+    }
+
     return () => {
       window.removeEventListener('resize', positionPopover);
       window.removeEventListener('scroll', positionPopover, true);
+      resizeObserver.disconnect();
     };
-  }, [anchorElement]);
+  }, [positionPopover]);
 
   useEffect(() => {
     const dismissOutside = (event: PointerEvent) => {
@@ -494,6 +511,7 @@ function MobileIngredientEditor({
           label="Ingredient"
           options={ingredients.map((ingredient) => ingredient.name)}
           placement="above"
+          openOnFocus={false}
           value={ingredientName}
           onDraftChange={setIngredientName}
           onCommit={setIngredientName}
@@ -501,9 +519,19 @@ function MobileIngredientEditor({
         />
       </div>
       <label>
-        <span>Detail</span>
+        <span>Specifics</span>
         <input type="text" value={detail} onChange={(event) => setDetail(event.target.value)} />
       </label>
+      <div className="recipe-mobile-picker-field recipe-mobile-measurement-field">
+        <span>Amount</span>
+        <MeasurementEditor
+          rowNumber={rowNumber}
+          measurements={measurements}
+          picklists={picklists}
+          validate={validateMeasurements}
+          onChange={setMeasurements}
+        />
+      </div>
       <div className="recipe-mobile-picker-field">
         <span>Preparation</span>
         <SuggestionCellEditor
@@ -515,16 +543,6 @@ function MobileIngredientEditor({
           onDraftChange={setPreparation}
           onCommit={setPreparation}
           onCancel={() => {}}
-        />
-      </div>
-      <div className="recipe-mobile-picker-field recipe-mobile-measurement-field">
-        <span>Amount</span>
-        <MeasurementEditor
-          rowNumber={rowNumber}
-          measurements={measurements}
-          picklists={picklists}
-          validate={validateMeasurements}
-          onChange={setMeasurements}
         />
       </div>
       <button className="recipe-ingredient-submit" type="button" onClick={submit}>
@@ -723,10 +741,9 @@ export function IngredientRowsEditor({
     ...preparationOptions,
     ...draftRows.map((row) => row.preparation),
   ]);
-
   function renderDesktopCell(row: IngredientRowDraft, rowIndex: number, field: IngredientField) {
     const fieldLabel =
-      field === 'ingredientName' ? 'Ingredient' : field === 'detail' ? 'Detail' : 'Preparation';
+      field === 'ingredientName' ? 'Ingredient' : field === 'detail' ? 'Specifics' : 'Preparation';
     const isActive = activeCell?.rowId === row.id && activeCell.field === field;
     const initialCharacter =
       activeCell?.rowId === row.id && activeCell.field === field
@@ -788,17 +805,16 @@ export function IngredientRowsEditor({
 
   function renderMeasurementCell(row: IngredientRowDraft, rowIndex: number) {
     return (
-      <td className="recipe-ingredient-amount-cell" key="measurements">
-        <MeasurementEditor
-          rowNumber={rowIndex + 1}
-          measurements={row.measurements}
-          picklists={picklists}
-          validate={validateMeasurements}
-          onChange={(measurements) =>
-            commitRows(updateIngredientRow(rowsRef.current, row.id, { measurements }))
-          }
-        />
-      </td>
+      <MeasurementEditor
+        layout="desktop"
+        rowNumber={rowIndex + 1}
+        measurements={row.measurements}
+        picklists={picklists}
+        validate={validateMeasurements}
+        onChange={(measurements) =>
+          commitRows(updateIngredientRow(rowsRef.current, row.id, { measurements }))
+        }
+      />
     );
   }
 
@@ -903,11 +919,23 @@ export function IngredientRowsEditor({
             className="recipe-ingredient-table"
             ref={ingredientTableRef}
           >
+            <colgroup>
+              <col className="recipe-ingredient-name-col" />
+              <col className="recipe-ingredient-detail-col" />
+              <col className="recipe-ingredient-type-col" />
+              <col className="recipe-ingredient-measurements-col" />
+              <col className="recipe-ingredient-preparation-col" />
+              <col className="recipe-ingredient-actions-col" />
+            </colgroup>
             <thead>
               <tr>
-                <th scope="col">Ingredient</th>
-                <th scope="col">Amount</th>
-                <th scope="col">Detail</th>
+                <th className="recipe-ingredient-name-column" scope="col">
+                  Ingredient
+                </th>
+                <th scope="col">Specifics</th>
+                <th className="recipe-ingredient-amount-group" colSpan={2} scope="colgroup">
+                  Amount
+                </th>
                 <th scope="col">Preparation</th>
                 <th
                   aria-label="Row actions"
@@ -927,8 +955,8 @@ export function IngredientRowsEditor({
                   onDrop={() => moveDraggedRow(row.id)}
                 >
                   {renderDesktopCell(row, index, 'ingredientName')}
-                  {renderMeasurementCell(row, index)}
                   {renderDesktopCell(row, index, 'detail')}
+                  {renderMeasurementCell(row, index)}
                   {renderDesktopCell(row, index, 'preparation')}
                   <td className="recipe-ingredient-delete-cell">
                     {!isEmptyIngredientRow(row) && (

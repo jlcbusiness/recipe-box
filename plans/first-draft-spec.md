@@ -37,7 +37,7 @@ allergen modeling, collaboration, cooking history, and native mobile clients.
 | Publication | A book, magazine issue, or website that can own recipes. |
 | Recipe Tin | The permanent home for recipes without a primary publication. |
 | Reference | Supplemental source material attached to a recipe. |
-| Detail | An ingredient qualification such as `all-purpose`, `large`, or `14 oz`. |
+| Specifics | An ingredient qualification such as `all-purpose`, `large`, or `unsalted`. |
 | Preparation | Handling such as `diced`, `melted`, or `minced`. |
 
 ## Recipes
@@ -88,35 +88,44 @@ mechanism is defined in the Images slice
 
 An ingredient and its measurements are one ordered row.
 See [comprehensive-reference.md § 3](comprehensive-reference.md#3-ingredient-rows-measurements-and-density).
-The edit grid is:
+The desktop edit table is:
 
-| Ingredient | Quantity | Unit | Detail | Preparation |
-| ---------- | -------- | ---- | ------ | ----------- |
-| Canonical ingredient | Numeric amount | Unit picker (not used for Count) | Optional text | Addable single-value suggestion |
+| Ingredient | Specifics | Amount | Preparation |
+| ---------- | --------- | ------ | ----------- |
+| Canonical ingredient | Optional text | Type plus category-specific controls | Addable single-value suggestion |
 
 The Main checkbox and a compact drag handle sit in a rail beside the table.
 Desktop starts with one trailing empty row; activating a value opens a compact
-cell editor. Mobile shows one ingredient column and opens a compact row popover
-when tapped. The Main checkbox is edit-only and is not a table column.
+cell editor. The left-aligned Amount header spans the compact Type picker and
+the adjacent category controls. Mobile shows one ingredient column and opens a
+compact row pane for Ingredient, Specifics, Amount, and Preparation when
+tapped. The Main checkbox is edit-only and is not a table column.
 
 The Main checkbox builds the searchable main-ingredient index. It does not need
 to appear in read-only recipe views.
 
-Measurement types are Volume, Weight, Count, Informal, and Unmeasured. Volume
-and Weight use fixed recognized units. Count is a bare number with no unit
-(`2` eggs). Informal is a number with a Settings-managed non-standard unit such
-as bunch, sprig, or clove; it scales but never converts. Packaging words such as
-can are not units, so a 14 oz can is entered as 14 oz Weight. Unmeasured uses
-approved phrases such as `to taste`, `as needed`, and `for garnish`.
+The amount picker exposes four fixed cooking-oriented categories: **Unit**,
+**Count**, **Things**, and **Feel**. Unit maps to fixed volume and weight unit
+catalogs and presents optional volume and weight fields together; either or
+both can be entered. Count is a bare number with no unit (`2` eggs). Things is a
+number with an account-managed non-standard unit such as bunch, sprig, or
+clove; it scales but never converts. Feel is an approved phrase such as
+`to taste`, `as needed`, or `for garnish`. The storage model retains Volume,
+Weight, Informal, and Unmeasured records, but those names are not the editing
+vocabulary. Packaging words such as can are not units, so a 14 oz can is
+entered as 14 oz Weight.
 
-A row may have both volume and weight measurements. The second is added on
-demand and displays as, for example, `1 cup / 120 g`. Detail is free text and
-renders as an Ingredient subtitle in Ingredient-first view. Preparation is a
-single-value suggestion list that accepts new user-entered values.
+A Unit row may show volume, weight, or both, rendering for example as
+`1 cup / 120 g`. Specifics is free text and renders in lowercase beside the
+ingredient in standard recipe reading; Preparation is a single-value suggestion
+list that accepts new user-entered values.
 
 Numeric values accept integers, ranges, decimals, fractions, and mixed numbers.
-Store precise values. Display common fractions with denominators 2, 3, 4, and 8
-where practical; otherwise display up to two decimal places.
+Store precise values. US customary display uses common fractions with
+denominators 2, 3, 4, and 8 where practical, otherwise at most two decimal
+places. Metric display never uses fractions and shows at most two decimal
+places. Things pluralize above one; among fixed unit labels, only `cup`
+pluralizes as `cups`.
 
 Settings supports one trusted density per canonical ingredient, expressed with
 the same volume and weight controls, for example `1 cup = 120 g`. An empty
@@ -158,9 +167,9 @@ References do not change the primary-publication rule.
 Ingredient presentation is a viewer preference, not recipe data.
 See [comprehensive-reference.md § 4](comprehensive-reference.md#4-ingredient-presentation-and-sorting).
 
-- Standard lists each ingredient as Amount, Ingredient (with Detail), then
+- Standard lists each ingredient as Amount, Ingredient (with Specifics), then
   Preparation, beside the instructions.
-- Ingredient-first displays Ingredient, Amount, and Preparation, with Detail as
+- Ingredient-first displays Ingredient, Amount, and Preparation, with Specifics as
   an Ingredient subtitle.
 
 Signed-in users can save a default. Print and public pages use Ingredient-first

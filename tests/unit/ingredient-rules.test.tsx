@@ -61,21 +61,21 @@ describe('ingredient row rules', () => {
     expect(normalizedRows[2]).toEqual({ ...emptyRow, id: 'extra' });
   });
 
-  it('formats detail and preparation as natural recipe text', () => {
+  it('formats lowercase specifics and preparation as natural recipe text', () => {
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Cheese',
         detail: 'Yellow',
         preparation: 'Diced',
       }),
-    ).toBe('Yellow cheese, diced');
+    ).toBe('yellow cheese, diced');
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Flour',
         detail: 'White',
         preparation: 'Sifted',
       }),
-    ).toBe('White flour, sifted');
+    ).toBe('white flour, sifted');
   });
 
   it('formats dual measurements before ingredient text and phrases after it', () => {
@@ -101,7 +101,7 @@ describe('ingredient row rules', () => {
           },
         ],
       }),
-    ).toBe('1 1/2 cup / 120 g All-purpose flour, sifted');
+    ).toBe('1 1/2 cups / 120 g all-purpose flour, sifted');
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Salt',
@@ -118,6 +118,84 @@ describe('ingredient row rules', () => {
         ],
       }),
     ).toBe('salt to taste');
+  });
+
+  it('formats metric view amounts as decimals with at most two places', () => {
+    expect(
+      formatIngredientDisplay({
+        ingredient_name: 'Flour',
+        detail: '',
+        preparation: '',
+        measurements: [
+          {
+            measurement_type: 'volume',
+            amount_min: 1.5,
+            amount_max: null,
+            unit_code: 'l',
+            picklist_value: null,
+          },
+          {
+            measurement_type: 'weight',
+            amount_min: 0.333333,
+            amount_max: 1.666,
+            unit_code: 'g',
+            picklist_value: null,
+          },
+        ],
+      }),
+    ).toBe('1.5 l / 0.33-1.67 g flour');
+  });
+
+  it('pluralizes cups above one while leaving unit abbreviations unchanged', () => {
+    const display = (
+      amount_min: number,
+      amount_max: number | null,
+      unit_code: string,
+      measurement_type: 'volume' | 'weight',
+    ) =>
+      formatIngredientDisplay({
+        ingredient_name: 'Flour',
+        detail: '',
+        preparation: '',
+        measurements: [
+          {
+            measurement_type,
+            amount_min,
+            amount_max,
+            unit_code,
+            picklist_value: null,
+          },
+        ],
+      });
+
+    expect(display(1, null, 'cup', 'volume')).toBe('1 cup flour');
+    expect(display(1.5, null, 'cup', 'volume')).toBe('1 1/2 cups flour');
+    expect(display(1, 2, 'cup', 'volume')).toBe('1-2 cups flour');
+    expect(display(2, null, 'tsp', 'volume')).toBe('2 tsp flour');
+    expect(display(2, null, 'oz', 'weight')).toBe('2 oz flour');
+  });
+
+  it('pluralizes Thing units when the maximum quantity is greater than one', () => {
+    const display = (amount_min: number, amount_max: number | null, picklist_value: string) =>
+      formatIngredientDisplay({
+        ingredient_name: 'Herbs',
+        detail: '',
+        preparation: '',
+        measurements: [
+          {
+            measurement_type: 'informal',
+            amount_min,
+            amount_max,
+            unit_code: null,
+            picklist_value,
+          },
+        ],
+      });
+
+    expect(display(1, null, 'Bunch')).toBe('1 bunch herbs');
+    expect(display(2, null, 'Bunch')).toBe('2 bunches herbs');
+    expect(display(1.5, null, 'Sprig')).toBe('1 1/2 sprigs herbs');
+    expect(display(1, 2, 'Pinch of')).toBe('1-2 pinches of herbs');
   });
 
   it('moves a row by its stable ID without changing its content', () => {

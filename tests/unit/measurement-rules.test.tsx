@@ -45,6 +45,15 @@ describe('measurement rules', () => {
     expect(formatQuantityRange(2, 3)).toBe('2-3');
   });
 
+  it('formats metric quantities as decimals with at most two places', () => {
+    expect(formatQuantity(1.5, 'metric')).toBe('1.5');
+    expect(formatQuantity(0.333333, 'metric')).toBe('0.33');
+    expect(formatQuantity(1.625, 'metric')).toBe('1.63');
+    expect(formatQuantity(123, 'metric')).toBe('123');
+    expect(formatQuantity(0.01234, 'metric')).toBe('0.01');
+    expect(formatQuantityRange(0.333333, 1.666, 'metric')).toBe('0.33-1.67');
+  });
+
   it('defines the fixed Volume and Weight unit catalogs by system', () => {
     expect(volumeUnits.map(({ code }) => code)).toEqual([
       'tsp',
@@ -119,6 +128,79 @@ describe('measurement rules', () => {
         measurement('weight', '120', 'g'),
       ]),
     ).toBeNull();
+  });
+
+  it('allows either or both optional Units amounts, but not an empty Units selection', () => {
+    expect(
+      serializeMeasurements([
+        {
+          id: 'volume-entry',
+          type: 'volume',
+          quantity: '1/2',
+          unitCode: 'cup',
+          picklistValueId: '',
+        },
+        {
+          id: 'weight-entry',
+          type: 'weight',
+          quantity: '',
+          unitCode: 'g',
+          picklistValueId: '',
+        },
+      ]),
+    ).toEqual([
+      {
+        measurement_type: 'volume',
+        amount_min: 0.5,
+        amount_max: null,
+        unit_code: 'cup',
+        picklist_value_id: null,
+      },
+    ]);
+    expect(
+      serializeMeasurements([
+        {
+          id: 'volume-entry',
+          type: 'volume',
+          quantity: '',
+          unitCode: 'cup',
+          picklistValueId: '',
+        },
+        {
+          id: 'weight-entry',
+          type: 'weight',
+          quantity: '100',
+          unitCode: 'g',
+          picklistValueId: '',
+        },
+      ]),
+    ).toEqual([
+      {
+        measurement_type: 'weight',
+        amount_min: 100,
+        amount_max: null,
+        unit_code: 'g',
+        picklist_value_id: null,
+      },
+    ]);
+    expect(() =>
+      serializeMeasurements([
+        {
+          id: 'volume-entry',
+          type: 'volume',
+          quantity: '',
+          unitCode: 'cup',
+          picklistValueId: '',
+        },
+        {
+          id: 'weight-entry',
+          type: 'weight',
+          quantity: '',
+          unitCode: 'g',
+          picklistValueId: '',
+        },
+      ]),
+    ).toThrow('Enter a volume or weight amount.');
   });
 
   it('rejects invalid units, missing values, and unsupported measurement pairs', () => {

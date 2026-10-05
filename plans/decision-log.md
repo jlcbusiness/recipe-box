@@ -38,7 +38,12 @@ the product specification or a task list. The canonical behavior remains in
 | The comprehensive reference is the master document; the spec summarizes it and defers to it. | One authority prevents drift, while the shorter spec stays the first thing read. |
 | Deleted items go to the trash and are purged after 30 days. "Archive" is not used. | One clear lifecycle: delete, restore within 30 days, or purge. |
 | Count has no unit. | A count is how many of the ingredient; a 14 oz can is entered as 14 oz. |
-| Informal is a fifth quantity type with Settings-managed unit words (bunch, sprig, clove). | Non-standard measures need a unit word but must never convert. |
+| Things is a quantity category with Settings-managed unit words (bunch, sprig, clove). | Non-standard measures need a unit word but must never convert; the normalized storage type remains Informal. |
+| Ingredient measurement UI exposes Unit, Count, Things, and Feel rather than the storage-level types. | Cooks choose a meaningful amount form, while the existing Volume, Weight, Informal, and Unmeasured records preserve a normalized data model. |
+| Unit supports optional volume and weight fields in one category. | Recipes commonly record either source measurement or both; a fixed pair prevents arbitrary multi-measurement combinations while making the dual form direct to enter. |
+| Measurement picklists are custom viewport-aware listboxes. | Native select menus could render off-screen and could not preserve the editor's option grouping, keyboard behavior, or visual language. |
+| Things pluralize in detail display; only `cup` pluralizes among fixed unit labels. | Account-managed unit words read naturally in recipe prose. Most fixed labels are abbreviations, for which appended `s` is awkward or incorrect; `cup` is the useful full-word exception. |
+| Metric amounts display as decimal values with at most two decimal places. | Metric recipe notation should not show cooking fractions; US customary quantities retain common fractions where appropriate. |
 | Changing State clears Verdict, Enthusiasm, Occasion detail, and Reason. | A new state means a new reaction, so stale answers must not linger. |
 | Unit display uses a default system per dimension, with per-ingredient view-time overrides. | Readers choose US customary or metric for volume and weight, and can still switch one ingredient. |
 | Magazine recipes use a `+ Site` button for a secondary Site listing. | The recipe's online URL lives with the site while the issue stays primary. |

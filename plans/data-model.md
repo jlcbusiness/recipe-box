@@ -38,8 +38,8 @@ security without prematurely creating recipe or other domain tables.
 | Recipe | The recipe's metadata, state, optional integer Serves count, timings, notes, primary publication, privacy, and public-link ID. |
 | Publication | A Book, Magazine issue, or Site that can list recipes. |
 | Ingredient | A canonical account-owned ingredient and optional trusted density. |
-| Recipe ingredient | An ordered ingredient row with persistent manual order, Main flag, detail, preparation, and measurements. |
-| Measurement | A volume, weight, count (a bare number), informal (a number with a non-standard unit word), or unmeasured expression attached to one recipe ingredient. |
+| Recipe ingredient | An ordered ingredient row with persistent manual order, Main flag, specifics, preparation, and measurements. |
+| Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to a recipe ingredient. |
 | Recipe pairing | A Pairs with entry with required display text and an optional linked target recipe. |
@@ -61,10 +61,11 @@ security without prematurely creating recipe or other domain tables.
   recipe relationships.
 - A recipe has many ordered ingredient rows and many ordered instruction steps.
   Ingredient manual order is persistent and separate from temporary view sorts.
-- A recipe ingredient can have a volume measurement, a weight measurement, a
-  count (a number with no unit), an informal measurement (a number plus a
-  non-standard unit such as bunch), or an approved unmeasured phrase. Volume and
-  weight may coexist on the same row.
+- A recipe ingredient can have one displayed category: Unit, Count, Things, or
+  Feel. Unit maps to the stored volume and/or weight records; Things maps to an
+  informal record and Feel maps to an unmeasured record. A Unit row can contain
+  volume, weight, or both; all other categories contain only their applicable
+  value.
 - Main ingredients are derived from recipe-ingredient flags, not duplicated
   recipe metadata.
 - Ingredient mentions reference a particular recipe ingredient, never an
@@ -82,7 +83,8 @@ security without prematurely creating recipe or other domain tables.
 ## Configuration Boundaries
 
 Volume and weight units are fixed recognized definitions. Count has no unit.
-Informal units and unmeasured phrases are account-managed configuration.
+Things units and Feel phrases are account-managed configuration. Their storage
+categories remain `informal_unit` and `unmeasured_phrase`.
 Ingredients, food types,
 meal types, cuisines, equipment, verdicts, enthusiasm options, and tags are
 account-managed.
