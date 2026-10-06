@@ -36,7 +36,9 @@ starts with the useful parts of dense work-item software—stable hierarchy,
 scan-friendly data, direct editing, and strong keyboard support—then replaces
 its cold, portal-like visual complexity with a quiet paper-and-ink workspace.
 The app should make a frequently edited recipe feel trustworthy and easy to
-read, not theatrical.
+read, not theatrical. It should feel like a well-kept personal reference: the
+recipe is primary, its source is legible but secondary, and editing mechanics
+appear only when they help someone capture or correct information.
 
 ### Principles
 
@@ -44,14 +46,36 @@ read, not theatrical.
   recipe entry and scanning faster. Give each field only the width it needs,
   align related values, and remove unused columns or controls. Do not fill
   space just because a table or pane has it.
+- **Reading hierarchy before decoration.** A recipe title leads its page. Its
+  source belongs immediately beneath it as a compact attribution, like a
+  byline or citation, not as an isolated content block. Italicize the source
+  title alone; issue, page, and URL are factual details and remain upright.
+- **Geometry follows information shape.** Fields are not equal-width tiles.
+  A recipe or publication name and a URL can justify a full row; author,
+  edition, ISBN, quantity, and page number should occupy only useful space and
+  wrap with their peers. Stable field sizes improve scanning and prevent a
+  sparse form from reading like a dashboard.
 - **Recipe language over database language.** A saved ingredient should read
   like a recipe: `1 1/2 cups flour`, `120 g flour`, `2 bunches cilantro`, or
   `salt to taste`. Labels and controls may expose structure in edit mode, but
   view mode should turn that structure into familiar cooking prose.
 - **Direct manipulation before chrome.** Make a cell editable in place, expose
-  a trailing blank ingredient row rather than an Add button, and keep one
-  compact delete action. Avoid extra toolbars, cards, explanatory copy, and
-  modal steps when an action can live with the item it changes.
+  a trailing blank ingredient row rather than an Add button. Keep routine
+  actions close to the item they affect; avoid extra toolbars, cards, and
+  explanatory copy when direct interaction is clear.
+- **Destructive actions require separation.** Keep Delete away from routine
+  navigation, editing, printing, and selection controls. Do not put it on
+  recipe-list rows, where selecting a recipe could trigger it accidentally.
+  Give it a deliberate place in an editing context; a confirmation dialog is
+  an additional safeguard, not a substitute for spatial separation. Slice 8
+  illustrates the rule: Delete sits at the upper-right of the edit header,
+  apart from Return to View. It does not belong beside the detail title,
+  where the title and routine actions already occupy the available sides, or
+  at the bottom of the screen, where it would be inconvenient and unexpected.
+- **State change must read at a glance.** Quiet default controls preserve the
+  paper-and-ink rhythm. A destructive text action may be outlined while idle,
+  but hover and focus must become unmistakable tomato red with white text.
+  Color reinforces a visible label and never provides the only signal.
 - **Structure is responsive, not merely smaller.** Desktop optimizes for
   keyboard-efficient, aligned row entry. Mobile keeps the same data model but
   edits one ingredient in a focused pane with touch-safe controls and
@@ -83,10 +107,21 @@ read, not theatrical.
 - The layout relies on a wide, restrained content column, wrapping form rows,
   compact tables, and modest separators. It avoids nested cards, oversized
   gutters, persistent side panes, and decorative shadows.
-- Labeled action buttons use two visual sizes: 48px for standalone actions such
-  as Save, and 32px for compact actions placed beside text, such as Edit.
-  Compact mobile actions retain a 48px hit area without changing their visible
-  height. Picklist triggers and icon-only controls have their own sizing rules.
+- Recipe details use a title stack: the recipe name, then a compact green
+  publication attribution when a source exists, then the detail content. The
+  linked publication title is italicized as bibliographic context; its issue,
+  page, and URL are not.
+- Publication forms use unequal, content-informed fields. Name and URLs occupy
+  a full row; Author, Edition, ISBN, and Magazine Issue remain compact and wrap
+  as a group. ISBN formatting appears as direct input assistance, including
+  after paste, not as a separate cleanup step.
+- Default add actions are quiet text commands. Their green filled hover/focus
+  state confirms an available constructive action without making the resting
+  interface button-heavy.
+- Standalone text actions such as Save are 48px high. Compact icon actions
+  placed beside a title, such as Print and Edit, are 36px square. On mobile they
+  keep a 48px hit area without changing their visible size. Picklist triggers
+  and other icon-only controls have their own sizing rules.
 
 ### Planned Recipe Tin identity
 
@@ -132,8 +167,34 @@ control surface.
 
 ### Current implementation conventions
 
-- Prefer visible labels and semantic controls over icon-only or placeholder-only
-  forms. A control's appearance must not be its only explanation.
+- Icons and text labels follow these rules. Where two rules seem to conflict,
+  the more specific rule (Rule 3, 4, or 8) wins.
+  1. **Prefer icons for routine actions**, on desktop and mobile alike, so the
+     two layouts stay consistent and mobile stays compact. Examples: Print,
+     Edit, Calculate total time.
+  2. **Every icon needs both a tooltip and a screen-reader name.** Set `title`
+     for sighted pointer and keyboard users, set an accessible name (usually
+     `aria-label`) for screen readers, and mark the icon itself `aria-hidden`.
+     An icon is never the only explanation of its action.
+  3. **Submission and deletion buttons always have visible text.** Save, Delete,
+     and Move to Trash are deliberate confirmations, so a person must read what
+     they are committing to. This applies to a single data pane, such as a
+     recipe's edit screen or a dialog.
+  4. **In a list, use a compact `x` to mean "remove this item".** Lists must
+     express information in a clear, compressed format, so a list row, such as
+     an ingredient row or instruction step, uses `x` instead of a text button.
+     It still needs a tooltip and a screen-reader name that names the item.
+  5. **On a pane, `x` means "close" or "cancel", never "delete".** Do not use
+     `x` for deleting a whole record from a single data pane; Rule 3 applies.
+  6. **Add a button only where an action merits one.** Fewer buttons is better.
+     Prefer direct manipulation of the item, and do not add a button for
+     something a person can already do in place.
+  7. **Form fields keep visible labels**, never placeholder-only labels.
+  8. **An icon must communicate its action clearly.** If no familiar icon
+     unambiguously describes the action, use text instead, as brief as possible
+     while still clear. For example, a trash can means "move this to Trash", so
+     it cannot mean "open the Trash"; use the text "View Trash" for that. Rule 8
+     overrides Rule 1.
 - Custom picklists use an ordinary compact trigger and a portal-rendered
   listbox. The listbox is anchored near its trigger, remains inside the
   viewport, shows the active keyboard option, and keeps selection visible
@@ -220,11 +281,12 @@ Opinion. Recipe detail follows the edit-form order
 but uses a distinct view order: State and its active response, Occasion Details
 when present, Serves, Total Time, Equipment, Food Type, Meal Type, Cuisine,
 remaining times, then Notes. On desktop, Food Type, Meal Type, and Cuisine share
-their own full-width row. On mobile, “Edit” uses 18px small caps at the right
-edge of the title row; the “Edit” label is the same on desktop and mobile, with
-small caps used only on mobile. The inline Edit button is 32px high on desktop
-and mobile. On mobile, its hit area is 48px high. Do not repeat Recipe Tin as a page breadcrumb or
-attribution when the selected navigation item already names the Recipe Tin.
+their own full-width row. The title row uses compact icon-only Print and Edit
+actions, with Edit at the trailing edge. Both controls expose descriptive
+accessible names and tooltips. Their visible buttons are 36px square; on mobile,
+their hit areas expand to 48px without changing their visible size. Do not repeat
+Recipe Tin as a page breadcrumb or attribution when the selected navigation item
+already names the Recipe Tin.
 Recipe titles and major detail section headings use 16pt (about 21.33px). The
 mobile Times subsection title is 18px navy small caps. The desktop Recipe Tin
 list content is up to about 1172px wide and the detail metadata area is up to
@@ -316,19 +378,21 @@ for kitchen lighting, temporary ingredient check-off, and a screen wake lock.
 
 ### Current implementation
 
-Recipe detail renders ingredient rows in their saved order as amount, lowercase
-Specifics and ingredient name, then Preparation. Unit can display volume,
-weight, or both with ` / ` separating the dimensions. Things pluralize from
-their maximum range value; `cup` becomes `cups` above one while abbreviated
-fixed units remain unchanged. US customary quantities use familiar fractions
-when close to halves, thirds, quarters, or eighths; metric quantities never use
-fractions and display at most two decimal places.
+Recipe detail currently uses Standard presentation: ingredient rows stay in
+their saved order and render as amount, lowercase Specifics and ingredient name,
+then Preparation. The detail page stacks ingredients and instructions
+vertically. Unit can display volume, weight, or both with ` / ` separating the
+dimensions. Things pluralize from their maximum range value; `cup` becomes
+`cups` above one while abbreviated fixed units remain unchanged. US customary
+quantities use familiar fractions when close to halves, thirds, quarters, or
+eighths; metric quantities never use fractions and display at most two decimal
+places.
 
 ### Planned direction
 
-Standard presentation lists each ingredient in the familiar recipe-book reading
-order: Amount, Ingredient and Specifics, then Preparation. The list sits beside the
-instructions.
+Slice 16 adds reader controls and Ingredient-first presentation. The intended
+Standard reading layout places ingredients beside instructions; the current
+detail page remains vertically stacked.
 
 Ingredient-first presentation ("mine") shows Ingredient, Amount, and Preparation.
 Specifics is rendered as a distinct subtitle beneath the Ingredient name:
@@ -347,8 +411,10 @@ Specifics is rendered as a distinct subtitle beneath the Ingredient name:
 +---------------------------+----------------+---------------+
 ```
 
-Ingredient-first is the default for mobile, public share, and printed recipes.
-The chosen presentation is a reader preference, not recipe data.
+Ingredient-first is the default for mobile and public share. Print follows the
+active recipe presentation; until Slice 16 introduces reader view controls,
+print uses the Standard presentation. The chosen presentation is a reader
+preference, not recipe data.
 
 Instruction ingredient mentions default to bold dark red so linked ingredients
 are easy to scan. User Settings offers a dedicated styling configuration:
@@ -357,6 +423,21 @@ are easy to scan. User Settings offers a dedicated styling configuration:
 - Independent toggle checkboxes for bold, italic, and underline (any combination).
 - Color presets are tested to ensure $\ge 4.5:1$ contrast against the app background.
 Public and printed recipes always use the default bold dark-red styling.
+
+### Trash and baseline print (Slice 8 current implementation)
+
+- Recipe detail keeps the routine Edit and Print actions beside the title. On
+  mobile, Edit remains at the title row's right edge while Print precedes it;
+  both retain touch-safe hit areas. Delete is available in edit mode at the
+  upper-right of the edit header, apart from Return to View. It is not placed
+  beside the detail actions or on recipe-list rows.
+- Delete opens a native confirmation dialog that names the recipe and explains
+  the 30-day restore window. Cancel and Escape leave the recipe unchanged.
+- Trash is a dense responsive working list with deleted and purge dates and an
+  explicit Restore action. Its empty state links back to the active Recipe Tin.
+- Print uses the active detail content and a light paper layout. Ingredients
+  use the same Standard-view formatter and ordering as recipe detail; app chrome
+  and editing controls are omitted. Amounts remain unscaled and unconverted.
 
 ## Planned Publication Cover Fallbacks
 

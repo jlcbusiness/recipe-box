@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { normalizeHttpUrl } from '../../lib/publications/validation';
 import type { RecipeState } from '../../lib/recipes/data';
 import type { IngredientRowPayload } from '../../lib/recipes/ingredient-rules';
 import {
@@ -179,7 +180,13 @@ export async function saveRecipe(
     return { error: 'Reload this recipe before saving.' };
   }
 
-  const { data, error } = await supabase.rpc('save_recipe', {
+  const recipeUrlValue = formText(formData, 'recipe_url');
+  const recipeUrl = recipeUrlValue ? normalizeHttpUrl(recipeUrlValue) : null;
+  if (recipeUrlValue && !recipeUrl) {
+    return { error: 'Enter a valid HTTP(S) URL.' };
+  }
+
+  const { data, error } = await supabase.rpc('save_recipe_with_publication', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_name: name,
@@ -206,6 +213,9 @@ export async function saveRecipe(
     p_equipment_ids: selectedIds(formData, 'equipment_ids'),
     p_ingredient_rows: ingredientRows,
     p_instruction_steps: instructionSteps,
+    p_publication_id: optionalId(formData, 'publication_id'),
+    p_publication_page: formText(formData, 'publication_page') || null,
+    p_recipe_url: recipeUrl,
   });
 
   if (error) {
@@ -226,4 +236,62 @@ export async function saveRecipe(
   revalidatePath('/recipes');
   revalidatePath(`/recipes/${savedRecipe.id}`);
   redirect(`/recipes/${savedRecipe.id}`);
+}
+
+export async function trashRecipe(formData: FormData): Promise<void> {
+  const recipeId = formText(formData, 'recipe_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  if (!recipeId || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+    redirect('/recipes?status=conflict');
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    redirect('/');
+  }
+
+  const { error } = await supabase.rpc('trash_recipe', {
+    p_recipe_id: recipeId,
+    p_expected_version: expectedVersion,
+  });
+  if (error) {
+    redirect(
+      error.code === '40001' || error.code === '55000'
+        ? '/recipes?status=conflict'
+        : '/recipes?status=error',
+    );
+  }
+
+  revalidatePath('/recipes');
+  revalidatePath('/recipes/trash');
+  revalidatePath(`/recipes/${recipeId}`);
+  redirect('/recipes?status=trashed');
+}
+
+export async function restoreRecipe(formData: FormData): Promise<void> {
+  const recipeId = formText(formData, 'recipe_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  if (!recipeId || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+    redirect('/recipes/trash?status=conflict');
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    redirect('/');
+  }
+
+  const { error } = await supabase.rpc('restore_recipe', {
+    p_recipe_id: recipeId,
+    p_expected_version: expectedVersion,
+  });
+  if (error) {
+    redirect('/recipes/trash?status=conflict');
+  }
+
+  revalidatePath('/recipes');
+  revalidatePath('/recipes/trash');
+  revalidatePath(`/recipes/${recipeId}`);
+  redirect(`/recipes/${recipeId}`);
 }

@@ -1,0 +1,97 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { normalizeHttpUrl, normalizeIsbn } from '../../lib/publications/validation';
+import type { PublicationOption } from '../../lib/recipes/data';
+import { createClient } from '../../lib/supabase/server';
+
+export type PublicationActionState = {
+  error?: string;
+  publication?: PublicationOption;
+};
+
+function formText(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? '').trim();
+}
+
+function optionalText(formData: FormData, name: string): string | null {
+  return formText(formData, name) || null;
+}
+
+export async function createPublication(
+  _previousState: PublicationActionState | undefined,
+  formData: FormData,
+): Promise<PublicationActionState> {
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { error: 'Sign in before creating a publication.' };
+  }
+
+  const name = formText(formData, 'name');
+  const publicationType = formText(formData, 'publication_type');
+  const author = publicationType === 'book' ? optionalText(formData, 'author') : null;
+  const edition = publicationType === 'book' ? optionalText(formData, 'edition') : null;
+  const isbnValue = publicationType === 'book' ? optionalText(formData, 'isbn') : null;
+  const isbn = isbnValue ? normalizeIsbn(isbnValue) : null;
+  const retailerUrlValue =
+    publicationType === 'book' ? optionalText(formData, 'retailer_url') : null;
+  const retailerUrl = retailerUrlValue ? normalizeHttpUrl(retailerUrlValue) : null;
+  const issue = publicationType === 'magazine' ? formText(formData, 'issue') : null;
+  const siteUrlValue = publicationType === 'site' ? formText(formData, 'site_url') : null;
+  const siteUrl = siteUrlValue ? normalizeHttpUrl(siteUrlValue) : null;
+
+  if (!name) {
+    return { error: 'Enter a publication name.' };
+  }
+  if (!['book', 'magazine', 'site'].includes(publicationType)) {
+    return { error: 'Choose a publication type.' };
+  }
+  if (publicationType === 'magazine' && !issue) {
+    return { error: 'Enter the Magazine Issue, edition, or date.' };
+  }
+  if (publicationType === 'site' && !siteUrl) {
+    return { error: 'Enter the Site URL.' };
+  }
+  if (isbnValue && !isbn) {
+    return { error: 'Enter a valid ISBN-10 or ISBN-13.' };
+  }
+  if (retailerUrlValue && !retailerUrl) {
+    return { error: 'Enter a valid HTTP(S) Retailer URL.' };
+  }
+  if (siteUrlValue && !siteUrl) {
+    return { error: 'Enter a valid HTTP(S) Site URL.' };
+  }
+
+  const { data, error } = await supabase.rpc('create_publication', {
+    p_name: name,
+    p_publication_type: publicationType,
+    p_author: author,
+    p_edition: edition,
+    p_isbn: isbn,
+    p_retailer_url: retailerUrl,
+    p_issue: issue,
+    p_site_url: siteUrl,
+  });
+
+  if (error || typeof data !== 'string') {
+    return { error: 'Unable to create this publication. Check its details and try again.' };
+  }
+
+  revalidatePath('/publications');
+  revalidatePath('/recipes');
+
+  return {
+    publication: {
+      id: data,
+      name,
+      publication_type: publicationType as PublicationOption['publication_type'],
+      author,
+      edition,
+      isbn,
+      retailer_url: retailerUrl,
+      issue,
+      site_url: siteUrl,
+    },
+  };
+}

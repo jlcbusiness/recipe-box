@@ -1,3 +1,4 @@
+import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
@@ -8,6 +9,7 @@ import {
   parseInstructionMarkdown,
 } from '../../../lib/recipes/instruction-markdown';
 import { createClient } from '../../../lib/supabase/server';
+import { RecipePrintAction } from '../recipe-detail-actions';
 
 type RecipeDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -179,17 +181,34 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       <div className="recipe-page-heading recipe-detail-heading">
         <div className="recipe-detail-title">
           <h1 id="page-title">{recipe.name}</h1>
+          {recipe.publication && (
+            <p className="recipe-attribution">
+              <span>From </span>
+              <Link href={`/publications/${recipe.publication.id}`}>
+                <cite>{recipe.publication.name}</cite>
+              </Link>
+              {recipe.publication.issue ? ` · ${recipe.publication.issue}` : ''}
+              {recipe.publication_page ? ` · p. ${recipe.publication_page}` : ''}
+              {recipe.recipe_url && (
+                <>
+                  {' · '}
+                  <a href={recipe.recipe_url}>{recipe.recipe_url}</a>
+                </>
+              )}
+            </p>
+          )}
         </div>
-        <Link
-          aria-label="Edit"
-          className="recipe-primary-link recipe-edit-link"
-          href={`/recipes/${recipe.id}/edit`}
-        >
-          <span className="recipe-edit-desktop">Edit</span>
-          <span aria-hidden="true" className="recipe-edit-mobile">
-            Edit
-          </span>
-        </Link>
+        <div className="recipe-detail-heading-actions recipe-screen-only">
+          <RecipePrintAction />
+          <Link
+            aria-label="Edit"
+            className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
+            href={`/recipes/${recipe.id}/edit`}
+            title="Edit recipe"
+          >
+            <Pencil aria-hidden="true" size={16} strokeWidth={2} />
+          </Link>
+        </div>
       </div>
       <section className="recipe-detail-section" aria-labelledby="metadata-title">
         <h2 id="metadata-title">Recipe details</h2>

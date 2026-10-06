@@ -3,6 +3,20 @@ import type { MeasurementType } from './measurement-rules';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
 
+export type PublicationType = 'book' | 'magazine' | 'site';
+
+export type PublicationOption = {
+  id: string;
+  name: string;
+  publication_type: PublicationType;
+  author: string | null;
+  edition: string | null;
+  isbn: string | null;
+  retailer_url: string | null;
+  issue: string | null;
+  site_url: string | null;
+};
+
 export type PicklistCategory =
   | 'food_type'
   | 'meal_type'
@@ -63,6 +77,10 @@ type RecipeMeasurementRecord = Omit<RecipeMeasurement, 'picklist_value'> & {
 export type RecipeRecord = {
   id: string;
   name: string;
+  publication_id: string | null;
+  publication_page: string | null;
+  recipe_url: string | null;
+  publication: PublicationOption | null;
   food_type_id: string | null;
   state: RecipeState;
   verdict_id: string | null;
@@ -91,7 +109,29 @@ export type RecipeRecord = {
   steps: RecipeInstructionStep[];
 };
 
+export type TrashedRecipeRecord = {
+  id: string;
+  name: string;
+  version: number;
+  trashed_at: string;
+};
+
 export type RecipeSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+export async function getPublications(
+  supabase: RecipeSupabaseClient,
+): Promise<PublicationOption[]> {
+  const { data, error } = await supabase
+    .from('publications')
+    .select('id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url')
+    .order('name');
+
+  if (error) {
+    throw new Error('Unable to load publications.');
+  }
+
+  return (data ?? []) as PublicationOption[];
+}
 
 export async function getRecipePicklists(
   supabase: RecipeSupabaseClient,
@@ -140,9 +180,10 @@ export async function getRecipe(
   const { data, error } = await supabase
     .from('recipes')
     .select(
-      'id, name, food_type_id, state, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, version, created_at, updated_at',
+      'id, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, version, created_at, updated_at',
     )
     .eq('id', recipeId)
+    .is('trashed_at', null)
     .maybeSingle();
 
   if (error) {
@@ -150,6 +191,19 @@ export async function getRecipe(
   }
   if (!data) {
     return null;
+  }
+
+  let publication: PublicationOption | null = null;
+  if (data.publication_id) {
+    const { data: publicationData, error: publicationError } = await supabase
+      .from('publications')
+      .select('id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url')
+      .eq('id', data.publication_id)
+      .maybeSingle();
+    if (publicationError) {
+      throw new Error('Unable to load this recipe.');
+    }
+    publication = (publicationData as PublicationOption | null) ?? null;
   }
 
   const { data: assignments, error: assignmentError } = await supabase
@@ -257,6 +311,7 @@ export async function getRecipe(
 
   return {
     ...data,
+    publication,
     meal_type_ids: idsFor('meal_type'),
     cuisine_ids: idsFor('cuisine'),
     equipment_ids: idsFor('equipment'),
@@ -267,6 +322,17 @@ export async function getRecipe(
     })),
     steps: (recipeSteps ?? []) as RecipeInstructionStep[],
   } as RecipeRecord;
+}
+
+export async function getTrashedRecipes(
+  supabase: RecipeSupabaseClient,
+): Promise<TrashedRecipeRecord[]> {
+  const { data, error } = await supabase.rpc('list_trashed_recipes');
+  if (error) {
+    throw new Error('Unable to load Trash.');
+  }
+
+  return (data ?? []) as TrashedRecipeRecord[];
 }
 
 export const recipeStateLabels: Record<RecipeState, string> = {

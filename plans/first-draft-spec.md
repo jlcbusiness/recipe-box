@@ -175,9 +175,11 @@ See [comprehensive-reference.md § 4](comprehensive-reference.md#4-ingredient-pr
 - Ingredient-first displays Ingredient, Amount, and Preparation, with Specifics as
   an Ingredient subtitle.
 
-Signed-in users can save a default. Print and public pages use Ingredient-first
-by default. Sort choices are first instruction appearance, alphabetical, size,
-and entered order. Size has fixed groups: volume, weight, count and informal, then rows with
+Signed-in users can save a default. Print follows the active ingredient
+presentation; until Slice 16 introduces reader view controls, print uses the
+Standard presentation. Public pages use Ingredient-first by default. Sort
+choices are first instruction appearance, alphabetical, size, and entered
+order. Size has fixed groups: volume, weight, count and informal, then rows with
 no usable amount. Ascending and descending only order within a group. A row
 with both volume and weight sorts by its volume. Edit mode
 has a left-edge drag handle for persistent manual reordering, with keyboard and
@@ -261,7 +263,9 @@ can grant. Invites are emailed, and accepting one verifies the email address.
 Development keeps sign-up open, with no verification, through a per-environment
 switch.
 
-Print uses Ingredient-first presentation, selected scaling, and selected units.
+Print follows the active ingredient presentation, selected scaling, and
+selected units. Until Slice 16 introduces reader view controls, print uses the
+Standard presentation.
 
 ## Import, Export, Lifecycle, And History
 

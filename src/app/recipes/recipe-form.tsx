@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type {
   IngredientOption,
+  PublicationOption,
   RecipePicklistValue,
   RecipeRecord,
   RecipeState,
@@ -33,11 +34,14 @@ import {
 import { saveRecipe } from './actions';
 import { IngredientRowsEditor } from './ingredient-rows-editor';
 import { InstructionStepsEditor } from './instruction-steps-editor';
+import { PublicationPicker } from './publication-picker';
 
 type RecipeFormProps = {
   ingredients: IngredientOption[];
+  initialPublicationId?: string | null;
   picklists: RecipePicklistValue[];
   preparationOptions: string[];
+  publications: PublicationOption[];
   recipe?: RecipeRecord;
 };
 
@@ -310,8 +314,10 @@ function MultiPicklist({
 
 export function RecipeForm({
   ingredients,
+  initialPublicationId,
   picklists,
   preparationOptions,
+  publications,
   recipe,
 }: RecipeFormProps) {
   const [actionState, formAction, pending] = useActionState(saveRecipe, undefined);
@@ -554,6 +560,12 @@ export function RecipeForm({
             defaultValue={recipe?.name ?? ''}
           />
         </label>
+        <PublicationPicker
+          initialPage={recipe?.publication_page ?? null}
+          initialPublicationId={recipe?.publication_id ?? initialPublicationId ?? null}
+          initialUrl={recipe?.recipe_url ?? null}
+          publications={publications}
+        />
         <div className="recipe-form-fields recipe-state-fields">
           <SinglePicklist
             label="State"

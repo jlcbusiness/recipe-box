@@ -135,12 +135,16 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   in a separate subsection with a divider and small-caps “Times” title; Total
   Time remains in the main metadata. Recipe Tin does not appear as a
   duplicate breadcrumb or attribution when it is already selected in navigation.
-  Recipe-page headings are about 16pt (about 21.33px).
-- Labeled action buttons use two visual sizes: 48px for standalone actions and
-  32px for compact actions beside text. The detail Edit action is 32px tall on
-  desktop and mobile and is labeled “Edit” in both. Mobile uses 18px small-caps
-  text and a 48px hit area at the right edge of the title row. Picklist triggers
-  and icon-only controls have separate sizing rules.
+  Recipe-page headings are about 16pt (about 21.33px). A recipe assigned to a
+  publication presents its origin as a compact subtitle directly beneath the
+  recipe title. The linked publication title is italicized as a citation; the
+  “From” label, issue, page, and URL remain upright. This attribution is absent
+  for Recipe Tin recipes.
+- Standalone text actions are 48px high. Compact icon-only actions beside the
+  detail title, including Print and Edit, are 36px square with descriptive
+  accessible names and tooltips. On mobile, their hit areas expand to 48px
+  without changing their visible size. Picklist triggers have separate sizing
+  rules.
 - The desktop Recipe Tin list is up to 1172px wide and its detail metadata
   section is up to 1012px wide.
 
@@ -246,7 +250,8 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
 - **Defaults:**
   - Authenticated desktop view: User-configurable default in settings (defaults to Standard).
   - Authenticated mobile view: Defaults to Ingredient-First.
-  - Print view: Defaults to Ingredient-First for compact paper layout.
+  - Print view: Follows the active ingredient presentation. Until Slice 16
+    introduces reader view controls, print uses the Standard presentation.
   - Public share view: Defaults to Ingredient-First.
 
 ### 4.2 Ingredient Sorting Options
@@ -350,7 +355,7 @@ A Publication is any formal collection or entity that contains recipes.
 
 | Publication Type | Specific Attributes | Recipe Location Field | Visual Treatment |
 | ---------------- | ------------------- | --------------------- | ---------------- |
-| **Book** | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. |
+| **Book** | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
 | **Magazine Issue** | Magazine Name, Issue / Edition / Date (Required free text e.g., "Oct 2024", "Holiday Issue 2023"), Cover image | None. Magazine recipes have no page number because thin magazines are easier to search by title. The recipe's online URL is recorded through the `+ Site` secondary listing (6.2). | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit. |
 | **Website** | Site Display Name, Site Root URL, Site Logo/Favicon (optional) | Full recipe URL | Minimalist site icon / badge. |
 
@@ -362,9 +367,15 @@ A Publication is any formal collection or entity that contains recipes.
 
 ### 6.3 Creation Workflows
 Publications can be created from three locations:
-1. **The Library:** A prominent `+ New Publication` button.
-2. **Recipe Edit Mode:** The Publication field is a searchable single-select combobox with an inline `+ Add new publication` button that opens a compact creation drawer/modal.
+1. **The Library:** An `Add publication` action.
+2. **Recipe Edit Mode:** The Publication field is a searchable single-select combobox with an inline `Add "{name}"` command after typing, which opens a compact creation dialog.
 3. **Import:** Automatic creation or matching during ZIP bundle imports.
+
+Publication creation follows the same content-sized form logic as recipe
+metadata: Name and URL fields take a full row; Author, Edition, ISBN, and
+Magazine Issue have widths appropriate to their expected content and wrap as a
+group when space is limited. Type choices use a labeled segmented control with
+an accessible native-radio affordance rather than visible radio dots.
 
 ### 6.4 The Recipe Tin (Unparented Recipes)
 - **Concept and Identity:** The Recipe Tin is the permanent, unparented container for recipes with no originating publication (family recipes, original experiments, clippings, recipes adapted from multiple sources).

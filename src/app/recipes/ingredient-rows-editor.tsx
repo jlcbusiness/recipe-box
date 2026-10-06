@@ -928,7 +928,13 @@ export function IngredientRowsEditor({
             onCommit={(value) => commitCell(row.id, field, value)}
           />
         ) : (
-          <span className="recipe-ingredient-cell-value">{displayValue}</span>
+          <span className="recipe-ingredient-cell-value">
+            {isEmptyIngredientRow(row) && field === 'ingredientName' ? (
+              <span className="recipe-ingredient-empty-prompt">add ingredient</span>
+            ) : (
+              displayValue
+            )}
+          </span>
         )}
       </td>
     );
@@ -1246,7 +1252,11 @@ export function IngredientRowsEditor({
                       }
                     }}
                   >
-                    {formatDraftIngredient(row, picklists)}
+                    {isEmptyIngredientRow(row) ? (
+                      <span className="recipe-ingredient-empty-prompt">add ingredient</span>
+                    ) : (
+                      formatDraftIngredient(row, picklists)
+                    )}
                   </button>
                   {!isEmptyIngredientRow(row) && (
                     <button

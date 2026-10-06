@@ -75,14 +75,14 @@ test('a user can reset their password through the local recovery email @e2e', as
 
     await page.getByRole('textbox', { name: 'New password' }).fill('replacement-password-84');
     await page.getByRole('button', { name: 'Save password' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
 
     await page.locator('.account-menu-trigger').click();
     await page.getByRole('button', { name: 'Sign out' }).click();
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill('replacement-password-84');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -102,7 +102,7 @@ test('recovery and reset screens are accessible @a11y', async ({ page, request }
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
 
     await page.goto('/reset-password');
     await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
@@ -129,9 +129,11 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
 
-    await expect(page).toHaveURL(/\/app$/);
-    await expect(page.getByRole('heading', { name: 'Your private workspace' })).toBeVisible();
+    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Workspace' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Trash', exact: true })).toBeVisible();
     const accountTrigger = page.locator('.account-menu-trigger');
     await expect(accountTrigger).toHaveAttribute('aria-label', `Account options for ${user.email}`);
     await expect(accountTrigger).toContainText(user.email);
@@ -147,7 +149,7 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await accountTrigger.click();
     await expect(page.locator('.account-menu-panel').getByText(user.email)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
-    await page.getByRole('heading', { name: 'Your private workspace' }).click();
+    await accountTrigger.click();
     await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
 
     const desktopA11y = await new AxeBuilder({ page })

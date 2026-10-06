@@ -36,7 +36,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/recipes$/);
 }
 
 async function dragByPointer(page: Page, source: Locator, target: Locator) {
@@ -729,6 +729,13 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(deleteBasil).toHaveCSS('opacity', '0');
     await reloadedGrid.getByRole('row').nth(2).hover();
     await expect(deleteBasil).toHaveCSS('opacity', '1');
+    await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await deleteBasil.focus();
+    await expect(deleteBasil).toHaveCSS('background-color', 'rgb(180, 62, 50)');
+    await deleteBasil.hover();
+    await expect(deleteBasil).toHaveCSS('width', '32px');
+    await expect(deleteBasil).toHaveCSS('background-color', 'rgb(180, 62, 50)');
+    await expect(deleteBasil).toHaveCSS('color', 'rgb(255, 255, 255)');
     await deleteBasil.click();
     await expect(reloadedGrid.getByRole('row')).toHaveCount(4);
     await expect(reloadedGrid).not.toContainText('Basil');
@@ -847,6 +854,10 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
 
     await expect(mobileList).toContainText('yellow cheese, diced');
     await expect(editor).toBeHidden();
+    const mobileDelete = mobileList.getByRole('button', { name: 'Delete ingredient row 1' });
+    await mobileDelete.hover();
+    await expect(mobileDelete).toHaveCSS('background-color', 'rgb(180, 62, 50)');
+    await expect(mobileDelete).toHaveCSS('color', 'rgb(255, 255, 255)');
     await mobileList.getByRole('button', { name: 'Enter ingredient' }).click();
     await editor.getByRole('combobox', { name: 'Ingredient', exact: true }).fill('Flour');
     await editor

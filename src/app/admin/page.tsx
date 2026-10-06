@@ -19,7 +19,7 @@ export default async function AdminPage() {
     .maybeSingle();
 
   if (!account?.is_admin) {
-    redirect('/app');
+    redirect('/recipes');
   }
 
   const admin = createAdminClient();
@@ -45,7 +45,8 @@ export default async function AdminPage() {
     <PrivateShell
       email={data.user.email ?? 'Unknown email'}
       navigation={[
-        { href: '/app', label: 'Workspace' },
+        { href: '/recipes', label: 'Recipe Tin' },
+        { href: '/publications', label: 'Library' },
         { href: '/admin', label: 'Administration', current: true },
       ]}
     >

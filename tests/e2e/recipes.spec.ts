@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
@@ -7,7 +8,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/recipes$/);
 }
 
 async function selectSinglePicklist(
@@ -28,18 +29,54 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
 
   try {
     await signIn(page, user.email, user.password);
+    await expect(page.getByRole('link', { name: 'Workspace' })).toHaveCount(0);
+    const trashNavLink = page.locator('.private-nav-bottom').getByRole('link', { name: 'Trash' });
+    await expect(trashNavLink).toBeVisible();
+    const trashNavBounds = await trashNavLink.boundingBox();
+    const accountMenuBounds = await page.locator('.account-menu-trigger').boundingBox();
+    if (testInfo.project.name === 'Fold 6') {
+      expect((trashNavBounds?.x ?? 0) + (trashNavBounds?.width ?? 0)).toBeLessThan(
+        accountMenuBounds?.x ?? 0,
+      );
+    } else {
+      expect((trashNavBounds?.y ?? 0) + (trashNavBounds?.height ?? 0)).toBeLessThan(
+        accountMenuBounds?.y ?? 0,
+      );
+    }
     await page.getByRole('link', { name: 'Recipe Tin' }).click();
     await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
     await expect(page.getByText('Your Recipe Tin is empty.')).toBeVisible();
-    await page.getByRole('link', { name: 'New Recipe' }).click();
-    await expect(page.getByRole('heading', { name: 'New Recipe' })).toBeVisible();
+    const addRecipeLink = page.getByRole('link', { name: 'Add Recipe' });
+    await expect(addRecipeLink).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await addRecipeLink.hover();
+    await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(56, 96, 68)');
+    await addRecipeLink.click();
+    await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
+    const emptyIngredientPrompt =
+      testInfo.project.name === 'Fold 6'
+        ? page.locator('.recipe-ingredient-mobile-value .recipe-ingredient-empty-prompt')
+        : page.locator('.recipe-ingredient-value-cell.is-empty .recipe-ingredient-empty-prompt');
+    await expect(emptyIngredientPrompt).toHaveText('add ingredient');
+    await expect(emptyIngredientPrompt).toHaveCSS('font-style', 'italic');
+    await expect(emptyIngredientPrompt).toHaveCSS('text-align', 'left');
+    expect(
+      await emptyIngredientPrompt.evaluate((element) => getComputedStyle(element).fontFamily),
+    ).toContain('Georgia');
     const titleFontSize = Number.parseFloat(
       await page
-        .getByRole('heading', { name: 'New Recipe' })
+        .getByRole('heading', { name: 'Add Recipe' })
         .evaluate((element) => getComputedStyle(element).fontSize),
     );
     expect(titleFontSize).toBeGreaterThanOrEqual(21);
     expect(titleFontSize).toBeLessThanOrEqual(22);
+    if (testInfo.project.name === 'Fold 6') {
+      const mainWidth = await page
+        .locator('main.recipes-main')
+        .evaluate((element) => element.clientWidth);
+      expect(
+        (await page.locator('.collection-add-action').boundingBox())?.width ?? 0,
+      ).toBeGreaterThan(mainWidth * 0.8);
+    }
     await expect(page.getByRole('main').getByRole('link', { name: 'Recipe Tin' })).toHaveCount(0);
     await page.getByLabel('Name').fill('Sunday tomato soup');
     await expect(page.getByLabel('State')).toBeVisible();
@@ -227,13 +264,13 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.getByRole('heading', { name: 'Sunday tomato soup' })).toBeVisible();
     await page.setViewportSize({ width: 1600, height: 1000 });
     const desktopEditLink = page.getByRole('link', { name: 'Edit' });
-    await expect(desktopEditLink.locator('.recipe-edit-desktop')).toBeVisible();
-    await expect(desktopEditLink.locator('.recipe-edit-mobile')).toBeHidden();
+    await expect(desktopEditLink.locator('svg')).toBeVisible();
+    await expect(desktopEditLink).toHaveAttribute('title', 'Edit recipe');
     const desktopTitleBounds = await page
       .getByRole('heading', { name: 'Sunday tomato soup' })
       .boundingBox();
     const desktopEditBounds = await desktopEditLink.boundingBox();
-    expect(desktopEditBounds?.height).toBe(32);
+    expect(desktopEditBounds?.height).toBe(36);
     expect(
       Math.abs(
         (desktopEditBounds?.y ?? 0) +
@@ -345,17 +382,16 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await recipeRow.getByRole('link', { name: 'Sunday tomato soup' }).click();
 
     const mobileEditLink = page.getByRole('link', { name: 'Edit' });
-    await expect(mobileEditLink.locator('.recipe-edit-mobile')).toBeVisible();
-    await expect(mobileEditLink.locator('.recipe-edit-desktop')).toBeHidden();
-    await expect(mobileEditLink).toHaveCSS('font-variant-caps', 'all-small-caps');
+    await expect(mobileEditLink.locator('svg')).toBeVisible();
+    await expect(mobileEditLink).toHaveAttribute('title', 'Edit recipe');
     const mobileTitleBounds = await page
       .getByRole('heading', { name: 'Sunday tomato soup' })
       .boundingBox();
     const mobileEditBounds = await mobileEditLink.boundingBox();
     const mobileHeadingBounds = await page.locator('.recipe-detail-heading').boundingBox();
-    expect(mobileEditBounds?.height).toBe(32);
+    expect(mobileEditBounds?.height).toBe(36);
     await expect(mobileEditLink).toHaveCSS('position', 'relative');
-    await expect(mobileEditLink).toHaveCSS('height', '32px');
+    await expect(mobileEditLink).toHaveCSS('height', '36px');
     const mobileEditHitArea = await mobileEditLink.evaluate((element) =>
       getComputedStyle(element, '::before'),
     );
@@ -890,7 +926,7 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
       .analyze();
     expect(listA11y.violations).toEqual([]);
 
-    await page.getByRole('link', { name: 'New Recipe' }).click();
+    await page.getByRole('link', { name: 'Add Recipe' }).click();
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
@@ -940,6 +976,23 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
     expect(reasonBounds?.height).toBe(stateTriggerBounds?.height);
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Accessible recipe' })).toBeVisible();
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      const editBounds = await page.getByRole('link', { name: 'Edit' }).boundingBox();
+      const printBounds = await page.getByRole('button', { name: 'Print' }).boundingBox();
+      expect(editBounds?.height).toBe(printBounds?.height);
+      expect(editBounds?.width).toBe(printBounds?.width);
+      expect(editBounds?.x).toBeGreaterThan(printBounds?.x ?? 0);
+      expect(
+        await page
+          .getByRole('link', { name: 'Edit' })
+          .evaluate((element) => getComputedStyle(element).borderRadius),
+      ).toBe(
+        await page
+          .getByRole('button', { name: 'Print' })
+          .evaluate((element) => getComputedStyle(element).borderRadius),
+      );
+    }
     const detailA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
@@ -1607,6 +1660,228 @@ test('owners confirm before removing an ingredient referenced by instructions @e
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.locator('.recipe-instruction-list > li')).toHaveText('Heat #iron');
     await expect(page.getByRole('heading', { name: 'Ingredients' })).toHaveCount(0);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('owners can move a recipe to Trash and restore it @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Recipe Tin' }).click();
+    await page.getByRole('link', { name: 'Add Recipe' }).click();
+    await page.getByLabel('Name').fill('A recipe to restore');
+    await page.getByLabel('Notes (Markdown)').fill('Keep these notes after restoration.');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'A recipe to restore' })).toBeVisible();
+    const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+    if (!recipeId) {
+      throw new Error('The saved recipe route must include its stable ID.');
+    }
+
+    const deleteRecipe = page.getByRole('button', { name: 'Delete', exact: true });
+    await expect(page.getByRole('button', { name: 'Delete recipe' })).toHaveCount(0);
+    const detailA11y = await new AxeBuilder({ page }).analyze();
+    expect(detailA11y.violations).toEqual([]);
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    await expect(deleteRecipe).toBeVisible({ timeout: 1_000 });
+    if (testInfo.project.name !== 'Fold 6') {
+      await deleteRecipe.hover();
+      await expect(deleteRecipe).toHaveCSS('background-color', 'rgb(180, 62, 50)');
+      await expect(deleteRecipe).toHaveCSS('color', 'rgb(255, 255, 255)');
+    }
+    await deleteRecipe.click();
+    const confirmation = page.getByRole('dialog', { name: 'Move recipe to Trash?' });
+    await expect(confirmation).toContainText('30 days');
+    await expect(confirmation.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    const dialogA11y = await new AxeBuilder({ page }).analyze();
+    expect(dialogA11y.violations).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(confirmation).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+
+    await deleteRecipe.click();
+    await expect(confirmation).toBeVisible();
+    await confirmation.getByRole('button', { name: 'Cancel' }).click();
+    await expect(confirmation).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Back to view' }).click();
+    await expect(page.getByRole('heading', { name: 'A recipe to restore' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Move recipe to Trash?' })
+      .getByRole('button', { name: 'Move to Trash' })
+      .click();
+    await expect(page).toHaveURL(/\/recipes\?status=trashed$/);
+    await expect(page.getByRole('status')).toContainText('Recipe moved to Trash');
+    expect((await page.request.get(`/recipes/${recipeId}`)).status()).toBe(404);
+    expect((await page.request.get(`/recipes/${recipeId}/edit`)).status()).toBe(404);
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(page.getByRole('heading', { name: 'Recipe not found' })).toBeVisible();
+    await page.getByRole('link', { name: 'Back to Recipes' }).click();
+    await page.getByRole('link', { name: 'Trash', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Trash' })).toBeVisible();
+    const trashedRow = page.getByRole('row', { name: /A recipe to restore/ });
+    await expect(trashedRow).toBeVisible();
+    await expect(trashedRow.locator('td').nth(1)).not.toBeEmpty();
+    await expect(trashedRow.locator('td').nth(2)).not.toBeEmpty();
+    const populatedTrashA11y = await new AxeBuilder({ page }).analyze();
+    expect(populatedTrashA11y.violations).toEqual([]);
+
+    const restoreButton = trashedRow.getByRole('button', { name: 'Restore A recipe to restore' });
+    if (testInfo.project.name !== 'Fold 6') {
+      await expect(restoreButton).toHaveCSS('opacity', '0');
+      await trashedRow.hover();
+      await expect(restoreButton).toHaveCSS('opacity', '1');
+      await restoreButton.focus();
+    }
+    for (const width of [352, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      );
+      await expect(restoreButton).toHaveCSS('opacity', '1');
+    }
+    if (testInfo.project.name === 'Fold 6') {
+      const restoreBounds = await page
+        .getByRole('button', { name: 'Restore A recipe to restore' })
+        .boundingBox();
+      expect(restoreBounds?.height).toBeGreaterThanOrEqual(48);
+    }
+    await page.getByRole('button', { name: 'Restore A recipe to restore' }).click();
+
+    await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+$/);
+    await expect(page.getByRole('heading', { name: 'A recipe to restore' })).toBeVisible();
+    await expect(page.getByText('Keep these notes after restoration.')).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Keep these notes after restoration.')).toBeVisible();
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    const editDeleteButton = page.getByRole('button', { name: 'Delete', exact: true });
+    await expect(editDeleteButton).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(editDeleteButton).toHaveCSS('color', 'rgb(180, 62, 50)');
+    await expect(editDeleteButton).toHaveCSS('border-radius', '6px');
+    await expect(page.getByRole('link', { name: 'Back to view' })).toBeVisible();
+    await expect(page.getByLabel('Notes (Markdown)')).toHaveValue(
+      'Keep these notes after restoration.',
+    );
+    await page.getByRole('link', { name: 'Recipe Tin', exact: true }).click();
+    await expect(page.getByRole('link', { name: 'A recipe to restore' })).toBeVisible();
+    await page.getByRole('link', { name: 'Trash', exact: true }).click();
+    await expect(page.getByText('Trash is empty. Deleted recipes appear here.')).toBeVisible();
+    const emptyTrashA11y = await new AxeBuilder({ page }).analyze();
+    expect(emptyTrashA11y.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('recipe detail print matches the Standard view @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ingredientRowId = randomUUID();
+  const stepId = randomUUID();
+
+  try {
+    const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${user.accessToken}`,
+      },
+      data: {
+        p_recipe_id: null,
+        p_expected_version: null,
+        p_name: 'A recipe to print',
+        p_food_type_id: null,
+        p_state: 'want_to_try',
+        p_verdict_id: null,
+        p_enthusiasm_id: null,
+        p_occasion_details: null,
+        p_reason: null,
+        p_serves: 4,
+        p_prep_time_minutes: 15,
+        p_mixing_time_minutes: null,
+        p_marinate_time_minutes: null,
+        p_chill_time_minutes: null,
+        p_freeze_time_minutes: null,
+        p_cook_time_minutes: 30,
+        p_bake_time_minutes: null,
+        p_cooling_time_minutes: null,
+        p_rest_time_minutes: null,
+        p_total_time_minutes: 45,
+        p_notes_markdown: 'Serve warm.',
+        p_meal_type_ids: [],
+        p_cuisine_ids: [],
+        p_equipment_ids: [],
+        p_ingredient_rows: [
+          {
+            recipe_ingredient_id: ingredientRowId,
+            ingredient_id: null,
+            ingredient_name: 'Flour',
+            is_main: true,
+            detail: 'All-purpose',
+            preparation: 'Sifted',
+            measurements: [
+              {
+                measurement_type: 'volume',
+                amount_min: 1.5,
+                amount_max: null,
+                unit_code: 'cup',
+                picklist_value_id: null,
+              },
+            ],
+          },
+        ],
+        p_instruction_steps: [
+          {
+            id: stepId,
+            position: 0,
+            content_markdown: `Mix [[ingredient:${ingredientRowId}|flour]].`,
+            plain_text: 'Mix flour.',
+          },
+        ],
+      },
+    });
+    expect(saved.ok(), await saved.text()).toBeTruthy();
+
+    await signIn(page, user.email, user.password);
+    await page.goto(`/recipes/${(await saved.json())[0].id}`);
+    await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Print' })).toBeVisible();
+    const printIngredient = page.locator('.recipe-ingredient-list li').first();
+    const ingredientText = '1 1/2 cups all-purpose flour, sifted';
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    await expect(page.getByText('Mix flour.')).toBeVisible();
+    await page.addInitScript(() => {
+      window.print = () => {
+        document.documentElement.dataset.printRequested = 'true';
+      };
+    });
+    await page.reload();
+    await page.getByRole('button', { name: 'Print' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
+
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.getByRole('button', { name: 'Print' })).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Edit' })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
+    await expect(page.getByText('Serve warm.')).toBeVisible();
+    await expect(page.getByText('Mix flour.')).toBeVisible();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    await expect(page.locator('.recipe-detail-section').first()).toHaveCSS('break-inside', 'avoid');
+    const pdf = await page.pdf();
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pdf.byteLength).toBeGreaterThan(1_000);
   } finally {
     await deleteTestUser(request, user);
   }

@@ -1,35 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '../../lib/supabase/server';
-import { PrivateShell } from '../private-shell';
 
 export default async function WorkspacePage() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-
-  if (error || !data.user) {
-    redirect('/');
-  }
-
-  const { data: account } = await supabase
-    .from('accounts')
-    .select('is_admin')
-    .eq('id', data.user.id)
-    .maybeSingle();
-
-  return (
-    <PrivateShell
-      email={data.user.email ?? 'Unknown email'}
-      navigation={[
-        { href: '/app', label: 'Workspace', current: true },
-        { href: '/recipes', label: 'Recipe Tin' },
-        ...(account?.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
-      ]}
-    >
-      <main aria-labelledby="page-title">
-        <p className="eyebrow">YOUR COOKBOOK SHELF</p>
-        <h1 id="page-title">Your private workspace</h1>
-        <p className="welcome-copy">Your library is ready for its first recipe.</p>
-      </main>
-    </PrivateShell>
-  );
+  redirect('/recipes');
 }

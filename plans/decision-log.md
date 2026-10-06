@@ -63,6 +63,7 @@ the product specification or a task list. The canonical behavior remains in
 | Settings shows the last export date and a reminder after 30 days. | Export is the only backup, so forgetting it is the main risk. |
 | Every picklist is seeded from the documented examples; Specific occasion is protected. | A usable start, while the value that reveals Occasion Details cannot be removed. |
 | The first release has one light theme. | Dark theme is deferred to avoid doubling visual verification. |
+| An assigned publication is shown as a citation-style subtitle beneath the recipe title; only its title is italicized. | Origin is supporting bibliographic context, not competing metadata. Keeping the citation adjacent to the title preserves reading hierarchy while leaving issue, page, and URL legible as factual location details. |
 | New recipes default to Want to try; State, its active response, and optional integer Serves share the row below Name. | The most common capture path is considering a recipe; State remains visible and editable rather than silently hidden in secondary metadata, while its response and serving count stay visually attached. |
 | Recipe metadata uses content-sized controls and flex-wrap rows, not a field grid. | Compact controls preserve scannability; widths follow the longest option or useful text length, fields wrap naturally, and time inputs fit their labels/value with 8px gaps. |
 | Multi-picklists are dropdown menus with stable-width triggers, checkmark-only selected options, and pale green bold emphasis. | Selection must read as an item choice, not browser text selection or a checklist; the checkmark keeps selection clear without relying on color. |
@@ -77,6 +78,8 @@ the product specification or a task list. The canonical behavior remains in
 | The desktop Edit control is 36px tall; the mobile “Edit” control is 32px tall, 18px small caps, and aligned to the right edge of the title row. | The desktop action keeps its right-side position while the mobile title row uses the available width without moving the action beneath the name. |
 | Desktop Recipe Tin content grows by about 192px, to 1172px for the list and 1012px for detail metadata. | The existing centered layout remains, with more room for the list and recipe fields on wide screens. |
 | The shared account menu sits at the bottom of desktop navigation and appears as a circular initials control on mobile. | One account-options menu works consistently across the private shell while using space appropriate to each layout. |
+| Slice 8 uses a daily Supabase Cron (`pg_cron`) job to trigger a parameterized recipe-purge function. | The lifecycle remains local-first and database-adjacent, while the explicit cutoff parameter makes the 30-day boundary deterministic in tests. |
+| Permanently purging a recipe also removes its retained recipe-history snapshots. | A history snapshot contains private recipe content; retaining it after a permanent purge would defeat the meaning of permanent deletion. |
 
 ## Recording New Decisions
 

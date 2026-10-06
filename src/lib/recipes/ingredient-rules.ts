@@ -28,6 +28,27 @@ export type IngredientRowPayload = {
   measurements: MeasurementPayload[];
 };
 
+export type IngredientDisplayInput = {
+  ingredient_name: string;
+  detail: string;
+  preparation: string;
+  measurements?: {
+    measurement_type: MeasurementType;
+    amount_min: number | null;
+    amount_max: number | null;
+    unit_code: string | null;
+    picklist_value: string | null;
+  }[];
+};
+
+export type IngredientDisplayParts = {
+  name: string;
+  specifics: string | null;
+  amount: string;
+  unmeasuredPhrase: string | null;
+  preparation: string | null;
+};
+
 export function isEmptyIngredientRow(row: IngredientRowDraft): boolean {
   return (
     !row.ingredientId &&
@@ -76,25 +97,13 @@ function pluralizeUnit(value: string): string {
   return `${displayValue.slice(0, start)}${plural}${displayValue.slice(start + word.length)}`;
 }
 
-export function formatIngredientDisplay(ingredient: {
-  ingredient_name: string;
-  detail: string;
-  preparation: string;
-  measurements?: {
-    measurement_type: MeasurementType;
-    amount_min: number | null;
-    amount_max: number | null;
-    unit_code: string | null;
-    picklist_value: string | null;
-  }[];
-}): string {
+export function getIngredientDisplayParts(
+  ingredient: IngredientDisplayInput,
+): IngredientDisplayParts {
   const name = ingredient.ingredient_name.trim();
   const detail = ingredient.detail.trim();
   const preparation = ingredient.preparation.trim();
   const displayName = /^[\p{Lu}][\p{Ll}]+$/u.test(name) ? lowercaseFirst(name) : name;
-  const mainText = [detail ? detail.toLocaleLowerCase() : '', displayName]
-    .filter(Boolean)
-    .join(' ');
   const amountText = [...(ingredient.measurements ?? [])]
     .filter((measurement) => measurement.measurement_type !== 'unmeasured')
     .sort((left, right) => {
@@ -143,12 +152,23 @@ export function formatIngredientDisplay(ingredient: {
   const unmeasuredPhrase = (ingredient.measurements ?? []).find(
     (measurement) => measurement.measurement_type === 'unmeasured',
   )?.picklist_value;
-  const measuredText = [amountText, mainText].filter(Boolean).join(' ');
-  const phraseText = unmeasuredPhrase
-    ? `${measuredText} ${lowercaseFirst(unmeasuredPhrase.trim())}`
-    : measuredText;
+  return {
+    name: displayName,
+    specifics: detail ? detail.toLocaleLowerCase() : null,
+    amount: amountText,
+    unmeasuredPhrase: unmeasuredPhrase ? lowercaseFirst(unmeasuredPhrase.trim()) : null,
+    preparation: preparation ? lowercaseFirst(preparation) : null,
+  };
+}
 
-  return preparation ? `${phraseText}, ${lowercaseFirst(preparation)}` : phraseText;
+export function formatIngredientDisplay(ingredient: IngredientDisplayInput): string {
+  const parts = getIngredientDisplayParts(ingredient);
+  const mainText = [parts.specifics, parts.name].filter(Boolean).join(' ');
+  const measuredText = [parts.amount, mainText].filter(Boolean).join(' ');
+  const displayText = parts.unmeasuredPhrase
+    ? `${measuredText} ${parts.unmeasuredPhrase}`
+    : measuredText;
+  return parts.preparation ? `${displayText}, ${parts.preparation}` : displayText;
 }
 
 export function moveIngredientRow(

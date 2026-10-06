@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AccountMenu } from './account-menu';
 
@@ -39,7 +40,13 @@ export function PrivateShell({
             </a>
           ))}
         </div>
-        <AccountMenu email={email} initials={initials} />
+        <div className="private-nav-bottom">
+          <a className="private-nav-utility-link" href="/recipes/trash" title="Trash">
+            <Trash2 aria-hidden="true" size={17} strokeWidth={1.8} />
+            <span>Trash</span>
+          </a>
+          <AccountMenu email={email} initials={initials} />
+        </div>
       </nav>
       <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>
         {children}

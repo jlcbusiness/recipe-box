@@ -38,8 +38,8 @@ test('local self-sign-up creates a regular email/password account @e2e @a11y', a
     await page.getByLabel('Password').fill(password);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page).toHaveURL(/\/app$/);
-    await expect(page.getByRole('heading', { name: 'Your private workspace' })).toBeVisible();
+    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
     await expect(page.locator('.account-avatar')).toBeVisible();
 
     const config = await getLocalSupabaseConfig();
@@ -99,10 +99,10 @@ test('a user cannot self-promote or change their sign-in method @e2e', async ({
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
     await expect(page.getByRole('link', { name: 'Administration' })).toHaveCount(0);
     await page.goto('/admin');
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -124,7 +124,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.getByLabel('Email').fill(admin.email);
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
 
     await expect(page.getByRole('link', { name: 'Administration' })).toBeVisible();
     await page.getByRole('link', { name: 'Administration' }).click();
@@ -195,7 +195,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     expect(inviteA11y.violations).toEqual([]);
     await page.getByLabel('Create password').fill(recipientPassword);
     await page.getByRole('button', { name: 'Set password' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
     await expect(page.locator('.account-avatar')).toBeVisible();
 
     const invitedAccount = await request.get(
@@ -216,7 +216,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.getByLabel('Email').fill(recipient);
     await page.getByLabel('Password').fill(recipientPassword);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
 
     const replay = await page.request.get(inviteLink);
     const replayUrl = new URL(replay.url());
@@ -247,7 +247,7 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await page.getByLabel('Email').fill(admin.email);
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
     await expect(page.getByRole('link', { name: 'Administration' })).toBeVisible();
     await page.getByRole('link', { name: 'Administration' }).click();
 
@@ -263,7 +263,7 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await page.getByLabel('Email').fill(member.email);
     await page.getByLabel('Password').fill(member.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
     await expect(page.getByRole('link', { name: 'Administration' })).toBeVisible();
     await page.getByRole('link', { name: 'Administration' }).click();
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
@@ -284,7 +284,7 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
     await page.getByLabel('Email').fill(admin.email);
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/recipes$/);
     await page.goto('/admin');
     await page.locator('.account-menu-trigger').click();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
