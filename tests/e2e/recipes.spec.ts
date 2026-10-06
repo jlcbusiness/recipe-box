@@ -498,6 +498,46 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
   }
 });
 
+test('clicking the next ingredient field preserves the selected row @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const ingredientResponse = await request.post(`${config.apiUrl}/rest/v1/ingredients`, {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+      },
+      data: { account_id: user.id, name: 'Paprika' },
+    });
+    expect(ingredientResponse.ok(), await ingredientResponse.text()).toBeTruthy();
+
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.getByLabel('Name').fill('Click between ingredient fields');
+    await page
+      .locator('.recipe-ingredient-value-cell[data-field="ingredientName"]')
+      .first()
+      .click();
+    const ingredientInput = page.getByRole('combobox', { name: 'Ingredient, row 1' });
+    await ingredientInput.fill('Paprika');
+    await page.getByRole('option', { name: 'Paprika', exact: true }).click();
+    await page.locator('.recipe-ingredient-value-cell[data-field="detail"]').first().click();
+
+    const specificsInput = page.getByRole('textbox', { name: 'Specifics, row 1' });
+    await expect(specificsInput).toBeFocused();
+    await expect(page.locator('.recipe-ingredient-table tbody tr').first()).toContainText(
+      'Paprika',
+    );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('recipes and history are isolated to their owning account @e2e', async ({ request }) => {
   const owner = await createTestUser(request);
   const other = await createTestUser(request);

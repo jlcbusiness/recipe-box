@@ -192,7 +192,9 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               {recipe.recipe_url && (
                 <>
                   {' · '}
-                  <a href={recipe.recipe_url}>{recipe.recipe_url}</a>
+                  <a className="recipe-source-link" href={recipe.recipe_url}>
+                    {recipe.recipe_url}
+                  </a>
                 </>
               )}
             </p>

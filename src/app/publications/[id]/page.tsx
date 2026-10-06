@@ -11,6 +11,14 @@ const publicationTypeLabels = {
   site: 'Site',
 } as const;
 
+function getRecipeUrlHost(recipeUrl: string): string {
+  try {
+    return new URL(recipeUrl).host.replace(/^www\./i, '');
+  } catch {
+    return recipeUrl;
+  }
+}
+
 export default async function PublicationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -120,9 +128,9 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
               <tr>
                 <th scope="col">Name</th>
                 <th scope="col">State</th>
+                <th scope="col">Opinion</th>
                 <th scope="col">Meal Type</th>
                 <th scope="col">Food Type</th>
-                <th scope="col">Opinion</th>
                 <th scope="col">Total Time</th>
                 <th scope="col">Page or URL</th>
               </tr>
@@ -141,14 +149,14 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
                       <Link href={`/recipes/${recipe.id}`}>{recipe.name}</Link>
                     </td>
                     <td data-label="State">{recipeStateLabels[recipe.state as RecipeState]}</td>
+                    <td data-label="Opinion">{opinion}</td>
                     <td data-label="Meal Type">
                       {(assignmentsByRecipe.get(recipe.id) ?? []).join(', ') || '—'}
                     </td>
                     <td data-label="Food Type">
                       {recipe.food_type_id ? (foodTypeById.get(recipe.food_type_id) ?? '—') : '—'}
                     </td>
-                    <td data-label="Opinion">{opinion}</td>
-                    <td data-label="Total Time">
+                    <td data-label="Time">
                       {recipe.total_time_minutes === null
                         ? '—'
                         : `${recipe.total_time_minutes} min`}
@@ -156,7 +164,12 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
                     <td data-label="Page or URL">
                       {recipe.publication_page ??
                         (recipe.recipe_url ? (
-                          <a href={recipe.recipe_url}>{recipe.recipe_url}</a>
+                          <a className="publication-recipe-url-link" href={recipe.recipe_url}>
+                            <span className="publication-recipe-url-host">
+                              {getRecipeUrlHost(recipe.recipe_url)}
+                            </span>
+                            <span className="publication-recipe-url-full">{recipe.recipe_url}</span>
+                          </a>
                         ) : (
                           '—'
                         ))}

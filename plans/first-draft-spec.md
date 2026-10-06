@@ -189,8 +189,12 @@ other non-drag controls providing the equivalent operation.
 
 Publication types are Book, Magazine, and Site.
 See [comprehensive-reference.md § 6](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin).
-The Library supports grid and
-details views, sorting, type filtering, and an optional preview pane.
+The Library supports List and Grid views, compact type and sort picklists, a
+direct icon toggle for View, and sorting by Date Added and Date Changed. Mobile
+List rows show a type icon and a single-line truncated title; mobile Grid cards
+use compact covers and truncate long titles and authors. Desktop publication
+titles expose a metadata tooltip instead of a preview pane, and Grid authors
+appear on separate lines without a publication-type prefix.
 
 - All publications have name, type, optional image, tags, and a recipe list.
 - Books have author, optional edition, ISBN, and external lookup URL (e.g., Amazon, B&N, AbeBooks).

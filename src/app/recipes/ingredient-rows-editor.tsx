@@ -586,6 +586,7 @@ export function IngredientRowsEditor({
   const [settlingSourceId, setSettlingSourceId] = useState<string | null>(null);
   const ingredientTableRef = useRef<HTMLTableElement>(null);
   const pendingFocusCell = useRef<{ rowId: string; field: IngredientField } | null>(null);
+  const pendingClickCell = useRef<{ rowId: string; field: IngredientField } | null>(null);
   const pendingDrop = useRef<{
     sourceId: string;
     rowTops: Map<string, number>;
@@ -733,8 +734,17 @@ export function IngredientRowsEditor({
           }
         : row,
     );
+    const clickedCell = pendingClickCell.current;
+    pendingClickCell.current = null;
     commitRows(updatedRows);
-    setActiveCell(null);
+    setActiveCell(
+      clickedCell
+        ? {
+            ...clickedCell,
+            rowId: promotedRowIds.current.get(clickedCell.rowId) ?? clickedCell.rowId,
+          }
+        : null,
+    );
   };
 
   const focusNextCell = (rowId: string, field: IngredientField) => {
@@ -896,7 +906,13 @@ export function IngredientRowsEditor({
         data-row-id={row.id}
         key={field}
         tabIndex={isActive ? -1 : 0}
-        onClick={() => setActiveCell({ rowId: row.id, field })}
+        onMouseDown={() => {
+          pendingClickCell.current = { rowId: row.id, field };
+        }}
+        onClick={() => {
+          pendingClickCell.current = null;
+          setActiveCell({ rowId: promotedRowIds.current.get(row.id) ?? row.id, field });
+        }}
         onKeyDown={handleGridKeyDown}
       >
         {isActive && field === 'ingredientName' ? (

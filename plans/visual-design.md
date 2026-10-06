@@ -340,13 +340,22 @@ shows its phrase picker. Quantity fields begin at two characters, grow only for
 entered content, and center their text. Units and category values use compact
 custom listboxes; US and Metric groups are visibly underlined in unit menus.
 
-### Planned direction
+### Product direction
 
 Recipe detail will place the ingredient list beside instructions, with related
-recipes (Pairs with) and notes at the bottom. The Library will support
-Windows-Explorer-like grid and details views, sorting, filtering by publication
-type, and an optional publication preview pane. Recipe and publication lists
-will support dense, scannable rows and configurable columns.
+recipes (Pairs with) and notes at the bottom. The Library uses List and Grid
+views with a compact Type picklist, a direct icon View toggle, a Sort by menu,
+and a separate Sort direction button. The View icon represents the current mode
+and its accessible name identifies the destination mode. The Type button stays
+wide enough for “Magazines” and reflects its active filter with an icon; icon
+buttons have accessible names.
+Desktop List uses scan-friendly metadata columns with centered recipe counts and
+publication-title tooltips that put each field on its own line. Mobile List
+shows only a type icon and one truncated title per row. Grid cards show author
+names without a type prefix; desktop puts each author on its own line, while
+mobile truncates titles and authors on one line. Grid covers are 72px wide on
+desktop and 48px wide on mobile. Date Added and Date Changed remain sort
+choices, not visible List columns. Configurable columns remain future work.
 
 ## Mobile
 

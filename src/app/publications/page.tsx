@@ -1,26 +1,34 @@
 import Link from 'next/link';
 import type { PublicationOption } from '../../lib/recipes/data';
 import { createClient } from '../../lib/supabase/server';
-import { PublicationCover } from './publication-cover';
+import { PublicationExplorer } from './publication-explorer';
 
-const publicationTypeLabels = {
-  book: 'Book',
-  magazine: 'Magazine Issue',
-  site: 'Site',
-} as const;
+type PublicationExplorerRow = PublicationOption & {
+  created_at: string;
+  updated_at: string;
+  recipes: { count: number }[];
+};
 
 export default async function LibraryPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('publications')
-    .select('id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url')
+    .select(
+      'id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url, created_at, updated_at, recipes(count)',
+    )
+    .is('recipes.trashed_at', null)
     .order('name');
 
   if (error) {
     throw new Error('Unable to load the Library.');
   }
 
-  const publications = (data ?? []) as PublicationOption[];
+  const publications = ((data ?? []) as PublicationExplorerRow[]).map(
+    ({ recipes, ...publication }) => ({
+      ...publication,
+      recipe_count: recipes[0]?.count ?? 0,
+    }),
+  );
 
   return (
     <main className="recipes-main" aria-labelledby="page-title">
@@ -35,27 +43,7 @@ export default async function LibraryPage() {
           </Link>
         </div>
       </div>
-      {publications.length === 0 ? (
-        <p className="recipe-empty-state">No publications yet.</p>
-      ) : (
-        <ul className="publication-list">
-          {publications.map((publication) => (
-            <li key={publication.id}>
-              <Link className="publication-list-item" href={`/publications/${publication.id}`}>
-                <PublicationCover publication={publication} />
-                <span className="publication-list-copy">
-                  <span className="publication-list-title">{publication.name}</span>
-                  <span className="publication-list-detail">
-                    {publicationTypeLabels[publication.publication_type]}
-                    {publication.issue ? ` · ${publication.issue}` : ''}
-                    {publication.author ? ` · ${publication.author}` : ''}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <PublicationExplorer publications={publications} />
     </main>
   );
 }

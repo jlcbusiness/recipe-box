@@ -53,6 +53,11 @@ security without prematurely creating recipe or other domain tables.
 | Media asset | Metadata and private storage path for a cover or recipe image. |
 | History event | An append-only forensic record of a saved change. |
 
+Publications retain `created_at` and `updated_at` timestamps. `updated_at`
+advances on each publication update and supports Date Changed sorting in the
+Library Explorer; Date Added and Date Changed are not displayed as List
+columns.
+
 ## Relationship Rules
 
 - A recipe has zero or one primary publication. No primary publication means

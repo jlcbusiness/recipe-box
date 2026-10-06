@@ -41,7 +41,7 @@ It serves as the exhaustive encyclopedia for implementation slices, slice briefs
 
 ### 1.2 Core Architectural Philosophy
 - **Dual-Platform Intentionality:** Desktop and mobile are treated as distinct interaction paradigms sharing a common data model and business logic, not a desktop site compressed into mobile viewports.
-  - **Desktop:** Keyboard-first, dense work-item detail layout, multi-column editing, advanced query builder, split-pane source library.
+  - **Desktop:** Keyboard-first, dense work-item detail layout, multi-column editing, advanced query builder, and a compact source Library.
   - **Mobile:** Touch-first, quick capture/editing, fast search, kitchen-friendly cooking layout (large checkboxes, bold quantities, prominent scaling).
 - **Relational Integrity:** Strong foreign keys and database constraints rather than loose no-code schemas.
 - **Progressive Web App (PWA):** Installable, globally accessible via Vercel hosting, using Supabase for authentication, Postgres storage, and private media buckets. Native mobile apps (React Native / Expo) are deferred until native-only capabilities (offline camera scanner, local push notifications) are needed.
@@ -421,12 +421,34 @@ Fast, indexed text search across:
 - Publication name, author, and notes
 
 ### 7.3 Source Library Explorer
-The Library screen offers a Windows Explorer-like file browsing experience:
+The Library provides a compact publication explorer with a desktop list/grid
+and a single-line mobile list:
 - **View Modes:**
-  - **Grid View:** Cover thumbnails with publication name, type, and recipe count.
-  - **Details View:** Tabular view with columns for Name, Type, Author, Issue/Edition, Total Recipes, and Date Added.
-- **Preview Pane:** Optional side/bottom drawer showing publication metadata, cover image, and external lookup links without listing all recipes.
-- **Filter Bar:** Instant toggle buttons to filter by `All`, `Books`, `Magazines`, or `Sites`.
+  - **List:** Desktop uses a semantic table with Name, Type, Author,
+    Issue/Edition, and Recipes. Recipe counts are centered. On mobile, each row shows only the
+    type-specific icon and a single-line publication title; long titles are
+    truncated without wrapping or horizontal scrolling.
+  - **Grid:** Shows the existing cover, publication name, author when present,
+    and active recipe count. Authors appear on separate lines on desktop, with
+    no publication-type prefix. Desktop covers are 72px wide; mobile cards
+    use 48px covers and truncate long titles and authors to one line.
+- **Compact Controls:** Type, View, Sort by, and Sort direction use separate
+  icon buttons. The Type button keeps a stable width sized for the Magazines
+  label and uses the active filter's icon. View toggles directly between List
+  and Grid and shows the current view's icon; its accessible name identifies
+  the destination view. Sort by opens an anchored option group; the direction
+  button toggles ascending/descending. Buttons have accessible names; menus
+  support keyboard focus, Escape, and outside-pointer dismissal.
+- **Metadata Tooltip:** The desktop publication title exposes a tooltip with
+  one line per metadata field, including Date Added and Date Changed. There is
+  no preview pane, and mobile has no metadata tooltip.
+- **Sorting:** Both views sort by Name, Type, Author, Issue/Edition, active
+  Recipe count, Date Added, or Date Changed, in ascending or descending order.
+  Date Added and Date Changed are sort choices, not visible columns. Default to
+  List sorted by Name ascending; use Name ascending as a deterministic
+  tie-breaker. Null text values sort after populated values.
+- **Transient State:** View, filter, and sort state remain transient until
+  saved views are introduced.
 
 ---
 
