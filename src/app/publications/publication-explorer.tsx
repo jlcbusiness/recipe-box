@@ -1,3 +1,4 @@
+// biome-ignore-all lint/a11y/noRedundantRoles: Explicit roles preserve table semantics after display: contents.
 'use client';
 
 import {
@@ -16,6 +17,7 @@ import Link from 'next/link';
 import type { MouseEvent, ReactNode } from 'react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import type { PublicationOption, PublicationType } from '../../lib/recipes/data';
+import { PublicationCommaList } from './publication-comma-list';
 import { PublicationCover } from './publication-cover';
 
 type ExplorerPublication = PublicationOption & {
@@ -175,23 +177,15 @@ function AuthorLines({ authors }: { authors: string }) {
 }
 
 function AuthorNames({ authors }: { authors: string }) {
-  const authorOccurrences = new Map<string, number>();
-
-  return authors
-    .split(',')
-    .map((author) => author.trim())
-    .filter(Boolean)
-    .map((author, index) => {
-      const occurrence = authorOccurrences.get(author) ?? 0;
-      authorOccurrences.set(author, occurrence + 1);
-
-      return (
-        <Fragment key={`${author}-${occurrence}`}>
-          {index > 0 ? ', ' : null}
-          <span className="publication-list-author-name">{author}</span>
-        </Fragment>
-      );
-    });
+  return (
+    <PublicationCommaList
+      itemClassName="publication-list-author-name"
+      values={authors
+        .split(',')
+        .map((author) => author.trim())
+        .filter(Boolean)}
+    />
+  );
 }
 
 function MenuOption({
@@ -324,26 +318,6 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
           )}
         </div>
 
-        <div className="publication-explorer-control publication-explorer-control-view">
-          <button
-            aria-label={`Switch to ${viewMode === 'list' ? 'Grid' : 'List'} view`}
-            aria-pressed={viewMode === 'grid'}
-            className="publication-explorer-trigger publication-explorer-icon-trigger"
-            onClick={() => {
-              setOpenMenu(null);
-              setViewMode((current) => (current === 'list' ? 'grid' : 'list'));
-            }}
-            title={`Switch to ${viewMode === 'list' ? 'Grid' : 'List'} view`}
-            type="button"
-          >
-            {viewMode === 'list' ? (
-              <List aria-hidden="true" size={19} />
-            ) : (
-              <LayoutGrid aria-hidden="true" size={19} />
-            )}
-          </button>
-        </div>
-
         <div className="publication-explorer-control publication-explorer-control-sort">
           <button
             aria-controls="publication-sort-options"
@@ -393,6 +367,26 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
             )}
           </button>
         </div>
+
+        <div className="publication-explorer-control publication-explorer-control-view">
+          <button
+            aria-label={`Switch to ${viewMode === 'list' ? 'Grid' : 'List'} view`}
+            aria-pressed={viewMode === 'grid'}
+            className="publication-explorer-trigger publication-explorer-icon-trigger"
+            onClick={() => {
+              setOpenMenu(null);
+              setViewMode((current) => (current === 'list' ? 'grid' : 'list'));
+            }}
+            title={`Switch to ${viewMode === 'list' ? 'Grid' : 'List'} view`}
+            type="button"
+          >
+            {viewMode === 'list' ? (
+              <List aria-hidden="true" size={19} />
+            ) : (
+              <LayoutGrid aria-hidden="true" size={19} />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="publication-explorer-results">
@@ -406,35 +400,53 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
         ) : viewMode === 'list' && sortedPublications.length > 0 ? (
           <>
             <div className="recipe-list-scroll publication-explorer-scroll publication-explorer-table-wrap">
-              <table className="recipe-list publication-explorer-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Author</th>
-                    <th scope="col">Issue / Edition</th>
-                    <th scope="col">Recipes</th>
+              <table className="recipe-list publication-explorer-table" role="table">
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th role="columnheader" scope="col">
+                      Name
+                    </th>
+                    <th role="columnheader" scope="col">
+                      Author
+                    </th>
+                    <th role="columnheader" scope="col">
+                      Issue / Edition
+                    </th>
+                    <th role="columnheader" scope="col">
+                      Recipes
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {sortedPublications.map((publication) => (
-                    <tr key={publication.id}>
-                      <td data-label="Name">
-                        <Link
-                          href={`/publications/${publication.id}`}
-                          title={tooltipText(publication)}
-                        >
-                          {publication.name}
-                        </Link>
+                    <tr key={publication.id} role="row">
+                      <td data-label="Name" role="cell">
+                        <div className="publication-explorer-table-name">
+                          <span
+                            aria-label={publicationTypeLabels[publication.publication_type]}
+                            className="publication-explorer-table-type"
+                            role="img"
+                            title={publicationTypeLabels[publication.publication_type]}
+                          >
+                            <PublicationTypeIcon type={publication.publication_type} />
+                          </span>
+                          <Link
+                            href={`/publications/${publication.id}`}
+                            title={tooltipText(publication)}
+                          >
+                            {publication.name}
+                          </Link>
+                        </div>
                       </td>
-                      <td data-label="Type">
-                        {publicationTypeLabels[publication.publication_type]}
-                      </td>
-                      <td data-label="Author">
+                      <td data-label="Author" role="cell">
                         {publication.author ? <AuthorNames authors={publication.author} /> : '—'}
                       </td>
-                      <td data-label="Issue / Edition">{issueOrEdition(publication) || '—'}</td>
-                      <td data-label="Recipes">{publication.recipe_count}</td>
+                      <td data-label="Issue / Edition" role="cell">
+                        {issueOrEdition(publication) || '—'}
+                      </td>
+                      <td data-label="Recipes" role="cell">
+                        {publication.recipe_count}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

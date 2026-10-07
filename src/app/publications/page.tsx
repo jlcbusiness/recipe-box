@@ -9,8 +9,12 @@ type PublicationExplorerRow = PublicationOption & {
   recipes: { count: number }[];
 };
 
-export default async function LibraryPage() {
-  const supabase = await createClient();
+export default async function LibraryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const [{ status }, supabase] = await Promise.all([searchParams, createClient()]);
   const { data, error } = await supabase
     .from('publications')
     .select(
@@ -43,6 +47,23 @@ export default async function LibraryPage() {
           </Link>
         </div>
       </div>
+      {status === 'trashed' && (
+        <p className="recipe-status-message" role="status">
+          Publication and selected recipes moved to Trash.{' '}
+          <Link href="/recipes/trash">View Trash</Link>
+        </p>
+      )}
+      {status === 'conflict' && (
+        <p className="recipe-status-message" role="alert">
+          A publication changed or is no longer available. Refresh the Library and try again.
+        </p>
+      )}
+      {status === 'error' && (
+        <p className="recipe-status-message" role="alert">
+          Unable to move the publication to Trash. Review the selected recipe disposition and try
+          again.
+        </p>
+      )}
       <PublicationExplorer publications={publications} />
     </main>
   );

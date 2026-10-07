@@ -297,7 +297,10 @@ function SuggestionCellEditor({
             id={listId}
             role="listbox"
             style={menuPosition ?? undefined}
-            onMouseDown={(event) => event.preventDefault()}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
           >
             {suggestions.map((option, index) => (
               <div

@@ -3,6 +3,7 @@
 > **Reference Note:** For full interaction details, screen state behaviors,
 > and UI specifications, see [plans/comprehensive-reference.md](comprehensive-reference.md),
 > specifically:
+>
 > - [comprehensive-reference.md § 4 (Ingredient Presentation & Sorting)](comprehensive-reference.md#4-ingredient-presentation-and-sorting)
 > - [comprehensive-reference.md § 6 (Publications & Recipe Tin Metaphor)](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
 > - [comprehensive-reference.md § 7 (Library Explorer & Query UI)](comprehensive-reference.md#7-queries-search-and-library-explorer)
@@ -30,140 +31,112 @@ screens. Treat a slice as current after implementation and validation.
 
 ## Design Philosophy
 
-Recipe Box is a **working recipe library**, not a marketing surface, a
-skeuomorphic kitchen, or a generic productivity dashboard. Its visual language
-starts with the useful parts of dense work-item software—stable hierarchy,
-scan-friendly data, direct editing, and strong keyboard support—then replaces
-its cold, portal-like visual complexity with a quiet paper-and-ink workspace.
-The app should make a frequently edited recipe feel trustworthy and easy to
-read, not theatrical. It should feel like a well-kept personal reference: the
-recipe is primary, its source is legible but secondary, and editing mechanics
-appear only when they help someone capture or correct information.
+### Copilot design brief
 
-### Principles
+Build Recipe Box as a calm, private working library for people who collect,
+organize, and cook from recipes. It should feel like a well-kept paper
+reference used every day: editorial and domestic in character, but crisp,
+practical, and highly usable. This is not a marketing page, a faux vintage
+kitchen, or a generic SaaS dashboard.
 
-- **Dense, but never cramped.** Information density is valuable when it makes
-  recipe entry and scanning faster. Give each field only the width it needs,
-  align related values, and remove unused columns or controls. Do not fill
-  space just because a table or pane has it.
-- **Reading hierarchy before decoration.** A recipe title leads its page. Its
-  source belongs immediately beneath it as a compact attribution, like a
-  byline or citation, not as an isolated content block. Italicize the source
-  title alone; issue, page, and URL are factual details and remain upright.
-- **Geometry follows information shape.** Fields are not equal-width tiles.
-  A recipe or publication name and a URL can justify a full row; author,
-  edition, ISBN, quantity, and page number should occupy only useful space and
-  wrap with their peers. Stable field sizes improve scanning and prevent a
-  sparse form from reading like a dashboard.
-- **Recipe language over database language.** A saved ingredient should read
-  like a recipe: `1 1/2 cups flour`, `120 g flour`, `2 bunches cilantro`, or
-  `salt to taste`. Labels and controls may expose structure in edit mode, but
-  view mode should turn that structure into familiar cooking prose.
-- **Direct manipulation before chrome.** Make a cell editable in place, expose
-  a trailing blank ingredient row rather than an Add button. Keep routine
-  actions close to the item they affect; avoid extra toolbars, cards, and
-  explanatory copy when direct interaction is clear.
-- **Destructive actions require separation.** Keep Delete away from routine
-  navigation, editing, printing, and selection controls. Do not put it on
-  recipe-list rows, where selecting a recipe could trigger it accidentally.
-  Give it a deliberate place in an editing context; a confirmation dialog is
-  an additional safeguard, not a substitute for spatial separation. Slice 8
-  illustrates the rule: Delete sits at the upper-right of the edit header,
-  apart from Return to View. It does not belong beside the detail title,
-  where the title and routine actions already occupy the available sides, or
-  at the bottom of the screen, where it would be inconvenient and unexpected.
-- **State change must read at a glance.** Quiet default controls preserve the
-  paper-and-ink rhythm. A destructive text action may be outlined while idle,
-  but hover and focus must become unmistakable tomato red with white text.
-  Color reinforces a visible label and never provides the only signal.
-- **Structure is responsive, not merely smaller.** Desktop optimizes for
-  keyboard-efficient, aligned row entry. Mobile keeps the same data model but
-  edits one ingredient in a focused pane with touch-safe controls and
-  viewport-contained menus. It is a different interaction anatomy, not a
-  compressed table.
-- **A little warmth, no nostalgia costume.** The paper surface, faint ruled
-  texture, restrained rounded corners, and DM Sans typography give the
-  application a domestic editorial character. They must never compromise
-  legibility, scanability, or form behavior. The planned Recipe Tin motif is
-  reserved for a later, bounded treatment; the current product is deliberately
-  crisp and functional.
-- **Polish serves operation.** Center short quantities, use quiet borders and
-  regular-weight control text, preserve consistent field heights, and use color
-  as reinforcement rather than instruction. A visual refinement is successful
-  only if it also preserves keyboard, pointer, touch, and assistive-technology
-  operation.
+The visual reference is a quiet paper-and-ink workspace with the useful
+discipline of dense work-item software: stable hierarchy, scan-friendly data,
+direct editing, and keyboard-first desktop workflows. Recipe content is always
+the subject. Source details are compact bibliographic attribution. UI mechanics
+appear only when they help someone read, capture, correct, or organize a
+recipe.
 
-### Current visual foundation
+### Visual direction
 
-- A single light theme uses a pale paper surface with a subtle green ruled
-  texture; dark ink, muted gray-green, navy, leaf green, tomato red, and muted
-  gold provide the limited accent palette.
-- DM Sans Variable carries application text. Major headings are direct and
-  modest rather than display-like; small caps distinguish compact labels and
-  selected mobile actions.
-- White editable surfaces, 1px quiet borders, and 3px corners distinguish
-  controls without turning each field into a card. Empty editable cells use a
-  faint paper tint rather than a separate empty-state panel.
-- The layout relies on a wide, restrained content column, wrapping form rows,
-  compact tables, and modest separators. It avoids nested cards, oversized
-  gutters, persistent side panes, and decorative shadows.
-- Recipe details use a title stack: the recipe name, then a compact green
-  publication attribution when a source exists, then the detail content. The
-  linked publication title is italicized as bibliographic context; its issue,
-  page, and URL are not.
-- Publication forms use unequal, content-informed fields. Name and URLs occupy
-  a full row; Author, Edition, ISBN, and Magazine Issue remain compact and wrap
-  as a group. ISBN formatting appears as direct input assistance, including
-  after paste, not as a separate cleanup step.
-- Default add actions are quiet text commands. Their green filled hover/focus
-  state confirms an available constructive action without making the resting
-  interface button-heavy.
-- Standalone text actions such as Save are 48px high. Compact icon actions
-  placed beside a title, such as Print and Edit, are 36px square. On mobile they
-  keep a 48px hit area without changing their visible size. Picklist triggers
-  and other icon-only controls have their own sizing rules.
+- Use one light theme. The base is pale paper with a barely visible green ruled
+  texture, dark ink text, muted gray-green supporting text, and quiet 1px
+  green-gray rules. Use leaf green for constructive actions and source context,
+  navy for selected structural emphasis, tomato red for destructive states, and
+  muted gold for visible keyboard focus. Keep the palette restrained.
+- Use DM Sans Variable for the application. Headings are modest, direct, and
+  compact, never hero-sized or display-like. Small caps are reserved for short
+  labels and selected mobile section markers. The small wordmark tile may use a
+  restrained serif accent; do not spread serif typography across the app.
+- Prefer square-ish geometry: white editable surfaces, 1px borders, and about
+  3px corners. Use shadows only for floating menus, dialogs, and popovers. Do
+  not use gradients, glass effects, floating decorative shapes, large rounded
+  cards, or layered card-within-card layouts.
+- Build pages from a wide restrained content column, dividers, compact tables,
+  and wrapping form rows. Sections should feel like parts of one working sheet,
+  not a collection of separate panels. Use whitespace to make information
+  scannable, never as decoration.
 
-### Planned Recipe Tin identity
+### Layout and information hierarchy
 
-The Recipe Tin may later gain a carefully bounded vintage metal-tin and index
-card treatment. It must remain distinct from the everyday editor: ordinary
-publication and recipe screens stay clean, crisp, and restrained, and any
-textured or deckled treatment must preserve accessibility, printing, and
-scannability.
+- Make the recipe or publication title the clear page anchor. On recipe detail,
+  place compact source attribution directly below the title. Italicize only the
+  linked source title; issue, page, and URL remain factual upright text.
+- Size controls and columns to their contents. Names and URLs may take a full
+  row; author, edition, ISBN, page number, quantity, and short picklists should
+  stay compact and wrap naturally with related fields. Avoid equal-width tiles,
+  unused table columns, and controls that stretch merely to fill available
+  space.
+- Use natural recipe language in reading mode: `1 1/2 cups flour`, `120 g
+  flour`, `2 bunches cilantro`, and `salt to taste`. Edit mode may expose data
+  structure through labeled controls, but reading mode should return to familiar
+  cooking prose.
+- Favor semantic tables for repeatable, comparable data and unframed layouts
+  for page sections. Use cards only for genuinely discrete repeated objects,
+  such as a publication cover in Grid view. Do not turn an ordinary form,
+  filter area, or detail section into a card.
+
+### Controls and state
+
+- Favor direct manipulation over extra chrome. Use inline editing, a trailing
+  blank ingredient row, compact picklists, ordinary checkboxes, small drag
+  grips, and modest inline actions before adding an Add button, toolbar, or
+  explanatory copy.
+- Resting controls should be quiet. Constructive text actions can become leaf
+  green with white text on hover or focus. Destructive actions remain visibly
+  labeled and spatially separate from routine actions; their hover and focus
+  state becomes tomato red with white text. A confirmation dialog supplements
+  that separation; it does not replace it.
+- Submission and deletion actions use visible text. Routine title actions may
+  use familiar icons when each has a tooltip and an accessible name. Every
+  focusable control needs a clear gold focus ring, and color must never be the
+  only state signal.
+- Keep labels visible for form fields. Use compact, anchored popovers and
+  listboxes that remain within the viewport, have explicit dismissal, preserve
+  keyboard operation, and do not introduce page-level horizontal overflow.
+
+### Responsive anatomy
+
+- Desktop is keyboard-first and information-dense: aligned rows, compact
+  tables, content-sized fields, and multi-column editing where comparison helps.
+- Mobile is touch-first, not a compressed desktop. Preserve the data model but
+  replace crowded row editing with a focused one-column pane or popover. Keep
+  lookup and cooking information prominent, retain at least 48px touch targets,
+  and ensure menus and dialogs remain inside the viewport.
+- Let lists simplify on small screens by hiding low-priority columns and using
+  deliberate wrapping, not horizontal page scrolling or tiny unreadable text.
+  Stable dimensions must prevent selected states, labels, or dynamic content
+  from shifting the layout.
+
+### Do not generate
+
+- No landing-page hero treatments, promotional claims, oversized headings, or
+  decorative imagery unrelated to a recipe or publication.
+- No dark mode by default, purple-led palette, beige-only theme, gradient
+  backgrounds, bokeh, ornamental blobs, or generic dashboard card grids.
+- No dense field wall: do not use equal-width input grids, excessive borders,
+  persistent side panels, oversized gutters, or explanatory text that repeats
+  what a control already communicates.
+- No nostalgia costume. The future Recipe Tin may use a bounded metal-tin and
+  index-card treatment, but ordinary recipes and publications remain clean,
+  crisp, and restrained.
 
 ### When details are unspecified
 
-Treat Recipe Box as a calm working tool for people who repeatedly collect,
-organize, and cook from recipes. New UI should feel deliberate, compact, and
-familiar rather than promotional, decorative, or app-like for its own sake.
-Prefer a clear information hierarchy, natural recipe language, and direct
-manipulation of the thing being edited over explanatory copy or a separate
-control surface.
-
-- **Favor the smallest useful control:** Use compact fields, ordinary
-  checkboxes, small drag grips, and modest inline actions. Do not add a button,
-  card, toolbar, or visible instruction when direct interaction with the item
-  already expresses the action.
-- **Reveal complexity in context:** Show the full established choice set when a
-  picker is activated. Filter or offer creation only after the person starts
-  typing. Use a compact pane or popover when a narrow screen cannot sustain the
-  desktop editing anatomy.
-- **Use space to clarify, not decorate:** Keep dense edit workflows compact,
-  but give reading-mode content enough consistent separation to scan. Preserve
-  stable dimensions and avoid oversized fields, excessive gaps, nested cards,
-  ornamental panels, or empty visual weight.
-- **Respect the recipe mental model:** Display ingredients and other recipe
-  content in natural, readable order and phrasing. Prefer conventions people
-  already know from a recipe card or recipe site over database-shaped labels or
-  concatenated values.
-- **Adapt the workflow, not just the scale:** Desktop can expose structured,
-  keyboard-efficient data entry. Mobile should retain the same capability with
-  a simpler one-column or focused-pane interaction, touch-safe targets, no
-  horizontal overflow, and viewport-aware overlays.
-- **Make visual polish support operation:** Center compact numeric labels and
-  values for scanning, keep text legible and controls visually quiet, and use
-  color as reinforcement rather than the only signal. Keyboard, pointer, and
-  touch paths must be equally complete.
+Choose the smallest clear interface that supports repeated use. Prefer
+information hierarchy, natural recipe language, and direct manipulation over
+decoration or feature narration. A visual refinement is correct only when it
+also improves or preserves scanning, keyboard use, pointer use, touch use, and
+assistive-technology behavior.
 
 ### Current implementation conventions
 
@@ -427,10 +400,12 @@ preference, not recipe data.
 
 Instruction ingredient mentions default to bold dark red so linked ingredients
 are easy to scan. User Settings offers a dedicated styling configuration:
+
 - A palette of accessible preset colors (dark red, forest green, navy blue,
   amber/brown, charcoal/default text).
 - Independent toggle checkboxes for bold, italic, and underline (any combination).
 - Color presets are tested to ensure $\ge 4.5:1$ contrast against the app background.
+
 Public and printed recipes always use the default bold dark-red styling.
 
 ### Trash and baseline print (Slice 8 current implementation)

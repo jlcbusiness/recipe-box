@@ -75,9 +75,55 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
 
     const viewTrigger = page.getByRole('button', { name: 'Switch to List view' });
     await expect(viewTrigger.locator('svg')).toBeVisible();
+    const expectViewAfterSortDirection = async () => {
+      const controlBounds = await page
+        .locator('.publication-explorer-toolbar > .publication-explorer-control')
+        .evaluateAll((controls) =>
+          controls.map((control) => {
+            const bounds = control.getBoundingClientRect();
+            const controlName = Array.from(control.classList).find((className) =>
+              className.startsWith('publication-explorer-control-'),
+            );
+            return { controlName, x: bounds.x, y: bounds.y };
+          }),
+        );
+      expect(controlBounds.map((control) => control.controlName)).toEqual([
+        'publication-explorer-control-type',
+        'publication-explorer-control-sort',
+        'publication-explorer-control-sort-direction',
+        'publication-explorer-control-view',
+      ]);
+      expect(controlBounds[3].x).toBeGreaterThan(controlBounds[2].x);
+      expect(controlBounds[3].y).toBe(controlBounds[2].y);
+    };
+    await expectViewAfterSortDirection();
     await expect(page.locator('.publication-explorer-grid')).toBeVisible();
     await viewTrigger.click();
-    await expect(page.locator('.publication-explorer-table')).toBeVisible();
+    const publicationTable = page.locator('.publication-explorer-table');
+    await expect(publicationTable).toBeVisible();
+    await expect(publicationTable).toHaveCSS('display', 'grid');
+    const publicationColumnGap = await publicationTable.evaluate((table) =>
+      Number.parseFloat(getComputedStyle(table).columnGap),
+    );
+    expect(publicationColumnGap).toBeCloseTo((3 * 96) / 25.4, 1);
+    const publicationColumnCount = await publicationTable.evaluate(
+      (table) => getComputedStyle(table).gridTemplateColumns.split(' ').length,
+    );
+    expect(publicationColumnCount).toBe(4);
+    const publicationTableWidth = await publicationTable.evaluate(
+      (table) => table.getBoundingClientRect().width,
+    );
+    const publicationTableContainerWidth = await page
+      .locator('.publication-explorer-table-wrap')
+      .evaluate((container) => container.getBoundingClientRect().width);
+    expect(publicationTableWidth).toBeCloseTo(publicationTableContainerWidth, 1);
+    const publicationTableRight = await publicationTable.evaluate(
+      (table) => table.getBoundingClientRect().right,
+    );
+    const publicationLastCellRight = await publicationTable
+      .locator('tbody tr:first-child td:last-child')
+      .evaluate((cell) => cell.getBoundingClientRect().right);
+    expect(publicationLastCellRight).toBeCloseTo(publicationTableRight, 1);
     await page.getByRole('button', { name: 'Switch to Grid view' }).click();
     await expect(page.locator('.publication-explorer-grid')).toBeVisible();
     await page.getByRole('button', { name: 'Switch to List view' }).click();
@@ -92,7 +138,7 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     await sortOptions.getByRole('button', { name: 'Date Added', exact: true }).click();
 
     await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Type' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Type' })).toHaveCount(0);
     await expect(page.getByRole('columnheader', { name: 'Author' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Issue / Edition' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Recipes' })).toBeVisible();
@@ -102,12 +148,9 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
       'href',
       /\/publications\//,
     );
-    await expect(
-      page
-        .getByRole('row', { name: /Explorer Cookbook/ })
-        .locator('td')
-        .last(),
-    ).toHaveCSS('text-align', 'center');
+    const explorerCookbookRow = page.getByRole('row', { name: /Explorer Cookbook/ });
+    await expect(explorerCookbookRow.getByRole('img', { name: 'Book' })).toBeVisible();
+    await expect(explorerCookbookRow.locator('td').last()).toHaveCSS('text-align', 'center');
     await expect(page.getByRole('complementary', { name: 'Publication preview' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Type: All' }).click();
     await page
@@ -121,6 +164,7 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
       .getByRole('button', { name: 'All', exact: true })
       .click();
     await page.setViewportSize({ width: 390, height: 844 });
+    await expectViewAfterSortDirection();
     await expect(page.locator('.publication-explorer-mobile-list')).toBeVisible();
     await expect(page.locator('.publication-explorer-table')).toBeHidden();
     const triggerSizes = await page
@@ -311,7 +355,7 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     const getNames = () =>
       page.locator('.publication-explorer-table tbody tr > td:first-child a').allTextContents();
     const appleRow = page.getByRole('row', { name: /Apple Cookbook/ });
-    await expect(appleRow.locator('td').nth(4)).toHaveText('1');
+    await expect(appleRow.locator('td').nth(3)).toHaveText('1');
 
     const chooseFilter = async (label: string) => {
       await page.getByRole('button', { name: /^Type:/ }).click();
@@ -331,15 +375,32 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
 
     await page.setViewportSize({ width: 721, height: 900 });
     const publicationTableWrap = page.locator('.publication-explorer-table-wrap');
+    const publicationTableDimensions = await publicationTableWrap.evaluate((element) => {
+      const table = element.querySelector('table');
+      return {
+        containerWidth: element.clientWidth,
+        containerScrollWidth: element.scrollWidth,
+        tableWidth: table?.clientWidth,
+        tableScrollWidth: table?.scrollWidth,
+        columns: Array.from(table?.querySelectorAll('thead th') ?? []).map((header) => ({
+          label: header.textContent,
+          width: header.getBoundingClientRect().width,
+        })),
+      };
+    });
     expect(
-      await publicationTableWrap.evaluate((element) => element.scrollWidth <= element.clientWidth),
-    ).toBe(true);
+      publicationTableDimensions.containerScrollWidth,
+      JSON.stringify(publicationTableDimensions),
+    ).toBeLessThanOrEqual(publicationTableDimensions.containerWidth);
     const appleAuthorCell = appleRow.locator('[data-label="Author"]');
+    const authorValueList = appleAuthorCell.locator('.publication-comma-values');
+    await expect(authorValueList).toHaveCSS('display', 'flex');
+    await expect(authorValueList).toHaveCSS('flex-wrap', 'wrap');
     const authorNames = appleAuthorCell.locator('.publication-list-author-name');
     await expect(authorNames).toHaveCount(2);
     expect(
       await authorNames.evaluateAll((elements) =>
-        elements.every((element) => getComputedStyle(element).whiteSpace === 'nowrap'),
+        elements.every((element) => getComputedStyle(element).whiteSpace === 'normal'),
       ),
     ).toBe(true);
     const authorPositions = await authorNames.evaluateAll((elements) =>
@@ -703,14 +764,14 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       'Opinion',
       'Meal Type',
       'Food Type',
-      'Total Time',
+      'Time',
       'Page or URL',
     ]);
     if (test.info().project.name === 'chromium') {
       await page.setViewportSize({ width: 768, height: 900 });
       const publicationTable = page.locator('.publication-recipe-list');
       const publicationScroll = page.locator('.publication-recipe-scroll');
-      await expect(publicationTable).toHaveCSS('table-layout', 'auto');
+      await expect(publicationTable).toHaveCSS('display', 'grid');
       expect(
         await publicationScroll.evaluate((element) => element.scrollWidth <= element.clientWidth),
       ).toBe(true);
@@ -718,18 +779,25 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     const mobilePublicationRow = page.locator('.publication-recipe-list tbody tr').first();
     for (const width of [352, 390]) {
       await page.setViewportSize({ width, height: 844 });
+      await expect(page.locator('.publication-recipe-list thead')).toBeHidden();
       await expect(mobilePublicationRow).toHaveCSS('display', 'flex');
       await expect(mobilePublicationRow).toHaveCSS('flex-wrap', 'wrap');
-      await expect(mobilePublicationRow.locator('[data-label="Opinion"]')).toHaveCSS('order', '2');
-      await expect(mobilePublicationRow.locator('[data-label="Meal Type"]')).toHaveCSS(
-        'order',
-        '3',
+      await expect(mobilePublicationRow.locator('[data-label="Name"]')).toHaveCSS(
+        'flex-basis',
+        '100%',
       );
+      const stateBounds = await mobilePublicationRow.locator('[data-label="State"]').boundingBox();
       const mobileOpinion = mobilePublicationRow.locator('[data-label="Opinion"]');
       await expect(mobileOpinion).toHaveCSS('flex-direction', 'column');
       expect(
         await mobileOpinion.evaluate((cell) => getComputedStyle(cell, '::before').display),
       ).toBe('block');
+      const opinionBounds = await mobileOpinion.boundingBox();
+      if (!stateBounds || !opinionBounds) {
+        throw new Error('Mobile recipe metadata must be measurable.');
+      }
+      expect(Math.abs(stateBounds.y - opinionBounds.y)).toBeLessThan(1);
+      expect(opinionBounds.x).toBeGreaterThan(stateBounds.x);
       await expect(mobilePublicationRow.locator('[data-label="Time"]')).toBeVisible();
       await expect(mobilePublicationRow.locator('[data-label="Total Time"]')).toHaveCount(0);
       await expectNoHorizontalOverflow(page);

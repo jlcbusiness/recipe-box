@@ -50,6 +50,12 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(addRecipeLink).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await addRecipeLink.hover();
     await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(56, 96, 68)');
+    if (testInfo.project.name === 'Fold 6') {
+      const mainWidth = await page
+        .locator('main.recipes-main')
+        .evaluate((element) => element.clientWidth);
+      expect((await addRecipeLink.boundingBox())?.width ?? 0).toBeGreaterThan(mainWidth * 0.8);
+    }
     await addRecipeLink.click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
     const emptyIngredientPrompt =
@@ -69,14 +75,6 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     );
     expect(titleFontSize).toBeGreaterThanOrEqual(21);
     expect(titleFontSize).toBeLessThanOrEqual(22);
-    if (testInfo.project.name === 'Fold 6') {
-      const mainWidth = await page
-        .locator('main.recipes-main')
-        .evaluate((element) => element.clientWidth);
-      expect(
-        (await page.locator('.collection-add-action').boundingBox())?.width ?? 0,
-      ).toBeGreaterThan(mainWidth * 0.8);
-    }
     await expect(page.getByRole('main').getByRole('link', { name: 'Recipe Tin' })).toHaveCount(0);
     await page.getByLabel('Name').fill('Sunday tomato soup');
     await expect(page.getByLabel('State')).toBeVisible();
@@ -1818,7 +1816,9 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
     await page.getByRole('link', { name: 'Recipe Tin', exact: true }).click();
     await expect(page.getByRole('link', { name: 'A recipe to restore' })).toBeVisible();
     await page.getByRole('link', { name: 'Trash', exact: true }).click();
-    await expect(page.getByText('Trash is empty. Deleted recipes appear here.')).toBeVisible();
+    await expect(
+      page.getByText('Trash is empty. Deleted recipes and publications appear here.'),
+    ).toBeVisible();
     const emptyTrashA11y = await new AxeBuilder({ page }).analyze();
     expect(emptyTrashA11y.violations).toEqual([]);
   } finally {

@@ -1,9 +1,16 @@
+// biome-ignore-all lint/a11y/noRedundantRoles: Explicit roles preserve table semantics after display: contents.
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { PublicationOption } from '../../../lib/recipes/data';
-import { type RecipeState, recipeStateLabels } from '../../../lib/recipes/data';
+import {
+  getPublications,
+  type PublicationOption,
+  type RecipeState,
+  recipeStateLabels,
+} from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
+import { PublicationCommaList } from '../publication-comma-list';
 import { PublicationCover } from '../publication-cover';
+import { PublicationDeleteAction } from '../publication-delete-action';
 
 const publicationTypeLabels = {
   book: 'Book',
@@ -22,11 +29,17 @@ function getRecipeUrlHost(recipeUrl: string): string {
 export default async function PublicationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: publicationData, error: publicationError } = await supabase
-    .from('publications')
-    .select('id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url')
-    .eq('id', id)
-    .maybeSingle();
+  const [publicationResult, activePublications] = await Promise.all([
+    supabase
+      .from('publications')
+      .select(
+        'id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url, version',
+      )
+      .eq('id', id)
+      .maybeSingle(),
+    getPublications(supabase),
+  ]);
+  const { data: publicationData, error: publicationError } = publicationResult;
 
   if (publicationError) {
     throw new Error('Unable to load this publication.');
@@ -35,7 +48,8 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const publication = publicationData as PublicationOption;
+  const publication = publicationData as PublicationOption & { version: number };
+  const destinations = activePublications.filter((option) => option.id !== publication.id);
   const [
     { data: recipesData, error: recipesError },
     { data: picklistsData, error: picklistsError },
@@ -107,12 +121,14 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
             </a>
           )}
         </div>
-        <Link
-          className="recipe-secondary-link collection-add-action publication-new-recipe"
-          href={`/recipes/new?publication=${publication.id}`}
-        >
-          Add Recipe
-        </Link>
+        <div className="publication-detail-actions">
+          <Link
+            className="recipe-secondary-link collection-add-action publication-new-recipe"
+            href={`/recipes/new?publication=${publication.id}`}
+          >
+            Add Recipe
+          </Link>
+        </div>
       </div>
       {recipes.length === 0 ? (
         <p className="recipe-empty-state">
@@ -123,20 +139,35 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
         </p>
       ) : (
         <div className="recipe-list-scroll publication-recipe-scroll">
-          <table className="recipe-list publication-recipe-list">
-            <thead>
-              <tr>
-                <th scope="col">Name</th>
-                <th scope="col">State</th>
-                <th scope="col">Opinion</th>
-                <th scope="col">Meal Type</th>
-                <th scope="col">Food Type</th>
-                <th scope="col">Total Time</th>
-                <th scope="col">Page or URL</th>
+          <table className="recipe-list publication-recipe-list" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" scope="col">
+                  Name
+                </th>
+                <th role="columnheader" scope="col">
+                  State
+                </th>
+                <th role="columnheader" scope="col">
+                  Opinion
+                </th>
+                <th role="columnheader" scope="col">
+                  Meal Type
+                </th>
+                <th role="columnheader" scope="col">
+                  Food Type
+                </th>
+                <th role="columnheader" scope="col">
+                  Time
+                </th>
+                <th role="columnheader" scope="col">
+                  Page or URL
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {recipes.map((recipe) => {
+                const mealTypes = assignmentsByRecipe.get(recipe.id) ?? [];
                 const opinion =
                   recipe.state === 'want_to_try'
                     ? (picklistById.get(recipe.enthusiasm_id ?? '') ?? '—')
@@ -144,24 +175,28 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
                       ? (picklistById.get(recipe.verdict_id ?? '') ?? '—')
                       : recipe.reason || '—';
                 return (
-                  <tr key={recipe.id}>
-                    <td data-label="Name">
+                  <tr key={recipe.id} role="row">
+                    <td data-label="Name" role="cell">
                       <Link href={`/recipes/${recipe.id}`}>{recipe.name}</Link>
                     </td>
-                    <td data-label="State">{recipeStateLabels[recipe.state as RecipeState]}</td>
-                    <td data-label="Opinion">{opinion}</td>
-                    <td data-label="Meal Type">
-                      {(assignmentsByRecipe.get(recipe.id) ?? []).join(', ') || '—'}
+                    <td data-label="State" role="cell">
+                      {recipeStateLabels[recipe.state as RecipeState]}
                     </td>
-                    <td data-label="Food Type">
+                    <td data-label="Opinion" role="cell">
+                      {opinion}
+                    </td>
+                    <td data-label="Meal Type" role="cell">
+                      <PublicationCommaList values={mealTypes} />
+                    </td>
+                    <td data-label="Food Type" role="cell">
                       {recipe.food_type_id ? (foodTypeById.get(recipe.food_type_id) ?? '—') : '—'}
                     </td>
-                    <td data-label="Time">
+                    <td data-label="Time" role="cell">
                       {recipe.total_time_minutes === null
                         ? '—'
                         : `${recipe.total_time_minutes} min`}
                     </td>
-                    <td data-label="Page or URL">
+                    <td data-label="Page or URL" role="cell">
                       {recipe.publication_page ??
                         (recipe.recipe_url ? (
                           <a className="publication-recipe-url-link" href={recipe.recipe_url}>
@@ -181,6 +216,15 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
           </table>
         </div>
       )}
+      <section aria-label="Publication deletion" className="publication-delete-section">
+        <PublicationDeleteAction
+          destinations={destinations}
+          publicationId={publication.id}
+          publicationName={publication.name}
+          version={publication.version}
+          hasRecipes={recipes.length > 0}
+        />
+      </section>
     </main>
   );
 }

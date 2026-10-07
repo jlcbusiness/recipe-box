@@ -84,6 +84,10 @@ columns.
 - Deleting a recipe or publication moves it to the trash. Trashed items are
   purged permanently after 30 days. The public ID of a purged recipe is retained
   so its URL can return 410.
+- Deleting a publication applies one atomic recipe disposition. Moving recipes
+  to the Recipe Tin or another publication is not reversed by restoring the
+  source publication. Recipes moved to Trash retain their publication link and
+  location, and require a separate recipe restore.
 
 ## Configuration Boundaries
 

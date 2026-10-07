@@ -387,15 +387,34 @@ an accessible native-radio affordance rather than visible radio dots.
 - **Mobility:** Any recipe in the Recipe Tin can later be assigned to a publication, and any publication recipe can be unparented into the Recipe Tin.
 
 ### 6.5 Deletion Rules for Publications
-When a user deletes a publication, the app presents a mandatory dialog with three choices:
-1. **Delete all recipes inside** (moves recipes to trash alongside the publication).
-2. **Move recipes to the Recipe Tin** (strips publication assignment and gives them the Recipe Tin paper styling).
-3. **Move recipes to another publication** (prompts user to pick the destination publication).
+Deleting a publication always requires confirmation. When it has active recipes,
+the dialog requires one of three dispositions:
+
+1. **Delete all recipes inside:** moves active recipes to Trash with the
+  publication.
+2. **Move recipes to the Recipe Tin:** clears publication assignment and applies
+  Recipe Tin styling.
+3. **Move recipes to another publication:** prompts for a destination.
+
+When a publication has no active recipes, the confirmation remains but the
+disposition choices are omitted.
+
+The deletion and recipe disposition are one atomic, version-checked operation.
+Moving recipes to another publication requires a different active publication
+owned by the same account. Location fields that do not apply to the destination
+type are cleared. The Delete choice retains each recipe's publication
+assignment and location while it is in Trash.
 
 ### 6.6 Trash, Restore, and Purge
 - Deleting a recipe or publication moves it to the trash. "Archive" is not a separate state.
 - A trashed item is purged permanently if it is not restored within 30 days of its deletion. A scheduled job performs the purge.
-- Restoring an item returns its own references and relationship links.
+- Restoring a publication restores only that publication; it does not reverse
+  the recipe disposition chosen during deletion. Recipes moved to the Recipe
+  Tin or another publication stay there. Recipes moved to Trash remain there
+  and can be restored separately; their retained publication assignment and
+  location return with the recipe.
+- Purging a trashed publication also purges its retained trashed recipes and
+  their history. Purging an item removes its private history snapshots as well.
 - A trashed recipe's public URL behaves like a private recipe (404). A purged recipe's URL returns 410, which requires keeping a record of purged public IDs.
 ---
 

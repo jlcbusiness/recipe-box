@@ -11,13 +11,14 @@ until the work about to begin expands and verifies its relevant details.
 
 ## Current implementation status
 
-Slices 0 through 10A are implemented locally. Ingredient rows and measurements
-form one coherent workflow; Slice 8 adds owner-scoped Trash and restore,
+Slices 0 through 10B are implemented locally. Ingredient rows and measurements
+form one coherent workflow; Slice 8 adds owner-scoped recipe Trash and restore,
 retention purge, lifecycle history, and baseline Standard-view printing; Slice
-9 adds owner-scoped publications and assignment; and Slice 10A provides the
-compact Library Explorer. The roadmap below remains ordered delivery direction
-for work not yet implemented; consult the slice briefs and comprehensive
-reference for the current behavior.
+9 adds owner-scoped publications and assignment; Slice 10A provides the compact
+Library Explorer; and Slice 10B adds publication deletion, recipe disposition,
+restore, and retention purge. The roadmap below remains ordered delivery
+direction for work not yet implemented; consult the slice briefs and
+comprehensive reference for the current behavior.
 
 ## Mandatory Slice Preparation
 
@@ -84,7 +85,7 @@ question. Its output is a decision-log entry, not shipped code.
 | 8. Trash, restore, and print — complete | A person can delete a recipe to Trash, restore it with its recipe graph intact, have it purged after 30 days, and print an unscaled recipe matching the current Standard view. | Delivered with owner-scoped, version-checked lifecycle RPCs; active-only read/save boundaries; lifecycle history; idempotent daily local `pg_cron` purge; responsive Trash and restore UI; and Standard-view print styling. Slice 16 adds alternate reader views; printing follows the active view. Verified by local API, Chromium/Fold 6, accessibility, unit, typecheck, lint, and production-build checks. |
 | 9. Publications and the Recipe Tin — complete | A person can create a book, magazine issue, or site; assign or unparent a recipe; and open a publication page listing its recipes. | Delivered with owner-scoped publication data and history; a searchable picker with inline creation; Book/Site/Magazine location rules; responsive publication forms with ISBN formatting; recipe-detail source attribution; Library and publication-detail views; and Chromium/Fold 6 accessibility coverage. |
 | 10A. Library Explorer — complete | A person can browse publications in List or Grid, filter by type, and sort results using compact controls; desktop defaults to Grid and mobile defaults to List; mobile List and Grid truncate long titles, and Grid also truncates long authors. | Delivered with a responsive default view and direct icon toggle, server-side active recipe counts, Date Added and Date Changed sorting, a desktop metadata tooltip, desktop multi-author line breaks, keyboard support, and empty states. Publication `updated_at` is maintained by a forward migration. |
-| 10B. Publication deletion and restore — next | A person can delete a publication using one of the three recipe-disposition choices, then restore the trashed publication and its retained relationships before purge. | Versioned publication lifecycle; atomic recipe disposition; restore semantics for related recipes; Trash UI; history; retention boundary. |
+| 10B. Publication deletion and restore — complete | A person can delete a publication using one of the three recipe-disposition choices, then restore the trashed publication and its retained relationships before purge. | Delivered with owner-scoped, version-checked lifecycle RPCs; atomic recipe disposition; independent publication and recipe restore; shared Trash UI; lifecycle history; inclusive 30-day purge boundary; daily `pg_cron` job; and Chromium/Fold 6 accessibility coverage. |
 | 11. Source links and relationships | A person can add a `+ Site` secondary listing to a magazine recipe, add References of all three kinds, and add Pairs with entries with incoming links shown. | Secondary listing schema; effect of deleting a Site; `#` recipe search in Pairs with; display of trashed targets (full private-link visibility tests finalize in slice 20); reference types. |
 | 12. Images | A person can add covers and recipe photos from phone and desktop, see them through signed URLs, and see cover fallbacks. | Add-photo mechanism (camera or library, HEIC, size limits, resizing, EXIF removal, thumbnails); storage paths; signed-URL lifetime; storage quotas; photo order and primary photo; fallback covers. |
 | 13. Scaling and unit conversion | A person can scale by servings, multiply, or divide; set default unit systems; and override one ingredient's unit; print reflects selected scale and units. | Conversion constants and math; rounding; preference storage; range scaling; unmeasured behavior; accessibility labels; print updates. |

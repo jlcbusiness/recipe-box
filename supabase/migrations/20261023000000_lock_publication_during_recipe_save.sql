@@ -1,0 +1,1 @@
+alter function public.apply_recipe_publication_context() security definer;

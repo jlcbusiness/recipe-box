@@ -116,6 +116,14 @@ export type TrashedRecipeRecord = {
   trashed_at: string;
 };
 
+export type TrashedPublicationRecord = {
+  id: string;
+  name: string;
+  publication_type: PublicationType;
+  version: number;
+  trashed_at: string;
+};
+
 export type RecipeSupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 export async function getPublications(
@@ -333,6 +341,17 @@ export async function getTrashedRecipes(
   }
 
   return (data ?? []) as TrashedRecipeRecord[];
+}
+
+export async function getTrashedPublications(
+  supabase: RecipeSupabaseClient,
+): Promise<TrashedPublicationRecord[]> {
+  const { data, error } = await supabase.rpc('list_trashed_publications');
+  if (error) {
+    throw new Error('Unable to load Trash.');
+  }
+
+  return (data ?? []) as TrashedPublicationRecord[];
 }
 
 export const recipeStateLabels: Record<RecipeState, string> = {

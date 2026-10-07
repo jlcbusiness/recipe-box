@@ -679,6 +679,16 @@ h1 {
   color: var(--muted);
 }
 
+.recipe-trash-content {
+  display: grid;
+  gap: 28px;
+}
+
+.recipe-trash-content h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
 .recipe-status-message {
   margin: 0 0 20px;
   border-top: 1px solid var(--line);
@@ -699,6 +709,8 @@ h1 {
 
 .recipe-trash-list {
   width: 100%;
+  max-width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
   text-align: left;
 }
@@ -719,8 +731,14 @@ h1 {
 
 .recipe-trash-list th:first-child,
 .recipe-trash-list td:first-child {
-  width: 42%;
   overflow-wrap: anywhere;
+}
+
+.recipes-main table.recipe-trash-list th:nth-child(n + 2),
+.recipes-main table.recipe-trash-list td:nth-child(n + 2) {
+  width: 1%;
+  padding-inline: 1mm;
+  white-space: nowrap;
 }
 
 .recipe-trash-recipe {
@@ -733,6 +751,28 @@ h1 {
 .recipe-trash-recipe-name {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.recipe-trash-publication-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.recipe-trash-publication-type-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--leaf);
+}
+
+.recipe-trash-list time {
+  white-space: nowrap;
+}
+
+.recipe-trash-list .recipe-trash-purge-urgent {
+  color: var(--tomato);
+  font-weight: 700;
 }
 
 .recipe-trash-list form {
@@ -748,10 +788,17 @@ h1 {
   color: var(--leaf);
   font: inherit;
   font-weight: 700;
-  text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
+  white-space: nowrap;
   opacity: 0;
+  text-decoration: none;
+}
+
+.recipe-trash-restore:hover,
+.recipe-trash-restore:focus-visible {
+  text-decoration: underline;
 }
 
 .recipe-trash-list tbody tr:hover .recipe-trash-restore,
@@ -2130,6 +2177,131 @@ h1 {
   box-shadow: 0 12px 28px rgb(35 45 31 / 24%);
 }
 
+.publication-delete-dialog {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.publication-delete-dispositions {
+  display: grid;
+  gap: 11px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+}
+
+.publication-delete-dispositions legend {
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.publication-delete-dispositions > label {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 9px;
+}
+
+.publication-delete-dispositions input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  accent-color: var(--leaf);
+}
+
+.publication-delete-dispositions > .publication-delete-destination {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.publication-delete-destination-button {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 8px 10px;
+  background: #fffefa;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.publication-delete-dialog
+  .publication-delete-dispositions
+  .publication-delete-destination-button
+  > span,
+.publication-delete-dialog
+  .publication-delete-dispositions
+  .publication-delete-destination-option
+  > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.publication-delete-destination-options {
+  display: flex;
+  max-height: min(220px, 30dvh);
+  flex-direction: column;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px;
+  background: white;
+}
+
+.publication-delete-destination-option {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-radius: 2px;
+  padding: 6px 8px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.publication-delete-destination-option:hover,
+.publication-delete-destination-option[aria-selected="true"] {
+  background: #edf4e9;
+  color: var(--leaf);
+}
+
+.publication-delete-destination-option small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.publication-delete-destination-button:focus-visible,
+.publication-delete-destination-option:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.publication-delete-no-destination {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .recipe-confirmation-dialog h2,
 .recipe-confirmation-dialog p {
   margin-top: 0;
@@ -2272,7 +2444,7 @@ h1 {
 
   .recipe-trash-list tbody tr {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0 12px;
     padding-block: 8px;
   }
@@ -2283,18 +2455,26 @@ h1 {
     padding: 6px 4px;
   }
 
-  .recipe-trash-list td:first-child {
+  .recipes-main table.recipe-trash-list th,
+  .recipes-main table.recipe-trash-list td {
+    padding: 6px 4px;
+  }
+
+  .recipes-main table.recipe-trash-list td:first-child {
     grid-column: 1 / -1;
     width: 100%;
+    padding-left: 14px;
+    padding-right: 0;
     font-weight: 700;
   }
 
   .recipe-trash-list td:nth-child(2),
   .recipe-trash-list td:nth-child(3) {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: max-content max-content;
+    gap: 6px;
     font-size: 13px;
+    white-space: nowrap;
   }
 
   .recipe-trash-list td:nth-child(2)::before {
@@ -2304,7 +2484,7 @@ h1 {
   }
 
   .recipe-trash-list td:nth-child(3)::before {
-    content: "Purge";
+    content: "Purge Date";
     color: var(--muted);
     font-weight: 700;
   }
@@ -2870,9 +3050,29 @@ h1 {
 }
 
 .publication-explorer-table {
+  display: grid;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
-  table-layout: fixed;
+  column-gap: 3mm;
+  grid-template-columns: repeat(4, auto);
+}
+
+.publication-explorer-table thead,
+.publication-explorer-table tbody {
+  display: contents;
+}
+
+.publication-explorer-table tr {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.private-content .recipe-list.publication-explorer-table tr th,
+.private-content .recipe-list.publication-explorer-table tr td {
+  padding-right: 0;
+  padding-left: 0;
 }
 
 .publication-explorer-mobile-list {
@@ -2882,54 +3082,57 @@ h1 {
 .publication-explorer-table th,
 .publication-explorer-table td {
   overflow: hidden;
+  overflow-wrap: anywhere;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
-.publication-explorer-table th:nth-child(1),
-.publication-explorer-table td:nth-child(1) {
-  width: 24%;
+.publication-explorer-table-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
 }
 
-.publication-explorer-table th:nth-child(2),
-.publication-explorer-table td:nth-child(2) {
-  width: 14%;
+.publication-explorer-table-type {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--muted);
 }
 
-.publication-explorer-table th:nth-child(3),
-.publication-explorer-table td:nth-child(3) {
-  width: 30%;
-}
-
-.publication-explorer-table th:nth-child(4),
-.publication-explorer-table td:nth-child(4) {
-  width: 22%;
-}
-
-.publication-explorer-table th:nth-child(5),
-.publication-explorer-table td:nth-child(5) {
-  width: 10%;
-}
-
-.publication-explorer-table td[data-label="Name"] a {
+.publication-explorer-table td[data-label="Name"] .publication-explorer-table-name a {
   display: block;
   min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .publication-explorer-table td[data-label="Author"] {
   white-space: normal;
 }
 
+.publication-comma-values {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  column-gap: 4px;
+}
+
+.publication-comma-values > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .publication-list-author-name {
-  display: inline-block;
+  display: block;
   max-width: 100%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: bottom;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .publication-explorer-table th:last-child,
@@ -3320,6 +3523,34 @@ h1 {
   white-space: nowrap;
 }
 
+.publication-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.publication-delete-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 32px;
+  padding-top: 13px;
+}
+
+.publication-delete-action {
+  display: inline-flex;
+  min-height: 48px;
+  height: 48px;
+  align-items: center;
+  font-size: inherit;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 0;
+  background: transparent;
+  white-space: nowrap;
+}
+
 .publication-recipe-scroll {
   border-top-color: var(--line);
 }
@@ -3331,11 +3562,25 @@ h1 {
 }
 
 .publication-recipe-list {
+  display: grid;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
-  table-layout: auto;
+  column-gap: 3mm;
+  grid-template-columns: repeat(7, auto);
   border-collapse: separate;
   border-spacing: 1mm 0;
+}
+
+.publication-recipe-list thead,
+.publication-recipe-list tbody {
+  display: contents;
+}
+
+.publication-recipe-list tr {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
 }
 
 .private-content .recipe-list.publication-recipe-list tr th,
@@ -3721,7 +3966,23 @@ h1 {
     overflow-wrap: anywhere;
   }
 
+  .publication-detail-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .publication-delete-section {
+    justify-content: flex-start;
+    margin-top: 16px;
+    padding-top: 0;
+  }
+
+  .publication-delete-action {
+    width: 100%;
+  }
+
   .publication-new-recipe {
+    justify-content: center;
     grid-column: 1 / -1;
     width: 100%;
   }
@@ -3748,13 +4009,7 @@ h1 {
   }
 
   .publication-recipe-list thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
+    display: none;
   }
 
   .private-content .publication-recipe-list tr {
@@ -3767,8 +4022,9 @@ h1 {
   }
 
   .private-content .publication-recipe-list tr td {
-    display: inline-flex;
+    display: flex;
     width: auto;
+    min-width: 0;
     max-width: 100%;
     flex: 0 1 auto;
     flex-direction: column;
@@ -3807,30 +4063,6 @@ h1 {
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-  }
-
-  .publication-recipe-list td[data-label="State"] {
-    order: 1;
-  }
-
-  .publication-recipe-list td[data-label="Opinion"] {
-    order: 2;
-  }
-
-  .publication-recipe-list td[data-label="Meal Type"] {
-    order: 3;
-  }
-
-  .publication-recipe-list td[data-label="Food Type"] {
-    order: 4;
-  }
-
-  .publication-recipe-list td[data-label="Time"] {
-    order: 5;
-  }
-
-  .publication-recipe-list td[data-label="Page or URL"] {
-    order: 6;
   }
 
   .publication-type-choice label {
