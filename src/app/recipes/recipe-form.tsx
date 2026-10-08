@@ -14,6 +14,7 @@ import type {
   PublicationOption,
   RecipePicklistValue,
   RecipeRecord,
+  RecipeReference,
   RecipeState,
 } from '../../lib/recipes/data';
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
@@ -35,6 +36,7 @@ import { saveRecipe } from './actions';
 import { IngredientRowsEditor } from './ingredient-rows-editor';
 import { InstructionStepsEditor } from './instruction-steps-editor';
 import { PublicationPicker } from './publication-picker';
+import { RecipeRelationshipsEditor } from './recipe-relationships-editor';
 
 type RecipeFormProps = {
   ingredients: IngredientOption[];
@@ -42,6 +44,7 @@ type RecipeFormProps = {
   picklists: RecipePicklistValue[];
   preparationOptions: string[];
   publications: PublicationOption[];
+  recipeOptions: IngredientOption[];
   recipe?: RecipeRecord;
 };
 
@@ -138,7 +141,11 @@ function SinglePicklist({
           aria-label={label}
           className="recipe-picklist-trigger"
           ref={triggerRef}
-          style={{ minWidth: triggerWidth ? `${triggerWidth + 40}px` : undefined }}
+          style={{
+            minWidth: triggerWidth
+              ? `calc(${triggerWidth}px + 40px${name === 'enthusiasm_id' ? ' - 4mm' : ''})`
+              : undefined,
+          }}
           type="button"
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
@@ -312,12 +319,32 @@ function MultiPicklist({
   );
 }
 
+function RecipeNameField({ initialName }: { initialName: string }) {
+  const [name, setName] = useState(initialName);
+
+  return (
+    <label className="recipe-field recipe-field-wide recipe-name-field" htmlFor="recipe-name">
+      <span>Name</span>
+      <input
+        id="recipe-name"
+        autoComplete="off"
+        name="name"
+        required
+        size={Math.max(1, name.length)}
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+      />
+    </label>
+  );
+}
+
 export function RecipeForm({
   ingredients,
   initialPublicationId,
   picklists,
   preparationOptions,
   publications,
+  recipeOptions,
   recipe,
 }: RecipeFormProps) {
   const [actionState, formAction, pending] = useActionState(saveRecipe, undefined);
@@ -550,16 +577,7 @@ export function RecipeForm({
       )}
       <fieldset className="recipe-metadata-section">
         <legend>Recipe</legend>
-        <label className="recipe-field recipe-field-wide" htmlFor="recipe-name">
-          <span>Name</span>
-          <input
-            id="recipe-name"
-            autoComplete="off"
-            name="name"
-            required
-            defaultValue={recipe?.name ?? ''}
-          />
-        </label>
+        <RecipeNameField initialName={recipe?.name ?? ''} />
         <PublicationPicker
           initialPage={recipe?.publication_page ?? null}
           initialPublicationId={recipe?.publication_id ?? initialPublicationId ?? null}
@@ -804,18 +822,24 @@ export function RecipeForm({
           </button>
         </div>
       </fieldset>
-      <fieldset>
-        <legend>Notes</legend>
-        <label className="recipe-field recipe-field-wide" htmlFor="notes-markdown">
-          <span>Notes (Markdown)</span>
-          <textarea
-            id="notes-markdown"
-            name="notes_markdown"
-            rows={6}
-            defaultValue={recipe?.notes_markdown ?? ''}
-          />
-        </label>
-      </fieldset>
+      <RecipeRelationshipsEditor
+        pairings={recipe?.pairings ?? []}
+        recipeOptions={recipeOptions}
+        references={(recipe?.references ?? []) as RecipeReference[]}
+      >
+        <fieldset>
+          <legend>Notes</legend>
+          <label className="recipe-field recipe-field-wide" htmlFor="notes-markdown">
+            <span>Notes (Markdown)</span>
+            <textarea
+              id="notes-markdown"
+              name="notes_markdown"
+              rows={6}
+              defaultValue={recipe?.notes_markdown ?? ''}
+            />
+          </label>
+        </fieldset>
+      </RecipeRelationshipsEditor>
       {actionState?.error && (
         <p className="recipe-form-error" role="alert">
           {actionState.error}

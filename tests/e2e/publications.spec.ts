@@ -140,7 +140,7 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Type' })).toHaveCount(0);
     await expect(page.getByRole('columnheader', { name: 'Author' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Issue / Edition' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Edition' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Recipes' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Date Added' })).toHaveCount(0);
     await expect(page.getByRole('columnheader', { name: 'Date Changed' })).toHaveCount(0);
@@ -209,7 +209,6 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
       type: 'book',
       author: 'Zed Writer',
       edition: 'Second edition',
-      issue: null,
       retailerUrl: 'https://books.example.test/zebra',
       siteUrl: null,
     },
@@ -218,7 +217,6 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
       type: 'book',
       author: 'Amy Writer, Alexandra Elizabeth Cooks and Writes for Busy Families Around the World',
       edition: 'First edition',
-      issue: null,
       retailerUrl: 'https://books.example.test/apple',
       siteUrl: null,
     },
@@ -227,7 +225,6 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
       type: 'magazine',
       author: null,
       edition: null,
-      issue: 'December issue',
       retailerUrl: null,
       siteUrl: null,
     },
@@ -236,7 +233,6 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
       type: 'site',
       author: null,
       edition: null,
-      issue: null,
       retailerUrl: null,
       siteUrl: 'https://cooks.example.test',
     },
@@ -254,7 +250,7 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
           p_edition: publication.edition,
           p_isbn: null,
           p_retailer_url: publication.retailerUrl,
-          p_issue: publication.issue,
+          p_issue: null,
           p_site_url: publication.siteUrl,
         },
       });
@@ -449,9 +445,9 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
       [zebraName, 'Apple Cookbook', 'Cooks Online', 'Midnight Magazine'],
     );
     await assertSort(
-      'Issue / Edition',
-      ['Midnight Magazine', 'Apple Cookbook', zebraName, 'Cooks Online'],
-      [zebraName, 'Apple Cookbook', 'Midnight Magazine', 'Cooks Online'],
+      'Edition',
+      ['Apple Cookbook', zebraName, 'Cooks Online', 'Midnight Magazine'],
+      [zebraName, 'Apple Cookbook', 'Cooks Online', 'Midnight Magazine'],
     );
     await assertSort(
       'Recipe count',
@@ -484,7 +480,7 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     await expect(magazineCover).toHaveCSS('border-top-color', 'rgb(155, 63, 50)');
     await expect(magazineCover).toHaveCSS('color', 'rgb(155, 63, 50)');
     await expect(magazineCover).toHaveCSS('font-weight', '700');
-    await expect(magazineCover.locator('.publication-cover-issue')).toHaveCSS('font-size', '8px');
+    await expect(magazineCover.locator('.publication-cover-issue')).toHaveCount(0);
     const siteLink = page.getByRole('link', { name: 'Cooks Online' });
     await expect(siteLink).toHaveAttribute(
       'title',
@@ -1009,17 +1005,17 @@ test('publication forms show only the fields for their selected type @e2e @a11y'
     await page.getByRole('link', { name: 'Library' }).click();
     await page.getByRole('link', { name: 'Add publication' }).click();
 
-    await page.getByRole('radio', { name: 'Magazine Issue' }).check();
+    await page.getByRole('radio', { name: 'Magazine' }).check();
     await page.getByLabel('Name').fill('Bon Appetit');
-    await page.getByLabel('Issue / edition / date').fill('October 2024');
     await expect(page.getByLabel('Author')).toHaveCount(0);
     await expect(page.getByLabel('Site URL')).toHaveCount(0);
+    await expect(page.getByLabel('Issue / edition / date')).toHaveCount(0);
     const magazineA11y = await new AxeBuilder({ page }).analyze();
     expect(magazineA11y.violations).toEqual([]);
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Bon Appetit' })).toBeVisible();
     await expect(page.locator('.publication-cover-magazine')).toBeVisible();
-    await expect(page.locator('.publication-detail-meta')).toContainText('October 2024');
+    await expect(page.locator('.publication-detail-meta')).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
 
     await page.getByRole('link', { name: 'Library', exact: true }).click();
@@ -1102,9 +1098,11 @@ test('inline publication creation preserves the unsaved recipe draft @e2e @a11y'
 
     await expect(page.getByRole('heading', { name: 'Lemon olive-oil cake' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Test Kitchen' })).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: 'https://www.kitchen.example.test/lemon-cake' }),
-    ).toBeVisible();
+    const onlineLinkName =
+      test.info().project.name === 'Fold 6'
+        ? 'View online'
+        : 'https://www.kitchen.example.test/lemon-cake';
+    await expect(page.getByRole('link', { name: onlineLinkName })).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
   }

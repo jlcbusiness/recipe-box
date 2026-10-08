@@ -18,7 +18,7 @@ export default async function LibraryPage({
   const { data, error } = await supabase
     .from('publications')
     .select(
-      'id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url, created_at, updated_at, recipes(count)',
+      'id, name, publication_type, author, edition, isbn, retailer_url, site_url, created_at, updated_at, recipes(count)',
     )
     .is('recipes.trashed_at', null)
     .order('name');

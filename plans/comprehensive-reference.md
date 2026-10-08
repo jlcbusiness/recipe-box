@@ -57,7 +57,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | ---------- | ---- | ----------------- | --------------------- |
 | **Name** | Text | Free text | Primary recipe title. |
 | **Primary Publication** | Single-select picker | Searchable list of all user publications + "Add new publication" button | Clickable in view mode; navigates directly to the publication page. Unparented recipes display as belonging to the "Recipe Tin". |
-| **Location** | Text / URL | Page number (integer/text) OR URL (clickable link) | Mutually exclusive display based on publication type: Books show page number; Sites show recipe URL; Magazines show no page number, and the recipe's online URL is entered through the `+ Site` secondary listing (see 6.2). |
+| **Location** | Text / URL | Book page or range; free-text Magazine citation; website recipe URL | A Magazine citation is free text because citation styles vary. Its optional online recipe URL is a separate field and may coexist with the citation. |
 | **Food Type** | Single-select picklist | Casserole, roast, pie, galette, pasta, soup, sauce, cake, cocktail, bread, stew, salad, etc. | "What kind of dish is this?" Settings-managed picklist; use a compact custom dropdown aligned with the other picklist triggers. |
 | **Meal Type** | Multi-select picklist | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc. | "When or how do I serve this?" Settings-managed multi-select dropdown. Multiple values are toggled with buttons; selected values show a checkmark, leaf-green text, and a pale green background. |
 | **Cuisine** | Multi-select picklist | American, Italian, Chinese, Mexican, French, Thai, Indian, Fusion, etc. | Settings-managed multi-select dropdown to cleanly support fusion cooking. |
@@ -104,6 +104,9 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   Type, and Cuisine occupy the following row, with Equipment after Serves.
   Controls use content-sized widths; longer text fields have a readable maximum
   width.
+- On desktop edit, the Recipe Name input has a 3-inch minimum and grows with
+  the entered text like the Book Page(s) field, capped by the available
+  viewport and form width. Mobile keeps the existing full-row Name field.
 - Food Type, State, Verdict, and Enthusiasm use custom anchored single-choice
   dropdowns with the same trigger height as multi-picklists. Menus align to their
   trigger on both desktop and mobile.
@@ -338,13 +341,39 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
   - Outgoing links: Recipes explicitly linked from this card.
   - Incoming links: Other recipes that have linked to this card.
 - In edit mode, typing `#` in the Pairs With field triggers an autocomplete search across all existing recipes in the user's library.
+- After selecting a recipe, edit mode displays its normalized token, such as
+  `#roast-chicken`. The saved pairing keeps the readable recipe name and linked
+  recipe ID; detail mode renders that name as the link text. Editing the token
+  clears the link until another recipe is selected.
+- On desktop, the Pairs With input is at least 3 inches wide and its right edge
+  aligns with the Rest time input. Its available width is recalculated when
+  layout dimensions change.
+- Autocomplete returns only active recipes owned by the signed-in account. A
+  trashed target remains as display text without a link; restoring it makes the
+  link active again. Purging a target detaches the link but preserves its last
+  display text. Purging the source recipe removes its own pairings.
 
 ### 5.3 References Section
-At the bottom of the card, a Wikipedia-style **References / See More** section supports three distinct reference types:
-1. **In-App Publication:** Clickable link to another publication record stored in Recipe Box.
+In recipe detail and edit, References follows Notes, which follows Pairs With. The editor uses one shared **Type** and **Reference** header and offers three reference types:
+1. **Recipe:** Clickable link to another active recipe in the same account.
 2. **External URL:** Clickable link pointing to a website or blog not formally imported into the library.
-3. **Printed Citation:** Non-clickable bibliographic reference (e.g., *The Joy of Cooking, 75th Anniv. Ed., p. 412*) for physical materials not entered as publications.
-- **Rule on Origins:** A recipe adapted from multiple disparate sources is considered an original recipe and belongs in the **Recipe Tin** with these references cited at the bottom.
+3. **Print:** Non-clickable bibliographic reference (e.g., *The Joy of Cooking, 75th Anniv. Ed., p. 412*).
+- **Rule on Origins:** A recipe adapted from multiple disparate sources is considered an original recipe and belongs in the **Recipe Tin** with these references cited in References.
+- In-app recipe references are owner-scoped. A trashed target is displayed
+  as text without a link; restoring it makes the link active again. Purging a
+  target clears the recipe association but preserves its resolved display
+  text. Purging the recipe that owns a reference removes that reference.
+- Existing Publication references remain as static legacy text. They cannot
+  be created or selected in the current editor.
+- External URL values accept a host without a scheme, such as `google.com`,
+  and normalize it to HTTPS. Only HTTP and HTTPS URLs are accepted.
+- Detail mode renders Pairs With and References as unordered lists. The
+  Magazine recipe URL is labeled `Url`; on mobile edit it appears below the
+  free-text Citation field.
+- On desktop, the Reference text field is at least 3 inches wide and no wider
+  than half its row; the Type column fits its control. On mobile, the Type
+  column also fits its control, leaving only the intended column gap before the
+  Reference field.
 
 ---
 
@@ -356,14 +385,17 @@ A Publication is any formal collection or entity that contains recipes.
 | Publication Type | Specific Attributes | Recipe Location Field | Visual Treatment |
 | ---------------- | ------------------- | --------------------- | ---------------- |
 | **Book** | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
-| **Magazine Issue** | Magazine Name, Issue / Edition / Date (Required free text e.g., "Oct 2024", "Holiday Issue 2023"), Cover image | None. Magazine recipes have no page number because thin magazines are easier to search by title. The recipe's online URL is recorded through the `+ Site` secondary listing (6.2). | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit. |
+| **Magazine** | Magazine title and optional cover image | Per-recipe issue, volume, edition/date, and optional page citation | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit. |
 | **Website** | Site Display Name, Site Root URL, Site Logo/Favicon (optional) | Full recipe URL | Minimalist site icon / badge. |
 
-### 6.2 Dual Listing for Magazine Recipes
-- Magazines frequently post their recipes online. When a recipe's primary publication is a Magazine Issue, the recipe form shows a `+ Site` button. It selects a Site publication as a secondary source and records the recipe's URL on that site. The recipe then lives in **both** publications (e.g., *Bon Appétit Oct 2024* issue and *bonappetit.com*).
-- A recipe has at most one secondary Site listing, and only Magazine-primary recipes offer `+ Site`.
-- Deleting a Site publication removes the secondary listings that point to it. It does not move or delete the recipes.
-- **Primary Origin Rule:** The magazine issue remains the primary originating publication. The site publication provides a secondary filtered view.
+### 6.2 Magazine Titles, Recipe Locations, and Online URLs
+- A Magazine publication represents the enduring magazine title, not an individual issue. Each recipe stores its issue citation as free text because magazines vary their conventions, for example `Vol. 18, no. 2, p. 41` or `Holiday issue, page 41`.
+- Book Page(s) and Magazine Citation inputs grow with their entered text while
+  remaining within the available Publication row.
+- A Magazine recipe may have an optional online recipe URL stored on that recipe. It does not require a second Site publication or a cross-publication relationship.
+- The recipe editor keeps its Magazine location and optional online URL together in a compact row directly below Publication. The URL field is present even when empty; it is a single-line field whose long value stays within the available width on mobile.
+- Recipe detail presents the Magazine citation and online link on separate lines on mobile. Desktop displays the actual URL as clickable link text; mobile uses the compact text `View online`. It is a direct link to that recipe, not a supplemental Reference.
+- Magazine identity and issue location remain separate: recipes from different issues share the Magazine publication while retaining their own issue and page details.
 
 ### 6.3 Creation Workflows
 Publications can be created from three locations:
@@ -373,7 +405,7 @@ Publications can be created from three locations:
 
 Publication creation follows the same content-sized form logic as recipe
 metadata: Name and URL fields take a full row; Author, Edition, ISBN, and
-Magazine Issue have widths appropriate to their expected content and wrap as a
+Magazine title fields have widths appropriate to their expected content and wrap as a
 group when space is limited. Type choices use a labeled segmented control with
 an accessible native-radio affordance rather than visible radio dots.
 

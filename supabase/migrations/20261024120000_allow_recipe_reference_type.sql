@@ -1,0 +1,2 @@
+alter table public.recipe_references
+  drop constraint recipe_references_reference_type_check;

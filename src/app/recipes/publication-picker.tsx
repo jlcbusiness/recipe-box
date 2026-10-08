@@ -5,9 +5,6 @@ import type { PublicationOption } from '../../lib/recipes/data';
 import { PublicationCreateDialog } from '../publications/publication-create-form';
 
 function publicationLabel(publication: PublicationOption): string {
-  if (publication.publication_type === 'magazine' && publication.issue) {
-    return `${publication.name} — ${publication.issue}`;
-  }
   return publication.name;
 }
 
@@ -211,7 +208,7 @@ export function PublicationPicker({
                   <span>{publicationLabel(publication)}</span>
                   <small>
                     {publication.publication_type === 'magazine'
-                      ? 'Magazine Issue'
+                      ? 'Magazine'
                       : publication.publication_type === 'site'
                         ? 'Site'
                         : 'Book'}
@@ -255,7 +252,19 @@ export function PublicationPicker({
           />
         </label>
       )}
-      {selectedPublication?.publication_type === 'site' && (
+      {selectedPublication?.publication_type === 'magazine' && (
+        <label className="publication-field" htmlFor="recipe-publication-page">
+          <span>Citation</span>
+          <input
+            id="recipe-publication-page"
+            size={Math.max(8, page.length)}
+            value={page}
+            onChange={(event) => setPage(event.target.value)}
+          />
+        </label>
+      )}
+      {(selectedPublication?.publication_type === 'site' ||
+        selectedPublication?.publication_type === 'magazine') && (
         <label className="publication-field" htmlFor="recipe-publication-url">
           <span>Url</span>
           <input

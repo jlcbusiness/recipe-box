@@ -38,7 +38,6 @@ export async function createPublication(
   const retailerUrlValue =
     publicationType === 'book' ? optionalText(formData, 'retailer_url') : null;
   const retailerUrl = retailerUrlValue ? normalizeHttpUrl(retailerUrlValue) : null;
-  const issue = publicationType === 'magazine' ? formText(formData, 'issue') : null;
   const siteUrlValue = publicationType === 'site' ? formText(formData, 'site_url') : null;
   const siteUrl = siteUrlValue ? normalizeHttpUrl(siteUrlValue) : null;
 
@@ -47,9 +46,6 @@ export async function createPublication(
   }
   if (!['book', 'magazine', 'site'].includes(publicationType)) {
     return { error: 'Choose a publication type.' };
-  }
-  if (publicationType === 'magazine' && !issue) {
-    return { error: 'Enter the Magazine Issue, edition, or date.' };
   }
   if (publicationType === 'site' && !siteUrl) {
     return { error: 'Enter the Site URL.' };
@@ -71,10 +67,13 @@ export async function createPublication(
     p_edition: edition,
     p_isbn: isbn,
     p_retailer_url: retailerUrl,
-    p_issue: issue,
+    p_issue: null,
     p_site_url: siteUrl,
   });
 
+  if (error?.code === '23505' && publicationType === 'magazine') {
+    return { error: 'A Magazine with this title already exists.' };
+  }
   if (error || typeof data !== 'string') {
     return { error: 'Unable to create this publication. Check its details and try again.' };
   }
@@ -91,7 +90,6 @@ export async function createPublication(
       edition,
       isbn,
       retailer_url: retailerUrl,
-      issue,
       site_url: siteUrl,
     },
   };

@@ -17,7 +17,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 });
 const publicationTypeLabels = {
   book: 'Book',
-  magazine: 'Magazine Issue',
+  magazine: 'Magazine',
   site: 'Site',
 } as const;
 

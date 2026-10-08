@@ -27,12 +27,19 @@ type ExplorerPublication = PublicationOption & {
 };
 type PublicationFilter = 'all' | PublicationType;
 type ViewMode = 'list' | 'grid';
-type SortKey = 'name' | 'type' | 'author' | 'issue' | 'recipe_count' | 'created_at' | 'updated_at';
+type SortKey =
+  | 'name'
+  | 'type'
+  | 'author'
+  | 'edition'
+  | 'recipe_count'
+  | 'created_at'
+  | 'updated_at';
 type ExplorerMenu = 'type' | 'sort-key';
 
 const publicationTypeLabels: Record<PublicationType, string> = {
   book: 'Book',
-  magazine: 'Magazine Issue',
+  magazine: 'Magazine',
   site: 'Site',
 };
 const filterLabels: Record<PublicationFilter, string> = {
@@ -45,7 +52,7 @@ const sortLabels: Record<SortKey, string> = {
   name: 'Name',
   type: 'Type',
   author: 'Author',
-  issue: 'Issue / Edition',
+  edition: 'Edition',
   recipe_count: 'Recipe count',
   created_at: 'Date Added',
   updated_at: 'Date Changed',
@@ -57,10 +64,6 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
   timeZone: 'UTC',
   year: 'numeric',
 });
-
-function issueOrEdition(publication: ExplorerPublication) {
-  return publication.publication_type === 'magazine' ? publication.issue : publication.edition;
-}
 
 function compareText(left: string, right: string) {
   return left.localeCompare(right, 'en', { sensitivity: 'base' });
@@ -96,8 +99,8 @@ function comparePublications(
     case 'author':
       comparison = compareNullableText(left.author, right.author, ascending);
       break;
-    case 'issue':
-      comparison = compareNullableText(issueOrEdition(left), issueOrEdition(right), ascending);
+    case 'edition':
+      comparison = compareNullableText(left.edition, right.edition, ascending);
       break;
     case 'recipe_count':
       comparison = (left.recipe_count - right.recipe_count) * (ascending ? 1 : -1);
@@ -120,11 +123,10 @@ function formatDate(value: string) {
 }
 
 function tooltipText(publication: ExplorerPublication) {
-  const issueOrEditionLabel = publication.publication_type === 'magazine' ? 'Issue' : 'Edition';
   return [
     publicationTypeLabels[publication.publication_type],
     publication.author ? `Author: ${publication.author}` : null,
-    issueOrEdition(publication) ? `${issueOrEditionLabel}: ${issueOrEdition(publication)}` : null,
+    publication.edition ? `Edition: ${publication.edition}` : null,
     `Recipes: ${publication.recipe_count}`,
     `Date Added: ${formatDate(publication.created_at)}`,
     `Date Changed: ${formatDate(publication.updated_at)}`,
@@ -410,7 +412,7 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
                       Author
                     </th>
                     <th role="columnheader" scope="col">
-                      Issue / Edition
+                      Edition
                     </th>
                     <th role="columnheader" scope="col">
                       Recipes
@@ -441,8 +443,8 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
                       <td data-label="Author" role="cell">
                         {publication.author ? <AuthorNames authors={publication.author} /> : '—'}
                       </td>
-                      <td data-label="Issue / Edition" role="cell">
-                        {issueOrEdition(publication) || '—'}
+                      <td data-label="Edition" role="cell">
+                        {publication.edition || '—'}
                       </td>
                       <td data-label="Recipes" role="cell">
                         {publication.recipe_count}

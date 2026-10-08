@@ -1198,23 +1198,49 @@ export function IngredientRowsEditor({
                     }
                   }}
                 >
-                  {renderDesktopCell(row, index, 'ingredientName')}
-                  {renderDesktopCell(row, index, 'detail')}
-                  {renderMeasurementCell(row, index)}
-                  {renderDesktopCell(row, index, 'preparation')}
-                  <td className="recipe-ingredient-delete-cell">
-                    {!isEmptyIngredientRow(row) && (
-                      <button
-                        aria-label={`Delete ingredient row ${index + 1}`}
-                        className="recipe-ingredient-delete-button"
-                        title="Delete ingredient row"
-                        type="button"
-                        onClick={() => deleteIngredientRow(row.id)}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </td>
+                  {isEmptyIngredientRow(row) && activeCell?.rowId !== row.id ? (
+                    <td
+                      aria-label="Add ingredient row"
+                      className="recipe-ingredient-value-cell is-empty"
+                      colSpan={6}
+                      data-field="ingredientName"
+                      data-row-id={row.id}
+                      tabIndex={activeCell?.rowId === row.id ? -1 : 0}
+                      onMouseDown={() => {
+                        pendingClickCell.current = { rowId: row.id, field: 'ingredientName' };
+                      }}
+                      onClick={() => {
+                        pendingClickCell.current = null;
+                        setActiveCell({
+                          rowId: promotedRowIds.current.get(row.id) ?? row.id,
+                          field: 'ingredientName',
+                        });
+                      }}
+                      onKeyDown={handleGridKeyDown}
+                    >
+                      <span className="recipe-ingredient-empty-prompt">add ingredient</span>
+                    </td>
+                  ) : (
+                    <>
+                      {renderDesktopCell(row, index, 'ingredientName')}
+                      {renderDesktopCell(row, index, 'detail')}
+                      {renderMeasurementCell(row, index)}
+                      {renderDesktopCell(row, index, 'preparation')}
+                      <td className="recipe-ingredient-delete-cell">
+                        {!isEmptyIngredientRow(row) && (
+                          <button
+                            aria-label={`Delete ingredient row ${index + 1}`}
+                            className="recipe-ingredient-delete-button"
+                            title="Delete ingredient row"
+                            type="button"
+                            onClick={() => deleteIngredientRow(row.id)}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>

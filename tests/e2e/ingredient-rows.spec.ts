@@ -374,6 +374,9 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
     await expect(grid).toBeVisible();
     await expect(grid.getByRole('row')).toHaveCount(2);
+    const emptyPlaceholder = grid.getByRole('cell', { name: 'Add ingredient row' });
+    await expect(emptyPlaceholder).toHaveAttribute('colspan', '6');
+    await expect(grid.getByRole('row').nth(1).getByRole('cell')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Add ingredient row' })).toHaveCount(0);
     await expect(
       page.locator(
@@ -391,7 +394,8 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     expect(mainCheckboxBounds?.height).toBeLessThanOrEqual(18);
     await expect(grid.getByRole('combobox', { name: 'Ingredient, row 1' })).toHaveCount(0);
 
-    await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+    await emptyPlaceholder.click();
+    await expect(grid.getByRole('row').nth(1).getByRole('cell')).toHaveCount(6);
     const firstIngredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
     await expect(firstIngredient).toHaveAttribute('type', 'text');
     await expect(firstIngredient).not.toHaveAttribute('list', /.+/);
@@ -409,6 +413,10 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.keyboard.press('Tab');
     await expect(grid.getByRole('row')).toHaveCount(3);
     await expect(grid.getByRole('row').nth(1)).toContainText('Basil');
+    const ingredientRemove = grid.getByRole('button', { name: 'Delete ingredient row 1' });
+    await ingredientRemove.hover();
+    await expect(ingredientRemove).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(ingredientRemove).toHaveCSS('color', 'rgb(98, 105, 93)');
     await expect(grid.locator('[aria-label="Specifics, row 1"]')).toBeFocused();
     await grid.locator('[aria-label="Ingredient, row 1"]').focus();
     await page.keyboard.press('Tab');
@@ -730,12 +738,13 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await reloadedGrid.getByRole('row').nth(2).hover();
     await expect(deleteBasil).toHaveCSS('opacity', '1');
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(deleteBasil).toHaveCSS('color', 'rgb(98, 105, 93)');
     await deleteBasil.focus();
-    await expect(deleteBasil).toHaveCSS('background-color', 'rgb(180, 62, 50)');
+    await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await deleteBasil.hover();
     await expect(deleteBasil).toHaveCSS('width', '32px');
-    await expect(deleteBasil).toHaveCSS('background-color', 'rgb(180, 62, 50)');
-    await expect(deleteBasil).toHaveCSS('color', 'rgb(255, 255, 255)');
+    await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(deleteBasil).toHaveCSS('color', 'rgb(98, 105, 93)');
     await deleteBasil.click();
     await expect(reloadedGrid.getByRole('row')).toHaveCount(4);
     await expect(reloadedGrid).not.toContainText('Basil');

@@ -20,9 +20,6 @@ export function PublicationCover({ publication }: { publication: PublicationOpti
       <span className="publication-cover-title" style={{ fontSize: `${titleSize}px` }}>
         {publication.name}
       </span>
-      {publication.publication_type === 'magazine' && publication.issue && (
-        <span className="publication-cover-issue">{publication.issue}</span>
-      )}
     </span>
   );
 }

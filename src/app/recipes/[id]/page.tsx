@@ -187,15 +187,14 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               <Link href={`/publications/${recipe.publication.id}`}>
                 <cite>{recipe.publication.name}</cite>
               </Link>
-              {recipe.publication.issue ? ` · ${recipe.publication.issue}` : ''}
-              {recipe.publication_page ? ` · p. ${recipe.publication_page}` : ''}
+              {recipe.publication_page
+                ? ` · ${recipe.publication.publication_type === 'book' ? `p. ${recipe.publication_page}` : recipe.publication_page}`
+                : ''}
               {recipe.recipe_url && (
-                <>
-                  {' · '}
-                  <a className="recipe-source-link" href={recipe.recipe_url}>
-                    {recipe.recipe_url}
-                  </a>
-                </>
+                <a className="recipe-source-link" href={recipe.recipe_url}>
+                  <span className="recipe-source-url-full">{recipe.recipe_url}</span>
+                  <span className="recipe-source-url-mobile">View online</span>
+                </a>
               )}
             </p>
           )}
@@ -280,10 +279,70 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           </ol>
         </section>
       )}
+      {(recipe.pairings.length > 0 || recipe.incoming_pairings.length > 0) && (
+        <section className="recipe-detail-section" aria-labelledby="pairs-with-title">
+          <h2 id="pairs-with-title">Pairs With</h2>
+          {recipe.pairings.length > 0 && (
+            <ul className="recipe-relationship-list">
+              {recipe.pairings.map((pairing) => (
+                <li key={pairing.id}>
+                  {pairing.linked_recipe_id && pairing.linked_recipe_is_active ? (
+                    <Link href={`/recipes/${pairing.linked_recipe_id}`}>
+                      {pairing.display_text}
+                    </Link>
+                  ) : (
+                    pairing.display_text
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {recipe.incoming_pairings.length > 0 && (
+            <div className="recipe-incoming-pairings">
+              <h3>Paired with this recipe</h3>
+              <ul className="recipe-relationship-list">
+                {recipe.incoming_pairings.map((pairing) => (
+                  <li key={pairing.source_recipe_id}>
+                    {pairing.source_recipe_is_active ? (
+                      <Link href={`/recipes/${pairing.source_recipe_id}`}>
+                        {pairing.source_recipe_name}
+                      </Link>
+                    ) : (
+                      pairing.source_recipe_name
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
       {recipe.notes_markdown && (
         <section className="recipe-detail-section" aria-labelledby="notes-title">
           <h2 id="notes-title">Notes</h2>
           <p className="recipe-notes">{renderMarkdown(recipe.notes_markdown)}</p>
+        </section>
+      )}
+      {recipe.references.length > 0 && (
+        <section className="recipe-detail-section" aria-labelledby="references-title">
+          <h2 id="references-title">References</h2>
+          <ul className="recipe-relationship-list">
+            {recipe.references.map((reference) => (
+              <li key={reference.id}>
+                {reference.reference_type === 'external_url' && reference.url ? (
+                  <a href={reference.url}>{reference.display_text}</a>
+                ) : reference.reference_type === 'recipe' &&
+                  reference.linked_recipe_id &&
+                  reference.linked_recipe_is_active ? (
+                  <Link href={`/recipes/${reference.linked_recipe_id}`}>
+                    {reference.display_text}
+                  </Link>
+                ) : (
+                  reference.display_text
+                )}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </main>

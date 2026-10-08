@@ -897,7 +897,7 @@ h1 {
   gap: 3px;
   color: var(--ink);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .recipe-field-wide {
@@ -1133,6 +1133,20 @@ h1 {
   width: min(26rem, 100%);
 }
 
+@media (min-width: 641px) {
+  .recipe-form .recipe-name-field {
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: min(100%, calc(100vw - 40px));
+  }
+
+  .recipe-form .recipe-name-field input {
+    width: auto;
+    min-width: 3in;
+    max-width: 100%;
+  }
+}
+
 .recipe-form input[name="serves"] {
   width: 6ch;
   min-height: 36px;
@@ -1164,12 +1178,12 @@ h1 {
   margin-bottom: 4px;
   padding: 0;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .recipe-single-picklist > span:first-child {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .recipe-picklist-anchor {
@@ -1595,12 +1609,6 @@ h1 {
 .recipe-ingredient-table tbody tr:focus-within .recipe-ingredient-delete-button,
 .recipe-ingredient-delete-button:focus-visible {
   opacity: 1;
-}
-
-.recipe-ingredient-delete-button:hover,
-.recipe-ingredient-delete-button:focus {
-  background: var(--tomato);
-  color: white;
 }
 
 .recipe-ingredient-delete-button:focus-visible {
@@ -2057,6 +2065,48 @@ h1 {
   font-size: 16pt;
 }
 
+.recipe-secondary-attribution {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+section.recipe-detail-section .recipe-secondary-attribution a,
+section.recipe-detail-section .recipe-relationship-list a {
+  color: var(--leaf);
+  text-underline-offset: 3px;
+}
+
+.recipe-relationship-list {
+  display: block;
+  list-style-type: disc;
+  margin: 0;
+  padding-left: 22px;
+  overflow-wrap: anywhere;
+}
+
+.recipe-relationship-list li::marker {
+  color: var(--ink);
+}
+
+.recipe-relationship-list li:has(> a)::marker {
+  color: var(--leaf);
+}
+
+.recipe-relationship-list li + li {
+  margin-top: 8px;
+}
+
+.recipe-incoming-pairings {
+  margin-top: 18px;
+}
+
+.recipe-incoming-pairings h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .recipe-metadata {
   display: flex;
   flex-wrap: wrap;
@@ -2122,7 +2172,275 @@ h1 {
 }
 
 .recipe-attribution .recipe-source-link {
+  display: block;
   color: var(--source-link);
+}
+
+.recipe-source-url-mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .recipe-source-url-full {
+    display: none;
+  }
+
+  .recipe-source-url-mobile {
+    display: inline;
+  }
+}
+
+.recipe-relationship-editor {
+  min-width: 0;
+}
+
+.recipe-relationship-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recipe-relationship-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recipe-relationship-row-open {
+  z-index: 2;
+}
+
+.recipe-relationship-row .recipe-field {
+  min-width: 0;
+}
+
+.recipe-reference-list {
+  gap: 6px;
+}
+
+.recipe-reference-heading,
+.recipe-reference-row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recipe-reference-heading {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recipe-reference-field {
+  min-width: 0;
+}
+
+.recipe-reference-field-fill {
+  width: 100%;
+}
+
+.recipe-reference-lookup {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.recipe-form fieldset.recipe-reference-type-control {
+  position: relative;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  align-self: flex-start;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.recipe-reference-type-trigger {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid #9ba596;
+  border-radius: 3px;
+  padding: 5px 7px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recipe-reference-type-label {
+  display: grid;
+  margin-right: 1mm;
+}
+
+.recipe-reference-type-measure {
+  visibility: hidden;
+}
+
+.recipe-reference-type-menu {
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px;
+  background: white;
+  box-shadow: 0 4px 14px rgb(36 40 32 / 18%);
+}
+
+.recipe-reference-type-option {
+  min-height: 36px;
+  border: 0;
+  border-bottom: 1px solid #e4e8e1;
+  padding: 6px 9px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recipe-reference-type-option:last-child {
+  border-bottom: 0;
+}
+
+.recipe-reference-type-option[aria-selected="true"],
+.recipe-reference-type-option:hover,
+.recipe-reference-type-option:focus-visible {
+  background: #edf4e9;
+  color: var(--leaf);
+}
+
+.recipe-reference-legacy-type,
+.recipe-reference-legacy-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recipe-reference-legacy-type {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.recipe-reference-legacy-text {
+  padding: 5px 7px;
+}
+
+.recipe-relationship-remove {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 2px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.recipe-relationship-row:hover .recipe-relationship-remove,
+.recipe-relationship-row:focus-within .recipe-relationship-remove,
+.recipe-relationship-remove:focus-visible {
+  opacity: 1;
+}
+
+.recipe-relationship-add {
+  align-self: flex-start;
+  width: fit-content;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.recipe-form .recipe-relationship-editor .recipe-reference-row input {
+  min-height: 36px;
+}
+
+.recipe-relationship-suggestions {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 2px);
+  right: 40px;
+  left: 0;
+  display: flex;
+  max-height: 220px;
+  flex-direction: column;
+  overflow-y: auto;
+  border: 1px solid #9ba596;
+  border-radius: 3px;
+  background: white;
+  box-shadow: 0 4px 12px rgb(27 37 26 / 16%);
+}
+
+.recipe-relationship-suggestions button {
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 0;
+  border-bottom: 1px solid #e4e8e1;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.recipe-relationship-suggestions button:hover,
+.recipe-relationship-suggestions button[aria-selected="true"] {
+  background: #edf4e9;
+  color: var(--leaf);
+}
+
+.recipe-reference-lookup .recipe-relationship-suggestions {
+  top: calc(100% + 2px);
+  right: 0;
+  left: 0;
+}
+
+@media (max-width: 420px) {
+  .recipe-reference-heading,
+  .recipe-reference-row {
+    grid-template-columns: max-content minmax(0, 1fr) 28px;
+    gap: 5px;
+  }
+}
+
+@media (min-width: 641px) {
+  .recipe-pairing-row {
+    grid-template-columns: minmax(3in, var(--pairing-field-max-width, 50%)) minmax(0, 1fr) 28px;
+  }
+
+  .recipe-pairing-row .recipe-relationship-remove {
+    grid-column: 3;
+  }
+
+  .recipe-reference-heading,
+  .recipe-reference-row {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: max-content minmax(3in, 50%) minmax(0, 1fr) 28px;
+  }
+
+  .recipe-reference-row .recipe-relationship-remove {
+    grid-column: 4;
+  }
 }
 
 .recipe-notes {
@@ -2518,28 +2836,35 @@ h1 {
     min-height: 48px;
   }
 
+  .recipe-relationship-editor .recipe-relationship-row .recipe-field {
+    min-height: 36px;
+  }
+
+  .recipe-relationship-remove {
+    opacity: 1;
+  }
+
   .recipe-picklist-trigger,
   .recipe-picklist-option,
   .recipe-calculate-button {
-    min-height: 48px;
+    min-height: 36px;
   }
 
   .recipe-form input,
-  .recipe-form select,
-  .recipe-form textarea {
-    min-height: 30px;
+  .recipe-form select {
+    min-height: 36px;
   }
 
   .recipe-form select.recipe-compact-select {
-    min-height: 48px;
+    min-height: 36px;
   }
 
   .recipe-form input[name="reason"] {
-    min-height: 48px;
+    min-height: 36px;
   }
 
   .recipe-form input[name="serves"] {
-    min-height: 48px;
+    min-height: 36px;
   }
 
   .recipe-picklist-menu {
@@ -3398,25 +3723,13 @@ h1 {
   font-weight: 700;
 }
 
-.publication-cover-magazine .publication-cover-issue {
-  font-size: 8px;
-}
-
-.publication-cover-title,
-.publication-cover-issue {
+.publication-cover-title {
   display: -webkit-box;
   overflow: hidden;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   line-height: 1.12;
-}
-
-.publication-cover-issue {
-  -webkit-line-clamp: 2;
-  font-family: "DM Sans Variable", sans-serif;
-  font-size: 7px;
-  font-style: normal;
 }
 
 .publication-cover-site {
@@ -3693,7 +4006,7 @@ h1 {
   gap: 4px;
   color: var(--ink);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .publication-form .publication-field-full-width {
@@ -3710,10 +4023,6 @@ h1 {
 
 .publication-field-isbn {
   width: min(100%, 18ch);
-}
-
-.publication-field-issue {
-  width: min(100%, 24ch);
 }
 
 .publication-field-hint {
@@ -3795,7 +4104,7 @@ h1 {
   gap: 3px;
   color: var(--ink);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .recipe-form .publication-picker-fieldset .publication-picker-label input {
@@ -3951,6 +4260,31 @@ h1 {
 }
 
 @media (max-width: 640px) {
+  .recipe-form
+    .publication-picker-fieldset:has(#recipe-publication-page):has(#recipe-publication-url) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 8px;
+  }
+
+  .recipe-form .publication-picker-fieldset:has(#recipe-publication-page) .publication-picker {
+    width: 100%;
+    max-width: none;
+  }
+
+  .recipe-form .publication-picker-fieldset:has(#recipe-publication-page) .publication-field {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .recipe-form
+    .publication-picker-fieldset:has(#recipe-publication-page)
+    label[for="recipe-publication-url"] {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .publication-detail-heading {
     grid-template-columns: 48px minmax(0, 1fr);
     gap: 12px;
@@ -4079,4 +4413,16 @@ h1 {
     width: auto;
     flex: 1;
   }
+}
+
+@media (min-width: 641px) {
+  body a:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+.recipe-form .recipe-reference-type-trigger .recipe-reference-type-label > span {
+  grid-area: 1 / 1;
+  white-space: nowrap;
 }

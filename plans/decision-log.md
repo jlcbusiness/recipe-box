@@ -12,13 +12,21 @@ the product specification or a task list. The canonical behavior remains in
 | Decision | Rationale |
 | -------- | --------- |
 | Use Publication in the UI. | Book is too narrow for books, magazine issues, and websites. |
+| Sites remain standalone primary publications for recipes sourced from websites. | Many recipe websites publish recipes that have no print counterpart; they remain valid recipe origins without being secondary listings for Magazine recipes. |
 | Use Recipe Tin for recipes without a primary publication. | It gives original and unparented recipes a permanent, meaningful home. |
 | One ingredient row owns its measurements. | Separate visual ingredient and amount columns must not lose row alignment. |
 | Keep volume and weight together when both are known. | A recipe may display `1 cup / 120 g` while retaining both source values. |
 | Trusted density is Settings-only. | Volume-to-weight conversion must be explicit and ingredient-specific. |
 | Main ingredients are row flags. | Classification stays attached to the actual recipe ingredient. |
 | Verdict remains one holistic configurable picklist. | Judgment and practical repeat likelihood are intentionally intertwined. |
-| Individual magazine issues are publications. | The issue is the relevant origin even when a recipe also has an online site. |
+| A Magazine publication represents the enduring title; issue, volume, edition/date, and page are recipe-location details. | Recipes from different issues share one Library record while retaining their exact citation. |
+| Magazine issue citations remain free text and may coexist with the recipe's online URL. | Magazines vary their citation styles, and the citation and URL are independent details. |
+| Deduplicate existing test Magazine records by trimmed, case-insensitive title within each account; keep one record and delete duplicates after reassigning their recipes. | The current dataset is disposable test data, so no owner review or complex metadata merge is needed. |
+| Recipe detail displays the actual online URL as clickable text on desktop and `View online` on mobile. | The full URL is useful on wide screens, while the short mobile link preserves space. |
+| In-app References link to recipes only; Publications remain citation text and are not selectable targets. Detail and edit order is Pairs With, Notes, References, and source URLs stay on their own line. | Recipe links are precise in-app references; a Publication record is too broad for citation. Existing Publication-reference text remains static for data preservation. |
+| A selected Pairs With recipe uses a normalized `#slug` token in edit mode; saved and view-mode text remains the readable recipe name. | This mirrors ingredient-link shorthand while preserving readable relationship text and the existing linked-ID contract. |
+| Desktop Recipe Name grows with its text from a 3-inch minimum; Pairs With ends at Rest; Reference is at least 3 inches and at most half its row. Mobile Reference Type is content-sized. | Content-sized controls use the available space without arbitrary fixed widths, excess gutters, or viewport overflow. |
+| Scheme-less host input such as `google.com` normalizes to HTTPS for URL fields; the recipe editor uses `Url` and `Print` labels and viewport-safe reference type selection. | People commonly paste host-only URLs; normalizing at save avoids unnecessary protocol entry while preserving the HTTP(S)-only contract. |
 | Public URLs remain stable when privacy changes. | A Private toggle changes access, not identity or the shared link. |
 | Private and trashed links return 404; permanently purged recipes return 410. | These HTTP semantics avoid misusing temporary-service errors and keep private/trashed recipes opaque. |
 | History is forensic only in the first release. | Audit value is useful now; version restore adds avoidable complexity. |
@@ -47,7 +55,8 @@ the product specification or a task list. The canonical behavior remains in
 | Metric amounts display as decimal values with at most two decimal places. | Metric recipe notation should not show cooking fractions; US customary quantities retain common fractions where appropriate. |
 | Changing State clears Verdict, Enthusiasm, Occasion detail, and Reason. | A new state means a new reaction, so stale answers must not linger. |
 | Unit display uses a default system per dimension, with per-ingredient view-time overrides. | Readers choose US customary or metric for volume and weight, and can still switch one ingredient. |
-| Magazine recipes use a `+ Site` button for a secondary Site listing. | The recipe's online URL lives with the site while the issue stays primary. |
+| A Magazine recipe stores its optional online recipe URL directly on the recipe; it does not need a secondary Site publication. | The URL identifies that recipe's online copy, while the Magazine remains its primary source and no cross-publication link is needed. |
+| Trashed pairing and publication-reference targets remain visible as text and become links again on restore; purged targets are detached while their last display text remains. | Relationships stay understandable without linking to unavailable records; purge clears the foreign key but preserves the resolved label, and restore does not require recreating the relationship. |
 | Instructions and notes are Markdown; Tiptap 3.31.4 handles editing, and confirmed `#` mentions serialize as `[[ingredient:<stable-id>|<slug>]]`. | The proof passed keyboard selection, Escape-to-plain-text, new-mention insertion, Markdown/plain-text round-trip, and mobile accessibility. The Markdown extension is early release, so the product editor must keep parser/serializer tests. |
 | Slice 7.5 owns shared reorder-interaction polish after Slice 7. | Smooth drag feedback applies to completed ingredient rows and instruction steps, but must not change their persistence or accessibility contracts. Keeping it separate prevents animation work from obscuring Slice 7's mention and transactional-save work. |
 | Ingredients are managed with the other picklists and require a replacement when deleted. | A recipe row cannot exist without an ingredient. |

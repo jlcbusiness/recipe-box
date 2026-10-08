@@ -14,7 +14,7 @@ import { PublicationDeleteAction } from '../publication-delete-action';
 
 const publicationTypeLabels = {
   book: 'Book',
-  magazine: 'Magazine Issue',
+  magazine: 'Magazine',
   site: 'Site',
 } as const;
 
@@ -33,7 +33,7 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
     supabase
       .from('publications')
       .select(
-        'id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url, version',
+        'id, name, publication_type, author, edition, isbn, retailer_url, site_url, version, trashed_at',
       )
       .eq('id', id)
       .maybeSingle(),
@@ -44,11 +44,14 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
   if (publicationError) {
     throw new Error('Unable to load this publication.');
   }
-  if (!publicationData) {
+  if (!publicationData || publicationData.trashed_at !== null) {
     notFound();
   }
 
-  const publication = publicationData as PublicationOption & { version: number };
+  const publication = publicationData as PublicationOption & {
+    version: number;
+    trashed_at: string | null;
+  };
   const destinations = activePublications.filter((option) => option.id !== publication.id);
   const [
     { data: recipesData, error: recipesError },
@@ -99,11 +102,9 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
     assignmentsByRecipe.set(assignment.recipe_id, values);
   }
 
-  const detail = [
-    publicationTypeLabels[publication.publication_type],
-    publication.issue,
-    publication.author,
-  ].filter(Boolean);
+  const detail = [publicationTypeLabels[publication.publication_type], publication.author].filter(
+    Boolean,
+  );
 
   return (
     <main className="recipes-main" aria-labelledby="page-title">

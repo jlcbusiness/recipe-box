@@ -36,7 +36,7 @@ supported mobile widths.
   relationship through `recipes.publication_id`. Recipe counts exclude
   trashed recipes; a publication update trigger advances `updated_at` for
   Date Changed sorting.
-- Fallback publication covers already exist for Book, Magazine Issue, and Site.
+- Fallback publication covers already exist for Book, Magazine, and Site.
   Uploaded covers and signed media URLs are Slice 12, not this explorer work.
 - Saved views and persisted view preferences belong to later query/settings
   work. List/Grid, filter, and sort are transient UI state for this slice.
@@ -53,7 +53,7 @@ supported mobile widths.
   the current view and directly toggles to the other view; its accessible name
   identifies the destination view.
 - A compact Type trigger opens **All**, **Books**, **Magazines**, and **Sites**
-  options. Its icon reflects the active filter; Magazine Issue records map to
+  options. Its icon reflects the active filter; Magazine title records map to
   the Magazines filter.
 - Separate icon-only Sort by and Sort direction buttons. Sort by opens the
   sort-key options; Sort direction toggles ascending/descending. The Type

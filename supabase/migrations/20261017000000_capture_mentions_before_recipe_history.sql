@@ -2,7 +2,7 @@ drop trigger if exists recipe_history_capture_step_mentions_before_delete on pub
 drop function if exists public.recipe_history_capture_step_mentions_before_delete();
 drop trigger if exists recipe_history_capture_mentions_before_recipe_update on public.recipes;
 
-create function public.recipe_history_capture_mentions_before_recipe_update()
+create or replace function public.recipe_history_capture_mentions_before_recipe_update()
 returns trigger
 language plpgsql
 security definer

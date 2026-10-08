@@ -1,14 +1,32 @@
 # Recipe Box Visual Design Guide
 
-> **Reference Note:** For full interaction details, screen state behaviors,
-> and UI specifications, see [plans/comprehensive-reference.md](comprehensive-reference.md),
-> specifically:
->
-> - [comprehensive-reference.md § 4 (Ingredient Presentation & Sorting)](comprehensive-reference.md#4-ingredient-presentation-and-sorting)
-> - [comprehensive-reference.md § 6 (Publications & Recipe Tin Metaphor)](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
-> - [comprehensive-reference.md § 7 (Library Explorer & Query UI)](comprehensive-reference.md#7-queries-search-and-library-explorer)
-> - [comprehensive-reference.md § 13 (Interaction, Keyboard-First & Accessibility)](comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
-> - [comprehensive-reference.md § 2.4 (Recipe Metadata Entry)](comprehensive-reference.md#24-recipe-metadata-entry-presentation)
+## Table of Contents
+
+- [Purpose](#purpose)
+- [Design Philosophy](#design-philosophy)
+- [Recipe Metadata Entry (Slice 4)](#recipe-metadata-entry-slice-4)
+- [Recipe Relationships and References (Slice 11)](#recipe-relationships-and-references-slice-11)
+- [Desktop](#desktop)
+- [Mobile](#mobile)
+- [Ingredient Presentation](#ingredient-presentation)
+- [Planned Publication Cover Fallbacks](#planned-publication-cover-fallbacks)
+- [Accessibility And Interaction](#accessibility-and-interaction)
+- [Required Future Detail](#required-future-detail)
+
+## Quick Links
+
+- [First-draft specification](first-draft-spec.md) for product scope and behavior.
+- [Data model](data-model.md) for entities and relationships.
+- [Decision log](decision-log.md) for accepted choices and rationale.
+- [Delivery roadmap](delivery-roadmap.md) for slice order and progress.
+- [Comprehensive reference](comprehensive-reference.md) for full requirements;
+  relevant sections: [metadata](comprehensive-reference.md#24-recipe-metadata-entry-presentation),
+  [ingredient presentation](comprehensive-reference.md#4-ingredient-presentation-and-sorting),
+  [recipe relationships](comprehensive-reference.md#52-recipe-to-recipe-links-pairs-with),
+  [references](comprehensive-reference.md#53-references-section),
+  [publications](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin),
+  [queries](comprehensive-reference.md#7-queries-search-and-library-explorer), and
+  [accessibility](comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility).
 
 ## Purpose
 
@@ -53,14 +71,17 @@ recipe.
   green-gray rules. Use leaf green for constructive actions and source context,
   navy for selected structural emphasis, tomato red for destructive states, and
   muted gold for visible keyboard focus. Keep the palette restrained.
-- Use DM Sans Variable for the application. Headings are modest, direct, and
-  compact, never hero-sized or display-like. Small caps are reserved for short
-  labels and selected mobile section markers. The small wordmark tile may use a
-  restrained serif accent; do not spread serif typography across the app.
+- Use DM Sans Variable for interface copy and controls. Page titles may use a
+  restrained Georgia serif: private-workspace titles are 42px and public or
+  simple-page titles are 64px. Keep serif typography limited to page titles and
+  the small wordmark tile. Small caps are reserved for short labels and selected
+  mobile section markers.
 - Prefer square-ish geometry: white editable surfaces, 1px borders, and about
   3px corners. Use shadows only for floating menus, dialogs, and popovers. Do
-  not use gradients, glass effects, floating decorative shapes, large rounded
-  cards, or layered card-within-card layouts.
+  not use decorative color gradients, glass effects, floating decorative shapes,
+  large rounded cards, or layered card-within-card layouts. A low-contrast
+  repeating linear gradient is permitted only for the pale green ruled-paper
+  texture.
 - Build pages from a wide restrained content column, dividers, compact tables,
   and wrapping form rows. Sections should feel like parts of one working sheet,
   not a collection of separate panels. Use whitespace to make information
@@ -76,6 +97,8 @@ recipe.
   stay compact and wrap naturally with related fields. Avoid equal-width tiles,
   unused table columns, and controls that stretch merely to fill available
   space.
+- In recipe References, size the Type picklist to its longest option plus 1mm;
+  changing the selected type must not resize the trigger.
 - Use natural recipe language in reading mode: `1 1/2 cups flour`, `120 g
   flour`, `2 bunches cilantro`, and `salt to taste`. Edit mode may expose data
   structure through labeled controls, but reading mode should return to familiar
@@ -112,6 +135,9 @@ recipe.
   replace crowded row editing with a focused one-column pane or popover. Keep
   lookup and cooking information prominent, retain at least 48px touch targets,
   and ensure menus and dialogs remain inside the viewport.
+- Mobile navigation remains persistently visible as a wrapping horizontal top
+  bar rather than moving into a drawer. Keep primary destinations and the
+  account control available without a separate navigation gesture.
 - Let lists simplify on small screens by hiding low-priority columns and using
   deliberate wrapping, not horizontal page scrolling or tiny unreadable text.
   Stable dimensions must prevent selected states, labels, or dynamic content
@@ -230,6 +256,20 @@ looks heavier by default.
 The visible single-choice prompt for Enthusiasm is “What am I feeling?” while
 the field label remains “Enthusiasm.” Verdict order places Specific occasion
 immediately before Once-a-year-rich and So-so. Reason is a single-line field.
+
+## Recipe Relationships and References (Slice 11)
+
+- On desktop edit, the Recipe Name field is at least 3 inches wide and grows
+  with its text, like the Book Page(s) field. Cap it to the available form and
+  viewport width; retain the full-row Name field on mobile.
+- A selected Pairs With recipe appears in edit mode as a normalized `#slug`
+  token, such as `#roast-chicken`. The saved display text and view-mode link
+  label remain the readable recipe name.
+- The desktop Pairs With input has a 3-inch minimum and ends at the right edge
+  of the Rest time input. The desktop Reference field has a 3-inch minimum and
+  a 50% row maximum; its Type column fits the picker.
+- On mobile, the Reference Type column fits the picker instead of reserving a
+  wider empty track. The field begins after the normal grid gap.
 
 ### Serves and times
 
@@ -426,7 +466,7 @@ Public and printed recipes always use the default bold dark-red styling.
 ## Planned Publication Cover Fallbacks
 
 When a Book has no cover image, show a light-blue book-shaped rectangle with a
-dark-blue border and italic title text sized to fit. When a Magazine Issue has
+dark-blue border and italic title text sized to fit. When a Magazine has
 no cover image, show a white magazine-shaped rectangle with a black border and
 normal title text sized to fit.
 

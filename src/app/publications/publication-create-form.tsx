@@ -10,7 +10,7 @@ import { createPublication } from './actions';
 
 const publicationTypes = [
   ['book', 'Book'],
-  ['magazine', 'Magazine Issue'],
+  ['magazine', 'Magazine'],
   ['site', 'Site'],
 ] as const;
 
@@ -160,12 +160,6 @@ export function PublicationCreateForm({
             <input id="publication-retailer-url" inputMode="url" name="retailer_url" type="text" />
           </label>
         </>
-      )}
-      {publicationType === 'magazine' && (
-        <label className="publication-field publication-field-issue" htmlFor="publication-issue">
-          <span>Issue / edition / date</span>
-          <input id="publication-issue" name="issue" required />
-        </label>
       )}
       {publicationType === 'site' && (
         <label

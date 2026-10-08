@@ -155,6 +155,13 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       .all()) {
       await expect(integerLabel).toHaveCSS('text-align', 'center');
     }
+    const foodTypeAfterSelectionBounds = await page
+      .getByRole('button', { name: 'Food Type', exact: true })
+      .boundingBox();
+    const stateAfterSelectionBounds = await page.getByLabel('State').boundingBox();
+    if (!foodTypeAfterSelectionBounds || !stateAfterSelectionBounds) {
+      throw new Error('Recipe metadata controls must have measurable bounds after selection.');
+    }
     const mealTriggerBounds = await page
       .getByRole('button', { name: 'Meal Type: Select' })
       .boundingBox();
@@ -173,9 +180,15 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
         352,
       );
     } else {
-      expect(Math.abs((mealTriggerBounds?.y ?? 0) - foodTypeBounds.y)).toBeLessThanOrEqual(4);
-      expect(Math.abs((cuisineTriggerBounds?.y ?? 0) - foodTypeBounds.y)).toBeLessThanOrEqual(4);
-      expect(Math.abs((equipmentTriggerBounds?.y ?? 0) - stateBounds.y)).toBeLessThanOrEqual(4);
+      expect(
+        Math.abs((mealTriggerBounds?.y ?? 0) - foodTypeAfterSelectionBounds.y),
+      ).toBeLessThanOrEqual(4);
+      expect(
+        Math.abs((cuisineTriggerBounds?.y ?? 0) - foodTypeAfterSelectionBounds.y),
+      ).toBeLessThanOrEqual(4);
+      expect(
+        Math.abs((equipmentTriggerBounds?.y ?? 0) - stateAfterSelectionBounds.y),
+      ).toBeLessThanOrEqual(4);
     }
     const prepBounds = await page.getByLabel('Prep time (minutes)').boundingBox();
     const mixingBounds = await page.getByLabel('Mixing time (minutes)').boundingBox();

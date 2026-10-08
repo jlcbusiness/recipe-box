@@ -17,6 +17,19 @@ export type RecipeActionState = {
   error?: string;
 };
 
+type RecipeRelationshipsPayload = {
+  site_listing: null;
+  pairings: { id: string; display_text: string; linked_recipe_id: string | null }[];
+  references: {
+    id: string;
+    reference_type: 'recipe' | 'publication' | 'external_url' | 'printed_citation';
+    display_text: string;
+    linked_recipe_id: string | null;
+    publication_id: string | null;
+    url: string | null;
+  }[];
+};
+
 function formText(formData: FormData, name: string): string {
   return String(formData.get(name) ?? '').trim();
 }
@@ -37,6 +50,97 @@ function optionalInteger(formData: FormData, name: string): number | null | unde
 
 function selectedIds(formData: FormData, name: string): string[] {
   return formData.getAll(name).map(String).filter(Boolean);
+}
+
+function parseRecipeRelationships(formData: FormData): RecipeRelationshipsPayload | null {
+  const raw = formData.get('recipe_relationships');
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    const value = parsed as Record<string, unknown>;
+    if (!Array.isArray(value.pairings) || !Array.isArray(value.references)) {
+      return null;
+    }
+    if (value.site_listing !== null) {
+      return null;
+    }
+
+    const pairings = value.pairings.map(
+      (entry): RecipeRelationshipsPayload['pairings'][number] | null => {
+        if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+          return null;
+        }
+        const pairing = entry as Record<string, unknown>;
+        if (
+          typeof pairing.id !== 'string' ||
+          typeof pairing.display_text !== 'string' ||
+          (pairing.linked_recipe_id !== null && typeof pairing.linked_recipe_id !== 'string')
+        ) {
+          return null;
+        }
+        return {
+          id: pairing.id,
+          display_text: pairing.display_text,
+          linked_recipe_id: pairing.linked_recipe_id,
+        };
+      },
+    );
+    if (pairings.some((entry) => entry === null)) {
+      return null;
+    }
+
+    const references = value.references.map(
+      (entry): RecipeRelationshipsPayload['references'][number] | null => {
+        if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+          return null;
+        }
+        const reference = entry as Record<string, unknown>;
+        if (
+          typeof reference.id !== 'string' ||
+          !['recipe', 'publication', 'external_url', 'printed_citation'].includes(
+            String(reference.reference_type),
+          ) ||
+          typeof reference.display_text !== 'string' ||
+          (reference.linked_recipe_id !== null && typeof reference.linked_recipe_id !== 'string') ||
+          (reference.publication_id !== null && typeof reference.publication_id !== 'string') ||
+          (reference.url !== null && typeof reference.url !== 'string')
+        ) {
+          return null;
+        }
+        const url = reference.url ? normalizeHttpUrl(reference.url) : null;
+        if (reference.reference_type === 'external_url' && !url) {
+          return null;
+        }
+        return {
+          id: reference.id,
+          reference_type:
+            reference.reference_type as RecipeRelationshipsPayload['references'][number]['reference_type'],
+          display_text:
+            reference.reference_type === 'external_url' ? (url ?? '') : reference.display_text,
+          linked_recipe_id: reference.linked_recipe_id,
+          publication_id: reference.publication_id,
+          url,
+        };
+      },
+    );
+    if (references.some((entry) => entry === null)) {
+      return null;
+    }
+
+    return {
+      site_listing: null,
+      pairings: pairings as RecipeRelationshipsPayload['pairings'],
+      references: references as RecipeRelationshipsPayload['references'],
+    };
+  } catch {
+    return null;
+  }
 }
 
 function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null {
@@ -144,6 +248,10 @@ export async function saveRecipe(
   if (!instructionSteps) {
     return { error: 'Check the instruction steps before saving.' };
   }
+  const relationships = parseRecipeRelationships(formData);
+  if (!relationships) {
+    return { error: 'Check the Pairs With and References fields before saving.' };
+  }
 
   const timeFields = [
     'prep_time_minutes',
@@ -186,7 +294,7 @@ export async function saveRecipe(
     return { error: 'Enter a valid HTTP(S) URL.' };
   }
 
-  const { data, error } = await supabase.rpc('save_recipe_with_publication', {
+  const { data, error } = await supabase.rpc('save_recipe_with_relationships', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_name: name,
@@ -216,6 +324,7 @@ export async function saveRecipe(
     p_publication_id: optionalId(formData, 'publication_id'),
     p_publication_page: formText(formData, 'publication_page') || null,
     p_recipe_url: recipeUrl,
+    p_recipe_relationships: relationships,
   });
 
   if (error) {
@@ -235,6 +344,12 @@ export async function saveRecipe(
 
   revalidatePath('/recipes');
   revalidatePath(`/recipes/${savedRecipe.id}`);
+  revalidatePath('/publications');
+  for (const pairing of relationships.pairings) {
+    if (pairing.linked_recipe_id) {
+      revalidatePath(`/recipes/${pairing.linked_recipe_id}`);
+    }
+  }
   redirect(`/recipes/${savedRecipe.id}`);
 }
 

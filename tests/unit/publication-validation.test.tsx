@@ -6,10 +6,11 @@ import {
 } from '../../src/lib/publications/validation';
 
 describe('normalizeHttpUrl', () => {
-  it('normalizes www addresses to HTTPS', () => {
+  it('normalizes scheme-less hosts to HTTPS', () => {
     expect(normalizeHttpUrl('  www.example.test/recipes/soup  ')).toBe(
       'https://www.example.test/recipes/soup',
     );
+    expect(normalizeHttpUrl('google.com')).toBe('https://google.com/');
   });
 
   it('preserves explicit HTTP and HTTPS protocols', () => {
@@ -19,6 +20,7 @@ describe('normalizeHttpUrl', () => {
 
   it('rejects non-HTTP protocols and incomplete URLs', () => {
     expect(normalizeHttpUrl('ftp://example.test/book')).toBeNull();
+    expect(normalizeHttpUrl('javascript:alert(1)')).toBeNull();
     expect(normalizeHttpUrl('//example.test/book')).toBeNull();
     expect(normalizeHttpUrl('www.')).toBeNull();
   });

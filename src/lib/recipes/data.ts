@@ -13,7 +13,6 @@ export type PublicationOption = {
   edition: string | null;
   isbn: string | null;
   retailer_url: string | null;
-  issue: string | null;
   site_url: string | null;
 };
 
@@ -70,6 +69,31 @@ export type RecipeInstructionStep = {
   plain_text: string;
 };
 
+export type RecipePairing = {
+  id: string;
+  display_text: string;
+  linked_recipe_id: string | null;
+  linked_recipe_is_active: boolean;
+  position: number;
+};
+
+export type IncomingRecipePairing = {
+  source_recipe_id: string;
+  source_recipe_name: string;
+  source_recipe_is_active: boolean;
+};
+
+export type RecipeReference = {
+  id: string;
+  reference_type: 'recipe' | 'publication' | 'external_url' | 'printed_citation';
+  display_text: string;
+  linked_recipe_id: string | null;
+  linked_recipe_is_active: boolean;
+  publication_id: string | null;
+  url: string | null;
+  position: number;
+};
+
 type RecipeMeasurementRecord = Omit<RecipeMeasurement, 'picklist_value'> & {
   recipe_ingredient_id: string;
 };
@@ -107,6 +131,9 @@ export type RecipeRecord = {
   equipment_ids: string[];
   ingredients: RecipeIngredient[];
   steps: RecipeInstructionStep[];
+  pairings: RecipePairing[];
+  incoming_pairings: IncomingRecipePairing[];
+  references: RecipeReference[];
 };
 
 export type TrashedRecipeRecord = {
@@ -131,7 +158,8 @@ export async function getPublications(
 ): Promise<PublicationOption[]> {
   const { data, error } = await supabase
     .from('publications')
-    .select('id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url')
+    .select('id, name, publication_type, author, edition, isbn, retailer_url, site_url')
+    .is('trashed_at', null)
     .order('name');
 
   if (error) {
@@ -165,6 +193,22 @@ export async function getIngredients(supabase: RecipeSupabaseClient): Promise<In
   }
 
   return data as IngredientOption[];
+}
+
+export async function getRecipeLinkOptions(
+  supabase: RecipeSupabaseClient,
+  excludeRecipeId?: string,
+): Promise<IngredientOption[]> {
+  let query = supabase.from('recipes').select('id, name').is('trashed_at', null).order('name');
+  if (excludeRecipeId) {
+    query = query.neq('id', excludeRecipeId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error('Unable to load recipe suggestions.');
+  }
+  return data ?? [];
 }
 
 export async function getPreparationOptions(supabase: RecipeSupabaseClient): Promise<string[]> {
@@ -205,7 +249,7 @@ export async function getRecipe(
   if (data.publication_id) {
     const { data: publicationData, error: publicationError } = await supabase
       .from('publications')
-      .select('id, name, publication_type, author, edition, isbn, retailer_url, issue, site_url')
+      .select('id, name, publication_type, author, edition, isbn, retailer_url, site_url')
       .eq('id', data.publication_id)
       .maybeSingle();
     if (publicationError) {
@@ -242,6 +286,47 @@ export async function getRecipe(
   if (recipeIngredientsError) {
     throw new Error('Unable to load this recipe.');
   }
+
+  const [pairingsResult, incomingResult, referencesResult] = await Promise.all([
+    supabase
+      .from('recipe_pairings')
+      .select('id, display_text, linked_recipe_id, position')
+      .eq('source_recipe_id', recipeId)
+      .order('position'),
+    supabase.from('recipe_pairings').select('source_recipe_id').eq('linked_recipe_id', recipeId),
+    supabase
+      .from('recipe_references')
+      .select('id, reference_type, display_text, linked_recipe_id, publication_id, url, position')
+      .eq('recipe_id', recipeId)
+      .order('position'),
+  ]);
+  if (pairingsResult.error || incomingResult.error || referencesResult.error) {
+    throw new Error('Unable to load this recipe.');
+  }
+
+  const pairings = pairingsResult.data ?? [];
+  const incoming = incomingResult.data ?? [];
+  const recipeTargetIds = [
+    ...new Set([
+      ...pairings.map((pairing) => pairing.linked_recipe_id).filter((id): id is string => !!id),
+      ...(referencesResult.data ?? [])
+        .map((reference) => reference.linked_recipe_id)
+        .filter((id): id is string => !!id),
+      ...incoming.map((pairing) => pairing.source_recipe_id),
+    ]),
+  ];
+  const recipeTargetsResult = await Promise.all([
+    recipeTargetIds.length
+      ? supabase.from('recipes').select('id, name, trashed_at').in('id', recipeTargetIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  const [resolvedRecipeTargets] = recipeTargetsResult;
+  if (resolvedRecipeTargets.error) {
+    throw new Error('Unable to load this recipe.');
+  }
+  const recipeTargets = new Map(
+    (resolvedRecipeTargets.data ?? []).map((target) => [target.id, target]),
+  );
 
   const ingredientIds = [...new Set((recipeIngredients ?? []).map((row) => row.ingredient_id))];
   const recipeIngredientIds = (recipeIngredients ?? []).map((row) => row.id);
@@ -329,6 +414,24 @@ export async function getRecipe(
       measurements: measurementsByIngredient.get(row.id) ?? [],
     })),
     steps: (recipeSteps ?? []) as RecipeInstructionStep[],
+    pairings: pairings.map((pairing) => ({
+      ...pairing,
+      linked_recipe_is_active: pairing.linked_recipe_id
+        ? recipeTargets.get(pairing.linked_recipe_id)?.trashed_at === null
+        : false,
+    })),
+    incoming_pairings: incoming.map((pairing) => ({
+      source_recipe_id: pairing.source_recipe_id,
+      source_recipe_name: recipeTargets.get(pairing.source_recipe_id)?.name ?? '',
+      source_recipe_is_active: recipeTargets.get(pairing.source_recipe_id)?.trashed_at === null,
+    })),
+    references: (referencesResult.data ?? []).map((recipeReference) => ({
+      ...recipeReference,
+      reference_type: recipeReference.reference_type as RecipeReference['reference_type'],
+      linked_recipe_is_active: recipeReference.linked_recipe_id
+        ? recipeTargets.get(recipeReference.linked_recipe_id)?.trashed_at === null
+        : false,
+    })),
   } as RecipeRecord;
 }
 

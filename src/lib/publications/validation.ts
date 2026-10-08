@@ -6,7 +6,11 @@ export function normalizeHttpUrl(value: string): string | null {
     return null;
   }
 
-  const withProtocol = /^www\./i.test(trimmed) ? `https://${trimmed}` : trimmed;
+  if (trimmed.startsWith('//')) {
+    return null;
+  }
+
+  const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   try {
     const url = new URL(withProtocol);
     return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== 'www.'

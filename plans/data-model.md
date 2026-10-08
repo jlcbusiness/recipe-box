@@ -35,15 +35,15 @@ security without prematurely creating recipe or other domain tables.
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, optional integer Serves count, timings, notes, primary publication, privacy, and public-link ID. |
-| Publication | A Book, Magazine issue, or Site that can list recipes. |
+| Recipe | The recipe's metadata, state, optional integer Serves count, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
+| Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient and optional trusted density. |
 | Recipe ingredient | An ordered ingredient row with persistent manual order, Main flag, specifics, preparation, and measurements. |
 | Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to a recipe ingredient. |
 | Recipe pairing | A Pairs with entry with required display text and an optional linked target recipe. |
-| Recipe reference | An in-app publication, external URL, or printed citation linked to a recipe. |
+| Recipe reference | A same-account recipe link, external URL, or printed citation linked to a recipe; legacy Publication references remain static text, and purged recipe targets retain their display text. |
 | Tag | An account-owned tag linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Saved view | A persisted recipe or publication search, filter, sort, and column configuration. |
@@ -77,9 +77,16 @@ columns.
   unstructured word in instruction text.
 - A recipe pairing may be plain text or link another recipe. Linked pairings are
   directional and expose both outgoing and incoming recipe relationships.
-- Individual magazine issues are individual publications. A Magazine-primary
-  recipe may have at most one secondary Site listing, which carries the recipe's
-  URL on that site, while the magazine issue remains primary.
+- A Magazine publication represents its title. Each Magazine recipe stores its
+  own issue, volume, edition/date, and optional page citation in its recipe
+  location. Its optional online recipe URL belongs to the recipe and does not
+  create a secondary Site relationship.
+- Pairing autocomplete and in-app recipe-reference selection expose only
+  active recipes from the owning account. Trashed targets remain associated but
+  render as text; restore makes their links active again. Permanent target
+  purge detaches the target while preserving the last display text. Legacy
+  Publication references retain their display text and are not selectable.
+  Permanent source-recipe purge removes its pairings and references.
 - History is append-only and excluded from recovery exports.
 - Deleting a recipe or publication moves it to the trash. Trashed items are
   purged permanently after 30 days. The public ID of a purged recipe is retained

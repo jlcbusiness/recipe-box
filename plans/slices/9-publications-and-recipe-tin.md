@@ -1,5 +1,14 @@
 # Slice 9: Publications and the Recipe Tin
 
+**Status:** Delivered with the original issue-per-publication model. The
+Magazine model was revised during Slice 11; implementation follow-up is
+required to consolidate issue records into Magazine titles and move issue
+details onto recipes. The current product contract is in the
+[comprehensive reference](../comprehensive-reference.md#62-magazine-titles-recipe-locations-and-online-urls).
+The scope, verified constraints, and acceptance details below document what
+Slice 9 originally shipped; they are not the target requirements for revised
+Magazine behavior.
+
 This brief introduces owner-scoped publications and connects recipes to one
 optional primary publication. A recipe with no primary publication remains in
 the permanent Recipe Tin. The slice provides a minimal Library, publication
@@ -22,7 +31,7 @@ and [decision log](../decision-log.md).
 
 ## Outcome
 
-An authenticated owner can create a Book, Magazine Issue, or Site; assign an
+An authenticated owner can create a Book, Magazine, or Site; assign an
 active recipe to one primary publication or return it to the Recipe Tin; and
 open a publication page showing its active recipes. Publication creation is
 available from a minimal Library and inline from the recipe Publication picker.

@@ -6,6 +6,14 @@
 > corrected. Read this spec first, then open only the reference sections the
 > current work needs.
 
+| Topic | Planning document | Use it for |
+| ----- | ----------------- | ---------- |
+| Product behavior | [Comprehensive reference](comprehensive-reference.md) | Canonical requirements and detailed behavior |
+| Data structure | [Data model](data-model.md) | Entities, relationships, and constraints |
+| Visual design | [Visual design guide](visual-design.md) | Layout, interaction, and responsive direction |
+| Decisions | [Decision log](decision-log.md) | Accepted choices and their rationale |
+| Delivery | [Delivery roadmap](delivery-roadmap.md) | Slice order, scope, and progress |
+
 ## Product
 
 Recipe Box is a private, relational recipe application with database-backed
@@ -34,7 +42,7 @@ allergen modeling, collaboration, cooking history, and native mobile clients.
 
 | Term | Meaning |
 | ---- | ------- |
-| Publication | A book, magazine issue, or website that can own recipes. |
+| Publication | A book, Magazine title, or website source that can own recipes. |
 | Recipe Tin | The permanent home for recipes without a primary publication. |
 | Reference | Supplemental source material attached to a recipe. |
 | Specifics | An ingredient qualification such as `all-purpose`, `large`, or `unsalted`. |
@@ -47,7 +55,8 @@ primary publication. A recipe without one belongs in the Recipe Tin and may be
 assigned a publication later.
 See [comprehensive-reference.md § 2](comprehensive-reference.md#2-recipe-card-and-metadata).
 
-Recipes include name, primary publication, page or recipe URL, food type
+Recipes include name, primary publication, publication location, an optional
+online recipe URL, food type
 (e.g., roast, pie, galette, casserole, pasta, soup, sauce, cake, cocktail),
 multi-select meal type (e.g., breakfast, lunch, dinner, appetizer, side dish,
 snack, dessert, drink, booze, sauce), multi-select cuisine (e.g., American,
@@ -160,9 +169,13 @@ references count; ordinary text does not.
 
 Recipes support Pairs with entries as ordinary text or directional recipe links.
 Typing `#` in Pairs with searches existing recipes and creates a link; a tooltip
-explains this optional linking behavior. Linked entries show both outgoing and
-incoming relationships. A References section supports in-app publications,
-external URLs, and printed citations.
+explains this optional linking behavior. Once selected, the editor shows a
+normalized token such as `#roast-chicken`; saved data and view mode retain the
+readable recipe name, with the linked ID controlling navigation. Linked entries
+show both outgoing and incoming relationships. A References section supports
+links to another recipe, external URLs, and printed citations (labeled `Print`
+in the editor). Legacy Publication references remain static text and are not
+selectable.
 References do not change the primary-publication rule.
 
 ### Views And Sorting
@@ -198,20 +211,22 @@ appear on separate lines without a publication-type prefix.
 
 - All publications have name, type, optional image, tags, and a recipe list.
 - Books have author, optional edition, ISBN, and external lookup URL (e.g., Amazon, B&N, AbeBooks).
-- Magazines are individual issues, with required free-text issue, edition, or
-  date. Magazine recipes have no page number.
+- A Magazine publication represents its title. Each recipe stores its issue,
+  volume, edition/date, and optional page in its publication location.
 - Sites have display name and site URL.
 
-A recipe whose primary publication is a Magazine has a + Site button that picks
-a Site Publication as a secondary source and records the recipe's URL there. The
-recipe lists under both publications, and the magazine issue remains primary.
+For a Magazine recipe, an optional online recipe URL is stored directly on the
+recipe. It does not require a secondary Site publication. Keep this field
+visible beside the Magazine location under Publication, including when it is
+empty. Site publications also remain valid standalone primary sources for
+recipes originating from websites, including sites with no print counterpart.
 The searchable single-select
 Publication picker includes Add new publication. Creating a recipe inside a
 publication preselects it; app-level creation starts in the Recipe Tin.
 
 A publication recipe list displays each recipe's state, meal type, food type,
-applicable enthusiasm, verdict, or reason, and total time. A recipe displays a
-page or a recipe URL according to its publication context, not both together.
+applicable enthusiasm, verdict, or reason, and total time. A recipe may display
+both its publication location and its online recipe URL.
 
 The Recipe Tin is permanent and has a distinctive tin-and-paper treatment (hinged
 tin lid graphic, ragged/deckled paper background for its recipe cards).

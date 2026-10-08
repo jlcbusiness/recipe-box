@@ -5,6 +5,7 @@ import {
   getPreparationOptions,
   getPublications,
   getRecipe,
+  getRecipeLinkOptions,
   getRecipePicklists,
 } from '../../../../lib/recipes/data';
 import { createClient } from '../../../../lib/supabase/server';
@@ -28,6 +29,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
   if (!recipe) {
     notFound();
   }
+  const recipeOptions = await getRecipeLinkOptions(supabase, recipe.id);
 
   return (
     <main className="recipes-main" aria-labelledby="page-title">
@@ -48,6 +50,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
         picklists={picklists}
         preparationOptions={preparationOptions}
         publications={publications}
+        recipeOptions={recipeOptions}
         recipe={recipe}
       />
     </main>

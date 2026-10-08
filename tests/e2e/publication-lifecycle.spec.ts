@@ -9,6 +9,64 @@ import {
   type TestUser,
 } from '../support/local-supabase';
 
+test('Magazine recipes keep a free-text citation and online URL @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const recipeUrl = 'https://magazine.example.test/recipes/roasted-carrots';
+  const citation = 'Winter issue, web edition, page 18';
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Library' }).click();
+    await page.getByRole('link', { name: 'Add publication' }).click();
+    await page.getByRole('radio', { name: 'Magazine' }).check();
+    await page.getByLabel('Magazine name').fill('Seasonal Table');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Seasonal Table' })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Add Recipe' }).click();
+    await page.getByLabel('Name').fill('Roasted carrots');
+    await expect(page.getByLabel('Citation')).toBeVisible();
+    await expect(page.getByLabel('Url')).toBeVisible();
+    await page.getByLabel('Citation').fill(citation);
+    await page.getByLabel('Url').fill(recipeUrl);
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Roasted carrots' })).toBeVisible();
+    await expect(page.locator('.recipe-attribution')).toContainText(citation);
+    await expect(page.locator('.recipe-attribution')).toContainText('Seasonal Table');
+
+    const mobileUrlLink = page.getByRole('link', { name: 'View online' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(mobileUrlLink).toHaveAttribute('href', recipeUrl);
+    await expectNoHorizontalOverflow(page);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(page.getByRole('link', { name: recipeUrl })).toHaveAttribute('href', recipeUrl);
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByLabel('Citation')).toHaveValue(citation);
+    await expect(page.getByLabel('Url')).toHaveValue(recipeUrl);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const publicationBounds = await page.getByLabel('Publication').boundingBox();
+    const citationBounds = await page.getByLabel('Citation').boundingBox();
+    const urlBounds = await page.getByLabel('Url').boundingBox();
+    expect(publicationBounds).not.toBeNull();
+    expect(citationBounds).not.toBeNull();
+    expect(urlBounds).not.toBeNull();
+    if (!publicationBounds || !citationBounds || !urlBounds) {
+      throw new Error('Expected Magazine metadata controls to have layout bounds');
+    }
+    expect(publicationBounds.y).toBeCloseTo(citationBounds.y, 0);
+    expect(urlBounds.y).toBeGreaterThan(citationBounds.y);
+    await expectNoHorizontalOverflow(page);
+    const recipeA11y = await new AxeBuilder({ page }).analyze();
+    expect(recipeA11y.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 function ownerHeaders(config: LocalSupabaseConfig, user: TestUser) {
   return {
     apikey: config.anonKey,

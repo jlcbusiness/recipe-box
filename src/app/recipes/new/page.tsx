@@ -2,6 +2,7 @@ import {
   getIngredients,
   getPreparationOptions,
   getPublications,
+  getRecipeLinkOptions,
   getRecipePicklists,
 } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
@@ -14,12 +15,14 @@ export default async function NewRecipePage({
 }) {
   const { publication: requestedPublicationId } = await searchParams;
   const supabase = await createClient();
-  const [picklists, ingredients, preparationOptions, publications] = await Promise.all([
-    getRecipePicklists(supabase),
-    getIngredients(supabase),
-    getPreparationOptions(supabase),
-    getPublications(supabase),
-  ]);
+  const [picklists, ingredients, preparationOptions, publications, recipeOptions] =
+    await Promise.all([
+      getRecipePicklists(supabase),
+      getIngredients(supabase),
+      getPreparationOptions(supabase),
+      getPublications(supabase),
+      getRecipeLinkOptions(supabase),
+    ]);
   const initialPublicationId = publications.some(({ id }) => id === requestedPublicationId)
     ? requestedPublicationId
     : null;
@@ -34,6 +37,7 @@ export default async function NewRecipePage({
         picklists={picklists}
         preparationOptions={preparationOptions}
         publications={publications}
+        recipeOptions={recipeOptions}
       />
     </main>
   );
