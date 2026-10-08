@@ -20,6 +20,9 @@ the product specification or a task list. The canonical behavior remains in
 | Main ingredients are row flags. | Classification stays attached to the actual recipe ingredient. |
 | Verdict remains one holistic configurable picklist. | Judgment and practical repeat likelihood are intentionally intertwined. |
 | A Magazine publication represents the enduring title; issue, volume, edition/date, and page are recipe-location details. | Recipes from different issues share one Library record while retaining their exact citation. |
+| Existing publications are edited in place in Slice 12.5. | A person can correct a Book, Magazine title, or Site without deleting it and risking its recipes, cover, or relationships. |
+| Recipe photos are decorative, have no descriptions or captions, and render with empty alternative text. | Recipe photos visually complement the recipe and should not add redundant screen-reader content or imply required descriptive metadata. |
+| Publication recipe lists use the Recipe Explorer's filters, sorting, and List/Grid views, scoped to that publication in Slice 17; Slice 18 saved views can retain the scope. | The same recipes should be discoverable consistently from the Recipe Explorer and their publication without losing the publication context. |
 | Magazine issue citations remain free text and may coexist with the recipe's online URL. | Magazines vary their citation styles, and the citation and URL are independent details. |
 | Deduplicate existing test Magazine records by trimmed, case-insensitive title within each account; keep one record and delete duplicates after reassigning their recipes. | The current dataset is disposable test data, so no owner review or complex metadata merge is needed. |
 | Recipe detail displays the actual online URL as clickable text on desktop and `View online` on mobile. | The full URL is useful on wide screens, while the short mobile link preserves space. |
@@ -92,6 +95,8 @@ the product specification or a task list. The canonical behavior remains in
 | The shared account menu sits at the bottom of desktop navigation and appears as a circular initials control on mobile. | One account-options menu works consistently across the private shell while using space appropriate to each layout. |
 | Slice 8 uses a daily Supabase Cron (`pg_cron`) job to trigger a parameterized recipe-purge function. | The lifecycle remains local-first and database-adjacent, while the explicit cutoff parameter makes the 30-day boundary deterministic in tests. |
 | Permanently purging a recipe also removes its retained recipe-history snapshots. | A history snapshot contains private recipe content; retaining it after a permanent purge would defeat the meaning of permanent deletion. |
+| Slice 12 accepts still JPEG, PNG, WebP, and HEIC/HEIF uploads up to 20 MiB; stores metadata-free WebP derivatives; limits each account to 1 GiB of processed media and each recipe to 12 photos. | Original uploads remain convenient on phones while normalized derivatives, explicit count limits, and an account quota constrain storage use. |
+| Recipe photos remain private until Slice 20 authorizes a public recipe link; publication covers are owner-only. | Possession of a private image URL must not bypass public-link privacy or publication ownership checks. |
 
 ## Recording New Decisions
 

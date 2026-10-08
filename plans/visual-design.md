@@ -37,6 +37,12 @@ refine it against the running desktop and mobile UI. Create a wireframe or
 clickable prototype when the layout is not yet clear; it is not a separate phase
 that blocks routine iteration.
 
+When a requested interaction is unfamiliar or its expected behavior is
+underspecified, investigate established patterns in comparable products before
+choosing an interaction. Summarize relevant conventions and trade-offs briefly,
+then follow this guide and the user's explicit direction; precedent informs a
+design but does not override either.
+
 Each UI behavior and state must be automatable. Before production UI code is
 written, define focused automated tests for its acceptance behavior, including
 keyboard and assistive-technology-relevant semantics; screenshots and manual
@@ -126,6 +132,26 @@ recipe.
 - Keep labels visible for form fields. Use compact, anchored popovers and
   listboxes that remain within the viewport, have explicit dismissal, preserve
   keyboard operation, and do not introduce page-level horizontal overflow.
+
+### Interaction principles
+
+- Let the object be the entry point for actions that belong to it. Prefer a
+  subtle contextual affordance over large, duplicate buttons.
+- Put related object actions in one focused management pane; do not scatter
+  controls around the page after an object is created.
+- Prefer platform behavior for pickers, paste, dialogs, focus, and cancellation.
+  Canceling a system picker must not cancel the surrounding task.
+- Stage consequential single-object changes; apply reversible collection edits
+  immediately and keep their result visible while saving.
+- Design mobile for its actual geometry, including touch targets and overlaid
+  controls. Do not shrink a desktop layout until it fits.
+- Use motion to clarify direct manipulation: the dragged object follows the
+  pointer, the destination is clear, and the dropped position stays visible
+  while saving.
+- Use icons only for familiar, contextual actions. Give each an accessible
+  name and visible focus; use text when the meaning may be ambiguous.
+- Keep instructions short and beside the relevant action. Avoid fake or
+  permanently focusable inputs used only to display guidance.
 
 ### Responsive anatomy
 
@@ -463,12 +489,46 @@ Public and printed recipes always use the default bold dark-red styling.
   use the same Standard-view formatter and ordering as recipe detail; app chrome
   and editing controls are omitted. Amounts remain unscaled and unconverted.
 
-## Planned Publication Cover Fallbacks
+## Publication Cover Fallbacks
 
 When a Book has no cover image, show a light-blue book-shaped rectangle with a
-dark-blue border and italic title text sized to fit. When a Magazine has
-no cover image, show a white magazine-shaped rectangle with a black border and
-normal title text sized to fit.
+dark-blue border and italic title text sized to fit. When a Magazine has no
+cover image, show a white magazine-shaped rectangle with a black border and
+normal title text sized to fit. A saved cover replaces the fallback in the
+publication detail and Explorer.
+
+Publication covers are managed from the cover itself: in edit mode, the image
+is a quiet clickable target with a lower-right pencil affordance and a
+desktop-only hover border. Its management pane stages selection or removal
+until the person submits; Cancel discards those pending changes. Device image
+selection is available on desktop and mobile, while a separate camera action
+is shown on mobile. The image, camera, and remove icons share a toolbar row
+with Cancel and Submit right-aligned. Canceling the system picker leaves the
+management pane open.
+
+Recipe detail presents the first (default) photo before recipe content and
+additional photos as a responsive thumbnail gallery. Edit mode opens photo
+management from a camera action beside the recipe name. The pane has a
+three-column mobile grid, immediate remove and reorder behavior, a
+rounded muted-orange default outline and attached `Default` tab, two-dimensional
+dragging, and Ctrl+Arrow keyboard reordering. Images are decorative and have
+empty alternative text; do not add descriptions or captions. A dashed Add photo
+tile shares the image-slot dimensions. At a 352px viewport, the management pane
+is 328px wide. Each image slot is about 84px; the 19px column and 21px row gaps
+make room for the overlaid 21px remove controls without horizontal or vertical
+scrolling. The sizing is `(328 - 2 × 12 - 2 - 11 - 2 × 19) ÷ 3 ≈ 84px`,
+accounting for the pane border, padding, and remove-control overhang.
+
+On desktop, the pane heading and action status share a row, with status
+right-aligned. Below, paste guidance sits left and the photo count right. On
+mobile, action status is right-aligned opposite the left-aligned photo count.
+Paste guidance is non-interactive text on desktop; on mobile it is a touchable
+paste target explaining tap-and-hold. It is excluded from Tab navigation but
+remains touch-focusable. The camera action shares the Name row and aligns right
+on desktop; on mobile, it matches the Name field's height. The Add photo tile
+and overlaid remove controls are the photo-management actions; there are no
+extra per-image action buttons. On mobile, Add photo and Done share the bottom
+row, with Add photo left and Done right.
 
 ## Accessibility And Interaction
 
@@ -483,9 +543,11 @@ implemented UI slice.
 
 Before building a UI slice, document the screen's information hierarchy,
 responsive behavior, key states, destructive confirmations, component anatomy,
-and acceptance screenshots. The current visual foundation is a working
-direction, not a locked design system: DM Sans Variable, a light paper surface
-with a subtle ruled texture, dark ink, navy, leaf green, tomato red, and muted
-gold.
+acceptance screenshots, the object's action entry point, whether changes are
+staged or immediate, keyboard and touch paths, system-picker cancellation,
+and mobile geometry including overlaid controls. The current visual foundation
+is a working direction, not a locked design system: DM Sans Variable, a light
+paper surface with a subtle ruled texture, dark ink, navy, leaf green, tomato
+red, and muted gold.
 Refine typography, color, icon usage, and spacing as screens are designed; do
 not treat these initial choices as final tokens.

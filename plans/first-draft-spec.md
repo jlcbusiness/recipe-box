@@ -223,10 +223,15 @@ recipes originating from websites, including sites with no print counterpart.
 The searchable single-select
 Publication picker includes Add new publication. Creating a recipe inside a
 publication preselects it; app-level creation starts in the Recipe Tin.
+Existing publications can be edited in place, preserving their recipes and
+cover rather than requiring deletion and recreation (Slice 12.5).
 
 A publication recipe list displays each recipe's state, meal type, food type,
 applicable enthusiasm, verdict, or reason, and total time. A recipe may display
-both its publication location and its online recipe URL.
+both its publication location and its online recipe URL. The list supports the
+same recipe filters, sorting, and List/Grid views as the Recipe Explorer,
+scoped to that publication; grid cards use each recipe's default photo when
+available (Slice 17). Saved views may retain the publication scope (Slice 18).
 
 The Recipe Tin is permanent and has a distinctive tin-and-paper treatment (hinged
 tin lid graphic, ragged/deckled paper background for its recipe cards).

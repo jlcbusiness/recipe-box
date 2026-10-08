@@ -24,6 +24,7 @@ type ExplorerPublication = PublicationOption & {
   created_at: string;
   updated_at: string;
   recipe_count: number;
+  cover_image_url: string | null;
 };
 type PublicationFilter = 'all' | PublicationType;
 type ViewMode = 'list' | 'grid';
@@ -483,7 +484,10 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
                   href={`/publications/${publication.id}`}
                   title={tooltipText(publication)}
                 >
-                  <PublicationCover publication={publication} />
+                  <PublicationCover
+                    imageUrl={publication.cover_image_url}
+                    publication={publication}
+                  />
                   <span className="publication-list-copy">
                     <span className="publication-list-title">{publication.name}</span>
                     {publication.author && (

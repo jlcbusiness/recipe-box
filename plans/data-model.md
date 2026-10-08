@@ -95,6 +95,14 @@ columns.
   to the Recipe Tin or another publication is not reversed by restoring the
   source publication. Recipes moved to Trash retain their publication link and
   location, and require a separate recipe restore.
+- A media asset belongs to exactly one active or trashed recipe or publication
+  and is stored in the private media bucket. Each publication has at most one
+  cover; each recipe has at most 12 ordered photos and one primary photo.
+  Account quota counts the processed full and thumbnail derivatives, not the
+  staged original.
+- Trashing a parent hides its media without breaking the association.
+  Permanent parent purge queues the staged and processed object paths before
+  cascading the media metadata.
 
 ## Configuration Boundaries
 

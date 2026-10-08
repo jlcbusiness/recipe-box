@@ -1,0 +1,16 @@
+HEIC.Best sample HEIC / HEIF fixtures
+
+To the extent possible under law, HEIC.Best has waived all copyright and
+related or neighboring rights to the sample files in the heic/ directory
+under CC0 1.0 Universal.
+
+You may copy, modify, distribute, and use these files for any purpose without
+asking permission or providing attribution.
+
+CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+
+Photographic bases are public-domain (CC0) stills; HEIC/HEIF containers are
+encoded for this corpus. Provenance notes: source-jpg/SOURCES.json and
+SOURCES.md on https://heic.best
+
+The files are provided as-is, without warranties or conditions of any kind.

@@ -65,6 +65,18 @@ registration, and admin invitations. The seed script intentionally adds no
 sample recipe records; recipe and other domain schemas and fixtures belong with
 their owning slices.
 
+Slice 12 implements private publication covers and recipe photos. Originals
+upload directly to Supabase Storage through short-lived signed paths; the
+server normalizes JPEG, PNG, WebP, and HEIC/HEIF uploads to metadata-free WebP
+derivatives. Account storage is limited to 1 GiB of processed images, each
+original is limited to 20 MiB, and recipes can have up to 12 photos. A real
+CC0 HEIC fixture is covered by normalization and browser upload tests; see the
+[Slice 12 brief](plans/slices/12-images.md) and
+[fixture provenance](tests/fixtures/media/README.md). Vercel runs the
+queued-object cleanup endpoint daily.
+Configure a non-empty `CRON_SECRET` in the Vercel Production environment; Vercel
+sends it as a Bearer token to the cron route. Do not commit the secret.
+
 Local self-sign-up is open by default. To run the app in invite-only mode for a
 manual check, set `SIGNUP_MODE=invite_only` before starting `npm run dev`.
 To bootstrap a local admin, create the account first, then use Supabase Studio's

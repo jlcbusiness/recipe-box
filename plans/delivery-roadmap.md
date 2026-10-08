@@ -11,18 +11,18 @@ until the work about to begin expands and verifies its relevant details.
 
 ## Current implementation status
 
-Slices 0 through 11 are implemented locally. Ingredient rows and measurements
-form one coherent workflow; Slice 8 adds owner-scoped recipe Trash and restore,
-retention purge, lifecycle history, and baseline Standard-view printing; Slice
-9 adds owner-scoped publications and assignment; Slice 10A provides the compact
-Library Explorer; Slice 10B adds publication deletion, recipe disposition,
-restore, and retention purge; and Slice 11 completes the title-level Magazine
-model, recipe-level locations and URLs, and source relationships. Slice 11
+Slices 0 through 12 are implemented locally. Slice 12's private media pipeline
+accepts JPEG, PNG, WebP, and HEIC/HEIF; its CC0 HEIC fixture passes both image
+normalization and browser upload/finalization tests, and a failed-storage
+deletion is verified to retry successfully. Media workflows and accessibility
+checks pass in Chromium and Fold 6. Earlier slices provide owner-scoped recipe
+Trash and restore (Slice 8), publications and assignment (Slice 9), the compact
+Library Explorer (Slice 10A), publication deletion and restore (Slice 10B), and
+title-level Magazine records and source relationships (Slice 11). Slice 11
 preserves legacy Publication references as static text and supports recipe-only
-in-app references. Its focused browser and accessibility checks, typecheck,
-lint, local database lint, and diff check passed. The roadmap below remains
-ordered delivery direction for work not yet implemented; consult the slice
-briefs and comprehensive reference for current requirements.
+in-app references. The roadmap below remains ordered delivery direction for
+work not yet implemented; consult the slice briefs and comprehensive reference
+for current requirements.
 
 ## Mandatory Slice Preparation
 
@@ -91,13 +91,14 @@ question. Its output is a decision-log entry, not shipped code.
 | 10A. Library Explorer — complete | A person can browse publications in List or Grid, filter by type, and sort results using compact controls; desktop defaults to Grid and mobile defaults to List; mobile List and Grid truncate long titles, and Grid also truncates long authors. | Delivered with a responsive default view and direct icon toggle, server-side active recipe counts, Date Added and Date Changed sorting, a desktop metadata tooltip, desktop multi-author line breaks, keyboard support, and empty states. Publication `updated_at` is maintained by a forward migration. |
 | 10B. Publication deletion and restore — complete | A person can delete a publication using one of the three recipe-disposition choices, then restore the trashed publication and its retained relationships before purge. | Delivered with owner-scoped, version-checked lifecycle RPCs; atomic recipe disposition; independent publication and recipe restore; shared Trash UI; lifecycle history; inclusive 30-day purge boundary; daily `pg_cron` job; and Chromium/Fold 6 accessibility coverage. |
 | 11. Source links and relationships — complete | A person can keep one Magazine title as the primary source, record issue/volume/page details and an optional online recipe URL on each recipe, add recipe, external URL, or printed-citation References, and add plain-text or linked Pairs With entries with incoming links shown. | Delivered with title-level Magazine records, recipe-level locations and URLs, recipe-only in-app References, preserved static legacy Publication references, and verified Chromium/Fold 6 behavior. Selected Pairs With links show an edit-only `#slug` while retaining readable names in saved and view modes. See [Slice 11 brief](slices/11-source-links-and-relationships.md). |
-| 12. Images | A person can add covers and recipe photos from phone and desktop, see them through signed URLs, and see cover fallbacks. | Add-photo mechanism (camera or library, HEIC, size limits, resizing, EXIF removal, thumbnails); storage paths; signed-URL lifetime; storage quotas; photo order and primary photo; fallback covers. |
+| 12. Images — complete | A person can add covers and recipe photos from phone and desktop, see them through signed URLs, and see cover fallbacks. | Verified private direct-to-Storage uploads, normalization, signed display, ordering/primary/removal, 20 MiB source limit, 1 GiB account quota, 12-photo limit, cleanup scheduling, and Chromium/Fold 6 workflows. A real CC0 HEIC fixture verifies normalization and upload finalization; a deterministic failed-Storage retry test verifies later cleanup success. See [Slice 12 brief](slices/12-images.md). |
+| 12.5. Edit publications | A person can update an existing Book, Magazine title, or Site's name and type-specific details without deleting and recreating it; its recipes and cover remain associated. | Type-specific fields and validation; URL normalization; explicit save and cancel; version-conflict handling; owner-scoped authorization; history events; integration with the cover manager; responsive and accessible edit behavior. |
 | 13. Scaling and unit conversion | A person can scale by servings, multiply, or divide; set default unit systems; and override one ingredient's unit; print reflects selected scale and units. | Conversion constants and math; rounding; preference storage; range scaling; unmeasured behavior; accessibility labels; print updates. |
 | 14. Settings and picklists | A person can add, rename, delete, and merge picklist values, tags, and ingredients, choosing a replacement when a value is in use; add and manage tags on recipes and publications. | Transactional merge and delete; ingredient merge effects on mentions and Main flags; tag schema and handling; personal preferences page. |
 | 15. Trusted density | A person can define an ingredient's density and see volume and weight auto-fill with tint and badge, override it, and have it re-fill when cleared. | Normalized density storage; derived-versus-manual state; override rules; accessible derived label. |
 | 16. Cooking views | A person can switch Standard and Ingredient-first, sort ingredients four ways, and use mobile cook mode with check-off and wake lock. | Sort normalization and dual-measurement rule; saved default presentation; wake-lock browser support; touch-target sizes. |
-| 17. Find recipes | A person can search full text, filter, and sort recipes and publications with chosen columns. | Search indexing across plain-text projections; filter semantics; empty states; performance. |
-| 18. Saved views | A person can save and pin a view with filters, columns, and sort. | Serialization format that extends to nested queries; ownership; pinning. |
+| 17. Find recipes | A person can search full text, filter, and sort recipes and publications with chosen columns. Recipes within a publication have the same recipe filters and list/grid views, with default recipe photos shown in Grid when available. | Search indexing across plain-text projections; filter semantics; empty states; performance; publication-scoped recipe explorer and its responsive list/grid presentation. |
+| 18. Saved views | A person can save and pin a view with filters, columns, and sort, including views scoped to a publication's recipes. | Serialization format that extends to nested queries; ownership; pinning; preservation and restoration of publication scope. |
 | 19. Advanced queries | A person can build and save nested Azure DevOps-style queries. | Operator catalog, type validation, AND/OR precedence, grouping, query serialization, explainable summaries, and performance limits. Create a dedicated query specification during this slice. |
 | 20. Public links and privacy | A person can make a recipe private or linkable; a guest sees the public cooking view (stripping personal fields: verdict, enthusiasm, occasion detail, reason, notes, gotchas) with scaling, unit switch, and print; private and trashed recipes return 404 and purged ones 410. | Random-link generation; purged recipe tombstone record (`purged_recipe`); cache headers; signed public images; public field allow-list; rate-limit design (initial target 60 requests per minute per IP, applied in slice 25). |
 | 21. History viewer | A person can inspect the change history of a recipe or publication. | Event structure review against what earlier slices captured; redaction; whether purge removes history; display design. |

@@ -27,6 +27,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev:test',
+    env: { CRON_SECRET: 'slice12-local-test-only' },
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

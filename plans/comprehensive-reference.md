@@ -94,8 +94,29 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 
 ### 2.3 Recipe Photos
 
-- A recipe may have photos in addition to publication covers (6.1). Photos use the same private media pipeline (9.4) and are included in exports.
-- The add-photo mechanism is specified in the Images slice brief. It must settle at least: capture from device camera or library, accepted formats (including iPhone HEIC), size limits and resizing, removal of EXIF and location metadata, photo order and primary photo, thumbnails, and whether public pages show photos.
+- A recipe may have up to 12 ordered photos in addition to publication covers
+  (6.1). The first photo is primary. Recipe photos are decorative: store no
+  descriptions or captions and render them with empty alternative text.
+- Accept still JPEG, PNG, WebP, and HEIC/HEIF images up to 20 MiB. Normalize
+  orientation, strip source metadata, and store full and thumbnail WebP
+  derivatives no larger than 2048 px and 480 px, respectively.
+- Each account has a 1 GiB quota measured against stored derivatives. A
+  publication has at most one cover; replacing it queues the previous objects
+  for deletion.
+- Originals upload directly to a one-use signed path in the private
+  `recipe-media` bucket. The server validates and processes them before
+  recording metadata. Signed read URLs are owner-authorized and expire after
+  15 minutes.
+- Recipe photos use the platform's ordinary image picker, allowing supported
+  devices to offer camera capture and photo-library selection. They can be
+  reordered with pointer or keyboard controls, promoted to primary, and removed
+  immediately. Publication cover management has an explicit camera action on
+  mobile.
+- Trashed parents hide but retain their photos for restoration. Permanent purge
+  queues all object paths for deletion; failed Storage deletions remain queued
+  for retry. Public recipe photos are deferred to Slice 20 and must be exposed
+  only after the public-link authorization check. Publication covers remain
+  owner-only. Image export/import is deferred.
 
 ### 2.4 Recipe Metadata Entry Presentation
 
@@ -408,6 +429,10 @@ metadata: Name and URL fields take a full row; Author, Edition, ISBN, and
 Magazine title fields have widths appropriate to their expected content and wrap as a
 group when space is limited. Type choices use a labeled segmented control with
 an accessible native-radio affordance rather than visible radio dots.
+Existing Books, Magazine titles, and Sites can be edited in place without
+deleting and recreating them. Saving updates type-specific details while
+preserving recipes, covers, and relationships; Cancel discards unsaved changes.
+This edit workflow is planned for Slice 12.5.
 
 ### 6.4 The Recipe Tin (Unparented Recipes)
 - **Concept and Identity:** The Recipe Tin is the permanent, unparented container for recipes with no originating publication (family recipes, original experiments, clippings, recipes adapted from multiple sources).
@@ -500,6 +525,11 @@ and a single-line mobile list:
   tie-breaker. Null text values sort after populated values.
 - **Transient State:** View, filter, and sort state remain transient until
   saved views are introduced.
+- **Publication Recipe Explorer:** In Slice 17, publication detail will use
+  recipe explorer controls and list/grid views scoped to that publication,
+  including recipe photo thumbnails in Grid when a default photo exists. Filter
+  and sort fields follow the recipe field catalog; Slice 18 saved views may
+  preserve the publication scope.
 
 ---
 
@@ -570,7 +600,16 @@ When an unauthenticated guest accesses a valid public recipe link:
 ### 9.4 Secure Image Delivery
 - All covers and recipe images are stored in **private Supabase Storage buckets**.
 - The public bucket setting is disabled.
-- Image assets are served via short-lived signed URLs generated on the server only after validating that the user is the owner OR that the recipe has public access enabled.
+- Original uploads use a one-use signed path so image bytes never pass through
+  a Server Action or function request body. The authenticated server validates
+  the staged object and writes metadata-free WebP full and thumbnail
+  derivatives.
+- Image assets are served through 15-minute signed URLs generated on the
+  server after validating owner access. Public recipe photos remain deferred
+  until Slice 20 verifies the public ID, privacy flag, and active lifecycle.
+  Publication covers are never public.
+- Deletion queues every private object path. A Vercel daily cron invokes the
+  protected cleanup endpoint; Storage failures remain queued and are retried.
 
 ### 9.5 Abuse Protection
 - Public recipe routes are rate limited. Initial target: 60 requests per minute per IP address, applied as a Vercel Firewall rate-limit rule on the public recipe path.

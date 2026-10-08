@@ -1,6 +1,7 @@
 import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getRecipePhotos } from '../../../lib/media/data';
 import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
 import { formatIngredientDisplay } from '../../../lib/recipes/ingredient-rules';
 import {
@@ -9,6 +10,7 @@ import {
   parseInstructionMarkdown,
 } from '../../../lib/recipes/instruction-markdown';
 import { createClient } from '../../../lib/supabase/server';
+import { RecipePhotoGallery } from '../../media/media-display';
 import { RecipePrintAction } from '../recipe-detail-actions';
 
 type RecipeDetailPageProps = {
@@ -128,9 +130,10 @@ function renderInstructionMarkdown(
 export default async function RecipeDetailPage({ params }: RecipeDetailPageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const [recipe, picklists] = await Promise.all([
+  const [recipe, picklists, photos] = await Promise.all([
     getRecipe(supabase, id),
     getRecipePicklists(supabase),
+    getRecipePhotos(supabase, id),
   ]);
   if (!recipe) {
     notFound();
@@ -211,6 +214,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           </Link>
         </div>
       </div>
+      <RecipePhotoGallery photos={photos} />
       <section className="recipe-detail-section" aria-labelledby="metadata-title">
         <h2 id="metadata-title">Recipe details</h2>
         {sections.length > 0 && (

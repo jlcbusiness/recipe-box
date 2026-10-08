@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getPublicationCovers } from '../../lib/media/data';
 import type { PublicationOption } from '../../lib/recipes/data';
 import { createClient } from '../../lib/supabase/server';
 import { PublicationExplorer } from './publication-explorer';
@@ -27,10 +28,15 @@ export default async function LibraryPage({
     throw new Error('Unable to load the Library.');
   }
 
+  const coverImages = await getPublicationCovers(
+    supabase,
+    (data ?? []).map((publication) => publication.id),
+  );
   const publications = ((data ?? []) as PublicationExplorerRow[]).map(
     ({ recipes, ...publication }) => ({
       ...publication,
       recipe_count: recipes[0]?.count ?? 0,
+      cover_image_url: coverImages.get(publication.id)?.thumbnail_url ?? null,
     }),
   );
 

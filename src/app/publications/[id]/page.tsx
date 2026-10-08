@@ -1,6 +1,7 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: Explicit roles preserve table semantics after display: contents.
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getPublicationCover } from '../../../lib/media/data';
 import {
   getPublications,
   type PublicationOption,
@@ -8,8 +9,8 @@ import {
   recipeStateLabels,
 } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
+import { MediaManager } from '../../media/media-manager';
 import { PublicationCommaList } from '../publication-comma-list';
-import { PublicationCover } from '../publication-cover';
 import { PublicationDeleteAction } from '../publication-delete-action';
 
 const publicationTypeLabels = {
@@ -29,7 +30,7 @@ function getRecipeUrlHost(recipeUrl: string): string {
 export default async function PublicationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [publicationResult, activePublications] = await Promise.all([
+  const [publicationResult, activePublications, publicationCover] = await Promise.all([
     supabase
       .from('publications')
       .select(
@@ -38,6 +39,7 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
       .eq('id', id)
       .maybeSingle(),
     getPublications(supabase),
+    getPublicationCover(supabase, id),
   ]);
   const { data: publicationData, error: publicationError } = publicationResult;
 
@@ -109,7 +111,13 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
   return (
     <main className="recipes-main" aria-labelledby="page-title">
       <div className="publication-detail-heading">
-        <PublicationCover publication={publication} />
+        <MediaManager
+          assets={publicationCover ? [publicationCover] : []}
+          parentId={publication.id}
+          parentName={publication.name}
+          parentType="publication"
+          publication={publication}
+        />
         <div>
           <p className="eyebrow">{publicationTypeLabels[publication.publication_type]}</p>
           <h1 id="page-title">{publication.name}</h1>

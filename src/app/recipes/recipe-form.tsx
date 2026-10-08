@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import type { MediaAssetDisplay } from '../../lib/media/data';
 import type {
   IngredientOption,
   PublicationOption,
@@ -32,6 +33,7 @@ import {
   clearConditionalValuesForStateChange,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
+import { MediaManager } from '../media/media-manager';
 import { saveRecipe } from './actions';
 import { IngredientRowsEditor } from './ingredient-rows-editor';
 import { InstructionStepsEditor } from './instruction-steps-editor';
@@ -41,6 +43,7 @@ import { RecipeRelationshipsEditor } from './recipe-relationships-editor';
 type RecipeFormProps = {
   ingredients: IngredientOption[];
   initialPublicationId?: string | null;
+  mediaAssets?: MediaAssetDisplay[];
   picklists: RecipePicklistValue[];
   preparationOptions: string[];
   publications: PublicationOption[];
@@ -341,6 +344,7 @@ function RecipeNameField({ initialName }: { initialName: string }) {
 export function RecipeForm({
   ingredients,
   initialPublicationId,
+  mediaAssets = [],
   picklists,
   preparationOptions,
   publications,
@@ -577,7 +581,17 @@ export function RecipeForm({
       )}
       <fieldset className="recipe-metadata-section">
         <legend>Recipe</legend>
-        <RecipeNameField initialName={recipe?.name ?? ''} />
+        <div className="recipe-name-media-row">
+          <RecipeNameField initialName={recipe?.name ?? ''} />
+          {recipe && (
+            <MediaManager
+              assets={mediaAssets}
+              parentId={recipe.id}
+              parentName={recipe.name}
+              parentType="recipe"
+            />
+          )}
+        </div>
         <PublicationPicker
           initialPage={recipe?.publication_page ?? null}
           initialPublicationId={recipe?.publication_id ?? initialPublicationId ?? null}

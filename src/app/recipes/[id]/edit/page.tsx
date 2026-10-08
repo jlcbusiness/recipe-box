@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getRecipePhotos } from '../../../../lib/media/data';
 import {
   getIngredients,
   getPreparationOptions,
@@ -19,13 +20,15 @@ type EditRecipePageProps = {
 export default async function EditRecipePage({ params }: EditRecipePageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const [recipe, picklists, ingredients, preparationOptions, publications] = await Promise.all([
-    getRecipe(supabase, id),
-    getRecipePicklists(supabase),
-    getIngredients(supabase),
-    getPreparationOptions(supabase),
-    getPublications(supabase),
-  ]);
+  const [recipe, picklists, ingredients, preparationOptions, publications, photos] =
+    await Promise.all([
+      getRecipe(supabase, id),
+      getRecipePicklists(supabase),
+      getIngredients(supabase),
+      getPreparationOptions(supabase),
+      getPublications(supabase),
+      getRecipePhotos(supabase, id),
+    ]);
   if (!recipe) {
     notFound();
   }
@@ -47,6 +50,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
       </Link>
       <RecipeForm
         ingredients={ingredients}
+        mediaAssets={photos}
         picklists={picklists}
         preparationOptions={preparationOptions}
         publications={publications}

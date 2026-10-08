@@ -30,3 +30,11 @@ This guide lists Recipe Box keyboard controls. Focus the relevant control before
 ## Recipe picklists
 
 - Press `Escape` while a recipe picklist is open to close it and return focus to its trigger.
+
+## Managing recipe photos
+
+- When the photo-management pane opens, focus starts on its heading. Use `Tab` and `Shift+Tab` to reach its controls and photo buttons.
+- Focus a photo and press `Enter` or `Space` to make it the default; the first photo is the default.
+- Press `Ctrl+ArrowLeft` or `Ctrl+ArrowRight` to move the focused photo one position horizontally. Press `Ctrl+ArrowUp` or `Ctrl+ArrowDown` to move it one row, based on the current grid width. Moves that would go beyond the first or last photo do nothing.
+- Focus remains on the moved photo after a reorder, so you can press another `Ctrl+Arrow` without selecting it again.
+- With the photo-management pane open, press `Ctrl+V` or `Command+V` to paste an image. On mobile, the tap-and-hold paste target is skipped by `Tab` navigation but can be tapped directly to use the device's Paste menu.
