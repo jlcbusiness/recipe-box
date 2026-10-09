@@ -4319,6 +4319,30 @@ section.recipe-detail-section .recipe-relationship-list a {
   gap: 8px;
 }
 
+.publication-edit-action {
+  margin-right: auto;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  padding: 12px;
+}
+
+.publication-edit-top-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 17px;
+  margin-top: 16px;
+}
+
+.publication-edit-cover {
+  flex: 0 0 auto;
+}
+
+.publication-edit-name {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .publication-delete-section {
   display: flex;
   justify-content: flex-end;
@@ -4465,6 +4489,10 @@ section.recipe-detail-section .recipe-relationship-list a {
   margin-top: 28px;
 }
 
+.publication-edit-dialog .publication-form {
+  margin-top: 16px;
+}
+
 .publication-type-choice,
 .publication-field-full-width,
 .publication-form-error,
@@ -4508,6 +4536,8 @@ section.recipe-detail-section .recipe-relationship-list a {
 
 .recipes-main .publication-form .publication-field input,
 .publication-create-dialog .publication-form .publication-field input,
+.publication-edit-dialog .publication-form .publication-field input,
+.publication-edit-dialog .publication-edit-name input,
 .recipe-form .publication-picker-fieldset .publication-field input {
   width: 100%;
   min-width: 0;
@@ -4531,7 +4561,7 @@ section.recipe-detail-section .recipe-relationship-list a {
   display: flex;
   width: 100%;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 8px;
   border-top: 1px solid var(--line);
   padding-top: 14px;
@@ -4686,7 +4716,8 @@ section.recipe-detail-section .recipe-relationship-list a {
   cursor: pointer;
 }
 
-.publication-create-dialog {
+.publication-create-dialog,
+.publication-edit-dialog {
   position: fixed;
   width: min(480px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
@@ -4700,12 +4731,14 @@ section.recipe-detail-section .recipe-relationship-list a {
   box-shadow: 0 12px 28px rgb(35 45 31 / 24%);
 }
 
-.publication-create-dialog[open] {
+.publication-create-dialog[open],
+.publication-edit-dialog[open] {
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
 }
 
-.publication-create-dialog::backdrop {
+.publication-create-dialog::backdrop,
+.publication-edit-dialog::backdrop {
   background: rgb(36 40 32 / 40%);
 }
 
@@ -4719,6 +4752,10 @@ section.recipe-detail-section .recipe-relationship-list a {
 .publication-dialog-heading h2 {
   margin: 0;
   font-size: 18px;
+}
+
+.publication-edit-type {
+  margin: 0 0 4px;
 }
 
 .publication-dialog-close {
@@ -4807,17 +4844,34 @@ section.recipe-detail-section .recipe-relationship-list a {
     align-self: start;
   }
 
-  .publication-detail-heading .publication-cover-manager-trigger {
-    width: 48px;
-    height: 64px;
-  }
-
   .recipe-form
     .publication-picker-fieldset:has(#recipe-publication-page):has(#recipe-publication-url) {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
     align-items: end;
     gap: 8px;
+  }
+
+  .recipe-form
+    .publication-picker-fieldset:has(#recipe-publication-page):not(:has(#recipe-publication-url)) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+  }
+
+  .recipe-form
+    .publication-picker-fieldset:has(#recipe-publication-page):not(:has(#recipe-publication-url))
+    .publication-picker {
+    width: 100%;
+    max-width: none;
+  }
+
+  .recipe-form
+    .publication-picker-fieldset:has(#recipe-publication-page):not(:has(#recipe-publication-url))
+    .publication-field {
+    width: fit-content;
+    max-width: 100%;
   }
 
   .recipe-form .publication-picker-fieldset:has(#recipe-publication-page) .publication-picker {
@@ -4854,23 +4908,13 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .publication-detail-actions {
     grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
-
-  .publication-delete-section {
-    justify-content: flex-start;
-    margin-top: 16px;
-    padding-top: 0;
-  }
-
-  .publication-delete-action {
-    width: 100%;
+    justify-content: flex-end;
   }
 
   .publication-new-recipe {
     justify-content: center;
-    grid-column: 1 / -1;
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
   }
 
   .publication-recipe-list,
@@ -4963,7 +5007,8 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .publication-form-actions > * {
     width: auto;
-    flex: 1;
+    flex: 0 0 auto;
+    padding: 10px;
   }
 }
 

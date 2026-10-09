@@ -418,7 +418,7 @@ A Publication is any formal collection or entity that contains recipes.
 - Recipe detail presents the Magazine citation and online link on separate lines on mobile. Desktop displays the actual URL as clickable link text; mobile uses the compact text `View online`. It is a direct link to that recipe, not a supplemental Reference.
 - Magazine identity and issue location remain separate: recipes from different issues share the Magazine publication while retaining their own issue and page details.
 
-### 6.3 Creation Workflows
+### 6.3 Creation and Editing Workflows
 Publications can be created from three locations:
 1. **The Library:** An `Add publication` action.
 2. **Recipe Edit Mode:** The Publication field is a searchable single-select combobox with an inline `Add "{name}"` command after typing, which opens a compact creation dialog.
@@ -429,10 +429,31 @@ metadata: Name and URL fields take a full row; Author, Edition, ISBN, and
 Magazine title fields have widths appropriate to their expected content and wrap as a
 group when space is limited. Type choices use a labeled segmented control with
 an accessible native-radio affordance rather than visible radio dots.
-Existing Books, Magazine titles, and Sites can be edited in place without
-deleting and recreating them. Saving updates type-specific details while
-preserving recipes, covers, and relationships; Cancel discards unsaved changes.
-This edit workflow is planned for Slice 12.5.
+
+Existing Books, Magazine titles, and Sites can be edited in place from their
+detail page. The detail page shows a static cover and places Edit at the left
+of the action row, opposite the compact Add Recipe link. The edit pane places
+the cover image and its pencil control beside a standard labeled Name field;
+the spacing preserves a consistent gap beyond the pencil overhang. Publication
+type remains fixed, and the editor shows only the fields for that type. Book
+Author, Edition, ISBN, and Retailer URL are optional; a non-empty ISBN must be
+valid and is stored without separators. Magazine names are unique within an
+account after trimming and case-folding, while recipe issue and page citations
+remain on their recipes. Site URL is required. URL fields accept HTTP(S) and
+normalize a scheme-less host to HTTPS. Empty optional values are stored as null.
+
+Saving is explicit. Each successful save increments the publication version and
+appends one `publication.updated` before/after history event, including when the
+submitted values are unchanged. The save checks ownership, active status, and
+the version loaded by the editor. Validation, duplicate-title, and stale-version
+errors leave the dialog open with its draft intact; the top-right close control
+and Escape discard the draft. Delete is available in the edit pane and opens
+the existing publication deletion confirmation. Delete stays left-aligned and
+Save stays right-aligned at equal widths on desktop and mobile. Updating
+metadata preserves the publication ID, its recipe links and locations, and its
+cover association. Cover management remains a separate interaction in the edit
+pane. The authenticated client has no direct table-update grant; edits go
+through the owner-scoped update function.
 
 ### 6.4 The Recipe Tin (Unparented Recipes)
 - **Concept and Identity:** The Recipe Tin is the permanent, unparented container for recipes with no originating publication (family recipes, original experiments, clippings, recipes adapted from multiple sources).

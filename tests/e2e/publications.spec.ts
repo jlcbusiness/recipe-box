@@ -18,6 +18,256 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
 }
 
+test('publication metadata edits preserve type, support all source fields, and detect stale saves @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  const createPublication = async (
+    name: string,
+    publicationType: 'book' | 'magazine' | 'site',
+    author: string | null = null,
+    siteUrl: string | null = null,
+  ) => {
+    const response = await request.post(`${config.apiUrl}/rest/v1/rpc/create_publication`, {
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${user.accessToken}`,
+      },
+      data: {
+        p_name: name,
+        p_publication_type: publicationType,
+        p_author: author,
+        p_edition: null,
+        p_isbn: null,
+        p_retailer_url: null,
+        p_issue: null,
+        p_site_url: siteUrl,
+      },
+    });
+    expect(response.ok(), await response.text()).toBeTruthy();
+    return (await response.json()) as string;
+  };
+
+  try {
+    const bookId = await createPublication('Edit Book', 'book', 'Original Author');
+    const magazineId = await createPublication('Edit Magazine', 'magazine');
+    const siteId = await createPublication('Edit Site', 'site', null, 'https://old.example.test');
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto(`/publications/${bookId}`);
+
+    const editButton = page.getByRole('button', { name: 'Edit publication' });
+    const addRecipeLink = page.getByRole('link', { name: 'Add Recipe' });
+    await expect(
+      page.locator('.publication-detail-heading .publication-cover-manager-pencil'),
+    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: `Manage Edit Book cover` })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
+    const addRecipeBounds = await addRecipeLink.boundingBox();
+    const editButtonBounds = await editButton.boundingBox();
+    const detailActionsBounds = await page.locator('.publication-detail-actions').boundingBox();
+    if (!addRecipeBounds || !editButtonBounds || !detailActionsBounds) {
+      throw new Error('Publication actions must be measurable.');
+    }
+    expect(addRecipeBounds.width).toBeLessThan(160);
+    expect(addRecipeBounds.y).toBeCloseTo(editButtonBounds.y, 0);
+    expect(editButtonBounds.x).toBeCloseTo(detailActionsBounds.x, 0);
+    expect(addRecipeBounds.x + addRecipeBounds.width).toBeCloseTo(
+      detailActionsBounds.x + detailActionsBounds.width,
+      0,
+    );
+    await editButton.click();
+    let dialog = page.getByRole('dialog', { name: 'Edit publication' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel('Name', { exact: true })).toBeFocused();
+    await expect(dialog.getByLabel('Author')).toHaveValue('Original Author');
+    await expect(dialog.getByLabel('Name', { exact: true })).toHaveCSS('border-top-width', '1px');
+    await expect(dialog.getByLabel('Name', { exact: true })).toHaveCSS(
+      'border-top-color',
+      'rgb(155, 165, 150)',
+    );
+    await expect(dialog.getByLabel('Name', { exact: true })).toHaveCSS(
+      'background-color',
+      'rgb(255, 255, 255)',
+    );
+    await expect(dialog.getByRole('button', { name: 'Manage Edit Book cover' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Delete' })).toBeVisible();
+    const coverBounds = await dialog
+      .getByRole('button', { name: 'Manage Edit Book cover' })
+      .boundingBox();
+    const nameFieldBounds = await dialog.locator('.publication-edit-name').boundingBox();
+    if (!coverBounds || !nameFieldBounds) {
+      throw new Error('Publication cover and name field must be measurable.');
+    }
+    expect(nameFieldBounds.x).toBeGreaterThan(coverBounds.x + coverBounds.width);
+    expect(nameFieldBounds.x - coverBounds.x - coverBounds.width - 5).toBeCloseTo(12, 0);
+    expect(nameFieldBounds.y + nameFieldBounds.height).toBeCloseTo(
+      coverBounds.y + coverBounds.height,
+      0,
+    );
+    const desktopActionsBounds = await dialog.locator('.publication-form-actions').boundingBox();
+    const desktopDeleteBounds = await dialog.getByRole('button', { name: 'Delete' }).boundingBox();
+    const desktopSaveBounds = await dialog.getByRole('button', { name: 'Save' }).boundingBox();
+    if (!desktopActionsBounds || !desktopDeleteBounds || !desktopSaveBounds) {
+      throw new Error('Desktop publication actions must be measurable.');
+    }
+    expect(desktopDeleteBounds.x).toBeCloseTo(desktopActionsBounds.x, 0);
+    expect(desktopSaveBounds.width).toBeCloseTo(desktopDeleteBounds.width, 0);
+    expect(desktopSaveBounds.x + desktopSaveBounds.width).toBeCloseTo(
+      desktopActionsBounds.x + desktopActionsBounds.width,
+      0,
+    );
+    await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toHaveCount(0);
+    await expect(dialog.getByRole('radio')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(editButton).toBeFocused();
+
+    await editButton.click();
+    dialog = page.getByRole('dialog', { name: 'Edit publication' });
+    await dialog.getByLabel('Name', { exact: true }).fill('Discarded title');
+    await dialog.getByRole('button', { name: 'Close publication editor' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Edit Book' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    dialog = page.getByRole('dialog', { name: 'Edit publication' });
+    await dialog.getByLabel('Name', { exact: true }).fill('Updated Book');
+    await dialog.getByLabel('Author').fill('New Author');
+    await dialog.getByLabel('Edition').fill('Second edition');
+    await dialog.getByLabel('ISBN').fill('0306406153');
+    await dialog.getByLabel('Retailer URL').fill('books.example.test/updated');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toHaveText('Enter a valid ISBN-10 or ISBN-13.');
+
+    await dialog.getByLabel('ISBN').fill('0-306-40615-2');
+    await dialog.getByLabel('Retailer URL').fill('javascript:alert(1)');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toHaveText('Enter a valid HTTP(S) Retailer URL.');
+    await dialog.getByLabel('Retailer URL').fill('books.example.test/updated');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoHorizontalOverflow(page);
+    const mobileCoverBounds = await dialog
+      .getByRole('button', { name: 'Manage Edit Book cover' })
+      .boundingBox();
+    const mobileNameFieldBounds = await dialog.locator('.publication-edit-name').boundingBox();
+    if (!mobileCoverBounds || !mobileNameFieldBounds) {
+      throw new Error('Mobile publication cover and name field must be measurable.');
+    }
+    expect(mobileNameFieldBounds.x).toBeGreaterThan(mobileCoverBounds.x + mobileCoverBounds.width);
+    expect(mobileNameFieldBounds.y + mobileNameFieldBounds.height).toBeCloseTo(
+      mobileCoverBounds.y + mobileCoverBounds.height,
+      0,
+    );
+    const saveBounds = await dialog
+      .getByRole('button', { name: 'Save', exact: true })
+      .boundingBox();
+    const deleteButton = dialog.getByRole('button', { name: 'Delete' });
+    const deleteBounds = await deleteButton.boundingBox();
+    const mobileActionsBounds = await dialog.locator('.publication-form-actions').boundingBox();
+    if (!saveBounds || !deleteBounds || !mobileActionsBounds) {
+      throw new Error('Mobile publication actions must be measurable.');
+    }
+    expect(saveBounds?.height).toBeGreaterThanOrEqual(48);
+    expect(deleteBounds?.height).toBeGreaterThanOrEqual(48);
+    expect(deleteBounds.x).toBeCloseTo(mobileActionsBounds.x, 0);
+    expect(saveBounds.width).toBeCloseTo(deleteBounds.width, 0);
+    expect(saveBounds.x + saveBounds.width).toBeCloseTo(
+      mobileActionsBounds.x + mobileActionsBounds.width,
+      0,
+    );
+    for (const button of [deleteButton, dialog.getByRole('button', { name: 'Save' })]) {
+      const padding = await button.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return [styles.paddingTop, styles.paddingRight, styles.paddingBottom, styles.paddingLeft];
+      });
+      expect(padding).toEqual(['10px', '10px', '10px', '10px']);
+    }
+    const editA11y = await new AxeBuilder({ page }).analyze();
+    expect(editA11y.violations).toEqual([]);
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Updated Book' })).toBeVisible();
+    await expect(page.getByText('New Author')).toBeVisible();
+
+    const bookResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=publication_type,edition,isbn,retailer_url&id=eq.${bookId}`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    expect(bookResponse.ok(), await bookResponse.text()).toBeTruthy();
+    expect(await bookResponse.json()).toEqual([
+      {
+        publication_type: 'book',
+        edition: 'Second edition',
+        isbn: '0306406152',
+        retailer_url: 'https://books.example.test/updated',
+      },
+    ]);
+
+    await page.goto(`/publications/${magazineId}`);
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    dialog = page.getByRole('dialog', { name: 'Edit publication' });
+    await expect(dialog.getByLabel('Magazine name')).toHaveValue('Edit Magazine');
+    await expect(dialog.getByLabel('Author')).toHaveCount(0);
+    await expect(dialog.getByLabel('Site URL')).toHaveCount(0);
+    await dialog.getByLabel('Magazine name').fill('Updated Magazine');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Updated Magazine' })).toBeVisible();
+
+    await page.goto(`/publications/${siteId}`);
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    dialog = page.getByRole('dialog', { name: 'Edit publication' });
+    await expect(dialog.getByLabel('Site URL')).toHaveValue('https://old.example.test');
+    await expect(dialog.getByLabel('Author')).toHaveCount(0);
+    await dialog.getByLabel('Name', { exact: true }).fill('Updated Site');
+    await dialog.getByLabel('Site URL').fill('recipes.example.test');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Updated Site' })).toBeVisible();
+    await expect(page.locator('.publication-site-link')).toHaveAttribute(
+      'href',
+      'https://recipes.example.test/',
+    );
+
+    await page.goto(`/publications/${bookId}`);
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    dialog = page.getByRole('dialog', { name: 'Edit publication' });
+    await dialog.getByLabel('Name', { exact: true }).fill('Stale draft');
+    const concurrentUpdate = await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${user.accessToken}`,
+      },
+      data: {
+        p_publication_id: bookId,
+        p_expected_version: 2,
+        p_name: 'Concurrent update',
+        p_author: 'New Author',
+        p_edition: 'Second edition',
+        p_isbn: '0306406152',
+        p_retailer_url: 'https://books.example.test/updated',
+        p_site_url: null,
+      },
+    });
+    expect(concurrentUpdate.ok(), await concurrentUpdate.text()).toBeTruthy();
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toContainText('changed in another session');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Close publication editor' }).click();
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Concurrent update' })).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Library Explorer defaults to Grid on desktop and exposes compact control picklists @e2e', async ({
   page,
   request,

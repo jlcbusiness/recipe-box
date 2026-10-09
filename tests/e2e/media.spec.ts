@@ -156,7 +156,14 @@ test('image management panes stage covers and immediately manage decorative reci
 
     await page.goto(`/publications/${publicationId}`);
     await expect(page.getByRole('heading', { name: publicationName })).toBeVisible();
-    await expect(page.locator('.publication-cover-manager-trigger')).toBeVisible();
+    await expect(page.locator('.publication-cover-manager-pencil')).toHaveCount(0);
+    await expect(
+      page.locator('.publication-detail-heading .publication-cover-image-content'),
+    ).toHaveCount(0);
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    const publicationEditor = page.getByRole('dialog', { name: 'Edit publication' });
+    await expect(publicationEditor).toBeVisible();
+    await expect(publicationEditor.locator('.publication-cover-manager-pencil')).toBeVisible();
     await page.getByRole('button', { name: `Manage ${publicationName} cover` }).click();
     const coverDialog = page.getByRole('dialog', { name: 'Manage publication cover' });
     await expect(coverDialog).toBeVisible();
@@ -212,7 +219,12 @@ test('image management panes stage covers and immediately manage decorative reci
     await expect(coverDialog.locator('.publication-cover-editor-image')).toBeVisible();
     await coverDialog.getByRole('button', { name: 'Submit' }).click();
     await expect(coverDialog).not.toBeVisible();
-    await expect(page.locator('.publication-cover-manager-image')).toBeVisible();
+    await expect(
+      page.locator('.publication-edit-cover .publication-cover-manager-image'),
+    ).toBeVisible();
+    await expect(
+      page.locator('.publication-detail-heading .publication-cover-image-content'),
+    ).toBeVisible();
     const coverResponse = await request.get(
       `${apiUrl}/rest/v1/media_assets?select=full_path&publication_id=eq.${publicationId}&status=eq.ready`,
       { headers: serviceHeaders(serviceRoleKey) },
@@ -239,7 +251,9 @@ test('image management panes stage covers and immediately manage decorative reci
       buffer: imageBuffer,
     });
     await coverDialog.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.locator('.publication-cover-manager-image')).toBeVisible();
+    await expect(
+      page.locator('.publication-edit-cover .publication-cover-manager-image'),
+    ).toBeVisible();
     const coverAxe = await new AxeBuilder({ page }).analyze();
     expect(coverAxe.violations).toEqual([]);
 
@@ -737,18 +751,24 @@ test('image management panes stage covers and immediately manage decorative reci
     await editPhotoDialog.getByRole('button', { name: 'Done' }).click();
 
     await page.goto(`/publications/${publicationId}`);
+    await page.getByRole('button', { name: 'Edit publication' }).click();
     await page.getByRole('button', { name: `Manage ${publicationName} cover` }).click();
     const finalCoverDialog = page.getByRole('dialog', { name: 'Manage publication cover' });
     await finalCoverDialog.getByRole('button', { name: 'Remove cover image' }).click();
     await finalCoverDialog.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.locator('.publication-cover-manager-image')).toBeVisible();
+    await expect(
+      page.locator('.publication-edit-cover .publication-cover-manager-image'),
+    ).toBeVisible();
     await page.getByRole('button', { name: `Manage ${publicationName} cover` }).click();
     await finalCoverDialog.getByRole('button', { name: 'Remove cover image' }).click();
     await finalCoverDialog.getByRole('button', { name: 'Submit' }).click();
     await expect(
-      page
-        .getByRole('button', { name: `Manage ${publicationName} cover` })
-        .locator('.publication-cover-fallback'),
+      page.locator(
+        '.publication-edit-cover .publication-cover-manager-trigger .publication-cover-fallback',
+      ),
+    ).toBeVisible();
+    await expect(
+      page.locator('.publication-detail-heading .publication-cover-fallback').first(),
     ).toBeVisible();
   } finally {
     await deleteTestUser(request, otherOwner);

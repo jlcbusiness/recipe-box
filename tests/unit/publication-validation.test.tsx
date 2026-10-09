@@ -3,6 +3,7 @@ import {
   formatIsbnInput,
   normalizeHttpUrl,
   normalizeIsbn,
+  validatePublicationDetails,
 } from '../../src/lib/publications/validation';
 
 describe('normalizeHttpUrl', () => {
@@ -57,5 +58,86 @@ describe('formatIsbnInput', () => {
 
   it('preserves the ISBN-10 X check character', () => {
     expect(formatIsbnInput('080442957X')).toBe('0-8044-2957-X');
+  });
+});
+
+describe('validatePublicationDetails', () => {
+  it('trims and normalizes Book fields while clearing empty optional values', () => {
+    expect(
+      validatePublicationDetails('book', {
+        name: '  Kitchen Notes  ',
+        author: '  A. Cook  ',
+        edition: ' ',
+        isbn: '0-306-40615-2',
+        retailerUrl: ' books.example.test/kitchen-notes ',
+        siteUrl: 'ignored.example.test',
+      }),
+    ).toEqual({
+      data: {
+        name: 'Kitchen Notes',
+        author: 'A. Cook',
+        edition: null,
+        isbn: '0306406152',
+        retailerUrl: 'https://books.example.test/kitchen-notes',
+        siteUrl: null,
+      },
+      error: null,
+    });
+  });
+
+  it('rejects an invalid ISBN and an invalid retailer URL', () => {
+    expect(
+      validatePublicationDetails('book', {
+        name: 'Kitchen Notes',
+        author: '',
+        edition: '',
+        isbn: '0306406153',
+        retailerUrl: '',
+        siteUrl: '',
+      }).error,
+    ).toBe('Enter a valid ISBN-10 or ISBN-13.');
+    expect(
+      validatePublicationDetails('book', {
+        name: 'Kitchen Notes',
+        author: '',
+        edition: '',
+        isbn: '',
+        retailerUrl: 'javascript:alert(1)',
+        siteUrl: '',
+      }).error,
+    ).toBe('Enter a valid HTTP(S) Retailer URL.');
+  });
+
+  it('requires a valid Site URL and ignores fields from other publication types', () => {
+    expect(
+      validatePublicationDetails('site', {
+        name: 'Kitchen Online',
+        author: 'Ignored',
+        edition: 'Ignored',
+        isbn: 'Ignored',
+        retailerUrl: 'Ignored',
+        siteUrl: '',
+      }).error,
+    ).toBe('Enter the Site URL.');
+    expect(
+      validatePublicationDetails('magazine', {
+        name: '  Seasonal Table  ',
+        author: 'Ignored',
+        edition: 'Ignored',
+        isbn: 'Ignored',
+        retailerUrl: 'Ignored',
+        siteUrl: 'Ignored',
+      }),
+    ).toEqual({
+      data: {
+        name: 'Seasonal Table',
+        author: null,
+        edition: null,
+        isbn: null,
+        retailerUrl: null,
+        siteUrl: null,
+      },
+      error: null,
+    });
   });
 });

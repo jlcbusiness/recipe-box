@@ -9,9 +9,9 @@ import {
   recipeStateLabels,
 } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
-import { MediaManager } from '../../media/media-manager';
 import { PublicationCommaList } from '../publication-comma-list';
-import { PublicationDeleteAction } from '../publication-delete-action';
+import { PublicationCover } from '../publication-cover';
+import { PublicationEditAction } from '../publication-edit-action';
 
 const publicationTypeLabels = {
   book: 'Book',
@@ -111,13 +111,7 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
   return (
     <main className="recipes-main" aria-labelledby="page-title">
       <div className="publication-detail-heading">
-        <MediaManager
-          assets={publicationCover ? [publicationCover] : []}
-          parentId={publication.id}
-          parentName={publication.name}
-          parentType="publication"
-          publication={publication}
-        />
+        <PublicationCover imageUrl={publicationCover?.thumbnail_url} publication={publication} />
         <div>
           <p className="eyebrow">{publicationTypeLabels[publication.publication_type]}</p>
           <h1 id="page-title">{publication.name}</h1>
@@ -131,6 +125,12 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
           )}
         </div>
         <div className="publication-detail-actions">
+          <PublicationEditAction
+            assets={publicationCover ? [publicationCover] : []}
+            destinations={destinations}
+            hasRecipes={recipes.length > 0}
+            publication={publication}
+          />
           <Link
             className="recipe-secondary-link collection-add-action publication-new-recipe"
             href={`/recipes/new?publication=${publication.id}`}
@@ -225,15 +225,6 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
           </table>
         </div>
       )}
-      <section aria-label="Publication deletion" className="publication-delete-section">
-        <PublicationDeleteAction
-          destinations={destinations}
-          publicationId={publication.id}
-          publicationName={publication.name}
-          version={publication.version}
-          hasRecipes={recipes.length > 0}
-        />
-      </section>
     </main>
   );
 }

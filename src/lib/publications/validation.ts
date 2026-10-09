@@ -1,5 +1,87 @@
 import { asIsbn10, parse } from 'isbn3';
 
+export type PublicationDetails = {
+  name: string;
+  author: string | null;
+  edition: string | null;
+  isbn: string | null;
+  retailerUrl: string | null;
+  siteUrl: string | null;
+};
+
+type PublicationDetailsInput = Omit<PublicationDetails, 'name'> & { name: string };
+
+export function validatePublicationDetails(
+  publicationType: 'book' | 'magazine' | 'site',
+  input: PublicationDetailsInput,
+): { data: PublicationDetails | null; error: string | null } {
+  const name = input.name.trim();
+  if (!name) {
+    return { data: null, error: 'Enter a publication name.' };
+  }
+
+  if (publicationType === 'book') {
+    const isbnValue = input.isbn?.trim() ?? '';
+    const isbn = isbnValue ? normalizeIsbn(isbnValue) : null;
+    if (isbnValue && !isbn) {
+      return { data: null, error: 'Enter a valid ISBN-10 or ISBN-13.' };
+    }
+
+    const retailerUrlValue = input.retailerUrl?.trim() ?? '';
+    const retailerUrl = retailerUrlValue ? normalizeHttpUrl(retailerUrlValue) : null;
+    if (retailerUrlValue && !retailerUrl) {
+      return { data: null, error: 'Enter a valid HTTP(S) Retailer URL.' };
+    }
+
+    return {
+      data: {
+        name,
+        author: input.author?.trim() || null,
+        edition: input.edition?.trim() || null,
+        isbn,
+        retailerUrl,
+        siteUrl: null,
+      },
+      error: null,
+    };
+  }
+
+  if (publicationType === 'site') {
+    const siteUrlValue = input.siteUrl?.trim() ?? '';
+    const siteUrl = siteUrlValue ? normalizeHttpUrl(siteUrlValue) : null;
+    if (!siteUrl) {
+      return {
+        data: null,
+        error: siteUrlValue ? 'Enter a valid HTTP(S) Site URL.' : 'Enter the Site URL.',
+      };
+    }
+
+    return {
+      data: {
+        name,
+        author: null,
+        edition: null,
+        isbn: null,
+        retailerUrl: null,
+        siteUrl,
+      },
+      error: null,
+    };
+  }
+
+  return {
+    data: {
+      name,
+      author: null,
+      edition: null,
+      isbn: null,
+      retailerUrl: null,
+      siteUrl: null,
+    },
+    error: null,
+  };
+}
+
 export function normalizeHttpUrl(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) {

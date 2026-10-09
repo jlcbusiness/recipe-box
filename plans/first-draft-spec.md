@@ -224,7 +224,7 @@ The searchable single-select
 Publication picker includes Add new publication. Creating a recipe inside a
 publication preselects it; app-level creation starts in the Recipe Tin.
 Existing publications can be edited in place, preserving their recipes and
-cover rather than requiring deletion and recreation (Slice 12.5).
+cover rather than requiring deletion and recreation (delivered in Slice 12.5).
 
 A publication recipe list displays each recipe's state, meal type, food type,
 applicable enthusiasm, verdict, or reason, and total time. A recipe may display

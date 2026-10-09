@@ -2,7 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { normalizeHttpUrl, normalizeIsbn } from '../../lib/publications/validation';
+import {
+  normalizeHttpUrl,
+  normalizeIsbn,
+  validatePublicationDetails,
+} from '../../lib/publications/validation';
 import type { PublicationOption } from '../../lib/recipes/data';
 import { createClient } from '../../lib/supabase/server';
 
@@ -11,12 +15,91 @@ export type PublicationActionState = {
   publication?: PublicationOption;
 };
 
+export type PublicationEditActionState = {
+  error?: string;
+  updated?: boolean;
+};
+
 function formText(formData: FormData, name: string): string {
   return String(formData.get(name) ?? '').trim();
 }
 
 function optionalText(formData: FormData, name: string): string | null {
   return formText(formData, name) || null;
+}
+
+export async function updatePublication(
+  _previousState: PublicationEditActionState | undefined,
+  formData: FormData,
+): Promise<PublicationEditActionState> {
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { error: 'Sign in before editing a publication.' };
+  }
+
+  const publicationId = formText(formData, 'publication_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  if (!publicationId || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+    return { error: 'This publication changed in another session. Close and reopen the editor.' };
+  }
+
+  const { data: publication, error: publicationError } = await supabase
+    .from('publications')
+    .select('publication_type')
+    .eq('id', publicationId)
+    .maybeSingle();
+  if (
+    publicationError ||
+    !publication ||
+    !['book', 'magazine', 'site'].includes(publication.publication_type)
+  ) {
+    return { error: 'This publication is no longer available.' };
+  }
+
+  const { data: validated, error: validationError } = validatePublicationDetails(
+    publication.publication_type as PublicationOption['publication_type'],
+    {
+      name: formText(formData, 'name'),
+      author: optionalText(formData, 'author'),
+      edition: optionalText(formData, 'edition'),
+      isbn: optionalText(formData, 'isbn'),
+      retailerUrl: optionalText(formData, 'retailer_url'),
+      siteUrl: optionalText(formData, 'site_url'),
+    },
+  );
+  if (validationError || !validated) {
+    return { error: validationError ?? 'Check the publication details and try again.' };
+  }
+
+  const { error } = await supabase.rpc('update_publication', {
+    p_publication_id: publicationId,
+    p_expected_version: expectedVersion,
+    p_name: validated.name,
+    p_author: validated.author,
+    p_edition: validated.edition,
+    p_isbn: validated.isbn,
+    p_retailer_url: validated.retailerUrl,
+    p_site_url: validated.siteUrl,
+  });
+  if (error?.code === '23505') {
+    return { error: 'A Magazine with this title already exists.' };
+  }
+  if (error?.code === '40001' || error?.code === '55000' || error?.code === 'P0002') {
+    return {
+      error:
+        'This publication changed in another session. Close and reopen the editor to load the current details.',
+    };
+  }
+  if (error) {
+    return { error: 'Unable to save this publication. Check its details and try again.' };
+  }
+
+  revalidatePath('/publications');
+  revalidatePath(`/publications/${publicationId}`);
+  revalidatePath('/recipes');
+
+  return { updated: true };
 }
 
 export async function createPublication(

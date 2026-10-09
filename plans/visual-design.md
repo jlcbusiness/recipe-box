@@ -489,6 +489,28 @@ Public and printed recipes always use the default bold dark-red styling.
   use the same Standard-view formatter and ordering as recipe detail; app chrome
   and editing controls are omitted. Amounts remain unscaled and unconverted.
 
+## Publication Editing
+
+Publication detail shows the cover without an edit trigger. Its action row
+places the square `Edit publication` pencil at the left and the compact Add
+Recipe link at the right. The pencil has a 48px hit area and visible focus. It
+opens a native modal dialog, focuses the Name field, displays the fixed
+publication type, and shows only the fields for that type. The edit pane places
+the interactive cover image and its pencil beside Name. Name keeps the same
+visible label and bordered input treatment as the other fields; allow 17px
+between the cover button and field so the pencil's 5px overhang leaves 12px of
+visible space. Other fields retain the established content-sized form layout.
+
+Save and Delete remain visible text actions. Delete opens the publication
+deletion confirmation; it replaces Cancel in the edit pane. Delete is
+left-aligned and Save is right-aligned, with equal rendered widths on desktop
+and mobile. At mobile widths both buttons retain 48px height and use 10px of
+padding on every side. The top-right close control and Escape discard the draft
+and return focus to the edit action; invalid data and version conflicts keep
+the dialog open with an announced error and the draft preserved. The form
+scrolls within the viewport without horizontal page overflow. Cover management
+remains a separate interaction in the edit pane, bound to the same publication.
+
 ## Publication Cover Fallbacks
 
 When a Book has no cover image, show a light-blue book-shaped rectangle with a

@@ -41,9 +41,11 @@ publication covers and private or trashed recipe photos are never public.
 - Enforce a 1 GiB per-account quota against the bytes of stored derivatives.
   Allow one cover per publication and at most 12 photos per recipe. The first
   recipe photo becomes primary. Changing primary or order is explicit.
-- Publication cover management opens from the cover image and stages selection
-  or removal until Submit; Cancel discards pending changes. The pane provides
-  icon-only device selection and removal, plus a camera action on mobile.
+- Publication cover management opens from the cover image and pencil inside
+  the publication edit pane. It stages selection or removal until Submit;
+  Cancel discards pending changes. The pane provides icon-only device
+  selection and removal, plus a camera action on mobile. The publication detail
+  page shows the cover without an edit trigger.
 - Recipe photo management opens from a camera action beside Name. Upload,
   removal, default selection, and ordering take effect immediately. Show a
   three-column photo grid on a 352px mobile viewport; with the pane's padding

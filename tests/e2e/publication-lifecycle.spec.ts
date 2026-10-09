@@ -239,6 +239,258 @@ function runLocalSql<T>(sql: string): T[] {
   return result.rows;
 }
 
+test('publication updates are owner-scoped, versioned, and preserve recipe locations @e2e', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const other = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const publicationId = await createPublication(request, config, owner, 'Original Cookbook');
+    const recipe = await createRecipe(request, config, owner, 'Linked recipe');
+    await assignRecipe(request, config, recipe.id, publicationId, '18-19');
+    const [coverAsset] = runLocalSql<{ id: string }>(`
+      insert into public.media_assets (
+        account_id, publication_id, asset_type, status, full_path, thumbnail_path,
+        content_type, byte_size, width, height
+      )
+      values (
+        '${owner.id}', '${publicationId}', 'publication_cover', 'ready',
+        'test/${publicationId}.webp', 'test/${publicationId}-thumb.webp',
+        'image/webp', 1, 1, 1
+      )
+      returning id;
+    `);
+
+    const updateResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+      headers: ownerHeaders(config, owner),
+      data: {
+        p_publication_id: publicationId,
+        p_expected_version: 1,
+        p_name: 'Updated Cookbook',
+        p_author: 'A. Writer',
+        p_edition: 'Second edition',
+        p_isbn: '0306406152',
+        p_retailer_url: 'https://books.example.test/updated',
+        p_site_url: null,
+      },
+    });
+    expect(updateResponse.ok(), await updateResponse.text()).toBeTruthy();
+    expect(await updateResponse.json()).toEqual([{ id: publicationId, version: 2 }]);
+
+    const publicationResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=id,name,publication_type,author,edition,isbn,retailer_url,site_url,version&id=eq.${publicationId}`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(publicationResponse.ok(), await publicationResponse.text()).toBeTruthy();
+    expect(await publicationResponse.json()).toEqual([
+      {
+        id: publicationId,
+        name: 'Updated Cookbook',
+        publication_type: 'book',
+        author: 'A. Writer',
+        edition: 'Second edition',
+        isbn: '0306406152',
+        retailer_url: 'https://books.example.test/updated',
+        site_url: null,
+        version: 2,
+      },
+    ]);
+    expect(await readRecipe(request, config, recipe.id)).toMatchObject({
+      publication_id: publicationId,
+      publication_page: '18-19',
+      trashed_at: null,
+    });
+
+    const historyResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publication_history?select=event_type,before_data,after_data&record_id=eq.${publicationId}&order=created_at.asc`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(historyResponse.ok(), await historyResponse.text()).toBeTruthy();
+    const initialHistory = (await historyResponse.json()) as {
+      event_type: string;
+      before_data: { name: string; version: number } | null;
+      after_data: { name: string; version: number } | null;
+    }[];
+    expect(initialHistory.filter((event) => event.event_type === 'publication.updated')).toEqual([
+      {
+        event_type: 'publication.updated',
+        before_data: expect.objectContaining({ name: 'Original Cookbook', version: 1 }),
+        after_data: expect.objectContaining({ name: 'Updated Cookbook', version: 2 }),
+      },
+    ]);
+
+    const coverResponse = await request.get(
+      `${config.apiUrl}/rest/v1/media_assets?select=id,publication_id&publication_id=eq.${publicationId}&asset_type=eq.publication_cover&status=eq.ready`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(coverResponse.ok(), await coverResponse.text()).toBeTruthy();
+    expect(await coverResponse.json()).toEqual([
+      { id: coverAsset.id, publication_id: publicationId },
+    ]);
+
+    const unchangedSave = await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+      headers: ownerHeaders(config, owner),
+      data: {
+        p_publication_id: publicationId,
+        p_expected_version: 2,
+        p_name: 'Updated Cookbook',
+        p_author: 'A. Writer',
+        p_edition: 'Second edition',
+        p_isbn: '0306406152',
+        p_retailer_url: 'https://books.example.test/updated',
+        p_site_url: null,
+      },
+    });
+    expect(unchangedSave.ok(), await unchangedSave.text()).toBeTruthy();
+    expect(await unchangedSave.json()).toEqual([{ id: publicationId, version: 3 }]);
+
+    await expectErrorCode(
+      await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+        headers: { apikey: config.anonKey },
+        data: {
+          p_publication_id: publicationId,
+          p_expected_version: 3,
+          p_name: 'Anonymous Update',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_site_url: null,
+        },
+      }),
+      '42501',
+    );
+    await expectErrorCode(
+      await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+        headers: ownerHeaders(config, owner),
+        data: {
+          p_publication_id: publicationId,
+          p_expected_version: 3,
+          p_name: 'Invalid URL',
+          p_author: 'A. Writer',
+          p_edition: 'Second edition',
+          p_isbn: '0306406152',
+          p_retailer_url: 'javascript:alert(1)',
+          p_site_url: null,
+        },
+      }),
+      '23514',
+    );
+
+    await expectErrorCode(
+      await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+        headers: ownerHeaders(config, owner),
+        data: {
+          p_publication_id: publicationId,
+          p_expected_version: 1,
+          p_name: 'Stale Cookbook',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_site_url: null,
+        },
+      }),
+      '40001',
+    );
+    await expectErrorCode(
+      await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+        headers: ownerHeaders(config, other),
+        data: {
+          p_publication_id: publicationId,
+          p_expected_version: 3,
+          p_name: 'Foreign Update',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_site_url: null,
+        },
+      }),
+      'P0002',
+    );
+
+    const createMagazine = async (name: string) => {
+      const response = await request.post(`${config.apiUrl}/rest/v1/rpc/create_publication`, {
+        headers: ownerHeaders(config, owner),
+        data: {
+          p_name: name,
+          p_publication_type: 'magazine',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_issue: null,
+          p_site_url: null,
+        },
+      });
+      expect(response.ok(), await response.text()).toBeTruthy();
+      return (await response.json()) as string;
+    };
+    const existingMagazineId = await createMagazine('Seasonal Table');
+    const duplicateMagazineId = await createMagazine('Other Magazine');
+    await expectErrorCode(
+      await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+        headers: ownerHeaders(config, owner),
+        data: {
+          p_publication_id: duplicateMagazineId,
+          p_expected_version: 1,
+          p_name: '  seasonal table  ',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_site_url: null,
+        },
+      }),
+      '23505',
+    );
+    expect(existingMagazineId).not.toBe(duplicateMagazineId);
+
+    const trashedPublicationId = await createPublication(request, config, owner, 'Already trashed');
+    const trashedResponse = await trashPublication(
+      request,
+      config,
+      owner,
+      trashedPublicationId,
+      1,
+      'delete',
+    );
+    expect(trashedResponse.ok(), await trashedResponse.text()).toBeTruthy();
+    await expectErrorCode(
+      await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
+        headers: ownerHeaders(config, owner),
+        data: {
+          p_publication_id: trashedPublicationId,
+          p_expected_version: 2,
+          p_name: 'Restore by editing',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_site_url: null,
+        },
+      }),
+      '55000',
+    );
+
+    const unchangedHistory = await request.get(
+      `${config.apiUrl}/rest/v1/publication_history?select=event_type&record_id=eq.${publicationId}`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(unchangedHistory.ok(), await unchangedHistory.text()).toBeTruthy();
+    const finalHistory = (await unchangedHistory.json()) as { event_type: string }[];
+    expect(finalHistory.filter((event) => event.event_type === 'publication.updated')).toHaveLength(
+      2,
+    );
+  } finally {
+    await deleteTestUser(request, owner);
+    await deleteTestUser(request, other);
+  }
+});
+
 test('publication lifecycle applies recipe disposition atomically and restores retained links @e2e', async ({
   request,
 }) => {
@@ -552,7 +804,11 @@ test('empty publication deletion confirms without a recipe disposition @e2e @a11
     const publicationId = await createPublication(request, config, owner, 'Empty publication');
     await signIn(page, owner.email, owner.password);
     await page.goto(`/publications/${publicationId}`);
-    await page.getByRole('button', { name: 'Delete publication' }).click();
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    await page
+      .getByRole('dialog', { name: 'Edit publication' })
+      .getByRole('button', { name: 'Delete' })
+      .click();
 
     const dialog = page.getByRole('dialog', { name: 'Move publication to Trash?' });
     await expect(dialog).toBeVisible();
@@ -590,17 +846,15 @@ test('publication deletion requires a disposition and can be restored from Trash
     await expectNoHorizontalOverflow(page);
     await expect(
       page.locator('.publication-detail-actions').getByRole('button', {
-        name: 'Delete publication',
+        name: 'Delete',
       }),
     ).toHaveCount(0);
-    const deletePublicationButton = page
-      .locator('.publication-delete-section')
-      .getByRole('button', { name: 'Delete publication' });
-    await expect(
-      page.locator('.publication-delete-section').getByRole('button', {
-        name: 'Delete publication',
-      }),
-    ).toBeVisible();
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    const editDialog = page.getByRole('dialog', { name: 'Edit publication' });
+    const deletePublicationButton = editDialog.getByRole('button', {
+      name: 'Delete',
+    });
+    await expect(deletePublicationButton).toBeVisible();
     await expect(deletePublicationButton).toHaveCSS('border-radius', '0px');
     await expect(deletePublicationButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await deletePublicationButton.hover();
@@ -737,40 +991,22 @@ $trash_display_fixture$;`);
     const mobileAddRecipeBounds = await page
       .getByRole('link', { name: 'Add Recipe' })
       .boundingBox();
-    const mobileRecipeDividerBounds = await page
-      .locator('.publication-recipe-scroll')
+    const mobileEditButtonBounds = await page
+      .getByRole('button', { name: 'Edit publication' })
       .boundingBox();
-    const mobileLastRecipeBounds = await mobilePublicationTable
-      .locator('tbody tr:last-child')
+    const mobileDetailActionsBounds = await page
+      .locator('.publication-detail-actions')
       .boundingBox();
-    const mobileDeleteButtonBounds = await page
-      .locator('.publication-delete-section')
-      .getByRole('button', { name: 'Delete publication' })
-      .boundingBox();
-    if (
-      !mobileAddRecipeBounds ||
-      !mobileRecipeDividerBounds ||
-      !mobileLastRecipeBounds ||
-      !mobileDeleteButtonBounds
-    ) {
-      throw new Error('Mobile publication actions and dividers must be measurable.');
+    if (!mobileAddRecipeBounds || !mobileEditButtonBounds || !mobileDetailActionsBounds) {
+      throw new Error('Mobile publication actions must be measurable.');
     }
-    expect(mobileDeleteButtonBounds.height).toBe(mobileAddRecipeBounds.height);
-    expect(Math.abs(mobileDeleteButtonBounds.width - mobileAddRecipeBounds.width)).toBeLessThan(1);
-    const mobileAddRecipe = page.getByRole('link', { name: 'Add Recipe' });
-    const mobileDeleteButton = page
-      .locator('.publication-delete-section')
-      .getByRole('button', { name: 'Delete publication' });
-    await expect(mobileAddRecipe).toHaveCSS('justify-content', 'center');
-    await expect(mobileDeleteButton).toHaveCSS(
-      'font-size',
-      await mobileAddRecipe.evaluate((element) => getComputedStyle(element).fontSize),
+    expect(mobileAddRecipeBounds.width).toBeLessThan(160);
+    expect(mobileAddRecipeBounds.y).toBeCloseTo(mobileEditButtonBounds.y, 0);
+    expect(mobileEditButtonBounds.x).toBeCloseTo(mobileDetailActionsBounds.x, 0);
+    expect(mobileAddRecipeBounds.x + mobileAddRecipeBounds.width).toBeCloseTo(
+      mobileDetailActionsBounds.x + mobileDetailActionsBounds.width,
+      0,
     );
-    const mobileAddToDividerSpacing =
-      mobileRecipeDividerBounds.y - mobileAddRecipeBounds.y - mobileAddRecipeBounds.height;
-    const mobileDividerToDeleteSpacing =
-      mobileDeleteButtonBounds.y - mobileLastRecipeBounds.y - mobileLastRecipeBounds.height;
-    expect(Math.abs(mobileAddToDividerSpacing - mobileDividerToDeleteSpacing)).toBeLessThan(3);
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`/publications/${publicationId}`);
@@ -797,29 +1033,20 @@ $trash_display_fixture$;`);
       .locator('tbody tr:first-child td:last-child')
       .evaluate((cell) => cell.getBoundingClientRect().right);
     expect(publicationRecipeLastCellRight).toBeCloseTo(publicationRecipeTableRight, 1);
-    await expect(page.locator('.publication-delete-section')).toHaveCSS('border-top-width', '0px');
     await expect(publicationRecipeTable.locator('tbody tr:last-child td').last()).toHaveCSS(
       'border-bottom-width',
       '1px',
     );
     const addRecipeBounds = await page.getByRole('link', { name: 'Add Recipe' }).boundingBox();
-    const recipeDividerBounds = await page.locator('.publication-recipe-scroll').boundingBox();
-    const lastRecipeBounds = await publicationRecipeTable
-      .locator('tbody tr:last-child td')
-      .last()
-      .boundingBox();
-    const deleteButtonBounds = await page
-      .locator('.publication-delete-section')
-      .getByRole('button', { name: 'Delete publication' })
-      .boundingBox();
-    if (!addRecipeBounds || !recipeDividerBounds || !lastRecipeBounds || !deleteButtonBounds) {
-      throw new Error('Publication actions and recipe dividers must be measurable.');
+    const detailActionsBounds = await page.locator('.publication-detail-actions').boundingBox();
+    if (!addRecipeBounds || !detailActionsBounds) {
+      throw new Error('Publication actions must be measurable.');
     }
-    expect(deleteButtonBounds.height).toBe(addRecipeBounds.height);
-    const addToDividerSpacing = recipeDividerBounds.y - addRecipeBounds.y - addRecipeBounds.height;
-    const dividerToDeleteSpacing =
-      deleteButtonBounds.y - lastRecipeBounds.y - lastRecipeBounds.height;
-    expect(Math.abs(addToDividerSpacing - dividerToDeleteSpacing)).toBeLessThan(3);
+    expect(addRecipeBounds.width).toBeLessThan(160);
+    expect(addRecipeBounds.x + addRecipeBounds.width).toBeCloseTo(
+      detailActionsBounds.x + detailActionsBounds.width,
+      0,
+    );
   } finally {
     await deleteTestUser(request, owner);
   }
