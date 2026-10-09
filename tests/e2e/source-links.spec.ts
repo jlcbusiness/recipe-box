@@ -529,24 +529,21 @@ test('recipe source links save atomically and remain recoverable through Trash @
       'Notes',
       'References',
     ]);
-    const enthusiasmTrigger = page.getByRole('button', { name: 'Enthusiasm', exact: true });
+    const enthusiasmTrigger = page.getByRole('combobox', { name: 'Enthusiasm', exact: true });
     const enthusiasmWidths = await enthusiasmTrigger.evaluate((trigger) => {
       const measure = trigger
         .closest('.recipe-single-picklist')
-        ?.querySelector('.recipe-picklist-measure');
+        ?.querySelector('.single-picklist-measure');
       return {
         trigger: trigger.getBoundingClientRect().width,
         measure: measure?.getBoundingClientRect().width ?? 0,
       };
     });
-    expect(enthusiasmWidths.trigger).toBeCloseTo(
-      enthusiasmWidths.measure + 40 - (4 * 96) / 25.4,
-      0,
-    );
+    expect(enthusiasmWidths.trigger).toBeCloseTo(enthusiasmWidths.measure + 40 + 96 / 25.4, 0);
     if (test.info().project.name === 'Fold 6') {
       const metadataControlHeights = await page
         .locator(
-          '.recipe-metadata-section input:not([type="hidden"]), .recipe-metadata-section select, .recipe-metadata-section button.recipe-picklist-trigger',
+          '.recipe-metadata-section input:not([type="hidden"]):not([type="file"]), .recipe-metadata-section select, .recipe-metadata-section button.recipe-picklist-trigger',
         )
         .evaluateAll((controls) =>
           controls.map((control) => Math.round(control.getBoundingClientRect().height)),

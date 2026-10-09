@@ -3,15 +3,16 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getRecipePhotos } from '../../../lib/media/data';
 import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
-import { formatIngredientDisplay } from '../../../lib/recipes/ingredient-rules';
 import {
   getSafeInstructionHref,
   type InstructionInlineToken,
   parseInstructionMarkdown,
 } from '../../../lib/recipes/instruction-markdown';
+import type { MeasurementSystem } from '../../../lib/recipes/measurement-rules';
 import { createClient } from '../../../lib/supabase/server';
 import { RecipePhotoGallery } from '../../media/media-display';
 import { RecipePrintAction } from '../recipe-detail-actions';
+import { RecipeReader, RecipeReaderProvider, RecipeServesControl } from '../recipe-reader';
 
 type RecipeDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -130,11 +131,23 @@ function renderInstructionMarkdown(
 export default async function RecipeDetailPage({ params }: RecipeDetailPageProps) {
   const { id } = await params;
   const supabase = await createClient();
+  const { data: authData } = await supabase.auth.getUser();
   const [recipe, picklists, photos] = await Promise.all([
     getRecipe(supabase, id),
     getRecipePicklists(supabase),
     getRecipePhotos(supabase, id),
   ]);
+  let volumeSystem: MeasurementSystem = 'us_customary';
+  let weightSystem: MeasurementSystem = 'us_customary';
+  if (authData.user) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('volume_system, weight_system')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+    volumeSystem = account?.volume_system === 'metric' ? 'metric' : 'us_customary';
+    weightSystem = account?.weight_system === 'metric' ? 'metric' : 'us_customary';
+  }
   if (!recipe) {
     notFound();
   }
@@ -215,56 +228,56 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         </div>
       </div>
       <RecipePhotoGallery photos={photos} />
-      <section className="recipe-detail-section" aria-labelledby="metadata-title">
-        <h2 id="metadata-title">Recipe details</h2>
-        {sections.length > 0 && (
-          <dl className="recipe-metadata">
-            {sections.map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {classificationSections.length > 0 && (
-          <dl className="recipe-metadata recipe-detail-classification">
-            {classificationSections.map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {times.length > 0 && (
-          <div className="recipe-detail-times">
-            <h3 className="recipe-detail-times-title">Times</h3>
-            <dl className="recipe-metadata recipe-time-list">
-              {times.map(([label, value]) => (
+      <RecipeReaderProvider serves={recipe.serves}>
+        <section className="recipe-detail-section" aria-labelledby="metadata-title">
+          <h2 id="metadata-title">Recipe details</h2>
+          {sections.length > 0 && (
+            <dl className="recipe-metadata">
+              {sections.map(([label, value]) => (
                 <div key={label}>
                   <dt>{label}</dt>
-                  <dd>{value} min</dd>
+                  {label === 'Serves' && recipe.serves !== null ? (
+                    <RecipeServesControl serves={recipe.serves} />
+                  ) : (
+                    <dd>{value}</dd>
+                  )}
                 </div>
               ))}
             </dl>
-          </div>
-        )}
-      </section>
-      {recipe.ingredients.length > 0 && (
-        <section className="recipe-detail-section" aria-labelledby="ingredients-title">
-          <h2 id="ingredients-title">Ingredients</h2>
-          <ol className="recipe-ingredient-list">
-            {recipe.ingredients.map((ingredient) => (
-              <li key={ingredient.id}>
-                <span className="recipe-ingredient-name">
-                  {formatIngredientDisplay(ingredient)}
-                </span>
-              </li>
-            ))}
-          </ol>
+          )}
+          {classificationSections.length > 0 && (
+            <dl className="recipe-metadata recipe-detail-classification">
+              {classificationSections.map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {times.length > 0 && (
+            <div className="recipe-detail-times">
+              <h3 className="recipe-detail-times-title">Times</h3>
+              <dl className="recipe-metadata recipe-time-list">
+                {times.map(([label, value]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{value} min</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
         </section>
-      )}
+        {recipe.ingredients.length > 0 && (
+          <RecipeReader
+            ingredients={recipe.ingredients}
+            serves={recipe.serves}
+            volumeSystem={volumeSystem}
+            weightSystem={weightSystem}
+          />
+        )}
+      </RecipeReaderProvider>
       {recipe.steps.length > 0 && (
         <section className="recipe-detail-section" aria-labelledby="instructions-title">
           <h2 id="instructions-title">Instructions</h2>

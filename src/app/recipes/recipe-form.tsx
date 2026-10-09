@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  type FocusEvent,
-  type FormEvent,
-  type KeyboardEvent,
-  useActionState,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { type FormEvent, useActionState, useEffect, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import type {
   IngredientOption,
@@ -34,9 +26,11 @@ import {
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
 import { MediaManager } from '../media/media-manager';
+import { Picklist } from '../picklist';
 import { saveRecipe } from './actions';
 import { IngredientRowsEditor } from './ingredient-rows-editor';
 import { InstructionStepsEditor } from './instruction-steps-editor';
+import { MultiPicklist, type RecipeMultiSelectCategory } from './multi-picklist';
 import { PublicationPicker } from './publication-picker';
 import { RecipeRelationshipsEditor } from './recipe-relationships-editor';
 
@@ -51,7 +45,6 @@ type RecipeFormProps = {
   recipe?: RecipeRecord;
 };
 
-type RecipeMultiSelectCategory = 'meal_type' | 'cuisine' | 'equipment';
 type RecipeSinglePicklistCategory = 'food_type' | 'state' | 'verdict' | 'enthusiasm';
 type RecipePicklistKey = RecipeMultiSelectCategory | RecipeSinglePicklistCategory;
 
@@ -85,8 +78,7 @@ function SinglePicklist({
   placeholder,
   options,
   isOpen,
-  onToggle,
-  onClose,
+  onOpenChange,
   onChange,
 }: {
   label: string;
@@ -95,230 +87,36 @@ function SinglePicklist({
   placeholder: string;
   options: SinglePicklistOption[];
   isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
+  onOpenChange: (isOpen: boolean) => void;
   onChange: (value: string) => void;
 }) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const measureRef = useRef<HTMLSpanElement>(null);
-  const anchorRef = useRef<HTMLDivElement>(null);
-  const [triggerWidth, setTriggerWidth] = useState(0);
   const selectedOption = options.find((option) => option.value === value);
-  const longestOption = options.reduce(
-    (longest, option) => (option.label.length > longest.length ? option.label : longest),
-    placeholder,
-  );
-
-  useEffect(() => {
-    const measuredWidth = measureRef.current?.getBoundingClientRect().width;
-    if (measuredWidth) {
-      setTriggerWidth(measuredWidth);
-    }
-  }, []);
-
-  function handleBlur(event: FocusEvent<HTMLButtonElement>) {
-    const nextTarget = event.relatedTarget;
-    if (!nextTarget || !anchorRef.current?.contains(nextTarget as Node)) {
-      onClose();
-    }
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    if (event.key === 'Escape' && isOpen) {
-      event.preventDefault();
-      onClose();
-      triggerRef.current?.focus();
-    }
-  }
 
   return (
     <div className="recipe-field recipe-single-picklist">
       <span>{label}</span>
-      <div className="recipe-picklist-anchor" ref={anchorRef}>
-        <span aria-hidden="true" className="recipe-picklist-measure" ref={measureRef}>
-          ✓ {longestOption}
+      <Picklist
+        className="recipe-picklist-trigger"
+        label={label}
+        measureLabel={placeholder}
+        menuClassName="recipe-picklist-menu"
+        onOpenChange={onOpenChange}
+        onSelect={onChange}
+        open={isOpen}
+        options={options}
+        value={value}
+      >
+        <span className="recipe-picklist-trigger-label">
+          {selectedOption && (
+            <span aria-hidden="true" className="single-picklist-check">
+              ✓
+            </span>
+          )}
+          <span>{selectedOption?.label ?? placeholder}</span>
         </span>
-        <button
-          aria-controls={`${name}-options`}
-          aria-expanded={isOpen}
-          aria-label={label}
-          className="recipe-picklist-trigger"
-          ref={triggerRef}
-          style={{
-            minWidth: triggerWidth
-              ? `calc(${triggerWidth}px + 40px${name === 'enthusiasm_id' ? ' - 4mm' : ''})`
-              : undefined,
-          }}
-          type="button"
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          onClick={onToggle}
-        >
-          <span className="recipe-picklist-trigger-label">
-            {selectedOption && (
-              <span aria-hidden="true" className="recipe-picklist-trigger-check">
-                ✓
-              </span>
-            )}
-            <span>{selectedOption?.label ?? placeholder}</span>
-          </span>
-          <span aria-hidden="true" className="recipe-picklist-arrow">
-            ▾
-          </span>
-        </button>
-        {isOpen && (
-          <fieldset
-            aria-label={`${label} options`}
-            className="recipe-picklist-menu"
-            id={`${name}-options`}
-          >
-            {options.map((option) => {
-              const isSelected = option.value === value;
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className="recipe-picklist-option"
-                  key={option.value}
-                  type="button"
-                  onBlur={handleBlur}
-                  onKeyDown={handleKeyDown}
-                  onClick={() => {
-                    onChange(option.value);
-                    onClose();
-                  }}
-                >
-                  <span aria-hidden="true" className="recipe-picklist-check">
-                    {isSelected ? '✓' : ''}
-                  </span>
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
-          </fieldset>
-        )}
-        <input name={name} type="hidden" value={value} />
-      </div>
+      </Picklist>
+      <input name={name} type="hidden" value={value} />
     </div>
-  );
-}
-
-function MultiPicklist({
-  category,
-  label,
-  values,
-  selectedIds,
-  isOpen,
-  onToggle,
-  onClose,
-}: {
-  category: RecipeMultiSelectCategory;
-  label: string;
-  values: RecipePicklistValue[];
-  selectedIds: string[];
-  isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-}) {
-  const [selectedOptionIds, setSelectedOptionIds] = useState(selectedIds);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const measureRef = useRef<HTMLSpanElement>(null);
-  const [triggerLabelWidth, setTriggerLabelWidth] = useState(0);
-  const selectedValues = values.filter((value) => selectedOptionIds.includes(value.id));
-  const longestOption = values.reduce(
-    (longest, value) => (value.value.length > longest.length ? value.value : longest),
-    '',
-  );
-  const triggerMeasure = `✓ ${longestOption}`;
-  const summaryText = selectedValues[0]?.value ?? 'Select';
-  const accessibleSelection = selectedValues.map((value) => value.value).join(', ');
-
-  useEffect(() => {
-    const measuredWidth = measureRef.current?.getBoundingClientRect().width;
-    if (measuredWidth) {
-      setTriggerLabelWidth(measuredWidth);
-    }
-  }, []);
-
-  function toggleOption(valueId: string) {
-    setSelectedOptionIds((current) =>
-      current.includes(valueId) ? current.filter((id) => id !== valueId) : [...current, valueId],
-    );
-  }
-
-  return (
-    <fieldset
-      className="recipe-choice-group"
-      onBlur={(event) => {
-        const nextTarget = event.relatedTarget;
-        if (!nextTarget || !event.currentTarget.contains(nextTarget as Node)) {
-          onClose();
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && isOpen) {
-          event.preventDefault();
-          onClose();
-          triggerRef.current?.focus();
-        }
-      }}
-    >
-      <legend>{label}</legend>
-      <div className="recipe-picklist-anchor">
-        <span aria-hidden="true" className="recipe-picklist-measure" ref={measureRef}>
-          {triggerMeasure}
-        </span>
-        <button
-          aria-controls={`${category}-options`}
-          aria-expanded={isOpen}
-          aria-label={`${label}: ${accessibleSelection || 'Select'}`}
-          className="recipe-picklist-trigger"
-          ref={triggerRef}
-          style={{ minWidth: triggerLabelWidth ? `${triggerLabelWidth + 40}px` : undefined }}
-          type="button"
-          onClick={onToggle}
-        >
-          <span className="recipe-picklist-trigger-label">
-            {selectedValues.length > 0 && (
-              <span aria-hidden="true" className="recipe-picklist-trigger-check">
-                ✓
-              </span>
-            )}
-            <span>{summaryText}</span>
-          </span>
-          <span aria-hidden="true" className="recipe-picklist-arrow">
-            ▾
-          </span>
-        </button>
-        {isOpen && (
-          <fieldset
-            aria-label={`${label} options`}
-            className="recipe-picklist-menu"
-            id={`${category}-options`}
-          >
-            {values.map((value) => {
-              const isSelected = selectedOptionIds.includes(value.id);
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className="recipe-picklist-option"
-                  key={value.id}
-                  type="button"
-                  onClick={() => toggleOption(value.id)}
-                >
-                  <span aria-hidden="true" className="recipe-picklist-check">
-                    {isSelected ? '✓' : ''}
-                  </span>
-                  <span>{value.value}</span>
-                </button>
-              );
-            })}
-          </fieldset>
-        )}
-      </div>
-      {selectedOptionIds.map((valueId) => (
-        <input key={valueId} name={`${category}_ids`} type="hidden" value={valueId} />
-      ))}
-    </fieldset>
   );
 }
 
@@ -606,8 +404,7 @@ export function RecipeForm({
             placeholder="Select"
             options={stateOptions}
             isOpen={openPicklist === 'state'}
-            onToggle={() => togglePicklist('state')}
-            onClose={() => setOpenPicklist(null)}
+            onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'state' : null)}
             onChange={(value) => handleStateChange(value as RecipeState)}
           />
           {state === 'want_to_try' && (
@@ -621,8 +418,7 @@ export function RecipeForm({
                 label: value.value,
               }))}
               isOpen={openPicklist === 'enthusiasm'}
-              onToggle={() => togglePicklist('enthusiasm')}
-              onClose={() => setOpenPicklist(null)}
+              onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'enthusiasm' : null)}
               onChange={(value) => handleSelectionChange('enthusiasm', value)}
             />
           )}
@@ -637,8 +433,7 @@ export function RecipeForm({
                 label: value.value,
               }))}
               isOpen={openPicklist === 'verdict'}
-              onToggle={() => togglePicklist('verdict')}
-              onClose={() => setOpenPicklist(null)}
+              onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'verdict' : null)}
               onChange={(value) => handleSelectionChange('verdict', value)}
             />
           )}
@@ -657,10 +452,10 @@ export function RecipeForm({
           {showOccasion && (
             <label className="recipe-field" htmlFor="occasion-details">
               <span>Occasion Details</span>
-              <textarea
+              <input
                 id="occasion-details"
                 name="occasion_details"
-                rows={3}
+                type="text"
                 value={occasionDetails}
                 onChange={(event) => setOccasionDetails(event.target.value)}
               />
@@ -701,8 +496,7 @@ export function RecipeForm({
               label: value.value,
             }))}
             isOpen={openPicklist === 'food_type'}
-            onToggle={() => togglePicklist('food_type')}
-            onClose={() => setOpenPicklist(null)}
+            onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'food_type' : null)}
             onChange={setFoodTypeId}
           />
           <MultiPicklist

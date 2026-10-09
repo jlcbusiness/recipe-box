@@ -1,0 +1,110 @@
+:global(.recipe-form) .group {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+  max-width: 100%;
+  border: 0;
+  padding: 0;
+}
+
+:global(.recipe-form) .group > legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.anchor {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+:global(.recipe-form) .menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 3px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(20rem, calc(100vw - 32px));
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px;
+  background: white;
+  box-shadow: 0 4px 14px rgb(36 40 32 / 12%);
+}
+
+.option {
+  display: flex;
+  min-width: 0;
+  min-height: 30px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 2px;
+  padding: 4px 7px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: #f3f5f0;
+}
+
+.option[aria-pressed="true"] {
+  background: #edf4e9;
+  color: var(--leaf);
+  font-weight: 700;
+}
+
+.option:focus-visible,
+:global(.recipe-picklist-trigger):focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.check {
+  display: inline-flex;
+  width: 14px;
+  flex: 0 0 14px;
+  justify-content: center;
+  color: var(--leaf);
+  font-size: 14px;
+}
+
+.triggerCheck {
+  color: var(--leaf);
+  font-weight: 700;
+}
+
+.measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .option {
+    min-height: 36px;
+  }
+
+  .menu {
+    max-width: calc(100vw - 40px);
+  }
+}

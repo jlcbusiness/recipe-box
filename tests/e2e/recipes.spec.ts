@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
@@ -16,9 +17,84 @@ async function selectSinglePicklist(
   label: string,
   option: string,
 ) {
-  await page.getByRole('button', { name: label, exact: true }).click();
-  await page.getByRole('button', { name: option, exact: true }).click();
+  await page.getByRole('combobox', { name: label, exact: true }).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
 }
+
+test('unit defaults are saved from the accessible navigation menu @e2e @a11y', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await signIn(page, user.email, user.password);
+
+    const unitsTrigger = page.getByLabel('Units', { exact: true });
+    await expect(unitsTrigger).toBeVisible();
+    await expect(unitsTrigger).toHaveAttribute('title', 'Units');
+    const trashLink = page.getByRole('link', { name: 'Trash' });
+    await expect(trashLink).toBeVisible();
+
+    if (testInfo.project.name === 'Fold 6') {
+      await expect(page.locator('.private-nav-utility-link span')).toBeHidden();
+      await expect(unitsTrigger.locator('span')).toBeHidden();
+      expect((await unitsTrigger.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+      expect((await trashLink.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    } else {
+      await expect(unitsTrigger).toContainText('Units');
+      await expect(page.locator('.private-nav-utility-link span')).toBeVisible();
+    }
+
+    await unitsTrigger.focus();
+    await page.keyboard.press('Enter');
+    const unitsMenu = page.locator('.units-menu');
+    await expect(unitsMenu).toHaveAttribute('open', '');
+    await expect(page.getByRole('combobox', { name: 'Volume' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Weight' })).toBeVisible();
+
+    const navigationA11y = await new AxeBuilder({ page }).analyze();
+    expect(navigationA11y.violations).toEqual([]);
+
+    await page.getByRole('combobox', { name: 'Volume' }).click();
+    await page.getByRole('option', { name: 'Metric', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    const volumeSaved = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${user.id}`,
+      { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
+    );
+    expect(await volumeSaved.json()).toEqual([
+      { volume_system: 'metric', weight_system: 'us_customary' },
+    ]);
+
+    await page.getByRole('combobox', { name: 'Weight' }).click();
+    await page.getByRole('option', { name: 'Metric', exact: true }).click();
+    await expect
+      .poll(async () => {
+        const response = await request.get(
+          `${config.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${user.id}`,
+          { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
+        );
+        return response.json();
+      })
+      .toEqual([{ volume_system: 'metric', weight_system: 'metric' }]);
+
+    await page.keyboard.press('Escape');
+    await expect(unitsMenu).not.toHaveAttribute('open', '');
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+
+    await page.goto('/publications');
+    await expect(page.getByLabel('Units', { exact: true })).toBeVisible();
+    await page.getByLabel('Units', { exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Volume' })).toContainText('Metric');
+    await expect(page.getByRole('combobox', { name: 'Weight' })).toContainText('Metric');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
 
 test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', async ({
   page,
@@ -80,18 +156,22 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.getByLabel('State')).toBeVisible();
     await expect(page.locator('input[name="state"]')).toHaveValue('want_to_try');
     const nameBounds = await page.getByLabel('Name').boundingBox();
+    const publicationBounds = await page
+      .getByRole('combobox', { name: 'Publication' })
+      .boundingBox();
     const stateBounds = await page.getByLabel('State').boundingBox();
     const foodTypeBounds = await page
-      .getByRole('button', { name: 'Food Type', exact: true })
+      .getByRole('combobox', { name: 'Food Type', exact: true })
       .boundingBox();
     const enthusiasmBounds = await page
-      .getByRole('button', { name: 'Enthusiasm', exact: true })
+      .getByRole('combobox', { name: 'Enthusiasm', exact: true })
       .boundingBox();
     const stateEquipmentBounds = await page
       .getByRole('button', { name: 'Equipment: Select' })
       .boundingBox();
     if (
       !nameBounds ||
+      !publicationBounds ||
       !stateBounds ||
       !foodTypeBounds ||
       !enthusiasmBounds ||
@@ -100,12 +180,12 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       throw new Error('Recipe metadata controls must have measurable bounds.');
     }
     const singlePicklistLabel = page.locator('.recipe-single-picklist > span').first();
-    const multiPicklistLabel = page.locator('.recipe-choice-group > legend').first();
+    const multiPicklistLabel = page.getByRole('group', { name: 'Equipment' }).locator('legend');
     await expect(singlePicklistLabel).toHaveCSS('font-size', '13px');
     await expect(multiPicklistLabel).toHaveCSS('font-size', '13px');
     await expect(singlePicklistLabel).toHaveCSS('font-weight', '700');
     await expect(multiPicklistLabel).toHaveCSS('font-weight', '700');
-    await expect(page.getByRole('button', { name: 'State', exact: true })).toHaveCSS(
+    await expect(page.getByRole('combobox', { name: 'State', exact: true })).toHaveCSS(
       'font-weight',
       '400',
     );
@@ -114,6 +194,8 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       '400',
     );
     expect(stateBounds.y).toBeGreaterThan(nameBounds.y);
+    expect(publicationBounds.height).toBe(nameBounds.height);
+    expect(stateBounds.height).toBe(nameBounds.height);
     expect(Math.abs(stateBounds.y - enthusiasmBounds.y)).toBeLessThanOrEqual(1);
     expect(foodTypeBounds.y).toBeGreaterThan(stateBounds.y);
     const servesBounds = await page.getByLabel('Serves').boundingBox();
@@ -129,17 +211,12 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       expect(Math.abs(stateEquipmentBounds.y - stateBounds.y)).toBeLessThanOrEqual(4);
       expect(stateEquipmentBounds.x).toBeGreaterThan(servesBounds?.x ?? 0);
     }
-    await expect(page.getByLabel('Serves')).toHaveAttribute('step', '1');
     await expect(page.getByLabel('Serves')).toHaveAttribute('name', 'serves');
-    await expect(page.getByRole('button', { name: 'Enthusiasm', exact: true })).toContainText(
+    await expect(page.getByRole('combobox', { name: 'Enthusiasm', exact: true })).toContainText(
       'What am I feeling?',
     );
     expect(foodTypeBounds?.width).toBeLessThanOrEqual(220);
-    if (testInfo.project.name === 'Fold 6') {
-      expect(foodTypeBounds?.height).toBeGreaterThanOrEqual(48);
-    } else {
-      expect(foodTypeBounds?.height).toBeLessThanOrEqual(40);
-    }
+    expect(foodTypeBounds.height).toBe(nameBounds.height);
     const formBounds = await page.locator('.recipe-form').boundingBox();
     const notesBounds = await page.getByLabel('Notes (Markdown)').boundingBox();
     expect(Math.abs((notesBounds?.width ?? 0) - (formBounds?.width ?? 0))).toBeLessThanOrEqual(1);
@@ -156,7 +233,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       await expect(integerLabel).toHaveCSS('text-align', 'center');
     }
     const foodTypeAfterSelectionBounds = await page
-      .getByRole('button', { name: 'Food Type', exact: true })
+      .getByRole('combobox', { name: 'Food Type', exact: true })
       .boundingBox();
     const stateAfterSelectionBounds = await page.getByLabel('State').boundingBox();
     if (!foodTypeAfterSelectionBounds || !stateAfterSelectionBounds) {
@@ -172,10 +249,9 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       .getByRole('button', { name: 'Equipment: Select' })
       .boundingBox();
     expect(mealTriggerBounds?.height).toBe(stateBounds.height);
+    expect(cuisineTriggerBounds?.height).toBe(stateBounds.height);
+    expect(equipmentTriggerBounds?.height).toBe(stateBounds.height);
     if (testInfo.project.name === 'Fold 6') {
-      expect(mealTriggerBounds?.height).toBeGreaterThanOrEqual(48);
-      expect(cuisineTriggerBounds?.height).toBeGreaterThanOrEqual(48);
-      expect(equipmentTriggerBounds?.height).toBeGreaterThanOrEqual(48);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         352,
       );
@@ -203,7 +279,9 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(mealGroup.getByRole('checkbox')).toHaveCount(0);
     await page.getByRole('button', { name: 'Meal Type: Select' }).click();
     const dinnerOption = page.getByRole('button', { name: 'Dinner', exact: true });
-    const mealMenuBounds = await page.locator('.recipe-picklist-menu').first().boundingBox();
+    const mealMenuBounds = await page
+      .getByRole('group', { name: 'Meal Type options' })
+      .boundingBox();
     expect(mealMenuBounds?.width).toBeLessThanOrEqual(220);
     await dinnerOption.click();
     await expect(dinnerOption).toHaveAttribute('aria-pressed', 'true');
@@ -425,19 +503,25 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     ).toBeLessThanOrEqual(1);
 
     await mobileEditLink.click();
-    const foodTypeTrigger = page.getByRole('button', { name: 'Food Type', exact: true });
+    const mobileNameBounds = await page.getByLabel('Name').boundingBox();
+    const mobilePublicationBounds = await page
+      .getByRole('combobox', { name: 'Publication' })
+      .boundingBox();
+    const foodTypeTrigger = page.getByRole('combobox', { name: 'Food Type', exact: true });
     const foodTypeTriggerBounds = await foodTypeTrigger.boundingBox();
     const mealTypeTriggerBounds = await page
       .getByRole('button', { name: /Meal Type:/ })
       .boundingBox();
+    expect(mobilePublicationBounds?.height).toBe(mobileNameBounds?.height);
     expect(foodTypeTriggerBounds?.height).toBe(mealTypeTriggerBounds?.height);
+    expect(foodTypeTriggerBounds?.height).toBe(mobileNameBounds?.height);
     expect(
       Math.abs((foodTypeTriggerBounds?.y ?? 0) - (mealTypeTriggerBounds?.y ?? 0)),
     ).toBeLessThanOrEqual(1);
     const foodTypeLabelBounds = await page
       .locator('.recipe-single-picklist')
       .filter({ has: foodTypeTrigger })
-      .locator(':scope > span')
+      .locator(':scope > span:first-child')
       .boundingBox();
     const mealTypeLabel = page.getByRole('group', { name: 'Meal Type' }).locator('legend');
     const mealTypeLabelBounds = await mealTypeLabel.boundingBox();
@@ -449,16 +533,16 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       Math.abs((foodTypeLabelBounds?.height ?? 0) - (mealTypeLabelBounds?.height ?? 0)),
     ).toBeLessThanOrEqual(1);
     const mobileStateBounds = await page
-      .getByRole('button', { name: 'State', exact: true })
+      .getByRole('combobox', { name: 'State', exact: true })
       .boundingBox();
     const mobileServesBounds = await page.getByLabel('Serves').boundingBox();
     expect(mobileServesBounds?.height).toBe(mobileStateBounds?.height);
     await foodTypeTrigger.click();
-    const foodTypeMenuBounds = await page.locator('#food_type_id-options').boundingBox();
+    const foodTypeMenuBounds = await page.getByRole('listbox').boundingBox();
     expect(
       Math.abs((foodTypeMenuBounds?.x ?? 0) - (foodTypeTriggerBounds?.x ?? 0)),
     ).toBeLessThanOrEqual(1);
-    await page.getByRole('button', { name: 'Soup', exact: true }).click();
+    await page.getByRole('option', { name: 'Soup', exact: true }).click();
     await selectSinglePicklist(page, 'State', 'Tried');
     await selectSinglePicklist(page, 'Verdict', 'Favorite');
     await page.getByLabel('Name').fill('Sunday tomato and basil soup');
@@ -504,6 +588,113 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.getByRole('row', { name: /Sunday tomato and basil soup/ })).toContainText(
       'Contains an ingredient I avoid.',
     );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('recipe multiselect stays anchored and hides measurement text @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+
+    const equipmentOptions = page.getByRole('group', { name: 'Equipment options' });
+    await page.getByRole('button', { name: 'Equipment: Select' }).click();
+    await expect(equipmentOptions).toBeVisible();
+    const foodTypeTrigger = page.getByRole('combobox', { name: 'Food Type', exact: true });
+    await foodTypeTrigger.focus();
+    await page.keyboard.press('Enter');
+    const foodTypeOptions = page.getByRole('listbox');
+    await expect(foodTypeOptions).toHaveCount(1);
+    await expect(equipmentOptions).toBeHidden();
+    const mealTypeTrigger = page.getByRole('button', { name: 'Meal Type: Select' });
+    await mealTypeTrigger.focus();
+    await page.keyboard.press('Enter');
+    const mealTypeOptions = page.getByRole('group', { name: 'Meal Type options' });
+    await expect(mealTypeOptions).toBeVisible();
+    await expect(foodTypeOptions).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(mealTypeOptions).toBeHidden();
+
+    for (const label of ['Equipment', 'Meal Type', 'Cuisine']) {
+      const measure = page
+        .getByRole('group', { name: label })
+        .locator('span[aria-hidden="true"]')
+        .first();
+      await expect(measure).toHaveCSS('visibility', 'hidden');
+      await expect(measure).not.toBeVisible();
+    }
+
+    const mealTypeGroup = page.getByRole('group', { name: 'Meal Type' });
+    const mealTypeLegend = mealTypeGroup.locator('legend');
+    const mealTypeBefore = await mealTypeLegend.boundingBox();
+    expect(mealTypeBefore).not.toBeNull();
+    await page.getByRole('button', { name: 'Equipment: Select' }).click();
+    const equipmentMenu = page.getByRole('group', { name: 'Equipment options' });
+    await expect(equipmentMenu).toBeVisible();
+    await expect(equipmentMenu).toHaveCSS('position', 'absolute');
+    const firstEquipmentOption = equipmentMenu.getByRole('button').first();
+    await expect(firstEquipmentOption).toHaveCSS('display', 'flex');
+    await expect(firstEquipmentOption).toHaveCSS('text-align', 'left');
+    const firstOptionLabel = (await firstEquipmentOption.innerText()).trim();
+    await firstEquipmentOption.click();
+    await expect(firstEquipmentOption).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('input[name="equipment_ids"]')).toHaveCount(1);
+    await expect(
+      page.getByRole('button', { name: `Equipment: ${firstOptionLabel}` }),
+    ).toBeVisible();
+    await firstEquipmentOption.click();
+    await expect(firstEquipmentOption).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('input[name="equipment_ids"]')).toHaveCount(0);
+    await firstEquipmentOption.focus();
+    await page.keyboard.press('Space');
+    await expect(firstEquipmentOption).toHaveAttribute('aria-pressed', 'true');
+    await expect(equipmentMenu).toBeVisible();
+    await expect(page.locator('input[name="equipment_ids"]')).toHaveCount(1);
+    await page.keyboard.press('Space');
+    await expect(firstEquipmentOption).toHaveAttribute('aria-pressed', 'false');
+    await expect(equipmentMenu).toBeVisible();
+    await expect(page.locator('input[name="equipment_ids"]')).toHaveCount(0);
+    const equipmentTrigger = page.getByRole('button', { name: 'Equipment: Select' });
+    await equipmentTrigger.click();
+    await expect(equipmentMenu).toBeHidden();
+    await equipmentTrigger.focus();
+    await page.keyboard.press('Space');
+    await expect(equipmentMenu).toBeVisible();
+    await expect(firstEquipmentOption).toBeFocused();
+    const secondEquipmentOption = equipmentMenu.getByRole('button').nth(1);
+    await page.keyboard.press('ArrowDown');
+    await expect(secondEquipmentOption).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(equipmentMenu).toBeVisible();
+    await expect(secondEquipmentOption).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('input[name="equipment_ids"]')).toHaveCount(1);
+    await page.keyboard.press('ArrowUp');
+    await expect(firstEquipmentOption).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(secondEquipmentOption).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(secondEquipmentOption).toHaveAttribute('aria-pressed', 'false');
+    await expect(equipmentMenu).toBeVisible();
+    await expect(page.locator('input[name="equipment_ids"]')).toHaveCount(0);
+    await firstEquipmentOption.focus();
+    await page.keyboard.press('Space');
+    await expect(firstEquipmentOption).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Enter');
+    await expect(equipmentMenu).toBeHidden();
+    await expect(page.locator('input[name="equipment_ids"]')).toHaveCount(1);
+    await expect(
+      page.getByRole('button', { name: `Equipment: ${firstOptionLabel}` }),
+    ).toBeVisible();
+    await expect(page.locator('button[aria-controls="equipment-options"]')).toBeFocused();
+    const mealTypeAfter = await mealTypeLegend.boundingBox();
+    expect(mealTypeAfter).not.toBeNull();
+    expect(Math.abs((mealTypeAfter?.y ?? 0) - (mealTypeBefore?.y ?? 0))).toBeLessThanOrEqual(1);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -600,7 +791,6 @@ test('recipes and history are isolated to their owning account @e2e', async ({ r
         );
     expect(seedEntries(ownerPicklists)).toEqual(seedEntries(otherPicklists));
     expect(ownerPicklists).toHaveLength(74);
-    expect(otherPicklists).toHaveLength(74);
     expect(ownerPicklists.every(({ id }) => !otherPicklists.some((value) => value.id === id))).toBe(
       true,
     );
@@ -878,6 +1068,14 @@ test('State controls conditional fields and clears old draft values @e2e', async
     await signIn(page, user.email, user.password);
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('A recipe under consideration');
+    const statePicklist = page.getByRole('combobox', { name: 'State', exact: true });
+    await expect(statePicklist).toBeVisible();
+    await statePicklist.click();
+    await expect(page.getByRole('listbox')).toHaveCount(1);
+    await page.getByRole('combobox', { name: 'Food Type', exact: true }).click();
+    await expect(page.getByRole('listbox')).toHaveCount(1);
+    await page.getByRole('option', { name: 'Soup', exact: true }).click();
+    await expect(page.locator('input[name="food_type_id"]')).not.toHaveValue('');
     await selectSinglePicklist(page, 'State', 'Want to Try');
     await expect(page.getByLabel('Enthusiasm')).toBeVisible();
     await expect(page.getByLabel('Verdict')).toBeHidden();
@@ -885,6 +1083,16 @@ test('State controls conditional fields and clears old draft values @e2e', async
 
     await selectSinglePicklist(page, 'Enthusiasm', 'Specific occasion');
     await expect(page.getByLabel('Occasion Details')).toBeVisible();
+    await expect(page.getByLabel('Occasion Details')).toHaveAttribute('type', 'text');
+    const occasionDetailsBounds = await page.getByLabel('Occasion Details').boundingBox();
+    const enthusiasmBounds = await page
+      .getByRole('combobox', { name: 'Enthusiasm', exact: true })
+      .boundingBox();
+    expect(occasionDetailsBounds).not.toBeNull();
+    expect(enthusiasmBounds).not.toBeNull();
+    expect(
+      Math.abs((occasionDetailsBounds?.height ?? 0) - (enthusiasmBounds?.height ?? 0)),
+    ).toBeLessThanOrEqual(1);
     await page.getByLabel('Occasion Details').fill('Sunday dinner');
     await selectSinglePicklist(page, 'Enthusiasm', 'Absolutely');
     await expect(page.getByLabel('Occasion Details')).toBeHidden();
@@ -906,10 +1114,8 @@ test('State controls conditional fields and clears old draft values @e2e', async
     await page.getByLabel('Reason').fill('Contains an ingredient I avoid.');
     await expect(page.getByLabel('Reason')).toHaveAttribute('type', 'text');
     await selectSinglePicklist(page, 'State', 'Tried');
-    await page.getByRole('button', { name: 'Verdict', exact: true }).click();
-    const verdictOptions = await page
-      .locator('#verdict_id-options .recipe-picklist-option')
-      .allTextContents();
+    await page.getByRole('combobox', { name: 'Verdict', exact: true }).click();
+    const verdictOptions = await page.getByRole('listbox').getByRole('option').allTextContents();
     const specificOccasionIndex = verdictOptions.indexOf('Specific occasion');
     expect(verdictOptions.slice(specificOccasionIndex, specificOccasionIndex + 3)).toEqual([
       'Specific occasion',
@@ -989,7 +1195,12 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
     const mealTriggerBounds = await page
       .getByRole('button', { name: 'Meal Type: Select' })
       .boundingBox();
-    expect(mealTriggerBounds?.height).toBeGreaterThanOrEqual(48);
+    const nameFieldBounds = await page.getByLabel('Name').boundingBox();
+    const publicationFieldBounds = await page
+      .getByRole('combobox', { name: 'Publication' })
+      .boundingBox();
+    expect(mealTriggerBounds?.height).toBe(nameFieldBounds?.height);
+    expect(publicationFieldBounds?.height).toBe(nameFieldBounds?.height);
     const totalInputBounds = await page.getByLabel('Total time (minutes)').boundingBox();
     const calculateButton = page.getByRole('button', { name: 'Calculate total time' });
     const calculateButtonBounds = await calculateButton.boundingBox();
@@ -1011,7 +1222,11 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
     const mealOptionBounds = await page
       .getByRole('button', { name: 'Dinner', exact: true })
       .boundingBox();
-    expect(mealOptionBounds?.height).toBeGreaterThanOrEqual(48);
+    expect(mealOptionBounds?.height).toBe(mealTriggerBounds?.height);
+    const multiPicklistA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(multiPicklistA11y.violations).toEqual([]);
     await page.keyboard.press('Escape');
     const editorA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -1022,7 +1237,7 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
     await selectSinglePicklist(page, 'State', 'Will not try');
     const reasonBounds = await page.getByLabel('Reason').boundingBox();
     const stateTriggerBounds = await page
-      .getByRole('button', { name: 'State', exact: true })
+      .getByRole('combobox', { name: 'State', exact: true })
       .boundingBox();
     expect(reasonBounds?.height).toBe(stateTriggerBounds?.height);
     await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -1054,6 +1269,38 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
     expect(editA11y.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('mobile recipe edit centers Cancel text while keeping the action left-aligned @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Cancel alignment recipe');
+    await selectSinglePicklist(page, 'State', 'Want to Try');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Cancel alignment recipe' })).toBeVisible();
+    await page.getByRole('link', { name: 'Edit' }).click();
+
+    const cancelLink = page.getByRole('link', { name: 'Cancel', exact: true });
+    const saveRecipeButton = page.getByRole('button', { name: 'Save recipe' });
+    const [cancelBounds, saveBounds] = await Promise.all([
+      cancelLink.boundingBox(),
+      saveRecipeButton.boundingBox(),
+    ]);
+    expect(cancelBounds).not.toBeNull();
+    expect(saveBounds).not.toBeNull();
+    expect(cancelBounds?.x).toBeLessThan(saveBounds?.x ?? 0);
+    await expect(cancelLink).toHaveCSS('text-align', 'center');
+    await expect(cancelLink).toHaveCSS('justify-content', 'center');
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1839,7 +2086,7 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
   }
 });
 
-test('recipe detail print matches the Standard view @e2e', async ({ page, request }) => {
+test('recipe detail print matches the Standard view @e2e', async ({ page, request }, testInfo) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
   const ingredientRowId = randomUUID();
@@ -1892,6 +2139,13 @@ test('recipe detail print matches the Standard view @e2e', async ({ page, reques
                 unit_code: 'cup',
                 picklist_value_id: null,
               },
+              {
+                measurement_type: 'weight',
+                amount_min: 120,
+                amount_max: null,
+                unit_code: 'g',
+                picklist_value_id: null,
+              },
             ],
           },
         ],
@@ -1908,33 +2162,340 @@ test('recipe detail print matches the Standard view @e2e', async ({ page, reques
     expect(saved.ok(), await saved.text()).toBeTruthy();
 
     await signIn(page, user.email, user.password);
-    await page.goto(`/recipes/${(await saved.json())[0].id}`);
-    await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Print' })).toBeVisible();
-    const printIngredient = page.locator('.recipe-ingredient-list li').first();
-    const ingredientText = '1 1/2 cups all-purpose flour, sifted';
-    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
-    await expect(page.getByText('Mix flour.')).toBeVisible();
+    await page.getByLabel('Units', { exact: true }).click();
+    const unitsPanel = page.locator('.units-menu-panel');
+    await expect(unitsPanel).toBeInViewport({ ratio: 1 });
+    const unitsPanelBounds = await unitsPanel.evaluate((panel) => {
+      const rect = panel.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        viewportLeft: viewport?.offsetLeft ?? 0,
+        viewportTop: viewport?.offsetTop ?? 0,
+        viewportWidth: viewport?.width ?? window.innerWidth,
+        viewportHeight: viewport?.height ?? window.innerHeight,
+      };
+    });
+    expect(unitsPanelBounds.left).toBeGreaterThanOrEqual(unitsPanelBounds.viewportLeft);
+    expect(unitsPanelBounds.top).toBeGreaterThanOrEqual(unitsPanelBounds.viewportTop);
+    expect(unitsPanelBounds.right).toBeLessThanOrEqual(
+      unitsPanelBounds.viewportLeft + unitsPanelBounds.viewportWidth,
+    );
+    expect(unitsPanelBounds.bottom).toBeLessThanOrEqual(
+      unitsPanelBounds.viewportTop + unitsPanelBounds.viewportHeight,
+    );
+    const volumePicker = page.getByRole('combobox', { name: 'Volume' });
+    const weightPicker = page.getByRole('combobox', { name: 'Weight' });
+    await expect(volumePicker).toContainText('US');
+    await expect(weightPicker).toContainText('US');
+    expect((await volumePicker.boundingBox())?.width).toBeLessThan(
+      (await unitsPanel.boundingBox())?.width ?? 0,
+    );
+    await volumePicker.click();
+    const volumeMenu = page.getByRole('listbox');
+    await expect(volumeMenu).toBeInViewport({ ratio: 1 });
+    expect(await volumeMenu.evaluate((menu) => menu.scrollWidth <= menu.clientWidth)).toBe(true);
+    await volumeMenu.getByRole('option', { name: 'Metric' }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect(volumePicker).toContainText('Metric');
+    await weightPicker.click();
+    const weightPreferenceMenu = page.getByRole('listbox');
+    await expect(weightPreferenceMenu).toBeInViewport({ ratio: 1 });
+    await expect(weightPreferenceMenu.getByRole('option', { name: 'US' })).toBeVisible();
+    await expect(weightPreferenceMenu.getByRole('option', { name: 'Metric' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(weightPreferenceMenu).toBeHidden();
     await page.addInitScript(() => {
       window.print = () => {
         document.documentElement.dataset.printRequested = 'true';
       };
     });
-    await page.reload();
+    await page.goto(`/recipes/${(await saved.json())[0].id}`);
+    await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Print' })).toBeVisible();
+    const printIngredient = page.locator('.recipe-ingredient-list li').first();
+    const ingredientText = '354.88 ml / 4 1/4 oz all-purpose flour, sifted';
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    await expect(page.getByText('Serves 4', { exact: true })).toBeVisible();
+    const scaleButton = page.getByRole('button', { name: 'Scale recipe' });
+    await expect(scaleButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(scaleButton).toHaveCSS('border-top-color', 'rgb(197, 210, 172)');
+    await expect(scaleButton).toHaveCSS('border-top-width', '2px');
+    await expect(scaleButton).toHaveCSS('border-radius', '10px');
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      const stateValueBounds = await page
+        .locator('.recipe-metadata > div')
+        .first()
+        .locator('dd')
+        .boundingBox();
+      const servesTextBounds = await page
+        .locator('.recipe-serves-value > span:first-child')
+        .boundingBox();
+      const scaleIconBounds = await page
+        .locator('.recipe-serves-value .recipe-scale-button svg')
+        .boundingBox();
+      const scaleButtonBounds = await scaleButton.boundingBox();
+      expect(stateValueBounds).not.toBeNull();
+      expect(servesTextBounds).not.toBeNull();
+      expect(scaleIconBounds).not.toBeNull();
+      expect(scaleButtonBounds).not.toBeNull();
+      if (servesTextBounds && scaleButtonBounds) {
+        expect(
+          Math.abs(
+            scaleButtonBounds.x - (servesTextBounds.x + servesTextBounds.width) - (4 * 96) / 25.4,
+          ),
+        ).toBeLessThanOrEqual(1);
+      }
+      expect(
+        Math.abs(
+          (stateValueBounds?.y ?? 0) +
+            (stateValueBounds?.height ?? 0) / 2 -
+            ((servesTextBounds?.y ?? 0) + (servesTextBounds?.height ?? 0) / 2),
+        ),
+      ).toBeLessThanOrEqual(2);
+      expect(
+        Math.abs(
+          (servesTextBounds?.y ?? 0) +
+            (servesTextBounds?.height ?? 0) / 2 -
+            ((scaleIconBounds?.y ?? 0) + (scaleIconBounds?.height ?? 0) / 2),
+        ),
+      ).toBeLessThanOrEqual(2);
+    }
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    const scalePane = page.getByRole('dialog', { name: 'Scale recipe' });
+    await expect(scalePane).toBeVisible();
+    await expect(scalePane).toHaveCSS('overflow-x', 'hidden');
+    await expect(scalePane.getByRole('heading', { name: 'Scale recipe' })).toBeHidden();
+    const scaleBounds = await scalePane.getByRole('combobox', { name: 'Scale' }).boundingBox();
+    const countBounds = await scalePane.getByLabel('To').boundingBox();
+    const closeBounds = await scalePane
+      .getByRole('button', { name: 'Close scaling' })
+      .boundingBox();
+    const closeIconBounds = await scalePane
+      .getByRole('button', { name: 'Close scaling' })
+      .locator('svg')
+      .boundingBox();
+    const scaleLabelBounds = await scalePane
+      .locator('.recipe-scaling-field > span')
+      .first()
+      .boundingBox();
+    expect(
+      scaleBounds && countBounds && closeBounds && closeIconBounds && scaleLabelBounds,
+    ).toBeTruthy();
+    if (scaleBounds && countBounds && closeBounds && closeIconBounds && scaleLabelBounds) {
+      expect(scaleBounds.x).toBeLessThan(closeBounds.x);
+      expect(
+        Math.abs(
+          closeIconBounds.y +
+            closeIconBounds.height / 2 -
+            (scaleLabelBounds.y + scaleLabelBounds.height / 2),
+        ),
+      ).toBeLessThanOrEqual(2);
+      expect(
+        Math.abs(countBounds.x - (scaleBounds.x + scaleBounds.width) - (3 * 96) / 25.4),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(closeIconBounds.x + closeIconBounds.width - (countBounds.x + countBounds.width)),
+      ).toBeLessThanOrEqual(1);
+      await scalePane.getByLabel('To').click({
+        position: { x: countBounds.width - 2, y: countBounds.height / 2 },
+      });
+      await expect(scalePane.getByLabel('To')).toBeFocused();
+    }
+    const actionBounds = await scalePane.locator('.recipe-scaling-actions').boundingBox();
+    const resetBounds = await scalePane.getByRole('button', { name: 'Reset' }).boundingBox();
+    const submitBounds = await scalePane.getByRole('button', { name: 'Submit' }).boundingBox();
+    const resetPadding = await scalePane
+      .getByRole('button', { name: 'Reset' })
+      .evaluate((button) => {
+        const styles = getComputedStyle(button);
+        return [styles.paddingTop, styles.paddingRight, styles.paddingBottom, styles.paddingLeft];
+      });
+    const submitPadding = await scalePane
+      .getByRole('button', { name: 'Submit' })
+      .evaluate((button) => {
+        const styles = getComputedStyle(button);
+        return [styles.paddingTop, styles.paddingRight, styles.paddingBottom, styles.paddingLeft];
+      });
+    expect(actionBounds && resetBounds && submitBounds && closeBounds).toBeTruthy();
+    expect(new Set(resetPadding).size).toBe(1);
+    expect(new Set(submitPadding).size).toBe(1);
+    if (actionBounds && resetBounds && submitBounds && closeBounds && closeIconBounds) {
+      expect(Math.abs(actionBounds.x - resetBounds.x)).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(submitBounds.x - (resetBounds.x + resetBounds.width) - (3 * 96) / 25.4),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(closeIconBounds.x + closeIconBounds.width - submitBounds.x - submitBounds.width),
+      ).toBeLessThanOrEqual(1);
+    }
+    await scalePane.getByLabel('To').fill('9');
+    await page.keyboard.press('Escape');
+    await expect(scalePane).toBeHidden();
+    await expect(page.getByText('Serves 4', { exact: true })).toBeVisible();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    await scalePane.getByLabel('To').fill('0');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(scalePane.getByRole('alert')).toContainText('positive whole serving count');
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    await scalePane.getByLabel('To').fill('8');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.getByText('Serves 8', { exact: true })).toBeVisible();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
+      '709.76 ml / 8.47 oz all-purpose flour, sifted',
+    );
+
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    const scaleMode = page.getByRole('combobox', { name: 'Scale' });
+    await scaleMode.click();
+    const scaleMenu = page.getByRole('listbox');
+    await expect(scaleMenu).toBeInViewport({ ratio: 1 });
+    expect((await scaleMenu.boundingBox())?.width).toBeLessThan(200);
+    expect(await scaleMenu.evaluate((menu) => menu.scrollWidth <= menu.clientWidth)).toBe(true);
+    expect(
+      await scaleMenu
+        .locator('.recipe-reader-picklist-option')
+        .evaluateAll((options) =>
+          options.every((option) => option.scrollWidth <= option.clientWidth),
+        ),
+    ).toBe(true);
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Tab');
+    await expect(scaleMode).toContainText('Multiply');
+    await expect(scalePane.getByLabel('By')).toBeFocused();
+    await expect(scalePane.getByLabel('By')).toHaveValue('2');
+    await scalePane.getByLabel('By').fill('2.5');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.getByText('Serves 10', { exact: true })).toBeVisible();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
+      '887.21 ml / 10.58 oz all-purpose flour, sifted',
+    );
+
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    await page.getByRole('combobox', { name: 'Scale' }).click();
+    await page.getByRole('option', { name: 'Divide' }).click();
+    await scalePane.getByLabel('By').fill('2');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.getByText('Serves 2', { exact: true })).toBeVisible();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
+      '177.44 ml / 2 1/8 oz all-purpose flour, sifted',
+    );
+    await page.getByRole('combobox', { name: 'Change Flour volume unit' }).click();
+    const unitMenu = page.getByRole('listbox');
+    await expect(unitMenu).toBeInViewport({ ratio: 1 });
+    expect((await unitMenu.boundingBox())?.width).toBeLessThan(240);
+    expect(await unitMenu.evaluate((menu) => menu.scrollWidth <= menu.clientWidth)).toBe(true);
+    expect(
+      await unitMenu
+        .locator('.recipe-reader-picklist-option')
+        .evaluateAll((options) =>
+          options.every((option) => option.scrollWidth <= option.clientWidth),
+        ),
+    ).toBe(true);
+    await expect(unitMenu.getByText('US', { exact: true })).toBeVisible();
+    const initialUnitMenuWidth = await unitMenu.evaluate(
+      (menu) => menu.getBoundingClientRect().width,
+    );
+    await page.evaluate(() => window.dispatchEvent(new Event('scroll')));
+    await expect
+      .poll(() => unitMenu.evaluate((menu) => menu.getBoundingClientRect().width))
+      .toBe(initialUnitMenuWidth);
+    await page.getByRole('option', { name: 'TBSP' }).click();
+    await page.getByRole('combobox', { name: 'Change Flour weight unit' }).click();
+    const weightMenu = page.getByRole('listbox');
+    await expect(weightMenu.getByRole('option', { name: 'kg' })).toBeVisible();
+    expect(
+      await weightMenu
+        .locator('.recipe-reader-picklist-option')
+        .evaluateAll((options) =>
+          options.every((option) => option.scrollWidth <= option.clientWidth),
+        ),
+    ).toBe(true);
+    await page.getByRole('option', { name: 'kg' }).click();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
+      '12 TBSP / 0.06 kg all-purpose flour, sifted',
+    );
+    const activeIngredientText = '12 TBSP / 2 1/8 oz all-purpose flour, sifted';
+    const readerA11y = await new AxeBuilder({ page }).analyze();
+    expect(readerA11y.violations).toEqual([]);
+    if (testInfo.project.name === 'Fold 6') {
+      const readerControls = page.locator(
+        '.recipe-scale-button, .recipe-reader-picklist-trigger, .recipe-scaling-pane input, .recipe-scaling-actions button',
+      );
+      for (const control of await readerControls.all()) {
+        expect((await control.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+      }
+      for (const unitTrigger of await page.locator('.recipe-reader-unit-trigger').all()) {
+        await expect(unitTrigger).toHaveCSS('text-decoration-line', 'underline');
+      }
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    await page.getByRole('button', { name: 'Reset' }).click();
+    await expect(page.getByText('Serves 4', { exact: true })).toBeVisible();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    await page.getByRole('button', { name: 'Close scaling' }).click();
+
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    await page.getByRole('combobox', { name: 'Scale' }).click();
+    await page.getByRole('option', { name: 'Divide' }).click();
+    await expect(scalePane.getByLabel('By')).toHaveValue('2');
+    await scalePane.getByLabel('By').fill('2');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await page.getByRole('combobox', { name: 'Change Flour volume unit' }).click();
+    await page.getByRole('option', { name: 'TBSP' }).click();
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
+      activeIngredientText,
+    );
+    await expect(page.getByText('Mix flour.')).toBeVisible();
     await page.getByRole('button', { name: 'Print' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
 
     await page.emulateMedia({ media: 'print' });
     await expect(page.getByRole('button', { name: 'Print' })).toBeHidden();
     await expect(page.getByRole('link', { name: 'Edit' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Scale recipe' })).toBeHidden();
+    await expect(page.getByRole('combobox', { name: 'Change Flour volume unit' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
     await expect(page.getByText('Serve warm.')).toBeVisible();
     await expect(page.getByText('Mix flour.')).toBeVisible();
-    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
+      activeIngredientText,
+    );
     await expect(page.locator('.recipe-detail-section').first()).toHaveCSS('break-inside', 'avoid');
     const pdf = await page.pdf();
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdf.byteLength).toBeGreaterThan(1_000);
+    const pdfDocument = await getDocument({ data: new Uint8Array(pdf) }).promise;
+    const pdfPages = await Promise.all(
+      Array.from({ length: pdfDocument.numPages }, async (_page, index) => {
+        const page = await pdfDocument.getPage(index + 1);
+        const content = await page.getTextContent();
+        return content.items.map((item) => ('str' in item ? item.str : '')).join(' ');
+      }),
+    );
+    const pdfText = pdfPages.join('\n');
+    expect(pdfText).toContain('Serves 2');
+    expect(pdfText).toContain('12 TBSP');
+    expect(pdfText).toContain('2 1/8 oz');
+    expect(pdfText).not.toContain('Submit');
+    expect(pdfText).not.toContain('Reset');
+
+    const storedMeasurement = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=amount_min,amount_max,unit_code&recipe_ingredient_id=eq.${ingredientRowId}`,
+      { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
+    );
+    expect(await storedMeasurement.json()).toEqual([
+      { amount_min: 1.5, amount_max: null, unit_code: 'cup' },
+      { amount_min: 120, amount_max: null, unit_code: 'g' },
+    ]);
   } finally {
     await deleteTestUser(request, user);
   }

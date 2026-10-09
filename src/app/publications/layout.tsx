@@ -12,13 +12,15 @@ export default async function PublicationsLayout({ children }: { children: React
 
   const { data: account } = await supabase
     .from('accounts')
-    .select('is_admin')
+    .select('is_admin, volume_system, weight_system')
     .eq('id', data.user.id)
     .maybeSingle();
 
   return (
     <PrivateShell
       email={data.user.email ?? 'Unknown email'}
+      volumeSystem={account?.volume_system === 'metric' ? 'metric' : 'us_customary'}
+      weightSystem={account?.weight_system === 'metric' ? 'metric' : 'us_customary'}
       wideContent
       navigation={[
         { href: '/recipes', label: 'Recipe Tin' },

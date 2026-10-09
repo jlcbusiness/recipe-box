@@ -1,0 +1,511 @@
+'use client';
+
+import { Scale, X } from 'lucide-react';
+import {
+  createContext,
+  type Dispatch,
+  Fragment,
+  type ReactNode,
+  type SetStateAction,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
+import type { RecipeIngredient } from '../../lib/recipes/data';
+import {
+  getIngredientDisplayParts,
+  type IngredientDisplayInput,
+} from '../../lib/recipes/ingredient-rules';
+import {
+  formatQuantity,
+  type MeasurementSystem,
+  type MeasurementUnit,
+  volumeUnits,
+  weightUnits,
+} from '../../lib/recipes/measurement-rules';
+import {
+  getScaleMultiplier,
+  type IngredientUnitOverrides,
+  type MeasurementDimension,
+  type RecipeScale,
+  transformIngredientForDisplay,
+} from '../../lib/recipes/recipe-reader-rules';
+import {
+  Picklist as ReaderPicklist,
+  type PicklistOption as ReaderPicklistOption,
+} from '../picklist';
+
+type ScaleMode = 'servings' | 'multiply' | 'divide';
+
+function getReaderViewportBounds() {
+  const viewport = window.visualViewport;
+  return {
+    left: viewport?.offsetLeft ?? 0,
+    top: viewport?.offsetTop ?? 0,
+    width: viewport?.width ?? window.innerWidth,
+    height: viewport?.height ?? window.innerHeight,
+  };
+}
+
+type RecipeScaleContextValue = {
+  scale: RecipeScale;
+  multiplier: number;
+  setScale: (scale: RecipeScale) => void;
+  unitOverrides: Record<string, IngredientUnitOverrides>;
+  setUnitOverrides: Dispatch<SetStateAction<Record<string, IngredientUnitOverrides>>>;
+};
+
+const RecipeScaleContext = createContext<RecipeScaleContextValue | null>(null);
+
+function useRecipeScale(): RecipeScaleContextValue {
+  const context = useContext(RecipeScaleContext);
+  if (!context) {
+    throw new Error('Recipe reader controls must be inside RecipeReaderProvider.');
+  }
+  return context;
+}
+
+function initialScale(serves: number | null): RecipeScale {
+  return serves !== null && serves > 0
+    ? { mode: 'servings', baseServings: serves, targetServings: serves }
+    : { mode: 'multiply', factor: 1 };
+}
+
+export function RecipeReaderProvider({
+  serves,
+  children,
+}: {
+  serves: number | null;
+  children: ReactNode;
+}) {
+  const [scale, setScale] = useState<RecipeScale>(() => initialScale(serves));
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, IngredientUnitOverrides>>({});
+  const value = {
+    scale,
+    multiplier: getScaleMultiplier(scale),
+    setScale,
+    unitOverrides,
+    setUnitOverrides,
+  };
+
+  return <RecipeScaleContext.Provider value={value}>{children}</RecipeScaleContext.Provider>;
+}
+
+function selectedScaleDraft(scale: RecipeScale): { mode: ScaleMode; to: string } {
+  if (scale.mode === 'servings') {
+    return { mode: scale.mode, to: String(scale.targetServings) };
+  }
+  if (scale.mode === 'multiply') {
+    return { mode: scale.mode, to: String(scale.factor) };
+  }
+  return { mode: scale.mode, to: String(scale.divisor) };
+}
+
+function ReaderScaleButton({ serves }: { serves: number | null }) {
+  const { scale, setScale, setUnitOverrides } = useRecipeScale();
+  const scope = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState<ScaleMode>(initialScale(serves).mode);
+  const [to, setTo] = useState(String(serves ?? 2));
+  const [error, setError] = useState('');
+  const [panelPosition, setPanelPosition] = useState<{
+    left: number;
+    top: number;
+    maxHeight: number;
+  } | null>(null);
+  const panelId = useId();
+  const scaleOptions: ReaderPicklistOption[] = [
+    ...(serves === null ? [] : [{ value: 'servings', label: 'Servings' }]),
+    { value: 'multiply', label: 'Multiply' },
+    { value: 'divide', label: 'Divide' },
+  ];
+
+  function restoreDraft() {
+    const draft = selectedScaleDraft(scale);
+    setMode(draft.mode);
+    setTo(serves === null && scale.mode === 'multiply' && scale.factor === 1 ? '2' : draft.to);
+    setError('');
+  }
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const positionPanel = () => {
+      const bounds = buttonRef.current?.getBoundingClientRect();
+      const panel = panelRef.current;
+      if (!bounds || !panel) {
+        return;
+      }
+      const viewport = getReaderViewportBounds();
+      const width = Math.min(panel.getBoundingClientRect().width, viewport.width - 24);
+      const maxHeight = Math.max(0, viewport.height - 24);
+      const height = Math.min(panel.scrollHeight, maxHeight);
+      const above =
+        bounds.bottom + height + 12 > viewport.top + viewport.height &&
+        bounds.top > viewport.top + height + 12;
+      setPanelPosition({
+        left: Math.max(
+          viewport.left + 12,
+          Math.min(bounds.right - width, viewport.left + viewport.width - width - 12),
+        ),
+        top: above
+          ? Math.max(viewport.top + 12, bounds.top - height - 8)
+          : Math.min(bounds.bottom + 8, viewport.top + viewport.height - height - 12),
+        maxHeight,
+      });
+    };
+    const visualViewport = window.visualViewport;
+    positionPanel();
+    window.addEventListener('resize', positionPanel);
+    window.addEventListener('scroll', positionPanel, true);
+    visualViewport?.addEventListener('resize', positionPanel);
+    visualViewport?.addEventListener('scroll', positionPanel);
+    return () => {
+      window.removeEventListener('resize', positionPanel);
+      window.removeEventListener('scroll', positionPanel, true);
+      visualViewport?.removeEventListener('resize', positionPanel);
+      visualViewport?.removeEventListener('scroll', positionPanel);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    function closeOnOutsidePointer(event: PointerEvent) {
+      const target = event.target;
+      const targetScope =
+        target instanceof Element
+          ? target.closest('[data-picklist-scope]')?.getAttribute('data-picklist-scope')
+          : null;
+      if (
+        target instanceof Node &&
+        !panelRef.current?.contains(target) &&
+        !buttonRef.current?.contains(target) &&
+        targetScope !== scope
+      ) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
+  }, [isOpen, scope]);
+
+  function close() {
+    setIsOpen(false);
+    setPanelPosition(null);
+    buttonRef.current?.focus();
+  }
+
+  function changeMode(nextMode: string) {
+    const next = nextMode as ScaleMode;
+    setMode(next);
+    setTo(next === 'servings' ? String(serves ?? 1) : '2');
+    setError('');
+  }
+
+  function reset() {
+    const baseScale = initialScale(serves);
+    setScale(baseScale);
+    setUnitOverrides({});
+    const draft = selectedScaleDraft(baseScale);
+    setMode(draft.mode);
+    setTo(draft.mode === 'servings' ? draft.to : '2');
+    setError('');
+  }
+
+  function submit() {
+    const numericValue = Number(to);
+    const nextScale: RecipeScale =
+      mode === 'servings'
+        ? { mode, baseServings: serves, targetServings: numericValue }
+        : mode === 'multiply'
+          ? { mode, factor: numericValue }
+          : { mode, divisor: numericValue };
+    try {
+      getScaleMultiplier(nextScale);
+      setScale(nextScale);
+      close();
+    } catch {
+      setError(
+        mode === 'servings'
+          ? 'To must be a positive whole serving count.'
+          : mode === 'multiply'
+            ? 'By must be a positive number.'
+            : 'By must be a positive whole number.',
+      );
+    }
+  }
+
+  return (
+    <span className="recipe-scale-control">
+      <button
+        aria-controls={isOpen ? panelId : undefined}
+        aria-expanded={isOpen}
+        aria-label="Scale recipe"
+        className="recipe-scale-button recipe-screen-only"
+        ref={buttonRef}
+        title="Scale recipe"
+        type="button"
+        onClick={() => {
+          if (isOpen) {
+            close();
+          } else {
+            restoreDraft();
+            setIsOpen(true);
+          }
+        }}
+      >
+        <Scale aria-hidden="true" size={17} strokeWidth={1.8} />
+      </button>
+      {isOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            aria-label="Scale recipe"
+            className="recipe-scaling-pane recipe-screen-only"
+            id={panelId}
+            ref={panelRef}
+            role="dialog"
+            style={{
+              left: panelPosition?.left ?? 0,
+              top: panelPosition?.top ?? 0,
+              maxHeight: panelPosition?.maxHeight,
+              visibility: panelPosition ? 'visible' : 'hidden',
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                close();
+              }
+            }}
+          >
+            <div className="recipe-scaling-top-row">
+              <div className="recipe-scaling-field">
+                <span>Scale</span>
+                <ReaderPicklist
+                  autoFocus
+                  className="recipe-scaling-mode"
+                  label="Scale"
+                  options={scaleOptions}
+                  scope={scope}
+                  value={mode}
+                  onSelect={changeMode}
+                />
+              </div>
+              <label className="recipe-scaling-field">
+                <span>{mode === 'servings' ? 'To' : 'By'}</span>
+                <input
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? `${panelId}-error` : undefined}
+                  className="recipe-scaling-to"
+                  min={mode === 'multiply' ? '0.01' : '1'}
+                  step={mode === 'multiply' ? 'any' : '1'}
+                  type="number"
+                  value={to}
+                  onChange={(event) => {
+                    setTo(event.currentTarget.value);
+                    setError('');
+                  }}
+                />
+              </label>
+              <button
+                aria-label="Close scaling"
+                className="recipe-scaling-close"
+                title="Cancel scaling"
+                type="button"
+                onClick={close}
+              >
+                <X aria-hidden="true" size={17} />
+              </button>
+            </div>
+            {error && (
+              <p className="recipe-scaling-error" id={`${panelId}-error`} role="alert">
+                {error}
+              </p>
+            )}
+            <div className="recipe-scaling-actions">
+              <button className="recipe-secondary-button" type="button" onClick={reset}>
+                Reset
+              </button>
+              <button className="recipe-primary-button" type="button" onClick={submit}>
+                Submit
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </span>
+  );
+}
+
+export function RecipeServesControl({ serves }: { serves: number }) {
+  const { multiplier } = useRecipeScale();
+  return (
+    <dd className="recipe-serves-value">
+      <span>Serves {formatQuantity(serves * multiplier, 'us_customary')}</span>
+      <ReaderScaleButton serves={serves} />
+    </dd>
+  );
+}
+
+function ReaderUnitPicklist({
+  ingredientName,
+  dimension,
+  unitCode,
+  unitLabel,
+  defaultUnitCode,
+  isOverridden,
+  onSelect,
+}: {
+  ingredientName: string;
+  dimension: MeasurementDimension;
+  unitCode: string;
+  unitLabel: string;
+  defaultUnitCode: string;
+  isOverridden: boolean;
+  onSelect: (unitCode: string) => void;
+}) {
+  const units: MeasurementUnit[] = dimension === 'volume' ? volumeUnits : weightUnits;
+  const defaultUnit = units.find((unit) => unit.code === defaultUnitCode);
+  const options: ReaderPicklistOption[] = [
+    ...(isOverridden
+      ? [
+          {
+            value: '__recipe_default',
+            label: `Recipe default (${defaultUnit?.abbreviation ?? defaultUnitCode})`,
+          },
+        ]
+      : []),
+    ...units.map((unit) => ({
+      value: unit.code,
+      label: unit.abbreviation,
+      group: unit.system === 'us_customary' ? 'US' : 'Metric',
+    })),
+  ];
+
+  return (
+    <ReaderPicklist
+      className="recipe-reader-unit-trigger"
+      label={`Change ${ingredientName} ${dimension} unit`}
+      options={options}
+      showArrow={false}
+      title={`Change ${dimension} unit`}
+      value={isOverridden ? unitCode : defaultUnitCode}
+      onSelect={(value) => onSelect(value === '__recipe_default' ? '' : value)}
+    >
+      {unitLabel}
+    </ReaderPicklist>
+  );
+}
+
+export function RecipeReader({
+  ingredients,
+  serves,
+  volumeSystem,
+  weightSystem,
+}: {
+  ingredients: RecipeIngredient[];
+  serves: number | null;
+  volumeSystem: MeasurementSystem;
+  weightSystem: MeasurementSystem;
+}) {
+  const { multiplier, unitOverrides, setUnitOverrides } = useRecipeScale();
+  const unitSystems = { volume: volumeSystem, weight: weightSystem };
+
+  function setIngredientOverride(
+    ingredientId: string,
+    dimension: 'volume' | 'weight',
+    unitCode: string,
+  ) {
+    setUnitOverrides((current) => {
+      const ingredientOverrides = { ...current[ingredientId] };
+      if (unitCode) {
+        ingredientOverrides[dimension] = unitCode;
+      } else {
+        delete ingredientOverrides[dimension];
+      }
+      return { ...current, [ingredientId]: ingredientOverrides };
+    });
+  }
+
+  return (
+    <section aria-labelledby="ingredients-title" className="recipe-detail-section">
+      <div className="recipe-reader-heading">
+        <h2 id="ingredients-title">Ingredients</h2>
+        {serves === null && <ReaderScaleButton serves={null} />}
+      </div>
+      <ol className="recipe-ingredient-list">
+        {ingredients.map((ingredient) => {
+          const displayOptions = { multiplier, unitSystems };
+          const displayIngredient: IngredientDisplayInput = transformIngredientForDisplay(
+            ingredient,
+            { ...displayOptions, unitOverrides: unitOverrides[ingredient.id] },
+          );
+          const defaultIngredient = transformIngredientForDisplay(ingredient, displayOptions);
+          const parts = getIngredientDisplayParts(displayIngredient);
+
+          return (
+            <li key={ingredient.id}>
+              <span className="recipe-ingredient-name">
+                {parts.measurements.length > 0 && (
+                  <>
+                    {parts.measurements.map((measurement, index) => {
+                      const dimension =
+                        measurement.measurementType === 'volume' ||
+                        measurement.measurementType === 'weight'
+                          ? measurement.measurementType
+                          : null;
+                      const defaultUnitCode = defaultIngredient.measurements?.find(
+                        (candidate) => candidate.measurement_type === measurement.measurementType,
+                      )?.unit_code;
+                      const isOverridden = Boolean(
+                        dimension && unitOverrides[ingredient.id]?.[dimension],
+                      );
+                      return (
+                        <Fragment key={`${measurement.measurementType}-${measurement.unitCode}`}>
+                          {index > 0 && ' / '}
+                          {measurement.quantity}
+                          {measurement.unitLabel && (
+                            <>
+                              {' '}
+                              {dimension && measurement.unitCode && defaultUnitCode ? (
+                                <ReaderUnitPicklist
+                                  defaultUnitCode={defaultUnitCode}
+                                  dimension={dimension}
+                                  ingredientName={ingredient.ingredient_name}
+                                  isOverridden={isOverridden}
+                                  unitCode={measurement.unitCode}
+                                  unitLabel={measurement.unitLabel}
+                                  onSelect={(unitCode) =>
+                                    setIngredientOverride(ingredient.id, dimension, unitCode)
+                                  }
+                                />
+                              ) : (
+                                measurement.unitLabel
+                              )}
+                            </>
+                          )}
+                        </Fragment>
+                      );
+                    })}{' '}
+                  </>
+                )}
+                {[parts.specifics, parts.name].filter(Boolean).join(' ')}
+                {parts.unmeasuredPhrase && ` ${parts.unmeasuredPhrase}`}
+                {parts.preparation && `, ${parts.preparation}`}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}

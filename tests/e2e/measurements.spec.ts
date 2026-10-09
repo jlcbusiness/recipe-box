@@ -409,6 +409,11 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
   try {
     await signIn(page, user.email, user.password);
     await page.setViewportSize({ width: 800, height: 900 });
+    await page.goto('/recipes');
+    await page.getByLabel('Units', { exact: true }).click();
+    await page.getByRole('combobox', { name: 'Weight' }).click();
+    await page.getByRole('listbox').getByRole('option', { name: 'US', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('Measured recipe');
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
@@ -425,20 +430,10 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
         .locator('th')
         .evaluateAll((headers) => headers.slice(0, 4).map((header) => header.textContent?.trim())),
     ).resolves.toEqual(['Ingredient', 'Specifics', 'Amount', 'Preparation']);
-    await expect(page.getByRole('combobox', { name: 'Ingredient type, row 1' })).toHaveText('Unit');
-    await expect(grid.locator('tbody tr').first().locator('td')).toHaveCount(6);
-    await expect(grid.locator('tbody tr').first().locator('td').nth(0)).toHaveCSS('height', '48px');
-
     async function chooseMeasurementOption(label: string, value: string) {
       await page.getByRole('combobox', { name: label }).click();
       await page.getByRole('listbox').getByRole('option', { name: value, exact: true }).click();
     }
-
-    const initialTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
-    await initialTypePicker.click();
-    const typeOptions = page.getByRole('listbox').getByRole('option');
-    await expect(typeOptions).toHaveText(['Unit', 'Count', 'Things', 'Feel']);
-    await initialTypePicker.press('Escape');
 
     async function addIngredientRow(
       row: number,
@@ -459,6 +454,16 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
         informal: 'Things',
         judgment: 'Feel',
       }[type];
+      if (row === 1) {
+        await typePicker.click();
+        await expect(page.getByRole('listbox').getByRole('option')).toHaveText([
+          'Unit',
+          'Count',
+          'Things',
+          'Feel',
+        ]);
+        await typePicker.press('Escape');
+      }
       await chooseMeasurementOption(`Ingredient type, row ${row}`, typeLabel);
       await expect(typePicker).toHaveText(typeLabel);
       if (type === 'units') {
@@ -499,6 +504,8 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     }
 
     await addIngredientRow(1, 'Flour', 'units', '1 1/2', 'cup');
+    await expect(grid.locator('tbody tr').first().locator('td')).toHaveCount(6);
+    await expect(grid.locator('tbody tr').first().locator('td').nth(0)).toHaveCSS('height', '48px');
     await page.getByRole('textbox', { name: 'Weight amount, row 1' }).fill('120');
     await chooseMeasurementOption('Weight unit, row 1', 'g');
     const volumeUnitWidth = await page
@@ -610,7 +617,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await expect(page.getByRole('button', { name: 'Save recipe' })).toBeVisible();
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Measured recipe' })).toBeVisible();
-    await expect(page.getByText('1 1/2 cups / 120 g flour', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 1/2 cups / 4 1/4 oz flour', { exact: true })).toBeVisible();
     await expect(page.getByText('1 cup milk', { exact: true })).toBeVisible();
     await expect(page.getByText('4 oz butter', { exact: true })).toBeVisible();
     await expect(page.getByText('2-3 eggs', { exact: true })).toBeVisible();

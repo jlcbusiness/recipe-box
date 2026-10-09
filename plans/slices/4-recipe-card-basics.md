@@ -169,10 +169,11 @@ recipe routes, or components:
   labels and five-character values, with 8px gaps. Total Time occupies its own
   row beside a square, keyboard-operable `Σ` Calculate control and remains
   editable after calculation.
-- Desktop field controls target approximately 30–36px height with compact
-  padding. Mobile controls remain visually compact while labeled hit rows and
-  picklist options preserve 48px touch targets. Serves is 36px high on desktop,
-  48px on mobile, with centered numeric text.
+- Recipe metadata inputs, picklist triggers, Serves, Reason, and Occasion
+  Details are 36px high on desktop and mobile, matching Name and Publication.
+  Multi-picklist options have a 30px minimum on desktop and 36px on mobile.
+  Component-time inputs remain compact; distinct actions retain their
+  separately specified hit areas. See [Slice 13.5](13.5-shared-single-picklists.md).
 - Labeled action buttons use 48px for standalone actions and 32px for actions
   placed beside text. Compact inline actions keep a 48px mobile hit area.
 - Use custom anchored single-choice menus with the same height as multi-select

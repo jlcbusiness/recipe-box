@@ -45,6 +45,12 @@ export type IngredientDisplayParts = {
   name: string;
   specifics: string | null;
   amount: string;
+  measurements: {
+    quantity: string;
+    unitLabel: string | null;
+    measurementType: MeasurementType;
+    unitCode: string | null;
+  }[];
   unmeasuredPhrase: string | null;
   preparation: string | null;
 };
@@ -104,7 +110,7 @@ export function getIngredientDisplayParts(
   const detail = ingredient.detail.trim();
   const preparation = ingredient.preparation.trim();
   const displayName = /^[\p{Lu}][\p{Ll}]+$/u.test(name) ? lowercaseFirst(name) : name;
-  const amountText = [...(ingredient.measurements ?? [])]
+  const displayedMeasurements = [...(ingredient.measurements ?? [])]
     .filter((measurement) => measurement.measurement_type !== 'unmeasured')
     .sort((left, right) => {
       const order: Record<MeasurementType, number> = {
@@ -146,8 +152,17 @@ export function getIngredientDisplayParts(
             : unitLabel
               ? (unit?.abbreviation ?? lowercaseFirst(unitLabel))
               : '';
-      return [[quantity, unitText].filter(Boolean).join(' ')];
-    })
+      return [
+        {
+          quantity,
+          unitLabel: unitText || null,
+          measurementType: measurement.measurement_type,
+          unitCode,
+        },
+      ];
+    });
+  const amountText = displayedMeasurements
+    .map(({ quantity, unitLabel }) => [quantity, unitLabel].filter(Boolean).join(' '))
     .join(' / ');
   const unmeasuredPhrase = (ingredient.measurements ?? []).find(
     (measurement) => measurement.measurement_type === 'unmeasured',
@@ -156,6 +171,7 @@ export function getIngredientDisplayParts(
     name: displayName,
     specifics: detail ? detail.toLocaleLowerCase() : null,
     amount: amountText,
+    measurements: displayedMeasurements,
     unmeasuredPhrase: unmeasuredPhrase ? lowercaseFirst(unmeasuredPhrase.trim()) : null,
     preparation: preparation ? lowercaseFirst(preparation) : null,
   };

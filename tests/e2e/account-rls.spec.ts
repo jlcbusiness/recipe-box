@@ -118,3 +118,105 @@ test('Account rows and private media are isolated by authenticated user @e2e', a
     await deleteTestUser(request, firstUser);
   }
 });
+
+test('Account unit preferences are owner-scoped and cannot update protected account fields @e2e', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const otherUser = await createTestUser(request);
+
+  try {
+    const preferencesUrl = `${supabase.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method,volume_system,weight_system&id=eq.${owner.id}`;
+    const initialRead = await request.get(preferencesUrl, { headers: userHeaders(owner) });
+    expect(initialRead.status()).toBe(200);
+    expect(await initialRead.json()).toEqual([
+      {
+        id: owner.id,
+        is_admin: false,
+        sign_in_method: 'email_password',
+        volume_system: 'us_customary',
+        weight_system: 'us_customary',
+      },
+    ]);
+
+    const directPreferenceUpdate = await request.patch(
+      `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+      {
+        headers: { ...userHeaders(owner), Prefer: 'return=representation' },
+        data: { volume_system: 'metric' },
+      },
+    );
+    expect(directPreferenceUpdate.ok()).toBeFalsy();
+
+    const directProtectedUpdate = await request.patch(
+      `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+      {
+        headers: { ...userHeaders(owner), Prefer: 'return=representation' },
+        data: { is_admin: true, sign_in_method: 'google' },
+      },
+    );
+    expect(directProtectedUpdate.ok()).toBeFalsy();
+
+    const updateVolume = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: { p_volume_system: 'metric', p_weight_system: null },
+      },
+    );
+    expect(updateVolume.status()).toBe(204);
+
+    const afterVolumeUpdate = await request.get(preferencesUrl, { headers: userHeaders(owner) });
+    expect(await afterVolumeUpdate.json()).toEqual([
+      {
+        id: owner.id,
+        is_admin: false,
+        sign_in_method: 'email_password',
+        volume_system: 'metric',
+        weight_system: 'us_customary',
+      },
+    ]);
+
+    const invalidUpdate = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: { p_volume_system: 'imperial', p_weight_system: null },
+      },
+    );
+    expect(invalidUpdate.ok()).toBeFalsy();
+
+    const anonymousUpdate = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { apikey: supabase.anonKey, 'Content-Type': 'application/json' },
+        data: { p_volume_system: 'us_customary', p_weight_system: null },
+      },
+    );
+    expect(anonymousUpdate.ok()).toBeFalsy();
+
+    const foreignTargetAttempt = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: {
+          p_account_id: otherUser.id,
+          p_volume_system: 'metric',
+          p_weight_system: 'metric',
+        },
+      },
+    );
+    expect(foreignTargetAttempt.ok()).toBeFalsy();
+
+    const otherUserRead = await request.get(
+      `${supabase.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${otherUser.id}`,
+      { headers: userHeaders(otherUser) },
+    );
+    expect(await otherUserRead.json()).toEqual([
+      { volume_system: 'us_customary', weight_system: 'us_customary' },
+    ]);
+  } finally {
+    await deleteTestUser(request, otherUser);
+    await deleteTestUser(request, owner);
+  }
+});

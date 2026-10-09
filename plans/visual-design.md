@@ -103,8 +103,9 @@ recipe.
   stay compact and wrap naturally with related fields. Avoid equal-width tiles,
   unused table columns, and controls that stretch merely to fill available
   space.
-- In recipe References, size the Type picklist to its longest option plus 1mm;
-  changing the selected type must not resize the trigger.
+- Standard picklist triggers and menus fit their longest entry plus 1mm, with
+  only the compact space needed for a checkmark, disclosure icon, border, and
+  control padding. Changing the selected value must not resize the trigger.
 - Use natural recipe language in reading mode: `1 1/2 cups flour`, `120 g
   flour`, `2 bunches cilantro`, and `salt to taste`. Edit mode may expose data
   structure through labeled controls, but reading mode should return to familiar
@@ -248,9 +249,10 @@ and full-width metadata groups.
 - **Text-fit, not equal-width:** Single-choice selects fit their longest option.
   Metadata and time controls flow left to right and wrap when the viewport runs
   out of room.
-- **A choice is not text selection:** Multi-picklists open a compact dropdown.
-  Options are buttons, not checkboxes or selectable text. One menu is open at a
-  time; Escape closes it.
+- **A choice is not text selection:** Recipe multi-picklists use the dedicated
+  `MultiPicklist` module and open a compact dropdown. Options are toggle buttons,
+  not checkboxes or selectable text. One single- or multi-picklist menu is open
+  at a time; Escape closes it and returns focus to the trigger.
 - **State is explicit:** Name occupies the first row. State defaults to Want to
   try; its active Enthusiasm, Verdict, Reason, or Occasion Details field shares
   the next row with State, with Serves at the end of that row. The following row
@@ -269,15 +271,25 @@ and full-width metadata groups.
 Single-choice Food Type, State, Verdict, and Enthusiasm controls use custom
 anchored dropdowns with the same trigger height as multi-picklists. Menus open
 below and align to their own trigger on desktop and mobile. Meal Type, Cuisine,
-and Equipment use a narrow trigger whose width is reserved for the longest
-option including its checkmark, so selecting or clearing an option cannot
-resize it. The popup lists options vertically in configured order. A selected
-option shows a checkmark and bold leaf-green text on a pale green background;
-color is supplementary to the checkmark, never the only selection signal. The
-picker does not display native checkboxes or blue text-selection highlighting.
+and Equipment use the recipe-specific `MultiPicklist` module and a narrow
+trigger whose width is reserved for the longest option including its checkmark,
+so selecting or clearing an option cannot resize it. Standard triggers and
+menus fit the longest entry plus 1mm, then add only required indicator and
+border/padding space. The popup lists options vertically in configured order.
+A selected option shows a checkmark and bold leaf-green text on a pale green
+background; color is supplementary to the checkmark, never the only selection
+signal. The picker does not display native checkboxes or blue text-selection
+highlighting. Multi-select groups use fieldset/legend semantics and options
+expose their pressed state.
 Single- and multi-picklist labels share the same 13px bold typography. Trigger
 text stays regular-weight whether selected or not, so neither control type
 looks heavier by default.
+
+Recipe metadata inputs, single- and multi-picklist triggers, Serves, Reason,
+and Occasion Details remain 36px high on desktop and mobile, matching Name and
+Publication. Multi-picklist options have a 30px minimum on desktop and 36px on
+mobile. Keep component-time inputs compact; larger hit areas belong to distinct
+actions, not these recipe-entry controls.
 
 The visible single-choice prompt for Enthusiasm is “What am I feeling?” while
 the field label remains “Enthusiasm.” Verdict order places Specific occasion
@@ -301,16 +313,15 @@ immediately before Once-a-year-rich and So-so. Reason is a single-line field.
 
 Serves is one optional positive integer with no group heading. Equipment follows
 it on the State row. Center the numeric text and label text for Serves and time
-fields. The Serves input is
-36px high on desktop and matches the 48px picklist trigger height on mobile.
+fields. The Serves input is 36px high on desktop and mobile, matching the
+recipe picklist triggers.
 Times are grouped under “Times (min)” and wrap naturally.
 Each numeric input is sized to five characters or its visible label, whichever
 needs more room, with 8px gaps. Total occupies its own final row, with a square
 icon-only `Σ` button beside it and an accessible name and tooltip of “Calculate
 total time.” On mobile, keep a 48px hit target around the visibly compact 30px
 square. Hide numeric spinner controls; values are entered by typing. The
-single-line Reason input matches its adjacent picklist height, including on
-mobile.
+single-line Reason input remains 36px high, matching adjacent recipe fields.
 
 ### Recipe list, detail, and headings
 
@@ -333,11 +344,18 @@ about 1012px wide.
 
 ### Account menu
 
-The private-shell account menu uses the same options everywhere. On desktop, show
-the account email at the bottom of the left navigation, below its navigation
-links (and directly below Settings when that destination is available). On
-mobile, show a 48px circular initials button at the right of the navigation.
-Both controls open the same account menu with the email and Sign out action.
+The private shell exposes a compact Units popover before Trash and Account.
+Desktop shows the Units icon with its text label; mobile shows a 48px circular
+Ruler control with a tooltip and accessible name. Volume and Weight are visibly
+labeled native selects sized to their options plus 1mm rather than the full
+popover width, and the popover reports save status. Trash becomes a 48px
+icon-only mobile link with its accessible name and tooltip.
+
+The account menu uses the same options everywhere. On desktop, show the account
+email at the bottom of the left navigation, below its navigation links (and
+directly below Settings when that destination is available). On mobile, show a
+48px circular initials button at the right of the navigation. Both controls
+open the same account menu with the email and Sign out action.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
 compact, while labeled rows, picklist triggers, popup options, standalone
@@ -434,13 +452,23 @@ dimensions. Things pluralize from their maximum range value; `cup` becomes
 `cups` above one while abbreviated fixed units remain unchanged. US customary
 quantities use familiar fractions when close to halves, thirds, quarters, or
 eighths; metric quantities never use fractions and display at most two decimal
-places.
+places. Slice 13 adds compact serving, multiply, and divide controls, account
+unit defaults, and transient per-ingredient unit overrides. Print retains the
+active scale and units while hiding the controls. Serves remains in recipe
+metadata and updates only after scale submission. A field-height Scale icon
+beside it opens a compact pane with Scale, To, Reset, Submit, and a top-right
+close control. Escape or close cancels unsubmitted changes. Scale uses the
+standard anchored picklist keyboard behavior. Reset restores base servings and
+account-default units by clearing all transient ingredient overrides. Volume
+and weight units stay
+inline in natural recipe prose and open their own anchored picklist. Unit tokens
+underline on hover on desktop and remain underlined on mobile.
 
 ### Planned direction
 
-Slice 16 adds reader controls and Ingredient-first presentation. The intended
-Standard reading layout places ingredients beside instructions; the current
-detail page remains vertically stacked.
+Slice 16 adds Ingredient-first presentation, ingredient sorting, and cooking
+mode. The intended Standard reading layout places ingredients beside
+instructions; the current detail page remains vertically stacked.
 
 Ingredient-first presentation ("mine") shows Ingredient, Amount, and Preparation.
 Specifics is rendered as a distinct subtitle beneath the Ingredient name:
@@ -460,9 +488,9 @@ Specifics is rendered as a distinct subtitle beneath the Ingredient name:
 ```
 
 Ingredient-first is the default for mobile and public share. Print follows the
-active recipe presentation; until Slice 16 introduces reader view controls,
-print uses the Standard presentation. The chosen presentation is a reader
-preference, not recipe data.
+active recipe presentation; until Slice 16 introduces alternate reader views,
+print uses the Standard presentation and retains Slice 13's active scale and
+unit choices. The chosen presentation is a reader preference, not recipe data.
 
 Instruction ingredient mentions default to bold dark red so linked ingredients
 are easy to scan. User Settings offers a dedicated styling configuration:

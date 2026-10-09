@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useId } from 'react';
 import { createPortal } from 'react-dom';
 import type { RecipePicklistValue } from '../../lib/recipes/data';
 import {
@@ -10,6 +10,7 @@ import {
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
+import { usePicklistMenu } from '../picklist';
 
 type MeasurementCategory = 'units' | 'count' | 'informal' | 'judgment';
 
@@ -115,136 +116,48 @@ function MeasurementPicklist({
   invalid?: boolean;
   onSelect: (valueId: string) => void;
 }) {
-  const listId = useId();
   const selectedValue = options.find((option) => option.id === selectedId);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [menuPosition, setMenuPosition] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    maxHeight: number;
-  } | null>(null);
-
-  useLayoutEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    document.getElementById(`${listId}-${activeIndex}`)?.scrollIntoView({ block: 'nearest' });
-  }, [activeIndex, isOpen, listId]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    const positionMenu = () => {
-      const bounds = triggerRef.current?.getBoundingClientRect();
-      if (!bounds) {
-        return;
-      }
-      const aboveSpace = Math.max(0, bounds.top - 12);
-      const belowSpace = Math.max(0, window.innerHeight - bounds.bottom - 12);
-      const idealHeight = Math.min(220, options.length * 40 + 8);
-      const above = aboveSpace >= idealHeight || aboveSpace >= belowSpace;
-      const maxHeight = Math.min(idealHeight, above ? aboveSpace : belowSpace);
-      const width = Math.min(Math.max(190, bounds.width), window.innerWidth - 24);
-      setMenuPosition({
-        left: Math.max(12, Math.min(bounds.left, window.innerWidth - width - 12)),
-        top: above ? Math.max(8, bounds.top - maxHeight - 4) : bounds.bottom + 4,
-        width,
-        maxHeight,
-      });
-    };
-    positionMenu();
-    window.addEventListener('resize', positionMenu);
-    window.addEventListener('scroll', positionMenu, true);
-    return () => {
-      window.removeEventListener('resize', positionMenu);
-      window.removeEventListener('scroll', positionMenu, true);
-    };
-  }, [isOpen, options.length]);
-
-  function select(valueId: string) {
-    onSelect(valueId);
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  }
+  const menu = usePicklistMenu({
+    value: selectedId,
+    options: options.map((option) => ({
+      value: option.id,
+      label: option.value,
+      group: option.group,
+    })),
+    onSelect,
+    selectOnTab: false,
+  });
 
   return (
     <>
       <button
-        aria-activedescendant={isOpen && options.length ? `${listId}-${activeIndex}` : undefined}
-        aria-controls={isOpen ? listId : undefined}
+        aria-activedescendant={
+          menu.isOpen && options.length ? `${menu.listId}-${menu.activeIndex}` : undefined
+        }
+        aria-controls={menu.isOpen ? menu.listId : undefined}
         aria-describedby={describedBy}
-        aria-expanded={isOpen}
+        aria-expanded={menu.isOpen}
         aria-label={label}
         aria-haspopup="listbox"
         aria-invalid={invalid || undefined}
         className={`ingredient-cell-input recipe-measurement-picklist-trigger ${className ?? ''}`}
-        ref={triggerRef}
+        ref={menu.triggerRef}
         role="combobox"
         type="button"
-        onBlur={() => setIsOpen(false)}
-        onClick={() => {
-          setActiveIndex(
-            Math.max(
-              0,
-              options.findIndex((option) => option.id === selectedId),
-            ),
-          );
-          setIsOpen((open) => !open);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault();
-            if (!isOpen) {
-              setActiveIndex(
-                Math.max(
-                  0,
-                  options.findIndex((option) => option.id === selectedId),
-                ),
-              );
-              setIsOpen(true);
-              return;
-            }
-            const offset = event.key === 'ArrowDown' ? 1 : -1;
-            setActiveIndex((index) => (index + offset + options.length) % options.length);
-          } else if (event.key === 'Home' || event.key === 'End') {
-            event.preventDefault();
-            if (!isOpen) {
-              setIsOpen(true);
-            }
-            setActiveIndex(event.key === 'Home' ? 0 : options.length - 1);
-          } else if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            if (!isOpen) {
-              setActiveIndex(
-                Math.max(
-                  0,
-                  options.findIndex((option) => option.id === selectedId),
-                ),
-              );
-              setIsOpen(true);
-            } else if (options[activeIndex]) {
-              select(options[activeIndex].id);
-            }
-          } else if (event.key === 'Escape') {
-            event.preventDefault();
-            setIsOpen(false);
-          }
-        }}
+        onClick={menu.toggle}
+        onKeyDown={menu.handleKeyDown}
       >
         {selectedValue?.value ?? prompt}
       </button>
-      {isOpen &&
+      {menu.isOpen &&
         options.length > 0 &&
         createPortal(
           <div
             className="ingredient-cell-options"
-            id={listId}
+            id={menu.listId}
             role="listbox"
-            style={menuPosition ?? undefined}
+            ref={menu.menuRef}
+            style={menu.menuPosition ?? undefined}
             onMouseDown={(event) => event.preventDefault()}
           >
             {options.map((option, index) => (
@@ -256,16 +169,16 @@ function MeasurementPicklist({
                 )}
                 <div
                   aria-selected={option.id === selectedId}
-                  className={`ingredient-cell-option${index === activeIndex ? ' is-active' : ''}`}
-                  id={`${listId}-${index}`}
+                  className={`ingredient-cell-option${index === menu.activeIndex ? ' is-active' : ''}`}
+                  id={`${menu.listId}-${index}`}
                   role="option"
                   tabIndex={-1}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => select(option.id)}
+                  onMouseEnter={() => menu.setActiveIndex(index)}
+                  onClick={() => menu.select(option.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      select(option.id);
+                      menu.select(option.id);
                     }
                   }}
                 >

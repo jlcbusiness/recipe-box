@@ -48,7 +48,7 @@ security without prematurely creating recipe or other domain tables.
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Saved view | A persisted recipe or publication search, filter, sort, and column configuration. |
 | Preference | Account-level defaults: ingredient presentation, volume and weight unit systems, and ingredient-mention style. |
-| Account | The account record linked to the sign-in identity; it owns private data and carries an immutable sign-in method plus a server-managed admin flag. |
+| Account | The account record linked to the sign-in identity; it owns private data, volume and weight display-system defaults, an immutable sign-in method, and a server-managed admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. |
 | History event | An append-only forensic record of a saved change. |
@@ -115,6 +115,16 @@ account-managed.
 
 Trusted density belongs to the canonical ingredient, not a recipe row. The first
 release permits one trusted density per ingredient.
+
+Slice 13 stores `volume_system` and `weight_system` on Account as non-null
+`us_customary` or `metric` values, both defaulting to `us_customary`. Existing
+accounts receive the same defaults when the migration is applied; the isolated
+migration harness verifies those defaults for both existing and newly created
+accounts. Authenticated owners retain their existing account read policy, but
+direct updates remain restricted to the existing column grant. A narrow
+authenticated function derives the account from `auth.uid()` and can update
+only these two preferences; it accepts no account ID and is not executable by
+`public` or `anon`.
 
 ## Required Future Detail
 

@@ -131,6 +131,10 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 - Food Type, State, Verdict, and Enthusiasm use custom anchored single-choice
   dropdowns with the same trigger height as multi-picklists. Menus align to their
   trigger on both desktop and mobile.
+- Single-choice fields use the shared portal `Picklist`; Meal Type, Cuisine, and
+  Equipment use the recipe-specific `MultiPicklist`. `RecipeForm` coordinates
+  their open state, and selected multi-values serialize as repeated hidden
+  `*_ids` inputs.
 - Single- and multi-picklist labels use the same 13px bold typography. All
   trigger text is regular weight by default, regardless of selection.
 - Meal Type, Cuisine, and Equipment use narrow dropdown triggers sized once to
@@ -140,15 +144,14 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 - Selected multi-picklist options show a checkmark, bold leaf-green text, and a
   pale green background. The checkmark remains the selection cue when color is
   unavailable or indistinguishable.
-- Desktop controls are approximately 30–36 px tall with 4 px vertical and 7 px
-  horizontal padding. Mobile inputs remain visually compact inside labeled
-  touch rows of at least 48 px; menu options and triggers are at least 48 px.
-- The single-line Reason input matches its adjacent picklist height, including
-  on mobile. The mobile `Σ` control keeps a 48px hit target around a visibly
-  compact 30px square.
-- The mobile Serves input matches the 48px height of adjacent picklist triggers.
-- Center the Serves number within its input. Its desktop field height is 36px;
-  mobile height is 48px to match picklist triggers.
+- Recipe metadata inputs, single- and multi-picklist triggers, Serves, Reason,
+  and Occasion Details are 36px high on desktop and mobile, matching Name and
+  Publication. Multi-picklist options have a 30px minimum height on desktop and
+  36px on mobile. Component-time inputs remain compact; distinct icon actions
+  retain their separately specified hit areas.
+- The mobile `Σ` control keeps a 48px hit target around a visibly compact 30px
+  square.
+- Center the Serves number within its 36px input on desktop and mobile.
 - On desktop, the recipe list shows Name, Food Type, State, and Opinion, which
   shows the active Enthusiasm, Verdict, or Reason. On mobile, the list shows
   Name and Opinion. Detail view uses content-sized wrapping metadata in this
@@ -229,10 +232,14 @@ trailing empty row.
   - Metric measurements always display as decimals rounded to at most two decimal places (e.g., $1.5$ L, $0.33$ g, $1.625$ g displayed as $1.63$ g); never display metric quantities as fractions.
 
 ### 3.5 Unit Display Preferences
-- **Default unit systems (Settings):** The user chooses US customary or metric for volume and, separately, for weight.
-- **Recipe-level override (view time):** While viewing a recipe, the user can switch an individual ingredient to a specific unit within its dimension (e.g., teaspoons instead of tablespoons, or ounces instead of grams). These overrides are not saved to the recipe.
+- **Default unit systems:** The account stores independent US customary or metric defaults for volume and weight. Until Slice 14 adds Settings, the signed-in user changes these values in the shared navigation's Units popover.
+- **Preference writes:** A narrow authenticated database function derives the account from `auth.uid()`, validates the requested systems, and updates only the preference fields. Direct authenticated account updates remain restricted; admin and sign-in-method fields are not writable through this function.
+- **Best-fit conversion:** Preserve a stored unit when it matches the selected system. Otherwise, choose the largest target-system unit whose converted lower amount is at least one; if none qualifies, use the target system's smallest unit. Both endpoints of a range use the same unit.
+- **Recipe-level override (view time):** While viewing a recipe, the user can switch an individual ingredient to a specific unit within its dimension (e.g., teaspoons instead of tablespoons, or ounces instead of grams). These overrides and scale values are transient reader state, never saved to the recipe or account.
+- **Reset:** Reset restores the recipe's saved base servings and resolves units from the account defaults again by clearing all transient volume and weight overrides.
 - **Dimensions:** Conversion stays within volume or within weight. Volume-to-weight conversion needs a trusted density (3.3).
-- **Public pages:** Guests have no preferences, so public pages open in the recipe's stored units and offer the same override controls.
+- **Printing:** The printed recipe reflects the active scale, account defaults, and per-ingredient overrides while omitting the interactive controls.
+- **Public pages:** Public recipe behavior remains assigned to Slice 20; this slice adds no unauthenticated preference storage.
 - **System naming:** The app uses "US customary", not "imperial", because UK imperial pints and gallons differ.
 
 ---
@@ -275,7 +282,8 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
   - Authenticated desktop view: User-configurable default in settings (defaults to Standard).
   - Authenticated mobile view: Defaults to Ingredient-First.
   - Print view: Follows the active ingredient presentation. Until Slice 16
-    introduces reader view controls, print uses the Standard presentation.
+    introduces alternate reader views, print uses Standard presentation while
+    retaining Slice 13's active scale and unit choices.
   - Public share view: Defaults to Ingredient-First.
 
 ### 4.2 Ingredient Sorting Options
@@ -587,6 +595,11 @@ Located in Settings, per account:
 - Default ingredient presentation: Standard or Ingredient-First (4.1).
 - Default unit system for volume and, separately, for weight (3.5).
 - Ingredient mention style (5.1).
+
+Until Slice 14 adds the Settings page, volume and weight defaults are available
+from the shared private-navigation Units popover. The popover is keyboard
+operable, displays save status, and never offers public or cross-account
+preference changes.
 
 ---
 

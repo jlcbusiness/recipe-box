@@ -1,6 +1,8 @@
 import { Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import type { MeasurementSystem } from '../lib/recipes/measurement-rules';
 import { AccountMenu } from './account-menu';
+import { UnitsMenu } from './units-menu';
 
 export type PrivateNavItem = {
   href: string;
@@ -12,11 +14,15 @@ export function PrivateShell({
   children,
   email,
   navigation,
+  volumeSystem,
+  weightSystem,
   wideContent = false,
 }: {
   children: ReactNode;
   email: string;
   navigation: PrivateNavItem[];
+  volumeSystem: MeasurementSystem;
+  weightSystem: MeasurementSystem;
   wideContent?: boolean;
 }) {
   const emailName = email.split('@')[0] ?? email;
@@ -41,9 +47,15 @@ export function PrivateShell({
           ))}
         </div>
         <div className="private-nav-bottom">
-          <a className="private-nav-utility-link" href="/recipes/trash" title="Trash">
+          <UnitsMenu volumeSystem={volumeSystem} weightSystem={weightSystem} />
+          <a
+            aria-label="Trash"
+            className="private-nav-utility-link"
+            href="/recipes/trash"
+            title="Trash"
+          >
             <Trash2 aria-hidden="true" size={17} strokeWidth={1.8} />
-            <span>Trash</span>
+            <span className="private-nav-utility-label">Trash</span>
           </a>
           <AccountMenu email={email} initials={initials} />
         </div>

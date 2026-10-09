@@ -240,7 +240,7 @@ async function readHistory(apiUrl, anonKey, owner, table, ids) {
   );
 }
 
-async function verifyMigration(apiUrl, anonKey, owner, otherOwner, fixtures) {
+async function verifyMigration(apiUrl, anonKey, owner, otherOwner, newOwner, fixtures) {
   const {
     recipeOne,
     recipeTwo,
@@ -254,6 +254,24 @@ async function verifyMigration(apiUrl, anonKey, owner, otherOwner, fixtures) {
     survivingMagazine,
   } = fixtures;
   const ownerHeaders = apiHeaders(anonKey, owner.accessToken);
+  const assertDefaultUnitSystems = async (account) => {
+    const accounts = await selectRows(
+      apiUrl,
+      anonKey,
+      account,
+      'accounts',
+      `select=id,volume_system,weight_system&id=eq.${account.id}`,
+    );
+    assert.deepEqual(accounts, [
+      {
+        id: account.id,
+        volume_system: 'us_customary',
+        weight_system: 'us_customary',
+      },
+    ]);
+  };
+  await Promise.all([owner, otherOwner, newOwner].map(assertDefaultUnitSystems));
+
   const recipes = await selectRows(
     apiUrl,
     anonKey,
@@ -461,8 +479,9 @@ async function main() {
     );
   }
   runSupabase(['migration', 'up', '--local']);
+  const newOwner = await createOwner(apiUrl, anonKey);
 
-  await verifyMigration(apiUrl, anonKey, owner, otherOwner, {
+  await verifyMigration(apiUrl, anonKey, owner, otherOwner, newOwner, {
     recipeOne,
     recipeTwo,
     siteRecipe,
@@ -476,7 +495,7 @@ async function main() {
     history,
   });
 
-  console.log('Magazine legacy-data migration checks passed.');
+  console.log('Magazine migration and account unit-preference default checks passed.');
 }
 
 try {
