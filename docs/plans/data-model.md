@@ -44,7 +44,7 @@ security without prematurely creating recipe or other domain tables.
 | Ingredient mention | A structured link from an instruction location to a recipe ingredient. |
 | Recipe pairing | A Pairs with entry with required display text and an optional linked target recipe. |
 | Recipe reference | A same-account recipe link, external URL, or printed citation linked to a recipe; legacy Publication references remain static text, and purged recipe targets retain their display text. |
-| Tag | An account-owned tag linked to recipes and publications. |
+| Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Saved view | A persisted recipe or publication search, filter, sort, and column configuration. |
 | Preference | Account-level defaults: ingredient presentation, volume and weight unit systems, and ingredient-mention style. |
@@ -62,6 +62,12 @@ columns.
 
 - A recipe has zero or one primary publication. No primary publication means
   Recipe Tin membership.
+- Recipes and publications each have many account-owned tags through the
+  `recipe_tags` and `publication_tags` many-to-many tables. An assignment's
+  account must match both its parent record and tag; duplicate assignments are
+  prohibited. Tag names are limited to 160 characters and are unique per
+  account after trimming and case-folding. Tags are flat; their color key comes
+  from the fixed 16-color pastel palette and is visual only.
 - A recipe may have many supplemental references and many incoming/outgoing
   recipe relationships.
 - A recipe has many ordered ingredient rows and many ordered instruction steps.
@@ -88,6 +94,12 @@ columns.
   Publication references retain their display text and are not selectable.
   Permanent source-recipe purge removes its pairings and references.
 - History is append-only and excluded from recovery exports.
+- Recipe and publication history snapshots include assigned tag IDs, names,
+  and color keys. Catalog revisions and append-only history track creation,
+  rename, merge, deletion, and recoloring. Rename, merge, or replacement
+  updates affected entity versions and captures before/after tag assignments in
+  the same transaction; recoloring changes the shared visual catalog value
+  without changing entity assignment versions.
 - Deleting a recipe or publication moves it to the trash. Trashed items are
   purged permanently after 30 days. The public ID of a purged recipe is retained
   so its URL can return 410.

@@ -793,7 +793,10 @@ export function RecipePicklistManager({
   }
 
   return (
-    <section aria-labelledby="recipe-picklists-title" className="settings-section">
+    <section
+      aria-labelledby="recipe-picklists-title"
+      className="settings-section settings-picklists-section"
+    >
       <h2 className={styles.sectionHeading}>
         <button
           aria-controls="recipe-picklists-editor"
@@ -803,8 +806,8 @@ export function RecipePicklistManager({
           type="button"
           onClick={() => setIsExpanded((current) => !current)}
         >
-          <span className={styles.sectionLabel}>Edit picklists</span>
           <ChevronRight aria-hidden="true" className={styles.sectionChevron} size={18} />
+          <span className={styles.sectionLabel}>Picklists</span>
         </button>
       </h2>
       <div hidden={!isExpanded} id="recipe-picklists-editor">
@@ -814,6 +817,12 @@ export function RecipePicklistManager({
               <span>Picklist category</span>
               <select
                 value={category}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && !event.currentTarget.matches(':open')) {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                }}
                 onChange={(event) => {
                   setCategory(event.target.value as PicklistCategory);
                   setSelectedId(null);

@@ -1,5 +1,6 @@
 import type { createClient } from '../supabase/server';
 import type { MeasurementType } from './measurement-rules';
+import type { TagColorKey } from './tag-colors';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
 
@@ -40,6 +41,21 @@ export type IngredientOption = {
   id: string;
   name: string;
 };
+
+export type TagOption = {
+  id: string;
+  name: string;
+  color_key: TagColorKey;
+};
+
+const tagNameCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+function sortTagOptions(tags: TagOption[]): TagOption[] {
+  return [...tags].sort(
+    (left, right) =>
+      tagNameCollator.compare(left.name, right.name) || left.id.localeCompare(right.id),
+  );
+}
 
 export type RecipeIngredient = {
   id: string;
@@ -130,6 +146,7 @@ export type RecipeRecord = {
   meal_type_ids: string[];
   cuisine_ids: string[];
   equipment_ids: string[];
+  tags: TagOption[];
   ingredients: RecipeIngredient[];
   steps: RecipeInstructionStep[];
   pairings: RecipePairing[];
@@ -194,6 +211,16 @@ export async function getIngredients(supabase: RecipeSupabaseClient): Promise<In
   }
 
   return data as IngredientOption[];
+}
+
+export async function getTags(supabase: RecipeSupabaseClient): Promise<TagOption[]> {
+  const { data, error } = await supabase.from('tags').select('id, name, color_key');
+
+  if (error) {
+    throw new Error('Unable to load tags.');
+  }
+
+  return sortTagOptions((data ?? []) as TagOption[]);
 }
 
 export async function getRecipeLinkOptions(
@@ -264,7 +291,20 @@ export async function getRecipe(
     .select('category, picklist_value_id')
     .eq('recipe_id', recipeId);
 
-  if (assignmentError) {
+  const { data: tagAssignments, error: tagAssignmentError } = await supabase
+    .from('recipe_tags')
+    .select('tag_id')
+    .eq('recipe_id', recipeId);
+
+  if (assignmentError || tagAssignmentError) {
+    throw new Error('Unable to load this recipe.');
+  }
+
+  const assignedTagIds = (tagAssignments ?? []).map((assignment) => assignment.tag_id);
+  const { data: assignedTags, error: assignedTagsError } = assignedTagIds.length
+    ? await supabase.from('tags').select('id, name, color_key').in('id', assignedTagIds)
+    : { data: [], error: null };
+  if (assignedTagsError) {
     throw new Error('Unable to load this recipe.');
   }
 
@@ -409,6 +449,7 @@ export async function getRecipe(
     meal_type_ids: idsFor('meal_type'),
     cuisine_ids: idsFor('cuisine'),
     equipment_ids: idsFor('equipment'),
+    tags: sortTagOptions((assignedTags ?? []) as TagOption[]),
     ingredients: (recipeIngredients ?? []).map((row) => ({
       ...row,
       ingredient_name: ingredientNames.get(row.ingredient_id) ?? '',

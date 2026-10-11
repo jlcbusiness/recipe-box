@@ -28,6 +28,10 @@ function optionalText(formData: FormData, name: string): string | null {
   return formText(formData, name) || null;
 }
 
+function selectedIds(formData: FormData, name: string): string[] {
+  return formData.getAll(name).map(String).filter(Boolean);
+}
+
 export async function updatePublication(
   _previousState: PublicationEditActionState | undefined,
   formData: FormData,
@@ -81,6 +85,7 @@ export async function updatePublication(
     p_isbn: validated.isbn,
     p_retailer_url: validated.retailerUrl,
     p_site_url: validated.siteUrl,
+    p_tag_ids: selectedIds(formData, 'tag_ids'),
   });
   if (error?.code === '23505') {
     return { error: 'A Magazine with this title already exists.' };
@@ -152,6 +157,7 @@ export async function createPublication(
     p_retailer_url: retailerUrl,
     p_issue: null,
     p_site_url: siteUrl,
+    p_tag_ids: selectedIds(formData, 'tag_ids'),
   });
 
   if (error?.code === '23505' && publicationType === 'magazine') {

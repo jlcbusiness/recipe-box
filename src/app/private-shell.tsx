@@ -1,6 +1,7 @@
 import { Archive, LibraryBig, Settings, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AccountMenu } from './account-menu';
+import { EscapeDeselect } from './escape-deselect';
 
 export type PrivateNavItem = {
   href: string;
@@ -34,6 +35,7 @@ export function PrivateShell({
 
   return (
     <div className="private-shell">
+      <EscapeDeselect />
       <nav aria-label="Main navigation" className="private-nav">
         <div className="private-nav-links">
           {mainNavigation.map(({ href, label, current }) => (

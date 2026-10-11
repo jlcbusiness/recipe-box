@@ -11,6 +11,7 @@ import {
 import type { MeasurementSystem } from '../../../lib/recipes/measurement-rules';
 import { createClient } from '../../../lib/supabase/server';
 import { RecipePhotoGallery } from '../../media/media-display';
+import { TagChips } from '../../tags/tag-controls';
 import { RecipePrintAction } from '../recipe-detail-actions';
 import { RecipeReader, RecipeReaderProvider, RecipeServesControl } from '../recipe-reader';
 
@@ -214,17 +215,24 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               )}
             </p>
           )}
-        </div>
-        <div className="recipe-detail-heading-actions recipe-screen-only">
-          <RecipePrintAction />
-          <Link
-            aria-label="Edit"
-            className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
-            href={`/recipes/${recipe.id}/edit`}
-            title="Edit recipe"
-          >
-            <Pencil aria-hidden="true" size={16} strokeWidth={2} />
-          </Link>
+          <div className="recipe-detail-tags-row">
+            <TagChips
+              tags={recipe.tags}
+              trailingActions={
+                <div className="recipe-detail-heading-actions recipe-screen-only">
+                  <RecipePrintAction />
+                  <Link
+                    aria-label="Edit"
+                    className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
+                    href={`/recipes/${recipe.id}/edit`}
+                    title="Edit recipe"
+                  >
+                    <Pencil aria-hidden="true" size={16} strokeWidth={2} />
+                  </Link>
+                </div>
+              }
+            />
+          </div>
         </div>
       </div>
       <RecipePhotoGallery photos={photos} />

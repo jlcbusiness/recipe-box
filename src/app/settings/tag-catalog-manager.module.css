@@ -1,0 +1,618 @@
+.manager {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.heading {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+.toggle:hover .label,
+.toggle:focus-visible .label {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+.chevron {
+  flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+
+.toggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+.toggle:focus-visible,
+.clearButton:focus-visible,
+.iconButton:focus-visible,
+.valueButton:focus-visible,
+.input:focus-visible,
+.addInput:focus-visible,
+.addButton:focus-visible,
+.searchField:focus-within,
+.saveButton:focus-visible,
+.deleteButton:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.body {
+  margin-top: 12px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.searchControls {
+  display: flex;
+  width: min(100%, 360px);
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.searchField {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fffefa;
+  color: var(--muted);
+  padding: 0 10px;
+}
+
+.searchField input {
+  order: 0;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.searchField > svg {
+  order: 1;
+  flex: 0 0 auto;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fffefa;
+  color: var(--ink);
+  font: inherit;
+  padding: 7px 9px;
+}
+
+.clearButton,
+.iconButton {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.clearButton {
+  flex: 0 0 44px;
+}
+
+.clearButton:hover:not(:disabled),
+.iconButton:hover:not(:disabled) {
+  color: var(--leaf);
+}
+
+.clearButton:disabled,
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  align-items: start;
+  gap: 28px;
+}
+
+.listColumn {
+  min-width: 0;
+}
+
+.list {
+  max-height: 416px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 0 4px;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  min-height: 52px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.valueButton {
+  --tag-base-padding-block: 8px;
+  --tag-base-padding-inline: 14px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  justify-self: start;
+  overflow-wrap: anywhere;
+  border: 1px dashed transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: var(--tag-base-padding-block) var(--tag-base-padding-inline);
+}
+
+.valueButton:hover:not(:disabled) {
+  color: var(--leaf);
+}
+
+.valueButton[data-tag-shape="tall"] {
+  padding-inline: 18px;
+}
+
+.row:focus-within .valueButton {
+  border-color: var(--muted);
+}
+
+.valueButton:disabled {
+  cursor: default;
+}
+
+.inlineEditor {
+  min-width: 0;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.row:hover .rowActions,
+.row:focus-within .rowActions {
+  opacity: 1;
+}
+
+.colorButton {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.colorButton > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid;
+  border-radius: 2px;
+}
+
+.colorButton:hover:not(:disabled) > span {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.colorButton:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.colorButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.addRow {
+  display: grid;
+  min-height: 52px;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  border-bottom: 1px dashed var(--line);
+}
+
+.addInput {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-style: italic;
+  padding: 6px 8px;
+}
+
+.addInput::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.addRow:hover .addInput:not(:focus-visible) {
+  outline: 1px dotted var(--muted);
+  outline-offset: -2px;
+}
+
+.addButton {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-style: italic;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.addRow > .addButton {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  justify-self: end;
+  text-align: right;
+}
+
+.addRow > .addButton:hover:not(:disabled),
+.searchAddRow .addButton:hover:not(:disabled) {
+  color: var(--leaf);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.addButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.addActionButton {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--leaf);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.addActionButton:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.addActionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.searchAddRow {
+  display: block;
+  padding: 4px 0;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.searchAddRow .addButton {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.empty {
+  margin: 10px 0 0;
+  padding: 16px 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.pane {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  padding: 4px 0 12px 24px;
+}
+
+.mergePane {
+  border-color: #d7c2b2;
+  background: #fffefa;
+  color: #34251b;
+}
+
+.deletePane {
+  border-color: color-mix(in srgb, var(--tomato) 45%, var(--line));
+}
+
+.paneHeading {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.paneHeading h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.field {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.keepChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.keepChoices legend {
+  margin-bottom: 7px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.keepButton {
+  min-width: 0;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  border: 1px solid #8c3f1d;
+  border-radius: 12px;
+  background: #fffefa;
+  color: #8c3f1d;
+  font: inherit;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.keepButton[aria-pressed="true"] {
+  border-color: #8c3f1d;
+  background: #8c3f1d;
+  color: white;
+}
+
+.keepButton[aria-pressed="false"]:hover:not(:disabled) {
+  background: #f3dfd2;
+  color: #6f3218;
+}
+
+.keepButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.saveButton,
+.deleteButton {
+  min-height: 44px;
+  justify-self: end;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 16px;
+}
+
+.deleteButton {
+  border-color: var(--tomato);
+  background: var(--tomato);
+}
+
+.saveButton:disabled,
+.deleteButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.mergePane .saveButton {
+  border-color: #482011;
+  background: #482011;
+}
+
+.mergePane .iconButton {
+  color: #806957;
+}
+
+.mergePane .iconButton:hover:not(:disabled) {
+  color: #8c3f1d;
+}
+
+.mergePane .saveButton:hover:not(:disabled) {
+  border-color: #572515;
+  background: #572515;
+}
+
+.colorPalette {
+  display: grid;
+  width: fit-content;
+  min-width: 0;
+  gap: 8px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.colorPalette legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.colorChoices {
+  display: grid;
+  width: 168px;
+  min-width: 0;
+  grid-template-columns: repeat(4, 36px);
+  gap: 8px;
+}
+
+.colorSwatch {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.colorSwatch[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.colorSwatch:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.colorSwatch:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.status,
+.error {
+  margin: 12px 0 0;
+  text-align: right;
+}
+
+.status {
+  color: var(--leaf);
+}
+
+.error {
+  color: #8b2e21;
+}
+
+@media (max-width: 760px) {
+  .columns {
+    display: block;
+  }
+
+  .pane {
+    position: fixed;
+    z-index: 30;
+    inset: auto 16px 16px auto;
+    width: 280px;
+    max-width: calc(100vw - 64px);
+    max-height: min(68dvh, 520px);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--paper);
+    box-shadow: 0 8px 28px rgb(36 40 32 / 24%);
+    padding: 16px;
+  }
+
+  .mergePane {
+    border-color: #d7c2b2;
+    background: #fffefa;
+  }
+
+  .addButton,
+  .iconButton,
+  .clearButton {
+    min-height: 48px;
+  }
+
+  .rowActions {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .label {
+    text-decoration: underline;
+    text-underline-offset: 5px;
+  }
+}

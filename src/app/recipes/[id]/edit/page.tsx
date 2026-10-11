@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getRecipePhotos } from '../../../../lib/media/data';
@@ -8,6 +9,7 @@ import {
   getRecipe,
   getRecipeLinkOptions,
   getRecipePicklists,
+  getTags,
 } from '../../../../lib/recipes/data';
 import { createClient } from '../../../../lib/supabase/server';
 import { RecipeDeleteAction } from '../../recipe-detail-actions';
@@ -20,7 +22,7 @@ type EditRecipePageProps = {
 export default async function EditRecipePage({ params }: EditRecipePageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const [recipe, picklists, ingredients, preparationOptions, publications, photos] =
+  const [recipe, picklists, ingredients, preparationOptions, publications, photos, tags] =
     await Promise.all([
       getRecipe(supabase, id),
       getRecipePicklists(supabase),
@@ -28,6 +30,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
       getPreparationOptions(supabase),
       getPublications(supabase),
       getRecipePhotos(supabase, id),
+      getTags(supabase),
     ]);
   if (!recipe) {
     notFound();
@@ -38,6 +41,16 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
     <main className="recipes-main" aria-labelledby="page-title">
       <div className="recipe-edit-heading">
         <h1 id="page-title">Edit Recipe</h1>
+        <Link
+          aria-label="Back to view"
+          className="recipe-secondary-link recipe-detail-action recipe-edit-back"
+          href={`/recipes/${recipe.id}`}
+          title="Back to view"
+        >
+          <X aria-hidden="true" size={24} />
+        </Link>
+      </div>
+      <div className="recipe-edit-delete-row">
         <RecipeDeleteAction
           buttonLabel="Delete"
           recipeId={recipe.id}
@@ -45,9 +58,6 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
           version={recipe.version}
         />
       </div>
-      <Link className="recipe-back-link" href={`/recipes/${recipe.id}`}>
-        Back to view
-      </Link>
       <RecipeForm
         ingredients={ingredients}
         mediaAssets={photos}
@@ -55,6 +65,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
         preparationOptions={preparationOptions}
         publications={publications}
         recipeOptions={recipeOptions}
+        tags={tags}
         recipe={recipe}
       />
     </main>

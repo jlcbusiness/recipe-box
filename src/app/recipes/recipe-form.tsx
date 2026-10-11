@@ -9,6 +9,7 @@ import type {
   RecipeRecord,
   RecipeReference,
   RecipeState,
+  TagOption,
 } from '../../lib/recipes/data';
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
 import { isEmptyIngredientRow, serializeIngredientRows } from '../../lib/recipes/ingredient-rules';
@@ -27,6 +28,7 @@ import {
 } from '../../lib/recipes/recipe-rules';
 import { MediaManager } from '../media/media-manager';
 import { Picklist } from '../picklist';
+import { TagMultiSelect } from '../tags/tag-controls';
 import { saveRecipe } from './actions';
 import { IngredientRowsEditor } from './ingredient-rows-editor';
 import { InstructionStepsEditor } from './instruction-steps-editor';
@@ -42,6 +44,7 @@ type RecipeFormProps = {
   preparationOptions: string[];
   publications: PublicationOption[];
   recipeOptions: IngredientOption[];
+  tags: TagOption[];
   recipe?: RecipeRecord;
 };
 
@@ -147,6 +150,7 @@ export function RecipeForm({
   preparationOptions,
   publications,
   recipeOptions,
+  tags,
   recipe,
 }: RecipeFormProps) {
   const [actionState, formAction, pending] = useActionState(saveRecipe, undefined);
@@ -395,6 +399,7 @@ export function RecipeForm({
           initialPublicationId={recipe?.publication_id ?? initialPublicationId ?? null}
           initialUrl={recipe?.recipe_url ?? null}
           publications={publications}
+          tags={tags}
         />
         <div className="recipe-form-fields recipe-state-fields">
           <SinglePicklist
@@ -518,6 +523,7 @@ export function RecipeForm({
             onClose={() => setOpenPicklist(null)}
           />
         </div>
+        <TagMultiSelect tags={tags} selectedIds={recipe?.tags.map((tag) => tag.id)} />
       </fieldset>
       <fieldset className="recipe-ingredient-section">
         <legend>Ingredients</legend>

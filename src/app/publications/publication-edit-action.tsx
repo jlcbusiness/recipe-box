@@ -4,8 +4,9 @@ import { Pencil } from 'lucide-react';
 import { useActionState, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import { formatIsbnInput } from '../../lib/publications/validation';
-import type { PublicationOption, PublicationType } from '../../lib/recipes/data';
+import type { PublicationOption, PublicationType, TagOption } from '../../lib/recipes/data';
 import { MediaManager } from '../media/media-manager';
+import { TagMultiSelect } from '../tags/tag-controls';
 import { updatePublication } from './actions';
 import { PublicationDeleteAction } from './publication-delete-action';
 
@@ -22,11 +23,15 @@ export function PublicationEditAction({
   assets,
   destinations,
   hasRecipes,
+  tags,
+  selectedTagIds,
 }: {
   publication: EditablePublication;
   assets: MediaAssetDisplay[];
   destinations: Pick<PublicationOption, 'id' | 'name' | 'publication_type'>[];
   hasRecipes: boolean;
+  tags: TagOption[];
+  selectedTagIds: string[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -47,6 +52,8 @@ export function PublicationEditAction({
           destinations={destinations}
           hasRecipes={hasRecipes}
           publication={publication}
+          selectedTagIds={selectedTagIds}
+          tags={tags}
           onClose={() => setIsOpen(false)}
           onSaved={() => setIsOpen(false)}
         />
@@ -60,6 +67,8 @@ function PublicationEditDialog({
   assets,
   destinations,
   hasRecipes,
+  tags,
+  selectedTagIds,
   onClose,
   onSaved,
 }: {
@@ -67,6 +76,8 @@ function PublicationEditDialog({
   assets: MediaAssetDisplay[];
   destinations: Pick<PublicationOption, 'id' | 'name' | 'publication_type'>[];
   hasRecipes: boolean;
+  tags: TagOption[];
+  selectedTagIds: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -265,6 +276,7 @@ function PublicationEditDialog({
             />
           </label>
         )}
+        <TagMultiSelect selectedIds={selectedTagIds} tags={tags} />
         {actionState?.error && (
           <p className="publication-form-error" role="alert">
             {actionState.error}

@@ -6,6 +6,7 @@
   --muted: #62695d;
   --paper: #f7f9f4;
   --line: #d9dfd3;
+  --line-strong: #aeb8a7;
   --tomato: #b43e32;
   --source-link: #783b30;
   --leaf: #386044;
@@ -179,7 +180,7 @@ a {
 .auth-form button:focus-visible,
 .auth-secondary-actions a:focus-visible,
 .recovery-link:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
 
@@ -265,7 +266,7 @@ a {
 
 .account-menu-trigger:focus-visible,
 .account-menu-panel button:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
 
@@ -382,12 +383,12 @@ a {
 }
 
 .admin-table-scroll button:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
 
 .private-nav a:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
 
@@ -423,6 +424,16 @@ h1 {
   margin-top: 30px;
   padding-top: 24px;
   border-top: 1px solid var(--line);
+}
+
+.private-content .settings-section.settings-picklists-section {
+  margin-top: 24px;
+}
+
+.private-content .settings-section.ingredient-catalog-section {
+  margin-top: 28px;
+  border-top: 0;
+  padding-top: 0;
 }
 
 .settings-section h2 {
@@ -477,6 +488,11 @@ h1 {
   margin: 12px 0 0;
   color: var(--leaf);
   font-size: 13px;
+}
+
+.settings-unit-status:empty {
+  min-height: 0;
+  margin-top: 0;
 }
 
 @media (max-width: 640px) {
@@ -721,6 +737,10 @@ h1 {
   margin: 0;
 }
 
+.recipe-edit-delete-row {
+  margin-bottom: 20px;
+}
+
 .recipe-page-heading-actions,
 .recipe-detail-heading-actions {
   display: flex;
@@ -767,6 +787,32 @@ h1 {
   font-size: 14px;
 }
 
+.recipe-detail-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.recipe-detail-tags-row > .recipe-detail-heading-actions {
+  margin-left: auto;
+}
+
+.recipe-secondary-link.recipe-edit-back {
+  display: inline-flex;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  padding: 8px;
+}
+
 .recipe-icon-action {
   width: 36px;
   min-width: 36px;
@@ -796,7 +842,7 @@ h1 {
 .recipe-form input:focus-visible,
 .recipe-form select:focus-visible,
 .recipe-form textarea:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
 
@@ -941,7 +987,7 @@ h1 {
 
 .recipe-trash-restore:focus-visible,
 .recipe-detail-action:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
 
@@ -1910,7 +1956,7 @@ h1 {
 
 .ingredient-cell-option:focus-visible,
 .ingredient-cell-input:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -2216,7 +2262,7 @@ h1 {
 .recipe-photo-grid-select:focus-visible,
 .recipe-photo-remove-icon:focus-visible,
 .publication-cover-editor-remove:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -2401,7 +2447,7 @@ h1 {
 }
 
 .recipe-photo-add-action:has(input:focus-visible) {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -2617,7 +2663,7 @@ h1 {
 .recipe-scaling-pane button:focus-visible,
 .recipe-scaling-pane input:focus-visible,
 .single-picklist-trigger:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -3373,7 +3419,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 
 .publication-delete-destination-button:focus-visible,
 .publication-delete-destination-option:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -3470,6 +3516,10 @@ section.recipe-detail-section .recipe-relationship-list a {
   .recipe-detail-heading-actions {
     flex: 0 0 auto;
     gap: 4px;
+  }
+
+  .recipe-detail-tags-row {
+    margin-block: 4px;
   }
 
   .recipe-edit-heading {
@@ -3906,7 +3956,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 .publication-list-item:focus-visible,
 .publication-site-link:focus-visible,
 .publication-recipe-list a:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
 
@@ -3981,7 +4031,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 .publication-explorer-trigger:focus-visible,
 .publication-explorer-menu-option:focus-visible,
 .publication-explorer-mobile-link:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -4405,7 +4455,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 .publication-explorer-sort select:focus-visible,
 .publication-explorer-card-link:focus-visible,
 .publication-preview-link:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -4826,7 +4876,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 }
 
 .publication-type-choice label:focus-within {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -4903,7 +4953,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 
 .publication-field input:focus-visible,
 .publication-picker-label input:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -5040,7 +5090,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 
 .publication-picker-option:focus-visible,
 .publication-picker-create-option:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 1px;
 }
 

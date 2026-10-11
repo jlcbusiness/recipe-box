@@ -38,9 +38,9 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
 
-    const section = page.getByRole('region', { name: 'Edit picklists' });
+    const section = page.getByRole('region', { name: 'Picklists' });
     await expect(section).toBeVisible();
-    const toggle = section.getByRole('button', { name: 'Edit picklists' });
+    const toggle = section.getByRole('button', { name: 'Picklists' });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(section.getByRole('list')).toHaveCount(0);
     await toggle.click();
@@ -130,7 +130,7 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
     await expect(draggedReorder).toBeFocused();
 
     await page.reload();
-    const reloadedToggle = page.getByRole('button', { name: 'Edit picklists' });
+    const reloadedToggle = page.getByRole('button', { name: 'Picklists' });
     await expect(reloadedToggle).toHaveAttribute('aria-expanded', 'false');
     await reloadedToggle.click();
     await expect(
@@ -481,8 +481,8 @@ test('picklist management is owner-scoped and keeps protected occasion semantics
     ]);
 
     await page.goto('/settings');
-    const settingsSection = page.getByRole('region', { name: 'Edit picklists' });
-    await settingsSection.getByRole('button', { name: 'Edit picklists' }).click();
+    const settingsSection = page.getByRole('region', { name: 'Picklists' });
+    await settingsSection.getByRole('button', { name: 'Picklists' }).click();
     await settingsSection
       .getByRole('button', { name: `Delete ${optionalFoodType?.display_value}` })
       .click();

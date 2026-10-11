@@ -37,7 +37,7 @@
 }
 
 .sectionToggle:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -97,7 +97,7 @@
 }
 
 .sortButton:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -118,8 +118,11 @@
 }
 
 .list {
+  max-height: 416px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 0;
-  padding: 0;
+  padding: 0 4px;
   list-style: none;
 }
 
@@ -230,7 +233,7 @@
 }
 
 .inlineInput:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -291,7 +294,7 @@
 .iconButton:focus-visible,
 .saveButton:focus-visible,
 .deleteButton:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 

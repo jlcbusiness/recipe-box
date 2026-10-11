@@ -325,6 +325,7 @@ export async function saveRecipe(
     p_publication_page: formText(formData, 'publication_page') || null,
     p_recipe_url: recipeUrl,
     p_recipe_relationships: relationships,
+    p_tag_ids: selectedIds(formData, 'tag_ids'),
   });
 
   if (error) {

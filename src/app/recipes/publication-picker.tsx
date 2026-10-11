@@ -1,7 +1,7 @@
 'use client';
 
 import { type KeyboardEvent, useRef, useState } from 'react';
-import type { PublicationOption } from '../../lib/recipes/data';
+import type { PublicationOption, TagOption } from '../../lib/recipes/data';
 import { PublicationCreateDialog } from '../publications/publication-create-form';
 
 function publicationLabel(publication: PublicationOption): string {
@@ -13,8 +13,10 @@ export function PublicationPicker({
   initialPublicationId,
   initialPage,
   initialUrl,
+  tags,
 }: {
   publications: PublicationOption[];
+  tags: TagOption[];
   initialPublicationId: string | null;
   initialPage: string | null;
   initialUrl: string | null;
@@ -237,6 +239,7 @@ export function PublicationPicker({
         <PublicationCreateDialog
           initialName={createPublicationName}
           isOpen={isCreateOpen}
+          tags={tags}
           onClose={closePublicationDialog}
           onCreated={handlePublicationCreated}
         />

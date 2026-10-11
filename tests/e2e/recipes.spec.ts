@@ -326,18 +326,23 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     const desktopEditLink = page.getByRole('link', { name: 'Edit' });
     await expect(desktopEditLink.locator('svg')).toBeVisible();
     await expect(desktopEditLink).toHaveAttribute('title', 'Edit recipe');
-    const desktopTitleBounds = await page
-      .getByRole('heading', { name: 'Sunday tomato soup' })
-      .boundingBox();
     const desktopEditBounds = await desktopEditLink.boundingBox();
+    const desktopTagRow = page.locator('.recipe-detail-tags-row');
+    const desktopTagRowBounds = await desktopTagRow.boundingBox();
     expect(desktopEditBounds?.height).toBe(36);
+    await expect(desktopTagRow).toHaveCSS('margin-top', '8px');
+    await expect(desktopTagRow).toHaveCSS('margin-bottom', '8px');
     expect(
       Math.abs(
         (desktopEditBounds?.y ?? 0) +
           (desktopEditBounds?.height ?? 0) / 2 -
-          ((desktopTitleBounds?.y ?? 0) + (desktopTitleBounds?.height ?? 0) / 2),
+          ((desktopTagRowBounds?.y ?? 0) + (desktopTagRowBounds?.height ?? 0) / 2),
       ),
     ).toBeLessThanOrEqual(1);
+    expect((desktopEditBounds?.x ?? 0) + (desktopEditBounds?.width ?? 0)).toBeCloseTo(
+      (desktopTagRowBounds?.x ?? 0) + (desktopTagRowBounds?.width ?? 0),
+      0,
+    );
     const detailTitleSize = Number.parseFloat(
       await page
         .getByRole('heading', { name: 'Sunday tomato soup' })
@@ -444,11 +449,11 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     const mobileEditLink = page.getByRole('link', { name: 'Edit' });
     await expect(mobileEditLink.locator('svg')).toBeVisible();
     await expect(mobileEditLink).toHaveAttribute('title', 'Edit recipe');
-    const mobileTitleBounds = await page
-      .getByRole('heading', { name: 'Sunday tomato soup' })
-      .boundingBox();
     const mobileEditBounds = await mobileEditLink.boundingBox();
-    const mobileHeadingBounds = await page.locator('.recipe-detail-heading').boundingBox();
+    const mobileTagRow = page.locator('.recipe-detail-tags-row');
+    const mobileTagRowBounds = await mobileTagRow.boundingBox();
+    await expect(mobileTagRow).toHaveCSS('margin-top', '4px');
+    await expect(mobileTagRow).toHaveCSS('margin-bottom', '4px');
     expect(mobileEditBounds?.height).toBe(36);
     await expect(mobileEditLink).toHaveCSS('position', 'relative');
     await expect(mobileEditLink).toHaveCSS('height', '36px');
@@ -460,8 +465,8 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     expect(mobileEditHitArea.bottom).toBe('-8px');
     expect(
       Math.abs(
-        (mobileHeadingBounds?.x ?? 0) +
-          (mobileHeadingBounds?.width ?? 0) -
+        (mobileTagRowBounds?.x ?? 0) +
+          (mobileTagRowBounds?.width ?? 0) -
           ((mobileEditBounds?.x ?? 0) + (mobileEditBounds?.width ?? 0)),
       ),
     ).toBeLessThanOrEqual(1);
@@ -469,7 +474,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       Math.abs(
         (mobileEditBounds?.y ?? 0) +
           (mobileEditBounds?.height ?? 0) / 2 -
-          ((mobileTitleBounds?.y ?? 0) + (mobileTitleBounds?.height ?? 0) / 2),
+          ((mobileTagRowBounds?.y ?? 0) + (mobileTagRowBounds?.height ?? 0) / 2),
       ),
     ).toBeLessThanOrEqual(1);
 
@@ -1960,6 +1965,19 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
     await page.getByRole('link', { name: 'Edit' }).click();
     await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
     await expect(deleteRecipe).toBeVisible({ timeout: 1_000 });
+    const backToView = page.getByRole('link', { name: 'Back to view' });
+    await expect(backToView.locator('svg')).toBeVisible();
+    await expect(backToView).toHaveAttribute('title', 'Back to view');
+    const editHeadingBounds = await page.locator('.recipe-edit-heading').boundingBox();
+    const backToViewBounds = await backToView.boundingBox();
+    const deleteBounds = await deleteRecipe.boundingBox();
+    await expect(backToView).toHaveCSS('width', '48px');
+    await expect(backToView).toHaveCSS('height', '48px');
+    await expect(backToView.locator('svg')).toHaveAttribute('width', '24');
+    expect(backToViewBounds?.x).toBeGreaterThan((editHeadingBounds?.x ?? 0) + 200);
+    expect(deleteBounds?.y).toBeGreaterThanOrEqual(
+      (editHeadingBounds?.y ?? 0) + (editHeadingBounds?.height ?? 0),
+    );
     if (testInfo.project.name !== 'Fold 6') {
       await deleteRecipe.hover();
       await expect(deleteRecipe).toHaveCSS('background-color', 'rgb(180, 62, 50)');
@@ -2040,7 +2058,7 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
     await page.mouse.move(0, 0);
     await expect(editDeleteButton).toHaveCSS('color', 'rgb(180, 62, 50)');
     await expect(editDeleteButton).toHaveCSS('border-radius', '6px');
-    await expect(page.getByRole('link', { name: 'Back to view' })).toBeVisible();
+    await expect(backToView).toBeVisible();
     await expect(page.getByLabel('Notes (Markdown)')).toHaveValue(
       'Keep these notes after restoration.',
     );

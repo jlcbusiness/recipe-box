@@ -69,7 +69,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Reason** | Single-line text | Text string explaining rejection | Visible **only** when `State == Will not try`. |
 | **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Settings-managed multi-select dropdown; follows Serves on the State row. |
 | **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears at the end of the State row, immediately before Equipment. It is the base serving count for recipe scaling; discrete-item Yield is not captured in this field. |
-| **Tags** | Multi-select text tags | Freeform user tags | Color-neutral tags searchable across all recipes and publications. |
+| **Tags** | Multi-select account-owned tags | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17. |
 | **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
 
 ### 2.2 Time Tracking and Overlapping Times
@@ -168,10 +168,13 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   “From” label, issue, page, and URL remain upright. This attribution is absent
   for Recipe Tin recipes.
 - Standalone text actions are 48px high. Compact icon-only actions beside the
-  detail title, including Print and Edit, are 36px square with descriptive
-  accessible names and tooltips. On mobile, their hit areas expand to 48px
-  without changing their visible size. Picklist triggers have separate sizing
-  rules.
+  detail tag line, including Print and Edit, are 36px square with descriptive
+  accessible names and tooltips. They are right-aligned after the chips, and
+  the action line remains when no tags are assigned. On mobile, their hit areas
+  expand to 48px without changing their visible size. Picklist triggers have
+  separate sizing rules. In edit mode, a standard 48px icon-only `x` with a
+  24px icon in the header returns to view; Delete remains a distinct text action
+  below it.
 - The desktop Recipe Tin list is up to 1172px wide and its detail metadata
   section is up to 1012px wide.
 
@@ -411,6 +414,12 @@ In recipe detail and edit, References follows Notes, which follows Pairs With. T
 ### 6.1 Publication Types and Attributes
 A Publication is any formal collection or entity that contains recipes.
 
+All publication types can carry account-owned tags selected during creation or
+editing. The form can create or reuse a tag inline; selected assignments are
+saved with the publication. Publication detail shows assigned tags as text
+chips with the tag's shared translucent pastel color; an empty assignment is
+omitted.
+
 | Publication Type | Specific Attributes | Recipe Location Field | Visual Treatment |
 | ---------------- | ------------------- | --------------------- | ---------------- |
 | **Book** | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
@@ -623,13 +632,63 @@ Deleting a referenced ingredient requires a replacement; an unused ingredient
 can be deleted without one.
 
 The `Edit picklists` and `Ingredient catalog` sections are collapsed by default.
-Each disclosure shows a right-facing chevron while closed and a down-facing
-chevron while open. Underlining applies to the label, not its chevron, and is
-persistent on touch devices. The Recipe picklists ordered list supports drag
-and keyboard reorder, inline rename, and a trailing category-labeled add input.
-On mobile, both sections' Merge and Delete panes appear above or below the
-selected row, whichever has more room, and remain within the viewport instead
-of taking over the screen.
+Each disclosure has a left-side chevron that points right while closed and down
+while open. Underlining applies to the label, not its chevron, and is persistent
+on touch devices. The Recipe picklists ordered list supports drag and keyboard
+reorder, inline rename, and a trailing category-labeled add input. Ingredient
+and tag search fields place the magnifying-glass icon at the trailing edge and
+keep the clear `x` outside the field. Their add affordance is italicized
+`add {thing}` text: clicking it or pressing Enter creates the unmatched
+trimmed search term, while Escape cancels the pending add. Do not show a
+separate `+ Add [thing]` action. On mobile, Merge and Delete panes appear above
+or below the selected row, whichever has more room, and remain within the
+viewport instead of taking over the screen.
+
+#### Tags
+
+Tags have a separate full-width Settings section after Ingredient catalog,
+using the same section spacing and rule treatment. Its left-side disclosure
+chevron follows the shared right-when-closed/down-when-open convention. The
+alphabetical list shows up to eight tags before scrolling. Names are trimmed,
+preserve entered casing, and are unique per account after case-folding, with a
+160-character maximum. Each tag uses one of 16 fixed, translucent pastel colors
+for visual distinction only; tags remain flat and have no hierarchy or manual
+ordering. Revision-checked catalog changes have append-only history, including
+recoloring.
+
+Add and search use the Ingredient catalog's shared pattern. A no-match search
+offers an italicized `add {tag}` action; click or Enter creates the trimmed
+query, and Escape cancels it. Keep the clear `x` outside the search field and
+the magnifying glass at its trailing edge. Inline rename stays with the list.
+Merge and Delete use the established accessible row panes, bounded to the
+viewport on mobile. Color editing opens a matching pane with the 16 swatches in
+a 4-by-4 grid. Use the Ingredient catalog's spacing treatment between search,
+list, and add affordances.
+
+Recipe and publication forms provide a searchable multi-select that reuses a
+case-insensitive catalog match or creates the typed tag inline. The compact
+italic `add tag` affordance opens an approximately one-inch input that grows
+only enough to fit entered text and wraps with the selected chips. Inline
+creation updates the catalog immediately and records catalog history; the
+selected assignment remains a form draft until the recipe or publication is
+saved. Leaving a form after creating a tag can leave an unused catalog entry,
+which can be deleted in Settings. Removing a selected chip only changes that
+entity's draft assignment.
+
+Settings owns global rename, pairwise merge, delete, and recolor. Recoloring
+updates every recipe and publication chip that uses the tag without changing
+entity assignment versions. Merge requires a deliberate survivor choice;
+deleting a tag in use requires a replacement and performs the same assignment
+transfer transactionally. An unused tag can be deleted directly.
+
+Private detail views show selected tags as alphabetized text chips with
+translucent pastel fills and borders; text remains readable and color is not
+the only cue. Recipe detail keeps Print/Edit right-aligned at the end of the
+tag line, with matching vertical spacing, even when the recipe has no assigned
+tags. Publication detail omits the tag line when unassigned. Recipe and
+publication history snapshots include tag IDs, names, and color keys. Public
+recipe payloads do not include tags. Query filtering and cross-record tag
+search belong to Slice 17.
 
 ### 8.2 Trusted Density Registry
 Located in Settings:
@@ -799,6 +858,12 @@ Because export is the only backup, Settings shows the date of the last full-data
 History events are recorded on save (never on individual keystrokes):
 - Recipe / Publication creation
 - Metadata edits (field-level before/after diffs)
+- Tag assignment changes, including tag IDs, names, and color keys in
+  before/after recipe and publication snapshots
+- Tag catalog creation, rename, merge, deletion, and recoloring, including
+  affected recipe/publication IDs, actor, and before/after catalog snapshots
+- Tag recoloring, including affected recipe/publication IDs and before/after
+  catalog snapshots with color keys
 - Ingredient additions, removals, and quantity modifications
 - Step reordering and edits
 - Publication assignment and unparenting

@@ -4,11 +4,13 @@ import { notFound } from 'next/navigation';
 import { getPublicationCover } from '../../../lib/media/data';
 import {
   getPublications,
+  getTags,
   type PublicationOption,
   type RecipeState,
   recipeStateLabels,
 } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
+import { TagChips } from '../../tags/tag-controls';
 import { PublicationCommaList } from '../publication-comma-list';
 import { PublicationCover } from '../publication-cover';
 import { PublicationEditAction } from '../publication-edit-action';
@@ -58,6 +60,8 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
   const [
     { data: recipesData, error: recipesError },
     { data: picklistsData, error: picklistsError },
+    { data: publicationTagAssignments, error: publicationTagError },
+    tags,
   ] = await Promise.all([
     supabase
       .from('recipes')
@@ -68,11 +72,16 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
       .is('trashed_at', null)
       .order('updated_at', { ascending: false }),
     supabase.from('recipe_picklist_values').select('id, category, display_value'),
+    supabase.from('publication_tags').select('tag_id').eq('publication_id', publication.id),
+    getTags(supabase),
   ]);
 
-  if (recipesError || picklistsError) {
+  if (recipesError || picklistsError || publicationTagError) {
     throw new Error('Unable to load this publication.');
   }
+
+  const assignedTagIds = new Set((publicationTagAssignments ?? []).map(({ tag_id }) => tag_id));
+  const publicationTags = tags.filter((tag) => assignedTagIds.has(tag.id));
 
   const recipes = recipesData ?? [];
   const recipeIds = recipes.map((recipe) => recipe.id);
@@ -117,6 +126,7 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
         <div>
           <p className="eyebrow">{publicationTypeLabels[publication.publication_type]}</p>
           <h1 id="page-title">{publication.name}</h1>
+          <TagChips tags={publicationTags} />
           {detail.length > 1 && (
             <p className="publication-detail-meta">{detail.slice(1).join(' · ')}</p>
           )}
@@ -132,6 +142,8 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
             destinations={destinations}
             hasRecipes={recipes.length > 0}
             publication={publication}
+            selectedTagIds={publicationTags.map((tag) => tag.id)}
+            tags={tags}
           />
           <Link
             className="recipe-secondary-link collection-add-action publication-new-recipe"

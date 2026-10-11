@@ -9,6 +9,7 @@
 - [Settings (Slice 14A)](#settings-slice-14a)
 - [Settings (Slice 14B)](#settings-slice-14b)
 - [Settings (Slice 14C)](#settings-slice-14c)
+- [Settings (Slice 14D)](#settings-slice-14d)
 - [Desktop](#desktop)
 - [Mobile](#mobile)
 - [Ingredient Presentation](#ingredient-presentation)
@@ -307,12 +308,15 @@ Opinion. Recipe detail follows the edit-form order
 but uses a distinct view order: State and its active response, Occasion Details
 when present, Serves, Total Time, Equipment, Food Type, Meal Type, Cuisine,
 remaining times, then Notes. On desktop, Food Type, Meal Type, and Cuisine share
-their own full-width row. The title row uses compact icon-only Print and Edit
-actions, with Edit at the trailing edge. Both controls expose descriptive
-accessible names and tooltips. Their visible buttons are 36px square; on mobile,
-their hit areas expand to 48px without changing their visible size. Do not repeat
-Recipe Tin as a page breadcrumb or attribution when the selected navigation item
-already names the Recipe Tin.
+their own full-width row. Private recipe detail places alphabetized tag chips
+and compact Print/Edit actions in one wrapping tag list beneath the heading.
+Print and Edit are trailing actions, right-aligned after the chips; retain this
+action line when the recipe has no tags. Give the line vertical margins matching
+the action spacing. Both controls expose descriptive accessible names and
+tooltips. Their visible buttons are 36px square; on mobile, their hit areas
+expand to 48px without changing their visible size. Do not repeat Recipe Tin as
+a page breadcrumb or attribution when the selected navigation item already
+names the Recipe Tin.
 Recipe titles and major detail section headings use 16pt (about 21.33px). The
 mobile Times subsection title is 18px navy small caps. The desktop Recipe Tin
 list content is up to about 1172px wide and the detail metadata area is up to
@@ -405,6 +409,38 @@ ingredient; changing the counterpart clears that choice. Before a counterpart
 is selected, the second keep button reads `ingredient`. Mobile panes remain
 viewport-bounded and appear above or below their affected row, whichever has
 more room.
+
+## Settings (Slice 14D)
+
+### Design contract
+
+Tags use a separate full-width, unframed Settings section after Ingredient
+catalog. It is collapsed by default, uses the same left-side disclosure chevron
+as Ingredient catalog and Recipe picklists, and lists trimmed, case-preserving
+names alphabetically. The list shows up to eight tags before scrolling. Reuse the
+Ingredient catalog's search, add, and spacing treatment: place the search icon
+at the field's trailing edge and keep its clear `x` outside the field. When a
+search has no match, offer an italicized `add {tag}` action that creates the
+trimmed query by click or Enter; Escape cancels that pending add. Do not add a
+separate `+ Add tag` action. Inline rename sits with the list. Merge and Delete
+use the established accessible row panes; color editing uses the same pane
+pattern with a 4-by-4 grid of 16 translucent pastel swatches. Recoloring in
+Settings updates the tag everywhere. There is no manual ordering or hierarchy.
+
+Recipe and publication create/edit forms expose a labeled searchable
+multi-select. Suggestions rank prefix matches before substring matches, with
+case-insensitive alphabetical order within each group. The compact italic
+`add tag` affordance opens an approximately one-inch input; it grows only enough
+to fit entered text and wraps on the same line as selected chips. A typed name
+can be created or reused inline. Selected chips include a local remove control;
+removing one edits only the entity draft. A newly created catalog tag is saved
+immediately, while its assignment is committed with the entity's explicit
+Save. Private detail views place alphabetized chips beneath the entity heading,
+using translucent pastel fills and borders with readable text. Chips are text,
+not links. Publication detail omits its tag line when no tags are assigned;
+recipe detail retains its tag/action line for trailing Print/Edit controls.
+Public recipe views continue to omit tags. On mobile, the Settings palette
+stays within its content width and remains operable without horizontal overflow.
 
 ## Desktop
 
@@ -548,11 +584,12 @@ Public and printed recipes always use the default bold dark-red styling.
 
 ### Trash and baseline print (Slice 8 current implementation)
 
-- Recipe detail keeps the routine Edit and Print actions beside the title. On
-  mobile, Edit remains at the title row's right edge while Print precedes it;
-  both retain touch-safe hit areas. Delete is available in edit mode at the
-  upper-right of the edit header, apart from Return to View. It is not placed
-  beside the detail actions or on recipe-list rows.
+- Recipe detail places Print and Edit at the right end of the tag line, not
+  beside the title. The action-bearing line remains when no tags are assigned;
+  both controls retain 48px mobile hit areas around their 36px visible buttons.
+  In edit mode, a standard 48px icon-only `x` with a 24px icon in the header
+  returns to view. Delete remains a separate text action below it and is not
+  placed beside the detail actions or on recipe-list rows.
 - Delete opens a native confirmation dialog that names the recipe and explains
   the 30-day restore window. Cancel and Escape leave the recipe unchanged.
 - Trash is a dense responsive working list with deleted and purge dates and an

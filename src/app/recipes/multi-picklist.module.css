@@ -71,7 +71,7 @@
 
 .option:focus-visible,
 :global(.recipe-picklist-trigger):focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 

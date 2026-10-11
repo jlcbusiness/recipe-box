@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { formatIsbnInput, normalizeIsbn } from '../../lib/publications/validation';
-import type { PublicationOption } from '../../lib/recipes/data';
+import type { PublicationOption, TagOption } from '../../lib/recipes/data';
+import { TagMultiSelect } from '../tags/tag-controls';
 import { createPublication } from './actions';
 
 const publicationTypes = [
@@ -21,11 +22,13 @@ export function PublicationCreateForm({
   onCancel,
   cancelHref,
   initialName,
+  tags,
 }: {
   onCreated?: (publication: PublicationOption) => void;
   onCancel?: () => void;
   cancelHref?: string;
   initialName?: string;
+  tags: TagOption[];
 }) {
   const [actionState, formAction, pending] = useActionState(createPublication, undefined);
   const [publicationType, setPublicationType] = useState<PublicationType>('book');
@@ -170,6 +173,7 @@ export function PublicationCreateForm({
           <input id="publication-site-url" inputMode="url" name="site_url" required type="text" />
         </label>
       )}
+      <TagMultiSelect tags={tags} />
       {(isbnError || actionState?.error) && (
         <p className="publication-form-error" role="alert">
           {isbnError || actionState?.error}
@@ -198,11 +202,13 @@ export function PublicationCreateForm({
 export function PublicationCreateDialog({
   onCreated,
   initialName,
+  tags,
   isOpen,
   onClose,
 }: {
   onCreated: (publication: PublicationOption) => void;
   initialName: string;
+  tags: TagOption[];
   isOpen: boolean;
   onClose: () => void;
 }) {
@@ -252,6 +258,7 @@ export function PublicationCreateDialog({
               initialName={initialName}
               onCancel={onClose}
               onCreated={onCreated}
+              tags={tags}
             />
           </dialog>,
           portalTarget,

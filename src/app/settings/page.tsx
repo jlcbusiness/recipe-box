@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import type { PicklistCategory } from '../../lib/recipes/data';
+import type { PicklistCategory, TagOption } from '../../lib/recipes/data';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
 import {
@@ -7,6 +7,7 @@ import {
   IngredientCatalogManager,
 } from './ingredient-catalog-manager';
 import { RecipePicklistManager } from './recipe-picklist-manager';
+import { TagCatalogManager } from './tag-catalog-manager';
 import { UnitPreferences } from './unit-preferences';
 
 export default async function SettingsPage() {
@@ -36,6 +37,10 @@ export default async function SettingsPage() {
     recipeIngredientsResult,
     ingredientCatalogResult,
     ingredientCatalogRevisionResult,
+    tagsResult,
+    tagCatalogRevisionResult,
+    recipeTagAssignmentsResult,
+    publicationTagAssignmentsResult,
   ] = await Promise.all([
     supabase
       .from('recipe_picklist_values')
@@ -52,6 +57,10 @@ export default async function SettingsPage() {
     supabase.from('recipe_ingredients').select('id, recipe_id, ingredient_id'),
     supabase.from('ingredients').select('id, name').order('name'),
     supabase.from('ingredient_catalog_revisions').select('revision').maybeSingle(),
+    supabase.from('tags').select('id, name, color_key').order('name'),
+    supabase.from('tag_catalog_revisions').select('revision').maybeSingle(),
+    supabase.from('recipe_tags').select('tag_id, recipe_id'),
+    supabase.from('publication_tags').select('tag_id, publication_id'),
   ]);
 
   if (
@@ -63,7 +72,12 @@ export default async function SettingsPage() {
     recipeIngredientsResult.error ||
     ingredientCatalogResult.error ||
     ingredientCatalogRevisionResult.error ||
-    !ingredientCatalogRevisionResult.data
+    !ingredientCatalogRevisionResult.data ||
+    tagsResult.error ||
+    tagCatalogRevisionResult.error ||
+    !tagCatalogRevisionResult.data ||
+    recipeTagAssignmentsResult.error ||
+    publicationTagAssignmentsResult.error
   ) {
     throw new Error('Unable to load Settings data.');
   }
@@ -121,6 +135,19 @@ export default async function SettingsPage() {
       ingredientRecipes.get(ingredient.id)?.size ?? 0,
     ]),
   );
+  const tagReferenceCounts = Object.fromEntries(
+    (tagsResult.data ?? []).map((tag) => [
+      tag.id,
+      {
+        recipes: (recipeTagAssignmentsResult.data ?? []).filter(
+          (assignment) => assignment.tag_id === tag.id,
+        ).length,
+        publications: (publicationTagAssignmentsResult.data ?? []).filter(
+          (assignment) => assignment.tag_id === tag.id,
+        ).length,
+      },
+    ]),
+  );
 
   return (
     <main aria-labelledby="page-title" className="settings-main">
@@ -144,6 +171,11 @@ export default async function SettingsPage() {
         initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
         initialRevision={ingredientCatalogRevisionResult.data.revision}
         referenceCounts={ingredientReferenceCounts}
+      />
+      <TagCatalogManager
+        initialTags={(tagsResult.data ?? []) as TagOption[]}
+        initialRevision={tagCatalogRevisionResult.data.revision}
+        referenceCounts={tagReferenceCounts}
       />
     </main>
   );

@@ -67,6 +67,17 @@ export function IngredientCatalogManager({
     if (editingId) renameInputRef.current?.focus();
   }, [editingId]);
 
+  useEffect(() => {
+    if (!editingId) return;
+    function cancelOnOutsidePointer(event: PointerEvent) {
+      const target = event.target;
+      if (target instanceof Node && renameInputRef.current?.contains(target)) return;
+      setEditingId(null);
+    }
+    document.addEventListener('pointerdown', cancelOnOutsidePointer);
+    return () => document.removeEventListener('pointerdown', cancelOnOutsidePointer);
+  }, [editingId]);
+
   const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
   const rows = [...ingredients].sort(
     (left, right) => collator.compare(left.name, right.name) || left.id.localeCompare(right.id),
@@ -212,6 +223,10 @@ export function IngredientCatalogManager({
 
   function addIngredient(event: FormEvent<HTMLFormElement>, name = addName) {
     event.preventDefault();
+    addIngredientByName(name);
+  }
+
+  function addIngredientByName(name: string) {
     if (!name.trim()) return;
     submitMutation('add', [{ name: 'name', value: name }], 'Ingredient added.', () => {
       setAddName('');
@@ -458,7 +473,10 @@ export function IngredientCatalogManager({
   }
 
   return (
-    <section aria-labelledby="ingredient-catalog-title" className="settings-section">
+    <section
+      aria-labelledby="ingredient-catalog-title"
+      className="settings-section ingredient-catalog-section"
+    >
       <h2 className={styles.sectionHeading}>
         <button
           aria-controls="ingredient-catalog-editor"
@@ -468,8 +486,8 @@ export function IngredientCatalogManager({
           type="button"
           onClick={() => setIsExpanded((current) => !current)}
         >
-          <span className={styles.sectionLabel}>Ingredient catalog</span>
           <ChevronRight aria-hidden="true" className={styles.sectionChevron} size={18} />
+          <span className={styles.sectionLabel}>Ingredients</span>
         </button>
       </h2>
       <div hidden={!isExpanded} id="ingredient-catalog-editor">
@@ -481,9 +499,18 @@ export function IngredientCatalogManager({
                 <input
                   aria-label="Search ingredients"
                   autoComplete="off"
-                  type="search"
+                  type="text"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && canAddSearch) {
+                      event.preventDefault();
+                      addIngredientByName(searchAddName);
+                    } else if (event.key === 'Escape' && search) {
+                      event.preventDefault();
+                      setSearch('');
+                    }
+                  }}
                 />
               </label>
               <button
@@ -517,8 +544,7 @@ export function IngredientCatalogManager({
                   onSubmit={(event) => addIngredient(event, searchAddName)}
                 >
                   <button className={styles.addButton} disabled={isPending} type="submit">
-                    <Plus aria-hidden="true" size={18} />
-                    <span>Add “{searchAddName}”</span>
+                    <span>add {searchAddName}</span>
                   </button>
                 </form>
               ) : (
@@ -531,16 +557,25 @@ export function IngredientCatalogManager({
                     required
                     value={addName}
                     onChange={(event) => setAddName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setAddName('');
+                        event.currentTarget.blur();
+                      }
+                    }}
                   />
-                  <button
-                    aria-label="Add ingredient"
-                    className={styles.addButton}
-                    disabled={isPending || !addName.trim()}
-                    title="Add ingredient"
-                    type="submit"
-                  >
-                    <Plus aria-hidden="true" size={18} />
-                  </button>
+                  {addName.trim() && (
+                    <button
+                      aria-label={`Add ${addName.trim()}`}
+                      className={styles.addActionButton}
+                      disabled={isPending}
+                      title={`Add ${addName.trim()}`}
+                      type="submit"
+                    >
+                      <Plus aria-hidden="true" size={18} />
+                    </button>
+                  )}
                 </form>
               )}
             </div>
