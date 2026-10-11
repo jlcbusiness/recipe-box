@@ -232,7 +232,7 @@ trailing empty row.
   - Metric measurements always display as decimals rounded to at most two decimal places (e.g., $1.5$ L, $0.33$ g, $1.625$ g displayed as $1.63$ g); never display metric quantities as fractions.
 
 ### 3.5 Unit Display Preferences
-- **Default unit systems:** The account stores independent US customary or metric defaults for volume and weight. Until Slice 14 adds Settings, the signed-in user changes these values in the shared navigation's Units popover.
+- **Default unit systems:** The account stores independent US customary or metric defaults for volume and weight. Signed-in users change these values in the Units subsection of Settings' Personal preferences section using the shared portal `Picklist`; the shared navigation has no Units shortcut.
 - **Preference writes:** A narrow authenticated database function derives the account from `auth.uid()`, validates the requested systems, and updates only the preference fields. Direct authenticated account updates remain restricted; admin and sign-in-method fields are not writable through this function.
 - **Best-fit conversion:** Preserve a stored unit when it matches the selected system. Otherwise, choose the largest target-system unit whose converted lower amount is at least one; if none qualifies, use the target system's smallest unit. Both endpoints of a range use the same unit.
 - **Recipe-level override (view time):** While viewing a recipe, the user can switch an individual ingredient to a specific unit within its dimension (e.g., teaspoons instead of tablespoons, or ounces instead of grams). These overrides and scale values are transient reader state, never saved to the recipe or account.
@@ -449,6 +449,8 @@ valid and is stored without separators. Magazine names are unique within an
 account after trimming and case-folding, while recipe issue and page citations
 remain on their recipes. Site URL is required. URL fields accept HTTP(S) and
 normalize a scheme-less host to HTTPS. Empty optional values are stored as null.
+The 48px Edit action uses the page-paper background and the same leaf-green
+border as Add Recipe.
 
 Saving is explicit. Each successful save increments the publication version and
 appends one `publication.updated` before/after history event, including when the
@@ -564,8 +566,17 @@ and a single-line mobile list:
 
 ## 8. Settings, Taxonomies, and Picklists
 
+Settings is a section-based workspace, not a compact menu or a grid of cards.
+Show implemented management domains as full-width, unframed sections. Personal
+preferences, configurable picklists, ingredient catalog, tags, trusted density,
+and later data tools can grow into distinct sections as their slices ship. Do
+not render empty placeholder sections or links for work that is not yet
+implemented.
+
 ### 8.1 Centralized Picklist Management
-All picklists are managed in the Settings area to prevent duplicate, misspelled, or orphaned options:
+All picklists are managed in the Settings area to prevent duplicate, misspelled,
+or orphaned options:
+
 - **Picklists Managed:**
   - Ingredients (canonical ingredient names; each may carry a trusted density, see 8.2)
   - Food Types (single-select)
@@ -579,11 +590,20 @@ All picklists are managed in the Settings area to prevent duplicate, misspelled,
   - Tags (general categorization)
 - **Picklists Actions:**
   - **Add:** Create new option.
-  - **Edit:** Rename option (cascades across all recipes).
+  - **Edit:** Rename an option inline in the ordered list. Enter saves; Escape,
+    an outside click, or browser Back cancels.
   - **Delete:** Remove option. If the option is in use, the user must choose a replacement option, which behaves as a merge. Optional fields may alternatively be explicitly cleared on affected records. Ingredients always require a replacement because a recipe row cannot exist without one.
-  - **Merge:** Select two or more options to combine into one, automatically reassigning all affected recipes and publications.
+  - **Merge:** Combine exactly two values in one operation: choose a source and
+    counterpart, then explicitly choose which value to keep. Choosing or
+    changing the counterpart clears the keep choice, and Merge stays disabled
+    until the user makes that choice. Protected values cannot be merged.
 - **Ordering:** Each picklist keeps a user-defined order used for display and sorting.
 - **Seeding:** New accounts start with the example values listed in section 2.1 for each picklist, in the order listed. All values are editable. `Specific occasion` in Verdict and Enthusiasm is protected: it can be renamed but not deleted or merged, because it reveals Occasion Details.
+
+The `Edit picklists` section is collapsed by default. Its ordered list supports
+drag and keyboard reorder, inline rename, and a trailing category-labeled add
+input. On mobile, Merge and Delete panes appear above or below the selected row
+within the viewport instead of taking over the screen.
 
 ### 8.2 Trusted Density Registry
 Located in Settings:
@@ -596,10 +616,12 @@ Located in Settings, per account:
 - Default unit system for volume and, separately, for weight (3.5).
 - Ingredient mention style (5.1).
 
-Until Slice 14 adds the Settings page, volume and weight defaults are available
-from the shared private-navigation Units popover. The popover is keyboard
-operable, displays save status, and never offers public or cross-account
-preference changes.
+Volume and weight defaults appear in the Units subsection of Personal
+preferences. Both controls use the shared portal `Picklist`; the private
+navigation has no Units shortcut. Triggers are 36px high; on mobile their hit
+areas expand to at least 48px without changing their visible size. The controls
+are keyboard operable, display save status, and never offer public or
+cross-account preference changes.
 
 ---
 
@@ -798,11 +820,15 @@ History events are recorded on save (never on individual keystrokes):
 
 ### 13.5 Private shell account menu
 
-Use one account menu throughout the private shell. On desktop, place the account
-email at the bottom of the left navigation, below navigation links (and directly
-below Settings when available). On mobile, use a 48px circular initials control
-at the right of the navigation. Both controls open the same menu with the email
-and Sign out action.
+Keep the private navigation available while the main content scrolls. On
+desktop, pin the full-height left sidebar to the viewport and let it scroll
+independently if its contents exceed the viewport. Place the utility controls
+at the bottom in this order: Trash, Settings, then Account. On mobile, use a
+wrapping horizontal navigation row with icon-only links for Recipe Tin, Library,
+Trash, and Settings; place Settings between Trash and the 48px circular initials
+account control. Preserve descriptive accessible names for each icon link.
+
+Both account controls open the same menu with the email and Sign out action.
 
 ---
 

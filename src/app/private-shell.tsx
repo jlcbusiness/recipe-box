@@ -1,8 +1,6 @@
-import { Trash2 } from 'lucide-react';
+import { Archive, LibraryBig, Settings, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { MeasurementSystem } from '../lib/recipes/measurement-rules';
 import { AccountMenu } from './account-menu';
-import { UnitsMenu } from './units-menu';
 
 export type PrivateNavItem = {
   href: string;
@@ -14,15 +12,11 @@ export function PrivateShell({
   children,
   email,
   navigation,
-  volumeSystem,
-  weightSystem,
   wideContent = false,
 }: {
   children: ReactNode;
   email: string;
   navigation: PrivateNavItem[];
-  volumeSystem: MeasurementSystem;
-  weightSystem: MeasurementSystem;
   wideContent?: boolean;
 }) {
   const emailName = email.split('@')[0] ?? email;
@@ -35,19 +29,31 @@ export function PrivateShell({
           .join('')
           .toUpperCase()
       : (nameParts[0]?.slice(0, 2).toUpperCase() ?? '?');
+  const mainNavigation = navigation.filter(({ href }) => href !== '/settings');
+  const settingsNavigation = navigation.find(({ href }) => href === '/settings');
 
   return (
     <div className="private-shell">
       <nav aria-label="Main navigation" className="private-nav">
         <div className="private-nav-links">
-          {navigation.map(({ href, label, current }) => (
-            <a aria-current={current ? 'page' : undefined} href={href} key={href}>
-              {label}
+          {mainNavigation.map(({ href, label, current }) => (
+            <a
+              aria-label={label}
+              aria-current={current ? 'page' : undefined}
+              href={href}
+              key={href}
+            >
+              {href === '/recipes' && (
+                <Archive aria-hidden="true" className="private-nav-mobile-icon" size={20} />
+              )}
+              {href === '/publications' && (
+                <LibraryBig aria-hidden="true" className="private-nav-mobile-icon" size={20} />
+              )}
+              <span className="private-nav-link-label">{label}</span>
             </a>
           ))}
         </div>
         <div className="private-nav-bottom">
-          <UnitsMenu volumeSystem={volumeSystem} weightSystem={weightSystem} />
           <a
             aria-label="Trash"
             className="private-nav-utility-link"
@@ -57,6 +63,18 @@ export function PrivateShell({
             <Trash2 aria-hidden="true" size={17} strokeWidth={1.8} />
             <span className="private-nav-utility-label">Trash</span>
           </a>
+          {settingsNavigation && (
+            <a
+              aria-label={settingsNavigation.label}
+              aria-current={settingsNavigation.current ? 'page' : undefined}
+              className="private-nav-utility-link"
+              href={settingsNavigation.href}
+              title={settingsNavigation.label}
+            >
+              <Settings aria-hidden="true" size={17} strokeWidth={1.8} />
+              <span className="private-nav-utility-label">{settingsNavigation.label}</span>
+            </a>
+          )}
           <AccountMenu email={email} initials={initials} />
         </div>
       </nav>

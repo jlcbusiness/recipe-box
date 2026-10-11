@@ -2,7 +2,7 @@
 
 > **Reference Note:** For exhaustive field-by-field definitions, measurement
 > structures, picklist taxonomies, and relationship behaviors, see
-> [plans/comprehensive-reference.md](comprehensive-reference.md), specifically:
+> [comprehensive reference](comprehensive-reference.md), specifically:
 > - [comprehensive-reference.md § 2 (Recipe Metadata)](comprehensive-reference.md#2-recipe-card-and-metadata)
 > - [comprehensive-reference.md § 3 (Ingredients & Measurements)](comprehensive-reference.md#3-ingredient-rows-measurements-and-density)
 > - [comprehensive-reference.md § 6 (Publications & Recipe Tin)](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)

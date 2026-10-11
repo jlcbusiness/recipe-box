@@ -10,7 +10,7 @@ a secondary Site publication. In-app References link to recipes only;
 existing Publication references remain visible as static legacy text.
 
 The product authority is
-[plans/comprehensive-reference.md](../comprehensive-reference.md), especially
+[comprehensive reference](../comprehensive-reference.md), especially
 [§ 5.2, Pairs With](../comprehensive-reference.md#52-recipe-to-recipe-links-pairs-with),
 [§ 5.3, References](../comprehensive-reference.md#53-references-section),
 and [§ 6.2, Magazine Titles, Recipe Locations, and Online URLs](../comprehensive-reference.md#62-magazine-titles-recipe-locations-and-online-urls).

@@ -4,7 +4,7 @@ Recipe Box is a private recipe library built with Next.js and Supabase. The
 current local app includes authentication, account isolation, recipe metadata,
 ordered ingredient rows, and validated measurements. Product features are
 delivered in the order described by the
-[delivery roadmap](plans/delivery-roadmap.md).
+[delivery roadmap](docs/plans/delivery-roadmap.md).
 
 ### Current product state
 
@@ -20,9 +20,9 @@ delivered in the order described by the
   decimal metric quantities, natural Things plurals, and plural `cups` above
   one.
 
-See the [comprehensive reference](plans/comprehensive-reference.md) for
+See the [comprehensive reference](docs/plans/comprehensive-reference.md) for
 implemented behavior and later-slice direction, and the
-[visual design guide](plans/visual-design.md) for the interface principles.
+[visual design guide](docs/plans/visual-design.md) for the interface principles.
 See the [keyboard guide](docs/keyboard-guide.md) for keyboard controls and
 shortcuts.
 
@@ -71,7 +71,7 @@ server normalizes JPEG, PNG, WebP, and HEIC/HEIF uploads to metadata-free WebP
 derivatives. Account storage is limited to 1 GiB of processed images, each
 original is limited to 20 MiB, and recipes can have up to 12 photos. A real
 CC0 HEIC fixture is covered by normalization and browser upload tests; see the
-[Slice 12 brief](plans/slices/12-images.md) and
+[Slice 12 brief](docs/plans/slices/12-images.md) and
 [fixture provenance](tests/fixtures/media/README.md). Vercel runs the
 queued-object cleanup endpoint daily.
 Configure a non-empty `CRON_SECRET` in the Vercel Production environment; Vercel

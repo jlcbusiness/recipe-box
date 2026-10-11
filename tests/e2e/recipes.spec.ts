@@ -21,76 +21,47 @@ async function selectSinglePicklist(
   await page.getByRole('option', { name: option, exact: true }).click();
 }
 
-test('unit defaults are saved from the accessible navigation menu @e2e @a11y', async ({
+test('private navigation links to Settings and keeps Units out of the nav @e2e @a11y', async ({
   page,
   request,
 }, testInfo) => {
   const user = await createTestUser(request);
-  const config = await getLocalSupabaseConfig();
 
   try {
     await signIn(page, user.email, user.password);
 
-    const unitsTrigger = page.getByLabel('Units', { exact: true });
-    await expect(unitsTrigger).toBeVisible();
-    await expect(unitsTrigger).toHaveAttribute('title', 'Units');
+    const privateNavigation = page.getByRole('navigation', { name: 'Main navigation' });
+    const settingsLink = privateNavigation.getByRole('link', { name: 'Settings' });
+    await expect(settingsLink).toBeVisible();
+    await expect(privateNavigation.getByLabel('Units', { exact: true })).toHaveCount(0);
     const trashLink = page.getByRole('link', { name: 'Trash' });
     await expect(trashLink).toBeVisible();
+    const utilityLabels = page.locator('.private-nav-utility-label');
+    await expect(utilityLabels).toHaveCount(2);
 
     if (testInfo.project.name === 'Fold 6') {
-      await expect(page.locator('.private-nav-utility-link span')).toBeHidden();
-      await expect(unitsTrigger.locator('span')).toBeHidden();
-      expect((await unitsTrigger.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+      await expect(utilityLabels.nth(0)).toBeHidden();
+      await expect(utilityLabels.nth(1)).toBeHidden();
       expect((await trashLink.boundingBox())?.height).toBeGreaterThanOrEqual(48);
     } else {
-      await expect(unitsTrigger).toContainText('Units');
-      await expect(page.locator('.private-nav-utility-link span')).toBeVisible();
+      await expect(utilityLabels.nth(0)).toBeVisible();
+      await expect(utilityLabels.nth(1)).toBeVisible();
+      await page.evaluate(() => {
+        const content = document.querySelector<HTMLElement>('.private-content');
+        if (content) content.style.minHeight = '200vh';
+        window.scrollTo(0, 300);
+      });
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      expect((await privateNavigation.boundingBox())?.y).toBe(0);
+      await page.evaluate(() => window.scrollTo(0, 0));
     }
-
-    await unitsTrigger.focus();
-    await page.keyboard.press('Enter');
-    const unitsMenu = page.locator('.units-menu');
-    await expect(unitsMenu).toHaveAttribute('open', '');
-    await expect(page.getByRole('combobox', { name: 'Volume' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Weight' })).toBeVisible();
 
     const navigationA11y = await new AxeBuilder({ page }).analyze();
     expect(navigationA11y.violations).toEqual([]);
 
-    await page.getByRole('combobox', { name: 'Volume' }).click();
-    await page.getByRole('option', { name: 'Metric', exact: true }).click();
-    await expect(page.getByRole('status')).toHaveText('Saved.');
-    const volumeSaved = await request.get(
-      `${config.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${user.id}`,
-      { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
-    );
-    expect(await volumeSaved.json()).toEqual([
-      { volume_system: 'metric', weight_system: 'us_customary' },
-    ]);
-
-    await page.getByRole('combobox', { name: 'Weight' }).click();
-    await page.getByRole('option', { name: 'Metric', exact: true }).click();
-    await expect
-      .poll(async () => {
-        const response = await request.get(
-          `${config.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${user.id}`,
-          { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
-        );
-        return response.json();
-      })
-      .toEqual([{ volume_system: 'metric', weight_system: 'metric' }]);
-
-    await page.keyboard.press('Escape');
-    await expect(unitsMenu).not.toHaveAttribute('open', '');
-    await expect
-      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
-      .toBe(true);
-
-    await page.goto('/publications');
-    await expect(page.getByLabel('Units', { exact: true })).toBeVisible();
-    await page.getByLabel('Units', { exact: true }).click();
-    await expect(page.getByRole('combobox', { name: 'Volume' })).toContainText('Metric');
-    await expect(page.getByRole('combobox', { name: 'Weight' })).toContainText('Metric');
+    await settingsLink.click();
+    await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
   }
@@ -2162,52 +2133,20 @@ test('recipe detail print matches the Standard view @e2e', async ({ page, reques
     expect(saved.ok(), await saved.text()).toBeTruthy();
 
     await signIn(page, user.email, user.password);
-    await page.getByLabel('Units', { exact: true }).click();
-    const unitsPanel = page.locator('.units-menu-panel');
-    await expect(unitsPanel).toBeInViewport({ ratio: 1 });
-    const unitsPanelBounds = await unitsPanel.evaluate((panel) => {
-      const rect = panel.getBoundingClientRect();
-      const viewport = window.visualViewport;
-      return {
-        left: rect.left,
-        top: rect.top,
-        right: rect.right,
-        bottom: rect.bottom,
-        viewportLeft: viewport?.offsetLeft ?? 0,
-        viewportTop: viewport?.offsetTop ?? 0,
-        viewportWidth: viewport?.width ?? window.innerWidth,
-        viewportHeight: viewport?.height ?? window.innerHeight,
-      };
-    });
-    expect(unitsPanelBounds.left).toBeGreaterThanOrEqual(unitsPanelBounds.viewportLeft);
-    expect(unitsPanelBounds.top).toBeGreaterThanOrEqual(unitsPanelBounds.viewportTop);
-    expect(unitsPanelBounds.right).toBeLessThanOrEqual(
-      unitsPanelBounds.viewportLeft + unitsPanelBounds.viewportWidth,
-    );
-    expect(unitsPanelBounds.bottom).toBeLessThanOrEqual(
-      unitsPanelBounds.viewportTop + unitsPanelBounds.viewportHeight,
-    );
+    await page.goto('/settings');
+    await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();
     const volumePicker = page.getByRole('combobox', { name: 'Volume' });
     const weightPicker = page.getByRole('combobox', { name: 'Weight' });
-    await expect(volumePicker).toContainText('US');
-    await expect(weightPicker).toContainText('US');
-    expect((await volumePicker.boundingBox())?.width).toBeLessThan(
-      (await unitsPanel.boundingBox())?.width ?? 0,
-    );
+    await expect(volumePicker).toContainText('US customary');
+    await expect(weightPicker).toContainText('US customary');
     await volumePicker.click();
-    const volumeMenu = page.getByRole('listbox');
-    await expect(volumeMenu).toBeInViewport({ ratio: 1 });
-    expect(await volumeMenu.evaluate((menu) => menu.scrollWidth <= menu.clientWidth)).toBe(true);
-    await volumeMenu.getByRole('option', { name: 'Metric' }).click();
+    const volumeOptions = page.getByRole('listbox').getByRole('option');
+    await expect(volumeOptions).toHaveCount(2);
+    await expect(volumeOptions.nth(0)).toHaveAccessibleName('US customary');
+    await expect(volumeOptions.nth(1)).toHaveAccessibleName('Metric');
+    await page.getByRole('listbox').getByRole('option', { name: 'Metric', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('Saved.');
     await expect(volumePicker).toContainText('Metric');
-    await weightPicker.click();
-    const weightPreferenceMenu = page.getByRole('listbox');
-    await expect(weightPreferenceMenu).toBeInViewport({ ratio: 1 });
-    await expect(weightPreferenceMenu.getByRole('option', { name: 'US' })).toBeVisible();
-    await expect(weightPreferenceMenu.getByRole('option', { name: 'Metric' })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(weightPreferenceMenu).toBeHidden();
     await page.addInitScript(() => {
       window.print = () => {
         document.documentElement.dataset.printRequested = 'true';

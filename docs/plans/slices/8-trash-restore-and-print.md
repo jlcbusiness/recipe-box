@@ -7,7 +7,7 @@ publications, sharing routes, scaling, alternate reader controls, or permanent
 user-directed deletion.
 
 The product authority is
-[plans/comprehensive-reference.md](../comprehensive-reference.md), especially
+[comprehensive reference](../comprehensive-reference.md), especially
 [§ 4, Ingredient Presentation and Sorting](../comprehensive-reference.md#4-ingredient-presentation-and-sorting),
 [§ 6.6, Trash, Restore, and Purge](../comprehensive-reference.md#66-trash-restore-and-purge),
 [§ 12, Change History and Forensic Audit](../comprehensive-reference.md#12-change-history-and-forensic-audit),

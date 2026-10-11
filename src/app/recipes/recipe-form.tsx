@@ -415,7 +415,7 @@ export function RecipeForm({
               placeholder="What am I feeling?"
               options={valuesFor('enthusiasm').map((value) => ({
                 value: value.id,
-                label: value.value,
+                label: value.display_value,
               }))}
               isOpen={openPicklist === 'enthusiasm'}
               onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'enthusiasm' : null)}
@@ -430,7 +430,7 @@ export function RecipeForm({
               placeholder="Select Verdict"
               options={valuesFor('verdict').map((value) => ({
                 value: value.id,
-                label: value.value,
+                label: value.display_value,
               }))}
               isOpen={openPicklist === 'verdict'}
               onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'verdict' : null)}
@@ -493,7 +493,7 @@ export function RecipeForm({
             placeholder="Select Food Type"
             options={valuesFor('food_type').map((value) => ({
               value: value.id,
-              label: value.value,
+              label: value.display_value,
             }))}
             isOpen={openPicklist === 'food_type'}
             onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'food_type' : null)}

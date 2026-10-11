@@ -67,7 +67,7 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
       .eq('publication_id', publication.id)
       .is('trashed_at', null)
       .order('updated_at', { ascending: false }),
-    supabase.from('recipe_picklist_values').select('id, category, value'),
+    supabase.from('recipe_picklist_values').select('id, category, display_value'),
   ]);
 
   if (recipesError || picklistsError) {
@@ -88,11 +88,13 @@ export default async function PublicationPage({ params }: { params: Promise<{ id
     throw new Error('Unable to load this publication.');
   }
 
-  const picklistById = new Map((picklistsData ?? []).map(({ id, value }) => [id, value]));
+  const picklistById = new Map(
+    (picklistsData ?? []).map(({ id, display_value }) => [id, display_value]),
+  );
   const foodTypeById = new Map(
     (picklistsData ?? [])
       .filter((option) => option.category === 'food_type')
-      .map(({ id, value }) => [id, value]),
+      .map(({ id, display_value }) => [id, display_value]),
   );
   const assignmentsByRecipe = new Map<string, string[]>();
   for (const assignment of assignments ?? []) {

@@ -1,6 +1,6 @@
 # Recipe Box First-Draft Specification
 
-> **Document authority:** [plans/comprehensive-reference.md](comprehensive-reference.md)
+> **Document authority:** [comprehensive reference](comprehensive-reference.md)
 > is the master document. This spec is the high-level strategy summary and must
 > always defer to it. If the two disagree, the reference wins and this spec is
 > corrected. Read this spec first, then open only the reference sections the

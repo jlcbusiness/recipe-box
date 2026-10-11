@@ -31,6 +31,7 @@ export type RecipePicklistValue = {
   account_id: string;
   category: PicklistCategory;
   value: string;
+  display_value: string;
   sort_order: number;
   is_protected: boolean;
 };
@@ -174,7 +175,7 @@ export async function getRecipePicklists(
 ): Promise<RecipePicklistValue[]> {
   const { data, error } = await supabase
     .from('recipe_picklist_values')
-    .select('id, account_id, category, value, sort_order, is_protected')
+    .select('id, account_id, category, value, display_value, sort_order, is_protected')
     .order('category')
     .order('sort_order');
 
@@ -374,14 +375,14 @@ export async function getRecipe(
   if (measurementPicklistIds.length > 0) {
     const { data: picklistData, error: picklistError } = await supabase
       .from('recipe_picklist_values')
-      .select('id, value')
+      .select('id, display_value')
       .in('id', measurementPicklistIds);
 
     if (picklistError) {
       throw new Error('Unable to load this recipe.');
     }
     measurementPicklistValues = new Map(
-      (picklistData ?? []).map((option) => [option.id, option.value]),
+      (picklistData ?? []).map((option) => [option.id, option.display_value]),
     );
   }
 

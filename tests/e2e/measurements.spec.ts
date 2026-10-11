@@ -409,11 +409,9 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
   try {
     await signIn(page, user.email, user.password);
     await page.setViewportSize({ width: 800, height: 900 });
-    await page.goto('/recipes');
-    await page.getByLabel('Units', { exact: true }).click();
+    await page.goto('/settings');
     await page.getByRole('combobox', { name: 'Weight' }).click();
-    await page.getByRole('listbox').getByRole('option', { name: 'US', exact: true }).click();
-    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await page.getByRole('listbox').getByRole('option', { name: 'US customary' }).click();
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('Measured recipe');
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });

@@ -31,6 +31,7 @@ const unitMeasurementTypes = ['volume', 'weight'] as const;
 type MeasurementPicklistOption = {
   id: string;
   value: string;
+  display_value?: string;
   group?: string;
 };
 
@@ -121,7 +122,7 @@ function MeasurementPicklist({
     value: selectedId,
     options: options.map((option) => ({
       value: option.id,
-      label: option.value,
+      label: option.display_value ?? option.value,
       group: option.group,
     })),
     onSelect,
@@ -147,7 +148,7 @@ function MeasurementPicklist({
         onClick={menu.toggle}
         onKeyDown={menu.handleKeyDown}
       >
-        {selectedValue?.value ?? prompt}
+        {selectedValue?.display_value ?? selectedValue?.value ?? prompt}
       </button>
       {menu.isOpen &&
         options.length > 0 &&

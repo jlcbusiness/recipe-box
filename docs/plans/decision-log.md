@@ -1,7 +1,7 @@
 # Recipe Box Decision Log
 
 > **Reference Note:** For full context and comprehensive background on each
-> decision, see [plans/comprehensive-reference.md](comprehensive-reference.md).
+> decision, see [comprehensive reference](comprehensive-reference.md).
 
 ## Purpose
 
@@ -39,6 +39,9 @@ the product specification or a task list. The canonical behavior remains in
 | History is forensic only in the first release. | Audit value is useful now; version restore adds avoidable complexity. |
 | Deliberate save only; no autosave. | Avoids runaway history events and mid-edit version increments; history logs on explicit save. |
 | Delivery is vertical slices, not one full implementation plan. | Each slice can be tested and adjusted before later complexity is added. |
+| Slice 14 is delivered in four independently testable stages: Settings and preferences (14A), recipe picklist values (14B), ingredient catalog management (14C), and tags (14D). | The existing preference RPC can ship without a schema migration, while vocabulary updates, ingredient graph rewrites, and tag assignment have distinct transactional and accessibility contracts. |
+| Settings is a wide, section-based workspace; implemented domains are unframed sections, and future sections appear only when their features ship. Preference Picklists use the standard 36px control height, with a separate 48px mobile hit area. | Personal preferences, picklist and ingredient management, tags, density, and data tools need room to grow without turning Settings into a compact menu, card grid, or page of empty placeholders. |
+| Recipe picklist merge is pairwise and requires an explicit keep choice after the counterpart is selected or changed. | Clearing the keep choice on counterpart changes prevents an accidental merge from inheriting a stale or default destination. |
 | Testability is a non-negotiable architecture constraint, and automated tests are written before production code. | Every requirement needs deterministic automated acceptance coverage; test-first delivery prevents untestable designs and makes demonstrations repeatable. |
 | The local test gate uses Vitest, Playwright with Chromium, and axe. | One reproducible command covers unit behavior, browser workflows, and automated accessibility without a hosted service. |
 | Domain seed records are introduced with the schema that defines them, not in the schema-free baseline. | Avoids a throwaway fixture table and keeps local migrations representative of the real product model. |

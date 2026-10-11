@@ -10,7 +10,7 @@ single-line truncated titles and authors. Publication deletion, Trash, and
 restore remain a separate Slice 10B lifecycle demonstration.
 
 The product authority is
-[plans/comprehensive-reference.md](../comprehensive-reference.md), especially
+[comprehensive reference](../comprehensive-reference.md), especially
 [§ 6, Publications and the Recipe Tin](../comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
 and [§ 7.3, Source Library Explorer](../comprehensive-reference.md#73-source-library-explorer).
 Also consult the [data model](../data-model.md),

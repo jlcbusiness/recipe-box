@@ -6,9 +6,12 @@
 - [Design Philosophy](#design-philosophy)
 - [Recipe Metadata Entry (Slice 4)](#recipe-metadata-entry-slice-4)
 - [Recipe Relationships and References (Slice 11)](#recipe-relationships-and-references-slice-11)
+- [Settings (Slice 14A)](#settings-slice-14a)
+- [Settings (Slice 14B)](#settings-slice-14b)
 - [Desktop](#desktop)
 - [Mobile](#mobile)
 - [Ingredient Presentation](#ingredient-presentation)
+- [Publication Editing](#publication-editing)
 - [Planned Publication Cover Fallbacks](#planned-publication-cover-fallbacks)
 - [Accessibility And Interaction](#accessibility-and-interaction)
 - [Required Future Detail](#required-future-detail)
@@ -158,13 +161,17 @@ recipe.
 
 - Desktop is keyboard-first and information-dense: aligned rows, compact
   tables, content-sized fields, and multi-column editing where comparison helps.
+- The private desktop shell uses a viewport-height left navigation rail pinned
+  at the top while the main content scrolls. The rail scrolls independently if
+  its contents exceed the viewport.
 - Mobile is touch-first, not a compressed desktop. Preserve the data model but
   replace crowded row editing with a focused one-column pane or popover. Keep
   lookup and cooking information prominent, retain at least 48px touch targets,
   and ensure menus and dialogs remain inside the viewport.
-- Mobile navigation remains persistently visible as a wrapping horizontal top
-  bar rather than moving into a drawer. Keep primary destinations and the
-  account control available without a separate navigation gesture.
+- Mobile navigation is a wrapping horizontal top bar rather than a drawer.
+  Recipe Tin, Library, Trash, and Settings use icon-only links with descriptive
+  accessible names; keep the account control at the right without a separate
+  navigation gesture.
 - Let lists simplify on small screens by hiding low-priority columns and using
   deliberate wrapping, not horizontal page scrolling or tiny unreadable text.
   Stable dimensions must prevent selected states, labels, or dynamic content
@@ -344,23 +351,66 @@ about 1012px wide.
 
 ### Account menu
 
-The private shell exposes a compact Units popover before Trash and Account.
-Desktop shows the Units icon with its text label; mobile shows a 48px circular
-Ruler control with a tooltip and accessible name. Volume and Weight are visibly
-labeled native selects sized to their options plus 1mm rather than the full
-popover width, and the popover reports save status. Trash becomes a 48px
-icon-only mobile link with its accessible name and tooltip.
+Unit preferences are managed from Settings, not from a persistent navigation
+shortcut. Settings uses a wide, unframed section layout rather than a compact
+menu panel or card. The Personal preferences section contains labeled Volume
+and Weight controls using the shared portal `Picklist`, with stable,
+content-sized triggers and the existing save action and status. Do not add a
+second preference form. Future settings domains become sections as their
+features are implemented; do not display empty placeholder sections or links.
+The private navigation keeps Settings, Trash, and Account. On desktop, place
+Settings after Trash and before Account in the pinned sidebar. On mobile, show
+icon-only links for Recipe Tin, Library, Trash, and Settings, with Settings
+after Trash and before the Account control. Give each icon link a descriptive
+accessible name and tooltip.
 
 The account menu uses the same options everywhere. On desktop, show the account
-email at the bottom of the left navigation, below its navigation links (and
-directly below Settings when that destination is available). On mobile, show a
-48px circular initials button at the right of the navigation. Both controls
-open the same account menu with the email and Sign out action.
+email at the bottom of the pinned left navigation, after the Trash and Settings
+utility links. On mobile, show a 48px circular initials button at the right of
+the navigation. Both controls open the same account menu with the email and
+Sign out action.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
 compact, while labeled rows, picklist triggers, popup options, standalone
 actions, and compact inline action hit areas retain touch targets of at least
 48px.
+
+## Settings (Slice 14A)
+
+### Current implementation
+
+Settings appears in the private navigation on Recipe Tin, Library, and
+Administration routes. The page uses a wide, unframed Personal preferences
+section with a Units subsection containing labeled Volume and Weight controls
+from the shared portal `Picklist`. The controls remain content-sized and 36px
+high; their mobile tap areas expand to 48px without changing their visible
+height. No compact panel, duplicate preference form, or Units shortcut appears
+in the private navigation. Add later Settings domains as working sections when
+their slices ship, not as empty placeholders.
+
+Changing a Picklist saves that account preference immediately and announces the
+save status. A failed save restores the last saved value. Picklist, ingredient,
+catalog, tag, density, and data-management features are separate Settings
+domains delivered by their later slices.
+
+## Settings (Slice 14B)
+
+### Current implementation
+
+Recipe picklist management is collapsed by default behind an `Edit picklists`
+toggle. Expanding it reveals a category selector, A-Z sort action, ordered
+value list, and trailing category-labeled add input. Drag and keyboard reorder
+preserve explicit ordering. Activating a value name edits it inline; Enter
+saves, while Escape, outside click, or browser Back cancels. Merge and Delete
+actions appear on row hover or focus and remain available on touch devices.
+
+Merge combines one source with one selected counterpart. `Keep as` offers the
+two values as exclusive choices; selecting or changing the counterpart clears
+the keep choice, so Merge requires a deliberate selection. Delete reports
+affected references and shows replacement or clearing controls when applicable.
+On mobile, Merge and Delete panes are positioned above or below their row,
+whichever has more room, and remain within the viewport. Merge uses a warm
+autumn-orange accent for its controls.
 
 ## Desktop
 
@@ -521,7 +571,8 @@ Public and printed recipes always use the default bold dark-red styling.
 
 Publication detail shows the cover without an edit trigger. Its action row
 places the square `Edit publication` pencil at the left and the compact Add
-Recipe link at the right. The pencil has a 48px hit area and visible focus. It
+Recipe link at the right. The pencil has a 48px hit area, page-paper background,
+leaf-green border matching Add Recipe, and visible focus. It
 opens a native modal dialog, focuses the Name field, displays the fixed
 publication type, and shows only the fields for that type. The edit pane places
 the interactive cover image and its pencil beside Name. Name keeps the same

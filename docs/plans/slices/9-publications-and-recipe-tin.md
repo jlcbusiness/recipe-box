@@ -17,7 +17,7 @@ active recipes. It does not introduce publication deletion, secondary Site
 listings, uploaded covers, or the full Library explorer.
 
 The product authority is
-[plans/comprehensive-reference.md](../comprehensive-reference.md), especially
+[comprehensive reference](../comprehensive-reference.md), especially
 [§ 2, Recipe Card and Metadata](../comprehensive-reference.md#2-recipe-card-and-metadata),
 [§ 6, Publications, Magazine Handling, and The Recipe Tin](../comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin),
 [§ 12, Change History and Forensic Audit](../comprehensive-reference.md#12-change-history-and-forensic-audit),

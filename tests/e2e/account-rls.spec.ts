@@ -139,6 +139,13 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
       },
     ]);
 
+    const foreignPreferenceRead = await request.get(
+      `${supabase.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${owner.id}`,
+      { headers: userHeaders(otherUser) },
+    );
+    expect(foreignPreferenceRead.status()).toBe(200);
+    expect(await foreignPreferenceRead.json()).toEqual([]);
+
     const directPreferenceUpdate = await request.patch(
       `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
       {

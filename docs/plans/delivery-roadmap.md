@@ -1,7 +1,7 @@
 # Recipe Box Delivery Roadmap
 
 > **Reference Note:** For the complete catalog of all requirements, edge cases,
-> UI behaviors, and design discussions, see [plans/comprehensive-reference.md](comprehensive-reference.md).
+> UI behaviors, and design discussions, see [comprehensive reference](comprehensive-reference.md).
 
 ## Purpose
 
@@ -11,7 +11,7 @@ until the work about to begin expands and verifies its relevant details.
 
 ## Current implementation status
 
-Slices 0 through 13, including 12.5, are implemented locally. Slice 13.5 is
+Slices 0 through 14B, including 12.5, are implemented locally. Slice 13.5 is
 complete: recipe-form State, Enthusiasm, Verdict, and Food Type use the shared
 portal picklist; Meal Type, Cuisine, and Equipment use the recipe-specific
 `MultiPicklist`. `RecipeForm` coordinates exclusive visibility and preserves
@@ -33,7 +33,7 @@ for current requirements.
 
 Before implementing any roadmap slice:
 
-1. Create a focused slice brief under `plans/slices/`.
+1. Create a focused slice brief under `docs/plans/slices/`.
 2. Read `first-draft-spec.md` first, then the relevant sections of
    [comprehensive-reference.md](comprehensive-reference.md) (the master
    document), `data-model.md`, `visual-design.md`, and `decision-log.md`.
@@ -100,7 +100,10 @@ question. Its output is a decision-log entry, not shipped code.
 | 12.5. Edit publications — implemented | A person can update an existing Book, Magazine title, or Site's name and type-specific details without deleting and recreating it; its recipes and cover remain associated. | Delivered with an authenticated owner-scoped, version-checked update function; immutable publication type; type-specific validation and URL normalization; append-only update history; and a responsive native editor. Detail shows a static cover, with Edit left and compact Add Recipe right; the editor places the cover manager beside a standard Name field, with Delete left and equal-width Save right. Closing with X or Escape discards the draft. Focused unit, API, and browser acceptance tests pass on Chromium and Fold 6. |
 | 13. Scaling and unit conversion — complete | A person can scale by servings, multiply, or divide; set account defaults for volume and weight systems; and override each dimension on one ingredient. Print retains the active scale and units. | Delivered with pure validated conversion/scaling rules, high-precision canonical factors, owner-derived preference updates, accessible navigation controls, local reader state, reset of scale and all overrides, and PDF text assertions. The isolated migration harness verifies defaults for accounts created before and after the migration. Focused unit, API, Chromium/Fold 6, accessibility, typecheck, lint, and production-build checks pass. The full E2E run has unrelated failures in storage, ingredient editing, measurement-editor locators, and recipe-form styling. |
 | 13.5. Shared recipe picklists — complete | State, Enthusiasm, Verdict, and Food Type use the shared portal picklist; Meal Type, Cuisine, and Equipment use the recipe-specific multi-select module. Both preserve recipe-form exclusivity, submitted values, and responsive layout with 36px recipe-entry controls. | Delivered with controlled single-select visibility, `aria-pressed` multi-select options, repeated hidden ID serialization, keyboard focus/dismissal, and consistent 36px metadata sizing. Recipe create/edit, conditional fields, multi-select interaction, active-menu axe, and source-link sizing pass on Chromium and Fold 6. See [Slice 13.5 brief](slices/13.5-shared-single-picklists.md). |
-| 14. Settings and picklists | A person can add, rename, delete, and merge picklist values, tags, and ingredients, choosing a replacement when a value is in use; add and manage tags on recipes and publications. | Transactional merge and delete; ingredient merge effects on mentions and Main flags; tag schema and handling; personal preferences page. |
+| 14A. Settings and personal preferences — implemented | A person can change account Volume and Weight defaults in a wide, unframed Personal preferences section in Settings; no Units shortcut remains in navigation. | Authenticated route; shared portal Picklists with 36px triggers and at least 48px mobile hit areas, backed by the existing owner-derived preference RPC; independent saves; pinned desktop sidebar and compact mobile navigation; accessible save/error state. Later Settings domains appear as working sections when their slices ship, not as empty placeholders. See [Slice 14A brief](slices/14a-settings-and-preferences.md). |
+| 14B. Recipe picklist values — implemented | A person can add, rename, reorder, delete, and merge Food Type, Meal Type, Cuisine, Equipment, Verdict, Enthusiasm, Informal Unit, and Unmeasured Phrase values. | Delivered with owner-derived management, optimistic revisions, normalized uniqueness, stable occasion semantics, transactional reference rewrites, and append-only history. Merge is pairwise and requires an explicit keep choice after selecting the counterpart. Settings interactions and database behavior pass on Chromium and Fold 6, including order persistence, optional clearing, required measurement replacement, version/history updates, and owner isolation. See [Slice 14B brief](slices/14b-recipe-picklist-values.md). |
+| 14C. Ingredient catalog management | A person can add, rename, reorder, merge, and delete canonical ingredients, choosing a replacement when an ingredient is referenced. | Transactional recipe-row reassignment; duplicate row handling; instruction mention rewrites; Main-flag preservation; owner isolation and history. Slice 15's density registry depends on this catalog workflow. |
+| 14D. Tags and assignment | A person can manage tags and add or remove them on recipes and publications. | Account-owned tag schema and joins; transactional merge/delete replacement; recipe/publication edit and detail presentation; history and owner isolation. |
 | 15. Trusted density | A person can define an ingredient's density and see volume and weight auto-fill with tint and badge, override it, and have it re-fill when cleared. | Normalized density storage; derived-versus-manual state; override rules; accessible derived label. |
 | 16. Cooking views | A person can switch Standard and Ingredient-first, sort ingredients four ways, and use mobile cook mode with check-off and wake lock. | Sort normalization and dual-measurement rule; saved default presentation; wake-lock browser support; touch-target sizes. |
 | 17. Find recipes | A person can search full text, filter, and sort recipes and publications with chosen columns. Recipes within a publication have the same recipe filters and list/grid views, with default recipe photos shown in Grid when available. | Search indexing across plain-text projections; filter semantics; empty states; performance; publication-scoped recipe explorer and its responsive list/grid presentation. |

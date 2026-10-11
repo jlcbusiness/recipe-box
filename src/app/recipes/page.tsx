@@ -17,15 +17,19 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       .is('trashed_at', null)
       .is('publication_id', null)
       .order('updated_at', { ascending: false }),
-    supabase.from('recipe_picklist_values').select('id, value'),
+    supabase.from('recipe_picklist_values').select('id, display_value'),
   ]);
 
   if (recipesResult.error || foodTypesResult.error) {
     throw new Error('Unable to load your Recipe Tin.');
   }
 
-  const foodTypeById = new Map(foodTypesResult.data.map(({ id, value }) => [id, value]));
-  const responseById = new Map(foodTypesResult.data.map(({ id, value }) => [id, value]));
+  const foodTypeById = new Map(
+    foodTypesResult.data.map(({ id, display_value }) => [id, display_value]),
+  );
+  const responseById = new Map(
+    foodTypesResult.data.map(({ id, display_value }) => [id, display_value]),
+  );
 
   return (
     <main className="recipes-main recipe-tin" aria-labelledby="page-title">

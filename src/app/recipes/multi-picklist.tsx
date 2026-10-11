@@ -33,12 +33,13 @@ export function MultiPicklist({
   const [triggerLabelWidth, setTriggerLabelWidth] = useState(0);
   const selectedValues = values.filter((value) => selectedOptionIds.includes(value.id));
   const longestOption = values.reduce(
-    (longest, value) => (value.value.length > longest.length ? value.value : longest),
+    (longest, value) =>
+      value.display_value.length > longest.length ? value.display_value : longest,
     '',
   );
   const triggerMeasure = `✓ ${longestOption}`;
-  const summaryText = selectedValues[0]?.value ?? 'Select';
-  const accessibleSelection = selectedValues.map((value) => value.value).join(', ');
+  const summaryText = selectedValues[0]?.display_value ?? 'Select';
+  const accessibleSelection = selectedValues.map((value) => value.display_value).join(', ');
 
   useEffect(() => {
     const measuredWidth = measureRef.current?.getBoundingClientRect().width;
@@ -174,7 +175,7 @@ export function MultiPicklist({
                   <span aria-hidden="true" className={styles.check}>
                     {isSelected ? '✓' : ''}
                   </span>
-                  <span>{value.value}</span>
+                  <span>{value.display_value}</span>
                 </button>
               );
             })}

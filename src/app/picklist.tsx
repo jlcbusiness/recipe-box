@@ -250,6 +250,7 @@ export function Picklist({
   className,
   title,
   showArrow = true,
+  sizeToContent = true,
   scope,
   autoFocus = false,
   disabled = false,
@@ -268,6 +269,7 @@ export function Picklist({
   className: string;
   title?: string;
   showArrow?: boolean;
+  sizeToContent?: boolean;
   scope?: string;
   autoFocus?: boolean;
   disabled?: boolean;
@@ -300,14 +302,14 @@ export function Picklist({
   const [triggerWidth, setTriggerWidth] = useState<number>();
 
   useLayoutEffect(() => {
-    if (!showArrow) {
+    if (!showArrow || !sizeToContent) {
       return;
     }
     const measuredWidth = measureRef.current?.getBoundingClientRect().width;
     if (measuredWidth) {
       setTriggerWidth(Math.ceil(measuredWidth + 40));
     }
-  }, [showArrow]);
+  }, [showArrow, sizeToContent]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -335,7 +337,9 @@ export function Picklist({
         ref={triggerRef}
         role="combobox"
         style={
-          showArrow && triggerWidth ? { minWidth: `calc(${triggerWidth}px + 1mm)` } : undefined
+          showArrow && sizeToContent && triggerWidth
+            ? { minWidth: `calc(${triggerWidth}px + 1mm)` }
+            : undefined
         }
         title={title}
         type="button"
