@@ -184,7 +184,7 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
     const ingredients = await ingredientsResponse.json();
     expect(ingredients.map((ingredient: { name: string }) => ingredient.name)).toEqual([
       'Basil',
-      'Sea salt',
+      'Sea Salt',
     ]);
     const basil = ingredients.find((ingredient: { name: string }) => ingredient.name === 'Basil');
 
@@ -345,14 +345,485 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
       after_data: {
         ingredients: [
           { name: 'Basil', is_main: true, detail: 'fresh', preparation: 'chopped' },
-          { name: 'Sea salt', is_main: false, detail: '', preparation: 'to taste' },
+          { name: 'Sea Salt', is_main: false, detail: '', preparation: 'to taste' },
         ],
       },
     });
     expect(history[1].before_data.ingredients).toHaveLength(2);
-    expect(history[1].after_data.ingredients[0].name).toBe('Sea salt');
+    expect(history[1].after_data.ingredients[0].name).toBe('Sea Salt');
   } finally {
     await deleteTestUser(request, other);
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('ingredient catalog merge preserves repeated rows, measurements, mentions, and history @e2e @ingredientCatalog', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const other = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ownerHeaders = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${owner.accessToken}`,
+  };
+  const otherHeaders = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${other.accessToken}`,
+  };
+  const sourceRowIds = [
+    '11111111-1111-4111-8111-111111111111',
+    '33333333-3333-4333-8333-333333333333',
+  ];
+  const targetRowId = '22222222-2222-4222-8222-222222222222';
+  const sourceStepIds = [
+    '44444444-4444-4444-8444-444444444444',
+    '55555555-5555-4555-8555-555555555555',
+  ];
+
+  function recipeWithIngredients(name: string, rowIds: string[], stepId: string) {
+    const sourceMarker = `[[ingredient:${rowIds[0]}|ground-pepper]]`;
+    const rows = rowIds.map((id, index) => ({
+      recipe_ingredient_id: id,
+      ingredient_id: null,
+      ingredient_name: index === 1 ? 'Pepper' : 'Ground pepper',
+      is_main: index === 0,
+      detail: index === 0 ? 'freshly cracked' : 'fine',
+      preparation: index === 0 ? 'cracked' : 'measured',
+      measurements: [
+        {
+          measurement_type: 'volume',
+          amount_min: index + 1,
+          amount_max: null,
+          unit_code: 'tbsp',
+          picklist_value_id: null,
+        },
+      ],
+    }));
+    return {
+      ...recipePayload(name, rows),
+      p_instruction_steps: [
+        {
+          id: stepId,
+          position: 0,
+          content_markdown: `Add ${sourceMarker}.`,
+          plain_text: 'Add #ground-pepper.',
+        },
+      ],
+    };
+  }
+
+  try {
+    const firstRecipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: ownerHeaders,
+      data: recipeWithIngredients(
+        'Catalog merge repeated rows',
+        [sourceRowIds[0], targetRowId],
+        sourceStepIds[0],
+      ),
+    });
+    expect(firstRecipeResponse.ok(), await firstRecipeResponse.text()).toBeTruthy();
+    const secondRecipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: ownerHeaders,
+      data: recipeWithIngredients(
+        'Catalog merge second recipe',
+        [sourceRowIds[1]],
+        sourceStepIds[1],
+      ),
+    });
+    expect(secondRecipeResponse.ok(), await secondRecipeResponse.text()).toBeTruthy();
+
+    const catalogResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id,name,sort_order&account_id=eq.${owner.id}&order=name.asc`,
+      { headers: ownerHeaders },
+    );
+    expect(catalogResponse.ok()).toBeTruthy();
+    const catalog = (await catalogResponse.json()) as { id: string; name: string }[];
+    const source = catalog.find((ingredient) => ingredient.name === 'Ground Pepper');
+    const target = catalog.find((ingredient) => ingredient.name === 'Pepper');
+    expect(source).toBeDefined();
+    expect(target).toBeDefined();
+    if (!source || !target) throw new Error('Catalog fixture ingredients were not created.');
+
+    const hiddenMutation = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: otherHeaders,
+        data: {
+          p_action: 'merge',
+          p_expected_revision: 1,
+          p_ingredient_id: source.id,
+          p_replacement_id: target.id,
+        },
+      },
+    );
+    expect(hiddenMutation.ok()).toBeFalsy();
+
+    const revisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${owner.id}`,
+      { headers: ownerHeaders },
+    );
+    expect(revisionResponse.ok()).toBeTruthy();
+    const [{ revision }] = (await revisionResponse.json()) as { revision: number }[];
+
+    const mergeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: ownerHeaders,
+        data: {
+          p_action: 'merge',
+          p_expected_revision: revision,
+          p_ingredient_id: source.id,
+          p_replacement_id: target.id,
+        },
+      },
+    );
+    expect(mergeResponse.ok(), await mergeResponse.text()).toBeTruthy();
+
+    const rowsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?select=id,recipe_id,ingredient_id,position,is_main,detail,preparation&account_id=eq.${owner.id}&id=in.(${sourceRowIds.join(',')},${targetRowId})&order=recipe_id,position`,
+      { headers: ownerHeaders },
+    );
+    expect(await rowsResponse.json()).toEqual(
+      expect.arrayContaining([
+        {
+          id: sourceRowIds[0],
+          recipe_id: expect.any(String),
+          ingredient_id: target.id,
+          position: 0,
+          is_main: true,
+          detail: 'freshly cracked',
+          preparation: 'cracked',
+        },
+        {
+          id: targetRowId,
+          recipe_id: expect.any(String),
+          ingredient_id: target.id,
+          position: 1,
+          is_main: false,
+          detail: 'fine',
+          preparation: 'measured',
+        },
+        {
+          id: sourceRowIds[1],
+          recipe_id: expect.any(String),
+          ingredient_id: target.id,
+          position: 0,
+          is_main: true,
+          detail: 'freshly cracked',
+          preparation: 'cracked',
+        },
+      ]),
+    );
+
+    const measurementsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=recipe_ingredient_id,amount_min,unit_code&recipe_ingredient_id=in.(${sourceRowIds.join(',')},${targetRowId})&order=recipe_ingredient_id`,
+      { headers: ownerHeaders },
+    );
+    expect(await measurementsResponse.json()).toEqual([
+      { recipe_ingredient_id: sourceRowIds[0], amount_min: 1, unit_code: 'tbsp' },
+      { recipe_ingredient_id: targetRowId, amount_min: 2, unit_code: 'tbsp' },
+      { recipe_ingredient_id: sourceRowIds[1], amount_min: 1, unit_code: 'tbsp' },
+    ]);
+
+    const mentionsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_step_mentions?select=recipe_ingredient_id&recipe_step_id=in.(${sourceStepIds.join(',')})&order=recipe_step_id`,
+      { headers: ownerHeaders },
+    );
+    expect(await mentionsResponse.json()).toEqual([
+      { recipe_ingredient_id: sourceRowIds[0] },
+      { recipe_ingredient_id: sourceRowIds[1] },
+    ]);
+
+    const historyResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_history?select=record_id,event_type,before_data,after_data&account_id=eq.${owner.id}&order=created_at.asc`,
+      { headers: ownerHeaders },
+    );
+    const history = (await historyResponse.json()) as {
+      record_id: string;
+      event_type: string;
+      before_data: { ingredients: { name: string }[] };
+      after_data: { ingredients: { name: string }[] };
+    }[];
+    const mergeEvents = history.filter((event) => event.event_type === 'recipe.updated');
+    expect(mergeEvents).toHaveLength(2);
+    expect(mergeEvents.map((event) => event.before_data.ingredients[0]?.name)).toEqual([
+      'Ground Pepper',
+      'Ground Pepper',
+    ]);
+    expect(mergeEvents.map((event) => event.after_data.ingredients[0]?.name)).toEqual([
+      'Pepper',
+      'Pepper',
+    ]);
+
+    const catalogHistoryResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_history?select=event_type,affected_recipe_ids&account_id=eq.${owner.id}&event_type=eq.ingredient.merged`,
+      { headers: ownerHeaders },
+    );
+    expect(await catalogHistoryResponse.json()).toEqual([
+      {
+        event_type: 'ingredient.merged',
+        affected_recipe_ids: expect.arrayContaining(mergeEvents.map((event) => event.record_id)),
+      },
+    ]);
+  } finally {
+    await deleteTestUser(request, other);
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('ingredient catalog rename records before and after recipe snapshots @e2e @ingredientCatalog', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ownerHeaders = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${owner.accessToken}`,
+  };
+  const rowId = '66666666-6666-4666-8666-666666666666';
+  const stepId = '77777777-7777-4777-8777-777777777777';
+
+  try {
+    const recipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: ownerHeaders,
+      data: {
+        ...recipePayload('Catalog rename history fixture', [
+          {
+            recipe_ingredient_id: rowId,
+            ingredient_id: null,
+            ingredient_name: 'Cumin',
+            is_main: true,
+            detail: 'whole',
+            preparation: 'toasted',
+            measurements: [],
+          },
+        ]),
+        p_instruction_steps: [
+          {
+            id: stepId,
+            position: 0,
+            content_markdown: `Toast [[ingredient:${rowId}|cumin]].`,
+            plain_text: 'Toast #cumin.',
+          },
+        ],
+      },
+    });
+    expect(recipeResponse.ok(), await recipeResponse.text()).toBeTruthy();
+    const [{ id: recipeId }] = await recipeResponse.json();
+
+    const revisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${owner.id}`,
+      { headers: ownerHeaders },
+    );
+    const [{ revision }] = (await revisionResponse.json()) as { revision: number }[];
+    const ingredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id&account_id=eq.${owner.id}&name=eq.Cumin`,
+      { headers: ownerHeaders },
+    );
+    const [{ id: ingredientId }] = await ingredientResponse.json();
+
+    const renameResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: ownerHeaders,
+        data: {
+          p_action: 'rename',
+          p_expected_revision: revision,
+          p_ingredient_id: ingredientId,
+          p_name: 'Toasted cumin',
+        },
+      },
+    );
+    expect(renameResponse.ok(), await renameResponse.text()).toBeTruthy();
+
+    const historyResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_history?select=event_type,before_data,after_data&record_id=eq.${recipeId}&order=created_at.asc`,
+      { headers: ownerHeaders },
+    );
+    const history = await historyResponse.json();
+    expect(history).toHaveLength(2);
+    expect(history[1].before_data.ingredients).toMatchObject([
+      { name: 'Cumin', is_main: true, detail: 'whole', preparation: 'toasted' },
+    ]);
+    expect(history[1].after_data.ingredients).toMatchObject([
+      { name: 'Toasted Cumin', is_main: true, detail: 'whole', preparation: 'toasted' },
+    ]);
+    expect(history[1].after_data.steps[0].mentions).toEqual([
+      { position: 0, recipe_ingredient_id: rowId },
+    ]);
+
+    const catalogHistoryResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_history?select=event_type,affected_recipe_ids&account_id=eq.${owner.id}&event_type=eq.ingredient.renamed`,
+      { headers: ownerHeaders },
+    );
+    expect(await catalogHistoryResponse.json()).toEqual([
+      { event_type: 'ingredient.renamed', affected_recipe_ids: [recipeId] },
+    ]);
+  } finally {
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('ingredient catalog normalizes names and rejects duplicates and stale revisions @e2e @ingredientCatalog', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ownerHeaders = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${owner.accessToken}`,
+  };
+
+  try {
+    const revisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${owner.id}`,
+      { headers: ownerHeaders },
+    );
+    expect(revisionResponse.ok()).toBeTruthy();
+    const [{ revision }] = (await revisionResponse.json()) as { revision: number }[];
+
+    const addResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: ownerHeaders,
+        data: {
+          p_action: 'add',
+          p_expected_revision: revision,
+          p_name: '  bAsIl  ',
+        },
+      },
+    );
+    expect(addResponse.ok(), await addResponse.text()).toBeTruthy();
+
+    const ingredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id,name&account_id=eq.${owner.id}&name=eq.Basil`,
+      { headers: ownerHeaders },
+    );
+    expect(await ingredientResponse.json()).toEqual([{ id: expect.any(String), name: 'Basil' }]);
+    const [{ id: basilId }] = (await ingredientResponse.json()) as { id: string; name: string }[];
+
+    const duplicateResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: ownerHeaders,
+        data: {
+          p_action: 'add',
+          p_expected_revision: revision + 1,
+          p_name: 'bASIL',
+        },
+      },
+    );
+    expect(duplicateResponse.ok()).toBeFalsy();
+    expect(await duplicateResponse.json()).toMatchObject({ code: '23505' });
+
+    const staleResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: ownerHeaders,
+        data: {
+          p_action: 'add',
+          p_expected_revision: revision,
+          p_name: 'Thyme',
+        },
+      },
+    );
+    expect(staleResponse.ok()).toBeFalsy();
+    expect(await staleResponse.json()).toMatchObject({ code: '40001' });
+
+    const finalCatalogResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id,name&account_id=eq.${owner.id}&order=name.asc`,
+      { headers: ownerHeaders },
+    );
+    expect(await finalCatalogResponse.json()).toEqual([{ id: basilId, name: 'Basil' }]);
+    const finalRevisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${owner.id}`,
+      { headers: ownerHeaders },
+    );
+    expect(await finalRevisionResponse.json()).toEqual([{ revision: revision + 1 }]);
+  } finally {
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('deleting a referenced ingredient requires a replacement and is atomic @e2e @ingredientCatalog', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ownerHeaders = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${owner.accessToken}`,
+  };
+
+  try {
+    const recipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: ownerHeaders,
+      data: recipePayload('Referenced ingredient delete fixture', [
+        {
+          ingredient_id: null,
+          ingredient_name: 'Cumin',
+          is_main: true,
+          detail: 'whole',
+          preparation: 'toasted',
+          measurements: [],
+        },
+      ]),
+    });
+    expect(recipeResponse.ok(), await recipeResponse.text()).toBeTruthy();
+    const [{ id: recipeId }] = await recipeResponse.json();
+
+    const ingredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id,name&account_id=eq.${owner.id}&name=eq.Cumin`,
+      { headers: ownerHeaders },
+    );
+    expect(ingredientResponse.ok()).toBeTruthy();
+    const [{ id: ingredientId }] = (await ingredientResponse.json()) as {
+      id: string;
+      name: string;
+    }[];
+    const revisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${owner.id}`,
+      { headers: ownerHeaders },
+    );
+    const [{ revision }] = (await revisionResponse.json()) as { revision: number }[];
+
+    const deleteResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: ownerHeaders,
+        data: {
+          p_action: 'delete',
+          p_expected_revision: revision,
+          p_ingredient_id: ingredientId,
+          p_replacement_id: null,
+        },
+      },
+    );
+    expect(deleteResponse.ok()).toBeFalsy();
+    expect(await deleteResponse.json()).toMatchObject({
+      code: '23514',
+      message: 'Choose a replacement for this referenced ingredient.',
+    });
+
+    const rowResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?select=id,ingredient_id&account_id=eq.${owner.id}&recipe_id=eq.${recipeId}`,
+      { headers: ownerHeaders },
+    );
+    expect(await rowResponse.json()).toEqual([
+      { id: expect.any(String), ingredient_id: ingredientId },
+    ]);
+    const retainedIngredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id&account_id=eq.${owner.id}&id=eq.${ingredientId}`,
+      { headers: ownerHeaders },
+    );
+    expect(await retainedIngredientResponse.json()).toEqual([{ id: ingredientId }]);
+    const finalRevisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${owner.id}`,
+      { headers: ownerHeaders },
+    );
+    expect(await finalRevisionResponse.json()).toEqual([{ revision }]);
+  } finally {
     await deleteTestUser(request, owner);
   }
 });

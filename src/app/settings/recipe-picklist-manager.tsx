@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDownAZ, GripVertical, Merge, Trash2, X } from 'lucide-react';
+import { ArrowDownAZ, ChevronRight, GripVertical, Merge, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
@@ -803,7 +803,8 @@ export function RecipePicklistManager({
           type="button"
           onClick={() => setIsExpanded((current) => !current)}
         >
-          Edit picklists
+          <span className={styles.sectionLabel}>Edit picklists</span>
+          <ChevronRight aria-hidden="true" className={styles.sectionChevron} size={18} />
         </button>
       </h2>
       <div hidden={!isExpanded} id="recipe-picklists-editor">

@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation';
 import type { PicklistCategory } from '../../lib/recipes/data';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
+import {
+  type IngredientCatalogEntry,
+  IngredientCatalogManager,
+} from './ingredient-catalog-manager';
 import { RecipePicklistManager } from './recipe-picklist-manager';
 import { UnitPreferences } from './unit-preferences';
 
@@ -29,7 +33,9 @@ export default async function SettingsPage() {
     recipesResult,
     assignmentsResult,
     measurementsResult,
-    ingredientsResult,
+    recipeIngredientsResult,
+    ingredientCatalogResult,
+    ingredientCatalogRevisionResult,
   ] = await Promise.all([
     supabase
       .from('recipe_picklist_values')
@@ -43,7 +49,9 @@ export default async function SettingsPage() {
       .from('recipe_ingredient_measurements')
       .select('recipe_ingredient_id, picklist_value_id')
       .not('picklist_value_id', 'is', null),
-    supabase.from('recipe_ingredients').select('id, recipe_id'),
+    supabase.from('recipe_ingredients').select('id, recipe_id, ingredient_id'),
+    supabase.from('ingredients').select('id, name').order('name'),
+    supabase.from('ingredient_catalog_revisions').select('revision').maybeSingle(),
   ]);
 
   if (
@@ -52,9 +60,12 @@ export default async function SettingsPage() {
     recipesResult.error ||
     assignmentsResult.error ||
     measurementsResult.error ||
-    ingredientsResult.error
+    recipeIngredientsResult.error ||
+    ingredientCatalogResult.error ||
+    ingredientCatalogRevisionResult.error ||
+    !ingredientCatalogRevisionResult.data
   ) {
-    throw new Error('Unable to load recipe picklists.');
+    throw new Error('Unable to load Settings data.');
   }
 
   const referenceRecipes = new Map<string, Set<string>>();
@@ -75,7 +86,7 @@ export default async function SettingsPage() {
     addRecipeReference(assignment.picklist_value_id, assignment.recipe_id);
   }
   const recipeIdByIngredientId = new Map(
-    (ingredientsResult.data ?? []).map((ingredient) => [ingredient.id, ingredient.recipe_id]),
+    (recipeIngredientsResult.data ?? []).map((ingredient) => [ingredient.id, ingredient.recipe_id]),
   );
   for (const measurement of measurementsResult.data ?? []) {
     const valueId = measurement.picklist_value_id;
@@ -98,6 +109,18 @@ export default async function SettingsPage() {
   const revisions = Object.fromEntries(
     (revisionsResult.data ?? []).map((item) => [item.category, item.revision]),
   ) as Partial<Record<PicklistCategory, number>>;
+  const ingredientRecipes = new Map<string, Set<string>>();
+  for (const row of recipeIngredientsResult.data ?? []) {
+    const recipes = ingredientRecipes.get(row.ingredient_id) ?? new Set<string>();
+    recipes.add(row.recipe_id);
+    ingredientRecipes.set(row.ingredient_id, recipes);
+  }
+  const ingredientReferenceCounts = Object.fromEntries(
+    (ingredientCatalogResult.data ?? []).map((ingredient) => [
+      ingredient.id,
+      ingredientRecipes.get(ingredient.id)?.size ?? 0,
+    ]),
+  );
 
   return (
     <main aria-labelledby="page-title" className="settings-main">
@@ -116,6 +139,11 @@ export default async function SettingsPage() {
         initialValues={picklistsResult.data ?? []}
         initialRevisions={revisions}
         referenceCounts={referenceCounts}
+      />
+      <IngredientCatalogManager
+        initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
+        initialRevision={ingredientCatalogRevisionResult.data.revision}
+        referenceCounts={ingredientReferenceCounts}
       />
     </main>
   );

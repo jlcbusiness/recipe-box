@@ -10,18 +10,30 @@
 }
 
 .sectionToggle {
-  border: 2px dashed transparent;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: transparent;
   color: inherit;
   font: inherit;
   cursor: pointer;
   padding: 0 3px;
+  text-decoration: none;
 }
 
-.sectionToggle:hover {
-  border-color: var(--muted);
-  border-style: dashed;
+.sectionToggle:hover .sectionLabel,
+.sectionToggle:focus-visible .sectionLabel {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+.sectionChevron {
+  flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+
+.sectionToggle[aria-expanded="true"] .sectionChevron {
+  transform: rotate(90deg);
 }
 
 .sectionToggle:focus-visible {
@@ -522,6 +534,11 @@
 }
 
 @media (hover: none) {
+  .sectionLabel {
+    text-decoration: underline;
+    text-underline-offset: 5px;
+  }
+
   .rowActions {
     opacity: 1;
   }

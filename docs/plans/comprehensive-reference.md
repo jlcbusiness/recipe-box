@@ -592,18 +592,44 @@ or orphaned options:
   - **Add:** Create new option.
   - **Edit:** Rename an option inline in the ordered list. Enter saves; Escape,
     an outside click, or browser Back cancels.
-  - **Delete:** Remove option. If the option is in use, the user must choose a replacement option, which behaves as a merge. Optional fields may alternatively be explicitly cleared on affected records. Ingredients always require a replacement because a recipe row cannot exist without one.
+  - **Delete:** Remove option. If the option is in use, the user must choose a replacement option, which behaves as a merge. Optional fields may alternatively be explicitly cleared on affected records. A referenced ingredient requires a replacement because a recipe row cannot exist without one; an unused ingredient can be deleted directly.
   - **Merge:** Combine exactly two values in one operation: choose a source and
     counterpart, then explicitly choose which value to keep. Choosing or
     changing the counterpart clears the keep choice, and Merge stays disabled
     until the user makes that choice. Protected values cannot be merged.
-- **Ordering:** Each picklist keeps a user-defined order used for display and sorting.
+- **Ordering:** Recipe picklist values keep a user-defined order used for display and sorting. The ingredient catalog is a distinct case: its visible list is always alphabetical, with no manual sort or reorder control.
 - **Seeding:** New accounts start with the example values listed in section 2.1 for each picklist, in the order listed. All values are editable. `Specific occasion` in Verdict and Enthusiasm is protected: it can be renamed but not deleted or merged, because it reveals Occasion Details.
 
-The `Edit picklists` section is collapsed by default. Its ordered list supports
-drag and keyboard reorder, inline rename, and a trailing category-labeled add
-input. On mobile, Merge and Delete panes appear above or below the selected row
-within the viewport instead of taking over the screen.
+#### Ingredient catalog
+
+The Ingredient catalog is a separate Settings section after Recipe picklists.
+It is account-scoped and searchable. Typing filters the visible alphabetized
+list without clearing the query after an action; a clear button resets it. A
+search ending in whitespace matches the complete query as a whole word. The Add
+ingredient affordance remains visible while searching, and when a non-empty
+query has no match it offers to add that query after removing trailing
+whitespace. The labeled Add ingredient field uses a compact icon-only submit
+button, without a redundant text button; successful changes show a right-aligned
+status message.
+
+Added and renamed ingredient names are trimmed and normalized to title case.
+Names are unique per account after trimming and case-folding. Merge chooses a
+counterpart and then requires an explicit `Keep as` choice for either value.
+Changing the counterpart clears the keep choice, and Merge stays disabled until
+the person chooses again. Merge moves recipe rows to the retained canonical
+ingredient without combining duplicate rows, changing row IDs, or detaching
+measurements, Main flags, specifics, preparation, or instruction mentions.
+Deleting a referenced ingredient requires a replacement; an unused ingredient
+can be deleted without one.
+
+The `Edit picklists` and `Ingredient catalog` sections are collapsed by default.
+Each disclosure shows a right-facing chevron while closed and a down-facing
+chevron while open. Underlining applies to the label, not its chevron, and is
+persistent on touch devices. The Recipe picklists ordered list supports drag
+and keyboard reorder, inline rename, and a trailing category-labeled add input.
+On mobile, both sections' Merge and Delete panes appear above or below the
+selected row, whichever has more room, and remain within the viewport instead
+of taking over the screen.
 
 ### 8.2 Trusted Density Registry
 Located in Settings:
