@@ -87,6 +87,7 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   - Rest time (meat resting, dough proofing)
   - Total time
 - **Card Display Rule:** Only non-zero/applicable times are displayed on the recipe card.
+- **Integer Formatting:** Serves and duration values display with comma grouping for thousands. Time fields accept valid comma-grouped integers and normalize their display on blur; total-time calculation also accepts grouped values.
 - **Total Time Calculation Behavior:**
   - Total time is stored as a distinct manual field. It is **never** auto-updated silently in the background, because steps often overlap (e.g., chopping ingredients while an oven preheats, or dough rising while sauce simmers).
   - Component times use compact, spinner-free numeric inputs sized to five-character values or their visible labels, whichever needs more room, with 8 px gaps. Total Time appears on its own final row.
@@ -112,6 +113,11 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   reordered with pointer or keyboard controls, promoted to primary, and removed
   immediately. Publication cover management has an explicit camera action on
   mobile.
+- In recipe edit mode, the photo action beside Name shows the primary photo in a
+  compact, contained thumbnail with a corner pencil. When no photo exists, it
+  shows a camera icon. In recipe detail, center the primary photo, preserve its
+  aspect ratio, and cap its height at 1.5 inches; additional photos use square
+  thumbnails.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
   for retry. Public recipe photos are deferred to Slice 20 and must be exposed
@@ -150,7 +156,8 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   36px on mobile. Component-time inputs remain compact; distinct icon actions
   retain their separately specified hit areas.
 - The mobile `Σ` control keeps a 48px hit target around a visibly compact 30px
-  square.
+  square and aligns with the Total Time input without adding visible horizontal
+  spacing beyond the neighboring field gap.
 - Center the Serves number within its 36px input on desktop and mobile.
 - On desktop, the recipe list shows Name, Food Type, State, and Opinion, which
   shows the active Enthusiasm, Verdict, or Reason. On mobile, the list shows
@@ -169,9 +176,9 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   for Recipe Tin recipes.
 - Standalone text actions are 48px high. Compact icon-only actions beside the
   detail tag line, including Print and Edit, are 36px square with descriptive
-  accessible names and tooltips. They are right-aligned after the chips, and
-  the action line remains when no tags are assigned. On mobile, their hit areas
-  expand to 48px without changing their visible size. Picklist triggers have
+  accessible names and tooltips. They follow the chips with compact spacing,
+  and the action line remains when no tags are assigned. On mobile, their hit
+  areas expand to 48px without changing their visible size. Picklist triggers have
   separate sizing rules. In edit mode, a standard 48px icon-only `x` with a
   24px icon in the header returns to view; Delete remains a distinct text action
   below it.
@@ -191,7 +198,7 @@ trailing empty row.
 
 1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon in lemon bars). Populates the recipe's `Main Ingredients` query index. The checkbox sits outside the table in the row control rail and is edit-only.
 2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside its row editor pane; menus remain within the viewport and use the available space above or below the field.
-3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4`), ranges (`2-3`), or integers. Blank for Feel phrases.
+3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4`), ranges (`2-3`), and comma-grouped whole-number parts (for example, `1,000`, `1,000 1/2`, or `1,000-2,000`). Blank for Feel phrases. Displayed quantities group thousands while retaining the existing fraction, range, and unit-system formatting.
 4. **Measurement Category (fixed selector and fields):**
    - **Unit:** The default category. Shows separate Volume amount/unit and Weight amount/unit fields. Either or both dimensions may be entered; a slash separates them visually and in recipe display.
    - **Volume Picker:** Predefined, immutable convertible units: teaspoon (tsp), tablespoon (TBSP), fluid ounce (fl oz), cup, pint (pt), quart (qt), gallon (gal), milliliter (ml), liter (L).
@@ -215,9 +222,15 @@ trailing empty row.
 - **Format:** Reuses the volume/weight input controls (e.g., `1 cup = 120 g` for all-purpose flour; `1 TBSP = 14 g` for butter).
 - **Auto-Fill Behavior in Recipe Editor:**
   - If an ingredient with a trusted density is selected, entering a volume automatically computes and fills the weight (or vice versa).
-  - **Visual Indicator:** The auto-filled cell receives a distinctive background tint **and** an accessible badge/icon (`Derived from density`).
+  - **Indicator and accessibility:** The auto-filled amount receives a subtle
+    tint and a compact calculator icon. The decorative icon is hidden from
+    assistive technology; an associated status announces `Derived from density`
+    to screen readers.
   - **Manual Override:** The user can edit the auto-filled value. Doing so removes the background tint and marks the field as manual.
   - **Re-triggering:** If a manual override is cleared, leaving the field empty causes it to re-fill automatically from the trusted density on blur.
+  - **Responsive amount field:** Derived values grow to fit their formatted
+    quantity, including ten-digit values, while remaining within the amount
+    group and clear of the target-unit picker.
 
 ### 3.4 Scaling Math and Rounding Rules
 - **Base Batch:** Every recipe is entered with baseline multiplier $1.0$.
@@ -683,17 +696,27 @@ transfer transactionally. An unused tag can be deleted directly.
 
 Private detail views show selected tags as alphabetized text chips with
 translucent pastel fills and borders; text remains readable and color is not
-the only cue. Recipe detail keeps Print/Edit right-aligned at the end of the
-tag line, with matching vertical spacing, even when the recipe has no assigned
+the only cue. Recipe detail keeps its Print/Edit action line immediately after
+the tags, with matching vertical spacing, even when the recipe has no assigned
 tags. Publication detail omits the tag line when unassigned. Recipe and
 publication history snapshots include tag IDs, names, and color keys. Public
 recipe payloads do not include tags. Query filtering and cross-record tag
 search belong to Slice 17.
 
 ### 8.2 Trusted Density Registry
-Located in Settings:
-- Searchable list of canonical ingredients with configured densities.
-- Allows defining volume-to-weight equivalencies using the standard quantity and unit picklists (e.g., `1 cup = 120 g` for all-purpose flour; `1 cup = 200 g` for granulated sugar).
+Located in Settings as a separate, collapsed-by-default section after Tags:
+- Searchable, alphabetized list of canonical ingredients with configured
+  densities, with an inline editor and confirmed removal.
+- Defines one positive Volume/Weight reference pair per ingredient using the
+  standard quantity and unit controls (e.g., `1 cup = 120 g` for all-purpose
+  flour; `1 cup = 200 g` for granulated sugar). The displayed density is
+  normalized from the reference pair.
+- Search can offer the top matching catalog ingredient without a density; the
+  add flow can select only existing canonical ingredients and cannot create
+  one.
+- Configuration changes do not rewrite saved recipe amounts. See the
+  [Slice 15 brief](slices/15-trusted-density.md) for the data, concurrency, and
+  interaction contract.
 
 ### 8.3 Personal Preferences
 Located in Settings, per account:
@@ -888,7 +911,9 @@ History events are recorded on save (never on individual keystrokes):
 ### 13.3 Accessibility Standards
 - Contrast ratio $\ge 4.5:1$ across all text.
 - Focus outlines visible on all interactive components.
-- Dual visual encoding: Density auto-fills use a subtle tint *and* a text/badge label; color is never the sole conveyor of status.
+- Density auto-fills use a subtle tint and visible calculator icon, plus an
+  associated screen-reader status announcing `Derived from density`; tint is
+  never the only visible cue.
 
 ### 13.4 Accessible controls and ingredient editing
 - Prefer native semantic HTML for ordinary page structure, forms, and controls.

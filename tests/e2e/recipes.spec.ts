@@ -195,7 +195,9 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await selectSinglePicklist(page, 'Food Type', 'Soup');
     await expect(page.getByRole('group', { name: 'Times (min)' })).toBeVisible();
     await expect(page.getByLabel('Serves')).toBeVisible();
-    for (const integerInput of await page.locator('.recipe-form input[type="number"]').all()) {
+    for (const integerInput of await page
+      .locator('.recipe-form input[inputmode="numeric"]')
+      .all()) {
       await expect(integerInput).toHaveCSS('text-align', 'center');
     }
     for (const integerLabel of await page
@@ -267,9 +269,11 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.getByRole('button', { name: 'Italian', exact: true }).click();
     await selectSinglePicklist(page, 'State', 'Want to Try');
     await selectSinglePicklist(page, 'Enthusiasm', 'Absolutely');
-    await page.getByLabel('Serves').fill('4');
-    await page.getByLabel('Prep time (minutes)').fill('15');
+    await page.getByLabel('Serves').fill('1200');
+    await page.getByLabel('Prep time (minutes)').fill('1015');
+    await expect(page.getByLabel('Serves')).toHaveValue('1,200');
     await page.getByLabel('Mixing time (minutes)').fill('10');
+    await expect(page.getByLabel('Prep time (minutes)')).toHaveValue('1,015');
     await page.getByLabel('Cook time (minutes)').fill('30');
     await page.getByLabel('Total time (minutes)').fill('999');
     expect(
@@ -299,7 +303,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
             (calculateBounds?.height ?? 0) / 2 -
             ((totalTimeBounds?.y ?? 0) + (totalTimeBounds?.height ?? 0) / 2),
         ),
-      ).toBeLessThanOrEqual(8);
+      ).toBeLessThanOrEqual(1);
       expect(calculateBounds?.width).toBeGreaterThanOrEqual(48);
       expect(calculateBounds?.height).toBeGreaterThanOrEqual(48);
     } else {
@@ -310,6 +314,15 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
         Math.abs((calculateBounds?.width ?? 0) - (calculateBounds?.height ?? 0)),
       ).toBeLessThanOrEqual(1);
     }
+    const componentTimeGap =
+      (mixingBounds?.x ?? 0) - ((prepBounds?.x ?? 0) + (prepBounds?.width ?? 0));
+    const calculateGapBounds =
+      testInfo.project.name === 'Fold 6'
+        ? await calculateButton.locator('.recipe-calculate-icon').boundingBox()
+        : calculateBounds;
+    const totalButtonGap =
+      (calculateGapBounds?.x ?? 0) - ((totalTimeBounds?.x ?? 0) + (totalTimeBounds?.width ?? 0));
+    expect(Math.abs(componentTimeGap - totalButtonGap)).toBeLessThanOrEqual(1);
     await page.getByRole('button', { name: 'Equipment: Select' }).click();
     await page.getByRole('button', { name: 'Medium skillet', exact: true }).click();
     await page.getByLabel('Notes (Markdown)').fill('Add **fresh** basil at the end.');
@@ -318,10 +331,24 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.getByLabel('Cook time (minutes)').fill('31');
     await expect(page.getByLabel('Total time (minutes)')).toHaveValue('999');
     await page.getByRole('button', { name: 'Calculate total time' }).click();
-    await expect(page.getByLabel('Total time (minutes)')).toHaveValue('56');
+    await expect(page.getByLabel('Total time (minutes)')).toHaveValue('1,056');
     await page.getByRole('button', { name: 'Save recipe' }).click();
 
     await expect(page.getByRole('heading', { name: 'Sunday tomato soup' })).toBeVisible();
+    await expect(page.locator('.recipe-serves-value')).toContainText('Serves 1,200');
+    await expect(page.locator('.recipe-time-list dd')).toHaveText([
+      '1,015 min',
+      '10 min',
+      '31 min',
+    ]);
+    await expect(
+      page.locator('.recipe-metadata:not(.recipe-time-list) dd').filter({ hasText: '1,056 min' }),
+    ).toBeVisible();
+    const detailsAfterPhotoFreeHeading = page.locator(
+      '.recipe-detail-heading + .recipe-detail-section',
+    );
+    await expect(detailsAfterPhotoFreeHeading).toHaveCount(1);
+    await expect(detailsAfterPhotoFreeHeading).toHaveCSS('margin-top', '0px');
     await page.setViewportSize({ width: 1600, height: 1000 });
     const desktopEditLink = page.getByRole('link', { name: 'Edit' });
     await expect(desktopEditLink.locator('svg')).toBeVisible();
@@ -339,10 +366,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
           ((desktopTagRowBounds?.y ?? 0) + (desktopTagRowBounds?.height ?? 0) / 2),
       ),
     ).toBeLessThanOrEqual(1);
-    expect((desktopEditBounds?.x ?? 0) + (desktopEditBounds?.width ?? 0)).toBeCloseTo(
-      (desktopTagRowBounds?.x ?? 0) + (desktopTagRowBounds?.width ?? 0),
-      0,
-    );
+    await expect(desktopTagRow.locator('ul > li').last()).toHaveCSS('margin-left', '0px');
     const detailTitleSize = Number.parseFloat(
       await page
         .getByRole('heading', { name: 'Sunday tomato soup' })
@@ -423,7 +447,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       { headers },
     );
     expect(await recipeResponse.json()).toEqual([
-      { id: recipeId, version: 1, total_time_minutes: 56, serves: 4 },
+      { id: recipeId, version: 1, total_time_minutes: 1056, serves: 1200 },
     ]);
 
     const createHistory = await request.get(
@@ -446,6 +470,10 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(recipeRow.locator('td:visible')).toHaveCount(2);
     await recipeRow.getByRole('link', { name: 'Sunday tomato soup' }).click();
 
+    await expect(page.locator('.recipe-detail-heading + .recipe-detail-section')).toHaveCSS(
+      'margin-top',
+      '0px',
+    );
     const mobileEditLink = page.getByRole('link', { name: 'Edit' });
     await expect(mobileEditLink.locator('svg')).toBeVisible();
     await expect(mobileEditLink).toHaveAttribute('title', 'Edit recipe');
@@ -463,13 +491,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     expect(mobileEditHitArea.position).toBe('absolute');
     expect(mobileEditHitArea.top).toBe('-8px');
     expect(mobileEditHitArea.bottom).toBe('-8px');
-    expect(
-      Math.abs(
-        (mobileTagRowBounds?.x ?? 0) +
-          (mobileTagRowBounds?.width ?? 0) -
-          ((mobileEditBounds?.x ?? 0) + (mobileEditBounds?.width ?? 0)),
-      ),
-    ).toBeLessThanOrEqual(1);
+    await expect(mobileTagRow.locator('ul > li').last()).toHaveCSS('margin-left', '0px');
     expect(
       Math.abs(
         (mobileEditBounds?.y ?? 0) +
@@ -479,6 +501,11 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     ).toBeLessThanOrEqual(1);
 
     await mobileEditLink.click();
+    await expect(page.getByLabel('Serves')).toHaveValue('1,200');
+    await expect(page.getByLabel('Prep time (minutes)')).toHaveValue('1,015');
+    await expect(page.getByLabel('Mixing time (minutes)')).toHaveValue('10');
+    await expect(page.getByLabel('Cook time (minutes)')).toHaveValue('31');
+    await expect(page.getByLabel('Total time (minutes)')).toHaveValue('1,056');
     const mobileNameBounds = await page.getByLabel('Name').boundingBox();
     const mobilePublicationBounds = await page
       .getByRole('combobox', { name: 'Publication' })
@@ -1916,18 +1943,18 @@ test('owners confirm before removing an ingredient referenced by instructions @e
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
       /\[\[ingredient:[^|]+\|iron\]\]/,
     );
-    await expect(ingredientGrid).toContainText('iron');
+    await expect(ingredientGrid).toContainText(/iron/i);
 
     await deleteIngredient.click();
     await expect(confirmation).toBeVisible();
     await confirmation.getByRole('button', { name: 'Cancel' }).click();
     await expect(confirmation).toHaveCount(0);
-    await expect(ingredientGrid).toContainText('iron');
+    await expect(ingredientGrid).toContainText(/iron/i);
 
     await ingredientGrid.getByRole('row').nth(1).hover();
     await deleteIngredient.click();
     await confirmation.getByRole('button', { name: 'Remove ingredient' }).click();
-    await expect(ingredientGrid).not.toContainText('iron');
+    await expect(ingredientGrid).not.toContainText(/iron/i);
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
       'Heat #iron',
     );

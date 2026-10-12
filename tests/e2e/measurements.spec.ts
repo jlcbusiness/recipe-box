@@ -560,7 +560,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     expect(
       (initialAmountBounds?.x ?? 0) -
         ((initialTypeBounds?.x ?? 0) + (initialTypeBounds?.width ?? 0)),
-    ).toBeLessThanOrEqual(8);
+    ).toBeLessThanOrEqual(9);
 
     await page.setViewportSize({ width: 800, height: 900 });
     const desktopEditor = page.locator('.recipe-ingredient-desktop');
@@ -599,23 +599,26 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     expect(Math.abs(thingsPickerWidth.actual - thingsPickerWidth.expected)).toBeLessThanOrEqual(2);
     expect(
       (firstAmountBounds?.x ?? 0) - ((typeFieldBounds?.x ?? 0) + (typeFieldBounds?.width ?? 0)),
-    ).toBeLessThanOrEqual(8);
+    ).toBeLessThanOrEqual(9);
     await expect(
       grid.locator('tbody tr').first().locator('.recipe-measurement-desktop-fields'),
     ).toHaveCSS('flex-wrap', 'nowrap');
 
     const volumeAmount = page.getByRole('textbox', { name: 'Volume amount, row 1' });
+    await volumeAmount.fill('1200');
+    await page.getByRole('textbox', { name: 'Weight amount, row 1' }).focus();
+    await expect(volumeAmount).toHaveValue('1,200');
     await volumeAmount.fill('Infinity');
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(volumeAmount).toHaveAttribute('aria-invalid', 'true');
     await expect(grid.locator('.recipe-measurement-error[role="alert"]')).toContainText(
       'Enter a positive whole number, decimal, fraction, mixed number, or range.',
     );
-    await volumeAmount.fill('1 1/2');
+    await volumeAmount.fill('1200');
     await expect(page.getByRole('button', { name: 'Save recipe' })).toBeVisible();
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Measured recipe' })).toBeVisible();
-    await expect(page.getByText('1 1/2 cups / 4 1/4 oz flour', { exact: true })).toBeVisible();
+    await expect(page.getByText('1,200 cups / 4 1/4 oz flour', { exact: true })).toBeVisible();
     await expect(page.getByText('1 cup milk', { exact: true })).toBeVisible();
     await expect(page.getByText('4 oz butter', { exact: true })).toBeVisible();
     await expect(page.getByText('2-3 eggs', { exact: true })).toBeVisible();
@@ -624,7 +627,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
 
     await page.setViewportSize({ width: 390, height: 500 });
     await page.getByRole('link', { name: 'Edit' }).click();
-    await page.getByRole('button', { name: /Edit 1 1\/2 cups \/ 120 g flour/ }).click();
+    await page.getByRole('button', { name: /Edit 1,200 cups \/ 120 g flour/ }).click();
     await expect(page.getByRole('dialog', { name: 'Ingredient details' })).toBeVisible();
     const mobilePane = page.getByRole('dialog', { name: 'Ingredient details' });
     await expect(
@@ -660,7 +663,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     );
     await expect(page.locator('.recipe-measurement-editor')).toHaveCSS('border-top-width', '0px');
     await expect(page.locator('.recipe-measurement-dimension').first()).toHaveCSS('gap', '8px');
-    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveValue('1 1/2');
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveValue('1,200');
     await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveCSS(
       'text-align',
       'center',

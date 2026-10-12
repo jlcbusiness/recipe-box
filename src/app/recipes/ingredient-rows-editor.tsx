@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { IngredientOption, RecipePicklistValue } from '../../lib/recipes/data';
+import { reconcileDensityIngredientChange } from '../../lib/recipes/density-rules';
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
 import {
   ensureTrailingIngredientRow,
@@ -404,6 +405,17 @@ function MobileIngredientEditor({
   );
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  function densityForName(name: string) {
+    return ingredients.find(
+      (ingredient) => ingredient.name.toLocaleLowerCase() === name.trim().toLocaleLowerCase(),
+    )?.density;
+  }
+
+  function changeIngredientName(name: string) {
+    setIngredientName(name);
+    setMeasurements((current) => reconcileDensityIngredientChange(current, densityForName(name)));
+  }
+
   const positionPopover = useCallback(() => {
     const popover = popoverRef.current;
     if (!popover) {
@@ -476,7 +488,11 @@ function MobileIngredientEditor({
   function submit() {
     onSubmit({
       ...row,
-      ingredientId: null,
+      ingredientId:
+        ingredients.find(
+          (ingredient) =>
+            ingredient.name.toLocaleLowerCase() === ingredientName.trim().toLocaleLowerCase(),
+        )?.id ?? null,
       ingredientName: ingredientName.trim(),
       detail: detail.trim(),
       preparation: preparation.trim(),
@@ -517,8 +533,8 @@ function MobileIngredientEditor({
           placement="above"
           openOnFocus={false}
           value={ingredientName}
-          onDraftChange={setIngredientName}
-          onCommit={setIngredientName}
+          onDraftChange={changeIngredientName}
+          onCommit={changeIngredientName}
           onCancel={() => {}}
         />
       </div>
@@ -532,6 +548,7 @@ function MobileIngredientEditor({
           rowNumber={rowNumber}
           measurements={measurements}
           picklists={picklists}
+          density={densityForName(ingredientName)}
           validate={validateMeasurements}
           onChange={setMeasurements}
         />
@@ -719,6 +736,13 @@ export function IngredientRowsEditor({
     if (persistedRowId !== rowId) {
       promotedRowIds.current.set(rowId, persistedRowId);
     }
+    const selectedIngredient =
+      field === 'ingredientName'
+        ? ingredients.find(
+            (ingredient) =>
+              ingredient.name.toLocaleLowerCase() === value.trim().toLocaleLowerCase(),
+          )
+        : undefined;
     const updatedRows = currentRows.map((row) =>
       row.id === rowId
         ? {
@@ -727,11 +751,15 @@ export function IngredientRowsEditor({
             [field]: value,
             ...(field === 'ingredientName'
               ? {
-                  ingredientId:
-                    ingredients.find(
-                      (ingredient) =>
-                        ingredient.name.toLocaleLowerCase() === value.toLocaleLowerCase(),
-                    )?.id ?? null,
+                  ingredientId: selectedIngredient?.id ?? null,
+                  measurements:
+                    row.ingredientName.trim().toLocaleLowerCase() !==
+                    value.trim().toLocaleLowerCase()
+                      ? reconcileDensityIngredientChange(
+                          row.measurements,
+                          selectedIngredient?.density,
+                        )
+                      : row.measurements,
                 }
               : {}),
           }
@@ -960,12 +988,19 @@ export function IngredientRowsEditor({
   }
 
   function renderMeasurementCell(row: IngredientRowDraft, rowIndex: number) {
+    const density =
+      ingredients.find((ingredient) => ingredient.id === row.ingredientId)?.density ??
+      ingredients.find(
+        (ingredient) =>
+          ingredient.name.toLocaleLowerCase() === row.ingredientName.trim().toLocaleLowerCase(),
+      )?.density;
     return (
       <MeasurementEditor
         layout="desktop"
         rowNumber={rowIndex + 1}
         measurements={row.measurements}
         picklists={picklists}
+        density={density}
         validate={validateMeasurements}
         onChange={(measurements) =>
           commitRows(updateIngredientRow(rowsRef.current, row.id, { measurements }))
@@ -978,9 +1013,12 @@ export function IngredientRowsEditor({
     const reorderState = isNestedMobileRail
       ? undefined
       : (getReorderState(row.id) ?? (settlingSourceId === row.id ? 'settling' : undefined));
+    const hasDensityDerivedMeasurement = row.measurements.some(
+      (measurement) => measurement.derivedFromDensity,
+    );
     return (
       <div
-        className="recipe-ingredient-rail-row"
+        className={`recipe-ingredient-rail-row${hasDensityDerivedMeasurement ? ' is-density-derived' : ''}`}
         data-reorder-state={reorderState}
         data-row-id={row.id}
         key={row.id}
@@ -1182,6 +1220,11 @@ export function IngredientRowsEditor({
             <tbody>
               {draftRows.map((row, index) => (
                 <tr
+                  className={
+                    row.measurements.some((measurement) => measurement.derivedFromDensity)
+                      ? 'is-density-derived'
+                      : undefined
+                  }
                   data-row-id={row.id}
                   data-reorder-state={
                     getReorderState(row.id) ??
@@ -1189,6 +1232,9 @@ export function IngredientRowsEditor({
                   }
                   key={row.id}
                   style={{
+                    height: row.measurements.some((measurement) => measurement.derivedFromDensity)
+                      ? '58px'
+                      : undefined,
                     transform: getReorderTransform(row.id),
                     transition: dropCommitPending || dropOffsets.has(row.id) ? 'none' : undefined,
                   }}

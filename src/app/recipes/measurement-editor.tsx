@@ -1,10 +1,14 @@
 'use client';
 
+import { Calculator } from 'lucide-react';
 import { Fragment, useId } from 'react';
 import { createPortal } from 'react-dom';
 import type { RecipePicklistValue } from '../../lib/recipes/data';
+import { deriveDensityCounterpart, type IngredientDensity } from '../../lib/recipes/density-rules';
 import {
+  formatQuantityInput,
   type MeasurementDraft,
+  type MeasurementSystem,
   type MeasurementType,
   serializeMeasurements,
   volumeUnits,
@@ -42,6 +46,16 @@ function unitOptions(type: 'volume' | 'weight'): MeasurementPicklistOption[] {
     value: unit.abbreviation,
     group: unit.system === 'us_customary' ? 'US' : 'Metric',
   }));
+}
+
+function quantitySystem(type: MeasurementType, unitCode: string): MeasurementSystem {
+  if (type === 'volume') {
+    return volumeUnits.find((unit) => unit.code === unitCode)?.system ?? 'us_customary';
+  }
+  if (type === 'weight') {
+    return weightUnits.find((unit) => unit.code === unitCode)?.system ?? 'us_customary';
+  }
+  return 'us_customary';
 }
 
 const volumePicklistOptions = unitOptions('volume');
@@ -198,6 +212,7 @@ export function MeasurementEditor({
   rowNumber,
   measurements,
   picklists,
+  density,
   validate,
   layout = 'mobile',
   onChange,
@@ -205,6 +220,7 @@ export function MeasurementEditor({
   rowNumber: number;
   measurements: MeasurementDraft[];
   picklists: RecipePicklistValue[];
+  density?: IngredientDensity | null;
   validate: boolean;
   layout?: 'desktop' | 'mobile';
   onChange: (measurements: MeasurementDraft[]) => void;
@@ -241,13 +257,29 @@ export function MeasurementEditor({
       currentCategory === 'units'
         ? unitMeasurementTypes.map((type) => getMeasurement(measurements, type))
         : measurements;
-    onChange(
-      currentMeasurements.some((measurement) => measurement.type === type)
-        ? currentMeasurements.map((measurement) =>
-            measurement.type === type ? { ...measurement, ...update } : measurement,
-          )
-        : [...currentMeasurements, { ...createMeasurement(type), ...update }],
-    );
+    let nextMeasurements = currentMeasurements.some((measurement) => measurement.type === type)
+      ? currentMeasurements.map((measurement) =>
+          measurement.type === type
+            ? {
+                ...measurement,
+                ...update,
+                ...(Object.hasOwn(update, 'quantity')
+                  ? { derivedFromDensity: undefined, derivedQuantity: undefined }
+                  : {}),
+              }
+            : measurement,
+        )
+      : [...currentMeasurements, { ...createMeasurement(type), ...update }];
+    if (type === 'volume' || type === 'weight') {
+      const updatedMeasurement = nextMeasurements.find((measurement) => measurement.type === type);
+      const sourceType = updatedMeasurement?.derivedFromDensity
+        ? type === 'volume'
+          ? 'weight'
+          : 'volume'
+        : type;
+      nextMeasurements = deriveDensityCounterpart(nextMeasurements, sourceType, density);
+    }
+    onChange(nextMeasurements);
   }
 
   function renderCategoryPicker() {
@@ -274,23 +306,78 @@ export function MeasurementEditor({
   }
 
   function renderAmountInput(type: MeasurementType, label: string, measurement: MeasurementDraft) {
+    const inputId = `${editorId}-${type}-amount`;
+    const labelId = `${editorId}-${type}-label`;
+    const derivedId = `${editorId}-${type}-derived`;
+    const inputDescribedBy =
+      [describedBy, measurement.derivedFromDensity ? derivedId : null].filter(Boolean).join(' ') ||
+      undefined;
+    const inputSize = Math.max(
+      2,
+      measurement.quantity.length + (measurement.derivedFromDensity ? 1 : 0),
+    );
     return (
-      <label className="recipe-measurement-control">
-        <span className="visually-hidden">
-          {label}, row {rowNumber}
-        </span>
-        <input
-          aria-describedby={describedBy}
-          aria-invalid={Boolean(validationError) || undefined}
-          autoComplete="off"
-          className="recipe-measurement-quantity"
-          inputMode="text"
-          size={Math.max(2, measurement.quantity.length)}
-          type="text"
-          value={measurement.quantity}
-          onChange={(event) => updateMeasurement(type, { quantity: event.target.value })}
-        />
-      </label>
+      <div className="recipe-measurement-control">
+        <label htmlFor={inputId}>
+          <span className="visually-hidden" id={labelId}>
+            {label}, row {rowNumber}
+          </span>
+        </label>
+        <div
+          className={`recipe-measurement-input-wrap${measurement.derivedFromDensity && measurement.quantity ? ' is-density-derived' : ''}`}
+        >
+          <input
+            aria-describedby={inputDescribedBy}
+            aria-labelledby={labelId}
+            aria-invalid={Boolean(validationError) || undefined}
+            autoComplete="off"
+            className={`recipe-measurement-quantity${measurement.derivedFromDensity ? ' is-density-derived' : ''}`}
+            id={inputId}
+            inputMode="text"
+            size={inputSize}
+            type="text"
+            value={measurement.quantity}
+            onChange={(event) => updateMeasurement(type, { quantity: event.target.value })}
+            onBlur={() => {
+              const formattedQuantity = formatQuantityInput(
+                measurement.quantity,
+                quantitySystem(type, measurement.unitCode),
+              );
+              if (formattedQuantity !== measurement.quantity) {
+                onChange(
+                  measurements.map((current) =>
+                    current.id === measurement.id
+                      ? { ...current, quantity: formattedQuantity }
+                      : current,
+                  ),
+                );
+              }
+              if (
+                (type === 'volume' || type === 'weight') &&
+                !measurement.quantity.trim() &&
+                density
+              ) {
+                const sourceType = type === 'volume' ? 'weight' : 'volume';
+                onChange(deriveDensityCounterpart(measurements, sourceType, density));
+              }
+            }}
+          />
+          {measurement.derivedFromDensity && measurement.quantity && (
+            <span
+              aria-hidden="true"
+              className="recipe-measurement-derived-indicator"
+              title="Derived from density"
+            >
+              <Calculator aria-hidden="true" size={13} strokeWidth={2} />
+            </span>
+          )}
+        </div>
+        {measurement.derivedFromDensity && measurement.quantity && (
+          <span className="visually-hidden" id={derivedId} role="status">
+            Derived from density
+          </span>
+        )}
+      </div>
     );
   }
 

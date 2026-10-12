@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatGroupedInteger,
+  formatGroupedIntegerInput,
   formatQuantity,
+  formatQuantityInput,
   formatQuantityRange,
   type MeasurementInput,
+  parseGroupedInteger,
   parseQuantityInput,
   serializeMeasurements,
   validateMeasurementSet,
@@ -61,6 +65,25 @@ describe('measurement rules', () => {
     expect(formatQuantity(123, 'metric')).toBe('123');
     expect(formatQuantity(0.01234, 'metric')).toBe('0.01');
     expect(formatQuantityRange(0.333333, 1.666, 'metric')).toBe('0.33-1.67');
+  });
+
+  it('groups large quantities without changing customary fractions', () => {
+    expect(formatQuantity(1234)).toBe('1,234');
+    expect(formatQuantity(1234.5)).toBe('1,234 1/2');
+    expect(formatQuantity(1234.567)).toBe('1,234.57');
+    expect(formatQuantity(1234.56, 'metric')).toBe('1,234.56');
+    expect(formatQuantityRange(1234, 2345, 'metric')).toBe('1,234-2,345');
+  });
+
+  it('parses and formats grouped quantities and integer inputs', () => {
+    expect(parseQuantityInput('1,234')).toEqual({ minimum: 1234, maximum: null });
+    expect(parseQuantityInput('1,234 1/2')).toEqual({ minimum: 1234.5, maximum: null });
+    expect(parseQuantityInput('1,000-2,000')).toEqual({ minimum: 1000, maximum: 2000 });
+    expect(formatQuantityInput('1234-2000', 'metric')).toBe('1,234-2,000');
+    expect(formatGroupedInteger(1234567)).toBe('1,234,567');
+    expect(formatGroupedIntegerInput('1234567')).toBe('1,234,567');
+    expect(parseGroupedInteger('1,234,567')).toBe(1234567);
+    expect(parseGroupedInteger('12,34')).toBeNull();
   });
 
   it('defines the fixed Volume and Weight unit catalogs by system', () => {

@@ -57,6 +57,7 @@ export function IngredientCatalogManager({
   const paneRef = useRef<HTMLElement>(null);
   const paneTriggerRef = useRef<HTMLButtonElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setIngredients(initialIngredients);
@@ -190,11 +191,17 @@ export function IngredientCatalogManager({
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
+        event.stopImmediatePropagation();
+        const searchInput = searchInputRef.current;
+        if (event.target === searchInput && searchInput?.value) {
+          setSearch('');
+          return;
+        }
         closePane();
       }
     }
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
+    document.addEventListener('keydown', closeOnEscape, true);
+    return () => document.removeEventListener('keydown', closeOnEscape, true);
   }, [closePane, selectedId]);
 
   function submitMutation(
@@ -499,6 +506,7 @@ export function IngredientCatalogManager({
                 <input
                   aria-label="Search ingredients"
                   autoComplete="off"
+                  ref={searchInputRef}
                   type="text"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}

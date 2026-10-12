@@ -96,8 +96,9 @@ affected assignment and records the change.
   chips with translucent pastel fills and borders. Color is decorative, text
   remains readable, and the Tags display is omitted when there are no
   assignments. Recipe detail is the exception: its tag/action line remains for
-  right-aligned Print/Edit controls even with no assigned tags. The actions
-  share the tag line, whose vertical margins match the action spacing. In
+  Print/Edit controls immediately after the chips, even with no assigned tags.
+  The actions share the tag line, whose vertical margins match the action
+  spacing. In
   recipe edit mode, a standard 48px icon-only `x` with a 24px icon in the
   heading returns to view; Delete is a separate text action below it. Chips
   are not interactive links.

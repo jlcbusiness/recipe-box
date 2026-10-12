@@ -11,6 +11,7 @@ import {
   instructionPlainText,
   serializeInstructionSteps,
 } from '../../lib/recipes/instruction-rules';
+import { parseGroupedInteger } from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
@@ -44,8 +45,8 @@ function optionalInteger(formData: FormData, name: string): number | null | unde
     return null;
   }
 
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+  const value = parseGroupedInteger(raw);
+  return value !== null && value >= 0 ? value : undefined;
 }
 
 function selectedIds(formData: FormData, name: string): string[] {
@@ -273,8 +274,8 @@ export async function saveRecipe(
   }
 
   const servesText = formText(formData, 'serves');
-  const serves = servesText ? Number(servesText) : null;
-  if (serves !== null && (!Number.isSafeInteger(serves) || serves <= 0)) {
+  const serves = servesText ? parseGroupedInteger(servesText) : null;
+  if (servesText && (serves === null || serves <= 0)) {
     return { error: 'Serves must be a whole number greater than zero.' };
   }
 

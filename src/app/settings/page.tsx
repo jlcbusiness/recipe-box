@@ -6,6 +6,10 @@ import {
   type IngredientCatalogEntry,
   IngredientCatalogManager,
 } from './ingredient-catalog-manager';
+import {
+  type IngredientDensityEntry,
+  IngredientDensityManager,
+} from './ingredient-density-manager';
 import { RecipePicklistManager } from './recipe-picklist-manager';
 import { TagCatalogManager } from './tag-catalog-manager';
 import { UnitPreferences } from './unit-preferences';
@@ -36,6 +40,7 @@ export default async function SettingsPage() {
     measurementsResult,
     recipeIngredientsResult,
     ingredientCatalogResult,
+    ingredientDensitiesResult,
     ingredientCatalogRevisionResult,
     tagsResult,
     tagCatalogRevisionResult,
@@ -56,6 +61,9 @@ export default async function SettingsPage() {
       .not('picklist_value_id', 'is', null),
     supabase.from('recipe_ingredients').select('id, recipe_id, ingredient_id'),
     supabase.from('ingredients').select('id, name').order('name'),
+    supabase
+      .from('ingredient_densities')
+      .select('ingredient_id, volume_amount, volume_unit_code, weight_amount, weight_unit_code'),
     supabase.from('ingredient_catalog_revisions').select('revision').maybeSingle(),
     supabase.from('tags').select('id, name, color_key').order('name'),
     supabase.from('tag_catalog_revisions').select('revision').maybeSingle(),
@@ -71,6 +79,7 @@ export default async function SettingsPage() {
     measurementsResult.error ||
     recipeIngredientsResult.error ||
     ingredientCatalogResult.error ||
+    ingredientDensitiesResult.error ||
     ingredientCatalogRevisionResult.error ||
     !ingredientCatalogRevisionResult.data ||
     tagsResult.error ||
@@ -135,6 +144,21 @@ export default async function SettingsPage() {
       ingredientRecipes.get(ingredient.id)?.size ?? 0,
     ]),
   );
+  const ingredientNames = new Map(
+    (ingredientCatalogResult.data ?? []).map((ingredient) => [ingredient.id, ingredient.name]),
+  );
+  const densityEntries = (ingredientDensitiesResult.data ?? []).flatMap((density) => {
+    const ingredientName = ingredientNames.get(density.ingredient_id);
+    if (!ingredientName) return [];
+    return [
+      {
+        ...density,
+        ingredient_name: ingredientName,
+        volume_amount: Number(density.volume_amount),
+        weight_amount: Number(density.weight_amount),
+      },
+    ];
+  }) as IngredientDensityEntry[];
   const tagReferenceCounts = Object.fromEntries(
     (tagsResult.data ?? []).map((tag) => [
       tag.id,
@@ -176,6 +200,11 @@ export default async function SettingsPage() {
         initialTags={(tagsResult.data ?? []) as TagOption[]}
         initialRevision={tagCatalogRevisionResult.data.revision}
         referenceCounts={tagReferenceCounts}
+      />
+      <IngredientDensityManager
+        initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
+        initialDensities={densityEntries}
+        initialRevision={ingredientCatalogRevisionResult.data.revision}
       />
     </main>
   );

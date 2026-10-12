@@ -416,7 +416,11 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
       expect(paneIsAbove || paneIsBelow).toBe(true);
     }
     await expect(deletePane.getByRole('combobox', { name: 'Replace with' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    await search.fill('Temporary');
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(deletePane).toBeVisible();
+    await search.press('Escape');
     await expect(deletePane).toHaveCount(0);
     const deleteTemporaryHerb = section.getByRole('button', { name: 'Delete Temporary herb' });
     await expect(deleteTemporaryHerb).toBeFocused();

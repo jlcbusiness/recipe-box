@@ -8,7 +8,10 @@ import {
   type InstructionInlineToken,
   parseInstructionMarkdown,
 } from '../../../lib/recipes/instruction-markdown';
-import type { MeasurementSystem } from '../../../lib/recipes/measurement-rules';
+import {
+  formatGroupedInteger,
+  type MeasurementSystem,
+} from '../../../lib/recipes/measurement-rules';
 import { createClient } from '../../../lib/supabase/server';
 import { RecipePhotoGallery } from '../../media/media-display';
 import { TagChips } from '../../tags/tag-controls';
@@ -172,8 +175,13 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['State', recipeStateLabels[recipe.state]],
     response,
     ['Occasion Details', recipe.occasion_details],
-    ['Serves', recipe.serves?.toString()],
-    ['Total time', recipe.total_time_minutes === null ? null : `${recipe.total_time_minutes} min`],
+    ['Serves', recipe.serves === null ? null : formatGroupedInteger(recipe.serves)],
+    [
+      'Total time',
+      recipe.total_time_minutes === null
+        ? null
+        : `${formatGroupedInteger(recipe.total_time_minutes)} min`,
+    ],
     ['Equipment', assignedValues('equipment', recipe.equipment_ids).join(', ')],
   ].filter(([, value]) => Boolean(value));
   const classificationSections = [
@@ -270,7 +278,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                 {times.map(([label, value]) => (
                   <div key={label}>
                     <dt>{label}</dt>
-                    <dd>{value} min</dd>
+                    <dd>{formatGroupedInteger(value as number)} min</dd>
                   </div>
                 ))}
               </dl>

@@ -86,6 +86,8 @@ export function MediaManager({
           is_primary: index === 0,
         }))
       : assets;
+  const primaryRecipePhoto =
+    recipePhotoAssets.find((asset) => asset.is_primary) ?? recipePhotoAssets[0] ?? null;
 
   useLayoutEffect(() => {
     const photoId = keyboardFocusPhotoIdRef.current;
@@ -516,7 +518,23 @@ export function MediaManager({
           title="Manage recipe photos"
           type="button"
         >
-          <Camera aria-hidden="true" size={18} />
+          {primaryRecipePhoto ? (
+            <Image
+              alt=""
+              className="recipe-photo-manager-image"
+              height={primaryRecipePhoto.height}
+              src={primaryRecipePhoto.thumbnail_url}
+              unoptimized
+              width={primaryRecipePhoto.width}
+            />
+          ) : (
+            <Camera aria-hidden="true" size={18} />
+          )}
+          {primaryRecipePhoto && (
+            <span aria-hidden="true" className="recipe-photo-manager-pencil">
+              <Pencil size={15} />
+            </span>
+          )}
         </button>
       ) : (
         <button

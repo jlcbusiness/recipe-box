@@ -43,7 +43,9 @@ control, and recipe creation/update history is recorded transactionally.
 - Store time values as non-negative integer minutes; blank inputs are `NULL`.
   The calculate control sums the nine component durations only, excluding the
   Total Time field. Total Time is never changed as a side effect of editing a
-  component duration.
+  component duration. Serves and duration values display with comma grouping
+  for thousands; valid grouped integers are accepted and time inputs normalize
+  their display on blur.
 - Store Serves as an optional positive integer. Slice 4 does not store separate
   numeric Servings or free-text Yield fields; scaling behavior belongs to Slice
   13.
@@ -126,7 +128,9 @@ recipe routes, or components:
   height parity, centered Serves text, desktop/mobile Serves height rules,
   aligned label boxes,
   Equipment after Serves, and a compact mobile Sigma mark with a 48px hit
-  target. Browser checks cover view-specific Total Time order, a dedicated
+  target aligned to the Total Time input without extra visible horizontal
+  spacing. Browser checks cover grouped Serves and duration values, view-specific
+  Total Time order, a dedicated
   desktop classification row, 32px desktop and mobile Edit controls, a 48px
   mobile Edit hit area, right alignment on mobile,
   and the wider desktop list/detail content.

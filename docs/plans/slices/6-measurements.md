@@ -20,7 +20,8 @@ This slice is implemented and validated locally.
 
 Included:
 
-- Positive integer, decimal, fraction, mixed-number, and range quantity input.
+- Positive integer, comma-grouped integer, decimal, fraction, mixed-number, and
+  range quantity input. Commas are accepted only in valid three-digit groups.
 - Validation and normalized numeric range storage.
 - Fixed Volume and Weight unit catalogs, each identifying US customary or metric
   units. This slice records units but does not convert them.
@@ -103,7 +104,8 @@ Excluded:
   as decimals rounded to at most two decimal places. Ranges format both endpoints
   using the applicable unit-system rule. In view mode, pluralize `cup` as `cups`
   when the amount or range maximum is greater than one; leave abbreviated units
-  unchanged.
+  unchanged. Displayed quantities use comma grouping for thousands, including
+  the whole-number part of a mixed fraction and each endpoint of a range.
 - Ingredient rows, measurements, recipe version, and before/after history
   snapshots commit atomically in the existing versioned `save_recipe` RPC.
   Owners can read their measurements; direct writes remain denied.
@@ -134,8 +136,9 @@ and history unchanged.
 
 Write these tests before production code:
 
-- Unit tests parse integers, decimals, simple fractions, mixed numbers, and
-  ranges; format common fractions and decimal fallbacks; reject malformed,
+- Unit tests parse integers, valid comma-grouped integers, decimals, simple
+  fractions, mixed numbers, and ranges; format grouped quantities, common
+  fractions, and decimal fallbacks; reject malformed or incorrectly grouped,
   zero, negative, reversed, and non-finite values; and validate every type/unit
   combination and dual-measurement rule.
 - Database/API tests save Volume, Weight, Count, Informal, and Unmeasured

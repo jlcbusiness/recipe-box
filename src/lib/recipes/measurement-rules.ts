@@ -6,6 +6,7 @@ export type MeasurementInput = {
   quantity: string;
   unitCode: string | null;
   picklistValueId: string | null;
+  parsedQuantity?: ParsedQuantity;
 };
 
 export type MeasurementDraft = {
@@ -14,6 +15,8 @@ export type MeasurementDraft = {
   quantity: string;
   unitCode: string;
   picklistValueId: string;
+  derivedFromDensity?: boolean;
+  derivedQuantity?: ParsedQuantity;
 };
 
 export type MeasurementPayload = {
@@ -56,15 +59,16 @@ export const weightUnits: MeasurementUnit[] = [
 ];
 
 function parsePositiveNumber(value: string): number | null {
-  const decimal = value.match(/^(\d+)(?:\.(\d+))?$/);
+  const wholeNumber = '(?:\\d+|\\d{1,3}(?:,\\d{3})+)';
+  const decimal = value.match(new RegExp(`^(${wholeNumber})(?:\\.(\\d+))?$`));
   if (decimal) {
-    const parsed = Number(value);
+    const parsed = Number(`${decimal[1].replaceAll(',', '')}${decimal[2] ? `.${decimal[2]}` : ''}`);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
-  const mixed = value.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  const mixed = value.match(new RegExp(`^(${wholeNumber})\\s+(\\d+)\\/(\\d+)$`));
   if (mixed) {
-    const whole = Number(mixed[1]);
+    const whole = Number(mixed[1].replaceAll(',', ''));
     const numerator = Number(mixed[2]);
     const denominator = Number(mixed[3]);
     if (denominator === 0) {
@@ -138,6 +142,25 @@ function fractionText(value: number): string | null {
   return whole > 0 ? `${whole} ${fractionPart}` : fractionPart;
 }
 
+export function formatGroupedInteger(value: number): string {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+}
+
+export function parseGroupedInteger(value: string): number | null {
+  const normalized = value.trim();
+  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(normalized)) {
+    return null;
+  }
+
+  const parsed = Number(normalized.replaceAll(',', ''));
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+export function formatGroupedIntegerInput(value: string): string {
+  const parsed = parseGroupedInteger(value);
+  return parsed === null ? value : formatGroupedInteger(parsed);
+}
+
 export function formatQuantity(value: number, system: MeasurementSystem = 'us_customary'): string {
   if (!Number.isFinite(value) || value <= 0) {
     return '';
@@ -146,16 +169,17 @@ export function formatQuantity(value: number, system: MeasurementSystem = 'us_cu
   if (system === 'metric') {
     return new Intl.NumberFormat('en-US', {
       maximumFractionDigits: 2,
-      useGrouping: false,
     }).format(value);
   }
 
   const fraction = fractionText(value);
   if (fraction !== null) {
-    return fraction;
+    return fraction.replace(/^\d+/, (whole) => formatGroupedInteger(Number(whole)));
   }
 
-  return Number(value.toFixed(2)).toString();
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(
+    Number(value.toFixed(2)),
+  );
 }
 
 export function formatQuantityRange(
@@ -165,6 +189,14 @@ export function formatQuantityRange(
 ): string {
   const lower = formatQuantity(minimum, system);
   return maximum === null ? lower : `${lower}-${formatQuantity(maximum, system)}`;
+}
+
+export function formatQuantityInput(
+  value: string,
+  system: MeasurementSystem = 'us_customary',
+): string {
+  const parsed = parseQuantityInput(value);
+  return parsed ? formatQuantityRange(parsed.minimum, parsed.maximum, system) : value;
 }
 
 export function validateMeasurementSet(measurements: MeasurementInput[]): string | null {
@@ -194,7 +226,7 @@ export function validateMeasurementSet(measurements: MeasurementInput[]): string
       continue;
     }
 
-    if (!parseQuantityInput(measurement.quantity)) {
+    if (!(measurement.parsedQuantity ?? parseQuantityInput(measurement.quantity))) {
       return 'Enter a positive whole number, decimal, fraction, mixed number, or range.';
     }
 
@@ -253,6 +285,7 @@ export function serializeMeasurements(drafts: MeasurementDraft[]): MeasurementPa
       quantity: draft.quantity,
       unitCode: draft.unitCode || null,
       picklistValueId: draft.picklistValueId || null,
+      parsedQuantity: draft.derivedFromDensity ? draft.derivedQuantity : undefined,
     };
   });
 
@@ -262,7 +295,10 @@ export function serializeMeasurements(drafts: MeasurementDraft[]): MeasurementPa
   }
 
   return inputs.map((input) => {
-    const parsed = input.type === 'unmeasured' ? null : parseQuantityInput(input.quantity);
+    const parsed =
+      input.type === 'unmeasured'
+        ? null
+        : (input.parsedQuantity ?? parseQuantityInput(input.quantity));
     return {
       measurement_type: input.type,
       amount_min: parsed?.minimum ?? null,

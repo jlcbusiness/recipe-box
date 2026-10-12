@@ -1,0 +1,842 @@
+.heading {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.toggle {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+.toggle:hover span,
+.toggle:focus-visible span {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+.chevron {
+  flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+
+.toggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+.toggle:focus-visible,
+.addButton:focus-visible,
+.removeButton:focus-visible,
+.cancelButton:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.manager {
+  margin-top: 16px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.searchControls {
+  display: flex;
+  width: min(100%, 360px);
+  min-width: 0;
+  align-items: end;
+  gap: 4px;
+}
+
+.searchField {
+  display: grid;
+  width: auto;
+  min-width: 0;
+  flex: 1;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.searchField input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fffefa;
+  color: var(--ink);
+  font: inherit;
+  padding: 7px 9px;
+}
+
+.searchField input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.searchField input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.clearButton {
+  display: inline-grid;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.clearButton:hover:not(:disabled) {
+  color: var(--leaf);
+}
+
+.clearButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.clearButton:focus-visible,
+.editorAction:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.addButton,
+.removeButton,
+.cancelButton {
+  min-height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  padding: 8px 13px;
+}
+
+.addButton {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: white;
+  font-weight: 700;
+}
+
+.removeButton {
+  border-color: var(--tomato);
+  background: var(--tomato);
+  color: white;
+  font-weight: 700;
+}
+
+.addButton:disabled,
+.removeButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.cancelButton:hover {
+  color: var(--leaf);
+}
+
+.removeButton,
+.cancelButton {
+  min-height: 48px;
+}
+
+.error {
+  margin: 0;
+  color: var(--tomato);
+  font-size: 14px;
+}
+
+.confirmation {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 12px 4px 4px;
+}
+
+.confirmation p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 14px 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status {
+  min-height: 1.4em;
+  margin: 10px 0 0;
+  color: var(--leaf);
+  font-size: 13px;
+}
+
+.errorStatus {
+  color: var(--tomato);
+}
+
+.tableViewport {
+  max-height: 462px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: left;
+}
+
+.table thead {
+  background: #f1f4ee;
+}
+
+.table th,
+.table td {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 9px;
+  vertical-align: middle;
+}
+
+.table thead th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  height: 38px;
+  background: #f1f4ee;
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.table thead th:first-child,
+.table tbody th {
+  width: 24%;
+}
+
+.table thead th:last-child {
+  width: 72px;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #f7f8f5;
+}
+
+.table tbody tr.editingRow {
+  background: #eef3e9;
+}
+
+.table tbody th {
+  text-align: left;
+}
+
+.ingredientButton {
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  padding: 5px 0;
+}
+
+.ingredientButton:hover:not(:disabled),
+.ingredientButton:focus-visible {
+  color: var(--leaf);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ingredientButton:focus-visible,
+.iconButton:focus-visible,
+.bottomAddButton:focus-visible,
+.ingredientChooser input:focus-visible,
+.ingredientOption:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.measurementValue,
+.densityValue,
+.editorIngredientName,
+.mobileDensity {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobileDensity {
+  display: none;
+  white-space: nowrap;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mobileDensity:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.measurementValue {
+  white-space: nowrap;
+}
+
+.densityValue {
+  white-space: nowrap;
+  transform: translateY(10px);
+}
+
+.measurementGroup {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.measurementLabel {
+  display: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.editorEquation {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.editorResult {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.addEditorRow {
+  display: grid;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 24%) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  background: #eef3e9;
+  margin: 0;
+  padding: 8px 9px;
+}
+
+.editorActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.editorAction {
+  display: inline-grid;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cancelAction {
+  color: var(--muted);
+}
+
+.cancelAction:hover {
+  color: var(--tomato);
+}
+
+.saveAction {
+  color: var(--leaf);
+}
+
+.saveAction:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.editorAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.addEditorRowEmpty .measurementLabel {
+  display: block;
+}
+
+.equationSeparator {
+  color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  transform: translateY(7px);
+}
+
+.measureControl {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.measureControl input {
+  box-sizing: border-box;
+  width: 5em;
+  min-width: 42px;
+  min-height: 40px;
+  flex: 1 1 4em;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fffefa;
+  color: var(--ink);
+  font: inherit;
+  padding: 6px 7px;
+}
+
+.measureControl input:focus-visible,
+.ingredientChooser input:focus-visible {
+  border-color: var(--gold);
+}
+
+.unitPicker {
+  min-width: 62px;
+  min-height: 40px;
+  justify-content: space-between;
+  padding: 5px 6px;
+}
+
+.actionCell {
+  width: 72px;
+  text-align: center;
+}
+
+.iconButton {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: rgb(180 62 50 / 10%);
+  color: var(--tomato);
+}
+
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.editorIngredientName {
+  display: block;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ingredientChooser {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  gap: 3px;
+}
+
+.ingredientChooser input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fffefa;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-style: italic;
+  font-weight: 400;
+  padding: 6px 7px;
+}
+
+.ingredientOptions {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 4px);
+  left: 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(320px, calc(100vw - 48px));
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  margin-top: 4px;
+  background: white;
+  box-shadow: 0 4px 12px rgb(25 37 23 / 14%);
+}
+
+.ingredientOption {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  background: white;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+
+.ingredientOption[aria-selected="true"],
+.ingredientOption:hover {
+  background: #eef3e9;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.confirmActions button {
+  min-height: 40px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+.bottomAddButton {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  align-items: center;
+  justify-content: flex-start;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-style: italic;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.bottomAddButton:hover:not(:disabled) {
+  color: var(--leaf);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bottomAddButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.emptyCell {
+  height: 48px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .toggle {
+    min-height: 48px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .searchField {
+    width: 100%;
+  }
+
+  .addButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .table {
+    display: block;
+    width: 100%;
+    max-width: none;
+    table-layout: auto;
+  }
+
+  .table tbody {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) max-content 48px;
+  }
+
+  .tableEditing {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  .table tbody tr {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: center;
+    width: 100%;
+    border-bottom: 1px solid var(--line);
+    padding: 0;
+  }
+
+  .table tbody tr > th {
+    width: auto;
+    grid-column: 1;
+    padding: 5px 8px;
+  }
+
+  .table tbody tr > td {
+    border-bottom: 0;
+    padding: 5px 8px;
+  }
+
+  .table tbody tr > th,
+  .table tbody tr > td {
+    border-bottom: 0;
+  }
+
+  .table tbody tr > td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted);
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .table tbody tr > td.actionCell {
+    width: auto;
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .table tbody tr > td.actionCell::before {
+    display: none;
+  }
+
+  .table tbody tr > td.equationCell {
+    grid-column: 2;
+  }
+
+  .table tbody tr > td.equationCell::before {
+    display: none;
+  }
+
+  .table tbody tr > td[colspan] {
+    grid-column: 1 / -1;
+  }
+
+  .table tbody tr > td[colspan]::before {
+    display: none;
+  }
+
+  .table tbody tr:not(.editingRow) {
+    display: grid;
+  }
+
+  .table tbody tr:not(.editingRow) > th,
+  .table tbody tr:not(.editingRow) > td {
+    padding: 5px 8px;
+  }
+
+  .table tbody tr:not(.editingRow) > th {
+    width: auto;
+    grid-column: 1;
+  }
+
+  .table tbody tr:not(.editingRow) > td.equationCell {
+    grid-column: 2;
+    overflow: hidden;
+  }
+
+  .table tbody tr:not(.editingRow) > td.actionCell {
+    width: auto;
+    grid-column: 3;
+    text-align: right;
+  }
+
+  .table tbody tr.editingRow > th,
+  .table tbody tr.editingRow > td.equationCell {
+    grid-column: 1 / -1;
+  }
+
+  .ingredientButton {
+    display: block;
+    width: auto;
+    max-width: min(45vw, 12em);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .table tbody tr:not(.editingRow) > td.actionCell .iconButton {
+    width: 48px;
+    height: 48px;
+  }
+
+  .measureControl {
+    gap: 3px;
+  }
+
+  .measurementLabel {
+    display: block;
+  }
+
+  .measureControl input {
+    width: 4em;
+    min-width: 34px;
+    flex: 0 1 4em;
+    padding-inline: 4px;
+  }
+
+  .unitPicker {
+    min-width: 58px;
+    padding-inline: 4px;
+  }
+
+  .densityValue,
+  .measurementValue,
+  .mobileDensity {
+    font-size: 15px;
+  }
+
+  .measurementValue {
+    display: none;
+  }
+
+  .mobileDensity {
+    display: inline-block;
+    font-size: 15px;
+  }
+
+  .ingredientButton,
+  .editorIngredientName {
+    font-size: 17px;
+  }
+
+  .ingredientOptions {
+    width: 100%;
+    max-height: 160px;
+    box-shadow: none;
+  }
+
+  .editorEquation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+
+  .editorEquation .equationSeparator {
+    display: none;
+  }
+
+  .editorEquation .densityValue {
+    grid-column: 1 / -1;
+  }
+
+  .editorEquation .densityValue {
+    transform: none;
+  }
+
+  .addEditorRow {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 8px;
+  }
+
+  .editorActions {
+    grid-column: unset;
+  }
+
+  .editorResult {
+    width: 100%;
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  .bottomAddButton {
+    min-height: 48px;
+  }
+}

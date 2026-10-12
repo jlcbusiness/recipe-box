@@ -46,8 +46,10 @@ publication covers and private or trashed recipe photos are never public.
   Cancel discards pending changes. The pane provides icon-only device
   selection and removal, plus a camera action on mobile. The publication detail
   page shows the cover without an edit trigger.
-- Recipe photo management opens from a camera action beside Name. Upload,
-  removal, default selection, and ordering take effect immediately. Show a
+- In recipe edit mode, the action beside Name shows the primary photo in a
+  contained thumbnail with a corner pencil, or a camera icon when no photo is
+  available. It opens recipe photo management. Upload, removal, default
+  selection, and ordering take effect immediately. Show a
   three-column photo grid on a 352px mobile viewport; with the pane's padding
   and horizontal and vertical space reserved for the overhanging remove
   controls, image slots are about 84px wide. The first photo is the default.
@@ -103,9 +105,12 @@ gallery/lightbox, cropping, video, and animated images remain out of scope.
   existing Book and Magazine fallbacks and the Site globe. The remove control
   uses an inverted white-and-tomato treatment; device/camera actions share a
   toolbar row with Cancel and Submit aligned to the right.
-- Recipe detail shows the first (default) photo at the top of recipe content
-  and an ordered thumbnail strip for additional photos. A camera action beside
-  Name opens an image-management pane with an immediate device upload, `x`
+- Recipe detail shows the first (default) photo centered before recipe content,
+  preserving its aspect ratio and capped at 1.5 inches high; additional photos
+  appear in square thumbnails. The edit action beside Name shows the primary
+  photo contained in a compact thumbnail with a corner pencil, or a camera icon
+  when no photo exists. It opens an image-management pane with an immediate
+  device upload, `x`
   removal, and default photo ordering. There are three image slots per row on
   a 352px viewport, with two-dimensional drag and Ctrl+Arrow keyboard
   alternatives. The dragged image tracks the pointer and the destination is

@@ -1,5 +1,6 @@
 import type { createClient } from '../supabase/server';
 import type { MeasurementType } from './measurement-rules';
+import type { IngredientDensity } from './density-rules';
 import type { TagColorKey } from './tag-colors';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
@@ -40,6 +41,7 @@ export type RecipePicklistValue = {
 export type IngredientOption = {
   id: string;
   name: string;
+  density?: IngredientDensity | null;
 };
 
 export type TagOption = {
@@ -204,13 +206,34 @@ export async function getRecipePicklists(
 }
 
 export async function getIngredients(supabase: RecipeSupabaseClient): Promise<IngredientOption[]> {
-  const { data, error } = await supabase.from('ingredients').select('id, name').order('name');
+  const [ingredientsResult, densitiesResult] = await Promise.all([
+    supabase.from('ingredients').select('id, name').order('name'),
+    supabase
+      .from('ingredient_densities')
+      .select('ingredient_id, volume_amount, volume_unit_code, weight_amount, weight_unit_code'),
+  ]);
 
-  if (error) {
+  if (ingredientsResult.error || densitiesResult.error) {
     throw new Error('Unable to load ingredients.');
   }
 
-  return data as IngredientOption[];
+  const densitiesByIngredient = new Map(
+    (densitiesResult.data ?? []).map((density) => [density.ingredient_id, density]),
+  );
+  return (ingredientsResult.data ?? []).map((ingredient) => {
+    const density = densitiesByIngredient.get(ingredient.id);
+    return {
+      ...ingredient,
+      density: density
+        ? {
+            volumeAmount: Number(density.volume_amount),
+            volumeUnitCode: density.volume_unit_code,
+            weightAmount: Number(density.weight_amount),
+            weightUnitCode: density.weight_unit_code,
+          }
+        : null,
+    };
+  });
 }
 
 export async function getTags(supabase: RecipeSupabaseClient): Promise<TagOption[]> {

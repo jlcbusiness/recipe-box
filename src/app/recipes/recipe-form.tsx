@@ -20,7 +20,12 @@ import {
   serializeInstructionSteps,
   unlinkIngredientMentions,
 } from '../../lib/recipes/instruction-rules';
-import { formatQuantityRange } from '../../lib/recipes/measurement-rules';
+import {
+  formatGroupedInteger,
+  formatGroupedIntegerInput,
+  formatQuantityRange,
+  parseGroupedInteger,
+} from '../../lib/recipes/measurement-rules';
 import {
   calculateTotalMinutes,
   clearConditionalValuesForStateChange,
@@ -73,6 +78,10 @@ const stateOptions: SinglePicklistOption[] = [
   { value: 'tried', label: 'Tried' },
   { value: 'will_not_try', label: 'Will not try' },
 ];
+
+function formatOptionalInteger(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : formatGroupedInteger(value);
+}
 
 function SinglePicklist({
   label,
@@ -191,7 +200,7 @@ export function RecipeForm({
   const ingredientDeletionDialogRef = useRef<HTMLDialogElement>(null);
   const [state, setState] = useState<RecipeState>(recipe?.state ?? 'want_to_try');
   const [foodTypeId, setFoodTypeId] = useState(recipe?.food_type_id ?? '');
-  const [serves, setServes] = useState<number | null>(recipe?.serves ?? null);
+  const [serves, setServes] = useState(formatOptionalInteger(recipe?.serves));
   const [verdictId, setVerdictId] = useState(recipe?.verdict_id ?? '');
   const [enthusiasmId, setEnthusiasmId] = useState(recipe?.enthusiasm_id ?? '');
   const [occasionDetails, setOccasionDetails] = useState(recipe?.occasion_details ?? '');
@@ -308,11 +317,11 @@ export function RecipeForm({
 
     const readMinutes = (field: string) => {
       const input = form.elements.namedItem(field);
-      return input instanceof HTMLInputElement && input.value !== '' ? Number(input.value) : null;
+      return input instanceof HTMLInputElement ? parseGroupedInteger(input.value) : null;
     };
     const totalInput = form.elements.namedItem('total_time_minutes');
     if (totalInput instanceof HTMLInputElement) {
-      totalInput.value = String(
+      totalInput.value = formatGroupedInteger(
         calculateTotalMinutes({
           prep: readMinutes('prep_time_minutes'),
           mixing: readMinutes('mixing_time_minutes'),
@@ -472,12 +481,11 @@ export function RecipeForm({
               id="serves"
               min="1"
               name="serves"
-              step="1"
-              type="number"
-              value={serves ?? ''}
-              onChange={(event) =>
-                setServes(event.target.value === '' ? null : Number(event.target.value))
-              }
+              inputMode="numeric"
+              type="text"
+              value={serves}
+              onBlur={() => setServes(formatGroupedIntegerInput(serves))}
+              onChange={(event) => setServes(event.currentTarget.value)}
             />
           </label>
           <MultiPicklist
@@ -602,10 +610,12 @@ export function RecipeForm({
                 aria-label={accessibleLabel}
                 id={name}
                 name={name}
-                type="number"
-                min="0"
-                step="1"
-                defaultValue={recipe?.[name] ?? ''}
+                inputMode="numeric"
+                type="text"
+                defaultValue={formatOptionalInteger(recipe?.[name])}
+                onBlur={(event) => {
+                  event.currentTarget.value = formatGroupedIntegerInput(event.currentTarget.value);
+                }}
               />
             </label>
           ))}
@@ -617,10 +627,12 @@ export function RecipeForm({
               aria-label="Total time (minutes)"
               id="total-time"
               name="total_time_minutes"
-              type="number"
-              min="0"
-              step="1"
-              defaultValue={recipe?.total_time_minutes ?? ''}
+              inputMode="numeric"
+              type="text"
+              defaultValue={formatOptionalInteger(recipe?.total_time_minutes)}
+              onBlur={(event) => {
+                event.currentTarget.value = formatGroupedIntegerInput(event.currentTarget.value);
+              }}
             />
           </label>
           <button

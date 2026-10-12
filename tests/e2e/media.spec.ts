@@ -270,6 +270,9 @@ test('image management panes stage covers and immediately manage decorative reci
     await coverDialog.getByRole('button', { name: 'Cancel' }).click();
 
     await page.goto(`/recipes/${recipeId}/edit`);
+    await expect(page.locator('.recipe-photo-manager-trigger svg')).toBeVisible();
+    await expect(page.locator('.recipe-photo-manager-trigger img')).toHaveCount(0);
+    await expect(page.locator('.recipe-photo-manager-pencil')).toHaveCount(0);
     if (viewportWidth <= 640) {
       const nameBox = await page.locator('.recipe-name-field').boundingBox();
       const cameraBox = await page
@@ -335,6 +338,19 @@ test('image management panes stage covers and immediately manage decorative reci
       },
     ]);
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(6);
+    await expect(page.locator('.recipe-photo-manager-trigger img')).toBeVisible();
+    await expect(page.locator('.recipe-photo-manager-trigger img')).toHaveCSS(
+      'object-fit',
+      'contain',
+    );
+    await expect(page.locator('.recipe-photo-manager-pencil')).toBeVisible();
+    const triggerPhotoSource = await page
+      .locator('.recipe-photo-manager-trigger img')
+      .getAttribute('src');
+    const primaryGridPhotoSource = await photoDialog
+      .locator('.recipe-photo-grid-item.is-default .recipe-photo-grid-image')
+      .getAttribute('src');
+    expect(triggerPhotoSource).toBe(primaryGridPhotoSource);
     const heicAssetResponse = await request.get(
       `${apiUrl}/rest/v1/media_assets?select=width,height,full_path,thumbnail_path&recipe_id=eq.${recipeId}&status=eq.ready&width=eq.320&height=eq.427`,
       { headers },
@@ -739,7 +755,23 @@ test('image management panes stage covers and immediately manage decorative reci
 
     await page.goto(`/recipes/${recipeId}`);
     await expect(page.locator('.recipe-photo-gallery')).toBeVisible();
-    await expect(page.locator('.recipe-photo-feature-image')).toBeVisible();
+    const featureImage = page.locator('.recipe-photo-feature-image');
+    await expect(featureImage).toBeVisible();
+    await expect(featureImage).toHaveCSS('max-height', '144px');
+    expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(144);
+    const [featureImageBounds, featureBounds] = await Promise.all([
+      featureImage.boundingBox(),
+      page.locator('.recipe-photo-feature').boundingBox(),
+    ]);
+    expect(featureImageBounds).not.toBeNull();
+    expect(featureBounds).not.toBeNull();
+    expect(
+      Math.abs(
+        (featureImageBounds?.x ?? 0) +
+          (featureImageBounds?.width ?? 0) / 2 -
+          ((featureBounds?.x ?? 0) + (featureBounds?.width ?? 0) / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
     const detailAxe = await new AxeBuilder({ page }).analyze();
     expect(detailAxe.violations).toEqual([]);
 

@@ -75,6 +75,8 @@ Multi-value picklists use compact checkmark dropdowns with a stable trigger widt
 not checklists. Selected values use a checkmark and pale green, bold text.
 Total time is manual. An explicit calculate control (`Σ`) visibly
 replaces total time with the sum of entered time fields only after the user invokes it.
+Serves and time values display with comma grouping for thousands; time inputs
+accept valid grouped integers and normalize their display on blur.
 
 State is Want to try, Tried, or Will not try. State conditionally shows Enthusiasm,
 Verdict, or Reason:
@@ -129,18 +131,21 @@ A Unit row may show volume, weight, or both, rendering for example as
 ingredient in standard recipe reading; Preparation is a single-value suggestion
 list that accepts new user-entered values.
 
-Numeric values accept integers, ranges, decimals, fractions, and mixed numbers.
+Numeric values accept integers, ranges, decimals, fractions, and mixed numbers,
+including comma-grouped whole-number parts such as `1,000` or `1,000-2,000`.
 Store precise values. US customary display uses common fractions with
 denominators 2, 3, 4, and 8 where practical, otherwise at most two decimal
-places. Metric display never uses fractions and shows at most two decimal
+places; displayed quantities group thousands. Metric display never uses
+fractions and shows at most two decimal
 places. Things pluralize above one; among fixed unit labels, only `cup`
 pluralizes as `cups`.
 
 Settings supports one trusted density per canonical ingredient, expressed with
 the same volume and weight controls, for example `1 cup = 120 g`. An empty
-convertible measurement auto-fills from trusted density. Derived values have a
-visual treatment and accessible label. Editing a derived value makes it manual;
-clearing it and leaving the field re-applies the density.
+convertible measurement auto-fills from trusted density. Derived amounts use a
+tinted field and calculator icon, with an associated screen-reader status.
+Editing a derived value makes it manual; clearing it and leaving the field
+re-applies the density.
 
 Recipes are base batches. Readers can select target servings, multiply, or
 divide. Scaling changes numeric amounts but does not invent precision for
