@@ -143,14 +143,17 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   ]);
   let volumeSystem: MeasurementSystem = 'us_customary';
   let weightSystem: MeasurementSystem = 'us_customary';
+  let ingredientPresentation: 'standard' | 'ingredient_first' = 'standard';
   if (authData.user) {
     const { data: account } = await supabase
       .from('accounts')
-      .select('volume_system, weight_system')
+      .select('volume_system, weight_system, ingredient_presentation')
       .eq('id', authData.user.id)
       .maybeSingle();
     volumeSystem = account?.volume_system === 'metric' ? 'metric' : 'us_customary';
     weightSystem = account?.weight_system === 'metric' ? 'metric' : 'us_customary';
+    ingredientPresentation =
+      account?.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard';
   }
   if (!recipe) {
     notFound();
@@ -200,6 +203,24 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Cooling', recipe.cooling_time_minutes],
     ['Rest', recipe.rest_time_minutes],
   ].filter(([, value]) => value !== null);
+  const instructions = recipe.steps.length > 0 && (
+    <section className="recipe-detail-section" aria-labelledby="instructions-title">
+      <h2 id="instructions-title">Instructions</h2>
+      <ol className="recipe-instruction-list">
+        {recipe.steps.map((step) => (
+          <li key={step.id}>
+            {renderInstructionMarkdown(
+              step.content_markdown,
+              recipe.ingredients.map((ingredient) => ({
+                id: ingredient.id,
+                name: ingredient.ingredient_name,
+              })),
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
 
   return (
     <main className="recipes-main" aria-labelledby="page-title">
@@ -287,31 +308,18 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         </section>
         {recipe.ingredients.length > 0 && (
           <RecipeReader
+            defaultPresentation={ingredientPresentation}
             ingredients={recipe.ingredients}
+            instructions={instructions}
+            recipeId={recipe.id}
             serves={recipe.serves}
+            steps={recipe.steps}
             volumeSystem={volumeSystem}
             weightSystem={weightSystem}
           />
         )}
       </RecipeReaderProvider>
-      {recipe.steps.length > 0 && (
-        <section className="recipe-detail-section" aria-labelledby="instructions-title">
-          <h2 id="instructions-title">Instructions</h2>
-          <ol className="recipe-instruction-list">
-            {recipe.steps.map((step) => (
-              <li key={step.id}>
-                {renderInstructionMarkdown(
-                  step.content_markdown,
-                  recipe.ingredients.map((ingredient) => ({
-                    id: ingredient.id,
-                    name: ingredient.ingredient_name,
-                  })),
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      {recipe.ingredients.length === 0 && instructions}
       {(recipe.pairings.length > 0 || recipe.incoming_pairings.length > 0) && (
         <section className="recipe-detail-section" aria-labelledby="pairs-with-title">
           <h2 id="pairs-with-title">Pairs With</h2>

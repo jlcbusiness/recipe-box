@@ -40,10 +40,8 @@ export async function manageIngredientDensity(
   let volumeAmount: number | null = null;
   let weightAmount: number | null = null;
   if (action === 'set') {
-    const volume =
-      typeof volumeQuantity === 'string' ? parseQuantityInput(volumeQuantity) : null;
-    const weight =
-      typeof weightQuantity === 'string' ? parseQuantityInput(weightQuantity) : null;
+    const volume = typeof volumeQuantity === 'string' ? parseQuantityInput(volumeQuantity) : null;
+    const weight = typeof weightQuantity === 'string' ? parseQuantityInput(weightQuantity) : null;
     if (
       !volume ||
       volume.maximum !== null ||

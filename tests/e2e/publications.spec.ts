@@ -934,8 +934,9 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     await expect(page.getByText('ISBN-13 begins with 978 or 979.')).toBeVisible();
     await page.getByLabel('ISBN').fill('9780306406157');
     await expect(page.getByLabel('ISBN')).toHaveValue('978-0-306-40615-7');
-    await page.getByLabel('ISBN').fill('0-306-40615-3');
-    await expect(page.getByLabel('ISBN')).toHaveValue('0-306-40615-3');
+    const isbnInput = page.getByLabel('ISBN');
+    await isbnInput.fill('0-306-40615-3');
+    await expect(isbnInput).toHaveValue('0-306-40615-3');
     await page.getByLabel('Retailer URL').fill('www.books.example.test/home-cook');
     await savePublication.click();
     await expect(page.locator('.publication-form').getByRole('alert')).toContainText(

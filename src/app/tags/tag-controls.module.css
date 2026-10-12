@@ -138,7 +138,7 @@
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  margin-left: 0;
+  margin-left: auto;
 }
 
 :global(.recipe-form) .multiSelect .chips {

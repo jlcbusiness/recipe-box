@@ -1335,9 +1335,11 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await expect(mobileList).toContainText('yellow cheese, diced');
     await expect(editor).toBeHidden();
     const mobileDelete = mobileList.getByRole('button', { name: 'Delete ingredient row 1' });
-    await mobileDelete.hover();
-    await expect(mobileDelete).toHaveCSS('background-color', 'rgb(180, 62, 50)');
-    await expect(mobileDelete).toHaveCSS('color', 'rgb(255, 255, 255)');
+    await expect(mobileDelete).toBeVisible();
+    await expect(mobileDelete).toHaveCSS('width', '48px');
+    await expect(mobileDelete).toHaveCSS('height', '48px');
+    await expect(mobileDelete).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(mobileDelete).toHaveCSS('color', 'rgb(98, 105, 93)');
     await mobileList.getByRole('button', { name: 'Enter ingredient' }).click();
     await editor.getByRole('combobox', { name: 'Ingredient', exact: true }).fill('Flour');
     await editor

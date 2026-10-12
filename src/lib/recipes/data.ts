@@ -1,6 +1,6 @@
 import type { createClient } from '../supabase/server';
-import type { MeasurementType } from './measurement-rules';
 import type { IngredientDensity } from './density-rules';
+import type { MeasurementType } from './measurement-rules';
 import type { TagColorKey } from './tag-colors';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';

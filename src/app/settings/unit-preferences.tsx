@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
+import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
 import { saveUnitPreferences } from '../actions/unit-preferences';
 import { Picklist, type PicklistOption } from '../picklist';
 
@@ -11,10 +12,17 @@ const unitSystemOptions: PicklistOption[] = [
   { value: 'metric', label: 'Metric' },
 ];
 
+const presentationOptions: PicklistOption[] = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'ingredient_first', label: 'Ingredient-first' },
+];
+
 export function UnitPreferences({
+  ingredientPresentation,
   volumeSystem,
   weightSystem,
 }: {
+  ingredientPresentation: IngredientPresentation;
   volumeSystem: MeasurementSystem;
   weightSystem: MeasurementSystem;
 }) {
@@ -22,31 +30,56 @@ export function UnitPreferences({
   const changedDimensionRef = useRef<HTMLInputElement>(null);
   const volumeSystemRef = useRef<HTMLInputElement>(null);
   const weightSystemRef = useRef<HTMLInputElement>(null);
+  const ingredientPresentationRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const [systems, setSystems] = useState({ volume: volumeSystem, weight: weightSystem });
+  const [preferences, setPreferences] = useState({
+    volume: volumeSystem,
+    weight: weightSystem,
+    presentation: ingredientPresentation,
+  });
   const [state, formAction, isPending] = useActionState(saveUnitPreferences, {});
 
   useEffect(() => {
-    setSystems({ volume: volumeSystem, weight: weightSystem });
-  }, [volumeSystem, weightSystem]);
+    setPreferences({
+      volume: volumeSystem,
+      weight: weightSystem,
+      presentation: ingredientPresentation,
+    });
+  }, [ingredientPresentation, volumeSystem, weightSystem]);
 
   useEffect(() => {
     if (state.status === 'saved') {
       router.refresh();
     } else if (state.status === 'error') {
-      setSystems({ volume: volumeSystem, weight: weightSystem });
+      setPreferences({
+        volume: volumeSystem,
+        weight: weightSystem,
+        presentation: ingredientPresentation,
+      });
     }
-  }, [router, state, volumeSystem, weightSystem]);
+  }, [ingredientPresentation, router, state, volumeSystem, weightSystem]);
 
   function updateSystem(dimension: 'volume' | 'weight', value: string) {
     const system = value as MeasurementSystem;
-    setSystems((current) => ({ ...current, [dimension]: system }));
+    setPreferences((current) => ({ ...current, [dimension]: system }));
     if (changedDimensionRef.current) {
       changedDimensionRef.current.value = dimension;
     }
     const systemRef = dimension === 'volume' ? volumeSystemRef : weightSystemRef;
     if (systemRef.current) {
       systemRef.current.value = system;
+    }
+    formRef.current?.requestSubmit();
+  }
+
+  function updatePresentation(value: string) {
+    const presentation = value as IngredientPresentation;
+    setPreferences((current) => ({ ...current, presentation }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'presentation';
+    }
+    if (ingredientPresentationRef.current) {
+      ingredientPresentationRef.current.value = presentation;
     }
     formRef.current?.requestSubmit();
   }
@@ -60,33 +93,71 @@ export function UnitPreferences({
         ref={formRef}
       >
         <input name="changed_dimension" ref={changedDimensionRef} type="hidden" value="volume" />
-        <input name="volume_system" ref={volumeSystemRef} type="hidden" value={systems.volume} />
-        <input name="weight_system" ref={weightSystemRef} type="hidden" value={systems.weight} />
-        <div className="settings-unit-field">
-          <span className="settings-unit-label">Volume</span>
-          <Picklist
-            className="settings-unit-picklist"
-            disabled={isPending}
-            label="Volume"
-            measureLabel="US customary"
-            menuClassName="settings-unit-picklist-menu"
-            onSelect={(value) => updateSystem('volume', value)}
-            options={unitSystemOptions}
-            value={systems.volume}
-          />
+        <input
+          name="volume_system"
+          ref={volumeSystemRef}
+          type="hidden"
+          value={preferences.volume}
+        />
+        <input
+          name="weight_system"
+          ref={weightSystemRef}
+          type="hidden"
+          value={preferences.weight}
+        />
+        <input
+          name="ingredient_presentation"
+          ref={ingredientPresentationRef}
+          type="hidden"
+          value={preferences.presentation}
+        />
+        <div className="settings-preference-group">
+          <h3 id="units-title">Units</h3>
+          <div className="settings-unit-preference-fields">
+            <div className="settings-unit-field">
+              <span className="settings-unit-label">Volume</span>
+              <Picklist
+                className="settings-unit-picklist"
+                disabled={isPending}
+                label="Volume"
+                measureLabel="US customary"
+                menuClassName="settings-unit-picklist-menu"
+                onSelect={(value) => updateSystem('volume', value)}
+                options={unitSystemOptions}
+                value={preferences.volume}
+              />
+            </div>
+            <div className="settings-unit-field">
+              <span className="settings-unit-label">Weight</span>
+              <Picklist
+                className="settings-unit-picklist"
+                disabled={isPending}
+                label="Weight"
+                measureLabel="US customary"
+                menuClassName="settings-unit-picklist-menu"
+                onSelect={(value) => updateSystem('weight', value)}
+                options={unitSystemOptions}
+                value={preferences.weight}
+              />
+            </div>
+          </div>
         </div>
-        <div className="settings-unit-field">
-          <span className="settings-unit-label">Weight</span>
-          <Picklist
-            className="settings-unit-picklist"
-            disabled={isPending}
-            label="Weight"
-            measureLabel="US customary"
-            menuClassName="settings-unit-picklist-menu"
-            onSelect={(value) => updateSystem('weight', value)}
-            options={unitSystemOptions}
-            value={systems.weight}
-          />
+        <div className="settings-preference-group">
+          <div className="settings-unit-preference-fields">
+            <div className="settings-unit-field">
+              <span className="settings-unit-label">Ingredient view</span>
+              <Picklist
+                className="settings-unit-picklist"
+                disabled={isPending}
+                label="Ingredient view"
+                measureLabel="Standard"
+                menuClassName="settings-unit-picklist-menu"
+                onSelect={updatePresentation}
+                options={presentationOptions}
+                value={preferences.presentation}
+              />
+            </div>
+          </div>
         </div>
       </form>
       <p aria-live="polite" className="settings-unit-status" role="status">

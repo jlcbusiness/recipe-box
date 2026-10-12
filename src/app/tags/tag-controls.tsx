@@ -124,7 +124,9 @@ export function TagMultiSelect({
                 const context = document.createElement('canvas').getContext('2d');
                 if (context) {
                   context.font = getComputedStyle(input).font;
-                  setInputWidth(Math.max(96, Math.ceil(context.measureText(input.value).width + 12)));
+                  setInputWidth(
+                    Math.max(96, Math.ceil(context.measureText(input.value).width + 12)),
+                  );
                 }
                 setActiveIndex(0);
                 setIsOpen(true);
@@ -215,9 +217,7 @@ export function TagChips({
           {tag.name}
         </li>
       ))}
-      {trailingActions && (
-        <li className={styles.trailingActions}>{trailingActions}</li>
-      )}
+      {trailingActions && <li className={styles.trailingActions}>{trailingActions}</li>}
     </ul>
   );
 }

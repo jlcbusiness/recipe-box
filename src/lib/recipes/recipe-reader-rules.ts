@@ -1,4 +1,6 @@
+import type { RecipeIngredient, RecipeInstructionStep } from './data';
 import type { IngredientDisplayInput } from './ingredient-rules';
+import { parseIngredientMentions } from './instruction-rules';
 import {
   type MeasurementSystem,
   type MeasurementType,
@@ -17,6 +19,12 @@ export type MeasurementUnitSystems = Record<MeasurementDimension, MeasurementSys
 
 export type IngredientUnitOverrides = Partial<Record<MeasurementDimension, string>>;
 
+export type IngredientSortMode = 'instructions' | 'alphabetical' | 'size' | 'entered';
+
+export type IngredientSortDirection = 'ascending' | 'descending';
+
+export type IngredientPresentation = 'standard' | 'ingredient_first';
+
 export type IngredientDisplayOptions = {
   multiplier: number;
   unitSystems: MeasurementUnitSystems;
@@ -24,6 +32,10 @@ export type IngredientDisplayOptions = {
 };
 
 const usFluidOunceMilliliters = 29.5735295625;
+const ingredientNameCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base',
+});
 
 // NIST SP 811 Appendix B.9; US liquid units use exact customary definitions.
 const unitsByDimension: Record<MeasurementDimension, Record<string, number>> = {
@@ -149,6 +161,106 @@ export function convertUnitAmount(
     throw new Error('The converted amount is outside the supported numeric range.');
   }
   return converted;
+}
+
+function enteredPosition(left: RecipeIngredient, right: RecipeIngredient): number {
+  return left.position - right.position;
+}
+
+function ingredientSize(ingredient: RecipeIngredient): { group: number; amount: number | null } {
+  const volume = ingredient.measurements.find(
+    (measurement) => measurement.measurement_type === 'volume' && measurement.amount_min !== null,
+  );
+  if (volume?.amount_min !== null && volume?.unit_code) {
+    return {
+      group: 0,
+      amount: convertUnitAmount(volume.amount_min, 'volume', volume.unit_code, 'ml'),
+    };
+  }
+
+  const weight = ingredient.measurements.find(
+    (measurement) => measurement.measurement_type === 'weight' && measurement.amount_min !== null,
+  );
+  if (weight?.amount_min !== null && weight?.unit_code) {
+    return {
+      group: 1,
+      amount: convertUnitAmount(weight.amount_min, 'weight', weight.unit_code, 'g'),
+    };
+  }
+
+  const countOrThings = ingredient.measurements.find(
+    (measurement) =>
+      (measurement.measurement_type === 'count' || measurement.measurement_type === 'informal') &&
+      measurement.amount_min !== null,
+  );
+  if (countOrThings && countOrThings.amount_min !== null) {
+    return { group: 2, amount: countOrThings.amount_min };
+  }
+
+  return { group: 3, amount: null };
+}
+
+export function sortRecipeIngredients(
+  ingredients: readonly RecipeIngredient[],
+  steps: readonly RecipeInstructionStep[],
+  mode: IngredientSortMode,
+  direction: IngredientSortDirection = 'ascending',
+): RecipeIngredient[] {
+  const indexedIngredients = ingredients.map((ingredient, index) => ({ ingredient, index }));
+  const compareEntered = (
+    left: (typeof indexedIngredients)[number],
+    right: (typeof indexedIngredients)[number],
+  ) => enteredPosition(left.ingredient, right.ingredient) || left.index - right.index;
+
+  if (mode === 'entered') {
+    return [...indexedIngredients].sort(compareEntered).map(({ ingredient }) => ingredient);
+  }
+
+  if (mode === 'instructions') {
+    const firstMentionOrder = new Map<string, number>();
+    let mentionOrder = 0;
+    for (const step of [...steps].sort((left, right) => left.position - right.position)) {
+      for (const mention of parseIngredientMentions(step.content_markdown)) {
+        if (!firstMentionOrder.has(mention.recipeIngredientId)) {
+          firstMentionOrder.set(mention.recipeIngredientId, mentionOrder);
+        }
+        mentionOrder += 1;
+      }
+    }
+    return [...indexedIngredients]
+      .sort((left, right) => {
+        const leftOrder = firstMentionOrder.get(left.ingredient.id) ?? Number.POSITIVE_INFINITY;
+        const rightOrder = firstMentionOrder.get(right.ingredient.id) ?? Number.POSITIVE_INFINITY;
+        return leftOrder - rightOrder || compareEntered(left, right);
+      })
+      .map(({ ingredient }) => ingredient);
+  }
+
+  const directionMultiplier = direction === 'descending' ? -1 : 1;
+  return [...indexedIngredients]
+    .sort((left, right) => {
+      if (mode === 'alphabetical') {
+        return (
+          ingredientNameCollator.compare(
+            left.ingredient.ingredient_name,
+            right.ingredient.ingredient_name,
+          ) * directionMultiplier || compareEntered(left, right)
+        );
+      }
+
+      const leftSize = ingredientSize(left.ingredient);
+      const rightSize = ingredientSize(right.ingredient);
+      if (leftSize.group !== rightSize.group) {
+        return leftSize.group - rightSize.group;
+      }
+      if (leftSize.group === 3 || leftSize.amount === null || rightSize.amount === null) {
+        return compareEntered(left, right);
+      }
+      return (
+        (leftSize.amount - rightSize.amount) * directionMultiplier || compareEntered(left, right)
+      );
+    })
+    .map(({ ingredient }) => ingredient);
 }
 
 function resolveDisplayUnit(

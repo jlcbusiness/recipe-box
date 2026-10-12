@@ -77,6 +77,7 @@ test('a user can reset their password through the local recovery email @e2e', as
     await page.getByRole('button', { name: 'Save password' }).click();
     await expect(page).toHaveURL(/\/recipes$/);
 
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.locator('.account-menu-trigger').click();
     await page.getByRole('button', { name: 'Sign out' }).click();
     await page.getByLabel('Email').fill(user.email);
@@ -122,6 +123,7 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
   const user = await createTestUser(request);
 
   try {
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/app');
     await expect(page).toHaveURL(/\/$/);
 
@@ -186,13 +188,15 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
         (mobileNavBounds?.width ?? 0) -
         ((mobileAccountBounds?.x ?? 0) + (mobileAccountBounds?.width ?? 0)),
     ).toBeLessThanOrEqual(20);
-    await accountTrigger.click();
+    await accountTrigger.focus();
+    await accountTrigger.press('Enter');
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
     const mobileA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
     expect(mobileA11y.violations).toEqual([]);
 
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByRole('button', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.goto('/app');

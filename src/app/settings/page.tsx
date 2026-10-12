@@ -24,7 +24,7 @@ export default async function SettingsPage() {
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('volume_system, weight_system')
+    .select('volume_system, weight_system, ingredient_presentation')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -178,13 +178,13 @@ export default async function SettingsPage() {
       <h1 id="page-title">Settings</h1>
       <section aria-labelledby="personal-preferences-title" className="settings-section">
         <h2 id="personal-preferences-title">Personal preferences</h2>
-        <div className="settings-preference-group">
-          <h3 id="units-title">Units</h3>
-          <UnitPreferences
-            volumeSystem={account.volume_system as MeasurementSystem}
-            weightSystem={account.weight_system as MeasurementSystem}
-          />
-        </div>
+        <UnitPreferences
+          ingredientPresentation={
+            account.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard'
+          }
+          volumeSystem={account.volume_system as MeasurementSystem}
+          weightSystem={account.weight_system as MeasurementSystem}
+        />
       </section>
       <RecipePicklistManager
         initialValues={picklistsResult.data ?? []}

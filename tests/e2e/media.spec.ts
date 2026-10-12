@@ -28,9 +28,36 @@ function serviceHeaders(serviceRoleKey: string) {
 }
 
 function runLocalSql(sql: string) {
-  execFileSync('supabase', ['db', 'query', '--local', '--output-format', 'json', sql], {
-    encoding: 'utf8',
-  });
+  try {
+    execFileSync('supabase', ['db', 'query', '--local', '--output-format', 'json', sql], {
+      encoding: 'utf8',
+    });
+  } catch (error) {
+    const commandError =
+      error instanceof Error
+        ? (error as Error & {
+            stdout?: unknown;
+            stderr?: unknown;
+            status?: number | null;
+            signal?: string | null;
+          })
+        : null;
+    const stdout = String(commandError?.stdout ?? '').trim();
+    const stderr = String(commandError?.stderr ?? '').trim();
+    const diagnostic = [
+      commandError?.status != null ? `Exit status: ${commandError.status}` : '',
+      commandError?.signal ? `Signal: ${commandError.signal}` : '',
+      stdout ? `stdout:\n${stdout}` : '',
+      stderr ? `stderr:\n${stderr}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+      .replace(/(postgres(?:ql)?:\/\/)[^\s@]+@/gi, '$1[redacted]@')
+      .replace(/((?:password|token|secret|apikey)=)[^\s&]+/gi, '$1[redacted]');
+    throw new Error(diagnostic || 'Local Supabase SQL command failed without diagnostics.', {
+      cause: error,
+    });
+  }
 }
 
 async function deleteMediaFixtures(

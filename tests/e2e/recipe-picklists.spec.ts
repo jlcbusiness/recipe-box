@@ -90,6 +90,7 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
     const secondRow = section.locator('[data-picklist-row]').nth(1);
     const secondValue =
       (await secondRow.getByRole('button', { name: /^Edit/ }).textContent())?.trim() ?? '';
+    await firstReorder.scrollIntoViewIfNeeded();
     const reorderBounds = await firstReorder.boundingBox();
     const secondRowBounds = await secondRow.boundingBox();
     expect(firstValue).not.toBe('');

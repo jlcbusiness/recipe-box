@@ -71,14 +71,27 @@ test('Account rows and private media are isolated by authenticated user @e2e', a
     );
     expect(await crossAccountUpdate.json()).toEqual([]);
 
-    const upload = await request.post(
+    const ownerUpload = await request.post(
       `${supabase.apiUrl}/storage/v1/object/recipe-media/${mediaPath}`,
       {
         headers: { ...userHeaders(firstUser), 'Content-Type': 'text/plain' },
         data: 'private test content',
       },
     );
-    expect(upload.ok()).toBeTruthy();
+    expect(ownerUpload.status()).toBe(400);
+
+    const fixtureUpload = await request.post(
+      `${supabase.apiUrl}/storage/v1/object/recipe-media/${mediaPath}`,
+      {
+        headers: {
+          apikey: supabase.serviceRoleKey,
+          Authorization: `Bearer ${supabase.serviceRoleKey}`,
+          'Content-Type': 'text/plain',
+        },
+        data: 'private test content',
+      },
+    );
+    expect(fixtureUpload.ok(), await fixtureUpload.text()).toBeTruthy();
 
     const ownerRead = await request.get(
       `${supabase.apiUrl}/storage/v1/object/authenticated/recipe-media/${mediaPath}`,
@@ -126,7 +139,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
   const otherUser = await createTestUser(request);
 
   try {
-    const preferencesUrl = `${supabase.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method,volume_system,weight_system&id=eq.${owner.id}`;
+    const preferencesUrl = `${supabase.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method,volume_system,weight_system,ingredient_presentation&id=eq.${owner.id}`;
     const initialRead = await request.get(preferencesUrl, { headers: userHeaders(owner) });
     expect(initialRead.status()).toBe(200);
     expect(await initialRead.json()).toEqual([
@@ -136,6 +149,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
         sign_in_method: 'email_password',
         volume_system: 'us_customary',
         weight_system: 'us_customary',
+        ingredient_presentation: 'standard',
       },
     ]);
 
@@ -155,6 +169,15 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
     );
     expect(directPreferenceUpdate.ok()).toBeFalsy();
 
+    const directPresentationUpdate = await request.patch(
+      `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+      {
+        headers: { ...userHeaders(owner), Prefer: 'return=representation' },
+        data: { ingredient_presentation: 'ingredient_first' },
+      },
+    );
+    expect(directPresentationUpdate.ok()).toBeFalsy();
+
     const directProtectedUpdate = await request.patch(
       `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
       {
@@ -173,6 +196,19 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
     );
     expect(updateVolume.status()).toBe(204);
 
+    const updatePresentation = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: {
+          p_volume_system: null,
+          p_weight_system: null,
+          p_ingredient_presentation: 'ingredient_first',
+        },
+      },
+    );
+    expect(updatePresentation.status()).toBe(204);
+
     const afterVolumeUpdate = await request.get(preferencesUrl, { headers: userHeaders(owner) });
     expect(await afterVolumeUpdate.json()).toEqual([
       {
@@ -181,6 +217,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
         sign_in_method: 'email_password',
         volume_system: 'metric',
         weight_system: 'us_customary',
+        ingredient_presentation: 'ingredient_first',
       },
     ]);
 
@@ -192,6 +229,19 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
       },
     );
     expect(invalidUpdate.ok()).toBeFalsy();
+
+    const invalidPresentationUpdate = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: {
+          p_volume_system: null,
+          p_weight_system: null,
+          p_ingredient_presentation: 'compact',
+        },
+      },
+    );
+    expect(invalidPresentationUpdate.ok()).toBeFalsy();
 
     const anonymousUpdate = await request.post(
       `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
@@ -216,11 +266,15 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
     expect(foreignTargetAttempt.ok()).toBeFalsy();
 
     const otherUserRead = await request.get(
-      `${supabase.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${otherUser.id}`,
+      `${supabase.apiUrl}/rest/v1/accounts?select=volume_system,weight_system,ingredient_presentation&id=eq.${otherUser.id}`,
       { headers: userHeaders(otherUser) },
     );
     expect(await otherUserRead.json()).toEqual([
-      { volume_system: 'us_customary', weight_system: 'us_customary' },
+      {
+        volume_system: 'us_customary',
+        weight_system: 'us_customary',
+        ingredient_presentation: 'standard',
+      },
     ]);
   } finally {
     await deleteTestUser(request, otherUser);

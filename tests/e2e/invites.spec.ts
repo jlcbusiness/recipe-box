@@ -197,6 +197,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.getByRole('button', { name: 'Set password' }).click();
     await expect(page).toHaveURL(/\/recipes$/);
     await expect(page.locator('.account-avatar')).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 800 });
 
     const invitedAccount = await request.get(
       `${config.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method&id=eq.${recipientUserId}`,
@@ -217,7 +218,6 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.getByLabel('Password').fill(recipientPassword);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/recipes$/);
-
     const replay = await page.request.get(inviteLink);
     const replayUrl = new URL(replay.url());
     expect(replayUrl.pathname).toBe('/sign-up');

@@ -81,6 +81,10 @@ the product specification or a task list. The canonical behavior remains in
 | Canonical ingredient names are trimmed and normalized to title case, unique per account after case-folding, and always displayed alphabetically without manual ordering. | Normalized names prevent spelling- or case-only duplicates, while alphabetical display keeps a large catalog predictable; aliases and cross-account sharing remain out of scope. |
 | Version restore is excluded; history is forensic only. | Restore adds snapshots and transactional complexity. |
 | Ingredient-first is a viewer preference; Standard reads Amount, Ingredient, Preparation. | Recipe content stays stable while presentation suits the reader. |
+| Reader Presentation and Sort controls cycle through their modes and show the active mode with an icon; sort direction keeps a reserved position beside Sort. | The reader can change transient organization without opening picklists or shifting nearby controls, while the icon and accessible name expose current state. |
+| The account stores the default ingredient presentation; desktop starts from that preference, mobile starts Ingredient-first, and reader changes remain transient. | A personal default improves repeat reading without changing recipe data, while the mobile default suits cooking use. |
+| Ingredient sort mode and direction are transient and sort a copy rather than rewriting saved positions. | Reader organization must not alter a recipe's canonical ingredient order. |
+| Cook-mode check-off is temporary; wake lock is best-effort and never gates check-off. | Cooking remains usable across browsers and devices with different Wake Lock support or lifecycle behavior. |
 | Production sign-up is invite-only; development is open. | Limits abuse and storage cost for a personal app. |
 | Each account uses exactly one sign-in method. | Avoids identity-linking ambiguity and unverified-email takeover risk. |
 | Invites are emailed, and accepting one verifies the email; there is no skip option. Open development sign-up has no verification. | The invite email already proves the mailbox, and tests stay frictionless. |

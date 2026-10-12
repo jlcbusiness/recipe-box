@@ -135,7 +135,8 @@ test('Settings exposes an accessible Tags catalog section @e2e @a11y', async ({
         );
       }),
     ).toBe(true);
-    await toggle.click();
+    await toggle.focus();
+    await page.keyboard.press('Enter');
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const addTag = section.getByRole('textbox', { name: 'Add tag' });
     const tagSearch = section.getByRole('textbox', { name: 'Search tags' });
@@ -219,7 +220,10 @@ test('Settings searches tags, adds a search result, and scrolls its 4x4 color ca
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
     const section = page.getByRole('region', { name: 'Tags' });
-    await section.getByRole('button', { name: 'Edit tags' }).click();
+    const toggle = section.getByRole('button', { name: 'Edit tags' });
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     const search = section.getByRole('textbox', { name: 'Search tags' });
     const clearSearch = section.getByRole('button', { name: 'Clear tag search' });

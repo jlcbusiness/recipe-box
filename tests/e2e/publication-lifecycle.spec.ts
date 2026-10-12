@@ -228,9 +228,36 @@ async function expectErrorCode(
 }
 
 function runLocalSqlCommand(sql: string): string {
-  return execFileSync('supabase', ['db', 'query', '--local', '--output-format', 'json', sql], {
-    encoding: 'utf8',
-  });
+  try {
+    return execFileSync('supabase', ['db', 'query', '--local', '--output-format', 'json', sql], {
+      encoding: 'utf8',
+    });
+  } catch (error) {
+    const commandError =
+      error instanceof Error
+        ? (error as Error & {
+            stdout?: unknown;
+            stderr?: unknown;
+            status?: number | null;
+            signal?: string | null;
+          })
+        : null;
+    const stdout = String(commandError?.stdout ?? '').trim();
+    const stderr = String(commandError?.stderr ?? '').trim();
+    const diagnostic = [
+      commandError?.status != null ? `Exit status: ${commandError.status}` : '',
+      commandError?.signal ? `Signal: ${commandError.signal}` : '',
+      stdout ? `stdout:\n${stdout}` : '',
+      stderr ? `stderr:\n${stderr}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+      .replace(/(postgres(?:ql)?:\/\/)[^\s@]+@/gi, '$1[redacted]@')
+      .replace(/((?:password|token|secret|apikey)=)[^\s&]+/gi, '$1[redacted]');
+    throw new Error(diagnostic || 'Local Supabase SQL command failed without diagnostics.', {
+      cause: error,
+    });
+  }
 }
 
 function runLocalSql<T>(sql: string): T[] {
@@ -251,16 +278,21 @@ test('publication updates are owner-scoped, versioned, and preserve recipe locat
     const recipe = await createRecipe(request, config, owner, 'Linked recipe');
     await assignRecipe(request, config, recipe.id, publicationId, '18-19');
     const [coverAsset] = runLocalSql<{ id: string }>(`
-      insert into public.media_assets (
-        account_id, publication_id, asset_type, status, full_path, thumbnail_path,
-        content_type, byte_size, width, height
+      with publication_lifecycle_context as materialized (
+        select set_config('app.publication_lifecycle_context', 'on', true)
+      ), inserted as (
+        insert into public.media_assets (
+          account_id, publication_id, asset_type, status, full_path, thumbnail_path,
+          content_type, byte_size, width, height
+        )
+        select
+          '${owner.id}', '${publicationId}', 'publication_cover', 'ready',
+          'test/${publicationId}.webp', 'test/${publicationId}-thumb.webp',
+          'image/webp', 1, 1, 1
+        from publication_lifecycle_context
+        returning id
       )
-      values (
-        '${owner.id}', '${publicationId}', 'publication_cover', 'ready',
-        'test/${publicationId}.webp', 'test/${publicationId}-thumb.webp',
-        'image/webp', 1, 1, 1
-      )
-      returning id;
+      select id from inserted;
     `);
 
     const updateResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {

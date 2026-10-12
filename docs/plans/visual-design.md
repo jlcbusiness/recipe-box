@@ -607,53 +607,66 @@ for kitchen lighting, temporary ingredient check-off, and a screen wake lock.
 
 ### Current implementation
 
-Recipe detail currently uses Standard presentation: ingredient rows stay in
-their saved order and render as amount, lowercase Specifics and ingredient name,
-then Preparation. The detail page stacks ingredients and instructions
-vertically. Unit can display volume, weight, or both with ` / ` separating the
-dimensions. Things pluralize from their maximum range value; `cup` becomes
-`cups` above one while abbreviated fixed units remain unchanged. US customary
-quantities use familiar fractions when close to halves, thirds, quarters, or
-eighths; metric quantities never use fractions and display at most two decimal
-places. Slice 13 adds compact serving, multiply, and divide controls, account
-unit defaults, and transient per-ingredient unit overrides. Print retains the
-active scale and units while hiding the controls. Serves remains in recipe
-metadata and updates only after scale submission. A field-height Scale icon
-beside it opens a compact pane with Scale, To, Reset, Submit, and a top-right
-close control. Escape or close cancels unsubmitted changes. Scale uses the
-standard anchored picklist keyboard behavior. Reset restores base servings and
-account-default units by clearing all transient ingredient overrides. Volume
-and weight units stay
-inline in natural recipe prose and open their own anchored picklist. Unit tokens
-underline on hover on desktop and remain underlined on mobile.
+Recipe detail offers Standard and Ingredient-first presentations. Standard
+keeps ingredient rows in saved order and renders Amount, lowercase Specifics
+and ingredient name, then Preparation. Both presentations keep Ingredients
+beside Instructions on desktop; mobile keeps the sections in a vertical flow. The desktop reader
+initializes from the saved account default, while mobile starts
+Ingredient-first. A reader's explicit change is transient. Ingredient-first
+uses a semantic table with Ingredient, Volume, Weight, and Preparation
+columns. Count, informal, and unmeasured values span the Volume and Weight
+columns; Volume and Weight remain separate when present. Specifics display
+indented and fully lowercase beneath the ingredient name. Cells are
+left-aligned with no more than 3mm between columns on desktop and 1mm on
+mobile. Mobile headers shorten to Vol, Wt, and Prep.
+
+Compact Presentation, Sort, Scale, and device wake-lock icon buttons match the
+Add reference and Add pairing controls: 36px high, with their existing widths
+retained. The toolbar shares the first heading line with Ingredients and orders
+the controls as sort direction, Sort, Presentation, Scale, and Screen Lock. The
+lowercase, normal-size italic summary sits below the heading with its vertical
+spacing below the subtitle, and reflects the current presentation and sort,
+for example `first, alphabetical`. When the screen wake lock is active, the
+summary adds `screen lock on`. Wake-lock failure and release warnings appear in
+a popup anchored to the Screen Lock control, without adding a line to the page.
+Each click cycles to the next presentation or
+sort mode and updates the icon; accessible names and tooltips announce the
+current and next modes. The ascending/descending button has a reserved slot to
+the left of Sort. Sort cycles through instruction mention,
+alphabetically, by size, and entered order. Alphabetical and size comparisons
+support ascending and descending direction; sorting never changes saved
+ingredient positions. By Size uses a number-sign icon, keeps measurement
+groups in their defined order, and uses Volume when a row has both Volume and
+Weight.
+
+Cook mode is an icon-only switch with a device-and-lock glyph, temporary
+ingredient check-off, and a screen wake-lock request when supported. Check-off
+remains available if the request is unavailable or rejected; the polite status
+reports the actual wake-lock state and its warning can be dismissed. In
+Ingredient-first, active cook mode adds an unlabeled checkbox column before the
+Ingredient column. Exiting mode or changing recipes clears check-off, and
+system-released locks can be reacquired when the document becomes visible.
+
+Unit can display volume, weight, or both with ` / ` separating the dimensions.
+Things pluralize from their maximum range value; `cup` becomes `cups` above one
+while abbreviated fixed units remain unchanged. US customary quantities use
+familiar fractions when close to halves, thirds, quarters, or eighths; metric
+quantities never use fractions and display at most two decimal places. Scaling
+controls retain the active scale and unit choices for print. Serves stays in
+recipe metadata and updates only after scale submission. The Scale icon is in
+the Ingredients toolbar and opens a compact pane with Scale, To, Reset when the
+value differs from its base, a filled Submit button, and a top-right close
+control. The integer field is centered and has no spinner arrows. Escape or
+close cancels unsubmitted changes; Scale uses the standard anchored picklist
+keyboard behavior. Reset restores base servings and account-default units by
+clearing all transient ingredient overrides. Volume and weight units stay
+inline in natural recipe prose and open their own anchored picklist. Unit
+tokens underline on hover on desktop and remain underlined on mobile. Print
+follows the active presentation and hides reader controls and check-off state.
+The saved presentation is an account preference, not recipe data.
+Ingredient-first remains the required default for public share in Slice 20.
 
 ### Planned direction
-
-Slice 16 adds Ingredient-first presentation, ingredient sorting, and cooking
-mode. The intended Standard reading layout places ingredients beside
-instructions; the current detail page remains vertically stacked.
-
-Ingredient-first presentation ("mine") shows Ingredient, Amount, and Preparation.
-Specifics is rendered as a distinct subtitle beneath the Ingredient name:
-
-```text
-+---------------------------+----------------+---------------+
-| Ingredient                | Amount         | Preparation   |
-+---------------------------+----------------+---------------+
-| flour                     | 1 cup / 120 g  |               |
-|   all-purpose             |                |               |
-| eggs                      | 2              |               |
-|   large                   |                |               |
-| onion                     | 1              | diced         |
-| coconut milk              | 14 oz          |               |
-| salt                      | to taste       |               |
-+---------------------------+----------------+---------------+
-```
-
-Ingredient-first is the default for mobile and public share. Print follows the
-active recipe presentation; until Slice 16 introduces alternate reader views,
-print uses the Standard presentation and retains Slice 13's active scale and
-unit choices. The chosen presentation is a reader preference, not recipe data.
 
 Instruction ingredient mentions default to bold dark red so linked ingredients
 are easy to scan. User Settings offers a dedicated styling configuration:
@@ -663,7 +676,7 @@ are easy to scan. User Settings offers a dedicated styling configuration:
 - Independent toggle checkboxes for bold, italic, and underline (any combination).
 - Color presets are tested to ensure $\ge 4.5:1$ contrast against the app background.
 
-Public and printed recipes always use the default bold dark-red styling.
+Public and printed recipes will use the default bold dark-red styling.
 
 ### Trash and baseline print (Slice 8 current implementation)
 

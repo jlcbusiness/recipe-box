@@ -58,8 +58,11 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
 
     const volumeSelect = page.getByRole('combobox', { name: 'Volume', exact: true });
     const weightSelect = page.getByRole('combobox', { name: 'Weight', exact: true });
+    await expect(page.getByRole('heading', { name: 'Recipe presentation' })).toHaveCount(0);
+    const presentationSelect = page.getByRole('combobox', { name: 'Ingredient view', exact: true });
     await expect(volumeSelect).toContainText('US customary');
     await expect(weightSelect).toContainText('US customary');
+    await expect(presentationSelect).toContainText('Standard');
     const volumeWidth = (await volumeSelect.boundingBox())?.width ?? 0;
 
     const picklistsSection = page.getByRole('region', { name: 'Picklists' });
@@ -67,17 +70,15 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       const unitControls = Array.from(
         document.querySelectorAll<HTMLElement>('.settings-unit-picklist'),
       );
+      const preferenceStatus = document.querySelector<HTMLElement>('.settings-unit-status');
       const heading = section.querySelector('h2');
-      if (!heading || unitControls.length === 0) {
-        throw new Error('Expected unit controls and the Picklists heading.');
+      if (!heading || unitControls.length === 0 || !preferenceStatus) {
+        throw new Error('Expected preference controls, status, and the Picklists heading.');
       }
 
       const ruleTop = section.getBoundingClientRect().top;
-      const unitControlsBottom = Math.max(
-        ...unitControls.map((control) => control.getBoundingClientRect().bottom),
-      );
       return {
-        beforeRule: ruleTop - unitControlsBottom,
+        beforeRule: ruleTop - preferenceStatus.getBoundingClientRect().bottom,
         afterRule:
           heading.getBoundingClientRect().top -
           ruleTop -
@@ -90,6 +91,19 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     expect(accessibility.violations).toEqual([]);
     expect((await volumeSelect.boundingBox())?.height).toBe(36);
     expect((await weightSelect.boundingBox())?.height).toBe(36);
+    expect((await presentationSelect.boundingBox())?.height).toBe(36);
+
+    await presentationSelect.click();
+    await page.getByRole('listbox').getByRole('option', { name: 'Ingredient-first' }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect(presentationSelect).toContainText('Ingredient-first');
+    const presentationSaved = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=ingredient_presentation&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await presentationSaved.json()).toEqual([
+      { ingredient_presentation: 'ingredient_first' },
+    ]);
 
     await volumeSelect.focus();
     await page.keyboard.press('Tab');
@@ -105,8 +119,12 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       const weightHitHeight = await weightSelect.evaluate((trigger) =>
         Number.parseFloat(getComputedStyle(trigger, '::before').height),
       );
+      const presentationHitHeight = await presentationSelect.evaluate((trigger) =>
+        Number.parseFloat(getComputedStyle(trigger, '::before').height),
+      );
       expect(volumeHitHeight).toBeGreaterThanOrEqual(48);
       expect(weightHitHeight).toBeGreaterThanOrEqual(48);
+      expect(presentationHitHeight).toBeGreaterThanOrEqual(48);
     }
 
     await page.keyboard.press('Enter');
