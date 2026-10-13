@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import sharp from 'sharp';
+import { captureScreenshot } from '../support/capture-screenshot';
 import {
   createTestUser,
   deleteTestUser,
@@ -27,7 +29,7 @@ test('Magazine recipes keep a free-text citation and online URL @e2e @a11y', asy
     await expect(page.getByRole('heading', { name: 'Seasonal Table' })).toBeVisible();
 
     await page.getByRole('link', { name: 'Add Recipe' }).click();
-    await page.getByLabel('Name').fill('Roasted carrots');
+    await page.locator('.recipe-form').getByLabel('Name').fill('Roasted carrots');
     await expect(page.getByLabel('Citation')).toBeVisible();
     await expect(page.getByLabel('Url')).toBeVisible();
     await page.getByLabel('Citation').fill(citation);
@@ -875,6 +877,9 @@ test('publication deletion requires a disposition and can be restored from Trash
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/publications/${publicationId}`);
     await expect(page.getByRole('heading', { name: 'Trash source' })).toBeVisible();
+    await expect(page.locator('#publication-recipe-search')).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Query refinements' })).toHaveCount(0);
+    await expect(page.locator('.publication-recipe-list')).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expect(
       page.locator('.publication-detail-actions').getByRole('button', {
@@ -1079,6 +1084,110 @@ $trash_display_fixture$;`);
       detailActionsBounds.x + detailActionsBounds.width,
       0,
     );
+  } finally {
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('publication recipe Search and Query stay within the selected publication @e2e', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const publicationId = await createPublication(request, config, owner, 'Scoped search source');
+    const otherPublicationId = await createPublication(
+      request,
+      config,
+      owner,
+      'Out-of-scope search source',
+    );
+    const scopedRecipe = await createRecipe(request, config, owner, 'ScopeSignal lemon cake');
+    const otherRecipe = await createRecipe(request, config, owner, 'ScopeSignal lemon soup');
+    const noPhotoRecipe = await createRecipe(request, config, owner, 'ScopeSignal lemon tart');
+    await assignRecipe(request, config, scopedRecipe.id, publicationId);
+    await assignRecipe(request, config, otherRecipe.id, otherPublicationId);
+
+    await signIn(page, owner.email, owner.password);
+    await page.goto(`/publications/${publicationId}`);
+    await page.getByRole('searchbox', { name: 'Search publication recipes' }).fill('ScopeSignal');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page).toHaveURL(/q=ScopeSignal/);
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'ScopeSignal lemon cake' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'ScopeSignal lemon soup' })).toHaveCount(0);
+
+    await page.getByRole('tab', { name: 'Query' }).click();
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    const rule = page.locator('.recipe-filter-row').first();
+    await rule.getByRole('combobox', { name: 'Field' }).click();
+    await page.getByRole('option', { name: 'Name', exact: true }).click();
+    await rule.getByLabel('Value').fill('cake');
+    await rule.getByLabel('Value').press('Tab');
+    await expect(page).toHaveURL((url) => {
+      const params = new URL(url).searchParams;
+      const [filter] = params.getAll('filter').map((value) => JSON.parse(value));
+      return (
+        params.get('q') === 'ScopeSignal' &&
+        params.get('tab') === 'query' &&
+        filter?.field === 'name' &&
+        filter?.value === 'cake'
+      );
+    });
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'ScopeSignal lemon cake' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'ScopeSignal lemon soup' })).toHaveCount(0);
+
+    await assignRecipe(request, config, noPhotoRecipe.id, publicationId);
+    await page.goto(`/recipes/${scopedRecipe.id}/edit`);
+    await page.getByRole('button', { name: 'Manage recipe photos' }).click();
+    const photoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
+    const recipePhoto = await sharp({
+      create: {
+        width: 32,
+        height: 24,
+        channels: 3,
+        background: { r: 126, g: 154, b: 116 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await photoDialog.getByLabel('Upload from device').setInputFiles({
+      name: 'scoped-recipe.png',
+      mimeType: 'image/png',
+      buffer: recipePhoto,
+    });
+    await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
+    await photoDialog.getByRole('button', { name: 'Done' }).click();
+
+    await page.goto(`/publications/${publicationId}?sort=name&view=grid`);
+    const scopedPhotoCard = page
+      .locator('.find-recipes-grid li')
+      .filter({ hasText: 'ScopeSignal lemon cake' });
+    const scopedNoPhotoCard = page
+      .locator('.find-recipes-grid li')
+      .filter({ hasText: 'ScopeSignal lemon tart' });
+    await expect(page.locator('.find-recipes-grid li')).toHaveCount(2);
+    await expect(scopedPhotoCard.locator('.find-recipes-card-image')).toBeVisible();
+    await expect(scopedPhotoCard.locator('.find-recipes-card-image')).toHaveCSS(
+      'object-fit',
+      'contain',
+    );
+    await expect(scopedNoPhotoCard.locator('img')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'ScopeSignal lemon soup' })).toHaveCount(0);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await captureScreenshot(page, 'publication-scoped-recipe-grid');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('.find-recipes-grid li')).toHaveCount(2);
+    await captureScreenshot(page, 'publication-scoped-recipe-grid-mobile');
+
+    const outOfScopeFilter = encodeURIComponent(
+      JSON.stringify({ field: 'publication_id', operator: 'in', value: [otherPublicationId] }),
+    );
+    await page.goto(`/publications/${publicationId}?filter=${outOfScopeFilter}`);
+    await expect(page.getByText('No recipes match these search criteria.')).toBeVisible();
   } finally {
     await deleteTestUser(request, owner);
   }

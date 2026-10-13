@@ -213,7 +213,11 @@ export function TagChips({
       className={`${styles.chips} ${trailingActions ? styles.chipsWithActions : ''}`}
     >
       {tags.map((tag) => (
-        <li className={styles.chip} key={tag.id} style={getTagColorStyle(tag.color_key)}>
+        <li
+          className={`${styles.chip} ${styles.displayChip}`}
+          key={tag.id}
+          style={getTagColorStyle(tag.color_key)}
+        >
           {tag.name}
         </li>
       ))}

@@ -3,6 +3,7 @@
 > **Reference Note:** For exhaustive field-by-field definitions, measurement
 > structures, picklist taxonomies, and relationship behaviors, see
 > [comprehensive reference](comprehensive-reference.md), specifically:
+>
 > - [comprehensive-reference.md § 2 (Recipe Metadata)](comprehensive-reference.md#2-recipe-card-and-metadata)
 > - [comprehensive-reference.md § 3 (Ingredients & Measurements)](comprehensive-reference.md#3-ingredient-rows-measurements-and-density)
 > - [comprehensive-reference.md § 6 (Publications & Recipe Tin)](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
@@ -141,7 +142,8 @@ only these two preferences; it accepts no account ID and is not executable by
 ## Required Future Detail
 
 Before database implementation, define identifiers, nullability, delete and
-trash/purge behavior, record versioning for edit-conflict detection, uniqueness, indexes, query/search representation, import IDs,
+trash/purge behavior, record versioning for edit-conflict detection, uniqueness, indexes, query/search representation,
+import IDs,
 validation, and Supabase row-level security policies. Record those verified
 choices in the relevant slice brief rather than treating this document as a
 ready-to-run schema.

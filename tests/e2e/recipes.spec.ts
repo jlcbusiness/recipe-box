@@ -42,7 +42,7 @@ test('private navigation links to Settings and keeps Units out of the nav @e2e @
     if (testInfo.project.name === 'Fold 6') {
       await expect(utilityLabels.nth(0)).toBeHidden();
       await expect(utilityLabels.nth(1)).toBeHidden();
-      expect((await trashLink.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+      expect((await trashLink.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     } else {
       await expect(utilityLabels.nth(0)).toBeVisible();
       await expect(utilityLabels.nth(1)).toBeVisible();

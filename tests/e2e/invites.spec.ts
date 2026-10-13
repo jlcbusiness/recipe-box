@@ -257,7 +257,9 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await expect(memberRow).toContainText('Admin');
     await expect(memberRow.getByRole('button', { name: 'Grant admin' })).toHaveCount(0);
 
-    await page.locator('.account-menu-trigger').click();
+    const accountTrigger = page.locator('.account-menu-trigger');
+    await accountTrigger.focus();
+    await accountTrigger.press('Enter');
     await page.getByRole('button', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.getByLabel('Email').fill(member.email);
@@ -286,7 +288,9 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/recipes$/);
     await page.goto('/admin');
-    await page.locator('.account-menu-trigger').click();
+    const accountTrigger = page.locator('.account-menu-trigger');
+    await accountTrigger.focus();
+    await accountTrigger.press('Enter');
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
     const desktopA11y = await new AxeBuilder({ page })

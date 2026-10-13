@@ -6,7 +6,7 @@ ordered ingredient rows, and validated measurements. Product features are
 delivered in the order described by the
 [delivery roadmap](docs/plans/delivery-roadmap.md).
 
-### Current product state
+## Current product state
 
 - Create, edit, and view recipes with state, metadata picklists, servings,
   component times, equipment, and Markdown notes.
@@ -87,7 +87,7 @@ update public.accounts as account
 set is_admin = true
 from auth.users as auth_user
 where auth_user.id = account.id
-	and lower(auth_user.email) = lower('owner@example.com');
+ and lower(auth_user.email) = lower('owner@example.com');
 ```
 
 This direct role update is for local setup only. In the app, only an existing

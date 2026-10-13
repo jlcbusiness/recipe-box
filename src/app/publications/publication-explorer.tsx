@@ -12,31 +12,61 @@ import {
   Library,
   List,
   Newspaper,
+  Settings2,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { MouseEvent, ReactNode } from 'react';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import type { PublicationOption, PublicationType } from '../../lib/recipes/data';
+import type {
+  PublicationSearchFilter,
+  PublicationSearchResult,
+  PublicationSearchSortKey,
+} from '../../lib/publications/search';
+import type { PublicationType } from '../../lib/recipes/data';
 import { PublicationCommaList } from './publication-comma-list';
 import { PublicationCover } from './publication-cover';
+import { PublicationFilterBuilder } from './publication-filter-builder';
 
-type ExplorerPublication = PublicationOption & {
-  created_at: string;
-  updated_at: string;
-  recipe_count: number;
+type ExplorerPublication = PublicationSearchResult & {
+  id: string;
   cover_image_url: string | null;
 };
 type PublicationFilter = 'all' | PublicationType;
 type ViewMode = 'list' | 'grid';
-type SortKey =
-  | 'name'
-  | 'type'
-  | 'author'
-  | 'edition'
-  | 'recipe_count'
-  | 'created_at'
-  | 'updated_at';
-type ExplorerMenu = 'type' | 'sort-key';
+type SortKey = PublicationSearchSortKey;
+type ExplorerMenu = 'type' | 'sort-key' | 'columns';
+type ColumnKey = 'author' | 'edition' | 'recipe_count' | 'tags' | 'created_at' | 'updated_at';
+type ExplorerState = {
+  query: string;
+  filters: PublicationSearchFilter[];
+  type: PublicationFilter;
+  sort: SortKey;
+  direction: 'asc' | 'desc';
+  view: ViewMode;
+  page: number;
+};
+
+const columnLabels: Record<ColumnKey, string> = {
+  author: 'Author',
+  edition: 'Edition / Issue',
+  recipe_count: 'Recipes',
+  tags: 'Tags',
+  created_at: 'Date Added',
+  updated_at: 'Date Changed',
+};
+
+function explorerHref(state: ExplorerState, changes: Partial<ExplorerState> = {}) {
+  const next = { ...state, ...changes };
+  const params = new URLSearchParams();
+  if (next.query) params.set('q', next.query);
+  for (const filter of next.filters) params.append('filter', JSON.stringify(filter));
+  if (next.type !== 'all') params.set('type', next.type);
+  params.set('sort', next.sort);
+  params.set('direction', next.direction);
+  params.set('view', next.view);
+  params.set('page', String(next.page));
+  return `/publications?${params.toString()}`;
+}
 
 const publicationTypeLabels: Record<PublicationType, string> = {
   book: 'Book',
@@ -50,6 +80,7 @@ const filterLabels: Record<PublicationFilter, string> = {
   site: 'Sites',
 };
 const sortLabels: Record<SortKey, string> = {
+  relevance: 'Relevance',
   name: 'Name',
   type: 'Type',
   author: 'Author',
@@ -66,59 +97,6 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
   year: 'numeric',
 });
 
-function compareText(left: string, right: string) {
-  return left.localeCompare(right, 'en', { sensitivity: 'base' });
-}
-
-function compareNullableText(left: string | null, right: string | null, ascending: boolean) {
-  if (left === null || left.trim() === '') {
-    return right === null || right.trim() === '' ? 0 : 1;
-  }
-  if (right === null || right.trim() === '') return -1;
-  return compareText(left, right) * (ascending ? 1 : -1);
-}
-
-function comparePublications(
-  left: ExplorerPublication,
-  right: ExplorerPublication,
-  sortKey: SortKey,
-  ascending: boolean,
-) {
-  let comparison = 0;
-
-  switch (sortKey) {
-    case 'name':
-      comparison = compareText(left.name, right.name) * (ascending ? 1 : -1);
-      break;
-    case 'type':
-      comparison =
-        compareText(
-          publicationTypeLabels[left.publication_type],
-          publicationTypeLabels[right.publication_type],
-        ) * (ascending ? 1 : -1);
-      break;
-    case 'author':
-      comparison = compareNullableText(left.author, right.author, ascending);
-      break;
-    case 'edition':
-      comparison = compareNullableText(left.edition, right.edition, ascending);
-      break;
-    case 'recipe_count':
-      comparison = (left.recipe_count - right.recipe_count) * (ascending ? 1 : -1);
-      break;
-    case 'created_at':
-      comparison =
-        (Date.parse(left.created_at) - Date.parse(right.created_at)) * (ascending ? 1 : -1);
-      break;
-    case 'updated_at':
-      comparison =
-        (Date.parse(left.updated_at) - Date.parse(right.updated_at)) * (ascending ? 1 : -1);
-      break;
-  }
-
-  return comparison || compareText(left.name, right.name) || left.id.localeCompare(right.id);
-}
-
 function formatDate(value: string) {
   return dateFormatter.format(new Date(value));
 }
@@ -127,7 +105,9 @@ function tooltipText(publication: ExplorerPublication) {
   return [
     publicationTypeLabels[publication.publication_type],
     publication.author ? `Author: ${publication.author}` : null,
-    publication.edition ? `Edition: ${publication.edition}` : null,
+    publication.edition || publication.issue
+      ? `Edition / Issue: ${publication.edition || publication.issue}`
+      : null,
     `Recipes: ${publication.recipe_count}`,
     `Date Added: ${formatDate(publication.created_at)}`,
     `Date Changed: ${formatDate(publication.updated_at)}`,
@@ -191,42 +171,90 @@ function AuthorNames({ authors }: { authors: string }) {
   );
 }
 
-function MenuOption({
+function MenuLink({
+  href,
   children,
   selected,
-  onClick,
 }: {
+  href: string;
   children: ReactNode;
   selected: boolean;
-  onClick: () => void;
 }) {
   return (
-    <button
-      aria-pressed={selected}
+    <Link
+      aria-current={selected ? 'true' : undefined}
       className="publication-explorer-menu-option"
-      onClick={onClick}
-      type="button"
+      href={href}
     >
       {children}
       <SelectedMark selected={selected} />
-    </button>
+    </Link>
   );
 }
 
-export function PublicationExplorer({ publications }: { publications: ExplorerPublication[] }) {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [filter, setFilter] = useState<PublicationFilter>('all');
-  const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [ascending, setAscending] = useState(true);
+export function PublicationExplorer({
+  publications,
+  query,
+  filters,
+  type,
+  sort,
+  direction,
+  view,
+  page,
+  pageCount,
+  totalCount,
+  emptyCatalog,
+  searchError,
+  tagOptions,
+}: {
+  publications: ExplorerPublication[];
+  query: string;
+  filters: PublicationSearchFilter[];
+  type: PublicationFilter;
+  sort: SortKey;
+  direction: 'asc' | 'desc';
+  view: ViewMode;
+  page: number;
+  pageCount: number;
+  totalCount: number;
+  emptyCatalog: boolean;
+  searchError: string | null;
+  tagOptions: { value: string; label: string }[];
+}) {
+  const [isMobile, setIsMobile] = useState(false);
   const [openMenu, setOpenMenu] = useState<ExplorerMenu | null>(null);
+  const [columns, setColumns] = useState<Record<ColumnKey, boolean>>({
+    author: true,
+    edition: true,
+    recipe_count: true,
+    tags: false,
+    created_at: false,
+    updated_at: false,
+  });
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const activeTrigger = useRef<HTMLButtonElement | null>(null);
+  const viewMode: ViewMode = isMobile && view === 'grid' ? 'list' : view;
+  const state: ExplorerState = { query, filters, type, sort, direction, view: viewMode, page };
+  const stateKey = JSON.stringify(state);
+  const previousStateKey = useRef(stateKey);
+  const visibleColumns = (Object.keys(columnLabels) as ColumnKey[]).filter(
+    (column) => columns[column],
+  );
 
   useEffect(() => {
-    if (window.matchMedia('(max-width: 720px)').matches) {
-      setViewMode('list');
-    }
+    const media = window.matchMedia('(max-width: 720px)');
+    const updateViewport = () => setIsMobile(media.matches);
+    updateViewport();
+    media.addEventListener('change', updateViewport);
+    return () => media.removeEventListener('change', updateViewport);
   }, []);
+
+  useEffect(() => {
+    if (previousStateKey.current !== stateKey) {
+      setOpenMenu(null);
+      previousStateKey.current = stateKey;
+    }
+  }, [stateKey]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -255,33 +283,11 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
     };
   }, [openMenu]);
 
-  const filteredPublications = publications.filter(
-    (publication) => filter === 'all' || publication.publication_type === filter,
-  );
-  const sortedPublications = [...filteredPublications].sort((left, right) =>
-    comparePublications(left, right, sortKey, ascending),
-  );
+  const sortedPublications = publications;
 
   function toggleMenu(menu: ExplorerMenu, event: MouseEvent<HTMLButtonElement>) {
     activeTrigger.current = event.currentTarget;
     setOpenMenu((current) => (current === menu ? null : menu));
-  }
-
-  function closeMenu(restoreFocus = false) {
-    setOpenMenu(null);
-    if (restoreFocus && activeTrigger.current?.isConnected) {
-      activeTrigger.current.focus();
-    }
-  }
-
-  function chooseFilter(value: PublicationFilter) {
-    setFilter(value);
-    closeMenu(true);
-  }
-
-  function chooseSort(value: SortKey) {
-    setSortKey(value);
-    closeMenu(true);
   }
 
   return (
@@ -291,14 +297,14 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
           <button
             aria-controls="publication-type-options"
             aria-expanded={openMenu === 'type'}
-            aria-label={`Type: ${filterLabels[filter]}`}
+            aria-label={`Type: ${filterLabels[type]}`}
             className="publication-explorer-trigger publication-explorer-type-trigger"
             onClick={(event) => toggleMenu('type', event)}
-            title={`Type: ${filterLabels[filter]}`}
+            title={`Type: ${filterLabels[type]}`}
             type="button"
           >
-            <PublicationTypeIcon type={filter} />
-            <span className="publication-explorer-trigger-label">{filterLabels[filter]}</span>
+            <PublicationTypeIcon type={type} />
+            <span className="publication-explorer-trigger-label">{filterLabels[type]}</span>
           </button>
           {openMenu === 'type' && (
             <fieldset
@@ -308,14 +314,14 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
             >
               <legend>Publication type options</legend>
               {(Object.keys(filterLabels) as PublicationFilter[]).map((value) => (
-                <MenuOption
+                <MenuLink
                   key={value}
-                  onClick={() => chooseFilter(value)}
-                  selected={filter === value}
+                  href={explorerHref(state, { type: value, page: 1 })}
+                  selected={type === value}
                 >
                   <PublicationTypeIcon type={value} />
                   <span>{filterLabels[value]}</span>
-                </MenuOption>
+                </MenuLink>
               ))}
             </fieldset>
           )}
@@ -325,10 +331,10 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
           <button
             aria-controls="publication-sort-options"
             aria-expanded={openMenu === 'sort-key'}
-            aria-label={`Sort by ${sortLabels[sortKey]}`}
+            aria-label={`Sort by ${sortLabels[sort]}`}
             className="publication-explorer-trigger publication-explorer-icon-trigger"
             onClick={(event) => toggleMenu('sort-key', event)}
-            title={`Sort by ${sortLabels[sortKey]}`}
+            title={`Sort by ${sortLabels[sort]}`}
             type="button"
           >
             <ArrowDownWideNarrow aria-hidden="true" size={19} />
@@ -342,13 +348,13 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
               <legend>Sort options</legend>
               <div className="publication-sort-keys">
                 {(Object.keys(sortLabels) as SortKey[]).map((value) => (
-                  <MenuOption
+                  <MenuLink
                     key={value}
-                    onClick={() => chooseSort(value)}
-                    selected={sortKey === value}
+                    href={explorerHref(state, { sort: value, page: 1 })}
+                    selected={sort === value}
                   >
                     <span>{sortLabels[value]}</span>
-                  </MenuOption>
+                  </MenuLink>
                 ))}
               </div>
             </fieldset>
@@ -356,68 +362,163 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
         </div>
 
         <div className="publication-explorer-control publication-explorer-control-sort-direction">
-          <button
-            aria-label={ascending ? 'Sort descending' : 'Sort ascending'}
+          <Link
+            aria-label={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
             className="publication-explorer-trigger publication-explorer-icon-trigger"
-            onClick={() => setAscending((current) => !current)}
-            title={ascending ? 'Sort descending' : 'Sort ascending'}
-            type="button"
+            href={explorerHref(state, {
+              direction: direction === 'asc' ? 'desc' : 'asc',
+              page: 1,
+            })}
+            title={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
           >
-            {ascending ? (
+            {direction === 'asc' ? (
               <ArrowUp aria-hidden="true" size={19} />
             ) : (
               <ArrowDown aria-hidden="true" size={19} />
             )}
-          </button>
+          </Link>
         </div>
 
         <div className="publication-explorer-control publication-explorer-control-view">
-          <button
+          <Link
             aria-label={`Switch to ${viewMode === 'list' ? 'Grid' : 'List'} view`}
-            aria-pressed={viewMode === 'grid'}
+            aria-current={viewMode === 'grid' ? 'true' : undefined}
             className="publication-explorer-trigger publication-explorer-icon-trigger"
-            onClick={() => {
-              setOpenMenu(null);
-              setViewMode((current) => (current === 'list' ? 'grid' : 'list'));
-            }}
+            href={explorerHref(state, { view: viewMode === 'list' ? 'grid' : 'list', page: 1 })}
             title={`Switch to ${viewMode === 'list' ? 'Grid' : 'List'} view`}
-            type="button"
           >
             {viewMode === 'list' ? (
               <List aria-hidden="true" size={19} />
             ) : (
               <LayoutGrid aria-hidden="true" size={19} />
             )}
-          </button>
+          </Link>
         </div>
+
+        <div className="publication-explorer-control publication-explorer-control-columns">
+          <button
+            aria-controls="publication-column-options"
+            aria-expanded={openMenu === 'columns'}
+            aria-label="Choose List columns"
+            className="publication-explorer-trigger publication-explorer-icon-trigger"
+            onClick={(event) => toggleMenu('columns', event)}
+            title="Choose List columns"
+            type="button"
+          >
+            <Settings2 aria-hidden="true" size={19} />
+          </button>
+          {openMenu === 'columns' && (
+            <fieldset
+              aria-label="List columns"
+              className="publication-explorer-popover publication-explorer-column-popover"
+              id="publication-column-options"
+            >
+              <legend>List columns</legend>
+              <span className="publication-explorer-column-required">Name</span>
+              {(Object.keys(columnLabels) as ColumnKey[]).map((column) => (
+                <label className="publication-explorer-column-option" key={column}>
+                  <input
+                    checked={columns[column]}
+                    onChange={(event) => {
+                      const checked = event.currentTarget.checked;
+                      setColumns((current) => ({ ...current, [column]: checked }));
+                    }}
+                    type="checkbox"
+                  />
+                  {columnLabels[column]}
+                </label>
+              ))}
+            </fieldset>
+          )}
+        </div>
+      </div>
+
+      <div className="publication-explorer-search-controls">
+        <form action="/publications" className="publication-search-form" method="get">
+          <label htmlFor="publication-search">Search publications</label>
+          <div className="publication-search-input-row">
+            <input
+              autoComplete="off"
+              id="publication-search"
+              maxLength={500}
+              name="q"
+              type="search"
+              defaultValue={query}
+            />
+            <button className="recipe-primary-button" type="submit">
+              Search
+            </button>
+            {query && (
+              <Link
+                className="recipe-secondary-link"
+                href={explorerHref(state, { query: '', page: 1 })}
+              >
+                Clear search
+              </Link>
+            )}
+          </div>
+          {filters.map((filter) => (
+            <input
+              key={JSON.stringify(filter)}
+              name="filter"
+              type="hidden"
+              value={JSON.stringify(filter)}
+            />
+          ))}
+          {type !== 'all' && <input name="type" type="hidden" value={type} />}
+          <input name="sort" type="hidden" value={sort} />
+          <input name="direction" type="hidden" value={direction} />
+          <input name="view" type="hidden" value={viewMode} />
+        </form>
+        <PublicationFilterBuilder
+          direction={direction}
+          filters={filters}
+          query={query}
+          sort={sort}
+          tagOptions={tagOptions}
+          type={type}
+          view={viewMode}
+        />
       </div>
 
       <div className="publication-explorer-results">
         <p aria-live="polite" className="publication-explorer-result-count">
-          {publications.length === 0
-            ? 'No publications yet.'
-            : `${sortedPublications.length} ${sortedPublications.length === 1 ? 'publication' : 'publications'}`}
+          {searchError
+            ? 'Publication results unavailable.'
+            : `${totalCount} ${totalCount === 1 ? 'publication' : 'publications'}`}
         </p>
-        {publications.length > 0 && sortedPublications.length === 0 ? (
-          <p className="recipe-empty-state">No publications match this filter.</p>
+        {searchError ? (
+          <p className="recipe-empty-state" role="alert">
+            {searchError}
+          </p>
+        ) : totalCount === 0 ? (
+          <p className="recipe-empty-state">
+            {emptyCatalog
+              ? 'No publications yet.'
+              : 'No publications match this search and filter combination.'}
+          </p>
         ) : viewMode === 'list' && sortedPublications.length > 0 ? (
           <>
             <div className="recipe-list-scroll publication-explorer-scroll publication-explorer-table-wrap">
-              <table className="recipe-list publication-explorer-table" role="table">
+              <table
+                className="recipe-list publication-explorer-table"
+                role="table"
+                style={{
+                  gridTemplateColumns: `repeat(${1 + visibleColumns.length}, minmax(0, 1fr))`,
+                }}
+              >
                 <thead role="rowgroup">
                   <tr role="row">
                     <th role="columnheader" scope="col">
                       Name
                     </th>
-                    <th role="columnheader" scope="col">
-                      Author
-                    </th>
-                    <th role="columnheader" scope="col">
-                      Edition
-                    </th>
-                    <th role="columnheader" scope="col">
-                      Recipes
-                    </th>
+                    {visibleColumns.map((column) => (
+                      <th key={column} role="columnheader" scope="col">
+                        {columnLabels[column] === 'Edition / Issue'
+                          ? 'Edition'
+                          : columnLabels[column]}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody role="rowgroup">
@@ -441,15 +542,27 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
                           </Link>
                         </div>
                       </td>
-                      <td data-label="Author" role="cell">
-                        {publication.author ? <AuthorNames authors={publication.author} /> : '—'}
-                      </td>
-                      <td data-label="Edition" role="cell">
-                        {publication.edition || '—'}
-                      </td>
-                      <td data-label="Recipes" role="cell">
-                        {publication.recipe_count}
-                      </td>
+                      {visibleColumns.map((column) => (
+                        <td data-label={columnLabels[column]} key={column} role="cell">
+                          {column === 'author' ? (
+                            publication.author ? (
+                              <AuthorNames authors={publication.author} />
+                            ) : (
+                              '—'
+                            )
+                          ) : column === 'edition' ? (
+                            publication.edition || publication.issue || '—'
+                          ) : column === 'recipe_count' ? (
+                            publication.recipe_count
+                          ) : column === 'tags' ? (
+                            publication.tag_names.join(', ') || '—'
+                          ) : column === 'created_at' ? (
+                            formatDate(publication.created_at)
+                          ) : (
+                            formatDate(publication.updated_at)
+                          )}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -505,6 +618,23 @@ export function PublicationExplorer({ publications }: { publications: ExplorerPu
             ))}
           </ul>
         ) : null}
+        {pageCount > 1 && (
+          <nav aria-label="Publication result pages" className="publication-explorer-pagination">
+            {page > 1 ? (
+              <Link href={explorerHref(state, { page: page - 1 })}>Previous</Link>
+            ) : (
+              <span aria-disabled="true">Previous</span>
+            )}
+            <span aria-current="page">
+              Page {page} of {pageCount}
+            </span>
+            {page < pageCount ? (
+              <Link href={explorerHref(state, { page: page + 1 })}>Next</Link>
+            ) : (
+              <span aria-disabled="true">Next</span>
+            )}
+          </nav>
+        )}
       </div>
     </section>
   );

@@ -12,6 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check src tests scripts next.config.mjs playwright.config.ts vitest.config.mts postcss.config.mjs package.json tsconfig.json",
+    "lint:md": "node scripts/lint-markdown.mjs",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:e2e && npm run test:a11y",
     "test:unit": "vitest run",
@@ -51,6 +52,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
     "jsdom": "30.1.1",
+    "markdownlint": "0.36.1",
     "pdfjs-dist": "^4.10.38",
     "postcss": "8.5.28",
     "supabase": "2.119.0",
@@ -58,5 +60,10 @@
     "typescript": "5.9.3",
     "vite": "8.3.2",
     "vitest": "5.0.3"
+  },
+  "overrides": {
+    "markdownlint": {
+      "markdown-it": "14.3.1"
+    }
   }
 }

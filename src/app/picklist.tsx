@@ -243,6 +243,7 @@ export function usePicklistMenu({
 }
 
 export function Picklist({
+  id,
   label,
   value,
   options,
@@ -258,10 +259,13 @@ export function Picklist({
   invalid,
   open,
   onOpenChange,
+  onEnter,
+  onFocusLeave,
   measureLabel,
   menuClassName,
   children,
 }: {
+  id?: string;
   label: string;
   value: string;
   options: PicklistOption[];
@@ -277,6 +281,8 @@ export function Picklist({
   invalid?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onEnter?: () => boolean;
+  onFocusLeave?: (relatedTarget: EventTarget | null) => void;
   measureLabel?: string;
   menuClassName?: string;
   children?: ReactNode;
@@ -334,6 +340,7 @@ export function Picklist({
         aria-label={label}
         className={`single-picklist-trigger ${className}`}
         disabled={disabled}
+        id={id}
         ref={triggerRef}
         role="combobox"
         style={
@@ -344,7 +351,15 @@ export function Picklist({
         title={title}
         type="button"
         onClick={toggle}
-        onKeyDown={handleKeyDown}
+        onBlur={(event) => onFocusLeave?.(event.relatedTarget)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && onEnter?.()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          handleKeyDown(event);
+        }}
       >
         {children ?? selectedOption?.label}
         {showArrow && (

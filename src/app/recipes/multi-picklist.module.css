@@ -20,6 +20,79 @@
   max-width: 100%;
 }
 
+.filterGroup {
+  display: block;
+  grid-area: value-control;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.filterGroup > legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.filterGroup .anchor {
+  width: 100%;
+  max-width: 100%;
+}
+
+.filterGroup .menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: min(58vh, 320px);
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px;
+  background: white;
+  box-shadow: 0 4px 14px rgb(36 40 32 / 12%);
+}
+
+.filterGroup .measure {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.filterGroup .option {
+  min-height: 36px;
+  font-size: 16px;
+}
+
+.filterGroup .check {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  font-size: 14px;
+}
+
+.filterGroup .option[aria-pressed="true"] .check {
+  border-color: var(--leaf);
+  background: var(--leaf);
+  color: white;
+}
+
 :global(.recipe-form) .menu {
   position: absolute;
   z-index: 20;
@@ -100,6 +173,11 @@
 }
 
 @media (max-width: 640px) {
+  .filterGroup .menu {
+    right: 0;
+    left: auto;
+  }
+
   .option {
     min-height: 36px;
   }

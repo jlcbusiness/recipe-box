@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import sharp from 'sharp';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
@@ -305,25 +306,26 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     );
     await typeTrigger.click();
     const typeOptions = page.getByRole('group', { name: 'Publication type options' });
-    await expect(typeOptions.getByRole('button', { name: 'Books', exact: true })).toBeVisible();
-    await typeOptions.getByRole('button', { name: 'Sites', exact: true }).click();
+    await expect(typeOptions.getByRole('link', { name: 'Books', exact: true })).toBeVisible();
+    await typeOptions.getByRole('link', { name: 'Sites', exact: true }).click();
     const sitesTrigger = page.getByRole('button', { name: 'Type: Sites' });
     await expect(sitesTrigger.locator('.publication-type-icon-site')).toBeVisible();
     await expect(sitesTrigger).toHaveJSProperty('offsetWidth', typeTriggerWidth);
+    await sitesTrigger.click();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('group', { name: 'Publication type options' })).toHaveCount(0);
     await expect(sitesTrigger).toBeFocused();
     await sitesTrigger.click();
     await page
       .getByRole('group', { name: 'Publication type options' })
-      .getByRole('button', { name: 'All', exact: true })
+      .getByRole('link', { name: 'All', exact: true })
       .click();
 
     await page.getByRole('button', { name: 'Type: All' }).click();
     await page.getByRole('heading', { name: 'Library' }).click();
     await expect(page.getByRole('group', { name: 'Publication type options' })).toHaveCount(0);
 
-    const viewTrigger = page.getByRole('button', { name: 'Switch to List view' });
+    const viewTrigger = page.getByRole('link', { name: 'Switch to List view' });
     await expect(viewTrigger.locator('svg')).toBeVisible();
     const expectViewAfterSortDirection = async () => {
       const controlBounds = await page
@@ -342,6 +344,7 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
         'publication-explorer-control-sort',
         'publication-explorer-control-sort-direction',
         'publication-explorer-control-view',
+        'publication-explorer-control-columns',
       ]);
       expect(controlBounds[3].x).toBeGreaterThan(controlBounds[2].x);
       expect(controlBounds[3].y).toBe(controlBounds[2].y);
@@ -374,18 +377,29 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
       .locator('tbody tr:first-child td:last-child')
       .evaluate((cell) => cell.getBoundingClientRect().right);
     expect(publicationLastCellRight).toBeCloseTo(publicationTableRight, 1);
-    await page.getByRole('button', { name: 'Switch to Grid view' }).click();
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    const columnOptions = page.getByRole('group', { name: 'List columns' });
+    await columnOptions.getByLabel('Tags').check();
+    await columnOptions.getByLabel('Date Added').check();
+    await expect(page.getByRole('columnheader', { name: 'Tags' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Date Added' })).toBeVisible();
+    await expect(publicationTable.locator('thead th')).toHaveCount(6);
+    await columnOptions.getByLabel('Tags').uncheck();
+    await columnOptions.getByLabel('Date Added').uncheck();
+    await page.getByRole('link', { name: 'Switch to Grid view' }).click();
     await expect(page.locator('.publication-explorer-grid')).toBeVisible();
-    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await page.getByRole('link', { name: 'Switch to List view' }).click();
+    await expect(page).toHaveURL(/view=list/);
 
     const sortTrigger = page.getByRole('button', { name: 'Sort by Name' });
     await expect(sortTrigger.locator('svg')).toBeVisible();
     await sortTrigger.click();
     const sortOptions = page.getByRole('group', { name: 'Sort options' });
     await expect(
-      sortOptions.getByRole('button', { name: 'Date Changed', exact: true }),
+      sortOptions.getByRole('link', { name: 'Date Changed', exact: true }),
     ).toBeVisible();
-    await sortOptions.getByRole('button', { name: 'Date Added', exact: true }).click();
+    await sortOptions.getByRole('link', { name: 'Date Added', exact: true }).click();
+    await expect(page).toHaveURL(/sort=created_at/);
 
     await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Type' })).toHaveCount(0);
@@ -405,13 +419,15 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     await page.getByRole('button', { name: 'Type: All' }).click();
     await page
       .getByRole('group', { name: 'Publication type options' })
-      .getByRole('button', { name: 'Sites', exact: true })
+      .getByRole('link', { name: 'Sites', exact: true })
       .click();
-    await expect(page.getByText('No publications match this filter.')).toBeVisible();
+    await expect(
+      page.getByText('No publications match this search and filter combination.'),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Type: Sites' }).click();
     await page
       .getByRole('group', { name: 'Publication type options' })
-      .getByRole('button', { name: 'All', exact: true })
+      .getByRole('link', { name: 'All', exact: true })
       .click();
     await page.setViewportSize({ width: 390, height: 844 });
     await expectViewAfterSortDirection();
@@ -425,18 +441,23 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
           return { width, height };
         }),
       );
-    expect(triggerSizes).toHaveLength(4);
+    expect(triggerSizes).toHaveLength(5);
     expect(triggerSizes.every(({ width, height }) => width >= 48 && height >= 48)).toBe(true);
     await page.getByRole('button', { name: 'Type: All' }).click();
     const menuOptionSizes = await page
       .getByRole('group', { name: 'Publication type options' })
-      .getByRole('button')
+      .getByRole('link')
       .evaluateAll((options) => options.map((option) => option.getBoundingClientRect().height));
     expect(menuOptionSizes.every((height) => height >= 48)).toBe(true);
     await page.keyboard.press('Escape');
     const mobileTitle = page.getByRole('link', { name: 'Explorer Cookbook' });
     await expect(mobileTitle).toHaveCSS('white-space', 'nowrap');
     await expect(mobileTitle).toHaveCSS('text-overflow', 'ellipsis');
+    await page.getByRole('button', { name: 'Add filter' }).click();
+    await page.getByLabel('Field for filter 1').selectOption('created_at');
+    await page.getByLabel('Operator for filter 1').selectOption('between');
+    await page.getByLabel('Value for filter 1', { exact: true }).fill('2026-10-01');
+    await page.getByLabel('Upper value for filter 1').fill('2026-10-31');
     await expectNoHorizontalOverflow(page);
   } finally {
     await deleteTestUser(request, user);
@@ -597,7 +618,8 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
 
     await page.getByRole('link', { name: 'Library', exact: true }).click();
     await expect(page.locator('.publication-explorer-grid')).toBeVisible();
-    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await page.getByRole('link', { name: 'Switch to List view' }).click();
+    await expect(page).toHaveURL(/view=list/);
     const getNames = () =>
       page.locator('.publication-explorer-table tbody tr > td:first-child a').allTextContents();
     const appleRow = page.getByRole('row', { name: /Apple Cookbook/ });
@@ -607,8 +629,10 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
       await page.getByRole('button', { name: /^Type:/ }).click();
       await page
         .getByRole('group', { name: 'Publication type options' })
-        .getByRole('button', { name: label, exact: true })
+        .getByRole('link', { name: label, exact: true })
         .click();
+      const typeValue = { All: null, Books: 'book', Magazines: 'magazine', Sites: 'site' }[label];
+      await expect(page).toHaveURL((url) => url.searchParams.get('type') === typeValue);
     };
     await chooseFilter('Books');
     await expect(page.getByRole('button', { name: 'Type: Books' })).toBeVisible();
@@ -661,11 +685,25 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
       if (!(await sortOptions.isVisible())) {
         await page.getByRole('button', { name: /^Sort by/ }).click();
       }
-      await sortOptions.getByRole('button', { name: label, exact: true }).click();
+      await sortOptions.getByRole('link', { name: label, exact: true }).click();
+      const sortValue: Record<string, string> = {
+        Name: 'name',
+        Type: 'type',
+        Author: 'author',
+        Edition: 'edition',
+        'Recipe count': 'recipe_count',
+        'Date Added': 'created_at',
+        'Date Changed': 'updated_at',
+      };
+      await expect(page).toHaveURL((url) => url.searchParams.get('sort') === sortValue[label]);
     };
     const chooseSortDirection = async (direction: 'Ascending' | 'Descending') => {
       const action = direction === 'Ascending' ? 'Sort ascending' : 'Sort descending';
-      await page.getByRole('button', { name: action, exact: true }).click();
+      await page.getByRole('link', { name: action, exact: true }).click();
+      const expectedDirection = direction === 'Ascending' ? 'asc' : 'desc';
+      await expect(page).toHaveURL(
+        (url) => url.searchParams.get('direction') === expectedDirection,
+      );
     };
     const assertSort = async (
       label: string,
@@ -707,15 +745,16 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     await assertSort('Date Added', dateAscending, dateDescending);
     await assertSort('Date Changed', changedAscending, changedDescending);
 
-    const gridTrigger = page.getByRole('button', { name: 'Switch to Grid view' });
+    const gridTrigger = page.getByRole('link', { name: 'Switch to Grid view' });
     await gridTrigger.click();
+    await expect(page).toHaveURL(/view=grid/);
     await expect(page.locator('.publication-explorer-grid > li')).toHaveCount(4);
     const appleCard = page
       .locator('.publication-explorer-card')
       .filter({ hasText: 'Apple Cookbook' });
     await expect(page.getByRole('link', { name: 'Apple Cookbook' })).toHaveAttribute(
       'title',
-      /^Book\nAuthor: Amy Writer, Alexandra Elizabeth Cooks and Writes for Busy Families Around the World\nEdition: First edition\nRecipes: 1\nDate Added: .+\nDate Changed: .+$/,
+      /^Book\nAuthor: Amy Writer, Alexandra Elizabeth Cooks and Writes for Busy Families Around the World\nEdition \/ Issue: First edition\nRecipes: 1\nDate Added: .+\nDate Changed: .+$/,
     );
     const appleAuthors = appleCard.locator('.publication-grid-authors');
     await expect(appleAuthors).toContainText('Amy Writer');
@@ -771,60 +810,28 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     expect(gridA11y.violations).toEqual([]);
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const siteCard = page.locator('.publication-explorer-card').filter({ hasText: 'Cooks Online' });
-    const bookCoverWidth = await appleCard
-      .locator('.publication-cover-book')
-      .evaluate((cover) => cover.getBoundingClientRect().width);
-    const siteCoverWidth = await siteCard
-      .locator('.publication-cover-site')
-      .evaluate((cover) => cover.getBoundingClientRect().width);
-    expect(siteCoverWidth).toBe(bookCoverWidth);
-    expect(bookCoverWidth).toBe(48);
-    const siteMobileCover = await siteCard.locator('.publication-cover-site').evaluate((cover) => {
-      const { top, height } = cover.getBoundingClientRect();
-      return { top, height };
-    });
-    const siteMobileLink = await siteCard
-      .locator('.publication-explorer-card-link')
-      .evaluate((link) => {
-        const { top, height } = link.getBoundingClientRect();
-        return { top, height };
-      });
-    const bookMobileCover = await appleCard.locator('.publication-cover-book').evaluate((cover) => {
-      const { top, height } = cover.getBoundingClientRect();
-      return { top, height };
-    });
-    const siteMobileTitleTop = await siteCard
-      .locator('.publication-list-title')
-      .evaluate((title) => title.getBoundingClientRect().top);
-    const bookMobileTitleTop = await appleCard
-      .locator('.publication-list-title')
-      .evaluate((title) => title.getBoundingClientRect().top);
-    expect(siteMobileCover.top - siteMobileLink.top).toBe(
-      (siteMobileLink.height - siteMobileCover.height) / 2 - 1,
+    const mobileList = page.locator('.publication-explorer-mobile-list');
+    await expect(mobileList).toBeVisible();
+    await expect(mobileList.locator('li')).toHaveCount(4);
+    const mobileAppleLink = mobileList.getByRole('link', { name: 'Apple Cookbook' });
+    await expect(mobileAppleLink).toHaveCSS('white-space', 'nowrap');
+    await expect(mobileAppleLink).toHaveCSS('text-overflow', 'ellipsis');
+    await expect(mobileAppleLink).toHaveAttribute(
+      'title',
+      /^Book\nAuthor: Amy Writer, Alexandra Elizabeth Cooks and Writes for Busy Families Around the World\nEdition \/ Issue: First edition\nRecipes: 1\nDate Added: .+\nDate Changed: .+$/,
     );
-    expect(siteMobileTitleTop - siteMobileCover.top).toBe(bookMobileTitleTop - bookMobileCover.top);
-    const mobileTitle = appleCard.locator('.publication-list-title');
-    await expect(mobileTitle).toHaveCSS('white-space', 'nowrap');
-    await expect(mobileTitle).toHaveCSS('text-overflow', 'ellipsis');
-    const mobileAuthors = appleCard.locator('.publication-grid-authors');
-    await expect(mobileAuthors).toHaveCSS('white-space', 'nowrap');
-    await expect(mobileAuthors).toHaveCSS('text-overflow', 'ellipsis');
-    const zebraTitle = page
-      .locator('.publication-explorer-card')
-      .filter({ hasText: 'Zebra Cookbook' })
-      .locator('.publication-list-title');
-    expect(await zebraTitle.evaluate((title) => title.scrollWidth > title.clientWidth)).toBe(true);
-    expect(
-      await mobileAuthors.evaluate((authors) => authors.scrollWidth > authors.clientWidth),
-    ).toBe(true);
+    const mobileZebraLink = mobileList.getByRole('link', { name: /Zebra Cookbook/ });
+    expect(await mobileZebraLink.evaluate((link) => link.scrollWidth > link.clientWidth)).toBe(
+      true,
+    );
+    await expectNoHorizontalOverflow(page);
 
     await page.setViewportSize({ width: 1024, height: 900 });
-    const listTrigger = page.getByRole('button', { name: 'Switch to List view' });
+    const listTrigger = page.getByRole('link', { name: 'Switch to List view' });
     await listTrigger.click();
+    await expect(page).toHaveURL(/view=list/);
     const listA11y = await new AxeBuilder({ page }).analyze();
     expect(listA11y.violations).toEqual([]);
-    const mobileList = page.locator('.publication-explorer-mobile-list');
     for (const width of [352, 390]) {
       await page.setViewportSize({ width, height: 844 });
       await expect(mobileList).toBeVisible();
@@ -846,10 +853,12 @@ test('Library Explorer keeps its empty state accessible on mobile @e2e @a11y', a
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('link', { name: 'Library' }).click();
     await expect(page.getByText('No publications yet.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Switch to Grid view' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Switch to Grid view' })).toBeVisible();
     const emptyA11y = await new AxeBuilder({ page }).analyze();
     expect(emptyA11y.violations).toEqual([]);
-    await page.getByRole('button', { name: 'Switch to Grid view' }).click();
+    await page.getByRole('link', { name: 'Switch to Grid view' }).click();
+    await expect(page).toHaveURL(/view=grid/);
+    await expect(page).toHaveTitle('Recipe Box');
     await expect(page.getByText('No publications yet.')).toBeVisible();
     const emptyGridA11y = await new AxeBuilder({ page }).analyze();
     expect(emptyGridA11y.violations).toEqual([]);
@@ -995,6 +1004,27 @@ test('an owner can create a publication, assign a recipe, and return it to the R
 
     await expect(page.getByRole('heading', { name: 'Roasted tomato soup' })).toBeVisible();
     const recipeUrl = page.url();
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Manage recipe photos' }).click();
+    const recipePhotoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
+    const recipePhoto = await sharp({
+      create: {
+        width: 32,
+        height: 24,
+        channels: 3,
+        background: { r: 126, g: 154, b: 116 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await recipePhotoDialog.getByLabel('Upload from device').setInputFiles({
+      name: 'publication-recipe.png',
+      mimeType: 'image/png',
+      buffer: recipePhoto,
+    });
+    await expect(recipePhotoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
+    await recipePhotoDialog.getByRole('button', { name: 'Done' }).click();
+    await page.goto(recipeUrl);
     const recipeLink = page.getByRole('link', { name: 'The Home Cook' });
     await expect(recipeLink).toBeVisible();
     const attribution = page.locator('.recipe-detail-title > .recipe-attribution');
@@ -1011,7 +1041,7 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       'Opinion',
       'Meal Type',
       'Food Type',
-      'Time',
+      'Total Time',
       'Page or URL',
     ]);
     if (test.info().project.name === 'chromium') {
@@ -1019,6 +1049,27 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       const publicationTable = page.locator('.publication-recipe-list');
       const publicationScroll = page.locator('.publication-recipe-scroll');
       await expect(publicationTable).toHaveCSS('display', 'grid');
+      const publicationNameHeader = publicationTable.locator('thead th').first();
+      await expect(publicationNameHeader).toHaveCSS('font-size', '16px');
+      await expect(publicationNameHeader).toHaveCSS('text-transform', 'none');
+      await expect(publicationNameHeader).toHaveCSS('text-align', 'left');
+      await expect(publicationNameHeader).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(publicationTable.locator('thead tr')).toHaveCSS(
+        'background-color',
+        'rgba(0, 0, 0, 0)',
+      );
+      await expect(publicationTable.locator('tbody tr:first-child')).toHaveCSS(
+        'background-color',
+        'rgba(56, 96, 68, 0.08)',
+      );
+      await expect(publicationTable.locator('tbody tr:first-child td:first-child')).toHaveCSS(
+        'background-color',
+        'rgba(0, 0, 0, 0)',
+      );
+      await expect(publicationTable.locator('tbody tr:first-child td:first-child a')).toHaveCSS(
+        'font-weight',
+        '400',
+      );
       expect(
         await publicationScroll.evaluate((element) => element.scrollWidth <= element.clientWidth),
       ).toBe(true);
@@ -1028,10 +1079,16 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await page.setViewportSize({ width, height: 844 });
       await expect(page.locator('.publication-recipe-list thead')).toBeHidden();
       await expect(mobilePublicationRow).toHaveCSS('display', 'flex');
+      await expect(mobilePublicationRow).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
       await expect(mobilePublicationRow).toHaveCSS('flex-wrap', 'wrap');
       await expect(mobilePublicationRow.locator('[data-label="Name"]')).toHaveCSS(
         'flex-basis',
         '100%',
+      );
+      await expect(mobilePublicationRow.locator('[data-label]')).toHaveCount(7);
+      await expect(mobilePublicationRow.locator('[data-label="Name"] a')).toHaveCSS(
+        'font-weight',
+        '400',
       );
       const stateBounds = await mobilePublicationRow.locator('[data-label="State"]').boundingBox();
       const mobileOpinion = mobilePublicationRow.locator('[data-label="Opinion"]');
@@ -1049,6 +1106,31 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await expect(mobilePublicationRow.locator('[data-label="Total Time"]')).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
     }
+
+    await page.getByRole('button', { name: 'Switch to Grid view' }).click();
+    const publicationGridCard = page.locator('.find-recipes-grid li').first();
+    await expect(publicationGridCard.locator('.find-recipes-card-image')).toBeVisible();
+    await expect(publicationGridCard.locator('strong')).toHaveText('Roasted tomato soup');
+    const publicationGridTitleBounds = await publicationGridCard.locator('strong').boundingBox();
+    expect(publicationGridTitleBounds?.height).toBeGreaterThan(0);
+    await expect(publicationGridCard.locator('.find-recipes-grid-metadata')).toContainText(
+      'No total time',
+    );
+    const mobileGridCardHeight = await publicationGridCard.evaluate(
+      (card) => card.getBoundingClientRect().height,
+    );
+    expect(mobileGridCardHeight).toBeLessThan(234);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(publicationGridCard).toHaveCSS('height', '234px');
+    await expect(publicationGridCard).toHaveCSS(
+      'box-shadow',
+      'rgba(36, 40, 32, 0.18) 0px 4px 12px 0px',
+    );
+    await publicationGridCard.locator('a').hover();
+    await expect(publicationGridCard.locator('strong')).toHaveCSS(
+      'text-decoration-line',
+      'underline',
+    );
 
     await page.getByRole('link', { name: 'Recipe Tin' }).click();
     await expect(page.getByRole('link', { name: 'Roasted tomato soup' })).toHaveCount(0);
@@ -1354,6 +1436,39 @@ test('inline publication creation preserves the unsaved recipe draft @e2e @a11y'
         ? 'View online'
         : 'https://www.kitchen.example.test/lemon-cake';
     await expect(page.getByRole('link', { name: onlineLinkName })).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Library preserves search criteria and distinguishes a recoverable error from no matches @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const query = 'preserved publication query';
+  const filter = JSON.stringify({ field: 'unsupported_field', operator: 'contains', value: 'x' });
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto(
+      `/publications?q=${encodeURIComponent(query)}&filter=${encodeURIComponent(filter)}`,
+    );
+
+    await expect(page.locator('.publication-explorer-results [role="alert"]')).toHaveText(
+      'Unable to search publications. Your query and filters are preserved. Try again.',
+    );
+    await expect(page.locator('.publication-explorer-result-count')).toHaveText(
+      'Publication results unavailable.',
+    );
+    await expect(page.getByRole('searchbox', { name: 'Search publications' })).toHaveValue(query);
+    await expect(
+      page.getByText('No publications match this search and filter combination.'),
+    ).toHaveCount(0);
+    await expect(page).toHaveURL((url) => {
+      const params = new URL(url).searchParams;
+      return params.get('q') === query && params.get('filter') === filter;
+    });
   } finally {
     await deleteTestUser(request, user);
   }

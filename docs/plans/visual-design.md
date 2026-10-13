@@ -45,6 +45,7 @@
     - [Trash and baseline print (Slice 8 current implementation)](#trash-and-baseline-print-slice-8-current-implementation)
   - [Publication Editing](#publication-editing)
   - [Publication Cover Fallbacks](#publication-cover-fallbacks)
+  - [Find Recipes (Slice 17)](#find-recipes-slice-17)
   - [Accessibility And Interaction](#accessibility-and-interaction)
   - [Required Future Detail](#required-future-detail)
 
@@ -62,6 +63,8 @@
   [publications](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin),
   [queries](comprehensive-reference.md#7-queries-search-and-library-explorer), and
   [accessibility](comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility).
+- [Slice 17: Find recipes](slices/17-find-recipes.md) for search and explorer
+  behavior.
 
 ## Purpose
 
@@ -124,12 +127,18 @@ must not be described as shipped behavior.
   selected, primary, and destructive states distinguishable. Do not make a
   visual refinement depend on color alone or imply that an unsaved change has
   already persisted.
+- **Keep temporary state temporary.** Keep saved preferences, recipe data, and
+  reader-only state distinct. Make persistence scope clear; a temporary
+  presentation, sort, or cooking check-off must not silently update the recipe.
 - **Keep personal metadata lightweight.** Tags are a flat, reusable descriptive
   layer, not a hierarchy or workflow state. Keep their names and colors
   subordinate to the recipe or publication.
 - **Preserve user agency.** Calculations and conversions should be explicit,
   understandable, and correctable. Never silently replace a saved measurement
   or hide whether a value was derived or entered by the person.
+- **Treat device capabilities as enhancements.** An unavailable or denied
+  optional API should not block the core task. Report the actual capability
+  state and keep the primary interaction usable.
 - **Prefer continuity with purpose.** Reuse spacing, typography, action
   placement, and control behavior across related tasks. Give imagery or a
   distinct treatment a role only when it helps identify content or complete an
@@ -562,11 +571,11 @@ custom listboxes; US and Metric groups are visibly underlined in unit menus.
 
 ### Product direction
 
-Recipe detail will place the ingredient list beside instructions, with related
-recipes (Pairs with) and notes at the bottom. The Library uses List and Grid
-views with a compact Type picklist, a direct icon View toggle, a Sort by menu,
-and a separate Sort direction button. The View icon represents the current mode
-and its accessible name identifies the destination mode. The Type button stays
+Recipe detail places the ingredient list beside instructions, with related
+recipes (Pairs with) and notes below. The Library uses List and Grid views with
+a compact Type picklist, a direct icon View toggle, a Sort by menu, and a
+separate Sort direction button. The View icon represents the current mode and
+its accessible name identifies the destination mode. The Type button stays
 wide enough for “Magazines” and reflects its active filter with an icon; icon
 buttons have accessible names.
 Desktop List uses scan-friendly metadata columns with centered recipe counts and
@@ -600,8 +609,9 @@ quantities, scaling, and short-form entry. Recipe reading should lead with the
 title, scaling, ingredient list, and steps; secondary metadata should stay
 compact or be progressively disclosed.
 
-Cooking mode should provide touch targets of at least 48px, high-contrast text
-for kitchen lighting, temporary ingredient check-off, and a screen wake lock.
+Cooking mode is implemented; see [Ingredient Presentation](#ingredient-presentation)
+for its current behavior. Future kitchen-facing features should prioritize
+interruption tolerance, legibility, and one-handed operation.
 
 ## Ingredient Presentation
 
@@ -760,6 +770,30 @@ on desktop; on mobile, it matches the Name field's height. The Add photo tile
 and overlaid remove controls are the photo-management actions; there are no
 extra per-image action buttons. On mobile, Add photo and Done share the bottom
 row, with Add photo left and Done right.
+
+## Find Recipes (Slice 17)
+
+### Current implementation
+
+The global recipe search and publication-scoped recipe results share the same
+List and Grid presentation. The publication List retains its seven fields;
+global recipe search uses its selected recipe columns. On desktop, headers are
+16px, sentence case, left-aligned, and aligned with their values. The header
+has no zebra fill. Publication data rows alternate a subtle leaf tint against
+the neutral table surface, starting with a tinted first recipe row; the fill
+spans the full row. Recipe links stay regular weight and underline on desktop
+hover or keyboard focus. On mobile, the table header is hidden, the recipe
+name occupies its own first line, and the remaining labeled fields wrap
+without horizontal page scrolling.
+
+Grid uses 234px-high desktop cards and content-sized mobile cards. Alternate
+desktop and mobile card surfaces between a subtle leaf tint and white, with a
+shared restrained shadow. Show the actual default recipe photo without
+cropping it; keep its 144px image area transparent and the recipe title visible
+directly below. In publication Grid, state and total time share one compact
+metadata row so the image, title, and metadata each retain their own layout
+space. Preserve the same result data between List and Grid. On desktop, card
+titles underline on hover or keyboard focus.
 
 ## Accessibility And Interaction
 

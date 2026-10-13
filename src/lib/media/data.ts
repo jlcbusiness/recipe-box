@@ -70,6 +70,33 @@ export async function getRecipePhotos(
   return signMediaRows(supabase, (data ?? []) as MediaAssetRow[]);
 }
 
+export async function getPrimaryRecipePhotos(
+  supabase: RecipeSupabaseClient,
+  recipeIds: string[],
+): Promise<Map<string, MediaAssetDisplay>> {
+  if (recipeIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .from('media_assets')
+    .select(
+      'id, recipe_id, asset_type, description, position, is_primary, byte_size, width, height, full_path, thumbnail_path',
+    )
+    .in('recipe_id', recipeIds)
+    .eq('asset_type', 'recipe_photo')
+    .eq('status', 'ready')
+    .eq('is_primary', true);
+
+  if (error) {
+    throw new Error('Unable to load recipe photos.');
+  }
+
+  const rows = (data ?? []) as (MediaAssetRow & { recipe_id: string })[];
+  const signed = await signMediaRows(supabase, rows);
+  return new Map(rows.map((row, index) => [row.recipe_id, signed[index]]));
+}
+
 export async function getPublicationCover(
   supabase: RecipeSupabaseClient,
   publicationId: string,

@@ -2,11 +2,17 @@
 
 ## Purpose
 
-This document is the definitive master reference for the Recipe Box application, capturing every concept, requirement, UI behavior, field specification, visual metaphor, and decision established across the planning discussions and subsequent implementation refinements.
+This document is the definitive master reference for the Recipe Box application, capturing every concept, requirement,
+UI behavior, field specification, visual metaphor, and decision established across the planning discussions and
+subsequent implementation refinements.
 
-It serves as the exhaustive encyclopedia for implementation slices, slice briefs, and technical specifications. Where high-level documents (`first-draft-spec.md`, `data-model.md`, `visual-design.md`, `delivery-roadmap.md`) provide concise rules, this document provides the complete context, background rationale, and granular specifications.
+It serves as the exhaustive encyclopedia for implementation slices, slice briefs, and technical specifications. Where
+high-level documents (`first-draft-spec.md`, `data-model.md` , `visual-design.md` , `delivery-roadmap.md` ) provide
+concise rules, this document provides the complete context, background rationale, and granular specifications.
 
-**This is the master document.** The other planning documents summarize it and must defer to it. If they disagree, this document wins and the other document is corrected. Read `first-draft-spec.md` first for orientation, then open only the sections of this reference that the current work needs.
+**This is the master document.** The other planning documents summarize it and must defer to it. If they disagree, this
+document wins and the other document is corrected. Read `first-draft-spec.md` first for orientation, then open only the
+sections of this reference that the current work needs.
 
 ---
 
@@ -34,23 +40,35 @@ It serves as the exhaustive encyclopedia for implementation slices, slice briefs
 ## 1. Product Vision and Paradigm
 
 ### 1.1 The Problem Being Solved
-- **Azure DevOps Work Items Appeal:** Clean information density, powerful multi-field queries, saved views, and markdown/wiki integration.
-- **Azure DevOps Dealbreaker:** Inability to have multi-value picklists (enums/tags) on work items, plus an awkward domain mismatch for cooking data.
-- **Fibery Experience:** Loved the relational database backing, bi-directional linking, and cross-linking between books and recipes. Strongly disliked the user experience ("all panes, like Azure Portal instead of Azure DevOps").
-- **Generic Tools Failure:** Notion feels sluggish and unstructured; Jira is rigid and pane-heavy; consumer recipe apps (Paprika, AnyList) lack deep relational modeling, advanced query capabilities, and customizable taxonomies.
+
+- **Azure DevOps Work Items Appeal:** Clean information density, powerful multi-field queries, saved views, and
+  markdown/wiki integration.
+- **Azure DevOps Dealbreaker:** Inability to have multi-value picklists (enums/tags) on work items, plus an awkward
+  domain mismatch for cooking data.
+- **Fibery Experience:** Loved the relational database backing, bi-directional linking, and cross-linking between books
+  and recipes. Strongly disliked the user experience ("all panes, like Azure Portal instead of Azure DevOps").
+- **Generic Tools Failure:** Notion feels sluggish and unstructured; Jira is rigid and pane-heavy; consumer recipe apps
+  (Paprika, AnyList) lack deep relational modeling, advanced query capabilities, and customizable taxonomies.
 
 ### 1.2 Core Architectural Philosophy
-- **Dual-Platform Intentionality:** Desktop and mobile are treated as distinct interaction paradigms sharing a common data model and business logic, not a desktop site compressed into mobile viewports.
-  - **Desktop:** Keyboard-first, dense work-item detail layout, multi-column editing, advanced query builder, and a compact source Library.
-  - **Mobile:** Touch-first, quick capture/editing, fast search, kitchen-friendly cooking layout (large checkboxes, bold quantities, prominent scaling).
+
+- **Dual-Platform Intentionality:** Desktop and mobile are treated as distinct interaction paradigms sharing a common
+  data model and business logic, not a desktop site compressed into mobile viewports.
+  - **Desktop:** Keyboard-first, dense work-item detail layout, multi-column editing, advanced query builder, and a
+    compact source Library.
+  - **Mobile:** Touch-first, quick capture/editing, fast search, kitchen-friendly cooking layout (large checkboxes, bold
+    quantities, prominent scaling).
 - **Relational Integrity:** Strong foreign keys and database constraints rather than loose no-code schemas.
-- **Progressive Web App (PWA):** Installable, globally accessible via Vercel hosting, using Supabase for authentication, Postgres storage, and private media buckets. Native mobile apps (React Native / Expo) are deferred until native-only capabilities (offline camera scanner, local push notifications) are needed.
+- **Progressive Web App (PWA):** Installable, globally accessible via Vercel hosting, using Supabase for authentication,
+  Postgres storage, and private media buckets. Native mobile apps (React Native / Expo) are deferred until native-only
+  capabilities (offline camera scanner, local push notifications) are needed.
 
 ---
 
 ## 2. Recipe Card and Metadata
 
 ### 2.1 Metadata Fields Breakdown
+
 The top portion of the desktop recipe card contains compact, dense metadata inspired by Azure DevOps work items:
 
 | Field Name | Type | Options / Formats | Behavior & Visibility |
@@ -73,7 +91,9 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
 
 ### 2.2 Time Tracking and Overlapping Times
-Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or resting steps. To ensure clear visibility, time is broken down into specific categories:
+
+Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or resting steps. To ensure clear visibility,
+time is broken down into specific categories:
 
 - **Specific Time Dimensions:**
   - Prep time
@@ -87,11 +107,16 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
   - Rest time (meat resting, dough proofing)
   - Total time
 - **Card Display Rule:** Only non-zero/applicable times are displayed on the recipe card.
-- **Integer Formatting:** Serves and duration values display with comma grouping for thousands. Time fields accept valid comma-grouped integers and normalize their display on blur; total-time calculation also accepts grouped values.
+- **Integer Formatting:** Serves and duration values display with comma grouping for thousands. Time fields accept valid
+  comma-grouped integers and normalize their display on blur; total-time calculation also accepts grouped values.
 - **Total Time Calculation Behavior:**
-  - Total time is stored as a distinct manual field. It is **never** auto-updated silently in the background, because steps often overlap (e.g., chopping ingredients while an oven preheats, or dough rising while sauce simmers).
-  - Component times use compact, spinner-free numeric inputs sized to five-character values or their visible labels, whichever needs more room, with 8 px gaps. Total Time appears on its own final row.
-  - A compact square **Auto-calculate** control showing only the `Σ` icon sits beside Total Time. It has the accessible name and tooltip `Calculate total time`. When clicked, it sums all entered component durations and visibly replaces Total Time, leaving the user in control.
+  - Total time is stored as a distinct manual field. It is **never** auto-updated silently in the background, because
+    steps often overlap (e.g., chopping ingredients while an oven preheats, or dough rising while sauce simmers).
+  - Component times use compact, spinner-free numeric inputs sized to five-character values or their visible labels,
+    whichever needs more room, with 8 px gaps. Total Time appears on its own final row.
+  - A compact square **Auto-calculate** control showing only the `Σ` icon sits beside Total Time. It has the accessible
+    name and tooltip `Calculate total time` . When clicked, it sums all entered component durations and visibly replaces
+    Total Time, leaving the user in control.
 
 ### 2.3 Recipe Photos
 
@@ -190,49 +215,83 @@ Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or res
 ## 3. Ingredient Rows, Measurements, and Density
 
 ### 3.1 Ingredient Row Structure
+
 An ingredient and its quantities are permanently tied together in a single
 relational row. The desktop edit table displays Ingredient, Specifics, Amount,
 and Preparation values in that order; the Main checkbox and 12px drag handle
 sit in a narrow control rail outside the table. The table always has one
 trailing empty row.
 
-1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon in lemon bars). Populates the recipe's `Main Ingredients` query index. The checkbox sits outside the table in the row control rail and is edit-only.
-2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside its row editor pane; menus remain within the viewport and use the available space above or below the field.
-3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4`), ranges (`2-3`), and comma-grouped whole-number parts (for example, `1,000`, `1,000 1/2`, or `1,000-2,000`). Blank for Feel phrases. Displayed quantities group thousands while retaining the existing fraction, range, and unit-system formatting.
+1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon
+   in lemon bars). Populates the recipe's `Main Ingredients` query index. The checkbox sits outside the table in the row
+   control rail and is edit-only.
+2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user
+   can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside
+   its row editor pane; menus remain within the viewport and use the available space above or below the field.
+3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4` ), ranges (`2-3`), and
+   comma-grouped whole-number parts (for example, `1,000` , `1,000 1/2` , or `1,000-2,000` ). Blank for Feel phrases.
+   Displayed quantities group thousands while retaining the existing fraction, range, and unit-system formatting.
 4. **Measurement Category (fixed selector and fields):**
-   - **Unit:** The default category. Shows separate Volume amount/unit and Weight amount/unit fields. Either or both dimensions may be entered; a slash separates them visually and in recipe display.
-   - **Volume Picker:** Predefined, immutable convertible units: teaspoon (tsp), tablespoon (TBSP), fluid ounce (fl oz), cup, pint (pt), quart (qt), gallon (gal), milliliter (ml), liter (L).
+   - **Unit:** The default category. Shows separate Volume amount/unit and Weight amount/unit fields. Either or both
+     dimensions may be entered; a slash separates them visually and in recipe display.
+   - **Volume Picker:** Predefined, immutable convertible units: teaspoon (tsp), tablespoon (TBSP), fluid ounce (fl oz),
+     cup, pint (pt), quart (qt), gallon (gal), milliliter (ml), liter (L).
    - **Weight Picker:** Predefined, immutable convertible units: gram (g), kilogram (kg), ounce (oz), pound (lb).
-   - **Count:** A count has no unit. The quantity is simply how many of the ingredient (`2` eggs, `1` cucumber). Packaging and portion words such as can or bag are not units: a 14 oz can is entered as 14 oz under Units.
-   - **Things Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk, sheet, stick, slice, pinch, dash, handful. Amounts in this category scale but never convert and never take part in density; display pluralizes the unit when the amount (or range maximum) exceeds one. Packaging words (can, bag, package) are not seeded.
-   - **Feel Picker:** Approved culinary phrases: `to taste`, `as needed`, `for garnish`, `to serve`, `divided`. Feel is stored using the existing Unmeasured measurement type and phrase list.
-   - On desktop, the edit column order is Ingredient, Specifics, Amount, Preparation. Type has its own cell and all quantity/unit controls share one Amount cell. Unit displays volume and weight amount/unit pairs separated by a slash; Count, Things, and Feel display only their relevant controls. Keep controls on one line and constrain the table to available width, switching to the mobile row list at narrow widths. One left-aligned Amount header spans Type and the Amount cell without subheaders. Quantity inputs start at two characters wide, grow with their contents, and center their text; Things and Feel picklists use short `Unit` and `Phrase` prompts. The weight-unit picker uses compact horizontal padding. On mobile, the editor field order is Ingredient, Specifics, Amount, Preparation; Type, quantity, and unit controls share a compact wrapping line, and paired Unit dimensions may wrap as needed without page-level horizontal scrolling.
-5. **Specifics (Text):** Qualitative specification or size qualification. Displayed in lowercase after the amount in recipe view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for butter), `Brummel & Brown` (for margarine).
-6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or during cooking. Examples: `diced`, `minced`, `cubed`, `melted`, `room-temperature`, `crushed`, `sliced`, `divided`. Users can add a preparation while editing; saved values appear in future suggestions.
+   - **Count:** A count has no unit. The quantity is simply how many of the ingredient (`2` eggs, `1` cucumber).
+     Packaging and portion words such as can or bag are not units: a 14 oz can is entered as 14 oz under Units.
+   - **Things Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk,
+     sheet, stick, slice, pinch, dash, handful. Amounts in this category scale but never convert and never take part in
+     density; display pluralizes the unit when the amount (or range maximum) exceeds one. Packaging words (can, bag,
+     package) are not seeded.
+   - **Feel Picker:** Approved culinary phrases: `to taste` , `as needed` , `for garnish` , `to serve` , `divided` .
+     Feel is stored using the existing Unmeasured measurement type and phrase list.
+   - On desktop, the edit column order is Ingredient, Specifics, Amount, Preparation. Type has its own cell and all
+     quantity/unit controls share one Amount cell. Unit displays volume and weight amount/unit pairs separated by a
+     slash; Count, Things, and Feel display only their relevant controls. Keep controls on one line and constrain the
+     table to available width, switching to the mobile row list at narrow widths. One left-aligned Amount header spans
+     Type and the Amount cell without subheaders. Quantity inputs start at two characters wide, grow with their
+     contents, and center their text; Things and Feel picklists use short `Unit` and `Phrase` prompts. The weight-unit
+     picker uses compact horizontal padding. On mobile, the editor field order is Ingredient, Specifics, Amount,
+     Preparation; Type, quantity, and unit controls share a compact wrapping line, and paired Unit dimensions may wrap
+     as needed without page-level horizontal scrolling.
+5. **Specifics (Text):** Qualitative specification or size qualification. Displayed in lowercase after the amount in
+   recipe view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for
+   butter), `Brummel & Brown` (for margarine).
+6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or
+   during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , `sliced` ,
+   `divided` . Users can add a preparation while editing; saved values appear in future suggestions.
 
 ### 3.2 Dual Measurement (Volume + Weight)
-- In edit mode, each row selects one fixed category. Selecting Units immediately exposes optional volume and weight fields side-by-side; there is no add-measurement action.
+
+- In edit mode, each row selects one fixed category. Selecting Units immediately exposes optional volume and weight
+  fields side-by-side; there is no add-measurement action.
 - In view mode:
   - If only volume or weight is present: displays single value (e.g., `1 cup flour` or `250 g flour`).
   - If both are present: displays both separated by a slash (e.g., `1 cup / 120 g all-purpose flour`).
   - Pluralize `cup` as `cups` when the amount or range maximum is greater than one; keep unit abbreviations unchanged.
 
 ### 3.3 Trusted Ingredient Density
-- **Settings-Only Configuration:** Density is defined formally in Settings per canonical ingredient, never on an ad-hoc recipe card.
+
+- **Settings-Only Configuration:** Density is defined formally in Settings per canonical ingredient, never on an ad-hoc
+  recipe card.
 - **Format:** Reuses the volume/weight input controls (e.g., `1 cup = 120 g` for all-purpose flour; `1 TBSP = 14 g` for butter).
 - **Auto-Fill Behavior in Recipe Editor:**
-  - If an ingredient with a trusted density is selected, entering a volume automatically computes and fills the weight (or vice versa).
+  - If an ingredient with a trusted density is selected, entering a volume automatically computes and fills the weight
+    (or vice versa).
   - **Indicator and accessibility:** The auto-filled amount receives a subtle
     tint and a compact calculator icon. The decorative icon is hidden from
     assistive technology; an associated status announces `Derived from density`
     to screen readers.
-  - **Manual Override:** The user can edit the auto-filled value. Doing so removes the background tint and marks the field as manual.
-  - **Re-triggering:** If a manual override is cleared, leaving the field empty causes it to re-fill automatically from the trusted density on blur.
+  - **Manual Override:** The user can edit the auto-filled value. Doing so removes the background tint and marks the
+    field as manual.
+  - **Re-triggering:** If a manual override is cleared, leaving the field empty causes it to re-fill automatically from
+    the trusted density on blur.
   - **Responsive amount field:** Derived values grow to fit their formatted
     quantity, including ten-digit values, while remaining within the amount
     group and clear of the target-unit picker.
 
 ### 3.4 Scaling Math and Rounding Rules
+
 - **Base Batch:** Every recipe is entered with baseline multiplier $1.0$.
 - **Scaling Modes:**
   - **Servings:** Enter desired servings $S_{target}$. The app computes multiplier $M = S_{target} / S_{base}$.
@@ -244,17 +303,31 @@ trailing empty row.
   - Feel items (`to taste`, `as needed`) are not scaled.
 - **Rounding and Fractions:**
   - Internally, values are preserved as high-precision floating numbers.
-  - US customary measurements display common cooking fractions with denominators 2, 3, 4, and 8 when within $0.03$ of the fraction (e.g., $0.25 \rightarrow 1/4$, $0.333 \rightarrow 1/3$, $1.625 \rightarrow 1\ 5/8$). Otherwise, they display as decimals rounded to two places (e.g., $1.17$ cups).
-  - Metric measurements always display as decimals rounded to at most two decimal places (e.g., $1.5$ L, $0.33$ g, $1.625$ g displayed as $1.63$ g); never display metric quantities as fractions.
+  - US customary measurements display common cooking fractions with denominators 2, 3, 4, and 8 when within $0.03$ of
+    the fraction (e.g., $0.25 \rightarrow 1/4$ , $0.333 \rightarrow 1/3$ , $1.625 \rightarrow 1\ 5/8$ ). Otherwise, they
+    display as decimals rounded to two places (e.g., $1.17$ cups).
+  - Metric measurements always display as decimals rounded to at most two decimal places (e.g., $1.5$ L, $0.33$ g,
+    $1.625$ g displayed as $1.63$ g); never display metric quantities as fractions.
 
 ### 3.5 Unit Display Preferences
-- **Default unit systems:** The account stores independent US customary or metric defaults for volume and weight. Signed-in users change these values in the Units subsection of Settings' Personal preferences section using the shared portal `Picklist`; the shared navigation has no Units shortcut.
-- **Preference writes:** A narrow authenticated database function derives the account from `auth.uid()`, validates the requested systems, and updates only the preference fields. Direct authenticated account updates remain restricted; admin and sign-in-method fields are not writable through this function.
-- **Best-fit conversion:** Preserve a stored unit when it matches the selected system. Otherwise, choose the largest target-system unit whose converted lower amount is at least one; if none qualifies, use the target system's smallest unit. Both endpoints of a range use the same unit.
-- **Recipe-level override (view time):** While viewing a recipe, the user can switch an individual ingredient to a specific unit within its dimension (e.g., teaspoons instead of tablespoons, or ounces instead of grams). These overrides and scale values are transient reader state, never saved to the recipe or account.
-- **Reset:** Reset restores the recipe's saved base servings and resolves units from the account defaults again by clearing all transient volume and weight overrides.
+
+- **Default unit systems:** The account stores independent US customary or metric defaults for volume and weight.
+  Signed-in users change these values in the Units subsection of Settings' Personal preferences section using the shared
+  portal `Picklist` ; the shared navigation has no Units shortcut.
+- **Preference writes:** A narrow authenticated database function derives the account from `auth.uid()` , validates the
+  requested systems, and updates only the preference fields. Direct authenticated account updates remain restricted;
+  admin and sign-in-method fields are not writable through this function.
+- **Best-fit conversion:** Preserve a stored unit when it matches the selected system. Otherwise, choose the largest
+  target-system unit whose converted lower amount is at least one; if none qualifies, use the target system's smallest
+  unit. Both endpoints of a range use the same unit.
+- **Recipe-level override (view time):** While viewing a recipe, the user can switch an individual ingredient to a
+  specific unit within its dimension (e.g., teaspoons instead of tablespoons, or ounces instead of grams). These
+  overrides and scale values are transient reader state, never saved to the recipe or account.
+- **Reset:** Reset restores the recipe's saved base servings and resolves units from the account defaults again by
+  clearing all transient volume and weight overrides.
 - **Dimensions:** Conversion stays within volume or within weight. Volume-to-weight conversion needs a trusted density (3.3).
-- **Printing:** The printed recipe reflects the active scale, account defaults, and per-ingredient overrides while omitting the interactive controls.
+- **Printing:** The printed recipe reflects the active scale, account defaults, and per-ingredient overrides while
+  omitting the interactive controls.
 - **Public pages:** Public recipe behavior remains assigned to Slice 20; this slice adds no unauthenticated preference storage.
 - **System naming:** The app uses "US customary", not "imperial", because UK imperial pints and gallons differ.
 
@@ -263,10 +336,13 @@ trailing empty row.
 ## 4. Ingredient Presentation and Sorting
 
 ### 4.1 The Two Presentation Modes
+
 The recipe card supports two distinct view presentations. This is a reader/device preference, not stored recipe data:
 
 #### A. Standard View (Amount-First)
+
 Inspired by work items and classical cookbooks:
+
 - **Ingredient-row reading order:** Amount, Ingredient (and Specifics), then
   Preparation, following conventional recipe-book notation such as
   `1 cup all-purpose flour, sifted`.
@@ -275,12 +351,14 @@ Inspired by work items and classical cookbooks:
   breaking the work-item-style recipe layout.
 
 #### B. Ingredient-First View ("Mine")
+
 Organized by how a cook actually operates in the kitchen ("get the item, check the amount, prep it"):
+
 - **Column 1: Ingredient** (with Specifics rendered as a distinct subtitle beneath the name).
 - **Column 2: Amount** (quantity and unit, formatted as volume / weight if dual).
 - **Column 3: Preparation** (diced, melted, minced, etc.).
 
-```
+```text
 +---------------------------+----------------+---------------+
 | Ingredient                | Amount         | Preparation   |
 +---------------------------+----------------+---------------+
@@ -303,9 +381,12 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
   - Public share view: Defaults to Ingredient-First.
 
 ### 4.2 Ingredient Sorting Options
-The user can re-sort ingredients dynamically in view mode. The canonical underlying order entered in edit mode is always preserved.
 
-1. **Appears in Instructions (Default):** Ingredients are ordered by their first structured appearance (`#`) in the instruction steps. Unmentioned ingredients appear at the bottom in their entered order.
+The user can re-sort ingredients dynamically in view mode. The canonical underlying order entered in edit mode is always
+preserved.
+
+1. **Appears in Instructions (Default):** Ingredients are ordered by their first structured appearance (`#`) in the
+   instruction steps. Unmentioned ingredients appear at the bottom in their entered order.
 2. **Alphabetical:** A-Z or Z-A by ingredient name.
 3. **By Size (Ascending / Descending):**
    - Strictly partitioned into four sequential, independent groups:
@@ -318,6 +399,7 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
 4. **Order Entered:** The exact sequential order established when editing the recipe.
 
 ### 4.3 Manual Reordering
+
 - Every ingredient row has a 12px drag handle at its left edge, outside the
   table, beside its Main checkbox. Dragging updates the persistent manual order
   used by **Order Entered**.
@@ -340,6 +422,7 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
 ## 5. Instructions, Autocomplete, and Recipe Linking
 
 ### 5.1 Instructions Editor and `#` Mentions
+
 - Instructions are stored as ordered step blocks written in Markdown. Confirmed
   ingredient mentions serialize as
   `[[ingredient:<stable-id>|<slug>]]` and render in the editor as `#<slug>`.
@@ -360,7 +443,8 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
     2. Select **Create new ingredient** (adds row to ingredients table and links it).
     3. Press `Escape` to cancel autocomplete and leave `#` as plain text.
   - **Rendered Output:** Renders cleanly as normal readable text (e.g., "Add the all-purpose flour and mix").
-  - **Trigger Symbol:** `#` on every platform. Phone keyboards have no convenient non-alphanumeric key, and `#` is a familiar mention convention.
+  - **Trigger Symbol:** `#` on every platform. Phone keyboards have no convenient non-alphanumeric key, and `#` is a
+    familiar mention convention.
   - **Degree Symbol Shortcut:** `Ctrl+.` inserts `°` at the caret and replaces any selected text.
   - **Ingredient Mention Style:** In-app instruction mentions default to bold
     dark red to make referenced ingredients easy to scan. User Settings offers
@@ -371,9 +455,11 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
       **italic**, and/or **underline**.
     - All combinations must maintain $\ge 4.5:1$ contrast against the app background.
     - Public and printed recipes use the default bold dark-red treatment.
-  - **Structured Tracking:** Only confirmed selections create a structured foreign-key link to the ingredient row. Plain text does not trigger instruction-appearance sorting.
+  - **Structured Tracking:** Only confirmed selections create a structured foreign-key link to the ingredient row. Plain
+    text does not trigger instruction-appearance sorting.
 
 ### 5.2 Recipe-to-Recipe Links ("Pairs With")
+
 - Bottom row of the recipe card features a **Pairs With** section.
 - It accepts ordinary text entries (for example, `Duck Sauce`) and optional
   recipe links. Text becomes a link only when the user selects an existing
@@ -385,7 +471,8 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
 - The card displays both:
   - Outgoing links: Recipes explicitly linked from this card.
   - Incoming links: Other recipes that have linked to this card.
-- In edit mode, typing `#` in the Pairs With field triggers an autocomplete search across all existing recipes in the user's library.
+- In edit mode, typing `#` in the Pairs With field triggers an autocomplete search across all existing recipes in the
+  user's library.
 - After selecting a recipe, edit mode displays its normalized token, such as
   `#roast-chicken`. The saved pairing keeps the readable recipe name and linked
   recipe ID; detail mode renders that name as the link text. Editing the token
@@ -399,11 +486,16 @@ The user can re-sort ingredients dynamically in view mode. The canonical underly
   display text. Purging the source recipe removes its own pairings.
 
 ### 5.3 References Section
-In recipe detail and edit, References follows Notes, which follows Pairs With. The editor uses one shared **Type** and **Reference** header and offers three reference types:
+
+In recipe detail and edit, References follows Notes, which follows Pairs With. The editor uses one shared **Type** and
+**Reference** header and offers three reference types:
+
 1. **Recipe:** Clickable link to another active recipe in the same account.
 2. **External URL:** Clickable link pointing to a website or blog not formally imported into the library.
 3. **Print:** Non-clickable bibliographic reference (e.g., *The Joy of Cooking, 75th Anniv. Ed., p. 412*).
-- **Rule on Origins:** A recipe adapted from multiple disparate sources is considered an original recipe and belongs in the **Recipe Tin** with these references cited in References.
+
+- **Rule on Origins:** A recipe adapted from multiple disparate sources is considered an original recipe and belongs in
+  the **Recipe Tin** with these references cited in References.
 - In-app recipe references are owner-scoped. A trashed target is displayed
   as text without a link; restoring it makes the link active again. Purging a
   target clears the recipe association but preserves its resolved display
@@ -425,6 +517,7 @@ In recipe detail and edit, References follows Notes, which follows Pairs With. T
 ## 6. Publications, Magazine Handling, and The Recipe Tin
 
 ### 6.1 Publication Types and Attributes
+
 A Publication is any formal collection or entity that contains recipes.
 
 All publication types can carry account-owned tags selected during creation or
@@ -440,18 +533,30 @@ omitted.
 | **Website** | Site Display Name, Site Root URL, Site Logo/Favicon (optional) | Full recipe URL | Minimalist site icon / badge. |
 
 ### 6.2 Magazine Titles, Recipe Locations, and Online URLs
-- A Magazine publication represents the enduring magazine title, not an individual issue. Each recipe stores its issue citation as free text because magazines vary their conventions, for example `Vol. 18, no. 2, p. 41` or `Holiday issue, page 41`.
+
+- A Magazine publication represents the enduring magazine title, not an individual issue. Each recipe stores its issue
+  citation as free text because magazines vary their conventions, for example `Vol. 18, no. 2, p. 41` or
+  `Holiday issue, page 41` .
 - Book Page(s) and Magazine Citation inputs grow with their entered text while
   remaining within the available Publication row.
-- A Magazine recipe may have an optional online recipe URL stored on that recipe. It does not require a second Site publication or a cross-publication relationship.
-- The recipe editor keeps its Magazine location and optional online URL together in a compact row directly below Publication. The URL field is present even when empty; it is a single-line field whose long value stays within the available width on mobile.
-- Recipe detail presents the Magazine citation and online link on separate lines on mobile. Desktop displays the actual URL as clickable link text; mobile uses the compact text `View online`. It is a direct link to that recipe, not a supplemental Reference.
-- Magazine identity and issue location remain separate: recipes from different issues share the Magazine publication while retaining their own issue and page details.
+- A Magazine recipe may have an optional online recipe URL stored on that recipe. It does not require a second Site
+  publication or a cross-publication relationship.
+- The recipe editor keeps its Magazine location and optional online URL together in a compact row directly below
+  Publication. The URL field is present even when empty; it is a single-line field whose long value stays within the
+  available width on mobile.
+- Recipe detail presents the Magazine citation and online link on separate lines on mobile. Desktop displays the actual
+  URL as clickable link text; mobile uses the compact text `View online` . It is a direct link to that recipe, not a
+  supplemental Reference.
+- Magazine identity and issue location remain separate: recipes from different issues share the Magazine publication
+  while retaining their own issue and page details.
 
 ### 6.3 Creation and Editing Workflows
+
 Publications can be created from three locations:
+
 1. **The Library:** An `Add publication` action.
-2. **Recipe Edit Mode:** The Publication field is a searchable single-select combobox with an inline `Add "{name}"` command after typing, which opens a compact creation dialog.
+2. **Recipe Edit Mode:** The Publication field is a searchable single-select combobox with an inline `Add "{name}"`
+   command after typing, which opens a compact creation dialog.
 3. **Import:** Automatic creation or matching during ZIP bundle imports.
 
 Publication creation follows the same content-sized form logic as recipe
@@ -488,15 +593,21 @@ pane. The authenticated client has no direct table-update grant; edits go
 through the owner-scoped update function.
 
 ### 6.4 The Recipe Tin (Unparented Recipes)
-- **Concept and Identity:** The Recipe Tin is the permanent, unparented container for recipes with no originating publication (family recipes, original experiments, clippings, recipes adapted from multiple sources).
-- **Physical Metaphor:** A vintage metal tin box with a hinged lid, containing dog-eared 3x5 index cards and handwritten scraps of paper.
+
+- **Concept and Identity:** The Recipe Tin is the permanent, unparented container for recipes with no originating
+  publication (family recipes, original experiments, clippings, recipes adapted from multiple sources).
+- **Physical Metaphor:** A vintage metal tin box with a hinged lid, containing dog-eared 3x5 index cards and handwritten
+  scraps of paper.
 - **Visual Design:**
   - The Recipe Tin container displays a distinctive vintage tin graphic.
-  - Recipes belonging to the Recipe Tin are rendered with a subtle, textured **ragged/deckled paper border background** instead of standard clean rounded cards.
+  - Recipes belonging to the Recipe Tin are rendered with a subtle, textured **ragged/deckled paper border background**
+    instead of standard clean rounded cards.
   - Normal publication cards remain crisp, clean, and restrained.
-- **Mobility:** Any recipe in the Recipe Tin can later be assigned to a publication, and any publication recipe can be unparented into the Recipe Tin.
+- **Mobility:** Any recipe in the Recipe Tin can later be assigned to a publication, and any publication recipe can be
+  unparented into the Recipe Tin.
 
 ### 6.5 Deletion Rules for Publications
+
 Deleting a publication always requires confirmation. When it has active recipes,
 the dialog requires one of three dispositions:
 
@@ -516,8 +627,10 @@ type are cleared. The Delete choice retains each recipe's publication
 assignment and location while it is in Trash.
 
 ### 6.6 Trash, Restore, and Purge
+
 - Deleting a recipe or publication moves it to the trash. "Archive" is not a separate state.
-- A trashed item is purged permanently if it is not restored within 30 days of its deletion. A scheduled job performs the purge.
+- A trashed item is purged permanently if it is not restored within 30 days of its deletion. A scheduled job performs
+  the purge.
 - Restoring a publication restores only that publication; it does not reverse
   the recipe disposition chosen during deletion. Recipes moved to the Recipe
   Tin or another publication stay there. Recipes moved to Trash remain there
@@ -525,33 +638,43 @@ assignment and location while it is in Trash.
   location return with the recipe.
 - Purging a trashed publication also purges its retained trashed recipes and
   their history. Purging an item removes its private history snapshots as well.
-- A trashed recipe's public URL behaves like a private recipe (404). A purged recipe's URL returns 410, which requires keeping a record of purged public IDs.
+- A trashed recipe's public URL behaves like a private recipe (404). A purged recipe's URL returns 410, which requires
+  keeping a record of purged public IDs.
+
 ---
 
 ## 7. Queries, Search, and Library Explorer
 
 ### 7.1 Azure DevOps-Style Query Engine
+
 The query engine provides high-density, flexible querying across recipes and publications:
-- **Field Selectors:** Query by any metadata field, tag, ingredient, equipment, time, verdict, enthusiasm, publication, or date. Tags are first-class searchable and filterable fields for both recipes and publications.
+
+- **Field Selectors:** Query by any metadata field, tag, ingredient, equipment, time, verdict, enthusiasm, publication,
+  or date. Tags are first-class searchable and filterable fields for both recipes and publications.
 - **Typed Operators:**
   - Text: `Contains`, `Does Not Contain`, `Equals`, `Starts With`, `Is Empty`, `Is Not Empty`.
   - Multi-select picklists: `Contains Any`, `Contains All`, `Does Not Contain`.
   - Numbers / Times / Dates: `=`, `!=`, `>`, `<`, `>=`, `<=`, `Between`.
   - State / Enums: `In`, `Not In`.
 - **Clause Grouping:** Compound boolean logic with `AND` / `OR` operators and bracketed sub-clauses.
-- **Saved Queries / Views:** Users can name, save, and pin queries to the navigation bar. Saved queries remember column visibility, column width, and sort order.
+- **Saved Queries / Views:** Users can name, save, and pin queries to the navigation bar. Saved queries remember column
+  visibility, column width, and sort order.
 
 ### 7.2 Full-Text Search
+
 Fast, indexed text search across:
-- Recipe title and aliases
-- Notes and gotchas
+
+- Recipe titles
+- Recipe notes
 - Ingredients and details
 - Instructions text
-- Publication name, author, and notes
+- Publication name, and author
 
 ### 7.3 Source Library Explorer
+
 The Library provides a compact publication explorer with a desktop list/grid
 and a single-line mobile list:
+
 - **View Modes:**
   - **List:** Desktop uses a semantic table with Name, Type, Author,
     Issue/Edition, and Recipes. Recipe counts are centered. On mobile, each row shows only the
@@ -578,11 +701,11 @@ and a single-line mobile list:
   tie-breaker. Null text values sort after populated values.
 - **Transient State:** View, filter, and sort state remain transient until
   saved views are introduced.
-- **Publication Recipe Explorer:** In Slice 17, publication detail will use
-  recipe explorer controls and list/grid views scoped to that publication,
-  including recipe photo thumbnails in Grid when a default photo exists. Filter
-  and sort fields follow the recipe field catalog; Slice 18 saved views may
-  preserve the publication scope.
+- **Publication Recipe Explorer:** Publication detail uses the shared recipe
+  explorer controls and List/Grid views scoped to that publication. Grid shows
+  the default recipe photo when available without cropping it. Filter and sort
+  fields follow the recipe field catalog; Slice 18 saved views may preserve the
+  publication scope.
 
 ---
 
@@ -596,6 +719,7 @@ not render empty placeholder sections or links for work that is not yet
 implemented.
 
 ### 8.1 Centralized Picklist Management
+
 All picklists are managed in the Settings area to prevent duplicate, misspelled,
 or orphaned options:
 
@@ -614,13 +738,18 @@ or orphaned options:
   - **Add:** Create new option.
   - **Edit:** Rename an option inline in the ordered list. Enter saves; Escape,
     an outside click, or browser Back cancels.
-  - **Delete:** Remove option. If the option is in use, the user must choose a replacement option, which behaves as a merge. Optional fields may alternatively be explicitly cleared on affected records. A referenced ingredient requires a replacement because a recipe row cannot exist without one; an unused ingredient can be deleted directly.
+  - **Delete:** Remove option. If the option is in use, the user must choose a replacement option, which behaves as a
+    merge. Optional fields may alternatively be explicitly cleared on affected records. A referenced ingredient requires
+    a replacement because a recipe row cannot exist without one; an unused ingredient can be deleted directly.
   - **Merge:** Combine exactly two values in one operation: choose a source and
     counterpart, then explicitly choose which value to keep. Choosing or
     changing the counterpart clears the keep choice, and Merge stays disabled
     until the user makes that choice. Protected values cannot be merged.
-- **Ordering:** Recipe picklist values keep a user-defined order used for display and sorting. The ingredient catalog is a distinct case: its visible list is always alphabetical, with no manual sort or reorder control.
-- **Seeding:** New accounts start with the example values listed in section 2.1 for each picklist, in the order listed. All values are editable. `Specific occasion` in Verdict and Enthusiasm is protected: it can be renamed but not deleted or merged, because it reveals Occasion Details.
+- **Ordering:** Recipe picklist values keep a user-defined order used for display and sorting. The ingredient catalog is
+  a distinct case: its visible list is always alphabetical, with no manual sort or reorder control.
+- **Seeding:** New accounts start with the example values listed in section 2.1 for each picklist, in the order listed.
+  All values are editable. `Specific occasion` in Verdict and Enthusiasm is protected: it can be renamed but not deleted
+  or merged, because it reveals Occasion Details.
 
 #### Ingredient catalog
 
@@ -704,7 +833,9 @@ recipe payloads do not include tags. Query filtering and cross-record tag
 search belong to Slice 17.
 
 ### 8.2 Trusted Density Registry
+
 Located in Settings as a separate, collapsed-by-default section after Tags:
+
 - Searchable, alphabetized list of canonical ingredients with configured
   densities, with an inline editor and confirmed removal.
 - Defines one positive Volume/Weight reference pair per ingredient using the
@@ -719,7 +850,9 @@ Located in Settings as a separate, collapsed-by-default section after Tags:
   interaction contract.
 
 ### 8.3 Personal Preferences
+
 Located in Settings, per account:
+
 - Default ingredient presentation: Standard or Ingredient-First (4.1).
 - Default unit system for volume and, separately, for weight (3.5).
 - Ingredient mention style (5.1).
@@ -736,19 +869,25 @@ cross-account preference changes.
 ## 9. Sharing, Privacy, URLs, and Image Delivery
 
 ### 9.1 URL Structure and Hash IDs
+
 - Every recipe has a stable URL incorporating a long random hash ID (e.g., `/r/e7f8a9b2c3d4e5f6`).
 - The URL remains identical whether the recipe is public or private.
 
 ### 9.2 Privacy Toggle and HTTP Status Behavior
+
 - **Default State:** Recipes are linkable by default.
 - **Private Toggle:** Marking a recipe private restricts access to the logged-in owner account.
 - **HTTP Response Rules for Unauthenticated / Non-Owner Requests:**
-  - **Private Recipe:** Returns **HTTP 404 Not Found** with a generic, calm page ("This recipe is currently unavailable") and `Cache-Control: no-store`. Does not reveal that the recipe exists, nor its title, owner, or publication. (Avoids misusing HTTP 503).
+  - **Private Recipe:** Returns **HTTP 404 Not Found** with a generic, calm page ("This recipe is currently
+    unavailable") and `Cache-Control: no-store` . Does not reveal that the recipe exists, nor its title, owner, or
+    publication. (Avoids misusing HTTP 503).
   - **Trashed Recipe:** Treated like a private recipe (404) until restored or purged.
   - **Permanently Purged Recipe:** Returns **HTTP 410 Gone**. This requires keeping a record of the purged public ID.
 
 ### 9.3 Public Recipe Experience
+
 When an unauthenticated guest accesses a valid public recipe link:
+
 - **Allowed Actions:**
   - View full recipe card in Ingredient-First view.
   - Scale servings ($jx$, $1/j$, or custom servings).
@@ -762,6 +901,7 @@ When an unauthenticated guest accesses a valid public recipe link:
   - In-app pairs-with links are displayed as static text.
 
 ### 9.4 Secure Image Delivery
+
 - All covers and recipe images are stored in **private Supabase Storage buckets**.
 - The public bucket setting is disabled.
 - Original uploads use a one-use signed path so image bytes never pass through
@@ -776,25 +916,37 @@ When an unauthenticated guest accesses a valid public recipe link:
   protected cleanup endpoint; Storage failures remain queued and are retried.
 
 ### 9.5 Abuse Protection
-- Public recipe routes are rate limited. Initial target: 60 requests per minute per IP address, applied as a Vercel Firewall rate-limit rule on the public recipe path.
+
+- Public recipe routes are rate limited. Initial target: 60 requests per minute per IP address, applied as a Vercel
+  Firewall rate-limit rule on the public recipe path.
 - Authentication endpoints keep Supabase's default rate limits.
-- Authentication emails (recovery, verification) require a custom SMTP provider; Supabase's built-in email sender is limited to 2 emails per hour.
+- Authentication emails (recovery, verification) require a custom SMTP provider; Supabase's built-in email sender is
+  limited to 2 emails per hour.
 
 ---
 
 ## 10. Authentication and Account Setup
 
 ### 10.1 Email and Password Authentication
+
 - Email + password login with standard "Forgot Password" reset link flow.
-- **Email Verification:** Verification is the invite. The app emails the invite link to the address the admin enters, and accepting it proves the person controls that mailbox, so there is no separate verification step and no skip option. Open development sign-up has no verification.
+- **Email Verification:** Verification is the invite. The app emails the invite link to the address the admin enters,
+  and accepting it proves the person controls that mailbox, so there is no separate verification step and no skip
+  option. Open development sign-up has no verification.
 
 ### 10.2 Social Authentication
-- Google OAuth is an alternative to email/password, not an addition. Each account uses exactly one sign-in method, chosen when the invite is accepted. Methods are never combined or linked on one account.
+
+- Google OAuth is an alternative to email/password, not an addition. Each account uses exactly one sign-in method,
+  chosen when the invite is accepted. Methods are never combined or linked on one account.
 
 ### 10.3 Invite-Only Sign-Up
+
 - In production, sign-up is invite-only. The admin generates account-creation links for specific people.
-- In development, sign-up is open. A per-environment switch controls this; development runs locally and production is set up last (14).
-- **Admin:** Admin is an account flag that existing admins can grant. Production starts with a pre-created admin invite to the owner's email address, supplied through configuration and not committed to the repository. This prevents a stranger from claiming the first account. Admins send all later invites.
+- In development, sign-up is open. A per-environment switch controls this; development runs locally and production is
+  set up last (14).
+- **Admin:** Admin is an account flag that existing admins can grant. Production starts with a pre-created admin invite
+  to the owner's email address, supplied through configuration and not committed to the repository. This prevents a
+  stranger from claiming the first account. Admins send all later invites.
 - Invites are sent by email, not copied by hand.
 - An invite is bound to the email address the admin enters. Slice 2 supports
   email/password accounts and stores the chosen method immutably. Before Google
@@ -802,6 +954,7 @@ When an unauthenticated guest accesses a valid public recipe link:
   identity linking cannot combine providers on one account.
 
 ### 10.4 Slice 1 account boundary and deterministic auth testing
+
 - Slice 1 establishes the account-owned data boundary with a minimal Account
   record linked to the authenticated user's identity. It is the first concrete
   owner-scoped resource and proves the row-level security pattern before any
@@ -823,6 +976,7 @@ When an unauthenticated guest accesses a valid public recipe link:
   deferred to their owning slices, beginning with Slice 4.
 
 ### 10.5 Slice 2 sign-up and invitation boundary
+
 - The application uses an environment-controlled sign-up mode. Local development
   is open and does not require email verification. Invite-only mode hides
   self-registration and rejects sign-up actions; production also disables
@@ -847,38 +1001,56 @@ When an unauthenticated guest accesses a valid public recipe link:
 ## 11. Import, Export, and Backup Bundles
 
 ### 11.1 ZIP Bundle Formats
-Export is built for catastrophic disaster recovery and migration. The app's own ZIP export is the only backup mechanism; Supabase backups are not used, so a full-database import into an empty account must reproduce the account completely. All exports produce standard `.zip` files containing:
-- `manifest.json`: Schema version, export date, bundle scope (`database`, `publication`, or `recipe`), app version, and asset file checksums.
+
+Export is built for catastrophic disaster recovery and migration. The app's own ZIP export is the only backup mechanism;
+Supabase backups are not used, so a full-database import into an empty account must reproduce the account completely.
+All exports produce standard `.zip` files containing:
+
+- `manifest.json` : Schema version, export date, bundle scope (`database`, `publication` , or `recipe` ), app version,
+  and asset file checksums.
 - `data.json`: Normalized relational JSON export of records.
 - `/images/`: Folder containing original binary image files for covers and photos.
 
 ### 11.2 Export Scopes
-1. **Database Export:** Accessible in Settings. Dumps the entire account: all recipes, publications, ingredients, densities, picklists, tags, views, and images.
-2. **Publication Export:** Accessible in Library view on any publication card. Dumps the publication, all its recipes, linked references, and associated images.
-3. **Recipe Export:** Accessible on any recipe card beside `New Recipe`. Dumps the single recipe, its ingredient rows, steps, images, and basic publication metadata.
+
+1. **Database Export:** Accessible in Settings. Dumps the entire account: all recipes, publications, ingredients,
+   densities, picklists, tags, views, and images.
+2. **Publication Export:** Accessible in Library view on any publication card. Dumps the publication, all its recipes,
+   linked references, and associated images.
+3. **Recipe Export:** Accessible on any recipe card beside `New Recipe` . Dumps the single recipe, its ingredient rows,
+   steps, images, and basic publication metadata.
 
 ### 11.3 Import Conflict Resolution
+
 Importing a ZIP bundle never silently overwrites data. When matching records are detected (by hash or title):
+
 - Prompts user with options:
   - **Keep Existing:** Discard incoming duplicate.
   - **Create Duplicate:** Import as new copy with `(Imported)` appended to the title.
   - **Replace:** Overwrite local record with the imported version.
-- Recipe import automatically offers to link to an existing publication if a match exists, or create a new publication from the bundled metadata.
+- Recipe import automatically offers to link to an existing publication if a match exists, or create a new publication
+  from the bundled metadata.
 
 ### 11.4 Backup Reminder
-Because export is the only backup, Settings shows the date of the last full-database export and a gentle reminder when it is more than 30 days old.
+
+Because export is the only backup, Settings shows the date of the last full-database export and a gentle reminder when
+it is more than 30 days old.
 
 ---
 
 ## 12. Change History and Forensic Audit
 
 ### 12.1 Purpose and Constraints
-- Change history exists purely for forensic auditing (e.g., checking "what was the baking time before I changed it?", "when did I add cardamom?").
+
+- Change history exists purely for forensic auditing (e.g., checking "what was the baking time before I changed it?",
+  "when did I add cardamom?").
 - **No Version Restore:** To keep the schema and UI clean, full version restoration is explicitly excluded from the v1 scope.
 - **Export Exclusion:** History logs are excluded from ZIP backup bundles to keep backups clean and portable.
 
 ### 12.2 Captured Audit Events
+
 History events are recorded on save (never on individual keystrokes):
+
 - Recipe / Publication creation
 - Metadata edits (field-level before/after diffs)
 - Tag assignment changes, including tag IDs, names, and color keys in
@@ -898,17 +1070,22 @@ History events are recorded on save (never on individual keystrokes):
 ## 13. Interaction, Keyboard-First Design, and Accessibility
 
 ### 13.1 Desktop Ergonomics
+
 - **Keyboard Navigation:** Tab and arrow key traversal through the ingredient edit grid.
-  - **Shortcut Actions:** Shortcuts for quick save (`Ctrl+S` / `Cmd+S`), adding ingredient rows (`Enter` in the last column), triggering autocomplete (`#`), and inserting a degree symbol in an instruction (`Ctrl+.`).
-- **No Drag-and-Drop Reliance:** Reordering ingredients and steps uses explicit keyboard-friendly up/down buttons or index input fields.
+  - **Shortcut Actions:** Shortcuts for quick save (`Ctrl+S` / `Cmd+S` ), adding ingredient rows (`Enter` in the last
+    column), triggering autocomplete (`#`), and inserting a degree symbol in an instruction (`Ctrl+.`).
+- **No Drag-and-Drop Reliance:** Reordering ingredients and steps uses explicit keyboard-friendly up/down buttons or
+  index input fields.
 
 ### 13.2 Mobile Kitchen Ergonomics
+
 - Touch targets strictly $\ge 48\times 48\text{ px}$.
 - High-contrast text legible under kitchen lighting.
 - Ingredient check-off state (temporary strikethrough/checkbox in cooking mode to track what has been added).
 - Screen wake lock / cook mode to keep the mobile screen awake while cooking.
 
 ### 13.3 Accessibility Standards
+
 - Contrast ratio $\ge 4.5:1$ across all text.
 - Focus outlines visible on all interactive components.
 - Density auto-fills use a subtle tint and visible calculator icon, plus an
@@ -916,6 +1093,7 @@ History events are recorded on save (never on individual keystrokes):
   never the only visible cue.
 
 ### 13.4 Accessible controls and ingredient editing
+
 - Prefer native semantic HTML for ordinary page structure, forms, and controls.
 - Use React Aria Components when a custom interactive control needs managed
   keyboard and assistive-technology behavior. Keep styling application-owned.
@@ -959,15 +1137,20 @@ Both account controls open the same menu with the email and Sign out action.
 - **Database:** Supabase Postgres.
 - **Auth:** Supabase Auth (Email/Password + Google OAuth).
 - **Storage:** Supabase Storage (Private media buckets with signed URLs).
-- **Client Architecture:** Progressive Web App (PWA) with manifest, offline view caching for viewed recipes, and service worker.
-- **Concurrent Edits:** Each recipe carries a version number. A save based on a stale version is rejected, and the user chooses between reloading the current version and keeping their edits.
-- **Environments:** Development runs entirely locally: a local Supabase stack, a local email catcher, open sign-up, and no email verification. Production setup (Supabase, Vercel, Google, email delivery) comes last. Schema changes ship as versioned migrations. Unit, end-to-end, and accessibility checks run locally with one command.
+- **Client Architecture:** Progressive Web App (PWA) with manifest, offline view caching for viewed recipes, and service
+  worker.
+- **Concurrent Edits:** Each recipe carries a version number. A save based on a stale version is rejected, and the user
+  chooses between reloading the current version and keeping their edits.
+- **Environments:** Development runs entirely locally: a local Supabase stack, a local email catcher, open sign-up, and
+  no email verification. Production setup (Supabase, Vercel, Google, email delivery) comes last. Schema changes ship as
+  versioned migrations. Unit, end-to-end, and accessibility checks run locally with one command.
 
 ---
 
 ## 15. Deferred Features Catalog
 
 The following features were discussed and intentionally set aside for post-v1 releases:
+
 - OCR and camera capture for paper cookbook recipes
 - Automated web recipe URL scrapers
 - Ingredient alias mapping (e.g., `bell pepper` $\leftrightarrow$ `capsicum`)

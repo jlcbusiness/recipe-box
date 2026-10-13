@@ -80,6 +80,7 @@ accept valid grouped integers and normalize their display on blur.
 
 State is Want to try, Tried, or Will not try. State conditionally shows Enthusiasm,
 Verdict, or Reason:
+
 - Verdict (when Tried): concepts such as favorite, delicious, staple, practice,
   try again, occasionally, specific occasion, once-a-year-rich, so-so, no,
   hell no, MISTAKE. `Specific occasion`, `Once-a-year-rich`, and `So-so` appear

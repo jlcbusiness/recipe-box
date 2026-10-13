@@ -160,6 +160,10 @@
   line-height: 1.35;
 }
 
+.displayChip {
+  padding-inline: 8px;
+}
+
 .pickerItem {
   display: flex;
   flex: 0 0 auto;

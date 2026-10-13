@@ -63,6 +63,9 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     await expect(volumeSelect).toContainText('US customary');
     await expect(weightSelect).toContainText('US customary');
     await expect(presentationSelect).toContainText('Standard');
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
     const volumeWidth = (await volumeSelect.boundingBox())?.width ?? 0;
 
     const picklistsSection = page.getByRole('region', { name: 'Picklists' });

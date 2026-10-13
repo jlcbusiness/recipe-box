@@ -7,25 +7,40 @@ import styles from './multi-picklist.module.css';
 export type RecipeMultiSelectCategory = 'meal_type' | 'cuisine' | 'equipment';
 
 type MultiPicklistProps = {
-  category: RecipeMultiSelectCategory;
+  category?: RecipeMultiSelectCategory;
+  controlId?: string;
   label: string;
-  values: RecipePicklistValue[];
+  values: Pick<RecipePicklistValue, 'id' | 'display_value'>[];
   selectedIds: string[];
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
+  onSelectionChange?: (selectedIds: string[]) => void;
+  onFocusLeave?: (relatedTarget: EventTarget | null) => void;
+  onEnter?: () => boolean;
+  emptyLabel?: string;
+  filterMode?: boolean;
+  includeHiddenInputs?: boolean;
 };
 
 export function MultiPicklist({
   category,
+  controlId,
   label,
   values,
   selectedIds,
   isOpen,
   onToggle,
   onClose,
+  onSelectionChange,
+  onFocusLeave,
+  onEnter,
+  emptyLabel = 'Select',
+  filterMode = false,
+  includeHiddenInputs = true,
 }: MultiPicklistProps) {
-  const [selectedOptionIds, setSelectedOptionIds] = useState(selectedIds);
+  const [localSelectedOptionIds, setLocalSelectedOptionIds] = useState(selectedIds);
+  const selectedOptionIds = onSelectionChange ? selectedIds : localSelectedOptionIds;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLFieldSetElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -38,15 +53,17 @@ export function MultiPicklist({
     '',
   );
   const triggerMeasure = `✓ ${longestOption}`;
-  const summaryText = selectedValues[0]?.display_value ?? 'Select';
+  const summaryText = selectedValues[0]?.display_value ?? emptyLabel;
   const accessibleSelection = selectedValues.map((value) => value.display_value).join(', ');
+  const optionsId = controlId ? `${controlId}-options` : `${category}-options`;
 
   useEffect(() => {
+    if (filterMode) return;
     const measuredWidth = measureRef.current?.getBoundingClientRect().width;
     if (measuredWidth) {
       setTriggerLabelWidth(measuredWidth);
     }
-  }, []);
+  }, [filterMode]);
 
   useLayoutEffect(() => {
     if (!isOpen || !focusOptionOnOpenRef.current) {
@@ -61,12 +78,19 @@ export function MultiPicklist({
   }, [isOpen]);
 
   function toggleOption(valueId: string) {
-    setSelectedOptionIds((current) =>
-      current.includes(valueId) ? current.filter((id) => id !== valueId) : [...current, valueId],
-    );
+    const nextValues = selectedOptionIds.includes(valueId)
+      ? selectedOptionIds.filter((id) => id !== valueId)
+      : [...selectedOptionIds, valueId];
+    if (onSelectionChange) onSelectionChange(nextValues);
+    else setLocalSelectedOptionIds(nextValues);
   }
 
   function handleTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'Enter' && onEnter?.()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (event.key !== ' ' && event.key !== 'Enter' && event.key !== 'ArrowDown') {
       return;
     }
@@ -111,11 +135,12 @@ export function MultiPicklist({
 
   return (
     <fieldset
-      className={styles.group}
+      className={`${styles.group}${filterMode ? ` ${styles.filterGroup}` : ''}`}
       onBlur={(event) => {
         const nextTarget = event.relatedTarget;
         if (!nextTarget || !event.currentTarget.contains(nextTarget as Node)) {
           onClose();
+          onFocusLeave?.(nextTarget);
         }
       }}
       onKeyDown={(event) => {
@@ -128,16 +153,23 @@ export function MultiPicklist({
     >
       <legend>{label}</legend>
       <div className={styles.anchor}>
-        <span aria-hidden="true" className={styles.measure} ref={measureRef}>
-          {triggerMeasure}
-        </span>
+        {!filterMode && (
+          <span aria-hidden="true" className={styles.measure} ref={measureRef}>
+            {triggerMeasure}
+          </span>
+        )}
         <button
-          aria-controls={`${category}-options`}
+          aria-controls={optionsId}
           aria-expanded={isOpen}
           aria-label={`${label}: ${accessibleSelection || 'Select'}`}
-          className="recipe-picklist-trigger"
+          className={`recipe-picklist-trigger${filterMode ? ' recipe-filter-value-trigger' : ''}`}
+          id={controlId}
           ref={triggerRef}
-          style={{ minWidth: triggerLabelWidth ? `${triggerLabelWidth + 40}px` : undefined }}
+          style={
+            !filterMode && triggerLabelWidth
+              ? { minWidth: `${triggerLabelWidth + 40}px` }
+              : undefined
+          }
           type="button"
           onClick={onToggle}
           onKeyDown={handleTriggerKeyDown}
@@ -148,7 +180,7 @@ export function MultiPicklist({
                 ✓
               </span>
             )}
-            <span>{summaryText}</span>
+            <span>{selectedValues.length > 0 ? summaryText : emptyLabel}</span>
           </span>
           <span aria-hidden="true" className="recipe-picklist-arrow">
             ▾
@@ -157,8 +189,8 @@ export function MultiPicklist({
         {isOpen && (
           <fieldset
             aria-label={`${label} options`}
-            className={styles.menu}
-            id={`${category}-options`}
+            className={`${styles.menu}${filterMode ? ` ${styles.filterMenu}` : ''}`}
+            id={optionsId}
             ref={menuRef}
           >
             {values.map((value) => {
@@ -182,9 +214,11 @@ export function MultiPicklist({
           </fieldset>
         )}
       </div>
-      {selectedOptionIds.map((valueId) => (
-        <input key={valueId} name={`${category}_ids`} type="hidden" value={valueId} />
-      ))}
+      {includeHiddenInputs &&
+        category &&
+        selectedOptionIds.map((valueId) => (
+          <input key={valueId} name={`${category}_ids`} type="hidden" value={valueId} />
+        ))}
     </fieldset>
   );
 }

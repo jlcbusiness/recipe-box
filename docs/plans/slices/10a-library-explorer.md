@@ -61,7 +61,7 @@ supported mobile widths.
   close with Escape, focus leaving the toolbar, or a pointer interaction
   outside the toolbar.
 - A sort control shared by both modes. Sort by Name, Type, Author,
--  Issue/Edition, Recipe count, Date Added, or Date Changed, in ascending or
+- Issue/Edition, Recipe count, Date Added, or Date Changed, in ascending or
   descending order. Default to Name ascending; use Name ascending as a
   deterministic tie-breaker. Null text values sort after populated values.
 - Desktop List columns for Name, Type, Author, Issue/Edition, and Recipes, with

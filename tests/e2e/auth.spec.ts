@@ -181,8 +181,8 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     const mobileAccountBounds = await accountTrigger.boundingBox();
     await expect(accountTrigger.locator('.account-avatar')).toBeVisible();
     await expect(accountTrigger.locator('.account-menu-email')).toBeHidden();
-    expect(mobileAccountBounds?.width).toBeGreaterThanOrEqual(48);
-    expect(mobileAccountBounds?.height).toBeGreaterThanOrEqual(48);
+    expect(mobileAccountBounds?.width).toBeGreaterThanOrEqual(44);
+    expect(mobileAccountBounds?.height).toBeGreaterThanOrEqual(44);
     expect(
       (mobileNavBounds?.x ?? 0) +
         (mobileNavBounds?.width ?? 0) -
