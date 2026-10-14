@@ -12,7 +12,7 @@ product authority; this brief resolves its Slice 15 implementation details.
 - [Comprehensive reference § 3.3](../comprehensive-reference.md#33-trusted-ingredient-density)
 - [Comprehensive reference § 8.2](../comprehensive-reference.md#82-trusted-density-registry)
 - [Data model](../data-model.md), Core Entities and Configuration Boundaries
-- [Visual design guide](../visual-design.md), Design Philosophy and Settings
+- [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Settings
 - [Decision log](../decision-log.md)
 - [Slice 6: Measurements](6-measurements.md)
 - [Slice 13: Scaling and unit conversion](13-scaling-and-unit-conversion.md)

@@ -7,8 +7,10 @@ UI behavior, field specification, visual metaphor, and decision established acro
 subsequent implementation refinements.
 
 It serves as the exhaustive encyclopedia for implementation slices, slice briefs, and technical specifications. Where
-high-level documents (`first-draft-spec.md`, `data-model.md` , `visual-design.md` , `delivery-roadmap.md` ) provide
-concise rules, this document provides the complete context, background rationale, and granular specifications.
+high-level documents (`first-draft-spec.md`, `data-model.md`,
+`design-philosophy.md`, `visual-design.md`, `delivery-roadmap.md`) provide
+concise rules, this document provides the complete context, background rationale,
+and granular specifications.
 
 **This is the master document.** The other planning documents summarize it and must defer to it. If they disagree, this
 document wins and the other document is corrected. Read `first-draft-spec.md` first for orientation, then open only the

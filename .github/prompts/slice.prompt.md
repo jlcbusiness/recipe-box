@@ -18,23 +18,25 @@ brief.
 - Follow the roadmap's Mandatory Slice Preparation, Standing Rules, and
   Completion Rule. Read `first-draft-spec.md` first, then the selected roadmap
   entry and relevant sections of the comprehensive reference, data model,
-  visual guide, decision log, and prerequisite or neighboring briefs.
+  design philosophy, visual guide, decision log, and prerequisite or
+  neighboring briefs.
 - Treat the comprehensive reference as product authority and the selected
   brief as the immediate implementation contract. Separate requirements from
   current behavior, research observations, recommendations, and assumptions.
-- Inspect the closest implementation, data path or schema, and tests. Preserve
-  adjacent behavior. For Next.js changes, read the installed version's
+- Inspect the closest implementation, data path or schema, and tests. Treat
+  existing code as evidence, not proof that it meets the new slice contract;
+  preserve adjacent behavior. For Next.js changes, read the installed version's
   relevant guide in `node_modules/next/dist/docs/`.
 - Ask about unresolved decisions that materially affect behavior, data,
   security, accessibility, or scope. Proceed independently on routine details.
 
 ## Research and brief
 
-Research established interaction patterns for every user-facing feature. Look
-at relevant products and cross-domain examples where useful; compare multiple
-independent examples when practical. Study the core task, controls, state
-changes, mobile and accessibility behavior, and common friction or failure
-cases. Consult authoritative guidance for relevant design or technical details.
+Research interaction patterns when product requirements, the design philosophy,
+the visual guide, and local precedents leave a real design uncertainty. Study
+the core task, controls, state changes, mobile and accessibility behavior, and
+common friction or failure cases. Consult authoritative guidance for unfamiliar
+or version-sensitive technical details.
 
 Use research to inform behavior, not dictate it. The visual guide governs
 Recipe Box's style; product requirements remain authoritative. Distinguish
@@ -50,6 +52,8 @@ Before production code, create or update a concise brief in
 - Relevant data, security, migration, and failure boundaries.
 - User flow, state ownership, transitions, commit or reset behavior, and
   applicable empty, loading, validation, and recovery states.
+- Whether each changed interaction applies immediately or is staged, and what
+  submit, clear, cancel, reset, reload, and failure actions do.
 - For UI changes: hierarchy, control behavior, responsive layout, and
   keyboard, focus, screen-reader, pointer, and touch behavior.
 - Observable acceptance criteria mapped to automated tests. Document manual
@@ -73,14 +77,20 @@ more than one. Record accepted decisions and material deferrals in
 - Before extending a substantially new UI pattern to other screens, inspect
   it in the running app at representative desktop and mobile sizes. Verify the
   complete journey, relevant state transitions, recovery, permissions,
-  persistence, accessibility, and responsive boundaries in the brief.
+  persistence, accessibility, and responsive boundaries in the brief. Inspect
+  the widths immediately around each relevant reflow boundary and at least one
+  intermediate width where wrapping changes.
 - Reuse the existing dev server. Do not start a competing server, stop a
   running service, or reset local data without authorization. Run focused tests
   first, then relevant type, lint, accessibility, and build checks. Screenshots
   supplement behavioral and geometry checks; they do not replace them.
+- When a product contract changes, update its focused tests to match the new
+  observable behavior. Do not weaken an assertion merely to make a failing test
+  pass.
 - Reconcile the brief and update the roadmap, visual guide, or decision log to
-  reflect verified behavior. Follow the roadmap's Completion Rule. Never claim
-  an unrun check passed.
+  reflect verified behavior. Review the final diff for scope, generated-file
+  churn, and whitespace. Follow the roadmap's Completion Rule. Never claim an
+  unrun check passed.
 
 Report the outcome, changed files, check results, warnings, and any unverified
 criteria or deferred decisions.

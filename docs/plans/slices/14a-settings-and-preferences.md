@@ -11,7 +11,7 @@ defaults without adding a second preference store or changing recipe data.
 - [Comprehensive reference, § 3.5: Unit display preferences](../comprehensive-reference.md#35-unit-display-preferences)
 - [Comprehensive reference, § 8: Settings and taxonomies](../comprehensive-reference.md#8-settings-taxonomies-and-picklists)
 - [Data model](../data-model.md), Configuration Boundaries
-- [Visual design guide](../visual-design.md), Design Philosophy and Account menu
+- [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Account menu
 - [Decision log](../decision-log.md)
 - Installed Next.js 16 documentation: Layouts and Pages, Authentication, and Server Actions
 

@@ -22,7 +22,8 @@ delivered in the order described by the
 
 See the [comprehensive reference](docs/plans/comprehensive-reference.md) for
 implemented behavior and later-slice direction, and the
-[visual design guide](docs/plans/visual-design.md) for the interface principles.
+[design philosophy](docs/plans/design-philosophy.md) for interface principles and
+[visual design guide](docs/plans/visual-design.md) for verified screen contracts.
 See the [keyboard guide](docs/keyboard-guide.md) for keyboard controls and
 shortcuts.
 

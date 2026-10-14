@@ -10,7 +10,8 @@
 | ----- | ----------------- | ---------- |
 | Product behavior | [Comprehensive reference](comprehensive-reference.md) | Canonical requirements and detailed behavior |
 | Data structure | [Data model](data-model.md) | Entities, relationships, and constraints |
-| Visual design | [Visual design guide](visual-design.md) | Layout, interaction, and responsive direction |
+| Design philosophy | [Design philosophy](design-philosophy.md) | Durable product character, visual language, and interaction principles |
+| Visual design | [Visual design guide](visual-design.md) | Verified screen contracts, layout, interaction, and responsive direction |
 | Decisions | [Decision log](decision-log.md) | Accepted choices and their rationale |
 | Delivery | [Delivery roadmap](delivery-roadmap.md) | Slice order, scope, and progress |
 

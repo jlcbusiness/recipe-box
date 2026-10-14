@@ -10,7 +10,7 @@ owner isolation, and the protected meaning of `Specific occasion`.
 - [First-draft specification](../first-draft-spec.md), Recipes and Ingredients
 - [Comprehensive reference](../comprehensive-reference.md#81-centralized-picklist-management)
 - [Data model](../data-model.md), Configuration Boundaries
-- [Visual design guide](../visual-design.md), Design Philosophy, Controls and state, and Settings
+- [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Controls and state, and Settings
 - [Decision log](../decision-log.md)
 - Installed Next.js 16 documentation: Server Actions, Forms, Vitest, and Playwright
 

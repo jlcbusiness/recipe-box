@@ -36,7 +36,8 @@ Before implementing any roadmap slice:
 1. Create a focused slice brief under `docs/plans/slices/`.
 2. Read `first-draft-spec.md` first, then the relevant sections of
    [comprehensive-reference.md](comprehensive-reference.md) (the master
-   document), `data-model.md`, `visual-design.md`, and `decision-log.md`.
+  document), `data-model.md`, `design-philosophy.md`, `visual-design.md`, and
+  `decision-log.md`.
 3. Look up and verify current framework, Supabase, Vercel, library, and browser
    specifics that affect the slice. Do not assume this roadmap contains current
    APIs, configuration syntax, security defaults, or implementation details.

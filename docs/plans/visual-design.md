@@ -6,16 +6,6 @@
   - [Table of Contents](#table-of-contents)
   - [Quick Links](#quick-links)
   - [Purpose](#purpose)
-  - [Design Philosophy](#design-philosophy)
-    - [Product character](#product-character)
-    - [Product-wide principles](#product-wide-principles)
-    - [Visual language](#visual-language)
-    - [Information hierarchy and density](#information-hierarchy-and-density)
-    - [Interaction and state](#interaction-and-state)
-    - [Responsive anatomy](#responsive-anatomy)
-    - [Avoid](#avoid)
-    - [When details are unspecified](#when-details-are-unspecified)
-    - [Current interaction conventions](#current-interaction-conventions)
   - [Recipe Metadata Entry (Slice 4)](#recipe-metadata-entry-slice-4)
     - [Guiding concepts](#guiding-concepts)
     - [Picklist behavior](#picklist-behavior)
@@ -31,11 +21,12 @@
     - [Current implementation](#current-implementation-2)
   - [Settings (Slice 14D)](#settings-slice-14d)
     - [Design contract](#design-contract)
-  - [Trusted Density (Slice 15)](#trusted-density-slice-15)
+  - [Trusted Densities (Slice 15)](#trusted-densities-slice-15)
     - [Settings and editor behavior](#settings-and-editor-behavior)
   - [Desktop](#desktop)
     - [Current implementation](#current-implementation-3)
     - [Product direction](#product-direction)
+    - [Library Explorer (current implementation)](#library-explorer-current-implementation)
   - [Mobile](#mobile)
     - [Current implementation](#current-implementation-4)
     - [Planned direction](#planned-direction)
@@ -52,6 +43,8 @@
 ## Quick Links
 
 - [First-draft specification](first-draft-spec.md) for product scope and behavior.
+- [Design philosophy](design-philosophy.md) for durable product and interaction
+  direction.
 - [Data model](data-model.md) for entities and relationships.
 - [Decision log](decision-log.md) for accepted choices and rationale.
 - [Delivery roadmap](delivery-roadmap.md) for slice order and progress.
@@ -68,8 +61,10 @@
 
 ## Purpose
 
-This document preserves visual and interaction direction and records decisions
-as they are validated in delivery slices. Design proceeds with each slice:
+This document records verified screen-specific visual and interaction contracts
+as delivery slices ship. The [design philosophy](design-philosophy.md) is the
+durable authority for product character, visual language, hierarchy,
+interaction, and responsive composition. Design proceeds with each slice:
 define the screen hierarchy and behavior, implement a testable first pass, then
 refine it against the running desktop and mobile UI. Create a wireframe or
 clickable prototype when the layout is not yet clear; it is not a separate phase
@@ -78,8 +73,8 @@ that blocks routine iteration.
 When a requested interaction is unfamiliar or its expected behavior is
 underspecified, investigate established patterns in comparable products before
 choosing an interaction. Summarize relevant conventions and trade-offs briefly,
-then follow this guide and the user's explicit direction; precedent informs a
-design but does not override either.
+then follow the design philosophy and the user's explicit direction; precedent
+informs a design but does not override either.
 
 Each UI behavior and state must be automatable. Before production UI code is
 written, define focused automated tests for its acceptance behavior, including
@@ -90,174 +85,6 @@ This guide records both implemented UI and future product direction. Sections
 marked **Current implementation** describe behavior present in the app; sections
 marked **Planned direction** are aspirational and are not claims about shipped
 screens. Treat a slice as current after implementation and validation.
-
-## Design Philosophy
-
-### Product character
-
-Recipe Box is a private culinary archive for collecting recipes and
-publications, preserving where recipes came from, and returning to them in the
-kitchen. Its character comes from reliable records, visible relationships, and
-thoughtful tools for repeated use. The paper-and-ink surface gives the archive
-a quiet identity; it is not a vintage costume, a feed, or a generic dashboard.
-
-The product connects distinct jobs: browse the Library, maintain the Recipe
-Tin, read and edit a recipe, manage shared vocabularies, and configure personal
-preferences. Keep these jobs recognizable within one visual language. Cooking
-informs decisions about readability and touch, but planned cooking features
-must not be described as shipped behavior.
-
-### Product-wide principles
-
-- **Lead with the record.** Make the recipe, publication, or collection the
-  visual anchor. Keep navigation and routine actions available without letting
-  application chrome compete with the content.
-- **Keep provenance close.** Place a recipe's publication, citation, or source
-  link near its identity. Make the source relationship easy to understand
-  without confusing a publication with the recipe itself.
-- **Make density legible.** Support quick comparison with compact aligned lists,
-  tables, and metadata, but give meaningful values room to read. A grouped
-  quantity, a familiar fraction, a unit pair, or a density-derived amount should
-  remain understandable at a glance.
-- **Show structure when editing; use natural language when reading.** Forms may
-  expose measurements, relationships, and provenance as separate controls.
-  Recipe reading should turn those records into familiar cooking language, not
-  expose the underlying data model.
-- **Make state and consequence visible.** Keep draft, saved, derived, overridden,
-  selected, primary, and destructive states distinguishable. Do not make a
-  visual refinement depend on color alone or imply that an unsaved change has
-  already persisted.
-- **Keep temporary state temporary.** Keep saved preferences, recipe data, and
-  reader-only state distinct. Make persistence scope clear; a temporary
-  presentation, sort, or cooking check-off must not silently update the recipe.
-- **Keep personal metadata lightweight.** Tags are a flat, reusable descriptive
-  layer, not a hierarchy or workflow state. Keep their names and colors
-  subordinate to the recipe or publication.
-- **Preserve user agency.** Calculations and conversions should be explicit,
-  understandable, and correctable. Never silently replace a saved measurement
-  or hide whether a value was derived or entered by the person.
-- **Treat device capabilities as enhancements.** An unavailable or denied
-  optional API should not block the core task. Report the actual capability
-  state and keep the primary interaction usable.
-- **Prefer continuity with purpose.** Reuse spacing, typography, action
-  placement, and control behavior across related tasks. Give imagery or a
-  distinct treatment a role only when it helps identify content or complete an
-  action.
-
-### Visual language
-
-- Use the light paper surface, subtle green ruling, and dark readable ink as a
-  restrained foundation. Let typography, alignment, and whitespace organize
-  the page; use color to reinforce meaning, not to build the hierarchy alone.
-- Use the established palette by semantic role: leaf for constructive or source
-  context, tomato for destructive or warning states, navy for structural
-  emphasis, and gold for visible keyboard focus. Balance accents with neutrals
-  and borders. Tag colors may distinguish names, but must not imply taxonomy or
-  importance.
-- Use DM Sans Variable for interface copy and controls. A restrained Georgia
-  serif may distinguish page titles or a compact editorial value such as a
-  density expression; keep serif styling out of dense controls. Reserve small
-  caps for short labels.
-- Favor crisp geometry and restrained borders. Use shadows only when an overlay
-  needs separation. The ruled-paper texture is a quiet surface detail, not an
-  excuse for gradients, glass effects, ornamental shapes, or nested cards.
-- Treat recipe photos and publication covers as informative content. Show the
-  actual image when it helps identify the record, preserve its useful content,
-  and keep edit affordances visually distinct from the image itself.
-
-### Information hierarchy and density
-
-- Let recipe and publication names lead. Align state, opinion, source, and other
-  secondary facts so people can scan and compare without losing context.
-- Fit controls and columns to their content, then let related fields wrap.
-  Give long names and URLs room to work; do not stretch short values into empty
-  space or force unrelated controls into equal-width tiles.
-- Use semantic tables or lists for repeated records. Keep ordinary page
-  sections unframed; reserve cards for discrete objects whose boundary helps,
-  such as publication covers in a grid.
-- Format numbers for quick reading without obscuring their meaning. Use
-  familiar fraction and range notation, group large values, and keep units
-  attached to their quantities. Give derived values enough room to remain
-  readable beside their state cue.
-- In reading mode, translate stored structure into familiar recipe language
-  (`1 1/2 cups flour`, `120 g flour`, `2 bunches cilantro`, `salt to taste`).
-  Editing may reveal labels and relationships; reading should stay focused on
-  the recipe.
-
-### Interaction and state
-
-- Put routine actions near the object they affect and keep related management
-  actions together. Do not make essential actions hover-only; provide a clear
-  pointer, keyboard, and touch path.
-- Keep inline add affordances quiet until activated, then fit them to their
-  content. Keep contextual actions with wrapping content when that improves
-  association, without compromising alignment or touch targets.
-- Keep ordinary controls predictable. Use visible field labels, explicit text
-  for consequential save and delete actions, and icons only when their meaning
-  is familiar. Icon controls need accessible names and visible focus; add a
-  tooltip when pointer users need clarification.
-- Distinguish canceling from deleting and staged changes from immediate ones.
-  Make confirmation, progress, success, and recoverable errors clear. Preserve a
-  draft when a person needs to correct a failed save.
-- Make menus and popovers anchored, viewport-bounded, dismissible, and
-  keyboard-operable. Show focus and selection through more than color, and
-  restore focus sensibly when an overlay closes.
-- Treat focus order, screen-reader status, contrast, reduced motion, and touch
-  targets as part of the interaction itself, not as a finishing pass.
-
-### Responsive anatomy
-
-- Desktop supports sustained organization and comparison. Keep primary
-  navigation available and use aligned, data-dense layouts where they improve
-  scanning and editing.
-- Mobile is a distinct use context, not a shrunken desktop. Keep navigation
-  compact, recompose editing into focused interactions, and keep dialogs and
-  popovers within the viewport while preserving the task's order and meaning.
-- Keep visible controls compact where information density matters, while
-  preserving generous hit areas for touch actions. At every size, prevent
-  page-level horizontal scrolling, overlap, and layout shifts.
-- Design kitchen-facing work for interruption, glare, and one-handed use as
-  those features ship. Do not present planned cooking behavior as current.
-
-### Avoid
-
-- Marketing-page composition, feature narration, or decorative imagery in
-  working views.
-- Faux-vintage kitchen props, generic dashboard grids, ornamental gradients,
-  glass effects, bokeh, and floating decorative shapes.
-- Dense field walls, repeated cards around ordinary content, oversized gutters,
-  arbitrary equal-width controls, or text that repeats what the interface
-  already communicates.
-- Cropping meaningful recipe imagery merely to fill a slot, or using color as
-  the only signal for selection, derivation, warning, or importance.
-- Hover-only actions, unlabeled controls, tiny touch targets, and motion that
-  distracts from reading or changes layout unexpectedly.
-
-### When details are unspecified
-
-Choose the smallest clear pattern that supports the task and fits established
-product behavior. Check it with realistic content on desktop and mobile. A
-refinement succeeds only when it preserves information hierarchy, data meaning,
-keyboard and pointer operation, touch use, and assistive-technology behavior.
-
-### Current interaction conventions
-
-- Use a familiar icon for a compact routine action only when its meaning is
-  clear. Give it an accessible name, visible focus, and a tooltip when useful.
-  Use visible text for consequential submission and deletion.
-- In a list, a compact `x` may remove an item from that list, but never deletes
-  the whole record. On a pane, `x` closes or cancels; it does not mean delete.
-- Keep form labels visible. Opening Trash and deleting a record are distinct
-  actions and must not share an ambiguous trash icon.
-- Custom picklists use compact triggers and anchored listboxes. Keep the active
-  keyboard option visible, bound the popup to the viewport, and show selection
-  without relying on color alone.
-- Treat popovers and menus as parts of the workflow, not floating decoration:
-  give them a clear anchor, controlled height, explicit dismissal, visible
-  focus, and no page-level horizontal overflow.
-- Keep reading mode calmer than editing mode. Editing may show labels, field
-  structure, and pickers; reading should reduce those mechanics to concise,
-  natural language.
 
 ## Recipe Metadata Entry (Slice 4)
 
@@ -582,6 +409,9 @@ separate Sort direction button. The View icon represents the current mode and
 its accessible name identifies the destination mode. The Type button stays
 wide enough for “Magazines” and reflects its active filter with an icon; icon
 buttons have accessible names.
+
+### Library Explorer (current implementation)
+
 Desktop List uses scan-friendly metadata columns with centered recipe counts and
 publication-title tooltips that put each field on its own line. Mobile List
 shows only a type icon and one truncated title per row. Grid cards show author
