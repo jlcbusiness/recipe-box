@@ -12,17 +12,18 @@ export default async function PublicationsLayout({ children }: { children: React
 
   const { data: account } = await supabase
     .from('accounts')
-    .select('is_admin')
+    .select('is_admin, hand_preference')
     .eq('id', data.user.id)
     .maybeSingle();
 
   return (
     <PrivateShell
       email={data.user.email ?? 'Unknown email'}
+      handPreference={account?.hand_preference === 'left' ? 'left' : 'right'}
       wideContent
       navigation={[
-        { href: '/recipes', label: 'Recipe Tin' },
         { href: '/publications', label: 'Library', current: true },
+        { href: '/recipes', label: 'Recipe Tin' },
         { href: '/settings', label: 'Settings' },
         ...(account?.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}

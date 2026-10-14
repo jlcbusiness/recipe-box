@@ -377,6 +377,39 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
       .locator('tbody tr:first-child td:last-child')
       .evaluate((cell) => cell.getBoundingClientRect().right);
     expect(publicationLastCellRight).toBeCloseTo(publicationTableRight, 1);
+    await page.getByRole('button', { name: 'Filter Name' }).click();
+    const nameFilterPopover = page.locator('.publication-column-filter-popover');
+    await expect(nameFilterPopover).toBeVisible();
+    await expect(publicationTable.locator('thead th').first()).toHaveCSS('overflow', 'visible');
+    await expect(page.getByRole('button', { name: 'Filter Name' })).toHaveCSS('font-size', '16px');
+    const nameOptions = nameFilterPopover.getByRole('option');
+    await expect(nameOptions).toHaveCount(4);
+    await page.getByRole('button', { name: 'Filter Author' }).click();
+    await expect(nameFilterPopover).toHaveCount(0);
+    const authorFilterPopover = page.locator('.publication-column-filter-popover');
+    await expect(authorFilterPopover).toBeVisible();
+    await page.getByRole('heading', { name: 'Library' }).click();
+    await expect(authorFilterPopover).toHaveCount(0);
+    await page.getByRole('button', { name: 'Filter Name' }).click();
+    await page.getByRole('option', { name: 'Explorer Cookbook', exact: true }).click();
+    await nameFilterPopover.getByRole('button', { name: 'Apply' }).click();
+    await expect(page).toHaveURL((url) => {
+      const [filter] = url.searchParams.getAll('filter').map((value) => JSON.parse(value));
+      return (
+        filter?.field === 'name' && filter?.operator === 'contains' && filter?.value === 'Explorer'
+      );
+    });
+    await expect(page.getByRole('link', { name: 'Explorer Cookbook' })).toBeVisible();
+    await page.getByRole('button', { name: 'Filter Name' }).click();
+    await page
+      .locator('.publication-column-filter-popover')
+      .getByRole('button', { name: 'Clear' })
+      .click();
+    await page
+      .locator('.publication-column-filter-popover')
+      .getByRole('button', { name: 'Apply' })
+      .click();
+    await expect(page).toHaveURL((url) => url.searchParams.getAll('filter').length === 0);
     await page.getByRole('button', { name: 'Choose List columns' }).click();
     const columnOptions = page.getByRole('group', { name: 'List columns' });
     await columnOptions.getByLabel('Tags').check();
@@ -415,6 +448,15 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     const explorerCookbookRow = page.getByRole('row', { name: /Explorer Cookbook/ });
     await expect(explorerCookbookRow.getByRole('img', { name: 'Book' })).toBeVisible();
     await expect(explorerCookbookRow.locator('td').last()).toHaveCSS('text-align', 'center');
+    await expect(page.getByRole('button', { name: 'Filter Recipes' })).toHaveCSS(
+      'justify-content',
+      'center',
+    );
+    const rowBackgrounds = await publicationTable
+      .locator('tbody tr')
+      .evaluateAll((rows) => rows.slice(0, 2).map((row) => getComputedStyle(row).backgroundColor));
+    expect(rowBackgrounds).toHaveLength(2);
+    expect(rowBackgrounds[0]).not.toBe(rowBackgrounds[1]);
     await expect(page.getByRole('complementary', { name: 'Publication preview' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Type: All' }).click();
     await page
@@ -433,6 +475,10 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     await expectViewAfterSortDirection();
     await expect(page.locator('.publication-explorer-mobile-list')).toBeVisible();
     await expect(page.locator('.publication-explorer-table')).toBeHidden();
+    const mobileControlRows = await page
+      .locator('.publication-explorer-toolbar > .publication-explorer-control')
+      .evaluateAll((controls) => controls.map((control) => control.getBoundingClientRect().y));
+    expect(mobileControlRows.every((row) => row === mobileControlRows[0])).toBe(true);
     const triggerSizes = await page
       .locator('.publication-explorer-trigger')
       .evaluateAll((triggers) =>
@@ -441,8 +487,15 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
           return { width, height };
         }),
       );
-    expect(triggerSizes).toHaveLength(5);
-    expect(triggerSizes.every(({ width, height }) => width >= 48 && height >= 48)).toBe(true);
+    expect(triggerSizes).toHaveLength(4);
+    expect(triggerSizes.every(({ width, height }) => width >= 40 && height >= 40)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Choose List columns' })).toBeHidden();
+    await page.getByRole('button', { name: 'Sort by Name' }).click();
+    const sortPopover = page.getByRole('group', { name: 'Sort options' });
+    const sortPopoverBounds = await sortPopover.boundingBox();
+    expect(sortPopoverBounds?.x).toBeGreaterThanOrEqual(0);
+    expect((sortPopoverBounds?.x ?? 0) + (sortPopoverBounds?.width ?? 0)).toBeLessThanOrEqual(390);
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Type: All' }).click();
     const menuOptionSizes = await page
       .getByRole('group', { name: 'Publication type options' })
@@ -453,11 +506,11 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     const mobileTitle = page.getByRole('link', { name: 'Explorer Cookbook' });
     await expect(mobileTitle).toHaveCSS('white-space', 'nowrap');
     await expect(mobileTitle).toHaveCSS('text-overflow', 'ellipsis');
-    await page.getByRole('button', { name: 'Add filter' }).click();
-    await page.getByLabel('Field for filter 1').selectOption('created_at');
-    await page.getByLabel('Operator for filter 1').selectOption('between');
-    await page.getByLabel('Value for filter 1', { exact: true }).fill('2026-10-01');
-    await page.getByLabel('Upper value for filter 1').fill('2026-10-31');
+    await page.getByRole('link', { name: 'Switch to Grid view' }).click();
+    await expect(page.locator('.publication-explorer-grid')).toBeVisible();
+    await expect(page.locator('.publication-explorer-mobile-list')).toBeHidden();
+    await expect(page.getByLabel('Search publications')).toHaveCount(0);
+    await expect(page.getByText('Filter publications', { exact: true })).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   } finally {
     await deleteTestUser(request, user);
@@ -809,11 +862,18 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     const gridA11y = await new AxeBuilder({ page }).analyze();
     expect(gridA11y.violations).toEqual([]);
 
+    const listTrigger = page.getByRole('link', { name: 'Switch to List view' });
+    await listTrigger.click();
+    await expect(page).toHaveURL(/view=list/);
+    const listA11y = await new AxeBuilder({ page }).analyze();
+    expect(listA11y.violations).toEqual([]);
+
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileList = page.locator('.publication-explorer-mobile-list');
     await expect(mobileList).toBeVisible();
     await expect(mobileList.locator('li')).toHaveCount(4);
     const mobileAppleLink = mobileList.getByRole('link', { name: 'Apple Cookbook' });
+    await expect(mobileAppleLink).toHaveCSS('color', 'rgb(46, 68, 50)');
     await expect(mobileAppleLink).toHaveCSS('white-space', 'nowrap');
     await expect(mobileAppleLink).toHaveCSS('text-overflow', 'ellipsis');
     await expect(mobileAppleLink).toHaveAttribute(
@@ -826,12 +886,6 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     );
     await expectNoHorizontalOverflow(page);
 
-    await page.setViewportSize({ width: 1024, height: 900 });
-    const listTrigger = page.getByRole('link', { name: 'Switch to List view' });
-    await listTrigger.click();
-    await expect(page).toHaveURL(/view=list/);
-    const listA11y = await new AxeBuilder({ page }).analyze();
-    expect(listA11y.violations).toEqual([]);
     for (const width of [352, 390]) {
       await page.setViewportSize({ width, height: 844 });
       await expect(mobileList).toBeVisible();
@@ -1441,33 +1495,31 @@ test('inline publication creation preserves the unsaved recipe draft @e2e @a11y'
   }
 });
 
-test('Library preserves search criteria and distinguishes a recoverable error from no matches @e2e', async ({
+test('Library preserves column filters and distinguishes a recoverable error from no matches @e2e', async ({
   page,
   request,
 }) => {
   const user = await createTestUser(request);
-  const query = 'preserved publication query';
   const filter = JSON.stringify({ field: 'unsupported_field', operator: 'contains', value: 'x' });
 
   try {
     await signIn(page, user.email, user.password);
-    await page.goto(
-      `/publications?q=${encodeURIComponent(query)}&filter=${encodeURIComponent(filter)}`,
-    );
+    await page.goto(`/publications?filter=${encodeURIComponent(filter)}`);
 
     await expect(page.locator('.publication-explorer-results [role="alert"]')).toHaveText(
-      'Unable to search publications. Your query and filters are preserved. Try again.',
+      'Unable to load publications. Your column filters are preserved. Try again.',
     );
     await expect(page.locator('.publication-explorer-result-count')).toHaveText(
       'Publication results unavailable.',
     );
-    await expect(page.getByRole('searchbox', { name: 'Search publications' })).toHaveValue(query);
+    await expect(page.getByLabel('Search publications')).toHaveCount(0);
+    await expect(page.getByText('Filter publications', { exact: true })).toHaveCount(0);
     await expect(
       page.getByText('No publications match this search and filter combination.'),
     ).toHaveCount(0);
     await expect(page).toHaveURL((url) => {
       const params = new URL(url).searchParams;
-      return params.get('q') === query && params.get('filter') === filter;
+      return params.get('filter') === filter;
     });
   } finally {
     await deleteTestUser(request, user);

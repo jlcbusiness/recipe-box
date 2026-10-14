@@ -497,7 +497,7 @@ export function IngredientDensityManager({
   }
 
   return (
-    <section aria-label="Trusted density" className="settings-section">
+    <section aria-label="Trusted densities" className="settings-section settings-density-section">
       <h2 className={styles.heading}>
         <button
           aria-controls="trusted-density-editor"
@@ -507,7 +507,7 @@ export function IngredientDensityManager({
           onClick={() => setIsExpanded((current) => !current)}
         >
           <ChevronRight aria-hidden="true" className={styles.chevron} size={18} />
-          <span>Trusted density</span>
+          <span>Trusted densities</span>
         </button>
       </h2>
       <div hidden={!isExpanded} id="trusted-density-editor">

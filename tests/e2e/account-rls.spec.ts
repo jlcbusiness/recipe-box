@@ -139,7 +139,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
   const otherUser = await createTestUser(request);
 
   try {
-    const preferencesUrl = `${supabase.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method,volume_system,weight_system,ingredient_presentation&id=eq.${owner.id}`;
+    const preferencesUrl = `${supabase.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method,volume_system,weight_system,ingredient_presentation,hand_preference&id=eq.${owner.id}`;
     const initialRead = await request.get(preferencesUrl, { headers: userHeaders(owner) });
     expect(initialRead.status()).toBe(200);
     expect(await initialRead.json()).toEqual([
@@ -150,6 +150,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
         volume_system: 'us_customary',
         weight_system: 'us_customary',
         ingredient_presentation: 'standard',
+        hand_preference: 'right',
       },
     ]);
 
@@ -177,6 +178,15 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
       },
     );
     expect(directPresentationUpdate.ok()).toBeFalsy();
+
+    const directHandUpdate = await request.patch(
+      `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+      {
+        headers: { ...userHeaders(owner), Prefer: 'return=representation' },
+        data: { hand_preference: 'left' },
+      },
+    );
+    expect(directHandUpdate.ok()).toBeFalsy();
 
     const directProtectedUpdate = await request.patch(
       `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
@@ -209,6 +219,15 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
     );
     expect(updatePresentation.status()).toBe(204);
 
+    const updateHand = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: { p_hand_preference: 'left' },
+      },
+    );
+    expect(updateHand.status()).toBe(204);
+
     const afterVolumeUpdate = await request.get(preferencesUrl, { headers: userHeaders(owner) });
     expect(await afterVolumeUpdate.json()).toEqual([
       {
@@ -218,6 +237,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
         volume_system: 'metric',
         weight_system: 'us_customary',
         ingredient_presentation: 'ingredient_first',
+        hand_preference: 'left',
       },
     ]);
 
@@ -243,6 +263,15 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
     );
     expect(invalidPresentationUpdate.ok()).toBeFalsy();
 
+    const invalidHandUpdate = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: { p_hand_preference: 'ambidextrous' },
+      },
+    );
+    expect(invalidHandUpdate.ok()).toBeFalsy();
+
     const anonymousUpdate = await request.post(
       `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
       {
@@ -266,7 +295,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
     expect(foreignTargetAttempt.ok()).toBeFalsy();
 
     const otherUserRead = await request.get(
-      `${supabase.apiUrl}/rest/v1/accounts?select=volume_system,weight_system,ingredient_presentation&id=eq.${otherUser.id}`,
+      `${supabase.apiUrl}/rest/v1/accounts?select=volume_system,weight_system,ingredient_presentation,hand_preference&id=eq.${otherUser.id}`,
       { headers: userHeaders(otherUser) },
     );
     expect(await otherUserRead.json()).toEqual([
@@ -274,8 +303,82 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
         volume_system: 'us_customary',
         weight_system: 'us_customary',
         ingredient_presentation: 'standard',
+        hand_preference: 'right',
       },
     ]);
+  } finally {
+    await deleteTestUser(request, otherUser);
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('Explorer state is owner-scoped and writable only through its owner-derived RPC @e2e', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const otherUser = await createTestUser(request);
+  const state = {
+    schema_version: 1,
+    column_filters: { state: ['tried'] },
+    filters: [{ field: 'state', operator: 'in', value: ['tried'] }],
+    sort: 'updated_at',
+    direction: 'desc',
+    view: 'grid',
+  };
+
+  try {
+    const save = await request.post(`${supabase.apiUrl}/rest/v1/rpc/update_explorer_state`, {
+      headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+      data: { p_context_key: 'recipes-find', p_state: state },
+    });
+    expect(save.status()).toBe(204);
+
+    const ownerRead = await request.get(
+      `${supabase.apiUrl}/rest/v1/explorer_state?select=context_key,state&context_key=eq.recipes-find`,
+      { headers: userHeaders(owner) },
+    );
+    expect(ownerRead.ok(), await ownerRead.text()).toBeTruthy();
+    expect(await ownerRead.json()).toEqual([{ context_key: 'recipes-find', state }]);
+
+    const otherRead = await request.get(
+      `${supabase.apiUrl}/rest/v1/explorer_state?select=context_key,state&context_key=eq.recipes-find`,
+      { headers: userHeaders(otherUser) },
+    );
+    expect(otherRead.ok(), await otherRead.text()).toBeTruthy();
+    expect(await otherRead.json()).toEqual([]);
+
+    const directInsert = await request.post(`${supabase.apiUrl}/rest/v1/explorer_state`, {
+      headers: { ...userHeaders(owner), Prefer: 'return=representation' },
+      data: { account_id: owner.id, context_key: 'publications', state },
+    });
+    expect(directInsert.ok()).toBeFalsy();
+
+    const directDelete = await request.delete(
+      `${supabase.apiUrl}/rest/v1/explorer_state?context_key=eq.recipes-find`,
+      { headers: { ...userHeaders(owner), Prefer: 'return=representation' } },
+    );
+    expect(directDelete.ok()).toBeFalsy();
+
+    const invalidState = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_explorer_state`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: {
+          p_context_key: 'recipes-find',
+          p_state: { ...state, page: 2 },
+        },
+      },
+    );
+    expect(invalidState.ok()).toBeFalsy();
+
+    const anonymousSave = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_explorer_state`,
+      {
+        headers: { apikey: supabase.anonKey, 'Content-Type': 'application/json' },
+        data: { p_context_key: 'recipes-find', p_state: state },
+      },
+    );
+    expect(anonymousSave.ok()).toBeFalsy();
   } finally {
     await deleteTestUser(request, otherUser);
     await deleteTestUser(request, owner);

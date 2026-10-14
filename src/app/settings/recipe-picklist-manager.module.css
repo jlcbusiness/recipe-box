@@ -537,11 +537,6 @@
 }
 
 @media (hover: none) {
-  .sectionLabel {
-    text-decoration: underline;
-    text-underline-offset: 5px;
-  }
-
   .rowActions {
     opacity: 1;
   }

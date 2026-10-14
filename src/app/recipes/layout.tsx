@@ -12,18 +12,19 @@ export default async function RecipesLayout({ children }: { children: React.Reac
 
   const { data: account } = await supabase
     .from('accounts')
-    .select('is_admin')
+    .select('is_admin, hand_preference')
     .eq('id', data.user.id)
     .maybeSingle();
 
   return (
     <PrivateShell
       email={data.user.email ?? 'Unknown email'}
+      handPreference={account?.hand_preference === 'left' ? 'left' : 'right'}
       wideContent
       navigation={[
+        { href: '/publications', label: 'Library' },
         { href: '/recipes', label: 'Recipe Tin', current: true },
         { href: '/recipes/find', label: 'Find Recipes' },
-        { href: '/publications', label: 'Library' },
         { href: '/settings', label: 'Settings' },
         ...(account?.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}

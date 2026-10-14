@@ -67,8 +67,8 @@ test('Settings stages, searches, edits, and removes trusted ingredient densities
 
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
-    const section = page.getByRole('region', { name: 'Trusted density' });
-    const toggle = section.getByRole('button', { name: 'Trusted density', exact: true });
+    const section = page.getByRole('region', { name: 'Trusted densities' });
+    const toggle = section.getByRole('button', { name: 'Trusted densities', exact: true });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');

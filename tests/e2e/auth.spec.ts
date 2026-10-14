@@ -165,6 +165,7 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     );
     const mobileRecipeLink = page.getByRole('link', { name: 'Recipe Tin' });
     const mobileLibraryLink = page.getByRole('link', { name: 'Library' });
+    const mobileSearchLink = page.getByRole('link', { name: 'Search' });
     const mobileSettingsLink = page.getByRole('link', { name: 'Settings' });
     await expect(mobileRecipeLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileLibraryLink.locator('.private-nav-mobile-icon')).toBeVisible();
@@ -173,21 +174,28 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     const trashX = (await mobileTrashLink.boundingBox())?.x ?? 0;
     const settingsX = (await mobileSettingsLink.boundingBox())?.x ?? 0;
     const accountX = (await accountTrigger.boundingBox())?.x ?? 0;
-    expect(trashX).toBeLessThan(settingsX);
-    expect(settingsX).toBeLessThan(accountX);
+    const recipeX = (await mobileRecipeLink.boundingBox())?.x ?? 0;
+    const searchX = (await mobileSearchLink.boundingBox())?.x ?? 0;
+    const libraryX = (await mobileLibraryLink.boundingBox())?.x ?? 0;
+    expect(accountX).toBeLessThan(settingsX);
+    expect(settingsX).toBeLessThan(trashX);
+    expect(trashX).toBeLessThan(recipeX);
+    expect(recipeX).toBeLessThan(searchX);
+    expect(searchX).toBeLessThan(libraryX);
     const mobileNavBounds = await page
       .getByRole('navigation', { name: 'Main navigation' })
       .boundingBox();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCSS(
+      'position',
+      'sticky',
+    );
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCSS('top', '0px');
     const mobileAccountBounds = await accountTrigger.boundingBox();
     await expect(accountTrigger.locator('.account-avatar')).toBeVisible();
     await expect(accountTrigger.locator('.account-menu-email')).toBeHidden();
     expect(mobileAccountBounds?.width).toBeGreaterThanOrEqual(44);
     expect(mobileAccountBounds?.height).toBeGreaterThanOrEqual(44);
-    expect(
-      (mobileNavBounds?.x ?? 0) +
-        (mobileNavBounds?.width ?? 0) -
-        ((mobileAccountBounds?.x ?? 0) + (mobileAccountBounds?.width ?? 0)),
-    ).toBeLessThanOrEqual(20);
+    expect((mobileAccountBounds?.x ?? 0) - (mobileNavBounds?.x ?? 0)).toBeLessThanOrEqual(20);
     await accountTrigger.focus();
     await accountTrigger.press('Enter');
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();

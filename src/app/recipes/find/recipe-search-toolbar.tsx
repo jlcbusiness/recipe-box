@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDown, ArrowDownWideNarrow, ArrowUp, LayoutGrid, List } from 'lucide-react';
+import { ArrowDown, ArrowDownWideNarrow, ArrowUp, LayoutGrid, List, Rows3 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type {
@@ -12,6 +12,7 @@ import { Picklist } from '../../picklist';
 import { useRecipeSearchMode } from './recipe-search-tabs';
 
 type SortOption = { value: RecipeSearchSortKey; label: string };
+type RecipeExplorerView = 'details' | 'grid' | 'list';
 
 function controlHref({
   path,
@@ -30,7 +31,7 @@ function controlHref({
   columnSelections: RecipeSearchColumnSelections;
   sort: RecipeSearchSortKey;
   direction: 'asc' | 'desc';
-  view: 'list' | 'grid';
+  view: RecipeExplorerView;
   tab?: 'search' | 'query';
   page?: number;
 }) {
@@ -60,6 +61,7 @@ export function RecipeSearchToolbar({
   query,
   sort,
   view,
+  viewOptions,
 }: {
   columnSelections: RecipeSearchColumnSelections;
   direction: 'asc' | 'desc';
@@ -68,7 +70,8 @@ export function RecipeSearchToolbar({
   path: string;
   query: string;
   sort: RecipeSearchSortKey;
-  view: 'list' | 'grid';
+  view: RecipeExplorerView;
+  viewOptions?: { value: RecipeExplorerView; label: string }[];
 }) {
   const router = useRouter();
   const searchMode = useRecipeSearchMode();
@@ -76,7 +79,7 @@ export function RecipeSearchToolbar({
   const hrefFor = (next: {
     sort?: RecipeSearchSortKey;
     direction?: 'asc' | 'desc';
-    view?: 'list' | 'grid';
+    view?: RecipeExplorerView;
   }) =>
     controlHref({
       path,
@@ -120,14 +123,41 @@ export function RecipeSearchToolbar({
         )}
       </Link>
       <button
-        aria-label={`Switch to ${view === 'list' ? 'Grid' : 'List'} view`}
+        aria-label={`Switch to ${
+          viewOptions
+            ? viewOptions[
+                (viewOptions.findIndex((option) => option.value === view) + 1) % viewOptions.length
+              ]?.label
+            : view === 'list'
+              ? 'Grid'
+              : 'List'
+        } view`}
         aria-pressed={view === 'grid'}
         className="recipe-explorer-trigger recipe-explorer-icon-trigger"
-        onClick={() => router.push(hrefFor({ view: view === 'list' ? 'grid' : 'list' }))}
-        title={`Switch to ${view === 'list' ? 'Grid' : 'List'} view`}
+        onClick={() => {
+          const nextView = viewOptions
+            ? viewOptions[
+                (viewOptions.findIndex((option) => option.value === view) + 1) % viewOptions.length
+              ]?.value
+            : view === 'list'
+              ? 'grid'
+              : 'list';
+          router.push(hrefFor({ view: nextView ?? 'list' }));
+        }}
+        title={`Switch to ${
+          viewOptions
+            ? viewOptions[
+                (viewOptions.findIndex((option) => option.value === view) + 1) % viewOptions.length
+              ]?.label
+            : view === 'list'
+              ? 'Grid'
+              : 'List'
+        } view`}
         type="button"
       >
-        {view === 'list' ? (
+        {view === 'details' ? (
+          <Rows3 aria-hidden="true" size={19} />
+        ) : view === 'list' ? (
           <List aria-hidden="true" size={19} />
         ) : (
           <LayoutGrid aria-hidden="true" size={19} />
@@ -156,7 +186,7 @@ export function RecipeSearchPagination({
   path: string;
   query: string;
   sort: RecipeSearchSortKey;
-  view: 'list' | 'grid';
+  view: RecipeExplorerView;
 }) {
   const searchMode = useRecipeSearchMode();
   const hrefForPage = (nextPage: number) =>

@@ -47,9 +47,10 @@ security without prematurely creating recipe or other domain tables.
 | Recipe reference | A same-account recipe link, external URL, or printed citation linked to a recipe; legacy Publication references remain static text, and purged recipe targets retain their display text. |
 | Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
-| Saved view | A persisted recipe or publication search, filter, sort, and column configuration. |
-| Preference | Account-level defaults: ingredient presentation, volume and weight unit systems, and ingredient-mention style. |
-| Account | The account record linked to the sign-in identity; it owns private data, volume and weight display-system defaults, an immutable sign-in method, and a server-managed admin flag. |
+| Explorer state | A per-account last-used recipe or publication explorer configuration: filters, sort, direction, view, and fixed publication scope when applicable. |
+| Saved view | A named, pinned recipe or publication query configuration delivered with advanced nested queries in Slice 19. |
+| Preference | Account-level defaults: ingredient presentation, volume and weight unit systems, mobile hand preference, and ingredient-mention style. |
+| Account | The account record linked to the sign-in identity; it owns private data, volume and weight display-system defaults, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. |
 | History event | An append-only forensic record of a saved change. |

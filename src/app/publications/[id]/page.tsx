@@ -3,7 +3,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicationCover } from '../../../lib/media/data';
 import { getPublications, getTags, type PublicationOption } from '../../../lib/recipes/data';
+import {
+  parseRecipeSearchColumnFilters,
+  type RecipeSearchSortKey,
+} from '../../../lib/recipes/search';
 import { createClient } from '../../../lib/supabase/server';
+import { RecipeSearchToolbar } from '../../recipes/find/recipe-search-toolbar';
 import { TagChips } from '../../tags/tag-controls';
 import { PublicationCover } from '../publication-cover';
 import { PublicationEditAction } from '../publication-edit-action';
@@ -15,21 +20,51 @@ const publicationTypeLabels = {
   site: 'Site',
 } as const;
 
+const recipeSortOptions: { value: RecipeSearchSortKey; label: string }[] = [
+  { value: 'relevance', label: 'Relevance' },
+  { value: 'name', label: 'Name' },
+  { value: 'state', label: 'State' },
+  { value: 'total_time_minutes', label: 'Total Time' },
+  { value: 'created_at', label: 'Date Added' },
+  { value: 'updated_at', label: 'Date Changed' },
+];
+const recipeViewOptions = [
+  { value: 'details', label: 'Details' },
+  { value: 'list', label: 'List' },
+  { value: 'grid', label: 'Grid' },
+] as const;
+
 export default async function PublicationPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
-    q?: string | string[];
-    filter?: string | string[];
     sort?: string;
     direction?: string;
     page?: string;
     view?: string;
+    column_name?: string | string[];
+    column_state?: string | string[];
+    column_total_time_minutes?: string | string[];
+    column_opinion?: string | string[];
+    column_meal_type?: string | string[];
+    column_food_type?: string | string[];
+    column_publication_source?: string | string[];
   }>;
 }) {
   const [{ id }, explorerSearchParams] = await Promise.all([params, searchParams]);
+  const columnSelections = parseRecipeSearchColumnFilters(explorerSearchParams).selections;
+  const sort = recipeSortOptions.some(({ value }) => value === explorerSearchParams.sort)
+    ? (explorerSearchParams.sort as RecipeSearchSortKey)
+    : 'name';
+  const direction = explorerSearchParams.direction === 'desc' ? 'desc' : 'asc';
+  const view =
+    explorerSearchParams.view === 'grid'
+      ? 'grid'
+      : explorerSearchParams.view === 'list'
+        ? 'list'
+        : 'details';
   const supabase = await createClient();
   const [publicationResult, activePublications, publicationCover] = await Promise.all([
     supabase
@@ -107,6 +142,19 @@ export default async function PublicationPage({
             selectedTagIds={publicationTags.map((tag) => tag.id)}
             tags={tags}
           />
+          <div className="publication-detail-mobile-controls">
+            <RecipeSearchToolbar
+              columnSelections={columnSelections}
+              direction={direction}
+              filters={[]}
+              options={recipeSortOptions}
+              path={`/publications/${publication.id}`}
+              query=""
+              sort={sort}
+              view={view}
+              viewOptions={[...recipeViewOptions]}
+            />
+          </div>
           <Link
             className="recipe-secondary-link collection-add-action publication-new-recipe"
             href={`/recipes/new?publication=${publication.id}`}
@@ -117,7 +165,6 @@ export default async function PublicationPage({
       </div>
       <PublicationRecipeExplorer
         publicationId={publication.id}
-        publicationName={publication.name}
         searchParams={explorerSearchParams}
       />
     </main>

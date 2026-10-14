@@ -237,7 +237,8 @@ applicable enthusiasm, verdict, or reason, and total time. A recipe may display
 both its publication location and its online recipe URL. The list supports the
 same recipe filters, sorting, and List/Grid views as the Recipe Explorer,
 scoped to that publication; grid cards use each recipe's default photo when
-available (Slice 17). Saved views may retain the publication scope (Slice 18).
+available (Slice 17). Last-used explorer state retains the publication scope
+(Slice 18); named saved views arrive with advanced queries (Slice 19).
 
 The Recipe Tin is permanent and has a distinctive tin-and-paper treatment (hinged
 tin lid graphic, ragged/deckled paper background for its recipe cards).
@@ -246,8 +247,9 @@ prompts to delete recipes, move to Recipe Tin, or move to another publication.
 
 ## Queries And Settings
 
-Recipes and publications are searchable, filterable, sortable, and available as
-saved views with selected columns.
+Recipes and publications are searchable, filterable, sortable, and restore
+last-used filters, sort, direction, and view per explorer. Named, pinned saved
+views and List-column selection arrive with advanced queries in Slice 19.
 See [comprehensive-reference.md § 7](comprehensive-reference.md#7-queries-search-and-library-explorer).
 Advanced queries support typed conditions,
 field-appropriate operators, AND/OR groups, blank checks, and full-text search

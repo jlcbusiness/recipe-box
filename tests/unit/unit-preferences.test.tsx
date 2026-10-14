@@ -72,6 +72,37 @@ describe('unit preference action', () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
+  it('saves a valid hand preference through the owner-derived RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const getUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
+    createClient.mockResolvedValue({ auth: { getUser }, rpc });
+    const formData = new FormData();
+    formData.set('changed_dimension', 'hand');
+    formData.set('hand_preference', 'left');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'saved',
+      message: 'Saved.',
+    });
+    expect(rpc).toHaveBeenCalledWith('update_account_unit_preferences', {
+      p_hand_preference: 'left',
+    });
+  });
+
+  it('rejects an unsupported hand preference before calling Supabase', async () => {
+    const formData = new FormData();
+    formData.set('changed_dimension', 'hand');
+    formData.set('hand_preference', 'ambidextrous');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'error',
+      message: 'Choose a valid hand preference.',
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it('restores the saved value and announces a failed save', async () => {
     const rpc = vi.fn().mockResolvedValue({ error: new Error('Database unavailable.') });
     const getUser = vi
@@ -80,6 +111,7 @@ describe('unit preference action', () => {
     createClient.mockResolvedValue({ auth: { getUser }, rpc });
     render(
       <UnitPreferences
+        handPreference="right"
         ingredientPresentation="standard"
         volumeSystem="us_customary"
         weightSystem="us_customary"
@@ -109,13 +141,14 @@ describe('unit preference action', () => {
     createClient.mockResolvedValue({ auth: { getUser }, rpc });
     render(
       <UnitPreferences
+        handPreference="right"
         ingredientPresentation="standard"
         volumeSystem="us_customary"
         weightSystem="us_customary"
       />,
     );
 
-    const presentation = screen.getByRole('combobox', { name: 'Ingredient view' });
+    const presentation = screen.getByRole('combobox', { name: 'View' });
     expect(presentation.textContent).toContain('Standard');
     fireEvent.click(presentation);
     fireEvent.click(screen.getByRole('option', { name: 'Ingredient-first' }));

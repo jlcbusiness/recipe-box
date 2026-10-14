@@ -58,11 +58,20 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
 
     const volumeSelect = page.getByRole('combobox', { name: 'Volume', exact: true });
     const weightSelect = page.getByRole('combobox', { name: 'Weight', exact: true });
+    const leftHand = page.getByRole('button', { name: 'Left', exact: true });
+    const rightHand = page.getByRole('button', { name: 'Right', exact: true });
     await expect(page.getByRole('heading', { name: 'Recipe presentation' })).toHaveCount(0);
-    const presentationSelect = page.getByRole('combobox', { name: 'Ingredient view', exact: true });
+    const presentationSelect = page.getByRole('combobox', { name: 'View', exact: true });
     await expect(volumeSelect).toContainText('US customary');
     await expect(weightSelect).toContainText('US customary');
     await expect(presentationSelect).toContainText('Standard');
+    if (testInfo.project.name === 'Fold 6') {
+      await expect(rightHand).toHaveAttribute('aria-pressed', 'true');
+      await expect(leftHand).toHaveAttribute('aria-pressed', 'false');
+    } else {
+      await expect(leftHand).toBeHidden();
+      await expect(rightHand).toBeHidden();
+    }
     await page.evaluate(async () => {
       await document.fonts.ready;
     });
@@ -108,6 +117,17 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       { ingredient_presentation: 'ingredient_first' },
     ]);
 
+    if (testInfo.project.name === 'Fold 6') {
+      await leftHand.click();
+      await expect(page.getByRole('status')).toHaveText('Saved.');
+      await expect(leftHand).toHaveAttribute('aria-pressed', 'true');
+      const handSaved = await request.get(
+        `${config.apiUrl}/rest/v1/accounts?select=hand_preference&id=eq.${user.id}`,
+        { headers },
+      );
+      expect(await handSaved.json()).toEqual([{ hand_preference: 'left' }]);
+    }
+
     await volumeSelect.focus();
     await page.keyboard.press('Tab');
     await expect(weightSelect).toBeFocused();
@@ -128,6 +148,43 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       expect(volumeHitHeight).toBeGreaterThanOrEqual(48);
       expect(weightHitHeight).toBeGreaterThanOrEqual(48);
       expect(presentationHitHeight).toBeGreaterThanOrEqual(48);
+
+      const handPreference = page.locator('.settings-hand-preference');
+      const handToggle = page.locator('.settings-hand-toggle');
+      const settingsBounds = await page.locator('.settings-main').boundingBox();
+      const handPreferenceBounds = await handPreference.boundingBox();
+      const handButtonBounds = await handToggle.getByRole('button').evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const { left, right } = button.getBoundingClientRect();
+          return { left, right };
+        }),
+      );
+      const handButtonHeights = await handToggle
+        .getByRole('button')
+        .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().height));
+      expect(handButtonHeights).toEqual([36, 36]);
+      expect((handPreferenceBounds?.x ?? 0) + (handPreferenceBounds?.width ?? 0) / 2).toBeCloseTo(
+        (settingsBounds?.x ?? 0) + (settingsBounds?.width ?? 0) / 2,
+        0,
+      );
+      expect(handButtonBounds[1].left - handButtonBounds[0].right).toBeCloseTo(48, 0);
+
+      const disclosureCenters = await Promise.all(
+        ['Picklists', 'Ingredients', 'Edit tags', 'Trusted densities'].map((name) =>
+          page
+            .getByRole('button', { name, exact: true })
+            .locator('svg')
+            .evaluate((chevron) => {
+              const bounds = chevron.getBoundingClientRect();
+              return bounds.top + bounds.height / 2;
+            }),
+        ),
+      );
+      const [, ...remainingCenters] = disclosureCenters;
+      const spacing = remainingCenters.map(
+        (center, index) => center - (disclosureCenters[index] ?? 0),
+      );
+      expect(spacing[2]).toBeCloseTo(spacing[1] ?? 0, 0);
     }
 
     await page.keyboard.press('Enter');
@@ -179,11 +236,16 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
     await page.getByRole('link', { name: 'Settings' }).click();
 
     const section = page.getByRole('region', { name: 'Ingredients' });
+    const densitySection = page.getByRole('region', { name: 'Trusted densities' });
     await expect(section).toHaveCSS('border-top-width', '0px');
+    await expect(densitySection).toHaveCSS('border-top-width', '0px');
+    await expect(densitySection).toHaveCSS('margin-top', '28px');
+    await expect(densitySection).toHaveCSS('padding-top', '0px');
     await expect(section).toHaveCSS('margin-top', '28px');
     await expect(section).toHaveCSS('padding-top', '0px');
     const toggle = section.getByRole('button', { name: 'Ingredients' });
     const picklistToggle = page.getByRole('button', { name: 'Picklists' });
+    const tagToggle = page.getByRole('button', { name: 'Tags' });
     const toggleChevron = toggle.locator('svg');
     const picklistChevron = picklistToggle.locator('svg');
     for (const disclosure of [toggle, picklistToggle]) {
@@ -200,8 +262,9 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
       ).toBe(true);
     }
     if (testInfo.project.name === 'Fold 6') {
-      await expect(toggle.locator('span')).toHaveCSS('text-decoration-line', 'underline');
-      await expect(picklistToggle.locator('span')).toHaveCSS('text-decoration-line', 'underline');
+      await expect(toggle.locator('span')).toHaveCSS('text-decoration-line', 'none');
+      await expect(picklistToggle.locator('span')).toHaveCSS('text-decoration-line', 'none');
+      await expect(tagToggle.locator('span')).toHaveCSS('text-decoration-line', 'none');
     } else {
       await picklistToggle.hover();
       await expect(picklistToggle.locator('span')).toHaveCSS('text-decoration-line', 'underline');

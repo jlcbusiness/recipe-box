@@ -14,7 +14,7 @@ export default async function AdminPage() {
 
   const { data: account } = await supabase
     .from('accounts')
-    .select('is_admin')
+    .select('is_admin, hand_preference')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -44,9 +44,10 @@ export default async function AdminPage() {
   return (
     <PrivateShell
       email={data.user.email ?? 'Unknown email'}
+      handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
       navigation={[
-        { href: '/recipes', label: 'Recipe Tin' },
         { href: '/publications', label: 'Library' },
+        { href: '/recipes', label: 'Recipe Tin' },
         { href: '/settings', label: 'Settings' },
         { href: '/admin', label: 'Administration', current: true },
       ]}

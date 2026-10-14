@@ -377,13 +377,14 @@ about 1012px wide.
 
 ### Account menu
 
-Unit preferences are managed from Settings, not from a persistent navigation
+Account preferences are managed from Settings, not from a persistent navigation
 shortcut. Settings uses a wide, unframed section layout rather than a compact
-menu panel or card. The Personal preferences section contains labeled Volume
-and Weight controls using the shared portal `Picklist`, with stable,
-content-sized triggers and the existing save action and status. Do not add a
-second preference form. Future settings domains become sections as their
-features are implemented; do not display empty placeholder sections or links.
+menu panel or card. The Personal preferences section contains labeled Volume,
+Weight, and View controls using the shared portal `Picklist`, with stable,
+content-sized triggers and the existing save action and status. A mobile-only
+Hand control reverses compact navigation order for Right. Do not add a second
+preference form. Future settings domains become sections as their features are
+implemented; do not display empty placeholder sections or links.
 The private navigation keeps Settings, Trash, and Account. On desktop, place
 Settings after Trash and before Account in the pinned sidebar. On mobile, show
 icon-only links for Recipe Tin, Library, Trash, and Settings, with Settings
@@ -407,12 +408,14 @@ actions, and compact inline action hit areas retain touch targets of at least
 
 Settings appears in the private navigation on Recipe Tin, Library, and
 Administration routes. The page uses a wide, unframed Personal preferences
-section with a Units subsection containing labeled Volume and Weight controls
-from the shared portal `Picklist`. The controls remain content-sized and 36px
-high; their mobile tap areas expand to 48px without changing their visible
-height. No compact panel, duplicate preference form, or Units shortcut appears
-in the private navigation. Add later Settings domains as working sections when
-their slices ship, not as empty placeholders.
+section with labeled Volume, Weight, and View controls from the shared portal
+`Picklist`, without a Units subsection. The controls remain content-sized and
+36px high; their mobile tap areas expand to 48px without changing their visible
+height. A centered Hand control is visible only on mobile; Right reverses the
+compact navigation order and Left preserves it. No compact panel, duplicate
+preference form, or Units shortcut appears in the private navigation. Add later
+Settings domains as working sections when their slices ship, not as empty
+placeholders.
 
 Changing a Picklist saves that account preference immediately and announces the
 save status. A failed save restores the last saved value. Picklist, ingredient,
@@ -495,12 +498,13 @@ recipe detail retains its tag/action line for Print/Edit controls after the chip
 Public recipe views continue to omit tags. On mobile, the Settings palette
 stays within its content width and remains operable without horizontal overflow.
 
-## Trusted Density (Slice 15)
+## Trusted Densities (Slice 15)
 
 ### Settings and editor behavior
 
-Trusted density is a separate full-width Settings disclosure after Tags,
-collapsed by default. Configured densities appear in a searchable, alphabetized
+Trusted densities is a separate full-width Settings disclosure after Tags,
+collapsed by default, with matching disclosure spacing and no divider.
+Configured densities appear in a searchable, alphabetized
 table with understated alternating rows and a scroll limit of about eight
 entries. Each row shows the canonical ingredient and a serif equivalency such as
 `1 cup / 242 g - 1.023 g/mL`. Clicking the ingredient opens its Volume and Weight
@@ -776,8 +780,8 @@ row, with Add photo left and Done right.
 ### Current implementation
 
 The global recipe search and publication-scoped recipe results share the same
-List and Grid presentation. The publication List retains its seven fields;
-global recipe search uses its selected recipe columns. On desktop, headers are
+List and Grid presentation with fixed fields appropriate to each explorer.
+Recipe List-column visibility is deferred to Slice 19. On desktop, headers are
 16px, sentence case, left-aligned, and aligned with their values. The header
 has no zebra fill. Publication data rows alternate a subtle leaf tint against
 the neutral table surface, starting with a tinted first recipe row; the fill

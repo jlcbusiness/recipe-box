@@ -100,10 +100,10 @@ Excluded:
 
 ## Settings and editor interaction contract
 
-- Add a separate full-width, unframed Trusted density section to Settings after
-  Tags. It follows the established Settings disclosure pattern and is collapsed
-  by default; do not add a navigation shortcut, card grid, or explanatory
-  feature copy.
+- Add a separate full-width, unframed **Trusted densities** section to Settings
+  after Tags. It follows the established Settings disclosure spacing without a
+  divider, is collapsed by default, and has no navigation shortcut, card grid,
+  or explanatory feature copy.
 - Show configured densities in a searchable, alphabetized table with
   understated alternating rows and a scroll limit of about eight entries. Each
   saved row shows its canonical ingredient and a serif expression containing

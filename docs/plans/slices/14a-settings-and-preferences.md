@@ -18,18 +18,19 @@ defaults without adding a second preference store or changing recipe data.
 ## Outcome
 
 A signed-in person can open Settings from the private navigation, see the
-account's Volume and Weight defaults, and change either value independently.
+account's Volume, Weight, and View defaults, and change each independently.
 Settings presents them in a full-width, unframed Personal preferences section.
-Both controls use the shared portal Picklist. Changes use the account's existing
-preference-update function, and a change to one dimension never overwrites the
-other.
+The three controls use the shared portal Picklist. Changes use the account's
+owner-derived preference-update function and never overwrite another preference.
+On mobile, Hand is a centered two-button preference that controls the compact
+navigation order; it is intentionally absent on desktop.
 
 ## Scope
 
 - Add `/settings` as an authenticated private-shell route.
 - Add Settings to the desktop sidebar and mobile navigation.
-- Show Volume and Weight defaults in a Units subsection of the unframed Personal
-  preferences section.
+- Show labeled Volume, Weight, and View defaults in the unframed Personal
+  preferences section, without a Units heading.
 - Use visibly labeled shared Picklist controls for US customary and Metric.
   Keep each trigger content-sized and stable when its selected value changes.
 - Save a changed value immediately through the existing
@@ -50,8 +51,8 @@ implemented; do not show empty sections or placeholder links in advance.
 ## Screen and interaction contract
 
 - The page title is `Settings`, using the existing private-page title scale.
-- The first section is `Personal preferences`, with a quiet divider. Its first
-  subsection is `Units`, containing labeled Volume and Weight Picklists.
+- The first section is `Personal preferences`, with a quiet divider. It contains
+  labeled Volume, Weight, and View Picklists without a Units heading.
 - Settings uses the wide private content area and unframed sections rather than
   a compact card or menu panel. Later management domains extend this page as
   real sections, without empty placeholders.
@@ -62,7 +63,7 @@ implemented; do not show empty sections or placeholder links in advance.
   announced error without losing focus.
 - The route follows the existing server-side `getUser()` check and redirects
   signed-out visitors to `/`. The server loads only the signed-in account's
-  volume and weight preference fields.
+  preference fields, including mobile hand preference.
 - There are no destructive actions, confirmation dialogs, native file pickers,
   or staged drafts in this slice. Shared Picklist keyboard behavior is
   retained; changing a value is the commit action.
@@ -79,10 +80,10 @@ implemented; do not show empty sections or placeholder links in advance.
   horizontal overflow.
 - Keep the desktop sidebar pinned while page content scrolls. Place Settings
   after Trash and immediately before Account in the utility links.
-- On mobile, use the wrapping icon-only navigation for Recipe Tin, Library,
-  Trash, and Settings, with the account control at the right. Preserve
-  descriptive accessible names and avoid a separate drawer or navigation
-  gesture.
+- On mobile, use compact icon-only navigation for Library, Search, Recipe Tin,
+  Trash, Settings, and Account. The Hand preference defaults to Right and
+  reverses this visual order; Left preserves the original order. Preserve
+  descriptive accessible names and avoid a separate drawer or navigation gesture.
 - Acceptance screenshots: desktop at 1280px wide and Fold 6 at the configured
   viewport, showing the wide unframed Settings section, current values, and the
   persistent navigation without overlap or horizontal scrolling.
@@ -92,21 +93,21 @@ implemented; do not show empty sections or placeholder links in advance.
 Write the focused browser tests before production UI changes:
 
 - Settings appears in desktop and mobile navigation and opens an authenticated
-  page with a wide Personal preferences section and labeled Volume and Weight
-  Picklists.
+  page with a wide Personal preferences section and labeled Volume, Weight, and
+  View Picklists.
 - Signed-out access redirects to sign-in; a second account cannot read or change
   the first account's defaults.
 - Changing Volume saves only Volume and preserves Weight; changing Weight saves
-  only Weight and preserves Volume. Invalid RPC results retain the saved value
-  and announce an error.
+  only Weight and preserves Volume; View and Hand also save independently.
+  Invalid RPC results retain the saved value and announce an error.
 - No Units menu or shortcut remains in the shared navigation on desktop and
   mobile.
 - Keyboard users can reach and operate both Picklists; focus remains
   visible, labels are programmatically associated, and the page passes axe.
 - Chromium and Fold 6 checks confirm desktop navigation remains visible while
-  content scrolls, Settings follows Trash and precedes Account, mobile
-  navigation remains available, preference triggers have 48px hit areas, and
-  the page has no horizontal overflow.
+  content scrolls, Hand is hidden on desktop, mobile navigation remains
+  available and reverses for Right, preference triggers have 48px hit areas,
+  and the page has no horizontal overflow.
 
 Run the focused Settings browser tests on Chromium and Fold 6, then unit tests,
 typecheck, lint, and `git diff --check`. Do not run `npm run dev:local`; it

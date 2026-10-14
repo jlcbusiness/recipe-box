@@ -33,7 +33,7 @@ export function RecipeColumnFilter({
   options: RecipeColumnFilterOption[];
   selectedValues?: string[];
   sort: RecipeSearchSortKey;
-  view: 'list' | 'grid';
+  view: 'details' | 'list' | 'grid';
 }) {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 12 });

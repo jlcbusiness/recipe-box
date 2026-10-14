@@ -1,5 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import {
+  createExplorerState,
+  hasPersistedExplorerUrlState,
+  serializeExplorerState,
+} from '../../../lib/explorer-state';
+import { getExplorerState } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
 import {
   getIngredients,
@@ -16,6 +23,7 @@ import {
   searchRecipes,
 } from '../../../lib/recipes/search';
 import { createClient } from '../../../lib/supabase/server';
+import { ExplorerStatePersistence } from '../../explorer-state-persistence';
 import { AlternatingRecipeGrid } from './alternating-recipe-grid';
 import { RecipeColumnFilter } from './recipe-column-filter';
 import { RecipeFilterBuilder } from './recipe-filter-builder';
@@ -58,6 +66,13 @@ function firstValue(value: string | string[] | undefined) {
 
 export default async function FindRecipesPage({ searchParams }: FindRecipesPageProps) {
   const params = await searchParams;
+  const supabase = await createClient();
+  if (!hasPersistedExplorerUrlState('recipes-find', params)) {
+    const rememberedState = await getExplorerState(supabase, 'recipes-find');
+    if (rememberedState) {
+      redirect(serializeExplorerState('/recipes/find', rememberedState, true));
+    }
+  }
   const q = firstValue(params.q);
   const searchMode = params.tab === 'query' ? 'query' : 'search';
   const query = searchMode === 'search' ? q.slice(0, 500) : '';
@@ -74,7 +89,6 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       : 'name';
   const sortDirection = params.direction === 'desc' ? 'desc' : 'asc';
   const view = params.view === 'grid' ? 'grid' : 'list';
-  const supabase = await createClient();
   const [picklists, ingredients, publications, tags, activeRecipes] = await Promise.all([
     getRecipePicklists(supabase),
     getIngredients(supabase),
@@ -230,10 +244,20 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       <input key={`${name}-${value}`} name={name} type="hidden" value={value} />
     ));
   });
+  const explorerState = createExplorerState('recipes-find', {
+    column_filters: Object.fromEntries(
+      Object.entries(columnSelections).filter(([, selections]) => selections !== undefined),
+    ),
+    filters,
+    sort: sortKey,
+    direction: sortDirection,
+    view,
+  });
 
   return (
     <RecipeSearchModeProvider initialMode={searchMode} key={searchMode}>
       <main className="recipes-main find-recipes" aria-labelledby="page-title">
+        {explorerState && <ExplorerStatePersistence context="recipes-find" state={explorerState} />}
         <div className="recipe-page-heading">
           <div>
             <h1 id="page-title">Search</h1>

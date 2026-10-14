@@ -15,11 +15,13 @@ export type PrivateNavItem = {
 export function PrivateShell({
   children,
   email,
+  handPreference = 'right',
   navigation,
   wideContent = false,
 }: {
   children: ReactNode;
   email: string;
+  handPreference?: 'left' | 'right';
   navigation: PrivateNavItem[];
   wideContent?: boolean;
 }) {
@@ -56,7 +58,7 @@ export function PrivateShell({
   };
 
   return (
-    <div className="private-shell">
+    <div className="private-shell" data-hand={handPreference}>
       <EscapeDeselect />
       <nav aria-label="Main navigation" className="private-nav">
         <div className="private-nav-links">

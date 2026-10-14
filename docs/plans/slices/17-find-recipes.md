@@ -177,16 +177,16 @@ need combobox semantics.
   filters combine with AND. Nested AND/OR groups and query serialization
   belong to Slice 19.
 - Recipe List and Grid modes with a compact toolbar, search/result summary,
-  sort key and direction, and a List column chooser. The global and
-  publication-scoped recipe explorers use the same controls and semantics.
+  sort key, and direction. The global and publication-scoped recipe explorers
+  use the same controls and semantics.
 - A publication detail recipe explorer scoped to that active publication.
   The scope is fixed by the route and cannot be removed by its ordinary
   filters. Grid displays a recipe's default photo when one exists.
 - Library publication search, filters, sorting, List/Grid views, and a column
   chooser. Preserve Slice 10A's publication type filter and stable responsive
   defaults.
-- Transient search, filter, sort, view, and column state. Saved views and
-  publication scope restoration belong to Slice 18.
+- Transient search, filter, sort, and view state. Saved views, recipe List
+  column selection, and publication-scope restoration belong to later slices.
 - Owner isolation, active-record filtering, deterministic pagination, empty
   and error states, responsive behavior, keyboard support, and accessibility
   tests.
@@ -195,6 +195,7 @@ need combobox semantics.
 
 - Saved or pinned views, persistence of view configuration, and restoring a
   publication scope from a saved view (Slice 18).
+- Recipe List-column visibility and its shared chooser (Slice 19).
 - Nested AND/OR groups, arbitrary clause grouping, query explanation, and
   advanced query serialization (Slice 19).
 - Public recipe search or public search documents (Slice 20).
@@ -230,11 +231,9 @@ need combobox semantics.
   Not Contain`; numeric/time/date comparisons and `Between`; and enum `In` and
   `Not In`. Validate filter field, operator, and value types against an
   allowlist on the server.
-- Default recipe List columns are Name, Publication, Food Type, State, Opinion,
-  Meal Type, and Total Time. The chooser can show/hide supported recipe
-  metadata columns, including Cuisine, Tags, Serves, other time fields, Date
-  Added, and Date Changed; Name is required. Column selection does not change
-  filter or sort semantics and is transient until Slice 18.
+- Recipe Lists render the supported fixed fields for their explorer context.
+  Recipe List-column visibility and its shared chooser are deferred to Slice
+  19. Fixed List fields do not change filter or sort semantics.
 - Default publication List columns remain Name (with its type icon), Author,
   Edition/Issue, and Recipes. The chooser can show/hide Tags, Date Added, and
   Date Changed; Name is required. Keep Type represented in Name rather than

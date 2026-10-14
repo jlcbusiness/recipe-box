@@ -1044,6 +1044,21 @@ $trash_display_fixture$;`);
       mobileDetailActionsBounds.x + mobileDetailActionsBounds.width,
       0,
     );
+    const mobileControls = page.locator(
+      '.publication-detail-mobile-controls .recipe-explorer-toolbar > :not(legend)',
+    );
+    await expect(mobileControls).toHaveCount(3);
+    const mobileControlRows = await mobileControls.evaluateAll((controls) =>
+      controls.map((control) => control.getBoundingClientRect().y),
+    );
+    expect(mobileControlRows.every((row) => Math.abs(row - mobileControlRows[0]) < 1)).toBe(true);
+    expect(mobileControlRows[0]).toBeGreaterThanOrEqual(mobileDetailActionsBounds.y);
+    expect(mobileControlRows[0]).toBeLessThan(
+      mobileDetailActionsBounds.y + mobileDetailActionsBounds.height,
+    );
+    await expect(
+      page.locator('.publication-recipe-explorer > .recipe-explorer-toolbar'),
+    ).toBeHidden();
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`/publications/${publicationId}`);
@@ -1089,7 +1104,7 @@ $trash_display_fixture$;`);
   }
 });
 
-test('publication recipe Search and Query stay within the selected publication @e2e', async ({
+test('publication recipe list stays scoped and omits global search controls @e2e', async ({
   page,
   request,
 }) => {
@@ -1112,33 +1127,17 @@ test('publication recipe Search and Query stay within the selected publication @
 
     await signIn(page, owner.email, owner.password);
     await page.goto(`/publications/${publicationId}`);
-    await page.getByRole('searchbox', { name: 'Search publication recipes' }).fill('ScopeSignal');
-    await page.getByRole('button', { name: 'Search', exact: true }).click();
-    await expect(page).toHaveURL(/q=ScopeSignal/);
+    await expect(page.getByRole('tab', { name: 'Search', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Query', exact: true })).toHaveCount(0);
     await expect(page.getByText('1 recipe found')).toBeVisible();
     await expect(page.getByRole('link', { name: 'ScopeSignal lemon cake' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'ScopeSignal lemon soup' })).toHaveCount(0);
-
-    await page.getByRole('tab', { name: 'Query' }).click();
-    await page.getByRole('button', { name: 'Add rule' }).click();
-    const rule = page.locator('.recipe-filter-row').first();
-    await rule.getByRole('combobox', { name: 'Field' }).click();
-    await page.getByRole('option', { name: 'Name', exact: true }).click();
-    await rule.getByLabel('Value').fill('cake');
-    await rule.getByLabel('Value').press('Tab');
-    await expect(page).toHaveURL((url) => {
-      const params = new URL(url).searchParams;
-      const [filter] = params.getAll('filter').map((value) => JSON.parse(value));
-      return (
-        !params.has('q') &&
-        params.get('tab') === 'query' &&
-        filter?.field === 'name' &&
-        filter?.value === 'cake'
-      );
-    });
-    await expect(page.getByText('1 recipe found')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'ScopeSignal lemon cake' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'ScopeSignal lemon soup' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Filter Name' }).click();
+    await page.getByRole('button', { name: 'Deselect all' }).click();
+    await page.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(page).toHaveURL(/column_name=__none__/);
+    await expect(page.getByText('No recipes match these column filters.')).toBeVisible();
+    await page.goto(`/publications/${publicationId}`);
 
     await assignRecipe(request, config, noPhotoRecipe.id, publicationId);
     await page.goto(`/recipes/${scopedRecipe.id}/edit`);
@@ -1162,6 +1161,22 @@ test('publication recipe Search and Query stay within the selected publication @
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
     await photoDialog.getByRole('button', { name: 'Done' }).click();
 
+    await page.goto(`/publications/${publicationId}`);
+    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await expect(page).toHaveURL(new RegExp(`/publications/${publicationId}[?][^#]*view=list`));
+    await expect(page.locator('.publication-recipe-simple-list li')).toHaveCount(2);
+    await expect(page.getByRole('link', { name: 'ScopeSignal lemon cake' })).toHaveCSS(
+      'font-weight',
+      '400',
+    );
+    await expect(page.getByRole('link', { name: 'ScopeSignal lemon cake' })).toHaveCSS(
+      'color',
+      'rgb(36, 40, 32)',
+    );
+    await expect(page.getByRole('button', { name: 'Filter Name' })).toHaveCount(0);
+    await page.goto(`/publications/${publicationId}?sort=name&view=list&column_name=__none__`);
+    await expect(page.locator('.publication-recipe-simple-list li')).toHaveCount(2);
+
     await page.goto(`/publications/${publicationId}?sort=name&view=grid`);
     const scopedPhotoCard = page
       .locator('.find-recipes-grid li')
@@ -1184,12 +1199,6 @@ test('publication recipe Search and Query stay within the selected publication @
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('.find-recipes-grid li')).toHaveCount(2);
     await captureScreenshot(page, 'publication-scoped-recipe-grid-mobile');
-
-    const outOfScopeFilter = encodeURIComponent(
-      JSON.stringify({ field: 'publication_id', operator: 'in', value: [otherPublicationId] }),
-    );
-    await page.goto(`/publications/${publicationId}?tab=query&filter=${outOfScopeFilter}`);
-    await expect(page.getByText('No recipes match these search criteria.')).toBeVisible();
   } finally {
     await deleteTestUser(request, owner);
   }

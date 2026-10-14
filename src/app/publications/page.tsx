@@ -1,11 +1,14 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { hasPersistedExplorerUrlState, serializeExplorerState } from '../../lib/explorer-state';
+import { getExplorerState } from '../../lib/explorer-state-data';
 import { getPublicationCovers } from '../../lib/media/data';
 import {
   type PublicationSearchSortKey,
   parsePublicationSearchFilters,
   searchPublications,
 } from '../../lib/publications/search';
-import { getTags, type PublicationType } from '../../lib/recipes/data';
+import type { PublicationType } from '../../lib/recipes/data';
 import { createClient } from '../../lib/supabase/server';
 import { PublicationExplorer } from './publication-explorer';
 
@@ -34,7 +37,6 @@ export default async function LibraryPage({
 }: {
   searchParams: Promise<{
     status?: string | string[];
-    q?: string | string[];
     filter?: string | string[];
     type?: string;
     sort?: string;
@@ -44,27 +46,27 @@ export default async function LibraryPage({
   }>;
 }) {
   const [params, supabase] = await Promise.all([searchParams, createClient()]);
+  if (!hasPersistedExplorerUrlState('publications', params)) {
+    const rememberedState = await getExplorerState(supabase, 'publications');
+    if (rememberedState) {
+      redirect(serializeExplorerState('/publications', rememberedState));
+    }
+  }
   const status = firstValue(params.status);
-  const query = firstValue(params.q).slice(0, 500);
   const filters = parsePublicationSearchFilters(params.filter);
   const typeFilter = publicationType(firstValue(params.type)) ?? 'all';
   const requestedPage = Math.max(1, Math.min(20_001, Number.parseInt(params.page ?? '1', 10) || 1));
   const sortKey = sortOptions.includes(params.sort as PublicationSearchSortKey)
     ? (params.sort as PublicationSearchSortKey)
-    : query.trim()
-      ? 'relevance'
-      : 'name';
+    : 'name';
   const sortDirection = params.direction === 'desc' ? 'desc' : 'asc';
   const view = params.view === 'list' ? 'list' : 'grid';
-  const [tags, activePublications] = await Promise.all([
-    getTags(supabase),
-    supabase
-      .from('publications')
-      .select('id', { count: 'exact', head: true })
-      .is('trashed_at', null),
-  ]);
+  const { count: activePublicationCount, error: activePublicationError } = await supabase
+    .from('publications')
+    .select('id', { count: 'exact', head: true })
+    .is('trashed_at', null);
 
-  if (activePublications.error) {
+  if (activePublicationError) {
     throw new Error('Unable to load the Library.');
   }
 
@@ -82,13 +84,13 @@ export default async function LibraryPage({
   let searchError: string | null = null;
 
   try {
-    publications = await searchPublications(supabase, query, {
+    publications = await searchPublications(supabase, '', {
       ...searchOptions,
       offset: (page - 1) * pageSize,
     });
     matchingCount = publications[0]?.total_count ?? 0;
     if (matchingCount === 0 && page > 1) {
-      const firstPage = await searchPublications(supabase, query, {
+      const firstPage = await searchPublications(supabase, '', {
         ...searchOptions,
         limit: 1,
         offset: 0,
@@ -98,13 +100,13 @@ export default async function LibraryPage({
     pageCount = Math.max(1, Math.ceil(matchingCount / pageSize));
     if (page > pageCount) {
       page = pageCount;
-      publications = await searchPublications(supabase, query, {
+      publications = await searchPublications(supabase, '', {
         ...searchOptions,
         offset: (page - 1) * pageSize,
       });
     }
   } catch {
-    searchError = 'Unable to search publications. Your query and filters are preserved. Try again.';
+    searchError = 'Unable to load publications. Your column filters are preserved. Try again.';
     publications = [];
     matchingCount = 0;
     pageCount = 1;
@@ -152,15 +154,13 @@ export default async function LibraryPage({
       )}
       <PublicationExplorer
         direction={sortDirection}
-        emptyCatalog={(activePublications.count ?? 0) === 0}
+        emptyCatalog={(activePublicationCount ?? 0) === 0}
         filters={filters}
         page={page}
         pageCount={pageCount}
         publications={explorerPublications}
-        query={query}
         searchError={searchError}
         sort={sortKey}
-        tagOptions={tags.map(({ id, name }) => ({ value: id, label: name }))}
         totalCount={matchingCount}
         type={typeFilter}
         view={view}

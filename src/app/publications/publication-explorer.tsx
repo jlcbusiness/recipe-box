@@ -17,15 +17,17 @@ import {
 import Link from 'next/link';
 import type { MouseEvent, ReactNode } from 'react';
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { createExplorerState } from '../../lib/explorer-state';
 import type {
   PublicationSearchFilter,
   PublicationSearchResult,
   PublicationSearchSortKey,
 } from '../../lib/publications/search';
 import type { PublicationType } from '../../lib/recipes/data';
+import { ExplorerStatePersistence } from '../explorer-state-persistence';
+import { PublicationColumnFilter } from './publication-column-filter';
 import { PublicationCommaList } from './publication-comma-list';
 import { PublicationCover } from './publication-cover';
-import { PublicationFilterBuilder } from './publication-filter-builder';
 
 type ExplorerPublication = PublicationSearchResult & {
   id: string;
@@ -37,7 +39,6 @@ type SortKey = PublicationSearchSortKey;
 type ExplorerMenu = 'type' | 'sort-key' | 'columns';
 type ColumnKey = 'author' | 'edition' | 'recipe_count' | 'tags' | 'created_at' | 'updated_at';
 type ExplorerState = {
-  query: string;
   filters: PublicationSearchFilter[];
   type: PublicationFilter;
   sort: SortKey;
@@ -58,7 +59,6 @@ const columnLabels: Record<ColumnKey, string> = {
 function explorerHref(state: ExplorerState, changes: Partial<ExplorerState> = {}) {
   const next = { ...state, ...changes };
   const params = new URLSearchParams();
-  if (next.query) params.set('q', next.query);
   for (const filter of next.filters) params.append('filter', JSON.stringify(filter));
   if (next.type !== 'all') params.set('type', next.type);
   params.set('sort', next.sort);
@@ -99,6 +99,17 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
 
 function formatDate(value: string) {
   return dateFormatter.format(new Date(value));
+}
+
+function filterOptions(values: (number | string | null | undefined)[]) {
+  return [
+    ...new Set(
+      values
+        .filter((value): value is number | string => value !== null && value !== undefined)
+        .map(String)
+        .filter(Boolean),
+    ),
+  ].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
 }
 
 function tooltipText(publication: ExplorerPublication) {
@@ -194,7 +205,6 @@ function MenuLink({
 
 export function PublicationExplorer({
   publications,
-  query,
   filters,
   type,
   sort,
@@ -205,10 +215,8 @@ export function PublicationExplorer({
   totalCount,
   emptyCatalog,
   searchError,
-  tagOptions,
 }: {
   publications: ExplorerPublication[];
-  query: string;
   filters: PublicationSearchFilter[];
   type: PublicationFilter;
   sort: SortKey;
@@ -219,9 +227,7 @@ export function PublicationExplorer({
   totalCount: number;
   emptyCatalog: boolean;
   searchError: string | null;
-  tagOptions: { value: string; label: string }[];
 }) {
-  const [isMobile, setIsMobile] = useState(false);
   const [openMenu, setOpenMenu] = useState<ExplorerMenu | null>(null);
   const [columns, setColumns] = useState<Record<ColumnKey, boolean>>({
     author: true,
@@ -233,21 +239,34 @@ export function PublicationExplorer({
   });
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const activeTrigger = useRef<HTMLButtonElement | null>(null);
-  const viewMode: ViewMode = isMobile && view === 'grid' ? 'list' : view;
-  const state: ExplorerState = { query, filters, type, sort, direction, view: viewMode, page };
+  const viewMode = view;
+  const state: ExplorerState = { filters, type, sort, direction, view: viewMode, page };
+  const persistedState = createExplorerState('publications', {
+    filters,
+    sort,
+    direction,
+    view,
+    type,
+  });
   const stateKey = JSON.stringify(state);
   const previousStateKey = useRef(stateKey);
   const visibleColumns = (Object.keys(columnLabels) as ColumnKey[]).filter(
     (column) => columns[column],
   );
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 720px)');
-    const updateViewport = () => setIsMobile(media.matches);
-    updateViewport();
-    media.addEventListener('change', updateViewport);
-    return () => media.removeEventListener('change', updateViewport);
-  }, []);
+  const columnFilterOptions = {
+    name: filterOptions(publications.map((publication) => publication.name)),
+    author: filterOptions(publications.map((publication) => publication.author)),
+    edition: filterOptions(
+      publications.map((publication) => publication.edition || publication.issue),
+    ),
+    recipe_count: filterOptions(publications.map((publication) => publication.recipe_count)),
+    created_at: filterOptions(
+      publications.map((publication) => publication.created_at.slice(0, 10)),
+    ),
+    updated_at: filterOptions(
+      publications.map((publication) => publication.updated_at.slice(0, 10)),
+    ),
+  } as const;
 
   useEffect(() => {
     if (previousStateKey.current !== stateKey) {
@@ -292,6 +311,7 @@ export function PublicationExplorer({
 
   return (
     <section className="publication-explorer" aria-label="Publication Explorer">
+      {persistedState && <ExplorerStatePersistence context="publications" state={persistedState} />}
       <div className="publication-explorer-toolbar" ref={toolbarRef}>
         <div className="publication-explorer-control publication-explorer-control-type">
           <button
@@ -433,54 +453,6 @@ export function PublicationExplorer({
         </div>
       </div>
 
-      <div className="publication-explorer-search-controls">
-        <form action="/publications" className="publication-search-form" method="get">
-          <label htmlFor="publication-search">Search publications</label>
-          <div className="publication-search-input-row">
-            <input
-              autoComplete="off"
-              id="publication-search"
-              maxLength={500}
-              name="q"
-              type="search"
-              defaultValue={query}
-            />
-            <button className="recipe-primary-button" type="submit">
-              Search
-            </button>
-            {query && (
-              <Link
-                className="recipe-secondary-link"
-                href={explorerHref(state, { query: '', page: 1 })}
-              >
-                Clear search
-              </Link>
-            )}
-          </div>
-          {filters.map((filter) => (
-            <input
-              key={JSON.stringify(filter)}
-              name="filter"
-              type="hidden"
-              value={JSON.stringify(filter)}
-            />
-          ))}
-          {type !== 'all' && <input name="type" type="hidden" value={type} />}
-          <input name="sort" type="hidden" value={sort} />
-          <input name="direction" type="hidden" value={direction} />
-          <input name="view" type="hidden" value={viewMode} />
-        </form>
-        <PublicationFilterBuilder
-          direction={direction}
-          filters={filters}
-          query={query}
-          sort={sort}
-          tagOptions={tagOptions}
-          type={type}
-          view={viewMode}
-        />
-      </div>
-
       <div className="publication-explorer-results">
         <p aria-live="polite" className="publication-explorer-result-count">
           {searchError
@@ -510,13 +482,58 @@ export function PublicationExplorer({
                 <thead role="rowgroup">
                   <tr role="row">
                     <th role="columnheader" scope="col">
-                      Name
+                      <PublicationColumnFilter
+                        direction={direction}
+                        field="name"
+                        filters={filters}
+                        kind="text"
+                        label="Name"
+                        options={columnFilterOptions.name}
+                        sort={sort}
+                        type={type}
+                        view={viewMode}
+                      />
                     </th>
                     {visibleColumns.map((column) => (
-                      <th key={column} role="columnheader" scope="col">
-                        {columnLabels[column] === 'Edition / Issue'
-                          ? 'Edition'
-                          : columnLabels[column]}
+                      <th
+                        className={
+                          column === 'recipe_count'
+                            ? 'publication-explorer-table-recipe-count'
+                            : undefined
+                        }
+                        key={column}
+                        role="columnheader"
+                        scope="col"
+                      >
+                        {column === 'author' ||
+                        column === 'edition' ||
+                        column === 'recipe_count' ||
+                        column === 'created_at' ||
+                        column === 'updated_at' ? (
+                          <PublicationColumnFilter
+                            direction={direction}
+                            field={column === 'edition' ? 'edition' : column}
+                            filters={filters}
+                            kind={
+                              column === 'recipe_count'
+                                ? 'number'
+                                : column === 'created_at' || column === 'updated_at'
+                                  ? 'date'
+                                  : 'text'
+                            }
+                            label={
+                              columnLabels[column] === 'Edition / Issue'
+                                ? 'Edition'
+                                : columnLabels[column]
+                            }
+                            options={columnFilterOptions[column === 'edition' ? 'edition' : column]}
+                            sort={sort}
+                            type={type}
+                            view={viewMode}
+                          />
+                        ) : (
+                          columnLabels[column]
+                        )}
                       </th>
                     ))}
                   </tr>
@@ -543,7 +560,16 @@ export function PublicationExplorer({
                         </div>
                       </td>
                       {visibleColumns.map((column) => (
-                        <td data-label={columnLabels[column]} key={column} role="cell">
+                        <td
+                          className={
+                            column === 'recipe_count'
+                              ? 'publication-explorer-table-recipe-count'
+                              : undefined
+                          }
+                          data-label={columnLabels[column]}
+                          key={column}
+                          role="cell"
+                        >
                           {column === 'author' ? (
                             publication.author ? (
                               <AuthorNames authors={publication.author} />

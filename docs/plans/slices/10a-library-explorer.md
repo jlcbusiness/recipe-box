@@ -1,6 +1,7 @@
 # Slice 10A: Library Explorer
 
-**Status:** Implemented and verified. Slice 10B remains pending.
+**Status:** Implemented and verified. Slice 10B is also complete; Slice 18
+later added remembered explorer state.
 
 This brief delivers a compact Library explorer: owners can switch between List
 and Grid, filter by publication type, and sort by publication metadata. The
@@ -38,8 +39,9 @@ supported mobile widths.
   Date Changed sorting.
 - Fallback publication covers already exist for Book, Magazine, and Site.
   Uploaded covers and signed media URLs are Slice 12, not this explorer work.
-- Saved views and persisted view preferences belong to later query/settings
-  work. List/Grid, filter, and sort are transient UI state for this slice.
+- Named saved views and persisted List-column visibility belong to later query
+  work. Slice 18 later added per-account remembered filters, sort, direction,
+  and List/Grid state.
 - Publication deletion and restore require a soft-delete lifecycle and
   transactional recipe disposition. They are explicitly out of scope for 10A
   and will be designed and verified in 10B.
@@ -48,8 +50,8 @@ supported mobile widths.
 
 ### Included
 
-- A two-mode view control: **List** and **Grid**. On initial load, default to
-  Grid above 720px and List at 720px or narrower. An icon-only trigger shows
+- A two-mode view control: **List** and **Grid**. In the absence of an explicit
+  URL or remembered state, Grid is the fallback. An icon-only trigger shows
   the current view and directly toggles to the other view; its accessible name
   identifies the destination view.
 - A compact Type trigger opens **All**, **Books**, **Magazines**, and **Sites**
@@ -65,8 +67,9 @@ supported mobile widths.
   descending order. Default to Name ascending; use Name ascending as a
   deterministic tie-breaker. Null text values sort after populated values.
 - Desktop List columns for Name, Type, Author, Issue/Edition, and Recipes, with
-  recipe counts centered. Names link to the existing publication detail route.
-  Neither date is a visible column.
+  centered Recipes header and counts plus subtle alternating row colors. Names
+  link to the existing publication detail route. Neither date is a visible
+  column.
 - A mobile one-line List row showing only the type icon and publication title.
   Titles do not wrap and truncate with an ellipsis; no horizontal scrolling is
   introduced.
@@ -90,8 +93,9 @@ supported mobile widths.
 
 - Publication edit or delete actions, publication Trash, restore, purge, and
   the three recipe-disposition choices; these belong to Slice 10B.
-- Persistent layout, filters, sort, saved searches, configurable columns, or
-  query construction; these belong to later settings/query slices.
+- Named saved searches, persisted List-column visibility, or query construction;
+  these belong to later query slices. Slice 18 owns remembered filters, sort,
+  direction, and view state.
 - Search by publication text; the Library Explorer requirements specify type
   filtering, while full-text search belongs to Slice 17.
 - Uploaded covers, logos, signed URLs, and image processing; Slice 12 owns
@@ -108,8 +112,9 @@ supported mobile widths.
 - Apply filters and sorting to the same owner-scoped data in both view modes.
   Filtering does not change publication records or recipe assignments.
 - Publication titles remain ordinary links to their detail routes.
-- Sort and mode changes do not change the URL or persist across reloads. This
-  avoids introducing a preference/schema contract ahead of saved views.
+- Sort and mode changes update the shareable URL. Slice 18 persists allowed
+  filters, sort, direction, and view per account; valid URL state takes
+  precedence over remembered state.
 
 ## Responsive and accessibility contract
 
@@ -129,9 +134,11 @@ supported mobile widths.
 
 ## Automated acceptance
 
-- Verify the initial view is Grid above 720px and List at 720px or narrower.
+- Verify URL state takes precedence over remembered state and the Grid fallback
+  applies when neither is available.
 - Verify List preserves name ordering and shows the five desktop data columns
-  without Date Added or Date Changed; center recipe counts.
+  without Date Added or Date Changed; center the Recipes header and counts, and
+  alternate desktop row backgrounds.
 - Verify List/Grid switching and publication navigation in both modes.
 - Verify each type filter, its active icon, All, and zero-result feedback.
 - Verify every sort key, including Date Added and Date Changed, in both

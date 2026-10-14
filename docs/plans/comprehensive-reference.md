@@ -312,8 +312,8 @@ trailing empty row.
 ### 3.5 Unit Display Preferences
 
 - **Default unit systems:** The account stores independent US customary or metric defaults for volume and weight.
-  Signed-in users change these values in the Units subsection of Settings' Personal preferences section using the shared
-  portal `Picklist` ; the shared navigation has no Units shortcut.
+  Signed-in users change these values in Settings' Personal preferences section using the shared portal `Picklist` ; the
+  shared navigation has no Units shortcut.
 - **Preference writes:** A narrow authenticated database function derives the account from `auth.uid()` , validates the
   requested systems, and updates only the preference fields. Direct authenticated account updates remain restricted;
   admin and sign-in-method fields are not writable through this function.
@@ -657,8 +657,11 @@ The query engine provides high-density, flexible querying across recipes and pub
   - Numbers / Times / Dates: `=`, `!=`, `>`, `<`, `>=`, `<=`, `Between`.
   - State / Enums: `In`, `Not In`.
 - **Clause Grouping:** Compound boolean logic with `AND` / `OR` operators and bracketed sub-clauses.
-- **Saved Queries / Views:** Users can name, save, and pin queries to the navigation bar. Saved queries remember column
-  visibility, column width, and sort order.
+- **Explorer State And Saved Queries:** Each explorer restores its owner's
+  last-used filters, sort key, sort direction, and List/Grid choice. A valid
+  shareable URL takes precedence over remembered state. Named and pinned saved
+  queries arrive with nested queries; they add persisted column visibility,
+  column width, and reusable query lifecycle.
 
 ### 7.2 Full-Text Search
 
@@ -677,7 +680,9 @@ and a single-line mobile list:
 
 - **View Modes:**
   - **List:** Desktop uses a semantic table with Name, Type, Author,
-    Issue/Edition, and Recipes. Recipe counts are centered. On mobile, each row shows only the
+    Issue/Edition, and Recipes. The Recipes filter header and counts are
+    centered. Desktop rows alternate a subtle leaf tint against white to aid
+    scanning. On mobile, each row shows only the
     type-specific icon and a single-line publication title; long titles are
     truncated without wrapping or horizontal scrolling.
   - **Grid:** Shows the existing cover, publication name, author when present,
@@ -699,13 +704,14 @@ and a single-line mobile list:
   Date Added and Date Changed are sort choices, not visible columns. Default to
   List sorted by Name ascending; use Name ascending as a deterministic
   tie-breaker. Null text values sort after populated values.
-- **Transient State:** View, filter, and sort state remain transient until
-  saved views are introduced.
+- **Restored State:** Each account's last-used Library view, filter, and sort
+  are restored independently of recipe explorers. A blank search query
+  prevents an old free-text query from making the collection appear incomplete.
 - **Publication Recipe Explorer:** Publication detail uses the shared recipe
   explorer controls and List/Grid views scoped to that publication. Grid shows
   the default recipe photo when available without cropping it. Filter and sort
-  fields follow the recipe field catalog; Slice 18 saved views may preserve the
-  publication scope.
+  fields follow the recipe field catalog; Slice 18 restores its last-used
+  state without losing the publication scope.
 
 ---
 
@@ -832,9 +838,10 @@ publication history snapshots include tag IDs, names, and color keys. Public
 recipe payloads do not include tags. Query filtering and cross-record tag
 search belong to Slice 17.
 
-### 8.2 Trusted Density Registry
+### 8.2 Trusted Densities
 
-Located in Settings as a separate, collapsed-by-default section after Tags:
+Located in Settings as a separate, collapsed-by-default **Trusted densities**
+section after Tags, with matching disclosure spacing and no divider:
 
 - Searchable, alphabetized list of canonical ingredients with configured
   densities, with an inline editor and confirmed removal.
@@ -856,13 +863,16 @@ Located in Settings, per account:
 - Default ingredient presentation: Standard or Ingredient-First (4.1).
 - Default unit system for volume and, separately, for weight (3.5).
 - Ingredient mention style (5.1).
+- Mobile hand preference: Left or Right.
 
-Volume and weight defaults appear in the Units subsection of Personal
-preferences. Both controls use the shared portal `Picklist`; the private
-navigation has no Units shortcut. Triggers are 36px high; on mobile their hit
-areas expand to at least 48px without changing their visible size. The controls
-are keyboard operable, display save status, and never offer public or
-cross-account preference changes.
+Volume, Weight, and View appear as labeled Personal preferences controls without
+a Units heading. View selects Standard or Ingredient-first presentation. Volume,
+Weight, and View use the shared portal `Picklist`; the private navigation has
+no Units shortcut. On mobile, a Hand preference selects Left or Right and
+reverses the compact navigation icon order for Right-handed use; it is not
+shown on desktop. Visible preference controls are 36px high; Picklist hit areas
+expand to at least 48px on mobile. The controls are keyboard operable, display
+save status, and never offer public or cross-account preference changes.
 
 ---
 

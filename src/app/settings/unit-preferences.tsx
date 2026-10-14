@@ -19,10 +19,12 @@ const presentationOptions: PicklistOption[] = [
 
 export function UnitPreferences({
   ingredientPresentation,
+  handPreference,
   volumeSystem,
   weightSystem,
 }: {
   ingredientPresentation: IngredientPresentation;
+  handPreference: 'left' | 'right';
   volumeSystem: MeasurementSystem;
   weightSystem: MeasurementSystem;
 }) {
@@ -31,11 +33,13 @@ export function UnitPreferences({
   const volumeSystemRef = useRef<HTMLInputElement>(null);
   const weightSystemRef = useRef<HTMLInputElement>(null);
   const ingredientPresentationRef = useRef<HTMLInputElement>(null);
+  const handPreferenceRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [preferences, setPreferences] = useState({
     volume: volumeSystem,
     weight: weightSystem,
     presentation: ingredientPresentation,
+    hand: handPreference,
   });
   const [state, formAction, isPending] = useActionState(saveUnitPreferences, {});
 
@@ -44,8 +48,9 @@ export function UnitPreferences({
       volume: volumeSystem,
       weight: weightSystem,
       presentation: ingredientPresentation,
+      hand: handPreference,
     });
-  }, [ingredientPresentation, volumeSystem, weightSystem]);
+  }, [handPreference, ingredientPresentation, volumeSystem, weightSystem]);
 
   useEffect(() => {
     if (state.status === 'saved') {
@@ -55,9 +60,10 @@ export function UnitPreferences({
         volume: volumeSystem,
         weight: weightSystem,
         presentation: ingredientPresentation,
+        hand: handPreference,
       });
     }
-  }, [ingredientPresentation, router, state, volumeSystem, weightSystem]);
+  }, [handPreference, ingredientPresentation, router, state, volumeSystem, weightSystem]);
 
   function updateSystem(dimension: 'volume' | 'weight', value: string) {
     const system = value as MeasurementSystem;
@@ -80,6 +86,17 @@ export function UnitPreferences({
     }
     if (ingredientPresentationRef.current) {
       ingredientPresentationRef.current.value = presentation;
+    }
+    formRef.current?.requestSubmit();
+  }
+
+  function updateHand(hand: 'left' | 'right') {
+    setPreferences((current) => ({ ...current, hand }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'hand';
+    }
+    if (handPreferenceRef.current) {
+      handPreferenceRef.current.value = hand;
     }
     formRef.current?.requestSubmit();
   }
@@ -111,8 +128,13 @@ export function UnitPreferences({
           type="hidden"
           value={preferences.presentation}
         />
+        <input
+          name="hand_preference"
+          ref={handPreferenceRef}
+          type="hidden"
+          value={preferences.hand}
+        />
         <div className="settings-preference-group">
-          <h3 id="units-title">Units</h3>
           <div className="settings-unit-preference-fields">
             <div className="settings-unit-field">
               <span className="settings-unit-label">Volume</span>
@@ -145,11 +167,11 @@ export function UnitPreferences({
         <div className="settings-preference-group">
           <div className="settings-unit-preference-fields">
             <div className="settings-unit-field">
-              <span className="settings-unit-label">Ingredient view</span>
+              <span className="settings-unit-label">View</span>
               <Picklist
                 className="settings-unit-picklist"
                 disabled={isPending}
-                label="Ingredient view"
+                label="View"
                 measureLabel="Standard"
                 menuClassName="settings-unit-picklist-menu"
                 onSelect={updatePresentation}
@@ -157,6 +179,31 @@ export function UnitPreferences({
                 value={preferences.presentation}
               />
             </div>
+          </div>
+        </div>
+        <div className="settings-preference-group settings-hand-preference-group">
+          <div className="settings-unit-preference-fields">
+            <fieldset className="settings-unit-field settings-hand-preference">
+              <legend className="settings-unit-label">Hand</legend>
+              <div className="settings-hand-toggle">
+                <button
+                  aria-pressed={preferences.hand === 'left'}
+                  disabled={isPending}
+                  onClick={() => updateHand('left')}
+                  type="button"
+                >
+                  Left
+                </button>
+                <button
+                  aria-pressed={preferences.hand === 'right'}
+                  disabled={isPending}
+                  onClick={() => updateHand('right')}
+                  type="button"
+                >
+                  Right
+                </button>
+              </div>
+            </fieldset>
           </div>
         </div>
       </form>

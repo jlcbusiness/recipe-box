@@ -24,7 +24,7 @@ export default async function SettingsPage() {
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('volume_system, weight_system, ingredient_presentation')
+    .select('volume_system, weight_system, ingredient_presentation, hand_preference')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -179,6 +179,7 @@ export default async function SettingsPage() {
       <section aria-labelledby="personal-preferences-title" className="settings-section">
         <h2 id="personal-preferences-title">Personal preferences</h2>
         <UnitPreferences
+          handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
           ingredientPresentation={
             account.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard'
           }
