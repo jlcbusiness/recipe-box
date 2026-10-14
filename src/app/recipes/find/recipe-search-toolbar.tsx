@@ -80,8 +80,8 @@ export function RecipeSearchToolbar({
   }) =>
     controlHref({
       path,
-      query,
-      filters,
+      query: searchMode?.mode === 'search' ? query : '',
+      filters: searchMode?.mode === 'query' ? filters : [],
       columnSelections,
       sort: next.sort ?? sort,
       direction: next.direction ?? direction,
@@ -162,8 +162,8 @@ export function RecipeSearchPagination({
   const hrefForPage = (nextPage: number) =>
     controlHref({
       path,
-      query,
-      filters,
+      query: searchMode?.mode === 'search' ? query : '',
+      filters: searchMode?.mode === 'query' ? filters : [],
       columnSelections,
       sort,
       direction,

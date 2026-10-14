@@ -323,7 +323,8 @@ a {
 
 @media (min-width: 641px) {
   .private-content.private-content-wide {
-    padding-inline: max(24px, calc((100vw - 1392px) / 2));
+    /* Fit five 230px cards at full width, using the shell track rather than viewport width. */
+    padding-inline: max(11px, calc((100% - 1198px) / 2));
   }
 }
 
@@ -1025,14 +1026,6 @@ h1 {
     background-color: rgb(56 96 68 / 8%);
   }
 
-  .find-recipes-grid li:nth-child(odd) {
-    background-color: rgb(56 96 68 / 8%);
-  }
-
-  .find-recipes-grid li:nth-child(even) {
-    background-color: #fff;
-  }
-
   .find-recipes-list th:first-child,
   .find-recipes-list td:first-child {
     width: 52%;
@@ -1657,7 +1650,7 @@ h1 {
 
 .find-recipes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 12px;
   margin: 0;
   padding: 0;
@@ -1673,6 +1666,14 @@ h1 {
   border-radius: 4px;
   background: rgb(255 255 255 / 75%);
   box-shadow: 0 4px 12px rgb(36 40 32 / 18%);
+}
+
+.find-recipes-grid li[data-stripe-cell="odd"] {
+  background-color: rgb(56 96 68 / 8%);
+}
+
+.find-recipes-grid li[data-stripe-cell="even"] {
+  background-color: #fff;
 }
 
 .private-content .find-recipes-grid li a {
@@ -5998,14 +5999,6 @@ section.recipe-detail-section .recipe-relationship-list a {
     font-weight: 400;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .find-recipes-grid li:nth-child(odd) {
-    background-color: rgb(56 96 68 / 8%);
-  }
-
-  .find-recipes-grid li:nth-child(even) {
-    background-color: #fff;
   }
 
   .find-recipes-grid li {

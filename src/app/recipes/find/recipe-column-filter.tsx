@@ -157,8 +157,10 @@ export function RecipeColumnFilter({
         <div className="recipe-column-filter-popover" ref={menuRef} style={menuPosition}>
           <form action={action} method="get">
             {searchMode && <input name="tab" type="hidden" value={searchMode.mode} />}
-            {baseQuery && <input name="q" type="hidden" value={baseQuery} />}
-            {baseFilters.map((filter) => (
+            {searchMode?.mode === 'search' && baseQuery && (
+              <input name="q" type="hidden" value={baseQuery} />
+            )}
+            {(searchMode?.mode === 'query' ? baseFilters : []).map((filter) => (
               <input
                 key={JSON.stringify(filter)}
                 name="filter"

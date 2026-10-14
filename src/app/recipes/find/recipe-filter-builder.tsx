@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { RecipeSearchFilter, RecipeSearchFilterField } from '../../../lib/recipes/search';
 import { Picklist } from '../../picklist';
 import { MultiPicklist } from '../multi-picklist';
+import { useRecipeSearchMode } from './recipe-search-tabs';
 
 type FilterOption = { value: string; label: string };
 type RecipeFilterOptions = {
@@ -190,6 +191,9 @@ export function RecipeFilterBuilder({
   const [focusRuleId, setFocusRuleId] = useState<string | null>(null);
   const [openPicklistId, setOpenPicklistId] = useState<string | null>(null);
   const builderRef = useRef<HTMLFieldSetElement | null>(null);
+  const searchMode = useRecipeSearchMode();
+  const mode = searchMode?.mode;
+  const previousModeRef = useRef(mode);
 
   useEffect(() => {
     if (!focusRuleId) return;
@@ -207,6 +211,19 @@ export function RecipeFilterBuilder({
     },
     [],
   );
+
+  useEffect(() => {
+    if (previousModeRef.current === mode) return;
+    previousModeRef.current = mode;
+    if (applyTimerRef.current !== null) {
+      window.clearTimeout(applyTimerRef.current);
+      applyTimerRef.current = null;
+    }
+    pendingChangesRef.current = false;
+    draftsRef.current = [];
+    setDrafts([]);
+    setOpenPicklistId(null);
+  }, [mode]);
 
   function isCompleteDraft(draft: DraftFilter) {
     const kind = definitionFor(draft.field)?.kind;
@@ -272,7 +289,7 @@ export function RecipeFilterBuilder({
   }
 
   return (
-    <fieldset className="recipe-filter-builder" ref={builderRef}>
+    <fieldset className="recipe-filter-builder" disabled={mode !== 'query'} ref={builderRef}>
       <legend>{title}</legend>
       {drafts.map((draft, index) => {
         const definition = definitionFor(draft.field);

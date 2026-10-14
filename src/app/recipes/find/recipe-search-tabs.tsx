@@ -5,6 +5,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -36,6 +37,47 @@ export function RecipeSearchModeProvider({
 
 export function useRecipeSearchMode() {
   return useContext(RecipeSearchModeContext);
+}
+
+export function RecipeSearchInput({
+  defaultValue,
+  id,
+  label,
+}: {
+  defaultValue: string;
+  id?: string;
+  label: string;
+}) {
+  const searchMode = useRecipeSearchMode();
+  if (!searchMode) throw new Error('RecipeSearchInput must be inside RecipeSearchModeProvider.');
+
+  const { mode } = searchMode;
+  const [value, setValue] = useState(defaultValue);
+  const previousModeRef = useRef(mode);
+
+  useEffect(() => {
+    if (previousModeRef.current === mode) return;
+    previousModeRef.current = mode;
+    setValue('');
+  }, [mode]);
+
+  useEffect(() => {
+    setValue(defaultValue);
+  }, [defaultValue]);
+
+  return (
+    <input
+      aria-label={label}
+      autoComplete="off"
+      disabled={mode !== 'search'}
+      id={id}
+      maxLength={500}
+      name={value ? 'q' : undefined}
+      type="search"
+      value={value}
+      onChange={(event) => setValue(event.target.value)}
+    />
+  );
 }
 
 export function RecipeSearchTabs({

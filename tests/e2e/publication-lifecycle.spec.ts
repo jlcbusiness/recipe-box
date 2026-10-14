@@ -1130,7 +1130,7 @@ test('publication recipe Search and Query stay within the selected publication @
       const params = new URL(url).searchParams;
       const [filter] = params.getAll('filter').map((value) => JSON.parse(value));
       return (
-        params.get('q') === 'ScopeSignal' &&
+        !params.has('q') &&
         params.get('tab') === 'query' &&
         filter?.field === 'name' &&
         filter?.value === 'cake'
@@ -1170,6 +1170,8 @@ test('publication recipe Search and Query stay within the selected publication @
       .locator('.find-recipes-grid li')
       .filter({ hasText: 'ScopeSignal lemon tart' });
     await expect(page.locator('.find-recipes-grid li')).toHaveCount(2);
+    await expect(scopedPhotoCard).toHaveAttribute('data-stripe-cell', 'odd');
+    await expect(scopedNoPhotoCard).toHaveAttribute('data-stripe-cell', 'even');
     await expect(scopedPhotoCard.locator('.find-recipes-card-image')).toBeVisible();
     await expect(scopedPhotoCard.locator('.find-recipes-card-image')).toHaveCSS(
       'object-fit',
@@ -1186,7 +1188,7 @@ test('publication recipe Search and Query stay within the selected publication @
     const outOfScopeFilter = encodeURIComponent(
       JSON.stringify({ field: 'publication_id', operator: 'in', value: [otherPublicationId] }),
     );
-    await page.goto(`/publications/${publicationId}?filter=${outOfScopeFilter}`);
+    await page.goto(`/publications/${publicationId}?tab=query&filter=${outOfScopeFilter}`);
     await expect(page.getByText('No recipes match these search criteria.')).toBeVisible();
   } finally {
     await deleteTestUser(request, owner);

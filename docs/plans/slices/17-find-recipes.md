@@ -240,12 +240,16 @@ need combobox semantics.
   Date Changed; Name is required. Keep Type represented in Name rather than
   adding a duplicate Type column. Existing Date Added and Date Changed sort
   choices remain available without being default columns.
-- Grid and List show the same filtered and sorted records. The publication
-  recipe Grid uses the current default photo where available and preserves
-  photo content rather than using a tight crop. On mobile, keep the existing
-  720px responsive convention: List at or below the breakpoint, Grid above
-  it. Adapt controls to touch-sized targets and prevent horizontal page
-  overflow.
+- Grid and List show the same filtered and sorted records. Recipe Grid uses
+  responsive 220px minimum columns with 12px gaps; five columns fit at 1,148px
+  of usable grid width. Keep desktop cards 234px high and mobile cards sized to
+  their content. Use a checkerboard that alternates card colors across each
+  visual row and flips the starting color on the next row, based on the
+  rendered row and column positions. The publication recipe Grid uses the
+  current default photo where available and preserves photo content rather
+  than using a tight crop. On mobile, keep the existing 720px responsive
+  convention: List at or below the breakpoint, Grid above it. Adapt controls
+  to touch-sized targets and prevent horizontal page overflow.
 - Show total matching count and distinguish an empty account/library from a
   non-empty collection with no matches. A no-match state offers to clear the
   query and filters. Query failures preserve the user's input and show a

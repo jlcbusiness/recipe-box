@@ -18,9 +18,14 @@ import {
   searchRecipes,
 } from '../../../lib/recipes/search';
 import { createClient } from '../../../lib/supabase/server';
+import { AlternatingRecipeGrid } from '../../recipes/find/alternating-recipe-grid';
 import { RecipeColumnFilter } from '../../recipes/find/recipe-column-filter';
 import { RecipeFilterBuilder } from '../../recipes/find/recipe-filter-builder';
-import { RecipeSearchModeProvider, RecipeSearchTabs } from '../../recipes/find/recipe-search-tabs';
+import {
+  RecipeSearchInput,
+  RecipeSearchModeProvider,
+  RecipeSearchTabs,
+} from '../../recipes/find/recipe-search-tabs';
 import { RecipeSearchToolbar } from '../../recipes/find/recipe-search-toolbar';
 
 const pageSize = 50;
@@ -100,13 +105,13 @@ export async function PublicationRecipeExplorer({
   const queryValue = Array.isArray(searchParams.q)
     ? (searchParams.q[0] ?? '')
     : (searchParams.q ?? '');
-  const query = queryValue.slice(0, 500);
-  const filters = parseRecipeSearchFilters(searchParams.filter);
+  const searchMode = searchParams.tab === 'query' ? 'query' : 'search';
+  const query = searchMode === 'search' ? queryValue.slice(0, 500) : '';
+  const filters = searchMode === 'query' ? parseRecipeSearchFilters(searchParams.filter) : [];
   const parsedColumnFilters = parseRecipeSearchColumnFilters(searchParams);
   const columnFilters = parsedColumnFilters.filters;
   const columnSelections = parsedColumnFilters.selections;
   const combinedFilters = [...filters, ...columnFilters];
-  const searchMode = searchParams.tab === 'query' ? 'query' : 'search';
   const requestedPage = Math.max(
     1,
     Math.min(20_001, Number.parseInt(searchParams.page ?? '1', 10) || 1),
@@ -299,14 +304,7 @@ export async function PublicationRecipeExplorer({
               searchPanel={
                 <div className="find-recipes-search-panel">
                   <div className="find-recipes-form-controls">
-                    <input
-                      aria-label="Search publication recipes"
-                      autoComplete="off"
-                      maxLength={500}
-                      name="q"
-                      type="search"
-                      defaultValue={query}
-                    />
+                    <RecipeSearchInput defaultValue={query} label="Search publication recipes" />
                     <button className="recipe-primary-button" formNoValidate type="submit">
                       Search
                     </button>
@@ -455,7 +453,7 @@ export async function PublicationRecipeExplorer({
             </table>
           </div>
         ) : (
-          <ul className="find-recipes-grid">
+          <AlternatingRecipeGrid>
             {recipes.map((recipe) => {
               const photo = recipePhotos.get(recipe.recipe_id);
               return (
@@ -483,7 +481,7 @@ export async function PublicationRecipeExplorer({
                 </li>
               );
             })}
-          </ul>
+          </AlternatingRecipeGrid>
         )}
 
         {pageCount > 1 && (

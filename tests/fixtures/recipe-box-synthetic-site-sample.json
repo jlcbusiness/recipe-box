@@ -1,0 +1,4055 @@
+{
+  "format": "recipe-box-synthetic-site-sample/v2",
+  "contentBasis": "Original synthetic recipes written for local test data; no recipe text was copied from websites.",
+  "measurementDefaults": {
+    "type": "volume",
+    "unitCode": "cup"
+  },
+  "publications": [
+    {
+      "name": "Cedar Spoon Notes",
+      "type": "site",
+      "siteUrl": "https://cedar-spoon.test",
+      "recipes": [
+        {
+          "slug": "charred-lemon-bean-toast",
+          "name": "Charred Lemon Bean Toast",
+          "serves": 2,
+          "prepMinutes": 12,
+          "cookMinutes": 8,
+          "ingredients": [
+            {
+              "name": "White Beans",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sourdough",
+              "amount": "2",
+              "specifics": "cubes",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.25",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "1.5",
+              "specifics": "yellow",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Warm the beans with lemon zest and a spoonful of water until creamy.",
+            "Toast the sourdough in a skillet, pile on the beans, and finish with charred lemon juice.",
+            "Measure fresh ginger and set it beside the cooking area.",
+            "Stir in butter, keeping the heat gentle so the flavors meld.",
+            "Add smoked paprika a little at a time and taste before adding more.",
+            "Fold through yellow onion until it is evenly distributed.",
+            "Cook fresh ginger briefly until its aroma becomes fragrant.",
+            "Add butter near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with smoked paprika.",
+            "Use yellow onion to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A bright pantry lunch; crisp toast contrasts with the soft beans.",
+          "foodType": "Bread",
+          "mealTypes": [
+            "Lunch"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Medium skillet"
+          ]
+        },
+        {
+          "slug": "cider-pear-breakfast-oats",
+          "name": "Cider Pear Breakfast Oats",
+          "serves": 2,
+          "prepMinutes": 7,
+          "cookMinutes": 18,
+          "ingredients": [
+            {
+              "name": "Rolled Oats",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Pear Cider",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "1",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Simmer oats in cider with a pinch of salt, stirring until tender.",
+            "Fold in diced pear and let the pot stand for two minutes before serving.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in vegetable stock, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "Make-ahead breakfast with orchard fruit and a gentle cider sweetness.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Breakfast"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Small pan",
+            "Spatula",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "dill-lentil-skillet",
+          "name": "Dill Lentil Skillet",
+          "serves": 4,
+          "prepMinutes": 14,
+          "cookMinutes": 16,
+          "ingredients": [
+            {
+              "name": "Green Lentils",
+              "amount": "2",
+              "specifics": "cooked",
+              "preparation": ""
+            },
+            {
+              "name": "Dill",
+              "amount": "0.25",
+              "specifics": "fresh leaves",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.5",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "1.5",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "0.125",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Soften sliced onion in a wide pan, then stir in the lentils and a splash of broth.",
+            "Warm through and scatter with dill, lemon, and cracked pepper.",
+            "Measure toasted sesame seeds and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld.",
+            "Add smoked paprika a little at a time and taste before adding more.",
+            "Fold through butter until it is evenly distributed.",
+            "Cook rice vinegar briefly until its aroma becomes fragrant.",
+            "Add fresh ginger near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with garlic cloves.",
+            "Use vegetable stock to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A quick supper with earthy lentils, fresh herbs, and a lemon finish.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "rosemary-carrot-ribbons",
+          "name": "Rosemary Carrot Ribbons",
+          "serves": 3,
+          "prepMinutes": 16,
+          "cookMinutes": 11,
+          "ingredients": [
+            {
+              "name": "Carrot",
+              "amount": "3",
+              "specifics": "ribbons",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Broth",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Toss carrot ribbons with oil and chopped rosemary in a warm skillet.",
+            "Add broth, cover briefly, then uncover and cook until glossy and just tender.",
+            "Measure shallot and set it beside the cooking area.",
+            "Stir in shallot, keeping the heat gentle so the flavors meld.",
+            "Add shallot a little at a time and taste before adding more.",
+            "Fold through shallot until it is evenly distributed."
+          ],
+          "notesMarkdown": "A flexible side dish; keep the ribbons bright rather than fully soft.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Peeler"
+          ]
+        },
+        {
+          "slug": "toasted-sesame-cabbage-bowls",
+          "name": "Toasted Sesame Cabbage Bowls",
+          "serves": 4,
+          "prepMinutes": 15,
+          "cookMinutes": 20,
+          "ingredients": [
+            {
+              "name": "Green Cabbage",
+              "amount": "4",
+              "specifics": "shredded",
+              "preparation": ""
+            },
+            {
+              "name": "Brown Rice",
+              "amount": "2",
+              "specifics": "cooked",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.75",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.25",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1.5",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Brown the cabbage in batches so its edges take on color.",
+            "Serve over warm rice with sesame dressing and toasted seeds.",
+            "Measure water and set it beside the cooking area.",
+            "Stir in fresh ginger, keeping the heat gentle so the flavors meld.",
+            "Add butter a little at a time and taste before adding more."
+          ],
+          "notesMarkdown": "A weeknight bowl with crunchy cabbage, nutty rice, and sesame.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Lunch"
+          ],
+          "cuisines": [
+            "Chinese"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "blueberry-thyme-cornmeal-cakes",
+          "name": "Blueberry Thyme Cornmeal Cakes",
+          "serves": 4,
+          "prepMinutes": 10,
+          "cookMinutes": 14,
+          "ingredients": [
+            {
+              "name": "Cornmeal Batter",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Blueberries",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.75",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "1",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.125",
+              "specifics": "toasted",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Stir thyme and blueberries into the cornmeal batter without crushing the fruit.",
+            "Cook small cakes on a lightly oiled griddle, turning when bubbles appear.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in red pepper flakes, keeping the heat gentle so the flavors meld.",
+            "Add rice vinegar a little at a time and taste before adding more.",
+            "Fold through lemon zest until it is evenly distributed.",
+            "Cook yellow onion briefly until its aroma becomes fragrant.",
+            "Add toasted sesame seeds near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with smoked paprika.",
+            "Use red pepper flakes to adjust the balance, then taste once more.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "Weekend breakfast with tart berries and a small savory note from thyme.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Breakfast"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Peeler",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "smoky-squash-and-white-beans",
+          "name": "Smoky Squash and White Beans",
+          "serves": 4,
+          "prepMinutes": 13,
+          "cookMinutes": 27,
+          "ingredients": [
+            {
+              "name": "Squash",
+              "amount": "3",
+              "specifics": "roasted cubes",
+              "preparation": ""
+            },
+            {
+              "name": "Cannellini Beans",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.5",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "1.5",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Warm smoked paprika in olive oil, then add squash and beans.",
+            "Fold gently with a little stock until the edges are saucy and the centers stay intact.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in fine sea salt, keeping the heat gentle so the flavors meld.",
+            "Add red pepper flakes a little at a time and taste before adding more.",
+            "Fold through fresh ginger until it is evenly distributed.",
+            "Cook lemon zest briefly until its aroma becomes fragrant.",
+            "Add olive oil near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with smoked paprika.",
+            "Use fine sea salt to adjust the balance, then taste once more.",
+            "Measure red pepper flakes and set it beside the cooking area."
+          ],
+          "notesMarkdown": "A cozy one-pan meal with smoky squash and creamy beans.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "12-inch cast iron",
+            "Chef knife",
+            "Baking sheet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Afterlight Kitchen",
+      "type": "site",
+      "siteUrl": "https://afterlight-kitchen.test",
+      "recipes": [
+        {
+          "slug": "ginger-miso-mushroom-rice",
+          "name": "Ginger Miso Mushroom Rice",
+          "serves": 3,
+          "prepMinutes": 10,
+          "cookMinutes": 22,
+          "ingredients": [
+            {
+              "name": "Cremini Mushrooms",
+              "amount": "2",
+              "specifics": "sliced",
+              "preparation": ""
+            },
+            {
+              "name": "Jasmine Rice",
+              "amount": "2",
+              "specifics": "cooked",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "0.125",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "1",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "1.5",
+              "specifics": "smoked",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Sear the mushrooms until their moisture cooks away and the edges brown.",
+            "Stir miso, ginger, and a little hot water into a glaze; fold through the rice.",
+            "Measure yellow onion and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld.",
+            "Add shallot a little at a time and taste before adding more.",
+            "Fold through plain yogurt until it is evenly distributed.",
+            "Cook fresh parsley briefly until its aroma becomes fragrant.",
+            "Add garlic cloves near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with smoked paprika.",
+            "Use yellow onion to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A savory bowl for cool evenings; the rice catches the ginger-miso glaze.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "crisp-chickpea-flatbread",
+          "name": "Crisp Chickpea Flatbread",
+          "serves": 4,
+          "prepMinutes": 18,
+          "cookMinutes": 15,
+          "ingredients": [
+            {
+              "name": "Chickpea Flour",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Scallions",
+              "amount": "0.5",
+              "specifics": "thinly sliced",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Whisk chickpea flour with water and salt, then rest the batter while the pan heats.",
+            "Pour a thin layer into an oiled skillet, add scallions, and cook until crisp at the rim.",
+            "Measure fresh thyme and set it beside the cooking area.",
+            "Stir in fresh thyme, keeping the heat gentle so the flavors meld.",
+            "Add fresh thyme a little at a time and taste before adding more."
+          ],
+          "notesMarkdown": "A quick gluten-free flatbread with crisp edges and a tender center.",
+          "foodType": "Bread",
+          "mealTypes": [
+            "Appetizer"
+          ],
+          "cuisines": [
+            "Indian"
+          ],
+          "equipment": [
+            "12-inch cast iron",
+            "Spatula",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "sesame-cucumber-noodle-salad",
+          "name": "Sesame Cucumber Noodle Salad",
+          "serves": 4,
+          "prepMinutes": 20,
+          "cookMinutes": 9,
+          "ingredients": [
+            {
+              "name": "Rice Noodles",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Cucumber",
+              "amount": "2",
+              "specifics": "matchsticks",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.5",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "0.5",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "0.25",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Soak or boil the noodles until supple, then rinse briefly in cool water.",
+            "Toss with cucumber, sesame, rice vinegar, and a spoonful of warm chili oil.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in butter, keeping the heat gentle so the flavors meld.",
+            "Add honey a little at a time and taste before adding more.",
+            "Fold through toasted sesame seeds until it is evenly distributed.",
+            "Cook garlic cloves briefly until its aroma becomes fragrant."
+          ],
+          "notesMarkdown": "A chilled lunch salad with a savory sesame dressing and fresh crunch.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Lunch"
+          ],
+          "cuisines": [
+            "Chinese"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Whisk"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Market Day Potluck",
+      "type": "site",
+      "siteUrl": "https://market-day-potluck.test",
+      "recipes": [
+        {
+          "slug": "tomato-peach-panzanella",
+          "name": "Tomato Peach Panzanella",
+          "serves": 4,
+          "prepMinutes": 18,
+          "cookMinutes": 10,
+          "ingredients": [
+            {
+              "name": "Tomatoes",
+              "amount": "3",
+              "specifics": "ripe",
+              "preparation": ""
+            },
+            {
+              "name": "Peach",
+              "amount": "2",
+              "specifics": "wedges",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "1.5",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "0.25",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "0.5",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Toast torn bread until crisp and let it cool while the tomatoes release their juice.",
+            "Toss bread with tomatoes, peaches, basil, and vinegar; rest briefly before serving.",
+            "Measure butter and set it beside the cooking area.",
+            "Stir in fresh ginger, keeping the heat gentle so the flavors meld.",
+            "Add fine sea salt a little at a time and taste before adding more.",
+            "Fold through olive oil until it is evenly distributed.",
+            "Cook lemon zest briefly until its aroma becomes fragrant.",
+            "Add yellow onion near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with plain yogurt."
+          ],
+          "notesMarkdown": "A late-summer salad that balances juicy fruit with crisp bread.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Lunch"
+          ],
+          "cuisines": [
+            "Italian"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Medium skillet"
+          ]
+        },
+        {
+          "slug": "charred-corn-lime-salad",
+          "name": "Charred Corn Lime Salad",
+          "serves": 5,
+          "prepMinutes": 12,
+          "cookMinutes": 13,
+          "ingredients": [
+            {
+              "name": "Corn Kernels",
+              "amount": "3",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Black Beans",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "0.25",
+              "specifics": "yellow",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Char the corn in a dry skillet, stirring only occasionally.",
+            "Cool slightly, then fold with black beans, lime juice, and chopped cilantro.",
+            "Measure yellow onion and set it beside the cooking area.",
+            "Stir in yellow onion, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A picnic-friendly salad with sweet corn, beans, and sharp lime.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "Mexican"
+          ],
+          "equipment": [
+            "12-inch cast iron",
+            "Chef knife",
+            "Medium skillet"
+          ]
+        },
+        {
+          "slug": "herbed-potato-and-snap-pea-salad",
+          "name": "Herbed Potato and Snap Pea Salad",
+          "serves": 6,
+          "prepMinutes": 15,
+          "cookMinutes": 21,
+          "ingredients": [
+            {
+              "name": "Potatoes",
+              "amount": "3",
+              "specifics": "small",
+              "preparation": ""
+            },
+            {
+              "name": "Sugar Snap Peas",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "1.5",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "1",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Steam potatoes until tender and add the peas for the final two minutes.",
+            "Dress while warm with mustard vinaigrette, parsley, and chives.",
+            "Measure lemon juice and set it beside the cooking area."
+          ],
+          "notesMarkdown": "Serve warm or cool; the snap peas keep their green crunch.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Peeler",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "roasted-beet-citrus-platter",
+          "name": "Roasted Beet Citrus Platter",
+          "serves": 4,
+          "prepMinutes": 16,
+          "cookMinutes": 38,
+          "ingredients": [
+            {
+              "name": "Beet",
+              "amount": "3",
+              "specifics": "wedges",
+              "preparation": ""
+            },
+            {
+              "name": "Orange",
+              "amount": "1",
+              "specifics": "segments",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.125",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Roast the beets in a covered dish until a knife slides through easily.",
+            "Arrange with orange, toasted pumpkin seeds, and a spooned-over yogurt dressing.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in fresh thyme, keeping the heat gentle so the flavors meld.",
+            "Add red pepper flakes a little at a time and taste before adding more.",
+            "Fold through lemon zest until it is evenly distributed.",
+            "Cook vegetable stock briefly until its aroma becomes fragrant."
+          ],
+          "notesMarkdown": "An earthy, bright platter with citrus, seeds, and cool yogurt.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Peeler"
+          ]
+        },
+        {
+          "slug": "green-goddess-butter-beans",
+          "name": "Green Goddess Butter Beans",
+          "serves": 4,
+          "prepMinutes": 14,
+          "cookMinutes": 9,
+          "ingredients": [
+            {
+              "name": "Butter Beans",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "0.5",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.5",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.5",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Blend yogurt with parsley, lemon, and a little olive oil until vivid green.",
+            "Warm the beans and spoon the herb sauce over them just before serving.",
+            "Measure shallot and set it beside the cooking area.",
+            "Stir in rice vinegar, keeping the heat gentle so the flavors meld.",
+            "Add toasted sesame seeds a little at a time and taste before adding more.",
+            "Fold through vegetable stock until it is evenly distributed.",
+            "Cook olive oil briefly until its aroma becomes fragrant.",
+            "Add water near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with red pepper flakes.",
+            "Use smoked paprika to adjust the balance, then taste once more.",
+            "Measure fresh parsley and set it beside the cooking area."
+          ],
+          "notesMarkdown": "A simple shared plate with creamy beans and a fresh herb sauce.",
+          "foodType": "Sauce",
+          "mealTypes": [
+            "Appetizer"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Blender",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "plum-and-black-pepper-crumble",
+          "name": "Plum and Black Pepper Crumble",
+          "serves": 6,
+          "prepMinutes": 17,
+          "cookMinutes": 34,
+          "ingredients": [
+            {
+              "name": "Plums",
+              "amount": "4",
+              "specifics": "sliced",
+              "preparation": ""
+            },
+            {
+              "name": "Oat Crumble",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "1",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Toss plums with a little sugar and a pinch of black pepper in a baking dish.",
+            "Cover with oat crumble and bake until the fruit bubbles at the edges.",
+            "Measure toasted sesame seeds and set it beside the cooking area.",
+            "Stir in lemon juice, keeping the heat gentle so the flavors meld.",
+            "Add red pepper flakes a little at a time and taste before adding more.",
+            "Fold through vegetable stock until it is evenly distributed.",
+            "Cook fresh ginger briefly until its aroma becomes fragrant.",
+            "Add toasted sesame seeds near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with lemon juice.",
+            "Use red pepper flakes to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A not-too-sweet dessert with peppery fruit and a crisp oat top.",
+          "foodType": "Pie",
+          "mealTypes": [
+            "Dessert"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Baking sheet",
+            "Stand mixer",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "dill-pickle-potato-skillet",
+          "name": "Dill Pickle Potato Skillet",
+          "serves": 4,
+          "prepMinutes": 12,
+          "cookMinutes": 25,
+          "ingredients": [
+            {
+              "name": "Potatoes",
+              "amount": "3",
+              "specifics": "parboiled",
+              "preparation": ""
+            },
+            {
+              "name": "Dill Pickles",
+              "amount": "0.5",
+              "specifics": "chopped",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Press the potatoes into a hot skillet and let their cut sides turn golden.",
+            "Fold in pickles and dill with a splash of brine, then serve with mustard.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in rice vinegar, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A tangy brunch skillet that uses pickle brine instead of extra salt.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "rosemary-apple-oat-squares",
+          "name": "Rosemary Apple Oat Squares",
+          "serves": 8,
+          "prepMinutes": 16,
+          "cookMinutes": 32,
+          "ingredients": [
+            {
+              "name": "Rolled Oats",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Apples",
+              "amount": "1.5",
+              "specifics": "diced",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.125",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "0.125",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Stir oats with grated apple, chopped rosemary, and a little melted butter.",
+            "Press into a lined pan and bake until the center is set and the corners brown.",
+            "Measure lemon zest and set it beside the cooking area.",
+            "Stir in toasted sesame seeds, keeping the heat gentle so the flavors meld.",
+            "Add vegetable stock a little at a time and taste before adding more.",
+            "Fold through fresh thyme until it is evenly distributed.",
+            "Cook fine sea salt briefly until its aroma becomes fragrant."
+          ],
+          "notesMarkdown": "Portable breakfast squares with a subtle savory edge from rosemary.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Snack"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Baking sheet",
+            "Stand mixer",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "smoky-lentil-lettuce-cups",
+          "name": "Smoky Lentil Lettuce Cups",
+          "serves": 4,
+          "prepMinutes": 15,
+          "cookMinutes": 19,
+          "ingredients": [
+            {
+              "name": "Brown Lentils",
+              "amount": "2",
+              "specifics": "cooked",
+              "preparation": ""
+            },
+            {
+              "name": "Butter Lettuce",
+              "amount": "1",
+              "specifics": "leaves",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.75",
+              "specifics": "toasted",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Cook lentils with smoked paprika and a splash of tomato until thick.",
+            "Spoon into crisp lettuce leaves and add chopped scallions and lime.",
+            "Measure fresh ginger and set it beside the cooking area.",
+            "Stir in olive oil, keeping the heat gentle so the flavors meld.",
+            "Add shallot a little at a time and taste before adding more.",
+            "Fold through toasted sesame seeds until it is evenly distributed.",
+            "Cook fresh ginger briefly until its aroma becomes fragrant.",
+            "Add olive oil near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with shallot."
+          ],
+          "notesMarkdown": "A hand-held lunch with smoky lentils and cool, crunchy lettuce.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Appetizer"
+          ],
+          "cuisines": [
+            "Chinese"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "basil-nectarine-yogurt-toast",
+          "name": "Basil Nectarine Yogurt Toast",
+          "serves": 2,
+          "prepMinutes": 8,
+          "cookMinutes": 5,
+          "ingredients": [
+            {
+              "name": "Yogurt",
+              "amount": "0.5",
+              "specifics": "thick",
+              "preparation": ""
+            },
+            {
+              "name": "Nectarine",
+              "amount": "1",
+              "specifics": "sliced",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "0.5",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Toast sturdy bread and spread with thick yogurt while still warm.",
+            "Layer on nectarine, torn basil, and a thin drizzle of honey.",
+            "Measure fine sea salt and set it beside the cooking area.",
+            "Stir in lemon juice, keeping the heat gentle so the flavors meld.",
+            "Add fresh thyme a little at a time and taste before adding more.",
+            "Fold through shallot until it is evenly distributed.",
+            "Cook honey briefly until its aroma becomes fragrant."
+          ],
+          "notesMarkdown": "A quick sweet-savory breakfast with ripe stone fruit and basil.",
+          "foodType": "Bread",
+          "mealTypes": [
+            "Breakfast"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "warm-farro-with-roasted-grapes",
+          "name": "Warm Farro with Roasted Grapes",
+          "serves": 4,
+          "prepMinutes": 10,
+          "cookMinutes": 31,
+          "ingredients": [
+            {
+              "name": "Farro",
+              "amount": "1.5",
+              "specifics": "pearled",
+              "preparation": ""
+            },
+            {
+              "name": "Grapes",
+              "amount": "1",
+              "specifics": "seedless",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.5",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Simmer farro in salted water until chewy, then drain well.",
+            "Roast grapes until they split and toss with farro, toasted walnuts, and vinegar.",
+            "Measure honey and set it beside the cooking area.",
+            "Stir in fresh thyme, keeping the heat gentle so the flavors meld.",
+            "Add smoked paprika a little at a time and taste before adding more.",
+            "Fold through lemon juice until it is evenly distributed.",
+            "Cook fresh ginger briefly until its aroma becomes fragrant."
+          ],
+          "notesMarkdown": "A grain salad with jammy grapes, toasted nuts, and a tart finish.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "Italian"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Small pan",
+            "Whisk"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Copper Kettle Journal",
+      "type": "site",
+      "siteUrl": "https://copper-kettle.test",
+      "recipes": [
+        {
+          "slug": "miso-squash-soup-with-crisp-rice",
+          "name": "Miso Squash Soup with Crisp Rice",
+          "serves": 4,
+          "prepMinutes": 15,
+          "cookMinutes": 30,
+          "ingredients": [
+            {
+              "name": "Squash",
+              "amount": "3",
+              "specifics": "roasted",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "3",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Blend roasted squash with hot stock and white miso until smooth.",
+            "Top each bowl with crisped rice and sliced scallions.",
+            "Measure red pepper flakes and set it beside the cooking area.",
+            "Stir in fresh parsley, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A silky soup with a savory miso base and crunchy rice topping.",
+          "foodType": "Soup",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Blender",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "saffron-carrot-risotto",
+          "name": "Saffron Carrot Risotto",
+          "serves": 4,
+          "prepMinutes": 12,
+          "cookMinutes": 29,
+          "ingredients": [
+            {
+              "name": "Arborio Rice",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Carrot",
+              "amount": "1",
+              "specifics": "grated",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Warm saffron in the stock, then cook the rice with ladlefuls of liquid.",
+            "Fold in carrots near the end and finish with lemon zest.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in fresh thyme, keeping the heat gentle so the flavors meld.",
+            "Add water a little at a time and taste before adding more.",
+            "Fold through butter until it is evenly distributed.",
+            "Cook shallot briefly until its aroma becomes fragrant.",
+            "Add vegetable stock near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with red pepper flakes."
+          ],
+          "notesMarkdown": "A golden rice supper with sweet carrot and fragrant saffron.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Italian"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Small pan",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "smoked-paprika-cauliflower-gratin",
+          "name": "Smoked Paprika Cauliflower Gratin",
+          "serves": 5,
+          "prepMinutes": 18,
+          "cookMinutes": 33,
+          "ingredients": [
+            {
+              "name": "Cauliflower",
+              "amount": "5",
+              "specifics": "florets",
+              "preparation": ""
+            },
+            {
+              "name": "Milk",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1.5",
+              "specifics": "plain",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Steam cauliflower until barely tender and arrange it in a shallow dish.",
+            "Pour over paprika cream, scatter with crumbs, and bake until bubbling.",
+            "Measure plain yogurt and set it beside the cooking area.",
+            "Stir in plain yogurt, keeping the heat gentle so the flavors meld.",
+            "Add plain yogurt a little at a time and taste before adding more.",
+            "Fold through plain yogurt until it is evenly distributed.",
+            "Cook plain yogurt briefly until its aroma becomes fragrant.",
+            "Add plain yogurt near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with plain yogurt."
+          ],
+          "notesMarkdown": "A warming side with a smoky cream sauce and crisp crumb topping.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Baking sheet",
+            "Medium skillet",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "ginger-braised-chicken-and-turnips",
+          "name": "Ginger-Braised Chicken and Turnips",
+          "serves": 4,
+          "prepMinutes": 20,
+          "cookMinutes": 42,
+          "ingredients": [
+            {
+              "name": "Chicken",
+              "amount": "4",
+              "specifics": "thighs",
+              "preparation": ""
+            },
+            {
+              "name": "Turnip",
+              "amount": "2",
+              "specifics": "wedges",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "1.5",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "0.125",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.5",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Brown the chicken, then add ginger, broth, and turnips to the covered pan.",
+            "Braise gently until the chicken is tender and the turnips hold their shape.",
+            "Measure fine sea salt and set it beside the cooking area.",
+            "Stir in lemon juice, keeping the heat gentle so the flavors meld.",
+            "Add fresh thyme a little at a time and taste before adding more.",
+            "Fold through garlic cloves until it is evenly distributed.",
+            "Cook shallot briefly until its aroma becomes fragrant.",
+            "Add toasted sesame seeds near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with red pepper flakes.",
+            "Use lemon zest to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A one-pan dinner with warming ginger and mild root vegetables.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Chinese"
+          ],
+          "equipment": [
+            "12-inch cast iron",
+            "Chef knife",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "dark-cocoa-rye-pudding",
+          "name": "Dark Cocoa Rye Pudding",
+          "serves": 4,
+          "prepMinutes": 9,
+          "cookMinutes": 24,
+          "ingredients": [
+            {
+              "name": "Rye Flakes",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Milk",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "1.5",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "1.5",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.75",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Whisk cocoa into warm milk, add rye flakes, and simmer until thick.",
+            "Cool until softly set and serve with a little orange zest.",
+            "Measure lemon juice and set it beside the cooking area.",
+            "Stir in garlic cloves, keeping the heat gentle so the flavors meld.",
+            "Add yellow onion a little at a time and taste before adding more.",
+            "Fold through red pepper flakes until it is evenly distributed."
+          ],
+          "notesMarkdown": "A spoonable cocoa dessert with a malty rye flavor and citrus aroma.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Dessert"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Small pan",
+            "Spatula",
+            "Whisk"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Little Table Lab",
+      "type": "site",
+      "siteUrl": "https://little-table-lab.test",
+      "recipes": [
+        {
+          "slug": "crispy-tofu-with-citrus-chard",
+          "name": "Crispy Tofu with Citrus Chard",
+          "serves": 3,
+          "prepMinutes": 17,
+          "cookMinutes": 18,
+          "ingredients": [
+            {
+              "name": "Tofu",
+              "amount": "2",
+              "specifics": "pressed cubes",
+              "preparation": ""
+            },
+            {
+              "name": "Rainbow Chard",
+              "amount": "3",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "0.75",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Sear tofu in a single layer until crisp on several sides.",
+            "Wilt chopped chard with orange juice and garlic, then serve beside the tofu.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in fresh thyme, keeping the heat gentle so the flavors meld.",
+            "Add butter a little at a time and taste before adding more.",
+            "Fold through plain yogurt until it is evenly distributed.",
+            "Cook fresh ginger briefly until its aroma becomes fragrant.",
+            "Add lemon zest near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with black pepper.",
+            "Use red pepper flakes to adjust the balance, then taste once more.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in fresh thyme, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A quick plate with crisp tofu, tender greens, and bright orange.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Chinese"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "black-lentil-tomato-pilaf",
+          "name": "Black Lentil Tomato Pilaf",
+          "serves": 4,
+          "prepMinutes": 12,
+          "cookMinutes": 35,
+          "ingredients": [
+            {
+              "name": "Black Lentils",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Tomatoes",
+              "amount": "1.5",
+              "specifics": "crushed",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "1",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "1.5",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Toast cumin in oil, add lentils and tomatoes, then cover with water.",
+            "Simmer until the lentils are tender and spoon over warm rice.",
+            "Measure fresh parsley and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld.",
+            "Add garlic cloves a little at a time and taste before adding more.",
+            "Fold through yellow onion until it is evenly distributed.",
+            "Cook fresh thyme briefly until its aroma becomes fragrant.",
+            "Add lemon juice near the end so it stays fresh and bright."
+          ],
+          "notesMarkdown": "A sturdy batch-cook pilaf with cumin, tomatoes, and black lentils.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Indian"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Small pan",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "lemony-broccoli-pasta-shells",
+          "name": "Lemony Broccoli Pasta Shells",
+          "serves": 4,
+          "prepMinutes": 10,
+          "cookMinutes": 17,
+          "ingredients": [
+            {
+              "name": "Pasta Shells",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Broccoli",
+              "amount": "3",
+              "specifics": "florets",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.75",
+              "specifics": "smoked",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Boil the pasta and add broccoli for the final four minutes.",
+            "Reserve a cup of cooking water and toss everything with lemon, oil, and grated cheese.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in smoked paprika, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A fast pasta supper with bright lemon and broccoli tucked into the shells.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Italian"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "coconut-lime-rice-pudding",
+          "name": "Coconut Lime Rice Pudding",
+          "serves": 5,
+          "prepMinutes": 8,
+          "cookMinutes": 36,
+          "ingredients": [
+            {
+              "name": "Short-Grain Rice",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Coconut Milk",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.125",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Simmer rice with coconut milk and water, stirring often to prevent sticking.",
+            "Sweeten lightly and finish with lime zest once the grains are soft.",
+            "Measure smoked paprika and set it beside the cooking area."
+          ],
+          "notesMarkdown": "A creamy dessert that is fragrant with coconut and sharp lime.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Dessert"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Small pan",
+            "Spatula",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "smash-cucumber-and-peanut-noodles",
+          "name": "Smash Cucumber and Peanut Noodles",
+          "serves": 4,
+          "prepMinutes": 19,
+          "cookMinutes": 10,
+          "ingredients": [
+            {
+              "name": "Wheat Noodles",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Cucumbers",
+              "amount": "2",
+              "specifics": "smashed",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.25",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "0.5",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "0.25",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Cook noodles, rinse briefly, and shake dry while you stir together peanut sauce.",
+            "Fold in smashed cucumber and noodles; loosen the sauce with warm water.",
+            "Measure lemon juice and set it beside the cooking area.",
+            "Stir in red pepper flakes, keeping the heat gentle so the flavors meld.",
+            "Add water a little at a time and taste before adding more.",
+            "Fold through smoked paprika until it is evenly distributed.",
+            "Cook rice vinegar briefly until its aroma becomes fragrant.",
+            "Add plain yogurt near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with garlic cloves.",
+            "Use yellow onion to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A cool noodle bowl with a thick peanut dressing and smashed cucumber.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Chinese"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "roasted-fennel-white-fish",
+          "name": "Roasted Fennel White Fish",
+          "serves": 4,
+          "prepMinutes": 14,
+          "cookMinutes": 24,
+          "ingredients": [
+            {
+              "name": "Fennel",
+              "amount": "2",
+              "specifics": "wedges",
+              "preparation": ""
+            },
+            {
+              "name": "White Fish Fillets",
+              "amount": "4",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1.5",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Roast fennel with olive oil until the tips begin to brown.",
+            "Nestle seasoned fish among the wedges and bake just until it flakes.",
+            "Measure plain yogurt and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld.",
+            "Add vegetable stock a little at a time and taste before adding more.",
+            "Fold through plain yogurt until it is evenly distributed."
+          ],
+          "notesMarkdown": "A light dinner with anise-scented fennel and tender white fish.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "herbed-lima-bean-dip",
+          "name": "Herbed Lima Bean Dip",
+          "serves": 6,
+          "prepMinutes": 11,
+          "cookMinutes": 5,
+          "ingredients": [
+            {
+              "name": "Lima Beans",
+              "amount": "2",
+              "specifics": "cooked",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.5",
+              "specifics": "flat-leaf",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1.5",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Blend warm lima beans with parsley, lemon, and enough oil to make a soft dip.",
+            "Serve with crisp vegetables or toasted flatbread.",
+            "Measure shallot and set it beside the cooking area.",
+            "Stir in plain yogurt, keeping the heat gentle so the flavors meld.",
+            "Add lemon zest a little at a time and taste before adding more.",
+            "Fold through shallot until it is evenly distributed.",
+            "Cook plain yogurt briefly until its aroma becomes fragrant.",
+            "Add lemon zest near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with shallot.",
+            "Use plain yogurt to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A smooth, mild dip that works as a snack or a lunch spread.",
+          "foodType": "Sauce",
+          "mealTypes": [
+            "Appetizer"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Blender",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "pear-cardamom-buckwheat-pancakes",
+          "name": "Pear Cardamom Buckwheat Pancakes",
+          "serves": 4,
+          "prepMinutes": 13,
+          "cookMinutes": 16,
+          "ingredients": [
+            {
+              "name": "Buckwheat Flour",
+              "amount": "1.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Pear",
+              "amount": "1",
+              "specifics": "ripe",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "1.5",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.5",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Whisk buckwheat flour with milk, egg, and a pinch of cardamom.",
+            "Griddle small pancakes and top with warm sliced pear.",
+            "Measure yellow onion and set it beside the cooking area.",
+            "Stir in lemon juice, keeping the heat gentle so the flavors meld.",
+            "Add smoked paprika a little at a time and taste before adding more.",
+            "Fold through lemon zest until it is evenly distributed.",
+            "Cook butter briefly until its aroma becomes fragrant.",
+            "Add plain yogurt near the end so it stays fresh and bright."
+          ],
+          "notesMarkdown": "Nutty breakfast pancakes with soft pear and fragrant cardamom.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Breakfast"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Medium skillet",
+            "Spatula",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "tomatillo-pumpkin-seed-salsa",
+          "name": "Tomatillo Pumpkin Seed Salsa",
+          "serves": 8,
+          "prepMinutes": 12,
+          "cookMinutes": 9,
+          "ingredients": [
+            {
+              "name": "Tomatillos",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Pumpkin Seeds",
+              "amount": "0.5",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "1",
+              "specifics": "yellow",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Broil tomatillos until blistered, turning once for even color.",
+            "Blend with pumpkin seeds, cilantro, and a splash of water to a spoonable salsa.",
+            "Measure lemon zest and set it beside the cooking area.",
+            "Stir in yellow onion, keeping the heat gentle so the flavors meld.",
+            "Add lemon zest a little at a time and taste before adding more.",
+            "Fold through yellow onion until it is evenly distributed.",
+            "Cook lemon zest briefly until its aroma becomes fragrant.",
+            "Add yellow onion near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with lemon zest.",
+            "Use yellow onion to adjust the balance, then taste once more.",
+            "Measure lemon zest and set it beside the cooking area.",
+            "Stir in yellow onion, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A tangy green salsa with toasted seeds for body and texture.",
+          "foodType": "Sauce",
+          "mealTypes": [
+            "Appetizer"
+          ],
+          "cuisines": [
+            "Mexican"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Blender",
+            "Medium skillet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Juniper and Rye",
+      "type": "site",
+      "siteUrl": "https://juniper-and-rye.test",
+      "recipes": [
+        {
+          "slug": "roasted-cabbage-with-caraway-yogurt",
+          "name": "Roasted Cabbage with Caraway Yogurt",
+          "serves": 4,
+          "prepMinutes": 10,
+          "cookMinutes": 32,
+          "ingredients": [
+            {
+              "name": "Cabbage",
+              "amount": "1",
+              "specifics": "wedges",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "0.75",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.75",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "0.125",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.125",
+              "specifics": "fresh",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Roast cabbage wedges cut-side down until deeply browned and tender.",
+            "Stir caraway and lemon into yogurt and spoon it under the hot cabbage.",
+            "Measure olive oil and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld.",
+            "Add honey a little at a time and taste before adding more.",
+            "Fold through smoked paprika until it is evenly distributed.",
+            "Cook yellow onion briefly until its aroma becomes fragrant.",
+            "Add shallot near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with lemon juice.",
+            "Use fresh parsley to adjust the balance, then taste once more.",
+            "Measure olive oil and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A simple winter side with browned edges and cool, tangy yogurt.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "wild-rice-mushroom-breakfast-hash",
+          "name": "Wild Rice Mushroom Breakfast Hash",
+          "serves": 3,
+          "prepMinutes": 12,
+          "cookMinutes": 21,
+          "ingredients": [
+            {
+              "name": "Wild Rice",
+              "amount": "1.5",
+              "specifics": "cooked",
+              "preparation": ""
+            },
+            {
+              "name": "Mushrooms",
+              "amount": "2",
+              "specifics": "sliced",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.5",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Onion",
+              "amount": "0.25",
+              "specifics": "yellow",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1.5",
+              "specifics": "plain",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Cook mushrooms in a hot pan until browned, then add wild rice and thyme.",
+            "Make small wells, add eggs, cover, and cook until the whites are set.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in yellow onion, keeping the heat gentle so the flavors meld.",
+            "Add butter a little at a time and taste before adding more.",
+            "Fold through lemon juice until it is evenly distributed."
+          ],
+          "notesMarkdown": "A savory breakfast hash with chewy rice, mushrooms, and soft eggs.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Breakfast"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "12-inch cast iron",
+            "Chef knife",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "plum-mustard-glazed-carrots",
+          "name": "Plum-Mustard Glazed Carrots",
+          "serves": 4,
+          "prepMinutes": 9,
+          "cookMinutes": 23,
+          "ingredients": [
+            {
+              "name": "Carrot",
+              "amount": "3",
+              "specifics": "batons",
+              "preparation": ""
+            },
+            {
+              "name": "Plum Preserves",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "1",
+              "specifics": "smoked",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Roast carrots until almost tender, then brush with plum preserves and mustard.",
+            "Return to the oven until the glaze clings and darkens at the edges.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in smoked paprika, keeping the heat gentle so the flavors meld.",
+            "Add smoked paprika a little at a time and taste before adding more.",
+            "Fold through smoked paprika until it is evenly distributed.",
+            "Cook smoked paprika briefly until its aroma becomes fragrant.",
+            "Add smoked paprika near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with smoked paprika.",
+            "Use smoked paprika to adjust the balance, then taste once more.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in smoked paprika, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A sweet-sharp side dish with a glossy fruit and mustard glaze.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Side dish"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Peeler"
+          ]
+        },
+        {
+          "slug": "lemon-thyme-chickpea-stew",
+          "name": "Lemon Thyme Chickpea Stew",
+          "serves": 5,
+          "prepMinutes": 15,
+          "cookMinutes": 26,
+          "ingredients": [
+            {
+              "name": "Chickpeas",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "3",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Juice",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "0.5",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.25",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Simmer chickpeas with stock, onion, and thyme until the broth is savory.",
+            "Stir in lemon juice and chopped greens just before serving.",
+            "Measure water and set it beside the cooking area.",
+            "Stir in lemon juice, keeping the heat gentle so the flavors meld.",
+            "Add garlic cloves a little at a time and taste before adding more.",
+            "Fold through lemon zest until it is evenly distributed.",
+            "Cook fresh parsley briefly until its aroma becomes fragrant.",
+            "Add toasted sesame seeds near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with black pepper.",
+            "Use honey to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A bright one-pot stew with chickpeas, thyme, and lemon.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Small pan",
+            "Spatula"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pantry Fieldnotes",
+      "type": "site",
+      "siteUrl": "https://pantry-fieldnotes.test",
+      "recipes": [
+        {
+          "slug": "brown-butter-sage-popcorn",
+          "name": "Brown Butter Sage Popcorn",
+          "serves": 4,
+          "prepMinutes": 4,
+          "cookMinutes": 8,
+          "ingredients": [
+            {
+              "name": "Corn",
+              "amount": "8",
+              "specifics": "popped",
+              "preparation": ""
+            },
+            {
+              "name": "Sage",
+              "amount": "0.25",
+              "specifics": "fresh leaves",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Brown butter with torn sage leaves until the foam smells nutty.",
+            "Pour over warm popcorn, toss well, and finish with flaky salt.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in shallot, keeping the heat gentle so the flavors meld.",
+            "Add fresh thyme a little at a time and taste before adding more.",
+            "Fold through olive oil until it is evenly distributed.",
+            "Cook rice vinegar briefly until its aroma becomes fragrant.",
+            "Add shallot near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with fresh thyme.",
+            "Use olive oil to adjust the balance, then taste once more.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in shallot, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A salty snack with crisp leaves and a nutty butter coating.",
+          "foodType": "Bread",
+          "mealTypes": [
+            "Snack"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Small pan",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "red-lentil-tomato-soup",
+          "name": "Red Lentil Tomato Soup",
+          "serves": 6,
+          "prepMinutes": 12,
+          "cookMinutes": 28,
+          "ingredients": [
+            {
+              "name": "Red Lentils",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Tomatoes",
+              "amount": "2",
+              "specifics": "crushed",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "0.125",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.125",
+              "specifics": "toasted",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Soften onion with cumin, then add lentils, tomatoes, and broth.",
+            "Simmer until the lentils collapse into a thick soup; brighten with lemon.",
+            "Measure vegetable stock and set it beside the cooking area.",
+            "Stir in shallot, keeping the heat gentle so the flavors meld.",
+            "Add plain yogurt a little at a time and taste before adding more.",
+            "Fold through water until it is evenly distributed.",
+            "Cook olive oil briefly until its aroma becomes fragrant.",
+            "Add honey near the end so it stays fresh and bright."
+          ],
+          "notesMarkdown": "A batch-friendly soup with cumin warmth and a lemon finish.",
+          "foodType": "Soup",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Indian"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Blender",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "apple-fennel-slaw",
+          "name": "Apple Fennel Slaw",
+          "serves": 4,
+          "prepMinutes": 15,
+          "cookMinutes": 0,
+          "ingredients": [
+            {
+              "name": "Apples",
+              "amount": "2",
+              "specifics": "crisp",
+              "preparation": ""
+            },
+            {
+              "name": "Fennel",
+              "amount": "1",
+              "specifics": "bulb",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.75",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "1",
+              "specifics": "fine",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Slice apples and fennel very thinly and place them in a chilled bowl.",
+            "Toss with lemon, olive oil, and chopped fennel fronds just before serving.",
+            "Measure lemon zest and set it beside the cooking area.",
+            "Stir in honey, keeping the heat gentle so the flavors meld.",
+            "Add red pepper flakes a little at a time and taste before adding more.",
+            "Fold through fresh ginger until it is evenly distributed.",
+            "Cook shallot briefly until its aroma becomes fragrant.",
+            "Add fine sea salt near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with lemon zest."
+          ],
+          "notesMarkdown": "A crisp no-cook side with anise notes and tart apple.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Lunch"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Peeler",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "sesame-salmon-rice-packets",
+          "name": "Sesame Salmon Rice Packets",
+          "serves": 4,
+          "prepMinutes": 16,
+          "cookMinutes": 22,
+          "ingredients": [
+            {
+              "name": "Salmon Portions",
+              "amount": "4",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Short-Grain Rice",
+              "amount": "2",
+              "specifics": "cooked",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "1",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Place salmon and rice on parchment with ginger, scallions, and a little soy.",
+            "Fold into packets and bake until the fish flakes and the rice is fragrant.",
+            "Measure butter and set it beside the cooking area.",
+            "Stir in rice vinegar, keeping the heat gentle so the flavors meld.",
+            "Add garlic cloves a little at a time and taste before adding more.",
+            "Fold through vegetable stock until it is evenly distributed.",
+            "Cook red pepper flakes briefly until its aroma becomes fragrant.",
+            "Add honey near the end so it stays fresh and bright."
+          ],
+          "notesMarkdown": "A tidy oven dinner with ginger-scented rice and tender salmon.",
+          "foodType": "Roast",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Chinese"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "roasted-cauliflower-tahini-wraps",
+          "name": "Roasted Cauliflower Tahini Wraps",
+          "serves": 4,
+          "prepMinutes": 17,
+          "cookMinutes": 25,
+          "ingredients": [
+            {
+              "name": "Cauliflower",
+              "amount": "4",
+              "specifics": "florets",
+              "preparation": ""
+            },
+            {
+              "name": "Tahini Sauce",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "1",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "1",
+              "specifics": "smoked",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Roast spiced cauliflower until the tips are crisp and the stems are tender.",
+            "Tuck into warm flatbread with tahini sauce, parsley, and pickled onion.",
+            "Measure fresh parsley and set it beside the cooking area.",
+            "Stir in fine sea salt, keeping the heat gentle so the flavors meld.",
+            "Add black pepper a little at a time and taste before adding more.",
+            "Fold through smoked paprika until it is evenly distributed.",
+            "Cook fresh parsley briefly until its aroma becomes fragrant.",
+            "Add fine sea salt near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with black pepper.",
+            "Use smoked paprika to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A portable lunch with crisp cauliflower and a creamy sesame sauce.",
+          "foodType": "Bread",
+          "mealTypes": [
+            "Lunch"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Peeler"
+          ]
+        },
+        {
+          "slug": "sour-cherry-polenta-bowls",
+          "name": "Sour Cherry Polenta Bowls",
+          "serves": 4,
+          "prepMinutes": 8,
+          "cookMinutes": 24,
+          "ingredients": [
+            {
+              "name": "Polenta",
+              "amount": "1",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Sour Cherries",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.5",
+              "specifics": "smoked",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "0.125",
+              "specifics": "cloves",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Whisk polenta into simmering milk and cook slowly until smooth.",
+            "Spoon into bowls and top with warm cherries and their tart syrup.",
+            "Measure smoked paprika and set it beside the cooking area.",
+            "Stir in honey, keeping the heat gentle so the flavors meld.",
+            "Add shallot a little at a time and taste before adding more.",
+            "Fold through black pepper until it is evenly distributed.",
+            "Cook garlic cloves briefly until its aroma becomes fragrant.",
+            "Add smoked paprika near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with honey.",
+            "Use shallot to adjust the balance, then taste once more.",
+            "Measure black pepper and set it beside the cooking area.",
+            "Stir in garlic cloves, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A breakfast bowl that pairs creamy corn with sharp cherries.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Dessert"
+          ],
+          "cuisines": [
+            "Italian"
+          ],
+          "equipment": [
+            "Small pan",
+            "Spatula",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "green-pea-and-mint-fritters",
+          "name": "Green Pea and Mint Fritters",
+          "serves": 4,
+          "prepMinutes": 14,
+          "cookMinutes": 18,
+          "ingredients": [
+            {
+              "name": "Green Peas",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Mint",
+              "amount": "0.25",
+              "specifics": "chopped",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Shallot",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Mash half the peas with egg and flour, leaving the rest whole for texture.",
+            "Fold in mint and pan-fry spoonfuls until both sides are golden.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in vegetable stock, keeping the heat gentle so the flavors meld.",
+            "Add honey a little at a time and taste before adding more.",
+            "Fold through fresh parsley until it is evenly distributed.",
+            "Cook shallot briefly until its aroma becomes fragrant.",
+            "Add rice vinegar near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with vegetable stock.",
+            "Use honey to adjust the balance, then taste once more."
+          ],
+          "notesMarkdown": "A crisp snack with sweet peas, fresh mint, and a cool yogurt dip.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Appetizer"
+          ],
+          "cuisines": [
+            "Indian"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "cocoa-orange-buckwheat-cookies",
+          "name": "Cocoa Orange Buckwheat Cookies",
+          "serves": 10,
+          "prepMinutes": 15,
+          "cookMinutes": 12,
+          "ingredients": [
+            {
+              "name": "Buckwheat Flour",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Cocoa Powder",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "1",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Ginger",
+              "amount": "0.25",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.75",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Garlic",
+              "amount": "0.25",
+              "specifics": "cloves",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "0.5",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Mix buckwheat flour with cocoa, orange zest, and softened butter to make a soft dough.",
+            "Scoop onto a tray and bake until the edges set while the centers stay tender.",
+            "Measure fine sea salt and set it beside the cooking area.",
+            "Stir in red pepper flakes, keeping the heat gentle so the flavors meld.",
+            "Add fresh ginger a little at a time and taste before adding more."
+          ],
+          "notesMarkdown": "A small-batch cookie with earthy cocoa and fragrant orange peel.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Dessert"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Baking sheet",
+            "Stand mixer",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "garlic-butter-bean-and-kale-pot",
+          "name": "Garlic Butter Bean and Kale Pot",
+          "serves": 4,
+          "prepMinutes": 12,
+          "cookMinutes": 17,
+          "ingredients": [
+            {
+              "name": "Butter Beans",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Kale",
+              "amount": "3",
+              "specifics": "chopped",
+              "preparation": ""
+            },
+            {
+              "name": "Rice Vinegar",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Lemon Zest",
+              "amount": "0.25",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "1.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Cook garlic slowly in olive oil, then add beans and a ladle of broth.",
+            "Fold in kale until tender and finish with lemon and black pepper.",
+            "Measure rice vinegar and set it beside the cooking area.",
+            "Stir in lemon zest, keeping the heat gentle so the flavors meld.",
+            "Add plain yogurt a little at a time and taste before adding more.",
+            "Fold through fresh parsley until it is evenly distributed.",
+            "Cook butter briefly until its aroma becomes fragrant.",
+            "Add rice vinegar near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with lemon zest.",
+            "Use plain yogurt to adjust the balance, then taste once more.",
+            "Measure fresh parsley and set it beside the cooking area.",
+            "Stir in butter, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A comforting skillet supper with greens, beans, and garlic broth.",
+          "foodType": "Stew",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "French"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Small pan",
+            "Spatula"
+          ]
+        },
+        {
+          "slug": "rosemary-grapefruit-shortbread",
+          "name": "Rosemary Grapefruit Shortbread",
+          "serves": 8,
+          "prepMinutes": 18,
+          "cookMinutes": 26,
+          "ingredients": [
+            {
+              "name": "Butter",
+              "amount": "1",
+              "specifics": "softened",
+              "preparation": ""
+            },
+            {
+              "name": "Grapefruit Zest",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Olive Oil",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "0.5",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "0.75",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Black Pepper",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Butter",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Rub grapefruit zest and chopped rosemary into the sugar before mixing the dough.",
+            "Press into a pan, score into fingers, and bake until pale gold at the edges.",
+            "Measure olive oil and set it beside the cooking area.",
+            "Stir in fresh thyme, keeping the heat gentle so the flavors meld.",
+            "Add fresh parsley a little at a time and taste before adding more."
+          ],
+          "notesMarkdown": "A buttery tea biscuit with citrus oils and a piney rosemary aroma.",
+          "foodType": "Cake",
+          "mealTypes": [
+            "Dessert"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Baking sheet",
+            "Stand mixer",
+            "Whisk"
+          ]
+        },
+        {
+          "slug": "spiced-pumpkin-and-barley-bowl",
+          "name": "Spiced Pumpkin and Barley Bowl",
+          "serves": 5,
+          "prepMinutes": 13,
+          "cookMinutes": 34,
+          "ingredients": [
+            {
+              "name": "Pearl Barley",
+              "amount": "1",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Pumpkin",
+              "amount": "2",
+              "specifics": "roasted",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "1.5",
+              "specifics": "toasted",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Simmer barley in salted water until pleasantly chewy, then drain.",
+            "Toss with pumpkin, coriander, and a spoonful of yogurt or seed sauce.",
+            "Measure toasted sesame seeds and set it beside the cooking area.",
+            "Stir in toasted sesame seeds, keeping the heat gentle so the flavors meld.",
+            "Add toasted sesame seeds a little at a time and taste before adding more.",
+            "Fold through toasted sesame seeds until it is evenly distributed.",
+            "Cook toasted sesame seeds briefly until its aroma becomes fragrant.",
+            "Add toasted sesame seeds near the end so it stays fresh and bright.",
+            "Let the dish rest briefly, then finish with toasted sesame seeds."
+          ],
+          "notesMarkdown": "A hearty grain bowl with sweet pumpkin and warm coriander.",
+          "foodType": "Salad",
+          "mealTypes": [
+            "Dinner"
+          ],
+          "cuisines": [
+            "Fusion"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Baking sheet",
+            "Medium skillet",
+            "Small pan"
+          ]
+        },
+        {
+          "slug": "chive-egg-and-potato-toast",
+          "name": "Chive Egg and Potato Toast",
+          "serves": 2,
+          "prepMinutes": 10,
+          "cookMinutes": 15,
+          "ingredients": [
+            {
+              "name": "Potatoes",
+              "amount": "1",
+              "specifics": "boiled",
+              "preparation": ""
+            },
+            {
+              "name": "Eggs",
+              "amount": "2",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Honey",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Red Pepper Flakes",
+              "amount": "1.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Parsley",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Sesame Seeds",
+              "amount": "1",
+              "specifics": "toasted",
+              "preparation": ""
+            },
+            {
+              "name": "Thyme",
+              "amount": "1",
+              "specifics": "fresh",
+              "preparation": ""
+            },
+            {
+              "name": "Water",
+              "amount": "0.5",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Vegetable Stock",
+              "amount": "0.125",
+              "specifics": "",
+              "preparation": ""
+            },
+            {
+              "name": "Sea Salt",
+              "amount": "0.75",
+              "specifics": "fine",
+              "preparation": ""
+            },
+            {
+              "name": "Yogurt",
+              "amount": "1",
+              "specifics": "plain",
+              "preparation": ""
+            },
+            {
+              "name": "Paprika",
+              "amount": "0.5",
+              "specifics": "smoked",
+              "preparation": ""
+            }
+          ],
+          "instructions": [
+            "Crisp sliced potatoes in a skillet while the bread toasts.",
+            "Scramble the eggs softly with chives and layer them over the potatoes and toast.",
+            "Measure honey and set it beside the cooking area.",
+            "Stir in red pepper flakes, keeping the heat gentle so the flavors meld."
+          ],
+          "notesMarkdown": "A substantial breakfast with crisp potatoes and soft chive eggs.",
+          "foodType": "Bread",
+          "mealTypes": [
+            "Breakfast"
+          ],
+          "cuisines": [
+            "American"
+          ],
+          "equipment": [
+            "Chef knife",
+            "Medium skillet",
+            "Spatula"
+          ]
+        }
+      ]
+    }
+  ]
+}

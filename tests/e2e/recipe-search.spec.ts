@@ -394,6 +394,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await searchTab.focus();
     await page.keyboard.press('ArrowRight');
     await expect(queryTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#recipe-search')).toHaveValue('');
     await expect(page.getByRole('tabpanel', { name: 'Query' })).toBeVisible();
     await page.keyboard.press('ArrowLeft');
     await expect(searchTab).toHaveAttribute('aria-selected', 'true');
@@ -457,28 +458,46 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       'Want to Try',
     );
     await searchTab.click();
-    await expect(page).toHaveURL((url) => new URL(url).searchParams.getAll('filter').length === 2);
+    await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'clear all' })).toHaveCount(0);
+    await expect(page.locator('#recipe-search')).toHaveValue('');
     await queryTab.click();
-    await expect(page.getByRole('button', { name: 'clear all' })).toBeVisible();
-    await page.getByRole('button', { name: 'Remove filter 1' }).click();
+    await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'clear all' })).toHaveCount(0);
+    await searchTab.click();
+    await expect(page.locator('#recipe-search')).toHaveValue('');
+    await page.getByRole('button', { name: 'Search' }).click();
     await expect(page).toHaveURL((url) => {
-      const filters = new URL(url).searchParams.getAll('filter').map((value) => JSON.parse(value));
-      return filters.length === 1 && filters[0]?.field === 'state';
+      const params = new URL(url).searchParams;
+      return (
+        !params.has('q') && params.getAll('filter').length === 0 && params.get('tab') === 'search'
+      );
     });
-    const survivingRule = page.locator('.recipe-filter-row').first();
-    await selectFilterValue(page, survivingRule, 'Tried');
+    await expect(page.getByText('2 recipes found')).toBeVisible();
+
+    await queryTab.click();
+    await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    const independentRule = page.locator('.recipe-filter-row').first();
+    await selectFilterOption(page, independentRule, 'Field', 'Name');
+    await independentRule.getByLabel('Value').fill('saffron');
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    const independentStateRule = page.locator('.recipe-filter-row').nth(1);
+    await selectFilterOption(page, independentStateRule, 'Field', 'State');
+    await selectFilterValue(page, independentStateRule, 'Want to Try');
     await page.getByRole('button', { name: 'clear all' }).click();
     await expect(page).toHaveURL((url) => {
       const searchParams = new URL(url).searchParams;
       return (
-        searchParams.get('q') === 'cardamom notesearch' &&
+        !searchParams.has('q') &&
         searchParams.getAll('filter').length === 0 &&
         searchParams.get('tab') === 'query'
       );
     });
-    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByText('2 recipes found')).toBeVisible();
     await searchTab.click();
-    await page.getByRole('searchbox', { name: 'Search recipes' }).fill('');
+    await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
+    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue('');
     await page.getByRole('button', { name: 'Search' }).click();
     await expect(page.getByText('2 recipes found')).toBeVisible();
     const secondRecipeRow = page.locator('.find-recipes-list tbody tr').nth(1);
@@ -891,22 +910,83 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await expect(filterOptionLabel).toHaveCSS('font-size', '16px');
     await expect(filterOptionLabel).toHaveCSS('text-transform', 'none');
 
+    for (const index of [3, 4, 5, 6, 7, 8]) {
+      await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+        name: `Grid stripe recipe ${index}`,
+        state: 'want_to_try',
+        totalTime: 10 + index,
+        notes: '',
+      });
+    }
+
     await page.goto('/recipes/find?sort=name&direction=asc&page=1&view=grid');
     const desktopGridCards = page.locator('.find-recipes-grid li');
+    await expect(desktopGridCards).toHaveCount(8);
     const desktopGridCardHeights = await desktopGridCards.evaluateAll((cards) =>
       cards.map((card) => Math.round(card.getBoundingClientRect().height)),
     );
     expect(new Set(desktopGridCardHeights).size).toBe(1);
     await expect(desktopGridCards.first()).toHaveCSS('height', '234px');
     await expect(desktopGridCards.first()).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
-    await expect(desktopGridCards.nth(1)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     await expect(desktopGridCards.first()).toHaveCSS(
       'box-shadow',
       'rgba(36, 40, 32, 0.18) 0px 4px 12px 0px',
     );
+
+    async function checkGridRowStarts(
+      columnCount: number,
+      candidateWidths = [
+        760, 800, 840, 880, 920, 960, 1000, 1040, 1080, 1120, 1160, 1200, 1240, 1280, 1360, 1500,
+      ],
+    ) {
+      let matchedColumns = false;
+      for (const width of candidateWidths) {
+        await page.setViewportSize({ width, height: 900 });
+        const actualColumns = await desktopGridCards.evaluateAll((cards) => {
+          const firstTop = cards[0]?.getBoundingClientRect().top;
+          if (firstTop === undefined) return 0;
+          return cards.filter((card) => Math.abs(card.getBoundingClientRect().top - firstTop) < 1)
+            .length;
+        });
+        if (actualColumns !== columnCount) continue;
+        matchedColumns = true;
+        break;
+      }
+
+      expect(matchedColumns).toBe(true);
+      const secondRowStart = desktopGridCards.nth(columnCount);
+      const secondRowNextCard = desktopGridCards.nth(columnCount + 1);
+      await expect(desktopGridCards.first()).toHaveAttribute('data-stripe-cell', 'odd');
+      await expect(desktopGridCards.nth(1)).toHaveAttribute('data-stripe-cell', 'even');
+      await expect(secondRowStart).toHaveAttribute('data-stripe-cell', 'even');
+      await expect(secondRowNextCard).toHaveAttribute('data-stripe-cell', 'odd');
+      await expect(desktopGridCards.first()).toHaveCSS(
+        'background-color',
+        'rgba(56, 96, 68, 0.08)',
+      );
+      await expect(desktopGridCards.nth(1)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expect(secondRowStart).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expect(secondRowNextCard).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
+      if (columnCount === 3) {
+        await expect(desktopGridCards.nth(6)).toHaveAttribute('data-stripe-cell', 'odd');
+        await expect(desktopGridCards.nth(7)).toHaveAttribute('data-stripe-cell', 'even');
+        await expect(desktopGridCards.nth(6)).toHaveCSS(
+          'background-color',
+          'rgba(56, 96, 68, 0.08)',
+        );
+        await expect(desktopGridCards.nth(7)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      }
+    }
+
+    await checkGridRowStarts(3);
+    await checkGridRowStarts(4);
+    await checkGridRowStarts(5, [1414]);
+    await checkGridRowStarts(5, [1440]);
+    await checkGridRowStarts(5, [1920]);
+    await page.setViewportSize({ width: 1280, height: 900 });
     await captureScreenshot(page, 'find-recipes-populated-grid');
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(desktopGridCards).toHaveCount(2);
+    await expect(desktopGridCards).toHaveCount(8);
     await captureScreenshot(page, 'find-recipes-populated-grid-mobile');
     await page.setViewportSize({ width: 1280, height: 900 });
     await desktopGridCards.first().locator('a').hover();
@@ -937,12 +1017,11 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
   }
 });
 
-test('Find Recipes shows a recoverable search error and preserves criteria @e2e', async ({
+test('Find Recipes shows a recoverable query error and preserves filters @e2e', async ({
   page,
   request,
 }) => {
   const user = await createTestUser(request);
-  const query = 'preserved saffron query';
   const filter = JSON.stringify({ field: 'unsupported_field', operator: 'contains', value: 'x' });
 
   try {
@@ -951,20 +1030,16 @@ test('Find Recipes shows a recoverable search error and preserves criteria @e2e'
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/recipes$/);
-    await page.goto(
-      `/recipes/find?q=${encodeURIComponent(query)}&filter=${encodeURIComponent(filter)}&view=grid`,
-    );
+    await page.goto(`/recipes/find?filter=${encodeURIComponent(filter)}&tab=query&view=grid`);
 
     await expect(
       page.getByRole('alert').filter({ hasText: 'Unable to search recipes.' }),
-    ).toHaveText(
-      'Unable to search recipes. Your query and filters are preserved. Try again.',
-    );
-    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue(query);
+    ).toHaveText('Unable to search recipes. Your query refinements are preserved. Try again.');
+    await expect(page.locator('#recipe-search')).toHaveValue('');
     await expect(page.locator('.recipe-empty-state')).toHaveCount(0);
     await expect(page).toHaveURL((url) => {
       const params = new URL(url).searchParams;
-      return params.get('q') === query && params.get('filter') === filter;
+      return !params.has('q') && params.get('filter') === filter && params.get('tab') === 'query';
     });
   } finally {
     await deleteTestUser(request, user);

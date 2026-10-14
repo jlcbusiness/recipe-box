@@ -786,8 +786,11 @@ hover or keyboard focus. On mobile, the table header is hidden, the recipe
 name occupies its own first line, and the remaining labeled fields wrap
 without horizontal page scrolling.
 
-Grid uses 234px-high desktop cards and content-sized mobile cards. Alternate
-desktop and mobile card surfaces between a subtle leaf tint and white, with a
+Grid uses responsive 220px minimum columns with 12px gaps; five columns fit
+when the grid has at least 1,148px of usable width. Desktop cards are 234px
+high, while mobile cards size to their content. Use a true checkerboard:
+alternate card colors across each visual row and flip the starting color on
+the next row. Keep this pattern correct as responsive columns reflow, with a
 shared restrained shadow. Show the actual default recipe photo without
 cropping it; keep its 144px image area transparent and the recipe title visible
 directly below. In publication Grid, state and total time share one compact

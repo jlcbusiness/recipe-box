@@ -16,9 +16,14 @@ import {
   searchRecipes,
 } from '../../../lib/recipes/search';
 import { createClient } from '../../../lib/supabase/server';
+import { AlternatingRecipeGrid } from './alternating-recipe-grid';
 import { RecipeColumnFilter } from './recipe-column-filter';
 import { RecipeFilterBuilder } from './recipe-filter-builder';
-import { RecipeSearchModeProvider, RecipeSearchTabs } from './recipe-search-tabs';
+import {
+  RecipeSearchInput,
+  RecipeSearchModeProvider,
+  RecipeSearchTabs,
+} from './recipe-search-tabs';
 import { RecipeSearchPagination, RecipeSearchToolbar } from './recipe-search-toolbar';
 
 const pageSize = 50;
@@ -54,8 +59,9 @@ function firstValue(value: string | string[] | undefined) {
 export default async function FindRecipesPage({ searchParams }: FindRecipesPageProps) {
   const params = await searchParams;
   const q = firstValue(params.q);
-  const query = q.slice(0, 500);
-  const filters = parseRecipeSearchFilters(params.filter);
+  const searchMode = params.tab === 'query' ? 'query' : 'search';
+  const query = searchMode === 'search' ? q.slice(0, 500) : '';
+  const filters = searchMode === 'query' ? parseRecipeSearchFilters(params.filter) : [];
   const parsedColumnFilters = parseRecipeSearchColumnFilters(params);
   const columnFilters = parsedColumnFilters.filters;
   const columnSelections = parsedColumnFilters.selections;
@@ -68,7 +74,6 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       : 'name';
   const sortDirection = params.direction === 'desc' ? 'desc' : 'asc';
   const view = params.view === 'grid' ? 'grid' : 'list';
-  const searchMode = params.tab === 'query' ? 'query' : 'search';
   const supabase = await createClient();
   const [picklists, ingredients, publications, tags, activeRecipes] = await Promise.all([
     getRecipePicklists(supabase),
@@ -158,7 +163,10 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       ],
     );
   } catch {
-    searchError = 'Unable to search recipes. Your query and filters are preserved. Try again.';
+    searchError =
+      searchMode === 'query'
+        ? 'Unable to search recipes. Your query refinements are preserved. Try again.'
+        : 'Unable to search recipes. Your search is preserved. Try again.';
     results = [];
     matchingCount = 0;
     pageCount = 1;
@@ -238,14 +246,10 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
               searchPanel={
                 <div className="find-recipes-search-panel">
                   <div className="find-recipes-form-controls">
-                    <input
-                      aria-label="Search recipes"
-                      autoComplete="off"
-                      id="recipe-search"
-                      maxLength={500}
-                      name="q"
-                      type="search"
+                    <RecipeSearchInput
                       defaultValue={query}
+                      id="recipe-search"
+                      label="Search recipes"
                     />
                     <button className="recipe-primary-button" formNoValidate type="submit">
                       Search
@@ -373,7 +377,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
             </table>
           </div>
         ) : (
-          <ul className="find-recipes-grid">
+          <AlternatingRecipeGrid>
             {results.map((recipe) => (
               <li key={recipe.recipe_id}>
                 <Link href={`/recipes/${recipe.recipe_id}`}>
@@ -405,7 +409,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                 </Link>
               </li>
             ))}
-          </ul>
+          </AlternatingRecipeGrid>
         )}
 
         {pageCount > 1 && (
