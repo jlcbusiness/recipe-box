@@ -69,17 +69,9 @@
           ],
           "notesMarkdown": "A bright pantry lunch; crisp toast contrasts with the soft beans.",
           "foodType": "Bread",
-          "mealTypes": [
-            "Lunch"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Medium skillet"
-          ]
+          "mealTypes": ["Lunch"],
+          "cuisines": ["American"],
+          "equipment": ["Chef knife", "Baking sheet", "Medium skillet"]
         },
         {
           "slug": "cider-pear-breakfast-oats",
@@ -127,17 +119,9 @@
           ],
           "notesMarkdown": "Make-ahead breakfast with orchard fruit and a gentle cider sweetness.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Breakfast"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Small pan",
-            "Spatula",
-            "Whisk"
-          ]
+          "mealTypes": ["Breakfast"],
+          "cuisines": ["American"],
+          "equipment": ["Small pan", "Spatula", "Whisk"]
         },
         {
           "slug": "dill-lentil-skillet",
@@ -221,17 +205,9 @@
           ],
           "notesMarkdown": "A quick supper with earthy lentils, fresh herbs, and a lemon finish.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "rosemary-carrot-ribbons",
@@ -269,17 +245,9 @@
           ],
           "notesMarkdown": "A flexible side dish; keep the ribbons bright rather than fully soft.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Peeler"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Medium skillet", "Peeler"]
         },
         {
           "slug": "toasted-sesame-cabbage-bowls",
@@ -370,17 +338,9 @@
           ],
           "notesMarkdown": "A weeknight bowl with crunchy cabbage, nutty rice, and sesame.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Lunch"
-          ],
-          "cuisines": [
-            "Chinese"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Lunch"],
+          "cuisines": ["Chinese"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "blueberry-thyme-cornmeal-cakes",
@@ -454,17 +414,9 @@
           ],
           "notesMarkdown": "Weekend breakfast with tart berries and a small savory note from thyme.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Breakfast"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Peeler",
-            "Whisk"
-          ]
+          "mealTypes": ["Breakfast"],
+          "cuisines": ["American"],
+          "equipment": ["Chef knife", "Peeler", "Whisk"]
         },
         {
           "slug": "smoky-squash-and-white-beans",
@@ -537,17 +489,9 @@
           ],
           "notesMarkdown": "A cozy one-pan meal with smoky squash and creamy beans.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "12-inch cast iron",
-            "Chef knife",
-            "Baking sheet"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["American"],
+          "equipment": ["12-inch cast iron", "Chef knife", "Baking sheet"]
         }
       ]
     },
@@ -632,17 +576,9 @@
           ],
           "notesMarkdown": "A savory bowl for cool evenings; the rice catches the ginger-miso glaze.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "crisp-chickpea-flatbread",
@@ -679,17 +615,9 @@
           ],
           "notesMarkdown": "A quick gluten-free flatbread with crisp edges and a tender center.",
           "foodType": "Bread",
-          "mealTypes": [
-            "Appetizer"
-          ],
-          "cuisines": [
-            "Indian"
-          ],
-          "equipment": [
-            "12-inch cast iron",
-            "Spatula",
-            "Whisk"
-          ]
+          "mealTypes": ["Appetizer"],
+          "cuisines": ["Indian"],
+          "equipment": ["12-inch cast iron", "Spatula", "Whisk"]
         },
         {
           "slug": "sesame-cucumber-noodle-salad",
@@ -776,17 +704,9 @@
           ],
           "notesMarkdown": "A chilled lunch salad with a savory sesame dressing and fresh crunch.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Lunch"
-          ],
-          "cuisines": [
-            "Chinese"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Whisk"
-          ]
+          "mealTypes": ["Lunch"],
+          "cuisines": ["Chinese"],
+          "equipment": ["Chef knife", "Medium skillet", "Whisk"]
         }
       ]
     },
@@ -888,17 +808,9 @@
           ],
           "notesMarkdown": "A late-summer salad that balances juicy fruit with crisp bread.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Lunch"
-          ],
-          "cuisines": [
-            "Italian"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Medium skillet"
-          ]
+          "mealTypes": ["Lunch"],
+          "cuisines": ["Italian"],
+          "equipment": ["Chef knife", "Baking sheet", "Medium skillet"]
         },
         {
           "slug": "charred-corn-lime-salad",
@@ -934,17 +846,9 @@
           ],
           "notesMarkdown": "A picnic-friendly salad with sweet corn, beans, and sharp lime.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "Mexican"
-          ],
-          "equipment": [
-            "12-inch cast iron",
-            "Chef knife",
-            "Medium skillet"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["Mexican"],
+          "equipment": ["12-inch cast iron", "Chef knife", "Medium skillet"]
         },
         {
           "slug": "herbed-potato-and-snap-pea-salad",
@@ -1021,17 +925,9 @@
           ],
           "notesMarkdown": "Serve warm or cool; the snap peas keep their green crunch.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Peeler",
-            "Small pan"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Peeler", "Small pan"]
         },
         {
           "slug": "roasted-beet-citrus-platter",
@@ -1106,17 +1002,9 @@
           ],
           "notesMarkdown": "An earthy, bright platter with citrus, seeds, and cool yogurt.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Peeler"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Baking sheet", "Peeler"]
         },
         {
           "slug": "green-goddess-butter-beans",
@@ -1213,17 +1101,9 @@
           ],
           "notesMarkdown": "A simple shared plate with creamy beans and a fresh herb sauce.",
           "foodType": "Sauce",
-          "mealTypes": [
-            "Appetizer"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Blender",
-            "Small pan"
-          ]
+          "mealTypes": ["Appetizer"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Chef knife", "Blender", "Small pan"]
         },
         {
           "slug": "plum-and-black-pepper-crumble",
@@ -1289,17 +1169,9 @@
           ],
           "notesMarkdown": "A not-too-sweet dessert with peppery fruit and a crisp oat top.",
           "foodType": "Pie",
-          "mealTypes": [
-            "Dessert"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Baking sheet",
-            "Stand mixer",
-            "Whisk"
-          ]
+          "mealTypes": ["Dessert"],
+          "cuisines": ["American"],
+          "equipment": ["Baking sheet", "Stand mixer", "Whisk"]
         },
         {
           "slug": "dill-pickle-potato-skillet",
@@ -1335,17 +1207,9 @@
           ],
           "notesMarkdown": "A tangy brunch skillet that uses pickle brine instead of extra salt.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["American"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "rosemary-apple-oat-squares",
@@ -1438,17 +1302,9 @@
           ],
           "notesMarkdown": "Portable breakfast squares with a subtle savory edge from rosemary.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Snack"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Baking sheet",
-            "Stand mixer",
-            "Whisk"
-          ]
+          "mealTypes": ["Snack"],
+          "cuisines": ["American"],
+          "equipment": ["Baking sheet", "Stand mixer", "Whisk"]
         },
         {
           "slug": "smoky-lentil-lettuce-cups",
@@ -1507,17 +1363,9 @@
           ],
           "notesMarkdown": "A hand-held lunch with smoky lentils and cool, crunchy lettuce.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Appetizer"
-          ],
-          "cuisines": [
-            "Chinese"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Small pan"
-          ]
+          "mealTypes": ["Appetizer"],
+          "cuisines": ["Chinese"],
+          "equipment": ["Chef knife", "Medium skillet", "Small pan"]
         },
         {
           "slug": "basil-nectarine-yogurt-toast",
@@ -1592,17 +1440,9 @@
           ],
           "notesMarkdown": "A quick sweet-savory breakfast with ripe stone fruit and basil.",
           "foodType": "Bread",
-          "mealTypes": [
-            "Breakfast"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Breakfast"],
+          "cuisines": ["American"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "warm-farro-with-roasted-grapes",
@@ -1677,17 +1517,9 @@
           ],
           "notesMarkdown": "A grain salad with jammy grapes, toasted nuts, and a tart finish.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "Italian"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Small pan",
-            "Whisk"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["Italian"],
+          "equipment": ["Chef knife", "Small pan", "Whisk"]
         }
       ]
     },
@@ -1736,17 +1568,9 @@
           ],
           "notesMarkdown": "A silky soup with a savory miso base and crunchy rice topping.",
           "foodType": "Soup",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Blender",
-            "Small pan"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Chef knife", "Blender", "Small pan"]
         },
         {
           "slug": "saffron-carrot-risotto",
@@ -1829,17 +1653,9 @@
           ],
           "notesMarkdown": "A golden rice supper with sweet carrot and fragrant saffron.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Italian"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Small pan",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Italian"],
+          "equipment": ["Chef knife", "Small pan", "Spatula"]
         },
         {
           "slug": "smoked-paprika-cauliflower-gratin",
@@ -1880,17 +1696,9 @@
           ],
           "notesMarkdown": "A warming side with a smoky cream sauce and crisp crumb topping.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Baking sheet",
-            "Medium skillet",
-            "Whisk"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["French"],
+          "equipment": ["Baking sheet", "Medium skillet", "Whisk"]
         },
         {
           "slug": "ginger-braised-chicken-and-turnips",
@@ -1980,17 +1788,9 @@
           ],
           "notesMarkdown": "A one-pan dinner with warming ginger and mild root vegetables.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Chinese"
-          ],
-          "equipment": [
-            "12-inch cast iron",
-            "Chef knife",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Chinese"],
+          "equipment": ["12-inch cast iron", "Chef knife", "Spatula"]
         },
         {
           "slug": "dark-cocoa-rye-pudding",
@@ -2070,17 +1870,9 @@
           ],
           "notesMarkdown": "A spoonable cocoa dessert with a malty rye flavor and citrus aroma.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Dessert"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Small pan",
-            "Spatula",
-            "Whisk"
-          ]
+          "mealTypes": ["Dessert"],
+          "cuisines": ["American"],
+          "equipment": ["Small pan", "Spatula", "Whisk"]
         }
       ]
     },
@@ -2173,17 +1965,9 @@
           ],
           "notesMarkdown": "A quick plate with crisp tofu, tender greens, and bright orange.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Chinese"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Chinese"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "black-lentil-tomato-pilaf",
@@ -2253,17 +2037,9 @@
           ],
           "notesMarkdown": "A sturdy batch-cook pilaf with cumin, tomatoes, and black lentils.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Indian"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Small pan",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Indian"],
+          "equipment": ["Chef knife", "Small pan", "Spatula"]
         },
         {
           "slug": "lemony-broccoli-pasta-shells",
@@ -2299,17 +2075,9 @@
           ],
           "notesMarkdown": "A fast pasta supper with bright lemon and broccoli tucked into the shells.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Italian"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Small pan"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Italian"],
+          "equipment": ["Chef knife", "Medium skillet", "Small pan"]
         },
         {
           "slug": "coconut-lime-rice-pudding",
@@ -2362,17 +2130,9 @@
           ],
           "notesMarkdown": "A creamy dessert that is fragrant with coconut and sharp lime.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Dessert"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Small pan",
-            "Spatula",
-            "Whisk"
-          ]
+          "mealTypes": ["Dessert"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Small pan", "Spatula", "Whisk"]
         },
         {
           "slug": "smash-cucumber-and-peanut-noodles",
@@ -2462,17 +2222,9 @@
           ],
           "notesMarkdown": "A cool noodle bowl with a thick peanut dressing and smashed cucumber.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Chinese"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Chinese"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "roasted-fennel-white-fish",
@@ -2522,17 +2274,9 @@
           ],
           "notesMarkdown": "A light dinner with anise-scented fennel and tender white fish.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Small pan"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Baking sheet", "Small pan"]
         },
         {
           "slug": "herbed-lima-bean-dip",
@@ -2586,17 +2330,9 @@
           ],
           "notesMarkdown": "A smooth, mild dip that works as a snack or a lunch spread.",
           "foodType": "Sauce",
-          "mealTypes": [
-            "Appetizer"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Blender",
-            "Small pan"
-          ]
+          "mealTypes": ["Appetizer"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Chef knife", "Blender", "Small pan"]
         },
         {
           "slug": "pear-cardamom-buckwheat-pancakes",
@@ -2690,17 +2426,9 @@
           ],
           "notesMarkdown": "Nutty breakfast pancakes with soft pear and fragrant cardamom.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Breakfast"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Medium skillet",
-            "Spatula",
-            "Whisk"
-          ]
+          "mealTypes": ["Breakfast"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Medium skillet", "Spatula", "Whisk"]
         },
         {
           "slug": "tomatillo-pumpkin-seed-salsa",
@@ -2750,17 +2478,9 @@
           ],
           "notesMarkdown": "A tangy green salsa with toasted seeds for body and texture.",
           "foodType": "Sauce",
-          "mealTypes": [
-            "Appetizer"
-          ],
-          "cuisines": [
-            "Mexican"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Blender",
-            "Medium skillet"
-          ]
+          "mealTypes": ["Appetizer"],
+          "cuisines": ["Mexican"],
+          "equipment": ["Chef knife", "Blender", "Medium skillet"]
         }
       ]
     },
@@ -2853,17 +2573,9 @@
           ],
           "notesMarkdown": "A simple winter side with browned edges and cool, tangy yogurt.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Whisk"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Baking sheet", "Whisk"]
         },
         {
           "slug": "wild-rice-mushroom-breakfast-hash",
@@ -2937,17 +2649,9 @@
           ],
           "notesMarkdown": "A savory breakfast hash with chewy rice, mushrooms, and soft eggs.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Breakfast"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "12-inch cast iron",
-            "Chef knife",
-            "Spatula"
-          ]
+          "mealTypes": ["Breakfast"],
+          "cuisines": ["American"],
+          "equipment": ["12-inch cast iron", "Chef knife", "Spatula"]
         },
         {
           "slug": "plum-mustard-glazed-carrots",
@@ -2991,17 +2695,9 @@
           ],
           "notesMarkdown": "A sweet-sharp side dish with a glossy fruit and mustard glaze.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Side dish"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Peeler"
-          ]
+          "mealTypes": ["Side dish"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Baking sheet", "Peeler"]
         },
         {
           "slug": "lemon-thyme-chickpea-stew",
@@ -3091,17 +2787,9 @@
           ],
           "notesMarkdown": "A bright one-pot stew with chickpeas, thyme, and lemon.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Small pan",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Small pan", "Spatula"]
         }
       ]
     },
@@ -3170,17 +2858,9 @@
           ],
           "notesMarkdown": "A salty snack with crisp leaves and a nutty butter coating.",
           "foodType": "Bread",
-          "mealTypes": [
-            "Snack"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Small pan",
-            "Spatula"
-          ]
+          "mealTypes": ["Snack"],
+          "cuisines": ["American"],
+          "equipment": ["Chef knife", "Small pan", "Spatula"]
         },
         {
           "slug": "red-lentil-tomato-soup",
@@ -3256,17 +2936,9 @@
           ],
           "notesMarkdown": "A batch-friendly soup with cumin warmth and a lemon finish.",
           "foodType": "Soup",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Indian"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Blender",
-            "Small pan"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Indian"],
+          "equipment": ["Chef knife", "Blender", "Small pan"]
         },
         {
           "slug": "apple-fennel-slaw",
@@ -3337,17 +3009,9 @@
           ],
           "notesMarkdown": "A crisp no-cook side with anise notes and tart apple.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Lunch"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Peeler",
-            "Whisk"
-          ]
+          "mealTypes": ["Lunch"],
+          "cuisines": ["American"],
+          "equipment": ["Chef knife", "Peeler", "Whisk"]
         },
         {
           "slug": "sesame-salmon-rice-packets",
@@ -3417,17 +3081,9 @@
           ],
           "notesMarkdown": "A tidy oven dinner with ginger-scented rice and tender salmon.",
           "foodType": "Roast",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Chinese"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Small pan"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Chinese"],
+          "equipment": ["Chef knife", "Baking sheet", "Small pan"]
         },
         {
           "slug": "roasted-cauliflower-tahini-wraps",
@@ -3487,17 +3143,9 @@
           ],
           "notesMarkdown": "A portable lunch with crisp cauliflower and a creamy sesame sauce.",
           "foodType": "Bread",
-          "mealTypes": [
-            "Lunch"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Peeler"
-          ]
+          "mealTypes": ["Lunch"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Chef knife", "Baking sheet", "Peeler"]
         },
         {
           "slug": "sour-cherry-polenta-bowls",
@@ -3565,17 +3213,9 @@
           ],
           "notesMarkdown": "A breakfast bowl that pairs creamy corn with sharp cherries.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Dessert"
-          ],
-          "cuisines": [
-            "Italian"
-          ],
-          "equipment": [
-            "Small pan",
-            "Spatula",
-            "Whisk"
-          ]
+          "mealTypes": ["Dessert"],
+          "cuisines": ["Italian"],
+          "equipment": ["Small pan", "Spatula", "Whisk"]
         },
         {
           "slug": "green-pea-and-mint-fritters",
@@ -3641,17 +3281,9 @@
           ],
           "notesMarkdown": "A crisp snack with sweet peas, fresh mint, and a cool yogurt dip.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Appetizer"
-          ],
-          "cuisines": [
-            "Indian"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Appetizer"],
+          "cuisines": ["Indian"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         },
         {
           "slug": "cocoa-orange-buckwheat-cookies",
@@ -3736,17 +3368,9 @@
           ],
           "notesMarkdown": "A small-batch cookie with earthy cocoa and fragrant orange peel.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Dessert"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Baking sheet",
-            "Stand mixer",
-            "Whisk"
-          ]
+          "mealTypes": ["Dessert"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Baking sheet", "Stand mixer", "Whisk"]
         },
         {
           "slug": "garlic-butter-bean-and-kale-pot",
@@ -3814,17 +3438,9 @@
           ],
           "notesMarkdown": "A comforting skillet supper with greens, beans, and garlic broth.",
           "foodType": "Stew",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "French"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Small pan",
-            "Spatula"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["French"],
+          "equipment": ["Chef knife", "Small pan", "Spatula"]
         },
         {
           "slug": "rosemary-grapefruit-shortbread",
@@ -3885,17 +3501,9 @@
           ],
           "notesMarkdown": "A buttery tea biscuit with citrus oils and a piney rosemary aroma.",
           "foodType": "Cake",
-          "mealTypes": [
-            "Dessert"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Baking sheet",
-            "Stand mixer",
-            "Whisk"
-          ]
+          "mealTypes": ["Dessert"],
+          "cuisines": ["American"],
+          "equipment": ["Baking sheet", "Stand mixer", "Whisk"]
         },
         {
           "slug": "spiced-pumpkin-and-barley-bowl",
@@ -3936,18 +3544,9 @@
           ],
           "notesMarkdown": "A hearty grain bowl with sweet pumpkin and warm coriander.",
           "foodType": "Salad",
-          "mealTypes": [
-            "Dinner"
-          ],
-          "cuisines": [
-            "Fusion"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Baking sheet",
-            "Medium skillet",
-            "Small pan"
-          ]
+          "mealTypes": ["Dinner"],
+          "cuisines": ["Fusion"],
+          "equipment": ["Chef knife", "Baking sheet", "Medium skillet", "Small pan"]
         },
         {
           "slug": "chive-egg-and-potato-toast",
@@ -4037,17 +3636,9 @@
           ],
           "notesMarkdown": "A substantial breakfast with crisp potatoes and soft chive eggs.",
           "foodType": "Bread",
-          "mealTypes": [
-            "Breakfast"
-          ],
-          "cuisines": [
-            "American"
-          ],
-          "equipment": [
-            "Chef knife",
-            "Medium skillet",
-            "Spatula"
-          ]
+          "mealTypes": ["Breakfast"],
+          "cuisines": ["American"],
+          "equipment": ["Chef knife", "Medium skillet", "Spatula"]
         }
       ]
     }

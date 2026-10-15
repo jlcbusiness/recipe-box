@@ -225,11 +225,13 @@ export function ExplorerListPreferences({
     event.preventDefault();
     event.stopPropagation();
     const savedWidth = preferencesRef.current.column_widths[column];
+    const rowPadding =
+      Number.parseFloat(getComputedStyle(header.parentElement ?? header).paddingLeft) || 0;
     dragRef.current = {
       column,
       pointerId: event.pointerId,
       startX: event.clientX,
-      startWidth: savedWidth ?? Math.round(header.getBoundingClientRect().width),
+      startWidth: savedWidth ?? Math.round(header.getBoundingClientRect().width + rowPadding),
       initialPreferences: preferencesRef.current,
     };
     event.currentTarget.setPointerCapture(event.pointerId);

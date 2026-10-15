@@ -30,8 +30,8 @@ A publication recipe explorer restores its fixed publication scope; it never
 turns that scope into a removable filter.
 
 Existing recipe `column_*` values are filter selections and restore with the
-other filters. They are distinct from List-column visibility, which remains
-deferred to Slice 19.
+other filters. They are distinct from List-column visibility and widths,
+delivered separately in Slice 19.
 
 The restored configuration omits free-text search input. Opening an explorer
 starts with a blank search so an old query cannot make the collection look
@@ -55,10 +55,11 @@ incomplete without an apparent criterion.
 ### Excluded
 
 - Naming, duplicating, pinning, navigation entries, or lifecycle management
-  for saved views. Slice 19 delivers those with nested queries.
-- Recipe List-column visibility, its shared chooser, and all column-width
-  persistence. Slice 19 delivers those with saved views.
-- Nested AND/OR groups, query explanations, or a new filter/operator catalog.
+  for saved views; these remain deferred.
+- List-column visibility and width preferences are separate from remembered
+  search state and were delivered in Slice 19.
+- Nested AND/OR groups, query explanations, or a new filter/operator catalog;
+  these remain deferred.
 - Persisting free-text search, pagination position, temporary popover state,
   or mobile-only presentation details.
 - Changes to recipe, publication, search-index, result-ordering, or sharing
@@ -142,9 +143,9 @@ lint, and a production build. Reuse the existing development server; never run
 
 - State synchronizes across a person's signed-in devices because it is stored
   per account, but the last successful change wins.
-- Remembered state does not include List-column visibility or widths. Both
-  belong to saved views in Slice 19, where they are useful and inspectable.
+- Remembered search state does not include List-column visibility or widths.
+  Slice 19 stores those display preferences separately in the same
+  account-owned, exact-context explorer-state record.
 - An unavailable publication scope falls back to that route's default view; it
   does not reveal whether another account owns the publication.
-- Slice 19 must define naming, duplication, pinning, navigation placement,
-  saved-view deletion, and saved-query interaction with last-used state.
+- Named and pinned saved views remain deferred; they are not part of Slice 19.

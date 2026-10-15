@@ -2698,7 +2698,7 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
             ingredient_name: 'Salt',
             is_main: false,
             detail: '',
-            preparation: '',
+            preparation: 'finely ground, then portioned',
             measurements: [],
           },
           {
@@ -2810,12 +2810,20 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     const ingredientColumnBounds = await page
       .getByRole('region', { name: 'Ingredients' })
       .boundingBox();
+    const ingredientTableBounds = await page
+      .locator('.recipe-ingredient-first-table')
+      .boundingBox();
     const instructionsColumnBounds = await page
       .getByRole('region', { name: 'Instructions' })
       .boundingBox();
     expect(ingredientColumnBounds).not.toBeNull();
+    expect(ingredientTableBounds).not.toBeNull();
     expect(instructionsColumnBounds).not.toBeNull();
-    if (ingredientColumnBounds && instructionsColumnBounds) {
+    if (ingredientColumnBounds && ingredientTableBounds && instructionsColumnBounds) {
+      expect(
+        Math.abs(ingredientColumnBounds.width - ingredientTableBounds.width),
+      ).toBeLessThanOrEqual(1);
+      expect(ingredientColumnBounds.width).toBeLessThan(instructionsColumnBounds.width);
       expect(instructionsColumnBounds.x).toBeGreaterThan(
         ingredientColumnBounds.x + ingredientColumnBounds.width / 2,
       );

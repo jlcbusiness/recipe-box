@@ -39,9 +39,9 @@ supported mobile widths.
   Date Changed sorting.
 - Fallback publication covers already exist for Book, Magazine, and Site.
   Uploaded covers and signed media URLs are Slice 12, not this explorer work.
-- Named saved views and persisted List-column visibility belong to later query
-  work. Slice 18 later added per-account remembered filters, sort, direction,
-  and List/Grid state.
+- Named saved views remain deferred. Slice 18 later added per-account
+  remembered filters, sort, direction, and List/Grid state; Slice 19 added
+  persisted List-column visibility and desktop widths.
 - Publication deletion and restore require a soft-delete lifecycle and
   transactional recipe disposition. They are explicitly out of scope for 10A
   and will be designed and verified in 10B.
@@ -93,9 +93,9 @@ supported mobile widths.
 
 - Publication edit or delete actions, publication Trash, restore, purge, and
   the three recipe-disposition choices; these belong to Slice 10B.
-- Named saved searches, persisted List-column visibility, or query construction;
-  these belong to later query slices. Slice 18 owns remembered filters, sort,
-  direction, and view state.
+- Named saved searches and query construction remain deferred. Persisted
+  List-column visibility and widths were delivered in Slice 19. Slice 18 owns
+  remembered filters, sort, direction, and view state.
 - Search by publication text; the Library Explorer requirements specify type
   filtering, while full-text search belongs to Slice 17.
 - Uploaded covers, logos, signed URLs, and image processing; Slice 12 owns

@@ -161,7 +161,7 @@ export const explorerColumnDefinitions: Record<
   'recipes-find' | 'publications' | 'publication-recipes',
   ExplorerColumnDefinition[]
 > = {
-  'recipes-find': recipeColumns(['publication', 'state']),
+  'recipes-find': recipeColumns(['publication', 'state', 'total_time_minutes']),
   publications: [
     nameColumn,
     { key: 'author', label: 'Author', defaultVisible: true, minWidth: 96, maxWidth: 600 },
@@ -224,10 +224,20 @@ export function getExplorerColumns(
   if (contextKey === 'publications') return definitions;
 
   const definitionsByKey = new Map(definitions.map((definition) => [definition.key, definition]));
-  const hiddenColumns = new Set(normalizeHiddenRecipeColumns(hiddenRecipeColumns));
+  const hiddenColumns =
+    hiddenRecipeColumns === undefined
+      ? null
+      : new Set(normalizeHiddenRecipeColumns(hiddenRecipeColumns));
   return normalizeRecipeColumnOrder(recipeColumnOrder).flatMap((key) => {
     const definition = definitionsByKey.get(key);
-    return definition ? [{ ...definition, defaultVisible: !hiddenColumns.has(key) }] : [];
+    return definition
+      ? [
+          {
+            ...definition,
+            defaultVisible: hiddenColumns ? !hiddenColumns.has(key) : definition.defaultVisible,
+          },
+        ]
+      : [];
   });
 }
 

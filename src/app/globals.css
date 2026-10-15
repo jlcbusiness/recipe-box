@@ -880,6 +880,11 @@ h1 {
   padding-block: 34px 64px;
 }
 
+.private-content main.recipes-main:has(.recipe-detail-heading),
+.private-content main.recipes-main:has(.recipe-edit-heading) {
+  padding-top: 17px;
+}
+
 .recipes-main h1,
 .recipes-main h2 {
   font-size: 16pt;
@@ -900,6 +905,18 @@ h1 {
 .recipe-detail-heading > .recipe-detail-title {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.recipe-detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.recipe-detail-title-row h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .recipe-edit-heading {
@@ -1234,7 +1251,6 @@ h1 {
   .publication-recipe-list tbody tr:nth-child(odd) {
     background-color: var(--tin-hover-wash);
   }
-
 }
 
 .private-content .recipe-list tr th,
@@ -3235,6 +3251,37 @@ h1 {
   padding-top: 18px;
 }
 
+.recipe-summary-layout {
+  width: min(100%, 1012px);
+}
+
+.recipe-summary-layout-with-photos {
+  --recipe-photo-row-width: 280px;
+  display: grid;
+  grid-template-columns: fit-content(var(--recipe-photo-row-width)) minmax(0, 1fr);
+  align-items: start;
+  gap: 32px;
+}
+
+@media (max-width: 760px) {
+  .recipe-summary-layout-with-photos {
+    display: block;
+  }
+
+  .recipe-summary-layout-with-photos .recipe-photo-gallery {
+    margin-top: 0;
+  }
+
+  .recipe-summary-layout-with-photos .recipe-photo-feature-image {
+    max-height: 240px;
+  }
+}
+
+.recipe-summary-layout > .recipe-detail-section {
+  width: 100%;
+  margin-top: 0;
+}
+
 .recipe-detail-heading + .recipe-detail-section {
   margin-top: 0;
 }
@@ -3248,6 +3295,19 @@ h1 {
   margin-top: 20px;
 }
 
+.recipe-summary-layout-with-photos .recipe-photo-gallery {
+  width: fit-content;
+  max-width: min(100%, var(--recipe-photo-row-width));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 19px;
+}
+
+.recipe-summary-layout-with-photos .recipe-photo-thumbnails {
+  width: 100%;
+  max-width: min(100%, var(--recipe-photo-row-width));
+}
+
 .recipe-photo-feature {
   display: flex;
   justify-content: center;
@@ -3259,15 +3319,26 @@ h1 {
   display: block;
   width: auto;
   max-width: 100%;
-  max-height: 1.5in;
+  max-height: 320px;
   border: 1px solid var(--line);
   object-fit: contain;
 }
 
+.recipe-summary-layout-with-photos .recipe-photo-feature-image {
+  max-width: min(100%, var(--recipe-photo-row-width));
+}
+
+@media (min-width: 761px) {
+  .recipe-summary-layout-with-photos .recipe-photo-feature-image {
+    max-height: 280px;
+  }
+}
+
 .recipe-photo-thumbnails {
   display: flex;
-  max-width: 240px;
+  max-width: 280px;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
   margin: 0;
   padding: 0;
@@ -3751,7 +3822,7 @@ h1 {
 .recipe-reading-standard,
 .recipe-reading-ingredient_first {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: fit-content(50%) minmax(0, 1fr);
   align-items: start;
   gap: 28px;
 }
@@ -5269,6 +5340,10 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .recipe-detail-heading {
     margin-bottom: 18px;
+  }
+
+  .recipe-photo-feature-image {
+    max-height: 1.5in;
   }
 
   .recipe-detail-section {
@@ -7273,6 +7348,23 @@ section.recipe-detail-section .recipe-relationship-list a {
 }
 
 @media (max-width: 640px) {
+  .private-content main.recipes-main:has(.recipe-detail-heading),
+  .private-content main.recipes-main:has(.recipe-edit-heading) {
+    padding-top: 14px;
+  }
+
+  .recipe-summary-layout-with-photos {
+    display: block;
+  }
+
+  .recipe-summary-layout-with-photos .recipe-photo-gallery {
+    margin-top: 0;
+  }
+
+  .recipe-summary-layout-with-photos .recipe-photo-feature-image {
+    max-height: 144px;
+  }
+
   .recipe-photo-gallery {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -7475,8 +7567,7 @@ section.recipe-detail-section .recipe-relationship-list a {
     flex: none;
   }
 
-  .explorer-list-preferences-toolbar:has(.publication-mobile-add)
-    .recipe-explorer-toolbar {
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add) .recipe-explorer-toolbar {
     width: 100%;
     flex-wrap: nowrap;
     justify-content: space-between;

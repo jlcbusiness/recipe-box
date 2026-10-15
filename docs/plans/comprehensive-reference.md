@@ -143,8 +143,8 @@ time is broken down into specific categories:
 - In recipe edit mode, the photo action beside Name shows the primary photo in a
   compact, contained thumbnail with a corner pencil. When no photo exists, it
   shows a camera icon. In recipe detail, center the primary photo, preserve its
-  aspect ratio, and cap its height at 1.5 inches; additional photos use square
-  thumbnails.
+  aspect ratio, and cap its height at 280px on desktop, 240px on tablet, and
+  144px on narrow mobile; additional photos use square thumbnails.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
   for retry. Public recipe photos are deferred to Slice 20 and must be exposed
@@ -349,8 +349,10 @@ Inspired by work items and classical cookbooks:
   Preparation, following conventional recipe-book notation such as
   `1 cup all-purpose flour, sifted`.
 - **Desktop layout:** The structured ingredient area sits alongside the
-  instruction column. It preserves the amount-first reading order without
-  breaking the work-item-style recipe layout.
+  instruction column. Size the Ingredients column to its widest row, capped at
+  half the available reader width, and let Instructions use the remaining
+  space. This preserves the amount-first reading order without wasting a full
+  equal-width track on a compact ingredient list.
 
 #### B. Ingredient-First View ("Mine")
 

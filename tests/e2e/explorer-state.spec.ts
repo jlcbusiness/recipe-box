@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
@@ -106,6 +107,265 @@ test('Publication recipe display preferences save Citation widths and detail fil
   }
 });
 
+test('List column chooser supports keyboard operation on every explorer @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const publicationId = await createPublication(request, config, user, 'Keyboard explorer book');
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    for (const path of [
+      '/recipes/find?view=details',
+      '/publications?view=list',
+      `/publications/${publicationId}?view=details`,
+    ]) {
+      await page.goto(path);
+      const trigger = page.getByRole('button', { name: 'Choose List columns' });
+      const chooser = page.getByRole('group', { name: 'List columns' });
+      await expect(trigger).toBeVisible();
+      const resizeHandles = page.locator('[data-explorer-resize-column]');
+      if (await resizeHandles.count()) {
+        const resizeHandle = resizeHandles.first();
+        await expect(resizeHandle).toHaveAttribute('aria-hidden', 'true');
+        expect(await resizeHandle.evaluate((element) => (element as HTMLElement).tabIndex)).toBe(
+          -1,
+        );
+      }
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await expect(chooser).toBeVisible();
+      const requiredName = chooser.getByRole('checkbox', { name: /^Name/ });
+      await expect(requiredName).toBeChecked();
+      await expect(requiredName).toBeDisabled();
+      const accessibility = await new AxeBuilder({ page })
+        .include('.explorer-list-preferences-popover')
+        .analyze();
+      expect(accessibility.violations).toEqual([]);
+
+      const resetButton = chooser.getByRole('button', { name: 'Reset columns' });
+      await page.keyboard.press('Tab');
+      await expect(resetButton).toBeFocused();
+
+      const optionalColumn = chooser.locator('input[type="checkbox"]:not(:disabled)').first();
+      const wasChecked = await optionalColumn.isChecked();
+      await page.keyboard.press('Tab');
+      await expect(optionalColumn).toBeFocused();
+      await page.keyboard.press('Space');
+      await expect.poll(() => optionalColumn.isChecked()).toBe(!wasChecked);
+
+      await page.keyboard.press('Escape');
+      await expect(chooser).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+    }
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Library column resizing supports pointer types, cancellation, and reload @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await createPublication(request, config, user, 'Resizable explorer publication');
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/publications?view=list');
+
+    const table = page.locator('.publication-explorer-table');
+    const nameHeader = table.locator('thead th[data-explorer-column="name"]');
+    const resizeHandle = nameHeader.locator('[data-explorer-resize-column="name"]');
+    const root = page.locator('.explorer-list-preferences');
+    await expect(nameHeader).toBeVisible();
+    await expect(resizeHandle).toHaveAttribute('aria-hidden', 'true');
+    expect(await resizeHandle.evaluate((element) => (element as HTMLElement).tabIndex)).toBe(-1);
+
+    const session = await page.context().newCDPSession(page);
+    await session.send('Emulation.setTouchEmulationEnabled', {
+      enabled: true,
+      maxTouchPoints: 1,
+    });
+    const touchPoint = (id: number, x: number, y: number) => ({
+      id,
+      x,
+      y,
+      radiusX: 5,
+      radiusY: 5,
+      force: 1,
+    });
+    const handleBounds = await resizeHandle.boundingBox();
+    if (!handleBounds) throw new Error('The Name resize handle must be visible.');
+    const touchStartX = Math.round(handleBounds.x + handleBounds.width / 2);
+    const touchStartY = Math.round(handleBounds.y + handleBounds.height / 2);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [touchPoint(1, touchStartX, touchStartY)],
+    });
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [touchPoint(1, touchStartX + 32, touchStartY)],
+    });
+    await expect
+      .poll(() => root.evaluate((element) => element.getAttribute('style')))
+      .toContain('--explorer-column-width-name');
+    await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    await expect
+      .poll(() =>
+        root.evaluate((element) => element.style.getPropertyValue('--explorer-column-width-name')),
+      )
+      .toBe('');
+
+    const readSavedNameWidth = async () => {
+      const response = await request.get(
+        `${config.apiUrl}/rest/v1/explorer_state?select=state&context_key=eq.publications`,
+        {
+          headers: {
+            apikey: config.anonKey,
+            Authorization: `Bearer ${user.accessToken}`,
+          },
+        },
+      );
+      expect(response.ok(), await response.text()).toBeTruthy();
+      const rows = (await response.json()) as {
+        state: { display_preferences?: { column_widths?: Record<string, number> } };
+      }[];
+      return rows[0]?.state.display_preferences?.column_widths?.name;
+    };
+
+    for (const pointerType of ['mouse', 'pen', 'touch'] as const) {
+      const headerBounds = await nameHeader.boundingBox();
+      const activeHandleBounds = await resizeHandle.boundingBox();
+      if (!headerBounds || !activeHandleBounds) {
+        throw new Error('The Name column and its resize handle must be visible.');
+      }
+      const startX = Math.round(activeHandleBounds.x + activeHandleBounds.width / 2);
+      const startY = Math.round(activeHandleBounds.y + activeHandleBounds.height / 2);
+      const rowPadding = await nameHeader.evaluate(
+        (header) =>
+          Number.parseFloat(getComputedStyle(header.parentElement ?? header).paddingLeft) || 0,
+      );
+      const expectedHeaderWidth = Math.round(headerBounds.width) + 24;
+      const expectedSavedWidth = Math.round(headerBounds.width + rowPadding) + 24;
+
+      if (pointerType === 'mouse') {
+        await page.mouse.move(startX, startY);
+        await page.mouse.down();
+        await page.mouse.move(startX + 24, startY, { steps: 3 });
+        await page.mouse.up();
+      } else if (pointerType === 'pen') {
+        await session.send('Input.dispatchMouseEvent', {
+          type: 'mouseMoved',
+          x: startX,
+          y: startY,
+          pointerType: 'pen',
+        });
+        await session.send('Input.dispatchMouseEvent', {
+          type: 'mousePressed',
+          x: startX,
+          y: startY,
+          button: 'left',
+          clickCount: 1,
+          pointerType: 'pen',
+        });
+        await session.send('Input.dispatchMouseEvent', {
+          type: 'mouseMoved',
+          x: startX + 24,
+          y: startY,
+          button: 'left',
+          pointerType: 'pen',
+        });
+        await session.send('Input.dispatchMouseEvent', {
+          type: 'mouseReleased',
+          x: startX + 24,
+          y: startY,
+          button: 'left',
+          clickCount: 1,
+          pointerType: 'pen',
+        });
+      } else {
+        await session.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [touchPoint(2, startX, startY)],
+        });
+        await session.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [touchPoint(2, startX + 24, startY)],
+        });
+        await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      }
+
+      await expect.poll(readSavedNameWidth).toBe(expectedSavedWidth);
+      await expect
+        .poll(async () => Math.round((await nameHeader.boundingBox())?.width ?? 0))
+        .toBe(expectedHeaderWidth);
+      await page.reload();
+      await expect
+        .poll(async () => Math.round((await nameHeader.boundingBox())?.width ?? 0))
+        .toBe(expectedHeaderWidth);
+    }
+
+    const resizeNameColumnToViewportEdge = async (targetX: number) => {
+      const bounds = await resizeHandle.boundingBox();
+      if (!bounds) throw new Error('The Name resize handle must be visible.');
+      const startX = Math.round(bounds.x + bounds.width / 2);
+      const startY = Math.round(bounds.y + bounds.height / 2);
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(targetX, startY, { steps: 3 });
+      await page.mouse.up();
+    };
+
+    await resizeNameColumnToViewportEdge(0);
+    await expect.poll(readSavedNameWidth).toBe(180);
+    await expect
+      .poll(() =>
+        root.evaluate((element) => element.style.getPropertyValue('--explorer-column-width-name')),
+      )
+      .toBe('180px');
+    await resizeNameColumnToViewportEdge(1279);
+    await expect.poll(readSavedNameWidth).toBe(720);
+    await expect
+      .poll(() =>
+        root.evaluate((element) => element.style.getPropertyValue('--explorer-column-width-name')),
+      )
+      .toBe('720px');
+
+    await page.setViewportSize({ width: 719, height: 900 });
+    await expect(page.locator('.publication-explorer-table-wrap')).toBeHidden();
+    await expect(resizeHandle).toBeHidden();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    await page.setViewportSize({ width: 721, height: 900 });
+    await expect(nameHeader).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    await page.setViewportSize({ width: 850, height: 900 });
+    await expect(nameHeader).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    await session.detach();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Find Recipes restores durable explorer state but not search or pagination @e2e', async ({
   page,
   request,
@@ -130,7 +390,7 @@ test('Find Recipes restores durable explorer state but not search or pagination 
     await expect(page).toHaveURL(
       /\/recipes\/find\?column_state=tried&sort=updated_at&direction=desc&view=grid$/,
     );
-    await expect(page.getByRole('button', { name: 'Switch to List view' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Switch to Details view' })).toBeVisible();
     await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue('');
   } finally {
     await deleteTestUser(request, user);
@@ -144,6 +404,8 @@ test('Find Recipes persists a changed durable explorer state @e2e', async ({ pag
   try {
     await signIn(page, user.email, user.password);
     await page.goto('/recipes/find');
+    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await expect(page).toHaveURL(/view=list/);
     await page.getByRole('button', { name: 'Switch to Grid view' }).click();
     await expect(page).toHaveURL(/\/recipes\/find\?sort=name&direction=asc&page=1&view=grid/);
 
@@ -241,10 +503,171 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
         schema_version: 2,
         sort: 'updated_at',
         display_preferences: {
-          visible_columns: ['state'],
+          visible_columns: ['state', 'total_time_minutes'],
           column_widths: {},
         },
       });
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('List display preferences remain isolated by exact explorer context @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const firstPublicationId = await createPublication(
+      request,
+      config,
+      user,
+      'First preference book',
+    );
+    const secondPublicationId = await createPublication(
+      request,
+      config,
+      user,
+      'Second preference book',
+    );
+    await saveExplorerState(request, config, user, 'recipes-find', {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['state'],
+        column_widths: { name: 300, state: 120 },
+      },
+      filters: [],
+      sort: 'name',
+      direction: 'asc',
+      view: 'details',
+    });
+    await saveExplorerState(request, config, user, 'publications', {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['created_at'],
+        column_widths: { name: 340, created_at: 160 },
+      },
+      filters: [],
+      sort: 'name',
+      direction: 'asc',
+      view: 'list',
+      type: 'all',
+    });
+    await saveExplorerState(request, config, user, `publication-recipes:${firstPublicationId}`, {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['citation'],
+        column_widths: { name: 360, citation: 240 },
+      },
+      filters: [],
+      sort: 'name',
+      direction: 'asc',
+      view: 'details',
+    });
+    await saveExplorerState(request, config, user, `publication-recipes:${secondPublicationId}`, {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['opinion'],
+        column_widths: { name: 400, opinion: 200 },
+      },
+      filters: [],
+      sort: 'name',
+      direction: 'asc',
+      view: 'details',
+    });
+
+    await signIn(page, user.email, user.password);
+    for (const { path, visibleColumns, nameWidth } of [
+      { path: '/recipes/find?view=details', visibleColumns: 'name state', nameWidth: 300 },
+      { path: '/publications?view=list', visibleColumns: 'name created_at', nameWidth: 340 },
+      {
+        path: `/publications/${firstPublicationId}?view=details`,
+        visibleColumns: 'name citation',
+        nameWidth: 360,
+      },
+      {
+        path: `/publications/${secondPublicationId}?view=details`,
+        visibleColumns: 'name opinion',
+        nameWidth: 400,
+      },
+    ]) {
+      await page.goto(path);
+      const preferences = page.locator('.explorer-list-preferences');
+      await expect(preferences).toHaveAttribute('data-visible-columns', visibleColumns);
+      await expect
+        .poll(() =>
+          preferences.evaluate((element) =>
+            (element as HTMLElement).style.getPropertyValue('--explorer-column-width-name'),
+          ),
+        )
+        .toBe(`${nameWidth}px`);
+
+      await page.reload();
+      await expect(preferences).toHaveAttribute('data-visible-columns', visibleColumns);
+      await expect
+        .poll(() =>
+          preferences.evaluate((element) =>
+            (element as HTMLElement).style.getPropertyValue('--explorer-column-width-name'),
+          ),
+        )
+        .toBe(`${nameWidth}px`);
+    }
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find Recipes keeps column changes usable when saving fails and retries @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/find');
+    await page.route('**/recipes/find*', async (route) => {
+      const actionRequest = route.request();
+      if (actionRequest.method() === 'POST' && actionRequest.headers()['next-action']) {
+        await route.abort();
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Publication' }).uncheck();
+    await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
+      'data-visible-columns',
+      'name state total_time_minutes',
+    );
+    await expect(page.locator('.explorer-list-preferences-error')).toHaveText(
+      'Explorer display preferences could not be saved.',
+    );
+
+    await page.unroute('**/recipes/find*');
+    await page.getByRole('checkbox', { name: 'Publication' }).check();
+    await expect
+      .poll(async () => {
+        const response = await request.get(
+          `${config.apiUrl}/rest/v1/explorer_state?select=state&context_key=eq.recipes-find`,
+          {
+            headers: {
+              apikey: config.anonKey,
+              Authorization: `Bearer ${user.accessToken}`,
+            },
+          },
+        );
+        const rows = (await response.json()) as {
+          state: { display_preferences?: { visible_columns?: string[] } };
+        }[];
+        return rows[0]?.state.display_preferences?.visible_columns;
+      })
+      .toContain('publication');
+    await expect(page.locator('.explorer-list-preferences-error')).toHaveCount(0);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -259,10 +682,10 @@ test('Find Recipes exposes all recipe columns beside the view controls @e2e', as
 
   try {
     await signIn(page, user.email, user.password);
-    await page.goto('/recipes/find?view=list');
+    await page.goto('/recipes/find?view=details');
 
     const columnButton = page.getByRole('button', { name: 'Choose List columns' });
-    const viewButton = page.getByRole('button', { name: 'Switch to Grid view' });
+    const viewButton = page.getByRole('button', { name: 'Switch to List view' });
     const columnButtonBox = await columnButton.boundingBox();
     const viewButtonBox = await viewButton.boundingBox();
     expect(columnButtonBox).not.toBeNull();

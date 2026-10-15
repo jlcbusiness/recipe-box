@@ -98,4 +98,4 @@ unless repository instructions and the user explicitly permit it.
 After implementation passes validation, reconcile the brief, visual guide,
 roadmap, and decision log with the behavior that actually shipped. Report what
 changed, what was verified, and any remaining gaps or deviations. Never claim a
-check passed unless it was run and its result confirmed.
+check passed unless it was run and its result was confirmed.

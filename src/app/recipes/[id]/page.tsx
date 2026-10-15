@@ -17,6 +17,7 @@ import { RecipePhotoGallery } from '../../media/media-display';
 import { TagChips } from '../../tags/tag-controls';
 import { RecipePrintAction } from '../recipe-detail-actions';
 import { RecipeReader, RecipeReaderProvider, RecipeServesControl } from '../recipe-reader';
+import { RecipeSummaryLayout } from '../recipe-summary-layout';
 
 type RecipeDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -229,7 +230,20 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     >
       <div className="recipe-page-heading recipe-detail-heading">
         <div className="recipe-detail-title">
-          <h1 id="page-title">{recipe.name}</h1>
+          <div className="recipe-detail-title-row">
+            <h1 id="page-title">{recipe.name}</h1>
+            <div className="recipe-detail-heading-actions recipe-screen-only">
+              <RecipePrintAction />
+              <Link
+                aria-label="Edit"
+                className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
+                href={`/recipes/${recipe.id}/edit`}
+                title="Edit recipe"
+              >
+                <Pencil aria-hidden="true" size={16} strokeWidth={2} />
+              </Link>
+            </div>
+          </div>
           {recipe.publication && (
             <p className="recipe-attribution">
               <span>
@@ -249,68 +263,57 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               )}
             </p>
           )}
-          <div className="recipe-detail-tags-row">
-            <TagChips
-              tags={recipe.tags}
-              trailingActions={
-                <div className="recipe-detail-heading-actions recipe-screen-only">
-                  <RecipePrintAction />
-                  <Link
-                    aria-label="Edit"
-                    className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
-                    href={`/recipes/${recipe.id}/edit`}
-                    title="Edit recipe"
-                  >
-                    <Pencil aria-hidden="true" size={16} strokeWidth={2} />
-                  </Link>
-                </div>
-              }
-            />
-          </div>
+          {recipe.tags.length > 0 && (
+            <div className="recipe-detail-tags-row">
+              <TagChips tags={recipe.tags} />
+            </div>
+          )}
         </div>
       </div>
-      <RecipePhotoGallery photos={photos} />
       <RecipeReaderProvider serves={recipe.serves}>
-        <section className="recipe-detail-section" aria-labelledby="metadata-title">
-          <h2 id="metadata-title">Recipe details</h2>
-          {sections.length > 0 && (
-            <dl className="recipe-metadata">
-              {sections.map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  {label === 'Serves' && recipe.serves !== null ? (
-                    <RecipeServesControl serves={recipe.serves} />
-                  ) : (
-                    <dd>{value}</dd>
-                  )}
-                </div>
-              ))}
-            </dl>
-          )}
-          {classificationSections.length > 0 && (
-            <dl className="recipe-metadata recipe-detail-classification">
-              {classificationSections.map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-          {times.length > 0 && (
-            <div className="recipe-detail-times">
-              <h3 className="recipe-detail-times-title">Times</h3>
-              <dl className="recipe-metadata recipe-time-list">
-                {times.map(([label, value]) => (
+        <RecipeSummaryLayout hasPhotos={photos.length > 0}>
+          <RecipePhotoGallery photos={photos} />
+          <section className="recipe-detail-section" aria-labelledby="metadata-title">
+            <h2 id="metadata-title">Recipe details</h2>
+            {sections.length > 0 && (
+              <dl className="recipe-metadata">
+                {sections.map(([label, value]) => (
                   <div key={label}>
                     <dt>{label}</dt>
-                    <dd>{formatGroupedInteger(value as number)} min</dd>
+                    {label === 'Serves' && recipe.serves !== null ? (
+                      <RecipeServesControl serves={recipe.serves} />
+                    ) : (
+                      <dd>{value}</dd>
+                    )}
                   </div>
                 ))}
               </dl>
-            </div>
-          )}
-        </section>
+            )}
+            {classificationSections.length > 0 && (
+              <dl className="recipe-metadata recipe-detail-classification">
+                {classificationSections.map(([label, value]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {times.length > 0 && (
+              <div className="recipe-detail-times">
+                <h3 className="recipe-detail-times-title">Times</h3>
+                <dl className="recipe-metadata recipe-time-list">
+                  {times.map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{formatGroupedInteger(value as number)} min</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+          </section>
+        </RecipeSummaryLayout>
         {recipe.ingredients.length > 0 && (
           <RecipeReader
             defaultPresentation={ingredientPresentation}

@@ -106,8 +106,9 @@ gallery/lightbox, cropping, video, and animated images remain out of scope.
   uses an inverted white-and-tomato treatment; device/camera actions share a
   toolbar row with Cancel and Submit aligned to the right.
 - Recipe detail shows the first (default) photo centered before recipe content,
-  preserving its aspect ratio and capped at 1.5 inches high; additional photos
-  appear in square thumbnails. The edit action beside Name shows the primary
+  preserving its aspect ratio and capped at 280px high on desktop, 240px on
+  tablet, and 144px on narrow mobile; additional photos appear in square
+  thumbnails. The edit action beside Name shows the primary
   photo contained in a compact thumbnail with a corner pencil, or a camera icon
   when no photo exists. It opens an image-management pane with an immediate
   device upload, `x`
@@ -183,8 +184,9 @@ Write failing automated coverage before implementation:
 - Mobile and desktop browser coverage proves that recipe uploads use the
   platform's ordinary image picker, publication covers expose an explicit
   camera action on mobile, canceling a picker leaves its pane open, there is no
-  horizontal overflow, image dimensions remain stable, and loading/error
-  states are perceivable.
+  horizontal overflow, image dimensions remain stable, the recipe detail photo
+  caps are 280px on desktop, 240px on tablet, and 144px on narrow mobile, and
+  loading/error states are perceivable.
 - Axe coverage proves the upload controls, gallery, primary selection, ordering,
   and removal controls are keyboard- and screen-reader-operable. Recipe photos
   are decorative; no description input is collected.

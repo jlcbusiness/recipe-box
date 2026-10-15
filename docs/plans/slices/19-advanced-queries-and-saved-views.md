@@ -1,11 +1,10 @@
 # Slice 19: Explorer columns and widths
 
-**Status:** Planned. The earlier “implemented” roadmap entry described an
-aborted attempt; this slice has not been delivered.
+**Status:** Complete and verified.
 
-This brief defines one demonstrable outcome: persistent List-column visibility
-and desktop width preferences across the three explorers. The comprehensive
-reference remains the product authority.
+This brief records the delivered List-column visibility and desktop-width
+preferences across the three explorers. The comprehensive reference remains
+the product authority.
 
 ## References
 
@@ -26,26 +25,24 @@ in Find, Library, and a publication's recipe list. These display preferences
 persist independently for each account and exact explorer context. Search,
 filters, sorting, publication scope, and Grid behavior remain unchanged.
 
-## Current baseline
+## Initial baseline (before Slice 19)
 
-The code inspection for this brief found:
+Preparation found the following starting state:
 
-- Find has full-text search and typed filter rows with field-specific
-  operators, but rules are flat and changes apply immediately. Its four recipe
-  List columns are fixed. Header controls filter values; they do not show or
-  hide columns.
-- The Library has a `Choose List columns` control for optional publication
-  columns. Its selections are component-local state, are not remembered after
-  reload.
-- Publication recipe Lists also have fixed columns. Their header controls are
-  filters, not column visibility controls.
-- Slice 18 persists last-used filters, sorting, direction, and view per
-  explorer context, with URL state taking precedence. Publication scope remains
-  route-owned. The current explorer preference payload does not include List
+- Find had full-text search and typed filter rows with field-specific
+  operators, but rules were flat and changes applied immediately. Its four
+  recipe List columns were fixed. Header controls filtered values; they did
+  not show or hide columns.
+- The Library had a `Choose List columns` control for optional publication
+  columns, but its selections were component-local and did not survive reload.
+- Publication recipe Lists had fixed columns. Their header controls filtered
+  values rather than controlling visibility.
+- Slice 18 persisted last-used filters, sorting, direction, and view per
+  explorer context, with URL state taking precedence and publication scope
+  remaining route-owned. Its initial preference payload did not include List
   visibility or widths.
-- No column-resizing behavior was found in the current application source or
-  tests. The roadmap's previous “implemented” entry described an aborted
-  attempt and does not reflect this checkout.
+- Column resizing was absent. The earlier roadmap entry described an aborted
+  attempt and did not reflect the checkout at preparation time.
 
 ## Research and recommendation
 
@@ -163,7 +160,7 @@ existing reflow boundary and at an intermediate width.
 | Mouse, pen, and touch drags resize columns within bounds; release persists and pointer cancellation restores the starting width. | Playwright pointer/touch tests with geometry assertions, reload, and page-overflow checks around responsive boundaries. |
 | Narrow responsive rows have no resize handles or horizontal page overflow; Grid results are unaffected. | Chromium and Fold 6 browser checks at breakpoints and an intermediate width. |
 | Resizing has no keyboard path, while surrounding explorer controls remain keyboard-operable and labeled. | Browser checks for chooser, filter, sort, and view keyboard paths; document the deliberate resize limitation. |
-| A failed preference write keeps the page usable and reports that the setting was not saved. | API failure injection and browser status/recovery assertions. |
+| A failed preference write keeps the page usable and reports that the setting was not saved. | Browser server-action failure injection and status/recovery assertions. |
 
 Write the focused failing tests before production code. Run focused unit/API and
 browser/accessibility checks first, then typecheck, Biome, Markdown lint, and a
@@ -186,3 +183,23 @@ not reset local data or stop a running service.
 - Preserve current default columns. Name is always shown; all other supported
   columns may be hidden. Derive width bounds from realistic headers and values
   during implementation tests.
+
+## Delivery and verification
+
+- Explorer preferences use account-owned `explorer_state` version 2 and the
+  exact contexts `recipes-find`, `publications`, and
+  `publication-recipes:<publication-id>`. URL search state remains separate.
+- The column chooser, visibility persistence, bounded pointer resizing,
+  cancellation recovery, responsive rows, and Grid independence are covered by
+  unit and browser tests. The v2 write path is covered by owner-isolation and
+  foreign-publication-context API tests.
+- Focused verification passed: 25 explorer-state unit tests; 24 explorer-state
+  browser tests across Chromium and Fold 6, with two expected mobile-only
+  skips; two RLS browser tests; and the seeded Find Grid-independence test in
+  both profiles. The full unit suite passed all 181 tests.
+- `npm run typecheck` and an isolated production build passed. The build used
+  `.next-slice19-build` so it did not replace the active development server's
+  output; its generated configuration edits were restored afterward.
+- Repository-wide Biome and Markdown lint pass. Biome reports 47 non-blocking
+  CSS specificity warnings in the existing global and multi-picklist styles.
+  The Slice 19 Playwright files pass their focused Biome check.

@@ -127,6 +127,61 @@ test('Find Recipes updates mobile metadata when columns are toggled @e2e', async
   }
 });
 
+test('List column preferences do not change recipe Grid cards @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: 'Grid preference isolation recipe',
+      state: 'tried',
+      totalTime: 20,
+      notes: '',
+    });
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/recipes$/);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/recipes/find?view=details');
+
+    const nameResizeHandle = page.locator(
+      '.find-recipes-list [data-explorer-resize-column="name"]',
+    );
+    await expect(nameResizeHandle).toBeVisible();
+    await expect(nameResizeHandle).toHaveAttribute('aria-hidden', 'true');
+    expect(await nameResizeHandle.evaluate((element) => (element as HTMLElement).tabIndex)).toBe(
+      -1,
+    );
+
+    const cards = page.locator('.find-recipes-grid li');
+    const metadata = cards.locator('.find-recipes-grid-metadata');
+    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await page.getByRole('button', { name: 'Switch to Grid view' }).click();
+    await expect(cards).toHaveCount(1);
+    await expect(metadata).toHaveText('Recipe Tin ~ Tried ~ 20 min');
+
+    await page.getByRole('button', { name: 'Switch to Details view' }).click();
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Publication', exact: true }).uncheck();
+    await page.getByRole('checkbox', { name: 'State', exact: true }).uncheck();
+    await page.getByRole('checkbox', { name: 'Total Time', exact: true }).uncheck();
+    await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
+      'data-visible-columns',
+      'name',
+    );
+
+    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await page.getByRole('button', { name: 'Switch to Grid view' }).click();
+    await expect(cards).toHaveCount(1);
+    await expect(metadata).toHaveText('Recipe Tin ~ Tried ~ 20 min');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Find Recipes searches indexed sources and isolates accounts @e2e', async ({
   page,
   request,

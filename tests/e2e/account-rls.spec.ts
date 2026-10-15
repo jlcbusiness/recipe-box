@@ -318,7 +318,11 @@ test('Explorer state is owner-scoped and writable only through its owner-derived
   const owner = await createTestUser(request);
   const otherUser = await createTestUser(request);
   const state = {
-    schema_version: 1,
+    schema_version: 2,
+    display_preferences: {
+      visible_columns: ['state', 'total_time_minutes'],
+      column_widths: { name: 320, state: 120 },
+    },
     column_filters: { state: ['tried'] },
     filters: [{ field: 'state', operator: 'in', value: ['tried'] }],
     sort: 'updated_at',
@@ -327,6 +331,25 @@ test('Explorer state is owner-scoped and writable only through its owner-derived
   };
 
   try {
+    const publicationResponse = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/create_publication`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: {
+          p_name: 'Owner-only explorer context',
+          p_publication_type: 'book',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_issue: null,
+          p_site_url: null,
+        },
+      },
+    );
+    expect(publicationResponse.ok(), await publicationResponse.text()).toBeTruthy();
+    const publicationId = (await publicationResponse.json()) as string;
+
     const save = await request.post(`${supabase.apiUrl}/rest/v1/rpc/update_explorer_state`, {
       headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
       data: { p_context_key: 'recipes-find', p_state: state },
@@ -346,6 +369,18 @@ test('Explorer state is owner-scoped and writable only through its owner-derived
     );
     expect(otherRead.ok(), await otherRead.text()).toBeTruthy();
     expect(await otherRead.json()).toEqual([]);
+
+    const foreignPublicationContextSave = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_explorer_state`,
+      {
+        headers: { ...userHeaders(otherUser), 'Content-Type': 'application/json' },
+        data: {
+          p_context_key: `publication-recipes:${publicationId}`,
+          p_state: state,
+        },
+      },
+    );
+    expect(foreignPublicationContextSave.ok()).toBe(false);
 
     const directInsert = await request.post(`${supabase.apiUrl}/rest/v1/explorer_state`, {
       headers: { ...userHeaders(owner), Prefer: 'return=representation' },

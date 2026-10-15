@@ -784,8 +784,7 @@ test('image management panes stage covers and immediately manage decorative reci
     await expect(page.locator('.recipe-photo-gallery')).toBeVisible();
     const featureImage = page.locator('.recipe-photo-feature-image');
     await expect(featureImage).toBeVisible();
-    await expect(featureImage).toHaveCSS('max-height', '144px');
-    expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(144);
+    const imageMaxHeight = viewportWidth <= 640 ? 144 : viewportWidth <= 760 ? 240 : null;
     const [featureImageBounds, featureBounds] = await Promise.all([
       featureImage.boundingBox(),
       page.locator('.recipe-photo-feature').boundingBox(),
@@ -799,6 +798,73 @@ test('image management panes stage covers and immediately manage decorative reci
           ((featureBounds?.x ?? 0) + (featureBounds?.width ?? 0) / 2),
       ),
     ).toBeLessThanOrEqual(1);
+    const thumbnailsBounds = await page.locator('.recipe-photo-thumbnails').boundingBox();
+    expect(thumbnailsBounds).not.toBeNull();
+    if (!featureBounds || !thumbnailsBounds) {
+      throw new Error('Expected recipe photo thumbnails beneath the feature image');
+    }
+    expect(thumbnailsBounds.y).toBeGreaterThanOrEqual(featureBounds.y + featureBounds.height);
+    const thumbnailRows = await page.locator('.recipe-photo-thumbnails').evaluate((list) => {
+      const rows = new Map<number, { left: number; right: number; count: number }>();
+      for (const image of Array.from(list.querySelectorAll('img'))) {
+        const bounds = image.getBoundingClientRect();
+        const rowTop = Math.round(bounds.top);
+        const row = rows.get(rowTop) ?? { left: bounds.left, right: bounds.right, count: 0 };
+        row.left = Math.min(row.left, bounds.left);
+        row.right = Math.max(row.right, bounds.right);
+        row.count += 1;
+        rows.set(rowTop, row);
+      }
+      return [...rows.values()].map(({ left, right, count }) => ({
+        center: (left + right) / 2,
+        count,
+      }));
+    });
+    expect(thumbnailRows.map(({ count }) => count)).toEqual([4, 2]);
+    expect(thumbnailsBounds.width).toBeLessThanOrEqual(280);
+    expect(
+      Math.abs((thumbnailRows[0]?.center ?? 0) - (thumbnailRows[1]?.center ?? 0)),
+    ).toBeLessThanOrEqual(1);
+    expect(featureImageBounds?.width ?? Infinity).toBeLessThanOrEqual(280);
+    if (viewportWidth > 760) {
+      const metadataBounds = await page
+        .getByRole('heading', { name: 'Recipe details' })
+        .boundingBox();
+      const actionBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
+      const titleBounds = await page.getByRole('heading', { level: 1 }).boundingBox();
+      expect(metadataBounds).not.toBeNull();
+      expect(actionBounds).not.toBeNull();
+      expect(titleBounds).not.toBeNull();
+      if (!metadataBounds || !featureBounds || !actionBounds || !titleBounds) {
+        throw new Error('Expected desktop recipe summary and title controls to be visible');
+      }
+      await expect(featureImage).toHaveCSS('max-height', '280px');
+      expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(281);
+      expect(featureBounds.x + featureBounds.width).toBeLessThan(metadataBounds.x);
+      expect(Math.abs((featureImageBounds?.y ?? 0) - metadataBounds.y)).toBeLessThanOrEqual(4);
+      expect(
+        Math.abs(titleBounds.y + titleBounds.height / 2 - actionBounds.y - actionBounds.height / 2),
+      ).toBeLessThanOrEqual(2);
+      await expect(page.locator('main.recipes-main')).toHaveCSS('padding-top', '17px');
+    } else {
+      if (imageMaxHeight === null) {
+        throw new Error('Expected a responsive image cap below the desktop breakpoint');
+      }
+      await expect(featureImage).toHaveCSS('max-height', `${imageMaxHeight}px`);
+      expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(
+        imageMaxHeight,
+      );
+      const metadataBounds = await page
+        .getByRole('heading', { name: 'Recipe details' })
+        .boundingBox();
+      const galleryBounds = await page.locator('.recipe-photo-gallery').boundingBox();
+      expect(metadataBounds).not.toBeNull();
+      expect(galleryBounds).not.toBeNull();
+      if (!metadataBounds || !galleryBounds) {
+        throw new Error('Expected the stacked mobile recipe summary to be visible');
+      }
+      expect(metadataBounds.y).toBeGreaterThanOrEqual(galleryBounds.y + galleryBounds.height);
+    }
     const detailAxe = await new AxeBuilder({ page }).analyze();
     expect(detailAxe.violations).toEqual([]);
 
@@ -807,7 +873,38 @@ test('image management panes stage covers and immediately manage decorative reci
     const editPhotoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
     await editPhotoDialog.getByRole('button', { name: 'Remove photo 1' }).click();
     await expect(editPhotoDialog.locator('.recipe-photo-grid-item')).toHaveCount(6);
+    for (const expectedCount of [5, 4, 3, 2]) {
+      await editPhotoDialog.getByRole('button', { name: 'Remove photo 1' }).click();
+      await expect(editPhotoDialog.locator('.recipe-photo-grid-item')).toHaveCount(expectedCount);
+    }
     await editPhotoDialog.getByRole('button', { name: 'Done' }).click();
+    await page.goto(`/recipes/${recipeId}`);
+    const compactGallery = page.locator('.recipe-photo-gallery');
+    const compactImage = page.locator('.recipe-photo-feature-image');
+    const compactThumbnails = page.locator('.recipe-photo-thumbnails');
+    await expect(compactThumbnails.locator('img')).toHaveCount(1);
+    const [compactGalleryBounds, compactImageBounds, compactThumbnailBounds] = await Promise.all([
+      compactGallery.boundingBox(),
+      compactImage.boundingBox(),
+      compactThumbnails.boundingBox(),
+    ]);
+    expect(compactGalleryBounds).not.toBeNull();
+    expect(compactImageBounds).not.toBeNull();
+    expect(compactThumbnailBounds).not.toBeNull();
+    if (!compactGalleryBounds || !compactImageBounds || !compactThumbnailBounds) {
+      throw new Error('Expected the compact two-photo gallery to be visible');
+    }
+    expect(compactGalleryBounds.width).toBeCloseTo(
+      Math.max(compactImageBounds.width, compactThumbnailBounds.width),
+      0,
+    );
+    expect(
+      Math.abs(
+        compactThumbnailBounds.x +
+          compactThumbnailBounds.width / 2 -
+          (compactGalleryBounds.x + compactGalleryBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
 
     await page.goto(`/publications/${publicationId}`);
     await page.getByRole('button', { name: 'Edit publication' }).click();

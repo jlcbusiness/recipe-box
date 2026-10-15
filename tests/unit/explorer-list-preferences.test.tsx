@@ -73,7 +73,9 @@ describe('ExplorerListPreferences', () => {
   it('shows context defaults, keeps Name required, and immediately saves visibility changes', async () => {
     const view = renderPreferences();
     const root = view.container.querySelector('.explorer-list-preferences');
-    expect(root?.getAttribute('data-visible-columns')).toBe('name publication state');
+    expect(root?.getAttribute('data-visible-columns')).toBe(
+      'name publication state total_time_minutes',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Choose List columns' }));
     expect(screen.getByText('Always shown')).toBeTruthy();
@@ -82,16 +84,43 @@ describe('ExplorerListPreferences', () => {
     ).toBe(true);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Publication' }));
 
-    expect(root?.getAttribute('data-visible-columns')).toBe('name state');
+    expect(root?.getAttribute('data-visible-columns')).toBe('name state total_time_minutes');
     await waitFor(() => {
       expect(saveExplorerState).toHaveBeenCalledWith('recipes-find', {
         ...state,
         schema_version: 2,
         display_preferences: {
-          visible_columns: ['state'],
+          visible_columns: ['state', 'total_time_minutes'],
           column_widths: {},
         },
       });
+    });
+  });
+
+  it('keeps visibility usable after a failed save and clears the error on retry', async () => {
+    saveExplorerState
+      .mockResolvedValueOnce({ error: 'Explorer preference could not be saved.' })
+      .mockResolvedValueOnce({});
+    const view = renderPreferences();
+    const root = view.container.querySelector('.explorer-list-preferences');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose List columns' }));
+    const publication = screen.getByRole('checkbox', { name: 'Publication' });
+    fireEvent.click(publication);
+
+    expect(root?.getAttribute('data-visible-columns')).toBe('name state total_time_minutes');
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Explorer preference could not be saved.',
+    );
+
+    fireEvent.click(publication);
+
+    expect(root?.getAttribute('data-visible-columns')).toBe(
+      'name publication state total_time_minutes',
+    );
+    await waitFor(() => {
+      expect(saveExplorerState).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole('alert')).toBeNull();
     });
   });
 
@@ -117,14 +146,16 @@ describe('ExplorerListPreferences', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Choose List columns' }));
     fireEvent.click(screen.getByRole('button', { name: 'Reset columns' }));
 
-    expect(root?.getAttribute('data-visible-columns')).toBe('name publication state');
+    expect(root?.getAttribute('data-visible-columns')).toBe(
+      'name publication state total_time_minutes',
+    );
     expect(root?.style.getPropertyValue('--explorer-column-width-name')).toBe('');
     await waitFor(() => {
       expect(saveExplorerState).toHaveBeenCalledWith('recipes-find', {
         ...state,
         schema_version: 2,
         display_preferences: {
-          visible_columns: ['publication', 'state'],
+          visible_columns: ['publication', 'state', 'total_time_minutes'],
           column_widths: {},
         },
       });

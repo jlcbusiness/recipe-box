@@ -107,8 +107,10 @@ Excluded:
   toolbar does not shift when direction is available. Keep all controls
   operable by keyboard and touch.
 - Standard keeps the existing natural amount-first row format. On desktop,
-  place Ingredients beside Instructions in the recipe reading area; on mobile,
-  retain the vertical reading flow.
+  place Ingredients beside Instructions in the recipe reading area; size the
+  Ingredients column to its widest row, cap it at half the available reader
+  width, and let Instructions use the remaining space. On mobile, retain the
+  vertical reading flow.
 - Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
   Preparation columns. Rows without a volume or weight use a cell spanning both
   measurement columns. Specifics appears lowercase and indented under the
@@ -145,7 +147,9 @@ Write focused automated tests before production code:
   defaults, and denial of unauthenticated or cross-account writes.
 - Browser tests cover changing each presentation and sort, presentation
   default save and failure recovery, the responsive initial presentation,
-  print matching the active presentation, and unchanged saved ingredient order.
+  content-sized Ingredients beside the flexible Instructions column on desktop,
+  stacked reading flow on mobile, print matching the active presentation, and
+  unchanged saved ingredient order.
 - Cook-mode tests cover entering and leaving mode, check and uncheck, reset on
   exit and recipe change, unavailable API, rejected request, active status,
   release on exit/unmount, system release, and reacquisition after visibility

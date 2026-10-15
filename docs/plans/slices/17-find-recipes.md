@@ -175,7 +175,7 @@ need combobox semantics.
   comprehensive reference § 7.1. Supported operators must match field type:
   text, multi-select, number/time/date, and state/enum. Multiple simple
   filters combine with AND. Nested AND/OR groups and query serialization
-  belong to Slice 19.
+  remain deferred.
 - Recipe List and Grid modes with a compact toolbar, search/result summary,
   sort key, and direction. The global and publication-scoped recipe explorers
   use the same controls and semantics.
@@ -185,19 +185,21 @@ need combobox semantics.
 - Library publication search, filters, sorting, List/Grid views, and a column
   chooser. Preserve Slice 10A's publication type filter and stable responsive
   defaults.
-- Transient search, filter, sort, and view state. Saved views, recipe List
-  column selection, and publication-scope restoration belong to later slices.
+- Search text remains transient. Slice 18 added remembered filters, sort,
+  direction, view, and publication scope; Slice 19 added persistent List-column
+  visibility and widths. Named or pinned saved views remain deferred.
 - Owner isolation, active-record filtering, deterministic pagination, empty
   and error states, responsive behavior, keyboard support, and accessibility
   tests.
 
 ### Excluded
 
-- Saved or pinned views, persistence of view configuration, and restoring a
-  publication scope from a saved view (Slice 18).
-- Recipe List-column visibility and its shared chooser (Slice 19).
+- Named or pinned saved views, their lifecycle, and restoring publication
+  scope from a saved view remain deferred. Slice 18 provides last-used state.
+- Recipe List-column visibility and its shared chooser were delivered in
+  Slice 19, after this slice's fixed-field implementation.
 - Nested AND/OR groups, arbitrary clause grouping, query explanation, and
-  advanced query serialization (Slice 19).
+  advanced query serialization remain deferred.
 - Public recipe search or public search documents (Slice 20).
 - Search by alias, typo-tolerant matching, OCR, recipe import, and fuzzy
   substring matching.
@@ -223,17 +225,17 @@ need combobox semantics.
 - Ordinary terms use the configured language dictionary and stemming.
   Quoted phrases, `or`, and `-` exclusion follow PostgreSQL's
   `websearch_to_tsquery` behavior. Do not claim typo correction or infix
-  matching. These search operators are not a substitute for Slice 19's typed
-  query builder.
+  matching. These search operators are independent of the deferred nested
+  query-group capability.
 - Simple filters use AND. Use the field operators in comprehensive reference
   § 7.1: text `Contains`, `Does Not Contain`, `Equals`, `Starts With`, `Is
   Empty`, `Is Not Empty`; multi-select `Contains Any`, `Contains All`, `Does
   Not Contain`; numeric/time/date comparisons and `Between`; and enum `In` and
   `Not In`. Validate filter field, operator, and value types against an
   allowlist on the server.
-- Recipe Lists render the supported fixed fields for their explorer context.
-  Recipe List-column visibility and its shared chooser are deferred to Slice
-  19. Fixed List fields do not change filter or sort semantics.
+- Slice 17 initially rendered fixed recipe fields for each explorer context.
+  Slice 19 subsequently added List-column visibility without changing filter
+  or sort semantics.
 - Default publication List columns remain Name (with its type icon), Author,
   Edition/Issue, and Recipes. The chooser can show/hide Tags, Date Added, and
   Date Changed; Name is required. Keep Type represented in Name rather than

@@ -454,8 +454,10 @@ interruption tolerance, legibility, and one-handed operation.
 Recipe detail offers Standard and Ingredient-first presentations. Standard
 keeps ingredient rows in saved order and renders Amount, lowercase Specifics
 and ingredient name, then Preparation. Both presentations keep Ingredients
-beside Instructions on desktop; mobile keeps the sections in a vertical flow. The desktop reader
-initializes from the saved account default, while mobile starts
+beside Instructions on desktop. The Ingredients column follows its widest row
+and is capped at half the available reader width; Instructions uses the
+remaining space. Mobile keeps the sections in a vertical flow. The desktop
+reader initializes from the saved account default, while mobile starts
 Ingredient-first. A reader's explicit change is transient. Ingredient-first
 uses a semantic table with Ingredient, Volume, Weight, and Preparation
 columns. Count, informal, and unmeasured values span the Volume and Weight
@@ -580,10 +582,11 @@ with Cancel and Submit right-aligned. Canceling the system picker leaves the
 management pane open.
 
 Recipe detail presents the first (default) photo centered before recipe content,
-preserving its aspect ratio and capped at 1.5 inches high; additional photos
-appear as square thumbnails. In edit mode, the action beside the recipe name
-shows the primary photo contained in a compact thumbnail with a corner pencil,
-or a camera icon when no photo exists, and opens photo management. The pane has a
+preserving its aspect ratio and capped at 280px high on desktop, 240px on tablet,
+and 144px on narrow mobile; additional photos appear as square thumbnails. In
+edit mode, the action beside the recipe name shows the primary photo contained
+in a compact thumbnail with a corner pencil, or a camera icon when no photo
+exists, and opens photo management. The pane has a
 three-column mobile grid, immediate remove and reorder behavior, a
 rounded muted-orange default outline and attached `Default` tab, two-dimensional
 dragging, and Ctrl+Arrow keyboard reordering. Images are decorative and have
@@ -610,9 +613,9 @@ row, with Add photo left and Done right.
 ### Current implementation
 
 The global recipe search and publication-scoped recipe results share the same
-List and Grid presentation with fixed fields appropriate to each explorer.
-Recipe List-column visibility is deferred to Slice 19. On desktop, headers are
-16px, sentence case, left-aligned, and aligned with their values. The header
+List and Grid presentation with fields appropriate to each explorer. Slice 19
+added per-context List-column visibility and desktop widths. On desktop,
+headers are 16px, sentence case, left-aligned, and aligned with their values. The header
 has no zebra fill. Publication data rows alternate a subtle leaf tint against
 the neutral table surface, starting with a tinted first recipe row; the fill
 spans the full row. Recipe links stay regular weight and underline on desktop
