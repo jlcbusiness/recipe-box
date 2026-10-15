@@ -223,20 +223,25 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   );
 
   return (
-    <main className="recipes-main" aria-labelledby="page-title">
+    <main
+      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}`}
+      aria-labelledby="page-title"
+    >
       <div className="recipe-page-heading recipe-detail-heading">
         <div className="recipe-detail-title">
           <h1 id="page-title">{recipe.name}</h1>
           {recipe.publication && (
             <p className="recipe-attribution">
-              <span>From </span>
+              <span>
+                {recipe.publication.publication_type === 'collection' ? 'In the ' : 'From '}
+              </span>
               <Link href={`/publications/${recipe.publication.id}`}>
                 <cite>{recipe.publication.name}</cite>
               </Link>
-              {recipe.publication_page
+              {recipe.publication.publication_type !== 'collection' && recipe.publication_page
                 ? ` · ${recipe.publication.publication_type === 'book' ? `p. ${recipe.publication_page}` : recipe.publication_page}`
                 : ''}
-              {recipe.recipe_url && (
+              {recipe.publication.publication_type !== 'collection' && recipe.recipe_url && (
                 <a className="recipe-source-link" href={recipe.recipe_url}>
                   <span className="recipe-source-url-full">{recipe.recipe_url}</span>
                   <span className="recipe-source-url-mobile">View online</span>

@@ -2,8 +2,11 @@ import 'server-only';
 
 import {
   createExplorerState,
+  defaultRecipeColumnOrder,
   type ExplorerState,
   type ExplorerStateContext,
+  normalizeHiddenRecipeColumns,
+  normalizeRecipeColumnOrder,
 } from './explorer-state';
 import type { RecipeSupabaseClient } from './recipes/data';
 
@@ -19,4 +22,22 @@ export async function getExplorerState(
 
   if (error || !data) return null;
   return createExplorerState(context, data.state);
+}
+
+export async function getRecipeColumnSettings(supabase: RecipeSupabaseClient): Promise<{
+  order: string[];
+  hiddenColumns: string[];
+}> {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('recipe_column_order, recipe_hidden_columns')
+    .maybeSingle();
+
+  if (error || !data) {
+    return { order: [...defaultRecipeColumnOrder], hiddenColumns: [] };
+  }
+  return {
+    order: normalizeRecipeColumnOrder(data.recipe_column_order),
+    hiddenColumns: normalizeHiddenRecipeColumns(data.recipe_hidden_columns),
+  };
 }

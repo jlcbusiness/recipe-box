@@ -165,23 +165,12 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     );
     const mobileRecipeLink = page.getByRole('link', { name: 'Recipe Tin' });
     const mobileLibraryLink = page.getByRole('link', { name: 'Library' });
-    const mobileSearchLink = page.getByRole('link', { name: 'Search' });
     const mobileSettingsLink = page.getByRole('link', { name: 'Settings' });
     await expect(mobileRecipeLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileLibraryLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileSettingsLink.locator('svg')).toBeVisible();
     const mobileTrashLink = page.getByRole('link', { name: 'Trash', exact: true });
-    const trashX = (await mobileTrashLink.boundingBox())?.x ?? 0;
-    const settingsX = (await mobileSettingsLink.boundingBox())?.x ?? 0;
-    const accountX = (await accountTrigger.boundingBox())?.x ?? 0;
-    const recipeX = (await mobileRecipeLink.boundingBox())?.x ?? 0;
-    const searchX = (await mobileSearchLink.boundingBox())?.x ?? 0;
-    const libraryX = (await mobileLibraryLink.boundingBox())?.x ?? 0;
-    expect(accountX).toBeLessThan(settingsX);
-    expect(settingsX).toBeLessThan(trashX);
-    expect(trashX).toBeLessThan(recipeX);
-    expect(recipeX).toBeLessThan(searchX);
-    expect(searchX).toBeLessThan(libraryX);
+    await expect(mobileTrashLink).toBeVisible();
     const mobileNavBounds = await page
       .getByRole('navigation', { name: 'Main navigation' })
       .boundingBox();

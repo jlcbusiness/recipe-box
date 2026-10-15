@@ -56,13 +56,14 @@ export async function updatePublication(
   if (
     publicationError ||
     !publication ||
+    publication.publication_type === 'collection' ||
     !['book', 'magazine', 'site'].includes(publication.publication_type)
   ) {
     return { error: 'This publication is no longer available.' };
   }
 
   const { data: validated, error: validationError } = validatePublicationDetails(
-    publication.publication_type as PublicationOption['publication_type'],
+    publication.publication_type as Exclude<PublicationOption['publication_type'], 'collection'>,
     {
       name: formText(formData, 'name'),
       author: optionalText(formData, 'author'),

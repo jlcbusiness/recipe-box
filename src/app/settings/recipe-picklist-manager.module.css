@@ -118,7 +118,7 @@
 }
 
 .list {
-  max-height: 416px;
+  max-height: 424px;
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 0;

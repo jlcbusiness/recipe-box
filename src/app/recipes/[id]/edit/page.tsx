@@ -38,7 +38,10 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
   const recipeOptions = await getRecipeLinkOptions(supabase, recipe.id);
 
   return (
-    <main className="recipes-main" aria-labelledby="page-title">
+    <main
+      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}`}
+      aria-labelledby="page-title"
+    >
       <div className="recipe-edit-heading">
         <h1 id="page-title">Edit Recipe</h1>
         <Link

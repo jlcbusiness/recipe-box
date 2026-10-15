@@ -18,6 +18,9 @@ export type RecipeSearchFilterField =
   | 'occasion_details'
   | 'publication_name'
   | 'publication_author'
+  | 'publication_page'
+  | 'recipe_url'
+  | 'citation'
   | 'ingredient'
   | 'state'
   | 'food_type'
@@ -59,6 +62,9 @@ export type RecipeSearchColumnKey =
   | 'opinion'
   | 'meal_type'
   | 'food_type'
+  | 'publication_page'
+  | 'recipe_url'
+  | 'citation'
   | 'publication_source';
 export type RecipeSearchColumnSelections = Partial<Record<RecipeSearchColumnKey, string[]>>;
 export type RecipeSearchFacetField =
@@ -69,16 +75,54 @@ export type RecipeSearchFacetField =
   | 'opinion'
   | 'meal_type'
   | 'food_type'
+  | 'publication_page'
+  | 'recipe_url'
+  | 'citation'
   | 'publication_source';
 export type RecipeSearchFacetOption = { value: string; label: string; count: number };
 
 export type RecipeSearchSortKey =
   | 'relevance'
   | 'name'
+  | 'publication'
+  | 'publication_page'
+  | 'recipe_url'
   | 'state'
+  | 'occasion_details'
+  | 'serves'
+  | 'equipment'
+  | 'food_type'
+  | 'meal_type'
+  | 'cuisine'
+  | 'tags'
+  | 'main_ingredients'
+  | 'prep_time_minutes'
+  | 'mixing_time_minutes'
+  | 'marinate_time_minutes'
+  | 'chill_time_minutes'
+  | 'freeze_time_minutes'
+  | 'cook_time_minutes'
+  | 'bake_time_minutes'
+  | 'cooling_time_minutes'
+  | 'rest_time_minutes'
   | 'total_time_minutes'
   | 'created_at'
-  | 'updated_at';
+  | 'updated_at'
+  | 'pairs_with'
+  | 'opinion'
+  | 'citation';
+
+export type RecipeSearchSortOption = { value: RecipeSearchSortKey; label: string };
+
+export function getRecipeSearchSortOptions(
+  columns: readonly { key: string; label: string }[],
+  includeRelevance = false,
+): RecipeSearchSortOption[] {
+  return [
+    ...(includeRelevance ? [{ value: 'relevance' as const, label: 'Relevance' }] : []),
+    ...columns.map(({ key, label }) => ({ value: key as RecipeSearchSortKey, label })),
+  ];
+}
 
 export type RecipeSearchOptions = {
   filters?: RecipeSearchFilter[];
@@ -121,6 +165,9 @@ export function parseRecipeSearchColumnFilters(params: {
   column_opinion?: string | string[];
   column_meal_type?: string | string[];
   column_food_type?: string | string[];
+  column_publication_page?: string | string[];
+  column_recipe_url?: string | string[];
+  column_citation?: string | string[];
   column_publication_source?: string | string[];
 }): { filters: RecipeSearchFilter[]; selections: RecipeSearchColumnSelections } {
   const definitions: {
@@ -141,6 +188,13 @@ export function parseRecipeSearchColumnFilters(params: {
     { key: 'opinion', parameter: 'column_opinion', field: 'opinion' },
     { key: 'meal_type', parameter: 'column_meal_type', field: 'meal_type' },
     { key: 'food_type', parameter: 'column_food_type', field: 'food_type' },
+    {
+      key: 'publication_page',
+      parameter: 'column_publication_page',
+      field: 'publication_page',
+    },
+    { key: 'recipe_url', parameter: 'column_recipe_url', field: 'recipe_url' },
+    { key: 'citation', parameter: 'column_citation', field: 'citation' },
     {
       key: 'publication_source',
       parameter: 'column_publication_source',

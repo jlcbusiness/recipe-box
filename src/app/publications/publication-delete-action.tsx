@@ -10,13 +10,14 @@ type PublicationDisposition = '' | 'delete' | 'recipe_tin' | 'another_publicatio
 type DestinationPublication = {
   id: string;
   name: string;
-  publication_type: 'book' | 'magazine' | 'site';
+  publication_type: 'book' | 'magazine' | 'site' | 'collection';
 };
 
 const publicationTypeLabels = {
   book: 'Book',
   magazine: 'Magazine',
   site: 'Site',
+  collection: 'Recipe Tin',
 } as const;
 
 export function PublicationDeleteAction({

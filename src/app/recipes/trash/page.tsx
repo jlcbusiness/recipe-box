@@ -19,6 +19,7 @@ const publicationTypeLabels = {
   book: 'Book',
   magazine: 'Magazine',
   site: 'Site',
+  collection: 'Recipe Tin',
 } as const;
 
 export default async function TrashPage({ searchParams }: TrashPageProps) {

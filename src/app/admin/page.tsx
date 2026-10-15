@@ -47,7 +47,6 @@ export default async function AdminPage() {
       handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
       navigation={[
         { href: '/publications', label: 'Library' },
-        { href: '/recipes', label: 'Recipe Tin' },
         { href: '/settings', label: 'Settings' },
         { href: '/admin', label: 'Administration', current: true },
       ]}

@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
+import { explorerColumnDefinitions } from '../../src/lib/explorer-state';
 import {
   parsePublicationSearchFilters,
   searchPublications,
 } from '../../src/lib/publications/search';
 import type { RecipeSupabaseClient } from '../../src/lib/recipes/data';
 import {
+  getRecipeSearchSortOptions,
   parseRecipeSearchColumnFilters,
   parseRecipeSearchFilters,
   searchRecipes,
@@ -16,6 +18,26 @@ function createSupabase(data: unknown = [], error: unknown = null) {
 }
 
 describe('recipe search URL contract', () => {
+  it('offers only visible recipe display columns as sort options', () => {
+    const visibleSearchColumns = explorerColumnDefinitions['recipes-find'].filter(
+      ({ defaultVisible, required }) => required || defaultVisible,
+    );
+    const visiblePublicationColumns = explorerColumnDefinitions['publication-recipes'].filter(
+      ({ defaultVisible, required }) => required || defaultVisible,
+    );
+    const searchOptions = getRecipeSearchSortOptions(visibleSearchColumns, true);
+    const publicationOptions = getRecipeSearchSortOptions(visiblePublicationColumns);
+
+    expect(searchOptions.map(({ value }) => value)).toEqual([
+      'relevance',
+      ...visibleSearchColumns.map(({ key }) => key),
+    ]);
+    expect(publicationOptions.map(({ value }) => value)).toEqual(
+      visiblePublicationColumns.map(({ key }) => key),
+    );
+    expect(searchOptions.some(({ value }) => value === 'opinion')).toBe(false);
+  });
+
   it('ignores malformed filters and limits repeated filter values to ten', () => {
     const filters = Array.from({ length: 12 }, (_, index) =>
       JSON.stringify({ field: `field-${index}`, operator: 'contains', value: 'x' }),
@@ -44,6 +66,27 @@ describe('recipe search URL contract', () => {
         state: [],
         meal_type: ['meal-a', 'meal-b'],
         total_time_minutes: ['__blank__', '20'],
+      },
+    });
+  });
+
+  it('keeps Page, URL, and Citation column selections independent', () => {
+    expect(
+      parseRecipeSearchColumnFilters({
+        column_publication_page: ['142-145'],
+        column_recipe_url: ['https://recipes.example.test/soup'],
+        column_citation: ['The Home Cook'],
+      }),
+    ).toEqual({
+      filters: [
+        { field: 'publication_page', operator: 'in', value: ['142-145'] },
+        { field: 'recipe_url', operator: 'in', value: ['https://recipes.example.test/soup'] },
+        { field: 'citation', operator: 'in', value: ['The Home Cook'] },
+      ],
+      selections: {
+        publication_page: ['142-145'],
+        recipe_url: ['https://recipes.example.test/soup'],
+        citation: ['The Home Cook'],
       },
     });
   });

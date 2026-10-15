@@ -29,7 +29,9 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 function publicationType(value: string): PublicationType | undefined {
-  return value === 'book' || value === 'magazine' || value === 'site' ? value : undefined;
+  return value === 'book' || value === 'magazine' || value === 'site' || value === 'collection'
+    ? value
+    : undefined;
 }
 
 export default async function LibraryPage({
@@ -46,8 +48,8 @@ export default async function LibraryPage({
   }>;
 }) {
   const [params, supabase] = await Promise.all([searchParams, createClient()]);
+  const rememberedState = await getExplorerState(supabase, 'publications');
   if (!hasPersistedExplorerUrlState('publications', params)) {
-    const rememberedState = await getExplorerState(supabase, 'publications');
     if (rememberedState) {
       redirect(serializeExplorerState('/publications', rememberedState));
     }
@@ -155,6 +157,7 @@ export default async function LibraryPage({
       <PublicationExplorer
         direction={sortDirection}
         emptyCatalog={(activePublicationCount ?? 0) === 0}
+        initialDisplayPreferences={rememberedState?.display_preferences}
         filters={filters}
         page={page}
         pageCount={pageCount}

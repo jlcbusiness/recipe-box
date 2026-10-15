@@ -39,14 +39,14 @@ export function useReorderDrag() {
     setPreview({ sourceId, targetId: sourceId, offset, pointerOffset: 0, slotOffset: 0 });
   }
 
-  function move(clientY: number) {
+  function move(clientY: number, scrollOffset = 0) {
     const current = activeDrag.current;
     if (!current) {
       return;
     }
 
     current.hasMoved = true;
-    const documentY = clientY + window.scrollY;
+    const documentY = clientY + window.scrollY + scrollOffset;
     current.targetId =
       Array.from(current.bounds).find(
         ([, bounds]) => documentY >= bounds.top && documentY <= bounds.bottom,

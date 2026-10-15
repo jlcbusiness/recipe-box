@@ -19,6 +19,7 @@
     "test:e2e": "playwright test --grep @e2e",
     "test:a11y": "playwright test --grep @a11y",
     "test:migration:magazine": "node scripts/test-magazine-migration.mjs",
+    "test:migration:recipe-tin": "node scripts/test-recipe-tin-migration.mjs",
     "supabase:start": "supabase start",
     "supabase:reset": "supabase db reset",
     "supabase:stop": "supabase stop"

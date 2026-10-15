@@ -83,6 +83,7 @@ const publicationTypeOptions: Option[] = [
   { value: 'book', label: 'Book' },
   { value: 'magazine', label: 'Magazine' },
   { value: 'site', label: 'Site' },
+  { value: 'collection', label: 'Recipe Tin' },
 ];
 
 function definitionFor(field: PublicationSearchFilterField | '') {

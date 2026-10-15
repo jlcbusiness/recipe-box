@@ -83,6 +83,35 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
     await expect(section.getByRole('button', { name: 'Edit Quick Supper' })).toBeVisible();
     await expect(section.getByRole('status')).toHaveText('Food Type renamed.');
 
+    const picklist = section.getByRole('list', { name: 'Food Type' });
+    await picklist.scrollIntoViewIfNeeded();
+    const initialListMetrics = await picklist.evaluate((list) => ({
+      clientHeight: list.clientHeight,
+      scrollHeight: list.scrollHeight,
+    }));
+    expect(initialListMetrics.clientHeight).toBeLessThanOrEqual(424);
+    expect(initialListMetrics.scrollHeight).toBeGreaterThan(initialListMetrics.clientHeight);
+    const idleHandle = picklist
+      .locator('[data-picklist-row]')
+      .nth(7)
+      .getByRole('button', { name: /^Reorder/ });
+    const idleHandleBounds = await idleHandle.boundingBox();
+    if (!idleHandleBounds) throw new Error('Expected the last visible picklist drag handle.');
+    const idleListScrollTop = await picklist.evaluate((list) => list.scrollTop);
+    const idleWindowScrollY = await page.evaluate(() => window.scrollY);
+    await page.mouse.move(
+      idleHandleBounds.x + idleHandleBounds.width / 2,
+      idleHandleBounds.y + idleHandleBounds.height / 2,
+    );
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    expect(await picklist.evaluate((list) => list.scrollTop)).toBe(idleListScrollTop);
+    expect(await page.evaluate(() => window.scrollY)).toBe(idleWindowScrollY);
+
     const firstRow = section.locator('[data-picklist-row]').first();
     const firstReorder = firstRow.getByRole('button', { name: /^Reorder/ });
     const firstValue =
@@ -90,6 +119,31 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
     const secondRow = section.locator('[data-picklist-row]').nth(1);
     const secondValue =
       (await secondRow.getByRole('button', { name: /^Edit/ }).textContent())?.trim() ?? '';
+    await firstReorder.scrollIntoViewIfNeeded();
+    const firstHandleBounds = await firstReorder.boundingBox();
+    const listBounds = await picklist.boundingBox();
+    if (!firstHandleBounds || !listBounds)
+      throw new Error('Expected visible picklist bounds before drag scrolling.');
+    const initialScrollHeight = await picklist.evaluate((list) => list.scrollHeight);
+    const initialWindowScrollY = await page.evaluate(() => window.scrollY);
+    await page.mouse.move(
+      firstHandleBounds.x + firstHandleBounds.width / 2,
+      firstHandleBounds.y + firstHandleBounds.height / 2,
+    );
+    await page.mouse.down();
+    const viewportHeight = await page.evaluate(() => window.innerHeight);
+    const scrollPointerY = Math.min(listBounds.y + listBounds.height - 4, viewportHeight - 2);
+    await page.mouse.move(listBounds.x + listBounds.width / 2, scrollPointerY, { steps: 8 });
+    await expect.poll(() => picklist.evaluate((list) => list.scrollTop)).toBeGreaterThan(0);
+    await expect
+      .poll(() =>
+        picklist.evaluate((list) => list.scrollTop + list.clientHeight >= list.scrollHeight - 1),
+      )
+      .toBe(true);
+    expect(await picklist.evaluate((list) => list.scrollHeight)).toBe(initialScrollHeight);
+    expect(await page.evaluate(() => window.scrollY)).toBe(initialWindowScrollY);
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
     await firstReorder.scrollIntoViewIfNeeded();
     const reorderBounds = await firstReorder.boundingBox();
     const secondRowBounds = await secondRow.boundingBox();

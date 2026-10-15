@@ -64,6 +64,9 @@ export function RecipeColumnFilter({
     opinion: 'Opinion',
     meal_type: 'Meal Type',
     food_type: 'Food Type',
+    publication_page: 'Page',
+    recipe_url: 'URL',
+    citation: 'Citation',
     publication_source: 'Page or URL',
   };
   const label = labels[field];

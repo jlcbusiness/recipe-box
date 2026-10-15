@@ -207,7 +207,9 @@ other non-drag controls providing the equivalent operation.
 
 ## Publications And Recipe Tin
 
-Publication types are Book, Magazine, and Site.
+Publication types are Book, Magazine, Site, and the reserved Recipe Tin
+collection. Each account has one permanent Tin; it is not offered in normal
+publication creation and cannot be edited or deleted by the account owner.
 See [comprehensive-reference.md § 6](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin).
 The Library supports List and Grid views, compact type and sort picklists, a
 direct icon toggle for View, and sorting by Date Added and Date Changed. Mobile
@@ -229,7 +231,8 @@ empty. Site publications also remain valid standalone primary sources for
 recipes originating from websites, including sites with no print counterpart.
 The searchable single-select
 Publication picker includes Add new publication. Creating a recipe inside a
-publication preselects it; app-level creation starts in the Recipe Tin.
+publication preselects it; app-level creation starts in the Recipe Tin. The
+Recipe Tin is a real publication assignment, but its recipe location is empty.
 Existing publications can be edited in place, preserving their recipes and
 cover rather than requiring deletion and recreation (delivered in Slice 12.5).
 
@@ -239,22 +242,28 @@ both its publication location and its online recipe URL. The list supports the
 same recipe filters, sorting, and List/Grid views as the Recipe Explorer,
 scoped to that publication; grid cards use each recipe's default photo when
 available (Slice 17). Last-used explorer state retains the publication scope
-(Slice 18); named saved views arrive with advanced queries (Slice 19).
+(Slice 18); per-explorer List-column visibility and desktop widths arrive in
+Slice 19.
 
-The Recipe Tin is permanent and has a distinctive tin-and-paper treatment (hinged
-tin lid graphic, ragged/deckled paper background for its recipe cards).
+The Recipe Tin is permanent and appears first among matching Library results
+regardless of sort direction. Normal filters can exclude it. It uses the
+mirrored transparent tin cover, and recipe attribution says `In the Recipe Tin`.
+The existing `/recipes` route redirects to its Library detail page. Recipe Tin
+recipes retain the distinctive tin-and-paper treatment (hinged tin lid graphic,
+ragged/deckled paper background for their recipe cards).
 Ordinary publication and recipe cards remain restrained. Deleting a publication
 prompts to delete recipes, move to Recipe Tin, or move to another publication.
 
 ## Queries And Settings
 
-Recipes and publications are searchable, filterable, sortable, and restore
-last-used filters, sort, direction, and view per explorer. Named, pinned saved
-views and List-column selection arrive with advanced queries in Slice 19.
-See [comprehensive-reference.md § 7](comprehensive-reference.md#7-queries-search-and-library-explorer).
-Advanced queries support typed conditions,
-field-appropriate operators, AND/OR groups, blank checks, and full-text search
-across names, notes, ingredients, instructions, publications, and authors.
+Recipes and publications support full-text search, straightforward
+field-appropriate filters, sorting, and last-used state per explorer. Slice 19
+adds per-explorer List-column visibility and desktop widths. Nested query
+groups and named or pinned saved views are deferred; ordinary filters remain
+available for on-the-fly lookup. See
+[comprehensive-reference.md § 7](comprehensive-reference.md#7-queries-search-and-library-explorer).
+Full-text search covers names, notes, ingredients, instructions, publications,
+and authors.
 
 Settings manages ingredients, tags, food types, meal types, cuisines, equipment, verdicts,
 enthusiasm, informal units, unmeasured phrases, and other picklists.

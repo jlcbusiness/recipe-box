@@ -10,8 +10,230 @@ export type ExplorerStateContext =
   | 'publications'
   | `publication-recipes:${string}`;
 
+export type ExplorerColumnDefinition = {
+  key: string;
+  label: string;
+  defaultVisible: boolean;
+  required?: boolean;
+  minWidth: number;
+  maxWidth: number;
+};
+
+export type ExplorerDisplayPreferences = {
+  visible_columns: string[];
+  column_widths: Record<string, number>;
+};
+
+const nameColumn: ExplorerColumnDefinition = {
+  key: 'name',
+  label: 'Name',
+  defaultVisible: true,
+  required: true,
+  minWidth: 180,
+  maxWidth: 720,
+};
+
+const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
+  { key: 'publication', label: 'Publication', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  {
+    key: 'publication_page',
+    label: 'Page',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  { key: 'recipe_url', label: 'URL', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'state', label: 'State', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  {
+    key: 'occasion_details',
+    label: 'Occasion Details',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  { key: 'serves', label: 'Serves', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'equipment', label: 'Equipment', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'food_type', label: 'Food Type', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'meal_type', label: 'Meal Type', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'cuisine', label: 'Cuisine', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'tags', label: 'Tags', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  {
+    key: 'main_ingredients',
+    label: 'Main Ingredients',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'prep_time_minutes',
+    label: 'Prep Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'mixing_time_minutes',
+    label: 'Mixing Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'marinate_time_minutes',
+    label: 'Marinate Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'chill_time_minutes',
+    label: 'Chill Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'freeze_time_minutes',
+    label: 'Freeze Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'cook_time_minutes',
+    label: 'Cook Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'bake_time_minutes',
+    label: 'Bake Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'cooling_time_minutes',
+    label: 'Cooling Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'rest_time_minutes',
+    label: 'Rest Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  {
+    key: 'total_time_minutes',
+    label: 'Total Time',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+  { key: 'created_at', label: 'Date Added', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'updated_at', label: 'Date Changed', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'pairs_with', label: 'Pairs With', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'opinion', label: 'Opinion', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  {
+    key: 'citation',
+    label: 'Citation',
+    defaultVisible: false,
+    minWidth: 96,
+    maxWidth: 600,
+  },
+];
+
+function recipeColumns(defaultVisible: string[]): ExplorerColumnDefinition[] {
+  return [
+    nameColumn,
+    ...recipeColumnDefinitions.map((definition) => ({
+      ...definition,
+      defaultVisible: defaultVisible.includes(definition.key),
+    })),
+  ];
+}
+
+export const explorerColumnDefinitions: Record<
+  'recipes-find' | 'publications' | 'publication-recipes',
+  ExplorerColumnDefinition[]
+> = {
+  'recipes-find': recipeColumns(['publication', 'state']),
+  publications: [
+    nameColumn,
+    { key: 'author', label: 'Author', defaultVisible: true, minWidth: 96, maxWidth: 600 },
+    { key: 'edition', label: 'Edition / Issue', defaultVisible: true, minWidth: 96, maxWidth: 600 },
+    { key: 'recipe_count', label: 'Recipes', defaultVisible: true, minWidth: 96, maxWidth: 600 },
+    { key: 'tags', label: 'Tags', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+    { key: 'created_at', label: 'Date Added', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+    {
+      key: 'updated_at',
+      label: 'Date Changed',
+      defaultVisible: false,
+      minWidth: 96,
+      maxWidth: 600,
+    },
+  ],
+  'publication-recipes': recipeColumns(['publication', 'state']).filter(
+    ({ key }) => key !== 'publication',
+  ),
+};
+
+export const defaultRecipeColumnOrder = ['name', ...recipeColumnDefinitions.map(({ key }) => key)];
+
+export function normalizeHiddenRecipeColumns(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const allowedColumns = new Set(defaultRecipeColumnOrder);
+  const hiddenColumns = new Set<string>();
+  for (const item of value) {
+    if (typeof item === 'string' && allowedColumns.has(item)) hiddenColumns.add(item);
+  }
+  return [...hiddenColumns];
+}
+
+export function normalizeRecipeColumnOrder(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length !== defaultRecipeColumnOrder.length) {
+    return [...defaultRecipeColumnOrder];
+  }
+  const keys = value.filter((item): item is string => typeof item === 'string');
+  if (
+    keys.length !== defaultRecipeColumnOrder.length ||
+    new Set(keys).size !== defaultRecipeColumnOrder.length ||
+    keys.some((key) => !defaultRecipeColumnOrder.includes(key))
+  ) {
+    return [...defaultRecipeColumnOrder];
+  }
+  return keys;
+}
+
+export function getExplorerColumns(
+  context: ExplorerStateContext,
+  recipeColumnOrder?: unknown,
+  hiddenRecipeColumns?: unknown,
+): ExplorerColumnDefinition[] {
+  const contextKey =
+    context === 'publications'
+      ? 'publications'
+      : context === 'recipes-find'
+        ? 'recipes-find'
+        : 'publication-recipes';
+  const definitions = explorerColumnDefinitions[contextKey];
+  if (contextKey === 'publications') return definitions;
+
+  const definitionsByKey = new Map(definitions.map((definition) => [definition.key, definition]));
+  const hiddenColumns = new Set(normalizeHiddenRecipeColumns(hiddenRecipeColumns));
+  return normalizeRecipeColumnOrder(recipeColumnOrder).flatMap((key) => {
+    const definition = definitionsByKey.get(key);
+    return definition ? [{ ...definition, defaultVisible: !hiddenColumns.has(key) }] : [];
+  });
+}
+
 export type ExplorerState = {
-  schema_version: 1;
+  schema_version: 1 | 2;
+  display_preferences?: ExplorerDisplayPreferences;
   column_filters?: Record<string, string[]>;
   filters: ExplorerFilter[];
   sort: string;
@@ -20,14 +242,7 @@ export type ExplorerState = {
   type?: 'all' | 'book' | 'magazine' | 'site';
 };
 
-const recipeSortKeys = new Set([
-  'relevance',
-  'name',
-  'state',
-  'total_time_minutes',
-  'created_at',
-  'updated_at',
-]);
+const recipeSortKeys = new Set(['relevance', ...defaultRecipeColumnOrder]);
 const publicationSortKeys = new Set([
   'relevance',
   'name',
@@ -44,6 +259,9 @@ const recipeFilterFields = new Set([
   'reason',
   'occasion_details',
   'publication_author',
+  'publication_page',
+  'recipe_url',
+  'citation',
   'ingredient',
   'state',
   'food_type',
@@ -106,6 +324,10 @@ const recipeFinderColumnFilterFields = new Set([
   'publication',
   'state',
   'total_time_minutes',
+  'publication_page',
+  'recipe_url',
+  'citation',
+  'publication_source',
 ]);
 const publicationRecipeColumnFilterFields = new Set([
   'name',
@@ -114,10 +336,14 @@ const publicationRecipeColumnFilterFields = new Set([
   'opinion',
   'meal_type',
   'food_type',
+  'publication_page',
+  'recipe_url',
+  'citation',
   'publication_source',
 ]);
 const stateKeys = new Set([
   'schema_version',
+  'display_preferences',
   'column_filters',
   'filters',
   'sort',
@@ -176,6 +402,75 @@ function isColumnFilterSelection(
   );
 }
 
+export function defaultExplorerDisplayPreferences(
+  context: ExplorerStateContext,
+  columnDefinitions?: ExplorerColumnDefinition[],
+): ExplorerDisplayPreferences {
+  const definitions =
+    columnDefinitions ??
+    explorerColumnDefinitions[
+      context === 'publications'
+        ? 'publications'
+        : context === 'recipes-find'
+          ? 'recipes-find'
+          : 'publication-recipes'
+    ];
+  return {
+    visible_columns: definitions
+      .filter(({ defaultVisible, required }) => defaultVisible && !required)
+      .map(({ key }) => key),
+    column_widths: {},
+  };
+}
+
+function isExplorerDisplayPreferences(
+  context: ExplorerStateContext,
+  value: unknown,
+): value is ExplorerDisplayPreferences {
+  if (
+    !isRecord(value) ||
+    Object.keys(value).some((key) => !['visible_columns', 'column_widths'].includes(key))
+  ) {
+    return false;
+  }
+  if (!Array.isArray(value.visible_columns) || !isRecord(value.column_widths)) return false;
+
+  const definitions =
+    explorerColumnDefinitions[
+      context === 'publications'
+        ? 'publications'
+        : context === 'recipes-find'
+          ? 'recipes-find'
+          : 'publication-recipes'
+    ];
+  const optionalColumns = new Map(
+    definitions
+      .filter(({ required }) => !required)
+      .map((definition) => [definition.key, definition]),
+  );
+  const resizableColumns = new Map(definitions.map((definition) => [definition.key, definition]));
+  const visibleColumns = value.visible_columns;
+  if (
+    visibleColumns.length !== new Set(visibleColumns).size ||
+    !visibleColumns.every(
+      (column): column is string => typeof column === 'string' && optionalColumns.has(column),
+    )
+  ) {
+    return false;
+  }
+
+  return Object.entries(value.column_widths).every(([column, width]) => {
+    const definition = resizableColumns.get(column);
+    return (
+      definition !== undefined &&
+      typeof width === 'number' &&
+      Number.isInteger(width) &&
+      width >= definition.minWidth &&
+      width <= definition.maxWidth
+    );
+  });
+}
+
 export function isExplorerStateContext(value: string): value is ExplorerStateContext {
   return (
     value === 'recipes-find' ||
@@ -189,7 +484,15 @@ export function createExplorerState(
   value: unknown,
 ): ExplorerState | null {
   if (!isRecord(value) || Object.keys(value).some((key) => !stateKeys.has(key))) return null;
-  if ('schema_version' in value && value.schema_version !== 1) return null;
+  const schemaVersion = value.schema_version ?? 1;
+  if (schemaVersion !== 1 && schemaVersion !== 2) return null;
+  const displayPreferences = value.display_preferences;
+  if (
+    (schemaVersion === 1 && displayPreferences !== undefined) ||
+    (schemaVersion === 2 && !isExplorerDisplayPreferences(context, displayPreferences))
+  ) {
+    return null;
+  }
   if (
     !Array.isArray(value.filters) ||
     value.filters.length > 10 ||
@@ -201,11 +504,7 @@ export function createExplorerState(
     return null;
   }
   if (value.direction !== 'asc' && value.direction !== 'desc') return null;
-  if (
-    value.view !== 'list' &&
-    value.view !== 'grid' &&
-    !(context.startsWith('publication-recipes:') && value.view === 'details')
-  ) {
+  if (value.view !== 'details' && value.view !== 'list' && value.view !== 'grid') {
     return null;
   }
   const columnFilters = 'column_filters' in value ? value.column_filters : undefined;
@@ -231,7 +530,10 @@ export function createExplorerState(
   }
 
   return {
-    schema_version: 1,
+    schema_version: schemaVersion,
+    ...(schemaVersion === 2
+      ? { display_preferences: displayPreferences as ExplorerDisplayPreferences }
+      : {}),
     ...(columnFilters !== undefined ? { column_filters: columnFilters } : {}),
     filters: value.filters,
     sort: value.sort,
@@ -258,11 +560,7 @@ export function hasPersistedExplorerUrlState(
   if (direction === 'asc' || direction === 'desc') return true;
 
   const view = firstString(params.view);
-  if (
-    view === 'list' ||
-    view === 'grid' ||
-    (context.startsWith('publication-recipes:') && view === 'details')
-  ) {
+  if (view === 'details' || view === 'list' || view === 'grid') {
     return true;
   }
 

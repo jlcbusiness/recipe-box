@@ -3,26 +3,35 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   createExplorerState,
+  defaultExplorerDisplayPreferences,
+  getExplorerColumns,
   hasPersistedExplorerUrlState,
   serializeExplorerState,
 } from '../../../lib/explorer-state';
-import { getExplorerState } from '../../../lib/explorer-state-data';
+import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
 import {
   getIngredients,
   getPublications,
+  getRecipeExplorerColumnValues,
   getRecipePicklists,
   getTags,
   recipeStateLabels,
 } from '../../../lib/recipes/data';
 import {
   getRecipeSearchFacetValues,
+  getRecipeSearchSortOptions,
   parseRecipeSearchColumnFilters,
   parseRecipeSearchFilters,
+  type RecipeSearchFilter,
   type RecipeSearchSortKey,
   searchRecipes,
 } from '../../../lib/recipes/search';
 import { createClient } from '../../../lib/supabase/server';
+import {
+  ExplorerColumnResizeHandle,
+  ExplorerListPreferences,
+} from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
 import { AlternatingRecipeGrid } from './alternating-recipe-grid';
 import { RecipeColumnFilter } from './recipe-column-filter';
@@ -35,15 +44,12 @@ import {
 import { RecipeSearchPagination, RecipeSearchToolbar } from './recipe-search-toolbar';
 
 const pageSize = 50;
-const sortOptions: { value: RecipeSearchSortKey; label: string }[] = [
-  { value: 'relevance', label: 'Relevance' },
-  { value: 'name', label: 'Name' },
-  { value: 'state', label: 'State' },
-  { value: 'total_time_minutes', label: 'Total Time' },
-  { value: 'created_at', label: 'Date Added' },
-  { value: 'updated_at', label: 'Date Changed' },
-];
-
+const dateFormatter = new Intl.DateTimeFormat('en', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+  year: 'numeric',
+});
 type FindRecipesPageProps = {
   searchParams: Promise<{
     q?: string | string[];
@@ -57,6 +63,10 @@ type FindRecipesPageProps = {
     column_publication?: string | string[];
     column_state?: string | string[];
     column_total_time_minutes?: string | string[];
+    column_publication_page?: string | string[];
+    column_recipe_url?: string | string[];
+    column_citation?: string | string[];
+    column_publication_source?: string | string[];
   }>;
 };
 
@@ -67,20 +77,33 @@ function firstValue(value: string | string[] | undefined) {
 export default async function FindRecipesPage({ searchParams }: FindRecipesPageProps) {
   const params = await searchParams;
   const supabase = await createClient();
+  const [rememberedState, recipeColumnSettings] = await Promise.all([
+    getExplorerState(supabase, 'recipes-find'),
+    getRecipeColumnSettings(supabase),
+  ]);
+  const recipeColumns = getExplorerColumns(
+    'recipes-find',
+    recipeColumnSettings.order,
+    recipeColumnSettings.hiddenColumns,
+  );
   if (!hasPersistedExplorerUrlState('recipes-find', params)) {
-    const rememberedState = await getExplorerState(supabase, 'recipes-find');
     if (rememberedState) {
       redirect(serializeExplorerState('/recipes/find', rememberedState, true));
     }
   }
+  const displayPreferences =
+    rememberedState?.display_preferences ??
+    defaultExplorerDisplayPreferences('recipes-find', recipeColumns);
+  const visibleColumnKeys = new Set(displayPreferences.visible_columns);
+  const sortOptions = getRecipeSearchSortOptions(
+    recipeColumns.filter(({ key, required }) => required || visibleColumnKeys.has(key)),
+    true,
+  );
   const q = firstValue(params.q);
   const searchMode = params.tab === 'query' ? 'query' : 'search';
   const query = searchMode === 'search' ? q.slice(0, 500) : '';
-  const filters = searchMode === 'query' ? parseRecipeSearchFilters(params.filter) : [];
+  const parsedFilters = searchMode === 'query' ? parseRecipeSearchFilters(params.filter) : [];
   const parsedColumnFilters = parseRecipeSearchColumnFilters(params);
-  const columnFilters = parsedColumnFilters.filters;
-  const columnSelections = parsedColumnFilters.selections;
-  const combinedFilters = [...filters, ...columnFilters];
   const requestedPage = Math.max(1, Math.min(20_001, Number.parseInt(params.page ?? '1', 10) || 1));
   const sortKey = sortOptions.some(({ value }) => value === params.sort)
     ? (params.sort as RecipeSearchSortKey)
@@ -88,7 +111,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       ? 'relevance'
       : 'name';
   const sortDirection = params.direction === 'desc' ? 'desc' : 'asc';
-  const view = params.view === 'grid' ? 'grid' : 'list';
+  const view = params.view === 'grid' ? 'grid' : params.view === 'list' ? 'list' : 'details';
   const [picklists, ingredients, publications, tags, activeRecipes] = await Promise.all([
     getRecipePicklists(supabase),
     getIngredients(supabase),
@@ -100,6 +123,36 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   if (activeRecipes.error) {
     throw new Error('Unable to load recipes.');
   }
+
+  const recipeTinId = publications.find(
+    ({ publication_type }) => publication_type === 'collection',
+  )?.id;
+  const normalizeTinFilter = (filter: RecipeSearchFilter): RecipeSearchFilter => {
+    if (filter.field !== 'publication_id' || !recipeTinId) return filter;
+    const values = Array.isArray(filter.value)
+      ? filter.value.filter((value): value is string | number => value !== undefined)
+      : filter.value === undefined
+        ? []
+        : [filter.value];
+    if (!values.includes('__recipe_tin__')) return filter;
+    return {
+      ...filter,
+      value: values.map((value) => (value === '__recipe_tin__' ? recipeTinId : value)),
+    };
+  };
+  const filters = parsedFilters.map(normalizeTinFilter);
+  const columnSelections = {
+    ...parsedColumnFilters.selections,
+    ...(recipeTinId && parsedColumnFilters.selections.publication
+      ? {
+          publication: parsedColumnFilters.selections.publication.map((value) =>
+            value === '__recipe_tin__' ? recipeTinId : value,
+          ),
+        }
+      : {}),
+  };
+  const columnFilters = parsedColumnFilters.filters.map(normalizeTinFilter);
+  const combinedFilters = [...filters, ...columnFilters];
 
   const searchOptions = {
     filters: combinedFilters,
@@ -116,6 +169,10 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   let publicationFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
   let stateFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
   let totalTimeFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let pageFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let urlFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let citationFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let recipeColumnValues = new Map<string, Record<string, string | null>>();
   let searchError: string | null = null;
 
   try {
@@ -144,38 +201,72 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       });
     }
 
-    [recipePhotos, nameFacets, publicationFacets, stateFacets, totalTimeFacets] = await Promise.all(
-      [
-        getPrimaryRecipePhotos(
-          supabase,
-          results.map(({ recipe_id }) => recipe_id),
-        ),
-        getRecipeSearchFacetValues(
-          supabase,
-          query,
-          [...filters, ...columnFilters.filter(({ field }) => field !== 'name')],
-          'name',
-        ),
-        getRecipeSearchFacetValues(
-          supabase,
-          query,
-          [...filters, ...columnFilters.filter(({ field }) => field !== 'publication_id')],
-          'publication_id',
-        ),
-        getRecipeSearchFacetValues(
-          supabase,
-          query,
-          [...filters, ...columnFilters.filter(({ field }) => field !== 'state')],
-          'state',
-        ),
-        getRecipeSearchFacetValues(
-          supabase,
-          query,
-          [...filters, ...columnFilters.filter(({ field }) => field !== 'total_time_minutes')],
-          'total_time_minutes',
-        ),
-      ],
-    );
+    [
+      recipePhotos,
+      nameFacets,
+      publicationFacets,
+      stateFacets,
+      totalTimeFacets,
+      pageFacets,
+      urlFacets,
+      citationFacets,
+      recipeColumnValues,
+    ] = await Promise.all([
+      view === 'grid'
+        ? getPrimaryRecipePhotos(
+            supabase,
+            results.map(({ recipe_id }) => recipe_id),
+          )
+        : Promise.resolve(new Map()),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...filters, ...columnFilters.filter(({ field }) => field !== 'name')],
+        'name',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...filters, ...columnFilters.filter(({ field }) => field !== 'publication_id')],
+        'publication_id',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...filters, ...columnFilters.filter(({ field }) => field !== 'state')],
+        'state',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...filters, ...columnFilters.filter(({ field }) => field !== 'total_time_minutes')],
+        'total_time_minutes',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...filters, ...columnFilters.filter(({ field }) => field !== 'publication_page')],
+        'publication_page',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...filters, ...columnFilters.filter(({ field }) => field !== 'recipe_url')],
+        'recipe_url',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...filters, ...columnFilters.filter(({ field }) => field !== 'citation')],
+        'citation',
+      ),
+      view === 'details'
+        ? getRecipeExplorerColumnValues(
+            supabase,
+            results.map(({ recipe_id }) => recipe_id),
+          )
+        : Promise.resolve(new Map<string, Record<string, string | null>>()),
+    ]);
   } catch {
     searchError =
       searchMode === 'query'
@@ -206,10 +297,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     enthusiasm: picklists
       .filter(({ category }) => category === 'enthusiasm')
       .map(({ id, display_value }) => ({ value: id, label: display_value })),
-    publication_id: [
-      { value: '__recipe_tin__', label: 'Recipe Tin' },
-      ...publications.map(({ id, name }) => ({ value: id, label: name })),
-    ],
+    publication_id: [...publications.map(({ id, name }) => ({ value: id, label: name }))],
     tag: tags.map(({ id, name }) => ({ value: id, label: name })),
   };
 
@@ -220,7 +308,12 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     publication: publicationFacets,
     state: stateFacets,
     total_time_minutes: totalTimeFacets,
+    publication_page: pageFacets,
+    recipe_url: urlFacets,
+    citation: citationFacets,
   };
+  const isFilterColumn = (key: string): key is keyof typeof columnFilterOptions =>
+    key in columnFilterOptions;
   const columnFilter = (field: keyof typeof columnFilterOptions) => (
     <RecipeColumnFilter
       action="/recipes/find"
@@ -245,6 +338,9 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     ));
   });
   const explorerState = createExplorerState('recipes-find', {
+    ...(rememberedState?.display_preferences
+      ? { schema_version: 2, display_preferences: rememberedState.display_preferences }
+      : {}),
     column_filters: Object.fromEntries(
       Object.entries(columnSelections).filter(([, selections]) => selections !== undefined),
     ),
@@ -299,156 +395,210 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
           </form>
         </search>
 
-        <RecipeSearchToolbar
-          columnSelections={columnSelections}
-          direction={sortDirection}
-          filters={filters}
-          options={sortOptions}
-          path="/recipes/find"
-          query={query}
-          sort={sortKey}
-          view={view}
-        />
-
-        <p className="find-recipes-count" role={searchError ? 'alert' : 'status'}>
-          {searchError ?? countLabel}
-        </p>
-
-        {view === 'list' && (
-          <nav aria-label="Filter recipe columns" className="find-recipes-mobile-filters">
-            {(['name', 'publication', 'state', 'total_time_minutes'] as const).map((field) => (
-              <span key={field}>{columnFilter(field)}</span>
-            ))}
-          </nav>
-        )}
-
-        {searchError ? null : matchingCount === 0 ? (
-          <p className="recipe-empty-state">
-            {hasCriteria
-              ? 'No recipes match these search criteria.'
-              : 'Your collection has no active recipes.'}
+        <ExplorerListPreferences
+          columnDefinitions={recipeColumns}
+          context="recipes-find"
+          initialPreferences={displayPreferences}
+          showControl={view === 'details' && explorerState !== null}
+          state={
+            explorerState ?? {
+              schema_version: 1,
+              filters: [],
+              sort: sortKey,
+              direction: sortDirection,
+              view,
+            }
+          }
+          toolbar={
+            <RecipeSearchToolbar
+              columnSelections={columnSelections}
+              direction={sortDirection}
+              filters={filters}
+              options={sortOptions}
+              path="/recipes/find"
+              query={query}
+              sort={sortKey}
+              view={view}
+              viewOptions={[
+                { value: 'details', label: 'Details' },
+                { value: 'list', label: 'List' },
+                { value: 'grid', label: 'Grid' },
+              ]}
+            />
+          }
+        >
+          <p className="find-recipes-count" role={searchError ? 'alert' : 'status'}>
+            {searchError ?? countLabel}
           </p>
-        ) : view === 'list' ? (
-          <div className="recipe-list-scroll">
-            <table className="recipe-list find-recipes-list">
-              <thead>
-                <tr>
-                  <th scope="col">{columnFilter('name')}</th>
-                  <th scope="col">{columnFilter('publication')}</th>
-                  <th scope="col">{columnFilter('state')}</th>
-                  <th scope="col">{columnFilter('total_time_minutes')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((recipe) => {
-                  const photo = recipePhotos.get(recipe.recipe_id);
-                  return (
-                    <tr key={recipe.recipe_id}>
-                      <td>
-                        <Link
-                          className="find-recipes-mobile-link"
-                          href={`/recipes/${recipe.recipe_id}`}
-                        >
-                          {photo ? (
-                            <Image
-                              alt=""
-                              className="find-recipes-mobile-thumbnail"
-                              height={photo.height ?? 1}
-                              src={photo.thumbnail_url}
-                              unoptimized
-                              width={photo.width ?? 1}
-                            />
-                          ) : (
-                            <span
-                              aria-hidden="true"
-                              className="find-recipes-mobile-thumbnail find-recipes-mobile-thumbnail-placeholder"
-                            />
-                          )}
-                          <span className="find-recipes-mobile-copy">
-                            <span className="find-recipes-mobile-title">{recipe.recipe_name}</span>
-                            <span className="find-recipes-mobile-metadata">
-                              <em>{recipe.publication_name ?? 'Recipe Tin'}</em>
-                              <span aria-hidden="true"> ~ </span>
-                              {recipeStateLabels[recipe.state]}
-                              {recipe.total_time_minutes !== null && (
-                                <>
-                                  <span aria-hidden="true"> ~ </span>
-                                  {recipe.total_time_minutes} min
-                                </>
-                              )}
-                            </span>
-                          </span>
-                        </Link>
-                      </td>
-                      <td>
-                        <span className="find-recipes-mobile-label">Publication</span>
-                        {recipe.publication_name ?? 'Recipe Tin'}
-                      </td>
-                      <td>
-                        <span className="find-recipes-mobile-label">State</span>
-                        {recipeStateLabels[recipe.state]}
-                      </td>
-                      <td>
-                        <span className="find-recipes-mobile-label">Total Time</span>
-                        {recipe.total_time_minutes === null
-                          ? '—'
-                          : `${recipe.total_time_minutes} min`}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <AlternatingRecipeGrid>
-            {results.map((recipe) => (
-              <li key={recipe.recipe_id}>
-                <Link href={`/recipes/${recipe.recipe_id}`}>
-                  {recipePhotos.get(recipe.recipe_id) && (
-                    <Image
-                      alt={
-                        recipePhotos.get(recipe.recipe_id)?.description ||
-                        `Photo of ${recipe.recipe_name}`
-                      }
-                      className="find-recipes-card-image"
-                      height={recipePhotos.get(recipe.recipe_id)?.height ?? 1}
-                      src={recipePhotos.get(recipe.recipe_id)?.thumbnail_url ?? ''}
-                      unoptimized
-                      width={recipePhotos.get(recipe.recipe_id)?.width ?? 1}
-                    />
-                  )}
-                  <strong>{recipe.recipe_name}</strong>
-                  <span className="find-recipes-grid-metadata">
-                    <em>{recipe.publication_name ?? 'Recipe Tin'}</em>
-                    <span aria-hidden="true"> ~ </span>
-                    {recipeStateLabels[recipe.state]}
-                    {recipe.total_time_minutes !== null && (
-                      <>
-                        <span aria-hidden="true"> ~ </span>
-                        {recipe.total_time_minutes} min
-                      </>
-                    )}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </AlternatingRecipeGrid>
-        )}
 
-        {pageCount > 1 && (
-          <RecipeSearchPagination
-            columnSelections={columnSelections}
-            direction={sortDirection}
-            filters={filters}
-            page={page}
-            pageCount={pageCount}
-            path="/recipes/find"
-            query={query}
-            sort={sortKey}
-            view={view}
-          />
-        )}
+          {view === 'details' && (
+            <nav aria-label="Filter recipe columns" className="find-recipes-mobile-filters">
+              {(
+                [
+                  'name',
+                  'publication',
+                  'state',
+                  'total_time_minutes',
+                  'publication_page',
+                  'recipe_url',
+                  'citation',
+                ] as const
+              ).map((field) => (
+                <span key={field}>{columnFilter(field)}</span>
+              ))}
+            </nav>
+          )}
+
+          {searchError ? null : matchingCount === 0 ? (
+            <p className="recipe-empty-state">
+              {hasCriteria
+                ? 'No recipes match these search criteria.'
+                : 'Your collection has no active recipes.'}
+            </p>
+          ) : view === 'details' ? (
+            <div className="recipe-list-scroll">
+              <table className="recipe-list find-recipes-list">
+                <thead>
+                  <tr>
+                    {recipeColumns.map(({ key, label }) => (
+                      <th data-explorer-column={key} key={key} scope="col">
+                        {isFilterColumn(key) ? columnFilter(key) : label}
+                        <ExplorerColumnResizeHandle column={key} />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((recipe) => {
+                    const details = recipeColumnValues.get(recipe.recipe_id);
+                    return (
+                      <tr key={recipe.recipe_id}>
+                        {recipeColumns.map(({ key, label }) => {
+                          let value =
+                            key === 'publication'
+                              ? (recipe.publication_name ?? 'Recipe Tin')
+                              : key === 'state'
+                                ? recipeStateLabels[recipe.state]
+                                : (details?.[key] ?? null);
+                          if (key === 'name') value = recipe.recipe_name;
+                          if (key === 'total_time_minutes') {
+                            value = recipe.total_time_minutes?.toString() ?? null;
+                          }
+                          if (key === 'created_at' || key === 'updated_at') {
+                            value = value ? dateFormatter.format(new Date(value)) : null;
+                          } else if (key.endsWith('_time_minutes')) {
+                            value = value ? `${value} min` : null;
+                          }
+
+                          return (
+                            <td data-explorer-column={key} data-label={label} key={key}>
+                              {key === 'name' ? (
+                                <Link
+                                  className="find-recipes-mobile-link"
+                                  href={`/recipes/${recipe.recipe_id}`}
+                                >
+                                  <span className="find-recipes-mobile-copy">
+                                    <span className="find-recipes-mobile-title">
+                                      {recipe.recipe_name}
+                                    </span>
+                                    <span className="find-recipes-mobile-metadata">
+                                      <span data-explorer-column="publication">
+                                        {recipe.publication_name ?? 'Recipe Tin'}
+                                      </span>
+                                      <span aria-hidden="true" data-explorer-separator="state">
+                                        {' ~ '}
+                                      </span>
+                                      <span data-explorer-column="state">
+                                        {recipeStateLabels[recipe.state]}
+                                      </span>
+                                      {recipe.total_time_minutes !== null && (
+                                        <>
+                                          <span
+                                            aria-hidden="true"
+                                            data-explorer-separator="total_time_minutes"
+                                          >
+                                            {' ~ '}
+                                          </span>
+                                          <span data-explorer-column="total_time_minutes">
+                                            {recipe.total_time_minutes} min
+                                          </span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </span>
+                                </Link>
+                              ) : key === 'recipe_url' && value ? (
+                                <a href={value}>{value}</a>
+                              ) : (
+                                value || '—'
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : view === 'list' ? (
+            <ul className="recipe-explorer-simple-list">
+              {results.map((recipe) => (
+                <li key={recipe.recipe_id}>
+                  <Link href={`/recipes/${recipe.recipe_id}`}>{recipe.recipe_name}</Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <AlternatingRecipeGrid>
+              {results.map((recipe) => (
+                <li key={recipe.recipe_id}>
+                  <Link href={`/recipes/${recipe.recipe_id}`}>
+                    {recipePhotos.get(recipe.recipe_id) && (
+                      <Image
+                        alt={
+                          recipePhotos.get(recipe.recipe_id)?.description ||
+                          `Photo of ${recipe.recipe_name}`
+                        }
+                        className="find-recipes-card-image"
+                        height={recipePhotos.get(recipe.recipe_id)?.height ?? 1}
+                        src={recipePhotos.get(recipe.recipe_id)?.thumbnail_url ?? ''}
+                        unoptimized
+                        width={recipePhotos.get(recipe.recipe_id)?.width ?? 1}
+                      />
+                    )}
+                    <strong>{recipe.recipe_name}</strong>
+                    <span className="find-recipes-grid-metadata">
+                      <em>{recipe.publication_name ?? 'Recipe Tin'}</em>
+                      <span aria-hidden="true"> ~ </span>
+                      {recipeStateLabels[recipe.state]}
+                      {recipe.total_time_minutes !== null && (
+                        <>
+                          <span aria-hidden="true"> ~ </span>
+                          {recipe.total_time_minutes} min
+                        </>
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </AlternatingRecipeGrid>
+          )}
+
+          {pageCount > 1 && (
+            <RecipeSearchPagination
+              columnSelections={columnSelections}
+              direction={sortDirection}
+              filters={filters}
+              page={page}
+              pageCount={pageCount}
+              path="/recipes/find"
+              query={query}
+              sort={sortKey}
+              view={view}
+            />
+          )}
+        </ExplorerListPreferences>
       </main>
     </RecipeSearchModeProvider>
   );

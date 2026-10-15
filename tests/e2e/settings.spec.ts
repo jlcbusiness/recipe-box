@@ -520,6 +520,257 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
   }
 });
 
+test('Settings recipe column order is saved and used by the Find column chooser @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/find');
+    await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
+      'data-visible-columns',
+      'name publication state',
+    );
+    await page.getByRole('link', { name: 'Settings' }).click();
+
+    const sectionToggle = page.getByRole('button', { name: 'Recipe columns' });
+    await expect(sectionToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('list', { name: 'Recipe column order' })).toBeHidden();
+    await sectionToggle.click();
+    await expect(sectionToggle).toHaveAttribute('aria-expanded', 'true');
+    const columnSection = page.getByRole('region', { name: 'Recipe columns' });
+    const columnList = columnSection.getByRole('list', { name: 'Recipe column order' });
+    await columnList.scrollIntoViewIfNeeded();
+    await expect(page.locator('[data-recipe-column-row="opinion"]')).toHaveCount(1);
+    for (const legacyColumn of ['enthusiasm', 'verdict', 'reason']) {
+      await expect(page.locator(`[data-recipe-column-row="${legacyColumn}"]`)).toHaveCount(0);
+    }
+    const listRightPadding = await columnList.evaluate((list) =>
+      Number.parseFloat(getComputedStyle(list).paddingRight),
+    );
+    expect(listRightPadding).toBeGreaterThanOrEqual(11);
+    const eyeToScrollbarGap = await columnList.evaluate((list) => {
+      const listElement = list as HTMLElement;
+      const lastVisibilityButton = listElement.querySelector<HTMLElement>(
+        '[data-recipe-column-row]:last-child button[aria-pressed]',
+      );
+      if (!lastVisibilityButton) throw new Error('Expected a visibility control in the last row.');
+      const scrollbarWidth = listElement.offsetWidth - listElement.clientWidth;
+      return (
+        listElement.getBoundingClientRect().right -
+        scrollbarWidth -
+        lastVisibilityButton.getBoundingClientRect().right
+      );
+    });
+    expect(eyeToScrollbarGap).toBeGreaterThanOrEqual(11);
+    const headingBox = await sectionToggle.boundingBox();
+    const listBox = await columnList.boundingBox();
+    if (!headingBox || !listBox) throw new Error('Expected the expanded recipe column list.');
+    const checkNoneBox = await columnSection
+      .getByRole('button', { name: 'Check None' })
+      .boundingBox();
+    if (!checkNoneBox) throw new Error('Expected the Check None control beside the header.');
+    expect(checkNoneBox.x).toBeGreaterThanOrEqual(headingBox.x + headingBox.width - 1);
+    expect(
+      Math.abs(checkNoneBox.y + checkNoneBox.height / 2 - (headingBox.y + headingBox.height / 2)),
+    ).toBeLessThan(1);
+    const listDimensions = await columnList.evaluate((list) => ({
+      clientHeight: list.clientHeight,
+      scrollHeight: list.scrollHeight,
+    }));
+    expect(listDimensions.clientHeight).toBeLessThanOrEqual(8 * 53);
+    expect(listDimensions.scrollHeight).toBeGreaterThan(listDimensions.clientHeight);
+    const idleHandle = columnList
+      .locator('[data-recipe-column-row]')
+      .nth(7)
+      .getByRole('button', { name: /^Reorder/ });
+    const idleHandleBox = await idleHandle.boundingBox();
+    if (!idleHandleBox) throw new Error('Expected the last visible drag handle.');
+    const idleScrollY = await page.evaluate(() => window.scrollY);
+    await page.mouse.move(
+      idleHandleBox.x + idleHandleBox.width / 2,
+      idleHandleBox.y + idleHandleBox.height / 2,
+    );
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    expect(await columnList.evaluate((list) => list.scrollTop)).toBe(0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(idleScrollY);
+    const rowWidths = await columnList
+      .locator('[data-recipe-column-row]')
+      .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().width));
+    expect(Math.max(...rowWidths) - Math.min(...rowWidths)).toBeLessThan(0.5);
+    const urlRow = page.locator('[data-recipe-column-row="recipe_url"]');
+    const dragBounds = await urlRow.getByRole('button', { name: 'Reorder URL' }).boundingBox();
+    const eyeBounds = await urlRow
+      .getByRole('button', { name: 'Show URL in recipe tables' })
+      .boundingBox();
+    if (!dragBounds || !eyeBounds)
+      throw new Error('Expected URL row drag and visibility controls.');
+    expect(eyeBounds.x).toBeGreaterThanOrEqual(dragBounds.x + dragBounds.width);
+    await expect(page.getByRole('button', { name: 'Reorder URL' })).toHaveAttribute(
+      'title',
+      'Drag to reorder. Use Ctrl+Up or Ctrl+Down to move by keyboard.',
+    );
+    const settingsAccessibility = await new AxeBuilder({ page }).analyze();
+    expect(settingsAccessibility.violations).toEqual([]);
+
+    const publicationHandle = page.getByRole('button', { name: 'Reorder Publication' });
+    const columnOrderStatus = page
+      .getByRole('region', { name: 'Recipe columns' })
+      .getByRole('status');
+    await publicationHandle.press('Control+ArrowDown');
+    await expect(columnOrderStatus).toHaveText('Publication moved to position 3.');
+    await page.getByRole('button', { name: 'Reorder Name' }).press('Control+ArrowDown');
+    await expect(columnOrderStatus).toHaveText('Name moved to position 2.');
+    await page.reload();
+    await expect(page.getByRole('list', { name: 'Recipe column order' })).toBeHidden();
+    await page.getByRole('button', { name: 'Recipe columns' }).click();
+    await expect(page.locator('[data-recipe-column-row="publication_page"]')).toHaveCount(1);
+    await expect(page.locator('[data-recipe-column-row="publication_page"]')).toHaveAttribute(
+      'data-recipe-column-row',
+      'publication_page',
+    );
+    const orderedKeys = await page
+      .locator('[data-recipe-column-row]')
+      .evaluateAll((rows) =>
+        rows.slice(0, 4).map((row) => row.getAttribute('data-recipe-column-row')),
+      );
+    expect(orderedKeys).toEqual(['publication_page', 'name', 'publication', 'recipe_url']);
+
+    const urlLabel = page
+      .locator('[data-recipe-column-row="recipe_url"]')
+      .getByText('URL', { exact: true });
+    const firstRow = page.locator('[data-recipe-column-row="publication_page"]');
+    await columnList.scrollIntoViewIfNeeded();
+    const sourceBox = await urlLabel.boundingBox();
+    const targetBox = await firstRow.boundingBox();
+    if (!sourceBox || !targetBox) throw new Error('Expected visible recipe column reorder rows.');
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
+      steps: 8,
+    });
+    await page.mouse.up();
+    await expect(columnOrderStatus).toHaveText('URL moved to position 1.');
+    await page.reload();
+    const draggedOrder = await page
+      .locator('[data-recipe-column-row]')
+      .evaluateAll((rows) =>
+        rows.slice(0, 4).map((row) => row.getAttribute('data-recipe-column-row')),
+      );
+    expect(draggedOrder).toEqual(['recipe_url', 'publication_page', 'name', 'publication']);
+
+    await page.setViewportSize({ width: 900, height: 520 });
+    await page.goto('/settings');
+    await page.getByRole('button', { name: 'Recipe columns' }).click();
+    const firstHandle = page.getByRole('button', { name: 'Reorder Name' });
+    const orderList = page.getByRole('list', { name: 'Recipe column order' });
+    await orderList.scrollIntoViewIfNeeded();
+    const firstHandleBox = await firstHandle.boundingBox();
+    if (!firstHandleBox) throw new Error('Expected the first recipe column handle.');
+    await page.mouse.move(
+      firstHandleBox.x + firstHandleBox.width / 2,
+      firstHandleBox.y + firstHandleBox.height / 2,
+    );
+    const initialScrollHeight = await orderList.evaluate((list) => list.scrollHeight);
+    const initialPageScrollY = await page.evaluate(() => window.scrollY);
+    await page.mouse.down();
+    const orderListBox = await orderList.boundingBox();
+    if (!orderListBox) throw new Error('Expected the scrollable recipe column list.');
+    const viewportHeight = await page.evaluate(() => window.innerHeight);
+    const pointerY = Math.min(orderListBox.y + orderListBox.height - 4, viewportHeight - 2);
+    await page.mouse.move(orderListBox.x + orderListBox.width / 2, pointerY, { steps: 8 });
+    await expect.poll(() => orderList.evaluate((list) => list.scrollTop)).toBeGreaterThan(0);
+    await expect
+      .poll(() =>
+        orderList.evaluate((list) => list.scrollTop + list.clientHeight >= list.scrollHeight - 1),
+      )
+      .toBe(true);
+    expect(await orderList.evaluate((list) => list.scrollHeight)).toBe(initialScrollHeight);
+    expect(await page.evaluate(() => window.scrollY)).toBe(initialPageScrollY);
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+
+    const hidePublication = page.getByRole('button', {
+      name: 'Hide Publication in recipe tables',
+    });
+    await hidePublication.click();
+    const publicationRow = page.locator('[data-recipe-column-row="publication"]');
+    await expect(publicationRow).toHaveAttribute('data-hidden', 'true');
+    await expect(publicationRow.getByText('Publication', { exact: true })).toHaveCSS(
+      'text-decoration-line',
+      'line-through',
+    );
+    await expect(columnOrderStatus).toHaveText('Publication hidden from recipe tables.');
+    await page.reload();
+    await page.getByRole('button', { name: 'Recipe columns' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Show Publication in recipe tables' }),
+    ).toHaveAttribute('aria-pressed', 'false');
+    await page.goto('/recipes/find');
+    const recipeListPreferences = page.locator('.explorer-list-preferences');
+    await expect(recipeListPreferences).not.toHaveAttribute(
+      'data-visible-columns',
+      /(^|\s)publication(\s|$)/,
+    );
+    const chooser = page.getByRole('button', { name: 'Choose List columns' });
+    await chooser.click();
+    const chooserFieldset = page.getByRole('group', { name: 'List columns' });
+    await expect(chooserFieldset.locator(':scope > button').first()).toHaveText('Reset columns');
+    const nameCheckbox = page.getByRole('checkbox', { name: /Name/ });
+    await expect(nameCheckbox).toBeChecked();
+    await expect(nameCheckbox).toBeDisabled();
+    const publicationCheckbox = page.getByRole('checkbox', { name: 'Publication' });
+    await expect(publicationCheckbox).not.toBeChecked();
+    await publicationCheckbox.check();
+    await expect(recipeListPreferences).toHaveAttribute(
+      'data-visible-columns',
+      /(^|\s)publication(\s|$)/,
+    );
+    await page.getByRole('button', { name: 'Reset columns' }).click();
+    await expect(publicationCheckbox).not.toBeChecked();
+    await expect(recipeListPreferences).not.toHaveAttribute(
+      'data-visible-columns',
+      /(^|\s)publication(\s|$)/,
+    );
+    await expect(page.getByRole('checkbox', { name: 'URL', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'State' })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Total Time' })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Publication' })).not.toBeChecked();
+    const chooserOrder = await page
+      .locator('.explorer-list-preferences-popover')
+      .evaluate((fieldset) =>
+        Array.from(
+          fieldset.querySelectorAll(
+            ':scope > .explorer-list-preferences-required, :scope > .explorer-list-preferences-option',
+          ),
+        ).map((item) => item.textContent?.replace(/\s+/g, ' ').trim()),
+      );
+    expect(chooserOrder.slice(0, 3)).toEqual(['URL', 'Page', 'NameAlways shown']);
+
+    await page.goto('/settings');
+    await page.getByRole('button', { name: 'Recipe columns' }).click();
+    await page.getByRole('button', { name: 'Check None' }).click();
+    await expect(page.locator('[data-recipe-column-row="total_time_minutes"]')).toHaveAttribute(
+      'data-hidden',
+      'true',
+    );
+    await expect(page.locator('[data-recipe-column-row="name"]')).not.toHaveAttribute(
+      'data-hidden',
+      'true',
+    );
+    await expect(columnOrderStatus).toHaveText('All optional recipe columns hidden.');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Settings redirects signed-out visitors to sign in @e2e', async ({ page }) => {
   await page.goto('/settings');
   await expect(page).toHaveURL(/\/$/);

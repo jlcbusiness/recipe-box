@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { normalizeHiddenRecipeColumns, normalizeRecipeColumnOrder } from '../../lib/explorer-state';
 import type { PicklistCategory, TagOption } from '../../lib/recipes/data';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
@@ -10,6 +11,7 @@ import {
   type IngredientDensityEntry,
   IngredientDensityManager,
 } from './ingredient-density-manager';
+import { RecipeColumnOrderManager } from './recipe-column-order-manager';
 import { RecipePicklistManager } from './recipe-picklist-manager';
 import { TagCatalogManager } from './tag-catalog-manager';
 import { UnitPreferences } from './unit-preferences';
@@ -24,7 +26,9 @@ export default async function SettingsPage() {
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('volume_system, weight_system, ingredient_presentation, hand_preference')
+    .select(
+      'volume_system, weight_system, ingredient_presentation, hand_preference, recipe_column_order, recipe_hidden_columns',
+    )
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -191,6 +195,10 @@ export default async function SettingsPage() {
         initialValues={picklistsResult.data ?? []}
         initialRevisions={revisions}
         referenceCounts={referenceCounts}
+      />
+      <RecipeColumnOrderManager
+        initialHiddenColumns={normalizeHiddenRecipeColumns(account.recipe_hidden_columns)}
+        initialOrder={normalizeRecipeColumnOrder(account.recipe_column_order)}
       />
       <IngredientCatalogManager
         initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}

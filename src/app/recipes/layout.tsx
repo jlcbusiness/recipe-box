@@ -23,7 +23,6 @@ export default async function RecipesLayout({ children }: { children: React.Reac
       wideContent
       navigation={[
         { href: '/publications', label: 'Library' },
-        { href: '/recipes', label: 'Recipe Tin', current: true },
         { href: '/recipes/find', label: 'Find Recipes' },
         { href: '/settings', label: 'Settings' },
         ...(account?.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),

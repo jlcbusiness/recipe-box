@@ -77,6 +77,15 @@ export function RecipePicklistManager({
   const addInputRef = useRef<HTMLInputElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLOListElement>(null);
+  const isDragActiveRef = useRef(false);
+  const dragPointerYRef = useRef<number | null>(null);
+  const listScrollOffsetRef = useRef(0);
+  const dragContentBoundsRef = useRef<{
+    sourceTop: number;
+    contentHeight: number;
+    rowHeight: number;
+  } | null>(null);
+  const autoScrollFrameRef = useRef<number | null>(null);
   const paneRef = useRef<HTMLElement>(null);
   const pendingDrop = useRef<{ sourceId: string; rowTops: Map<string, number> } | null>(null);
   const editHistoryEntry = useRef(false);
@@ -87,6 +96,16 @@ export function RecipePicklistManager({
     setValues(initialValues);
     setRevisions(initialRevisions);
   }, [initialRevisions, initialValues]);
+
+  useEffect(
+    () => () => {
+      isDragActiveRef.current = false;
+      if (autoScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(autoScrollFrameRef.current);
+      }
+    },
+    [],
+  );
 
   const categoryLabel = categories.find((item) => item.id === category)?.label ?? category;
   const rows = values
@@ -428,8 +447,9 @@ export function RecipePicklistManager({
 
   function startDrag(value: ManagedValue, clientY: number, handle: HTMLButtonElement) {
     const sourceRow = handle.closest<HTMLElement>('[data-picklist-row]');
+    const list = listRef.current;
     const visibleRows = Array.from(
-      handle.closest('ol')?.querySelectorAll<HTMLElement>('[data-picklist-row]') ?? [],
+      list?.querySelectorAll<HTMLElement>('[data-picklist-row]') ?? [],
     );
     const bounds = visibleRows.map((row) => {
       const rect = row.getBoundingClientRect();
@@ -439,7 +459,66 @@ export function RecipePicklistManager({
         bottom: rect.bottom + window.scrollY,
       };
     });
+    const listBounds = list?.getBoundingClientRect();
+    const sourceBounds = sourceRow?.getBoundingClientRect();
+    listScrollOffsetRef.current = 0;
+    isDragActiveRef.current = true;
+    dragContentBoundsRef.current =
+      list && listBounds && sourceBounds
+        ? {
+            sourceTop: sourceBounds.top - listBounds.top + list.scrollTop,
+            contentHeight: list.scrollHeight,
+            rowHeight: sourceBounds.height,
+          }
+        : null;
     reorderDrag.start(value.id, clientY, sourceRow?.getBoundingClientRect().height ?? 48, bounds);
+  }
+
+  function stopAutoScroll() {
+    isDragActiveRef.current = false;
+    dragPointerYRef.current = null;
+    if (autoScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(autoScrollFrameRef.current);
+      autoScrollFrameRef.current = null;
+    }
+  }
+
+  function autoScrollWhileDragging() {
+    const pointerY = dragPointerYRef.current;
+    if (pointerY === null || !isDragActiveRef.current) {
+      autoScrollFrameRef.current = null;
+      return;
+    }
+
+    const list = listRef.current;
+    const listBounds = list?.getBoundingClientRect();
+    if (list && listBounds && pointerY >= listBounds.top && pointerY <= listBounds.bottom) {
+      const edgeSize = 64;
+      const distanceToTop = edgeSize - (pointerY - listBounds.top);
+      const distanceToBottom = pointerY - (listBounds.bottom - edgeSize);
+      const scrollDelta =
+        distanceToTop > 0
+          ? -Math.min(16, Math.ceil(distanceToTop / 4))
+          : distanceToBottom > 0
+            ? Math.min(16, Math.ceil(distanceToBottom / 4))
+            : 0;
+      if (scrollDelta !== 0) {
+        const previousScrollTop = list.scrollTop;
+        list.scrollTop += scrollDelta;
+        listScrollOffsetRef.current += list.scrollTop - previousScrollTop;
+      }
+    }
+
+    reorderDrag.move(pointerY, listScrollOffsetRef.current);
+    autoScrollFrameRef.current = window.requestAnimationFrame(autoScrollWhileDragging);
+  }
+
+  function trackDragPointer(clientY: number) {
+    if (!isDragActiveRef.current) return;
+    dragPointerYRef.current = clientY;
+    if (autoScrollFrameRef.current === null) {
+      autoScrollFrameRef.current = window.requestAnimationFrame(autoScrollWhileDragging);
+    }
   }
 
   function renderRow(value: ManagedValue, index: number) {
@@ -456,9 +535,21 @@ export function RecipePicklistManager({
         : settlingSourceId === value.id
           ? 'settling'
           : undefined;
+    const dragContentBounds = isDragging ? dragContentBoundsRef.current : null;
+    const pointerOffset = dragContentBounds
+      ? Math.max(
+          -dragContentBounds.sourceTop,
+          Math.min(
+            dragContentBounds.contentHeight -
+              dragContentBounds.sourceTop -
+              dragContentBounds.rowHeight,
+            preview?.pointerOffset ?? 0,
+          ),
+        )
+      : (preview?.pointerOffset ?? 0);
     const transform = preview
       ? isDragging
-        ? `translateY(${preview.pointerOffset}px)`
+        ? `translateY(${pointerOffset}px)`
         : isDisplaced
           ? `translateY(${sourceIndex < targetIndex ? -preview.offset : preview.offset}px)`
           : undefined
@@ -543,11 +634,17 @@ export function RecipePicklistManager({
                 onPointerDown={(event) => {
                   if (event.button !== 0 || isPending || selectedId || editingId) return;
                   startDrag(value, event.clientY, event.currentTarget);
+                  trackDragPointer(event.clientY);
                   event.currentTarget.setPointerCapture(event.pointerId);
                 }}
-                onPointerMove={(event) => reorderDrag.move(event.clientY)}
+                onPointerMove={(event) => {
+                  trackDragPointer(event.clientY);
+                  reorderDrag.move(event.clientY, listScrollOffsetRef.current);
+                }}
                 onPointerUp={(event) => {
                   const handle = event.currentTarget;
+                  stopAutoScroll();
+                  reorderDrag.move(event.clientY, listScrollOffsetRef.current);
                   const targetId = document
                     .elementFromPoint(event.clientX, event.clientY)
                     ?.closest<HTMLElement>('[data-picklist-row]')?.dataset.picklistRow;
@@ -563,6 +660,7 @@ export function RecipePicklistManager({
                   handle.focus();
                 }}
                 onPointerCancel={(event) => {
+                  stopAutoScroll();
                   reorderDrag.cancel();
                   event.currentTarget.focus();
                 }}
@@ -570,6 +668,7 @@ export function RecipePicklistManager({
                   if (isPending || selectedId || editingId) return;
                   if (event.key === 'Escape' && reorderDrag.preview) {
                     event.preventDefault();
+                    stopAutoScroll();
                     reorderDrag.cancel();
                     event.currentTarget.focus();
                   } else if (event.ctrlKey && event.key === 'ArrowUp') {

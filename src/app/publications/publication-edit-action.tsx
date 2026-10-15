@@ -14,6 +14,7 @@ const publicationTypeLabels: Record<PublicationType, string> = {
   book: 'Book',
   magazine: 'Magazine',
   site: 'Site',
+  collection: 'Recipe Tin',
 };
 
 type EditablePublication = PublicationOption & { version: number };

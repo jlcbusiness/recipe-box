@@ -39,21 +39,20 @@ export function PublicationPicker({
   const filteredOptions = options.filter((item) =>
     publicationLabel(item).toLocaleLowerCase().includes(normalizedQuery),
   );
-  const showRecipeTin = !normalizedQuery || 'recipe tin'.includes(normalizedQuery);
   const hasExactMatch = options.some(
     (item) => publicationLabel(item).toLocaleLowerCase() === normalizedQuery,
   );
   const showCreatePublication = Boolean(normalizedQuery) && !hasExactMatch;
-  const optionCount =
-    filteredOptions.length + (showRecipeTin ? 1 : 0) + (showCreatePublication ? 1 : 0);
+  const optionCount = filteredOptions.length + (showCreatePublication ? 1 : 0);
   const activeOptionIndex = Math.min(activeIndex, Math.max(0, optionCount - 1));
   const activeOptionId = `publication-option-${activeOptionIndex}`;
+  const recipeTin = options.find((item) => item.publication_type === 'collection');
 
-  function selectPublication(publication: PublicationOption | null) {
+  function selectPublication(publication: PublicationOption) {
     const previousType = selectedPublication?.publication_type ?? null;
-    const nextType = publication?.publication_type ?? null;
-    setPublicationId(publication?.id ?? '');
-    setQuery(publication ? publicationLabel(publication) : 'Recipe Tin');
+    setPublicationId(publication.id);
+    setQuery(publicationLabel(publication));
+    const nextType = publication.publication_type;
     if (previousType !== nextType) {
       setPage('');
       setRecipeUrl('');
@@ -63,7 +62,13 @@ export function PublicationPicker({
   }
 
   function addPublication(publication: PublicationOption) {
-    setOptions((current) => [...current.filter((item) => item.id !== publication.id), publication]);
+    setOptions((current) =>
+      [...current.filter((item) => item.id !== publication.id), publication].sort(
+        (left, right) =>
+          Number(right.publication_type === 'collection') -
+            Number(left.publication_type === 'collection') || left.name.localeCompare(right.name),
+      ),
+    );
     setPublicationId(publication.id);
     setQuery(publicationLabel(publication));
     setPage('');
@@ -84,16 +89,11 @@ export function PublicationPicker({
   }
 
   function chooseActiveOption() {
-    if (showRecipeTin && activeOptionIndex === 0) {
-      selectPublication(null);
-      return;
-    }
-    const publicationIndex = activeOptionIndex - (showRecipeTin ? 1 : 0);
-    if (showCreatePublication && publicationIndex === filteredOptions.length) {
+    if (showCreatePublication && activeOptionIndex === filteredOptions.length) {
       openPublicationDialog();
       return;
     }
-    const publication = filteredOptions[publicationIndex];
+    const publication = filteredOptions[activeOptionIndex];
     if (publication) {
       selectPublication(publication);
     }
@@ -120,7 +120,9 @@ export function PublicationPicker({
     } else if (event.key === 'Escape' && isOpen) {
       event.preventDefault();
       setIsOpen(false);
-      setQuery(selectedPublication ? publicationLabel(selectedPublication) : 'Recipe Tin');
+      const fallback = selectedPublication ?? recipeTin;
+      setPublicationId(fallback?.id ?? '');
+      setQuery(fallback ? publicationLabel(fallback) : 'Recipe Tin');
     }
   }
 
@@ -135,7 +137,9 @@ export function PublicationPicker({
         onBlur={(event) => {
           if (!containerRef.current?.contains(event.relatedTarget as Node)) {
             setIsOpen(false);
-            setQuery(selectedPublication ? publicationLabel(selectedPublication) : 'Recipe Tin');
+            const fallback = selectedPublication ?? recipeTin;
+            setPublicationId(fallback?.id ?? '');
+            setQuery(fallback ? publicationLabel(fallback) : 'Recipe Tin');
           }
         }}
       >
@@ -181,26 +185,12 @@ export function PublicationPicker({
             id="publication-options"
             role="listbox"
           >
-            {showRecipeTin && (
-              <button
-                aria-selected={!publicationId}
-                className="publication-picker-option"
-                id="publication-option-0"
-                role="option"
-                type="button"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectPublication(null)}
-              >
-                Recipe Tin
-              </button>
-            )}
             {filteredOptions.map((publication, index) => {
-              const optionIndex = index + (showRecipeTin ? 1 : 0);
               return (
                 <button
                   aria-selected={publication.id === publicationId}
                   className="publication-picker-option"
-                  id={`publication-option-${optionIndex}`}
+                  id={`publication-option-${index}`}
                   key={publication.id}
                   role="option"
                   type="button"
@@ -209,11 +199,13 @@ export function PublicationPicker({
                 >
                   <span>{publicationLabel(publication)}</span>
                   <small>
-                    {publication.publication_type === 'magazine'
-                      ? 'Magazine'
-                      : publication.publication_type === 'site'
-                        ? 'Site'
-                        : 'Book'}
+                    {publication.publication_type === 'collection'
+                      ? 'Recipe Tin'
+                      : publication.publication_type === 'magazine'
+                        ? 'Magazine'
+                        : publication.publication_type === 'site'
+                          ? 'Site'
+                          : 'Book'}
                   </small>
                 </button>
               );
@@ -222,7 +214,7 @@ export function PublicationPicker({
               <button
                 aria-selected={false}
                 className="publication-picker-option publication-picker-create-option"
-                id={`publication-option-${filteredOptions.length + (showRecipeTin ? 1 : 0)}`}
+                id={`publication-option-${filteredOptions.length}`}
                 role="option"
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}

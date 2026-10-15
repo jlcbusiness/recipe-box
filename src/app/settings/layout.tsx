@@ -27,7 +27,6 @@ export default async function SettingsLayout({ children }: { children: React.Rea
       wideContent
       navigation={[
         { href: '/publications', label: 'Library' },
-        { href: '/recipes', label: 'Recipe Tin' },
         { href: '/settings', label: 'Settings', current: true },
         ...(account.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}

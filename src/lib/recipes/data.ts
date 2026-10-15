@@ -5,7 +5,7 @@ import type { TagColorKey } from './tag-colors';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
 
-export type PublicationType = 'book' | 'magazine' | 'site';
+export type PublicationType = 'book' | 'magazine' | 'site' | 'collection';
 
 export type PublicationOption = {
   id: string;
@@ -120,7 +120,7 @@ type RecipeMeasurementRecord = Omit<RecipeMeasurement, 'picklist_value'> & {
 export type RecipeRecord = {
   id: string;
   name: string;
-  publication_id: string | null;
+  publication_id: string;
   publication_page: string | null;
   recipe_url: string | null;
   publication: PublicationOption | null;
@@ -186,7 +186,11 @@ export async function getPublications(
     throw new Error('Unable to load publications.');
   }
 
-  return (data ?? []) as PublicationOption[];
+  return ((data ?? []) as PublicationOption[]).sort(
+    (left, right) =>
+      Number(right.publication_type === 'collection') -
+        Number(left.publication_type === 'collection') || left.name.localeCompare(right.name),
+  );
 }
 
 export async function getRecipePicklists(
@@ -498,6 +502,210 @@ export async function getRecipe(
         : false,
     })),
   } as RecipeRecord;
+}
+
+export async function getRecipeExplorerColumnValues(
+  supabase: RecipeSupabaseClient,
+  recipeIds: string[],
+): Promise<Map<string, Record<string, string | null>>> {
+  if (recipeIds.length === 0) return new Map();
+
+  const [
+    recipesResult,
+    ingredientsResult,
+    assignmentsResult,
+    tagsResult,
+    pairingsResult,
+    citationsResult,
+  ] = await Promise.all([
+    supabase
+      .from('recipes')
+      .select(
+        'id, publication_id, publication_page, recipe_url, state, food_type_id, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, created_at, updated_at',
+      )
+      .in('id', recipeIds),
+    supabase
+      .from('recipe_ingredients')
+      .select('recipe_id, ingredient_id, position, is_main')
+      .in('recipe_id', recipeIds)
+      .eq('is_main', true)
+      .order('position'),
+    supabase
+      .from('recipe_picklist_assignments')
+      .select('recipe_id, category, picklist_value_id')
+      .in('recipe_id', recipeIds),
+    supabase.from('recipe_tags').select('recipe_id, tag_id').in('recipe_id', recipeIds),
+    supabase
+      .from('recipe_pairings')
+      .select('source_recipe_id, display_text, position')
+      .in('source_recipe_id', recipeIds)
+      .order('position'),
+    supabase
+      .from('recipe_references')
+      .select('recipe_id, display_text, position')
+      .in('recipe_id', recipeIds)
+      .eq('reference_type', 'printed_citation')
+      .order('position'),
+  ]);
+
+  if (
+    recipesResult.error ||
+    ingredientsResult.error ||
+    assignmentsResult.error ||
+    tagsResult.error ||
+    pairingsResult.error ||
+    citationsResult.error
+  ) {
+    throw new Error('Unable to load recipe list details.');
+  }
+
+  const mainIngredients = ingredientsResult.data ?? [];
+  const tagAssignments = tagsResult.data ?? [];
+  const ingredientIds = [...new Set(mainIngredients.map(({ ingredient_id }) => ingredient_id))];
+  const tagIds = [...new Set(tagAssignments.map(({ tag_id }) => tag_id))];
+  const publicationIds = [
+    ...new Set(
+      recipesResult.data
+        ?.map(({ publication_id }) => publication_id)
+        .filter((id): id is string => id !== null) ?? [],
+    ),
+  ];
+  const [ingredientNamesResult, tagNamesResult, publicationNamesResult] = await Promise.all([
+    ingredientIds.length
+      ? supabase.from('ingredients').select('id, name').in('id', ingredientIds)
+      : Promise.resolve({ data: [], error: null }),
+    tagIds.length
+      ? supabase.from('tags').select('id, name').in('id', tagIds)
+      : Promise.resolve({ data: [], error: null }),
+    publicationIds.length
+      ? supabase.from('publications').select('id, name').in('id', publicationIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (ingredientNamesResult.error || tagNamesResult.error || publicationNamesResult.error) {
+    throw new Error('Unable to load recipe list details.');
+  }
+
+  const ingredientNameById = new Map(
+    (ingredientNamesResult.data ?? []).map(({ id, name }) => [id, name]),
+  );
+  const tagNameById = new Map((tagNamesResult.data ?? []).map(({ id, name }) => [id, name]));
+  const publicationNameById = new Map(
+    (publicationNamesResult.data ?? []).map(({ id, name }) => [id, name]),
+  );
+  const recipes = recipesResult.data ?? [];
+  const picklistIds = [
+    ...new Set([
+      ...(assignmentsResult.data ?? []).map(({ picklist_value_id }) => picklist_value_id),
+      ...recipes
+        .flatMap(({ food_type_id, verdict_id, enthusiasm_id }) => [
+          food_type_id,
+          verdict_id,
+          enthusiasm_id,
+        ])
+        .filter((id): id is string => id !== null),
+    ]),
+  ];
+  const picklistsResult = picklistIds.length
+    ? await supabase
+        .from('recipe_picklist_values')
+        .select('id, display_value')
+        .in('id', picklistIds)
+    : { data: [], error: null };
+  if (picklistsResult.error) {
+    throw new Error('Unable to load recipe list details.');
+  }
+  const picklistById = new Map(
+    (picklistsResult.data ?? []).map(({ id, display_value }) => [id, display_value]),
+  );
+  const assignmentsByRecipe = new Map<string, Map<string, string[]>>();
+  for (const assignment of assignmentsResult.data ?? []) {
+    const categories = assignmentsByRecipe.get(assignment.recipe_id) ?? new Map();
+    const values = categories.get(assignment.category) ?? [];
+    const label = picklistById.get(assignment.picklist_value_id);
+    if (label) values.push(label);
+    categories.set(assignment.category, values);
+    assignmentsByRecipe.set(assignment.recipe_id, categories);
+  }
+
+  const ingredientsByRecipe = new Map<string, string[]>();
+  for (const ingredient of mainIngredients) {
+    const values = ingredientsByRecipe.get(ingredient.recipe_id) ?? [];
+    const name = ingredientNameById.get(ingredient.ingredient_id);
+    if (name) values.push(name);
+    ingredientsByRecipe.set(ingredient.recipe_id, values);
+  }
+  const tagsByRecipe = new Map<string, string[]>();
+  for (const assignment of tagAssignments) {
+    const values = tagsByRecipe.get(assignment.recipe_id) ?? [];
+    const name = tagNameById.get(assignment.tag_id);
+    if (name) values.push(name);
+    tagsByRecipe.set(assignment.recipe_id, values);
+  }
+  const pairingsByRecipe = new Map<string, string[]>();
+  for (const pairing of pairingsResult.data ?? []) {
+    const values = pairingsByRecipe.get(pairing.source_recipe_id) ?? [];
+    values.push(pairing.display_text);
+    pairingsByRecipe.set(pairing.source_recipe_id, values);
+  }
+  const citationsByRecipe = new Map<string, string[]>();
+  for (const citation of citationsResult.data ?? []) {
+    const values = citationsByRecipe.get(citation.recipe_id) ?? [];
+    values.push(citation.display_text);
+    citationsByRecipe.set(citation.recipe_id, values);
+  }
+
+  const optionalValue = (value: number | null) => (value === null ? null : String(value));
+  return new Map(
+    recipes.map((recipe) => {
+      const assignments = assignmentsByRecipe.get(recipe.id);
+      const enthusiasm = recipe.enthusiasm_id
+        ? (picklistById.get(recipe.enthusiasm_id) ?? null)
+        : null;
+      const verdict = recipe.verdict_id ? (picklistById.get(recipe.verdict_id) ?? null) : null;
+      const opinion =
+        recipe.state === 'want_to_try'
+          ? enthusiasm
+          : recipe.state === 'tried'
+            ? verdict
+            : recipe.reason;
+      const values: Record<string, string | null> = {
+        publication: recipe.publication_id
+          ? (publicationNameById.get(recipe.publication_id) ?? null)
+          : null,
+        publication_page: recipe.publication_page,
+        recipe_url: recipe.recipe_url,
+        citation: citationsByRecipe.get(recipe.id)?.join(', ') ?? null,
+        state: recipeStateLabels[recipe.state as RecipeState],
+        enthusiasm,
+        verdict,
+        reason: recipe.reason,
+        occasion_details: recipe.occasion_details,
+        serves: optionalValue(recipe.serves),
+        equipment: assignments?.get('equipment')?.join(', ') ?? null,
+        food_type: recipe.food_type_id ? (picklistById.get(recipe.food_type_id) ?? null) : null,
+        meal_type: assignments?.get('meal_type')?.join(', ') ?? null,
+        cuisine: assignments?.get('cuisine')?.join(', ') ?? null,
+        tags: tagsByRecipe.get(recipe.id)?.join(', ') ?? null,
+        main_ingredients: ingredientsByRecipe.get(recipe.id)?.join(', ') ?? null,
+        prep_time_minutes: optionalValue(recipe.prep_time_minutes),
+        mixing_time_minutes: optionalValue(recipe.mixing_time_minutes),
+        marinate_time_minutes: optionalValue(recipe.marinate_time_minutes),
+        chill_time_minutes: optionalValue(recipe.chill_time_minutes),
+        freeze_time_minutes: optionalValue(recipe.freeze_time_minutes),
+        cook_time_minutes: optionalValue(recipe.cook_time_minutes),
+        bake_time_minutes: optionalValue(recipe.bake_time_minutes),
+        cooling_time_minutes: optionalValue(recipe.cooling_time_minutes),
+        rest_time_minutes: optionalValue(recipe.rest_time_minutes),
+        total_time_minutes: optionalValue(recipe.total_time_minutes),
+        created_at: recipe.created_at,
+        updated_at: recipe.updated_at,
+        pairs_with: pairingsByRecipe.get(recipe.id)?.join(', ') ?? null,
+        opinion,
+      };
+      return [recipe.id, values];
+    }),
+  );
 }
 
 export async function getTrashedRecipes(

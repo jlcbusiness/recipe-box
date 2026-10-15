@@ -43,21 +43,21 @@ sections of this reference that the current work needs.
 
 ### 1.1 The Problem Being Solved
 
-- **Azure DevOps Work Items Appeal:** Clean information density, powerful multi-field queries, saved views, and
-  markdown/wiki integration.
+- **Azure DevOps Work Items Appeal:** Clean information density, relational
+  records, and useful multi-field filtering.
 - **Azure DevOps Dealbreaker:** Inability to have multi-value picklists (enums/tags) on work items, plus an awkward
   domain mismatch for cooking data.
 - **Fibery Experience:** Loved the relational database backing, bi-directional linking, and cross-linking between books
   and recipes. Strongly disliked the user experience ("all panes, like Azure Portal instead of Azure DevOps").
 - **Generic Tools Failure:** Notion feels sluggish and unstructured; Jira is rigid and pane-heavy; consumer recipe apps
-  (Paprika, AnyList) lack deep relational modeling, advanced query capabilities, and customizable taxonomies.
+  (Paprika, AnyList) lack deep relational modeling, domain-aware search, and customizable taxonomies.
 
 ### 1.2 Core Architectural Philosophy
 
 - **Dual-Platform Intentionality:** Desktop and mobile are treated as distinct interaction paradigms sharing a common
   data model and business logic, not a desktop site compressed into mobile viewports.
-  - **Desktop:** Keyboard-first, dense work-item detail layout, multi-column editing, advanced query builder, and a
-    compact source Library.
+  - **Desktop:** Keyboard-first, dense detail layout, multi-column editing,
+    quick recipe filters, and a compact source Library.
   - **Mobile:** Touch-first, quick capture/editing, fast search, kitchen-friendly cooking layout (large checkboxes, bold
     quantities, prominent scaling).
 - **Relational Integrity:** Strong foreign keys and database constraints rather than loose no-code schemas.
@@ -76,7 +76,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | Field Name | Type | Options / Formats | Behavior & Visibility |
 | ---------- | ---- | ----------------- | --------------------- |
 | **Name** | Text | Free text | Primary recipe title. |
-| **Primary Publication** | Single-select picker | Searchable list of all user publications + "Add new publication" button | Clickable in view mode; navigates directly to the publication page. Unparented recipes display as belonging to the "Recipe Tin". |
+| **Primary Publication** | Single-select picker | Searchable list of all user publications, including the reserved Recipe Tin collection, + "Add new publication" button | Clickable in view mode; navigates directly to the publication page. Every recipe belongs to a publication; Recipe Tin is the default collection and has no location fields. |
 | **Location** | Text / URL | Book page or range; free-text Magazine citation; website recipe URL | A Magazine citation is free text because citation styles vary. Its optional online recipe URL is a separate field and may coexist with the citation. |
 | **Food Type** | Single-select picklist | Casserole, roast, pie, galette, pasta, soup, sauce, cake, cocktail, bread, stew, salad, etc. | "What kind of dish is this?" Settings-managed picklist; use a compact custom dropdown aligned with the other picklist triggers. |
 | **Meal Type** | Multi-select picklist | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc. | "When or how do I serve this?" Settings-managed multi-select dropdown. Multiple values are toggled with buttons; selected values show a checkmark, leaf-green text, and a pale green background. |
@@ -533,6 +533,7 @@ omitted.
 | **Book** | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
 | **Magazine** | Magazine title and optional cover image | Per-recipe issue, volume, edition/date, and optional page citation | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit. |
 | **Website** | Site Display Name, Site Root URL, Site Logo/Favicon (optional) | Full recipe URL | Minimalist site icon / badge. |
+| **Collection** | Reserved Recipe Tin, one per account | None | Mirrored transparent tin image; cannot be created, edited, or deleted by the account owner. |
 
 ### 6.2 Magazine Titles, Recipe Locations, and Online URLs
 
@@ -594,19 +595,28 @@ cover association. Cover management remains a separate interaction in the edit
 pane. The authenticated client has no direct table-update grant; edits go
 through the owner-scoped update function.
 
-### 6.4 The Recipe Tin (Unparented Recipes)
+### 6.4 The Recipe Tin Collection
 
-- **Concept and Identity:** The Recipe Tin is the permanent, unparented container for recipes with no originating
-  publication (family recipes, original experiments, clippings, recipes adapted from multiple sources).
+- **Concept and Identity:** The Recipe Tin is a permanent, system-managed
+  collection publication reserved for recipes without an external publication
+  source (family recipes, original experiments, clippings, recipes adapted from
+  multiple sources). Each account has exactly one Tin, displayed before other
+  matching Library entries regardless of sort direction.
+- **Library Behavior:** Normal search and filters apply. A type or field filter
+  can exclude the Tin; selecting Collection shows it. Its static cover uses
+  the mirrored transparent `public/images/recipe-tin.webp` asset. The former
+  `/recipes` destination redirects to the Tin's Library detail page.
 - **Physical Metaphor:** A vintage metal tin box with a hinged lid, containing dog-eared 3x5 index cards and handwritten
   scraps of paper.
 - **Visual Design:**
-  - The Recipe Tin container displays a distinctive vintage tin graphic.
+  - Recipe detail attribution says `In the Recipe Tin`; the Tin is a container,
+    not a recipe source.
   - Recipes belonging to the Recipe Tin are rendered with a subtle, textured **ragged/deckled paper border background**
     instead of standard clean rounded cards.
   - Normal publication cards remain crisp, clean, and restrained.
-- **Mobility:** Any recipe in the Recipe Tin can later be assigned to a publication, and any publication recipe can be
-  unparented into the Recipe Tin.
+- **Mobility:** Tin recipes can later be assigned to another publication, and
+  publication recipes can be moved into the Tin. Tin recipes cannot have a
+  page or recipe URL location.
 
 ### 6.5 Deletion Rules for Publications
 
@@ -615,8 +625,8 @@ the dialog requires one of three dispositions:
 
 1. **Delete all recipes inside:** moves active recipes to Trash with the
   publication.
-2. **Move recipes to the Recipe Tin:** clears publication assignment and applies
-  Recipe Tin styling.
+2. **Move recipes to the Recipe Tin:** assigns the account's permanent Tin
+  publication and clears publication location fields.
 3. **Move recipes to another publication:** prompts for a destination.
 
 When a publication has no active recipes, the confirmation remains but the
@@ -647,23 +657,27 @@ assignment and location while it is in Trash.
 
 ## 7. Queries, Search, and Library Explorer
 
-### 7.1 Azure DevOps-Style Query Engine
+### 7.1 Recipe and Publication Search and Filters
 
-The query engine provides high-density, flexible querying across recipes and publications:
+Recipe and publication discovery is optimized for quick, occasional lookup:
 
-- **Field Selectors:** Query by any metadata field, tag, ingredient, equipment, time, verdict, enthusiasm, publication,
-  or date. Tags are first-class searchable and filterable fields for both recipes and publications.
-- **Typed Operators:**
-  - Text: `Contains`, `Does Not Contain`, `Equals`, `Starts With`, `Is Empty`, `Is Not Empty`.
-  - Multi-select picklists: `Contains Any`, `Contains All`, `Does Not Contain`.
-  - Numbers / Times / Dates: `=`, `!=`, `>`, `<`, `>=`, `<=`, `Between`.
-  - State / Enums: `In`, `Not In`.
-- **Clause Grouping:** Compound boolean logic with `AND` / `OR` operators and bracketed sub-clauses.
-- **Explorer State And Saved Queries:** Each explorer restores its owner's
-  last-used filters, sort key, sort direction, and List/Grid choice. A valid
-  shareable URL takes precedence over remembered state. Named and pinned saved
-  queries arrive with nested queries; they add persisted column visibility,
-  column width, and reusable query lifecycle.
+- **Full-text search and straightforward filters:** Search the indexed text
+  described in § 7.2 and narrow results with field-appropriate filters. Text,
+  multi-select, number/time/date, and enum fields expose only their applicable
+  operators, including blank checks where supported. Multiple filters combine
+  with `AND`; nested `AND`/`OR` query groups and named-query lifecycle are
+  deferred.
+- **Last-used explorer state:** Each explorer restores its owner's last-used
+  filters, sort key, sort direction, and List/Grid choice. A valid shareable
+  URL takes precedence over remembered search state. Publication recipe scope
+  remains fixed by its route.
+- **List display preferences:** Each account can choose visible List columns
+  and resize desktop column widths independently in Find, Library, and each
+  publication recipe explorer. A small settings icon opens the column chooser.
+  These preferences belong to the exact explorer context, not a saved view or
+  search URL. Column visibility applies immediately; widths are adjusted by
+  pointer or touch dragging. Resizing has no keyboard equivalent by explicit
+  product choice; all other explorer controls remain keyboard-operable.
 
 ### 7.2 Full-Text Search
 
@@ -1167,7 +1181,8 @@ The following features were discussed and intentionally set aside for post-v1 re
 - Automated web recipe URL scrapers
 - Ingredient alias mapping (e.g., `bell pepper` $\leftrightarrow$ `capsicum`)
 - Formal allergen and dietary restriction tags/warnings
-- Cooking attempt logs, star ratings over time, and cook history
+- Simple star ratings, a separate favorites/bookmark list, cooking attempt logs,
+  star ratings over time, and cook history
 - Multi-user household collaboration and role permissions
 - Native mobile applications (Expo / React Native)
 - Historical version rollback/restoration engine

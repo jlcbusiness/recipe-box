@@ -1,16 +1,20 @@
+import { Plus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   createExplorerState,
+  defaultExplorerDisplayPreferences,
+  getExplorerColumns,
   hasPersistedExplorerUrlState,
   serializeExplorerState,
 } from '../../../lib/explorer-state';
-import { getExplorerState } from '../../../lib/explorer-state-data';
+import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
-import { getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
+import { getRecipeExplorerColumnValues, recipeStateLabels } from '../../../lib/recipes/data';
 import {
   getRecipeSearchFacetValues,
+  getRecipeSearchSortOptions,
   parseRecipeSearchColumnFilters,
   type RecipeSearchColumnSelections,
   type RecipeSearchFacetOption,
@@ -18,26 +22,27 @@ import {
   searchRecipes,
 } from '../../../lib/recipes/search';
 import { createClient } from '../../../lib/supabase/server';
+import {
+  ExplorerColumnResizeHandle,
+  ExplorerListPreferences,
+} from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
 import { AlternatingRecipeGrid } from '../../recipes/find/alternating-recipe-grid';
 import { RecipeColumnFilter } from '../../recipes/find/recipe-column-filter';
 import { RecipeSearchToolbar } from '../../recipes/find/recipe-search-toolbar';
 
 const pageSize = 50;
-const sortOptions: { value: RecipeSearchSortKey; label: string }[] = [
-  { value: 'relevance', label: 'Relevance' },
-  { value: 'name', label: 'Name' },
-  { value: 'state', label: 'State' },
-  { value: 'total_time_minutes', label: 'Total Time' },
-  { value: 'created_at', label: 'Date Added' },
-  { value: 'updated_at', label: 'Date Changed' },
-];
-const viewOptions = [
+const dateFormatter = new Intl.DateTimeFormat('en', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+  year: 'numeric',
+});
+const recipeViewOptions = [
   { value: 'details', label: 'Details' },
   { value: 'list', label: 'List' },
   { value: 'grid', label: 'Grid' },
 ] as const;
-
 type RecipeExplorerSearchParams = {
   sort?: string;
   direction?: string;
@@ -49,6 +54,9 @@ type RecipeExplorerSearchParams = {
   column_opinion?: string | string[];
   column_meal_type?: string | string[];
   column_food_type?: string | string[];
+  column_publication_page?: string | string[];
+  column_recipe_url?: string | string[];
+  column_citation?: string | string[];
   column_publication_source?: string | string[];
 };
 
@@ -95,29 +103,54 @@ export async function PublicationRecipeExplorer({
     1,
     Math.min(20_001, Number.parseInt(searchParams.page ?? '1', 10) || 1),
   );
-  const sortKey = sortOptions.some(({ value }) => value === searchParams.sort)
-    ? (searchParams.sort as RecipeSearchSortKey)
-    : 'name';
   const sortDirection = searchParams.direction === 'desc' ? 'desc' : 'asc';
   const view =
     searchParams.view === 'grid' ? 'grid' : searchParams.view === 'list' ? 'list' : 'details';
   const supabase = await createClient();
   const path = `/publications/${publicationId}`;
   const context = `publication-recipes:${publicationId}` as const;
+  const [rememberedState, recipeColumnSettings] = await Promise.all([
+    getExplorerState(supabase, context),
+    getRecipeColumnSettings(supabase),
+  ]);
+  const recipeColumns = getExplorerColumns(
+    context,
+    recipeColumnSettings.order,
+    recipeColumnSettings.hiddenColumns,
+  );
   if (!hasPersistedExplorerUrlState(context, searchParams)) {
-    const rememberedState = await getExplorerState(supabase, context);
     if (rememberedState) {
       redirect(serializeExplorerState(path, rememberedState, true));
     }
   }
-  const [picklists, activeRecipes] = await Promise.all([
-    getRecipePicklists(supabase),
-    supabase
-      .from('recipes')
-      .select('id', { count: 'exact', head: true })
-      .eq('publication_id', publicationId)
-      .is('trashed_at', null),
-  ]);
+  const displayPreferences =
+    rememberedState?.display_preferences ??
+    defaultExplorerDisplayPreferences(context, recipeColumns);
+  const visibleColumnKeys = new Set(displayPreferences.visible_columns);
+  const sortOptions = getRecipeSearchSortOptions(
+    recipeColumns.filter(({ key, required }) => required || visibleColumnKeys.has(key)),
+  );
+  const sortKey = sortOptions.some(({ value }) => value === searchParams.sort)
+    ? (searchParams.sort as RecipeSearchSortKey)
+    : 'name';
+  const toolbar = (
+    <RecipeSearchToolbar
+      columnSelections={columnSelections}
+      direction={sortDirection}
+      filters={[]}
+      options={sortOptions}
+      path={path}
+      query=""
+      sort={sortKey}
+      view={view}
+      viewOptions={[...recipeViewOptions]}
+    />
+  );
+  const activeRecipes = await supabase
+    .from('recipes')
+    .select('id', { count: 'exact', head: true })
+    .eq('publication_id', publicationId)
+    .is('trashed_at', null);
 
   if (activeRecipes.error) {
     throw new Error('Unable to load publication recipes.');
@@ -155,28 +188,12 @@ export async function PublicationRecipeExplorer({
   }
 
   const recipeIds = recipes.map(({ recipe_id }) => recipe_id);
-  const [recipeDetailsResult, assignmentsResult, recipePhotos] = await Promise.all([
-    recipeIds.length
-      ? supabase
-          .from('recipes')
-          .select(
-            'id, publication_page, recipe_url, food_type_id, verdict_id, enthusiasm_id, reason',
-          )
-          .in('id', recipeIds)
-      : Promise.resolve({ data: [], error: null }),
-    recipeIds.length
-      ? supabase
-          .from('recipe_picklist_assignments')
-          .select('recipe_id, picklist_value_id')
-          .in('recipe_id', recipeIds)
-          .eq('category', 'meal_type')
-      : Promise.resolve({ data: [], error: null }),
+  const [recipeColumnValues, recipePhotos] = await Promise.all([
+    view === 'details'
+      ? getRecipeExplorerColumnValues(supabase, recipeIds)
+      : Promise.resolve(new Map<string, Record<string, string | null>>()),
     view === 'grid' ? getPrimaryRecipePhotos(supabase, recipeIds) : Promise.resolve(new Map()),
   ]);
-
-  if (recipeDetailsResult.error || assignmentsResult.error) {
-    throw new Error('Unable to load publication recipe details.');
-  }
 
   const facetFields = [
     ['name', 'name'],
@@ -185,7 +202,9 @@ export async function PublicationRecipeExplorer({
     ['opinion', 'opinion'],
     ['meal_type', 'meal_type'],
     ['food_type', 'food_type'],
-    ['publication_source', 'publication_source'],
+    ['publication_page', 'publication_page'],
+    ['recipe_url', 'recipe_url'],
+    ['citation', 'citation'],
   ] as const;
   const columnFacetEntries = await Promise.all(
     facetFields.map(
@@ -209,26 +228,12 @@ export async function PublicationRecipeExplorer({
     | 'opinion'
     | 'meal_type'
     | 'food_type'
-    | 'publication_source',
+    | 'publication_page'
+    | 'recipe_url'
+    | 'citation',
     RecipeSearchFacetOption[]
   >;
 
-  const picklistById = new Map(picklists.map(({ id, display_value }) => [id, display_value]));
-  const foodTypeById = new Map(
-    picklists
-      .filter(({ category }) => category === 'food_type')
-      .map(({ id, display_value }) => [id, display_value]),
-  );
-  const assignmentsByRecipe = new Map<string, string[]>();
-  for (const assignment of assignmentsResult.data ?? []) {
-    const values = assignmentsByRecipe.get(assignment.recipe_id) ?? [];
-    const value = picklistById.get(assignment.picklist_value_id);
-    if (value) values.push(value);
-    assignmentsByRecipe.set(assignment.recipe_id, values);
-  }
-  const recipeDetails = new Map(
-    (recipeDetailsResult.data ?? []).map((recipe) => [recipe.id, recipe]),
-  );
   const countLabel = `${matchingCount} ${matchingCount === 1 ? 'recipe' : 'recipes'} found`;
   const columnFilter = (field: keyof typeof columnFacetOptions) => (
     <RecipeColumnFilter
@@ -244,6 +249,8 @@ export async function PublicationRecipeExplorer({
       view={view}
     />
   );
+  const isFilterColumn = (key: string): key is keyof typeof columnFacetOptions =>
+    key in columnFacetOptions;
   const resultsHref = (nextPage: number) =>
     searchHref({
       path,
@@ -254,6 +261,9 @@ export async function PublicationRecipeExplorer({
       view,
     });
   const explorerState = createExplorerState(context, {
+    ...(rememberedState?.display_preferences
+      ? { schema_version: 2, display_preferences: rememberedState.display_preferences }
+      : {}),
     column_filters: Object.fromEntries(
       Object.entries(columnSelections).filter(([, selections]) => selections !== undefined),
     ),
@@ -266,169 +276,176 @@ export async function PublicationRecipeExplorer({
   return (
     <section aria-label="Publication recipes" className="publication-recipe-explorer">
       {explorerState && <ExplorerStatePersistence context={context} state={explorerState} />}
-      <RecipeSearchToolbar
-        columnSelections={columnSelections}
-        direction={sortDirection}
-        filters={[]}
-        options={sortOptions}
-        path={path}
-        query=""
-        sort={sortKey}
-        view={view}
-        viewOptions={[...viewOptions]}
-      />
-
-      <p className="find-recipes-count" role="status">
-        {countLabel}
-      </p>
-
-      {view === 'details' && (
-        <nav aria-label="Filter publication recipe columns" className="find-recipes-mobile-filters">
-          {(
-            [
-              'name',
-              'state',
-              'opinion',
-              'meal_type',
-              'food_type',
-              'total_time_minutes',
-              'publication_source',
-            ] as const
-          ).map((field) => (
-            <span key={field}>{columnFilter(field)}</span>
-          ))}
-        </nav>
-      )}
-
-      {matchingCount === 0 ? (
-        <p className="recipe-empty-state">
-          {activeRecipes.count === 0
-            ? 'No recipes in this publication yet. '
-            : 'No recipes match these column filters.'}
-          {activeRecipes.count === 0 && (
-            <Link className="publication-empty-link" href="/publications">
-              Back to Library
-            </Link>
-          )}
+      <ExplorerListPreferences
+        columnDefinitions={recipeColumns}
+        context={context}
+        initialPreferences={displayPreferences}
+        showControl={view === 'details'}
+        state={
+          explorerState ?? {
+            schema_version: 1,
+            filters: [],
+            sort: sortKey,
+            direction: sortDirection,
+            view,
+          }
+        }
+        toolbar={toolbar}
+        toolbarAction={
+          <Link
+            aria-label="Add Recipe"
+            className="recipe-secondary-link collection-add-action publication-mobile-add"
+            href={`/recipes/new?publication=${publicationId}`}
+            title="Add Recipe"
+          >
+            <Plus aria-hidden="true" size={16} />
+            <span>Add</span>
+          </Link>
+        }
+      >
+        <p className="find-recipes-count" role="status">
+          {countLabel}
         </p>
-      ) : view === 'details' ? (
-        <div className="recipe-list-scroll publication-recipe-scroll">
-          <table className="recipe-list publication-recipe-list">
-            <thead>
-              <tr>
-                <th scope="col">{columnFilter('name')}</th>
-                <th scope="col">{columnFilter('state')}</th>
-                <th scope="col">{columnFilter('opinion')}</th>
-                <th scope="col">{columnFilter('meal_type')}</th>
-                <th scope="col">{columnFilter('food_type')}</th>
-                <th scope="col">{columnFilter('total_time_minutes')}</th>
-                <th scope="col">{columnFilter('publication_source')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recipes.map((recipe) => {
-                const details = recipeDetails.get(recipe.recipe_id);
-                const opinion =
-                  recipe.state === 'want_to_try'
-                    ? (picklistById.get(details?.enthusiasm_id ?? '') ?? '—')
-                    : recipe.state === 'tried'
-                      ? (picklistById.get(details?.verdict_id ?? '') ?? '—')
-                      : details?.reason || '—';
-                const recipeUrl = details?.recipe_url ?? null;
-                let recipeUrlHost = recipeUrl;
-                if (recipeUrl) {
-                  try {
-                    recipeUrlHost = new URL(recipeUrl).host.replace(/^www\./i, '');
-                  } catch {
-                    recipeUrlHost = recipeUrl;
-                  }
-                }
-                return (
-                  <tr key={recipe.recipe_id}>
-                    <td data-label="Name">
-                      <Link href={`/recipes/${recipe.recipe_id}`}>{recipe.recipe_name}</Link>
-                    </td>
-                    <td data-label="State">{recipeStateLabels[recipe.state]}</td>
-                    <td data-label="Opinion">{opinion}</td>
-                    <td data-label="Meal Type">
-                      {(assignmentsByRecipe.get(recipe.recipe_id) ?? []).join(', ') || '—'}
-                    </td>
-                    <td data-label="Food Type">
-                      {details?.food_type_id
-                        ? (foodTypeById.get(details.food_type_id) ?? '—')
-                        : '—'}
-                    </td>
-                    <td data-label="Time">
-                      {recipe.total_time_minutes === null
-                        ? '—'
-                        : `${recipe.total_time_minutes} min`}
-                    </td>
-                    <td data-label="Page or URL">
-                      {details?.publication_page ??
-                        (recipeUrl ? (
-                          <a className="publication-recipe-url-link" href={recipeUrl}>
-                            <span className="publication-recipe-url-host">{recipeUrlHost}</span>
-                            <span className="publication-recipe-url-full">{recipeUrl}</span>
-                          </a>
-                        ) : (
-                          '—'
-                        ))}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : view === 'list' ? (
-        <ul className="publication-recipe-simple-list">
-          {recipes.map((recipe) => (
-            <li key={recipe.recipe_id}>
-              <Link href={`/recipes/${recipe.recipe_id}`}>{recipe.recipe_name}</Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <AlternatingRecipeGrid>
-          {recipes.map((recipe) => {
-            const photo = recipePhotos.get(recipe.recipe_id);
-            return (
-              <li key={recipe.recipe_id}>
-                <Link href={`/recipes/${recipe.recipe_id}`}>
-                  {photo && (
-                    <Image
-                      alt={photo.description || `Photo of ${recipe.recipe_name}`}
-                      className="find-recipes-card-image"
-                      height={photo.height}
-                      src={photo.thumbnail_url}
-                      unoptimized
-                      width={photo.width}
-                    />
-                  )}
-                  <strong>{recipe.recipe_name}</strong>
-                  <span className="find-recipes-grid-metadata">
-                    {recipeStateLabels[recipe.state]}
-                    <span aria-hidden="true"> ~ </span>
-                    {recipe.total_time_minutes === null
-                      ? 'No total time'
-                      : `${recipe.total_time_minutes} min`}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </AlternatingRecipeGrid>
-      )}
 
-      {pageCount > 1 && (
-        <nav aria-label="Publication recipe pages" className="find-recipes-pagination">
-          {page > 1 && <Link href={resultsHref(page - 1)}>Previous</Link>}
-          <span aria-current="page">
-            Page {page} of {pageCount}
-          </span>
-          {page < pageCount && <Link href={resultsHref(page + 1)}>Next</Link>}
-        </nav>
-      )}
+        {view === 'details' && (
+          <nav
+            aria-label="Filter publication recipe columns"
+            className="find-recipes-mobile-filters"
+          >
+            {(
+              [
+                'name',
+                'state',
+                'opinion',
+                'meal_type',
+                'food_type',
+                'total_time_minutes',
+                'publication_page',
+                'recipe_url',
+                'citation',
+              ] as const
+            ).map((field) => (
+              <span data-explorer-column={field} key={field}>
+                {columnFilter(field)}
+              </span>
+            ))}
+          </nav>
+        )}
+
+        {matchingCount === 0 ? (
+          <p className="recipe-empty-state">
+            {activeRecipes.count === 0
+              ? 'No recipes in this publication yet. '
+              : 'No recipes match these column filters.'}
+            {activeRecipes.count === 0 && (
+              <Link className="publication-empty-link" href="/publications">
+                Back to Library
+              </Link>
+            )}
+          </p>
+        ) : view === 'details' ? (
+          <div className="recipe-list-scroll publication-recipe-scroll">
+            <table className="recipe-list publication-recipe-list">
+              <thead>
+                <tr>
+                  {recipeColumns.map(({ key, label }) => (
+                    <th data-explorer-column={key} key={key} scope="col">
+                      {isFilterColumn(key) ? columnFilter(key) : label}
+                      <ExplorerColumnResizeHandle column={key} />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {recipes.map((recipe) => {
+                  const details = recipeColumnValues.get(recipe.recipe_id);
+                  return (
+                    <tr key={recipe.recipe_id}>
+                      {recipeColumns.map(({ key, label }) => {
+                        let value = details?.[key] ?? null;
+                        if (key === 'name') value = recipe.recipe_name;
+                        if (key === 'state') value = recipeStateLabels[recipe.state];
+                        if (key === 'created_at' || key === 'updated_at') {
+                          value = value ? dateFormatter.format(new Date(value)) : null;
+                        } else if (key.endsWith('_time_minutes')) {
+                          value = value ? `${value} min` : null;
+                        }
+
+                        return (
+                          <td data-explorer-column={key} data-label={label} key={key}>
+                            {key === 'name' ? (
+                              <Link href={`/recipes/${recipe.recipe_id}`}>
+                                {recipe.recipe_name}
+                              </Link>
+                            ) : key === 'recipe_url' && value ? (
+                              <a className="publication-recipe-url-link" href={value}>
+                                <span className="publication-recipe-url-host">
+                                  {new URL(value).hostname.replace(/^www\./i, '')}
+                                </span>
+                                <span className="publication-recipe-url-full">{value}</span>
+                              </a>
+                            ) : (
+                              value || '—'
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : view === 'list' ? (
+          <ul className="publication-recipe-simple-list">
+            {recipes.map((recipe) => (
+              <li key={recipe.recipe_id}>
+                <Link href={`/recipes/${recipe.recipe_id}`}>{recipe.recipe_name}</Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <AlternatingRecipeGrid>
+            {recipes.map((recipe) => {
+              const photo = recipePhotos.get(recipe.recipe_id);
+              return (
+                <li key={recipe.recipe_id}>
+                  <Link href={`/recipes/${recipe.recipe_id}`}>
+                    {photo && (
+                      <Image
+                        alt={photo.description || `Photo of ${recipe.recipe_name}`}
+                        className="find-recipes-card-image"
+                        height={photo.height}
+                        src={photo.thumbnail_url}
+                        unoptimized
+                        width={photo.width}
+                      />
+                    )}
+                    <strong>{recipe.recipe_name}</strong>
+                    <span className="find-recipes-grid-metadata">
+                      {recipeStateLabels[recipe.state]}
+                      <span aria-hidden="true"> ~ </span>
+                      {recipe.total_time_minutes === null
+                        ? 'No total time'
+                        : `${recipe.total_time_minutes} min`}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </AlternatingRecipeGrid>
+        )}
+
+        {pageCount > 1 && (
+          <nav aria-label="Publication recipe pages" className="find-recipes-pagination">
+            {page > 1 && <Link href={resultsHref(page - 1)}>Previous</Link>}
+            <span aria-current="page">
+              Page {page} of {pageCount}
+            </span>
+            {page < pageCount && <Link href={resultsHref(page + 1)}>Next</Link>}
+          </nav>
+        )}
+      </ExplorerListPreferences>
     </section>
   );
 }

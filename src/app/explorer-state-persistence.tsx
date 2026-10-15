@@ -21,12 +21,20 @@ export function ExplorerStatePersistence({
 
     previousFingerprint.current = fingerprint;
     latestFingerprint.current = fingerprint;
+    const urlState = { ...state, schema_version: 1 as const };
+    delete urlState.display_preferences;
     startTransition(() => {
-      void saveExplorerState(context, state).then((result) => {
-        if (latestFingerprint.current === fingerprint) {
-          setError(result.error ?? null);
-        }
-      });
+      void saveExplorerState(context, urlState)
+        .then((result) => {
+          if (latestFingerprint.current === fingerprint) {
+            setError(result.error ?? null);
+          }
+        })
+        .catch(() => {
+          if (latestFingerprint.current === fingerprint) {
+            setError('Explorer state could not be saved.');
+          }
+        });
     });
   }, [context, fingerprint, state]);
 

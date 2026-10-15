@@ -27,7 +27,7 @@ export default async function NewRecipePage({
     ]);
   const initialPublicationId = publications.some(({ id }) => id === requestedPublicationId)
     ? requestedPublicationId
-    : null;
+    : (publications.find(({ publication_type }) => publication_type === 'collection')?.id ?? null);
 
   return (
     <main className="recipes-main" aria-labelledby="page-title">

@@ -194,9 +194,9 @@ chips with compact spacing rather than being pushed to the far edge; retain this
 action line when the recipe has no tags. Give the line vertical margins
 matching the action spacing. Both controls expose descriptive accessible names
 and tooltips. Their visible buttons are 36px square; on mobile, their hit areas
-expand to 48px without changing their visible size. Do not repeat Recipe Tin as
-a page breadcrumb or attribution when the selected navigation item already
-names the Recipe Tin.
+expand to 48px without changing their visible size. Recipe Tin recipes use the
+attribution `In the Recipe Tin`; the Tin is a Library entry, not a separate
+navigation destination.
 Recipe titles and major detail section headings use 16pt (about 21.33px). The
 mobile Times subsection title is 18px navy small caps. The desktop Recipe Tin
 list content is up to about 1172px wide and the detail metadata area is up to
@@ -214,7 +214,7 @@ preference form. Future settings domains become sections as their features are
 implemented; do not display empty placeholder sections or links.
 The private navigation keeps Settings, Trash, and Account. On desktop, place
 Settings after Trash and before Account in the pinned sidebar. On mobile, show
-icon-only links for Recipe Tin, Library, Trash, and Settings, with Settings
+icon-only links for Library, Find Recipes, Trash, and Settings, with Settings
 after Trash and before the Account control. Give each icon link a descriptive
 accessible name and tooltip.
 
@@ -233,7 +233,7 @@ actions, and compact inline action hit areas retain touch targets of at least
 
 ### Current implementation
 
-Settings appears in the private navigation on Recipe Tin, Library, and
+Settings appears in the private navigation on Library, Find Recipes, and
 Administration routes. The page uses a wide, unframed Personal preferences
 section with labeled Volume, Weight, and View controls from the shared portal
 `Picklist`, without a Units subsection. The controls remain content-sized and
@@ -631,6 +631,29 @@ directly below. In publication Grid, state and total time share one compact
 metadata row so the image, title, and metadata each retain their own layout
 space. Preserve the same result data between List and Grid. On desktop, card
 titles underline on hover or keyboard focus.
+
+## Explorer Columns And Widths (Slice 19)
+
+Find, Library, and publication recipe explorers expose a small settings icon
+button for List-column visibility. Give it the accessible name and tooltip
+“Choose List columns.” Preserve each explorer's current default columns and
+keep Name visible. Visibility changes apply immediately and persist per account
+and exact explorer context; they do not depend on the active search URL or
+change its filters. The chooser remains available when switching to Grid, but
+only affects List presentation.
+
+On table layouts, drag a visible column divider to resize. Show the
+column-resize cursor at the divider and support mouse, pen, and touch pointer
+input. Use a touch hit area centered on the visible divider. Width changes apply
+during the drag and persist when the pointer is released. Bound widths to
+prevent clipped controls or unusably wide columns. Resizing is intentionally
+pointer/touch-only and has no keyboard equivalent; the chooser, search, filters,
+sort, view, and other explorer controls remain keyboard-operable.
+
+On narrow layouts, preserve the existing responsive rows with hidden table
+headers; do not show resize handles or introduce page-level horizontal
+scrolling. A failed preference save leaves the current layout usable and
+announces that the change was not saved.
 
 ## Accessibility And Interaction
 

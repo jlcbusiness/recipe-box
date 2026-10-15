@@ -72,6 +72,61 @@ async function createContractRecipe(
   expect(response.ok(), await response.text()).toBeTruthy();
 }
 
+test('Find Recipes updates mobile metadata when columns are toggled @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: 'Mobile column visibility recipe',
+      state: 'want_to_try',
+      totalTime: 20,
+      notes: '',
+    });
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/recipes$/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/recipes/find?sort=name&direction=asc&page=1&view=details');
+
+    const recipeRow = page
+      .locator('.find-recipes-list tbody tr')
+      .filter({ has: page.getByRole('link', { name: 'Mobile column visibility recipe' }) });
+    const metadata = recipeRow.locator('.find-recipes-mobile-metadata');
+    const stateSegment = metadata.locator('[data-explorer-column="state"]');
+    const stateOption = page.getByRole('checkbox', { name: 'State', exact: true });
+    const totalTimeOption = page.getByRole('checkbox', { name: 'Total Time', exact: true });
+    const columnsButton = page.getByRole('button', { name: 'Choose List columns' });
+
+    await columnsButton.click();
+    await stateOption.check();
+    await totalTimeOption.check();
+    await expect(stateSegment).toBeVisible();
+    await expect
+      .poll(() => metadata.evaluate((element) => (element as HTMLElement).innerText))
+      .toBe('Recipe Tin ~ Want to try ~ 20 min');
+    await stateOption.uncheck();
+    await expect(stateSegment).toBeHidden();
+    await expect
+      .poll(() => metadata.evaluate((element) => (element as HTMLElement).innerText))
+      .toBe('Recipe Tin ~ 20 min');
+    await stateOption.check();
+    await expect(stateSegment).toBeVisible();
+    await expect
+      .poll(() => metadata.evaluate((element) => (element as HTMLElement).innerText))
+      .toBe('Recipe Tin ~ Want to try ~ 20 min');
+    await columnsButton.click();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Find Recipes searches indexed sources and isolates accounts @e2e', async ({
   page,
   request,
@@ -81,93 +136,144 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
   const config = await getLocalSupabaseConfig();
 
   try {
-    const recipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
-      headers: {
-        apikey: config.anonKey,
-        Authorization: `Bearer ${user.accessToken}`,
+    const publicationResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/create_publication`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        data: {
+          p_name: 'Search Source Magazine',
+          p_publication_type: 'magazine',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_issue: null,
+          p_site_url: null,
+        },
       },
-      data: {
-        p_recipe_id: null,
-        p_expected_version: null,
-        p_name: 'Searchable saffron rice',
-        p_food_type_id: null,
-        p_state: 'want_to_try',
-        p_verdict_id: null,
-        p_enthusiasm_id: null,
-        p_occasion_details: null,
-        p_reason: null,
-        p_serves: null,
-        p_prep_time_minutes: null,
-        p_mixing_time_minutes: null,
-        p_marinate_time_minutes: null,
-        p_chill_time_minutes: null,
-        p_freeze_time_minutes: null,
-        p_cook_time_minutes: null,
-        p_bake_time_minutes: null,
-        p_cooling_time_minutes: null,
-        p_rest_time_minutes: null,
-        p_total_time_minutes: 20,
-        p_notes_markdown: 'A distinctive cardamom notesearch marker.',
-        p_meal_type_ids: [],
-        p_cuisine_ids: [],
-        p_equipment_ids: [],
-        p_ingredient_rows: [
-          {
-            recipe_ingredient_id: randomUUID(),
-            ingredient_id: null,
-            ingredient_name: 'Searchable coriander ingredient',
-            is_main: true,
-            detail: 'toasted source marker',
-            preparation: '',
-            measurements: [],
+    );
+    expect(publicationResponse.ok(), await publicationResponse.text()).toBeTruthy();
+    const publicationId = (await publicationResponse.json()) as string;
+
+    const recipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_relationships`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        data: {
+          p_recipe_id: null,
+          p_expected_version: null,
+          p_name: 'Searchable saffron rice',
+          p_food_type_id: null,
+          p_state: 'want_to_try',
+          p_verdict_id: null,
+          p_enthusiasm_id: null,
+          p_occasion_details: null,
+          p_reason: null,
+          p_serves: null,
+          p_prep_time_minutes: null,
+          p_mixing_time_minutes: null,
+          p_marinate_time_minutes: null,
+          p_chill_time_minutes: null,
+          p_freeze_time_minutes: null,
+          p_cook_time_minutes: null,
+          p_bake_time_minutes: null,
+          p_cooling_time_minutes: null,
+          p_rest_time_minutes: null,
+          p_total_time_minutes: 20,
+          p_notes_markdown: 'A distinctive cardamom notesearch marker.',
+          p_meal_type_ids: [],
+          p_cuisine_ids: [],
+          p_equipment_ids: [],
+          p_ingredient_rows: [
+            {
+              recipe_ingredient_id: randomUUID(),
+              ingredient_id: null,
+              ingredient_name: 'Searchable coriander ingredient',
+              is_main: true,
+              detail: 'toasted source marker',
+              preparation: '',
+              measurements: [],
+            },
+          ],
+          p_instruction_steps: [
+            {
+              id: randomUUID(),
+              position: 0,
+              content_markdown: 'Fold the toasted spice into the rice.',
+              plain_text: 'Fold in the saffroninstruction marker.',
+            },
+          ],
+          p_publication_id: publicationId,
+          p_publication_page: '42',
+          p_recipe_url: null,
+          p_recipe_relationships: {
+            site_listing: null,
+            pairings: [],
+            references: [
+              {
+                id: randomUUID(),
+                reference_type: 'printed_citation',
+                display_text: 'The Saffron Kitchen, page 42',
+                linked_recipe_id: null,
+                publication_id: null,
+                url: null,
+              },
+            ],
           },
-        ],
-        p_instruction_steps: [
-          {
-            id: randomUUID(),
-            position: 0,
-            content_markdown: 'Fold the toasted spice into the rice.',
-            plain_text: 'Fold in the saffroninstruction marker.',
-          },
-        ],
+          p_tag_ids: [],
+        },
       },
-    });
+    );
     expect(recipeResponse.ok(), await recipeResponse.text()).toBeTruthy();
 
-    const secondRecipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
-      headers: {
-        apikey: config.anonKey,
-        Authorization: `Bearer ${user.accessToken}`,
+    const secondRecipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_relationships`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        data: {
+          p_recipe_id: null,
+          p_expected_version: null,
+          p_name: 'Apricot roast with a very long title that wraps on a narrow screen',
+          p_food_type_id: null,
+          p_state: 'tried',
+          p_verdict_id: null,
+          p_enthusiasm_id: null,
+          p_occasion_details: null,
+          p_reason: null,
+          p_serves: null,
+          p_prep_time_minutes: null,
+          p_mixing_time_minutes: null,
+          p_marinate_time_minutes: null,
+          p_chill_time_minutes: null,
+          p_freeze_time_minutes: null,
+          p_cook_time_minutes: null,
+          p_bake_time_minutes: null,
+          p_cooling_time_minutes: null,
+          p_rest_time_minutes: null,
+          p_total_time_minutes: null,
+          p_notes_markdown: '',
+          p_meal_type_ids: [],
+          p_cuisine_ids: [],
+          p_equipment_ids: [],
+          p_ingredient_rows: [],
+          p_instruction_steps: [],
+          p_publication_id: publicationId,
+          p_publication_page: null,
+          p_recipe_url: 'https://source.example.test/apricot-roast',
+          p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+          p_tag_ids: [],
+        },
       },
-      data: {
-        p_recipe_id: null,
-        p_expected_version: null,
-        p_name: 'Apricot roast with a very long title that wraps on a narrow screen',
-        p_food_type_id: null,
-        p_state: 'tried',
-        p_verdict_id: null,
-        p_enthusiasm_id: null,
-        p_occasion_details: null,
-        p_reason: null,
-        p_serves: null,
-        p_prep_time_minutes: null,
-        p_mixing_time_minutes: null,
-        p_marinate_time_minutes: null,
-        p_chill_time_minutes: null,
-        p_freeze_time_minutes: null,
-        p_cook_time_minutes: null,
-        p_bake_time_minutes: null,
-        p_cooling_time_minutes: null,
-        p_rest_time_minutes: null,
-        p_total_time_minutes: null,
-        p_notes_markdown: '',
-        p_meal_type_ids: [],
-        p_cuisine_ids: [],
-        p_equipment_ids: [],
-        p_ingredient_rows: [],
-        p_instruction_steps: [],
-      },
-    });
+    );
     expect(secondRecipeResponse.ok(), await secondRecipeResponse.text()).toBeTruthy();
 
     for (const query of ['coriander ingredient', 'saffroninstruction marker']) {
@@ -300,6 +406,87 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       ),
     ).toEqual(['Searchable saffron rice']);
 
+    const sourceCases = [
+      {
+        field: 'publication_page',
+        value: '42',
+        expectedName: 'Searchable saffron rice',
+        expectedFacet: [
+          { facet_value: '42', facet_label: '42', recipe_count: 1 },
+          { facet_value: '__blank__', facet_label: 'No page', recipe_count: 1 },
+        ],
+      },
+      {
+        field: 'recipe_url',
+        value: 'https://source.example.test/apricot-roast',
+        expectedName: 'Apricot roast with a very long title that wraps on a narrow screen',
+        expectedFacet: [
+          {
+            facet_value: '__blank__',
+            facet_label: 'No URL',
+            recipe_count: 1,
+          },
+          {
+            facet_value: 'https://source.example.test/apricot-roast',
+            facet_label: 'https://source.example.test/apricot-roast',
+            recipe_count: 1,
+          },
+        ],
+      },
+      {
+        field: 'citation',
+        value: 'The Saffron Kitchen, page 42',
+        expectedName: 'Searchable saffron rice',
+        expectedFacet: [
+          {
+            facet_value: '__blank__',
+            facet_label: 'No citation',
+            recipe_count: 1,
+          },
+          {
+            facet_value: 'The Saffron Kitchen, page 42',
+            facet_label: 'The Saffron Kitchen, page 42',
+            recipe_count: 1,
+          },
+        ],
+      },
+    ] as const;
+
+    for (const sourceCase of sourceCases) {
+      const sourceFilter = await request.post(`${config.apiUrl}/rest/v1/rpc/search_recipes`, {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        data: {
+          p_query: null,
+          p_filters: [{ field: sourceCase.field, operator: 'in', value: [sourceCase.value] }],
+          p_sort_key: 'name',
+          p_limit: 50,
+          p_offset: 0,
+        },
+      });
+      expect(sourceFilter.ok(), await sourceFilter.text()).toBeTruthy();
+      expect(
+        ((await sourceFilter.json()) as { recipe_name: string }[]).map(
+          ({ recipe_name }) => recipe_name,
+        ),
+      ).toEqual([sourceCase.expectedName]);
+
+      const sourceFacets = await request.post(
+        `${config.apiUrl}/rest/v1/rpc/recipe_search_facet_values`,
+        {
+          headers: {
+            apikey: config.anonKey,
+            Authorization: `Bearer ${user.accessToken}`,
+          },
+          data: { p_query: null, p_filters: [], p_facet_field: sourceCase.field },
+        },
+      );
+      expect(sourceFacets.ok(), await sourceFacets.text()).toBeTruthy();
+      expect(await sourceFacets.json()).toEqual(sourceCase.expectedFacet);
+    }
+
     const firstPage = await request.post(`${config.apiUrl}/rest/v1/rpc/search_recipes`, {
       headers: {
         apikey: config.anonKey,
@@ -377,7 +564,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
         name: 'Search',
       }),
     ).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByText('Search recipes', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toBeVisible();
     await expect(page.getByText('YOUR COLLECTION', { exact: true })).toHaveCount(0);
 
     await page.getByRole('searchbox', { name: 'Search recipes' }).fill('cardamom notesearch');
@@ -394,7 +581,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await searchTab.focus();
     await page.keyboard.press('ArrowRight');
     await expect(queryTab).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('#recipe-search')).toHaveValue('');
+    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveCount(0);
     await expect(page.getByRole('tabpanel', { name: 'Query' })).toBeVisible();
     await page.keyboard.press('ArrowLeft');
     await expect(searchTab).toHaveAttribute('aria-selected', 'true');
@@ -460,7 +647,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await searchTab.click();
     await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'clear all' })).toHaveCount(0);
-    await expect(page.locator('#recipe-search')).toHaveValue('');
+    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue('');
     await queryTab.click();
     await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'clear all' })).toHaveCount(0);
@@ -705,10 +892,14 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       .getByRole('option', { name: 'Date Added' })
       .click();
     await expect(page).toHaveURL(/sort=created_at/);
+    await expect(page.getByRole('button', { name: 'Switch to List view' })).toBeVisible();
+    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await expect(page.locator('.recipe-explorer-simple-list')).toBeVisible();
+    await expect(page.locator('.recipe-explorer-simple-list img')).toHaveCount(0);
     await page.getByRole('button', { name: 'Switch to Grid view' }).click();
     await expect(page.locator('.find-recipes-grid')).toBeVisible();
     await expect(page.locator('.find-recipes-grid-metadata')).toHaveText(
-      'Recipe Tin ~ Want to try ~ 20 min',
+      'Search Source Magazine ~ Want to try ~ 20 min',
     );
     await page.reload();
     await expect(page.getByText('1 recipe found')).toBeVisible();
@@ -722,19 +913,19 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
         params.getAll('filter').length === 3
       );
     });
-    await expect(page.getByRole('button', { name: 'Switch to List view' })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: 'Switch to Details view' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    await page.getByRole('button', { name: 'Switch to Details view' }).click();
 
     for (const width of [352, 390]) {
       await page.setViewportSize({ width, height: 820 });
-      await expect(page.locator('.find-recipes-mobile-filters')).toHaveCSS('display', 'none');
+      await expect(page.locator('.find-recipes-mobile-filters')).toHaveCSS('display', 'flex');
       await expect(page.locator('.find-recipes-list thead')).toHaveCSS('display', 'none');
-      await expect(page.locator('.find-recipes-mobile-label').first()).toHaveCSS('display', 'none');
+      await expect(page.locator('.find-recipes-mobile-label')).toHaveCount(0);
       await expect(page.locator('.find-recipes-mobile-metadata')).toHaveText(
-        'Recipe Tin ~ Want to try ~ 20 min',
+        'Search Source Magazine ~ Want to try ~ 20 min',
       );
       await expect(page.locator('.find-recipes-list tbody tr').first()).toHaveCSS(
         'background-color',
@@ -790,14 +981,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
           ),
         );
       expect(new Set(toolbarRows).size).toBe(1);
-      await expect(page.locator('.find-recipes-list tbody td:nth-child(3)')).toHaveCSS(
-        'white-space',
-        'nowrap',
-      );
-      await expect(page.locator('.find-recipes-list tbody td:nth-child(4)')).toHaveCSS(
-        'white-space',
-        'nowrap',
-      );
+      await expect(
+        page.locator('.find-recipes-list tbody td[data-explorer-column="state"]'),
+      ).toHaveCSS('white-space', 'nowrap');
+      await expect(
+        page.locator('.find-recipes-list tbody td[data-explorer-column="total_time_minutes"]'),
+      ).toHaveCSS('white-space', 'nowrap');
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBeTruthy();
@@ -832,7 +1021,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       .locator('strong')
       .evaluate((title) => title.getBoundingClientRect().height);
     expect(noImageTitleHeight).toBeGreaterThan(24);
-    await page.goto('/recipes/find?sort=name&direction=asc&page=1&view=list');
+    await page.goto('/recipes/find?sort=name&direction=asc&page=1&view=details');
     await expect(page.locator('.find-recipes-list thead')).toHaveCSS('display', 'none');
     await expect(page.locator('.find-recipes-mobile-thumbnail-placeholder')).toHaveCount(2);
     await expect(page.locator('.find-recipes-mobile-thumbnail-placeholder').first()).toHaveCSS(
@@ -870,6 +1059,10 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await expect(firstHeader).toHaveCSS('font-size', '16px');
     await expect(firstHeader).toHaveCSS('text-transform', 'none');
     await expect(firstHeader).toHaveCSS('text-align', 'left');
+    await expect(page.locator('.find-recipes-list')).toHaveCSS('display', 'grid');
+    await expect(
+      page.locator('.find-recipes-list tbody td[data-explorer-column="name"]').first(),
+    ).toHaveCSS('white-space', 'nowrap');
     const firstColumnShare = await firstHeader.evaluate((header) => {
       const tableWidth = header.closest('table')?.getBoundingClientRect().width ?? 0;
       return header.getBoundingClientRect().width / tableWidth;
@@ -1035,12 +1228,56 @@ test('Find Recipes shows a recoverable query error and preserves filters @e2e', 
     await expect(
       page.getByRole('alert').filter({ hasText: 'Unable to search recipes.' }),
     ).toHaveText('Unable to search recipes. Your query refinements are preserved. Try again.');
-    await expect(page.locator('#recipe-search')).toHaveValue('');
+    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue('');
     await expect(page.locator('.recipe-empty-state')).toHaveCount(0);
     await expect(page).toHaveURL((url) => {
       const params = new URL(url).searchParams;
       return !params.has('q') && params.get('filter') === filter && params.get('tab') === 'query';
     });
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find Recipes sorts by every display column in Details view @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/recipes$/);
+    await page.goto('/recipes/find?sort=name&direction=asc&view=details');
+
+    await page.getByRole('combobox', { name: 'Sort by Name' }).click();
+    const sortMenu = page.locator('.recipe-explorer-sort-menu');
+    await expect(sortMenu.getByRole('option', { name: 'Name' })).toBeVisible();
+    await expect(sortMenu.getByRole('option', { name: 'Publication' })).toBeVisible();
+    await expect(sortMenu.getByRole('option', { name: 'State' })).toBeVisible();
+    await expect(sortMenu.getByRole('option', { name: 'Opinion' })).toHaveCount(0);
+    await expect(sortMenu.getByRole('option', { name: 'Citation' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Opinion' }).check();
+    await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
+      'data-visible-columns',
+      /(^|\s)opinion(\s|$)/,
+    );
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('combobox', { name: 'Sort by Name' }).click();
+    await expect(sortMenu.getByRole('option', { name: 'Opinion' })).toBeVisible();
+    await expect(sortMenu.getByRole('option', { name: 'Citation' })).toHaveCount(0);
+    await sortMenu.getByRole('option', { name: 'Opinion' }).click();
+
+    await expect(page).toHaveURL(/sort=opinion/);
+    await expect(page.getByRole('combobox', { name: 'Sort by Opinion' })).toBeVisible();
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Unable to search recipes.' }),
+    ).toHaveCount(0);
   } finally {
     await deleteTestUser(request, user);
   }

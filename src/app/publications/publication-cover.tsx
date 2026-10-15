@@ -9,6 +9,21 @@ export function PublicationCover({
   publication: PublicationOption;
   imageUrl?: string | null;
 }) {
+  if (publication.publication_type === 'collection') {
+    return (
+      <span className="publication-cover publication-cover-recipe-tin">
+        <Image
+          alt="Recipe Tin"
+          className="publication-cover-image-content"
+          height={1031}
+          loading="eager"
+          src="/images/recipe-tin-3e1f5f0d8f3a.webp"
+          width={933}
+        />
+      </span>
+    );
+  }
+
   if (imageUrl) {
     return (
       <span

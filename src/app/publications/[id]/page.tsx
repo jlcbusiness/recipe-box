@@ -3,12 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicationCover } from '../../../lib/media/data';
 import { getPublications, getTags, type PublicationOption } from '../../../lib/recipes/data';
-import {
-  parseRecipeSearchColumnFilters,
-  type RecipeSearchSortKey,
-} from '../../../lib/recipes/search';
 import { createClient } from '../../../lib/supabase/server';
-import { RecipeSearchToolbar } from '../../recipes/find/recipe-search-toolbar';
 import { TagChips } from '../../tags/tag-controls';
 import { PublicationCover } from '../publication-cover';
 import { PublicationEditAction } from '../publication-edit-action';
@@ -18,21 +13,8 @@ const publicationTypeLabels = {
   book: 'Book',
   magazine: 'Magazine',
   site: 'Site',
+  collection: 'Recipe Tin',
 } as const;
-
-const recipeSortOptions: { value: RecipeSearchSortKey; label: string }[] = [
-  { value: 'relevance', label: 'Relevance' },
-  { value: 'name', label: 'Name' },
-  { value: 'state', label: 'State' },
-  { value: 'total_time_minutes', label: 'Total Time' },
-  { value: 'created_at', label: 'Date Added' },
-  { value: 'updated_at', label: 'Date Changed' },
-];
-const recipeViewOptions = [
-  { value: 'details', label: 'Details' },
-  { value: 'list', label: 'List' },
-  { value: 'grid', label: 'Grid' },
-] as const;
 
 export default async function PublicationPage({
   params,
@@ -40,6 +22,7 @@ export default async function PublicationPage({
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
+    status?: string;
     sort?: string;
     direction?: string;
     page?: string;
@@ -50,21 +33,13 @@ export default async function PublicationPage({
     column_opinion?: string | string[];
     column_meal_type?: string | string[];
     column_food_type?: string | string[];
+    column_publication_page?: string | string[];
+    column_recipe_url?: string | string[];
+    column_citation?: string | string[];
     column_publication_source?: string | string[];
   }>;
 }) {
   const [{ id }, explorerSearchParams] = await Promise.all([params, searchParams]);
-  const columnSelections = parseRecipeSearchColumnFilters(explorerSearchParams).selections;
-  const sort = recipeSortOptions.some(({ value }) => value === explorerSearchParams.sort)
-    ? (explorerSearchParams.sort as RecipeSearchSortKey)
-    : 'name';
-  const direction = explorerSearchParams.direction === 'desc' ? 'desc' : 'asc';
-  const view =
-    explorerSearchParams.view === 'grid'
-      ? 'grid'
-      : explorerSearchParams.view === 'list'
-        ? 'list'
-        : 'details';
   const supabase = await createClient();
   const [publicationResult, activePublications, publicationCover] = await Promise.all([
     supabase
@@ -90,7 +65,9 @@ export default async function PublicationPage({
     version: number;
     trashed_at: string | null;
   };
-  const destinations = activePublications.filter((option) => option.id !== publication.id);
+  const destinations = activePublications.filter(
+    (option) => option.id !== publication.id && option.publication_type !== 'collection',
+  );
   const [
     { count: recipeCount, error: recipeCountError },
     { data: publicationTagAssignments, error: publicationTagError },
@@ -117,7 +94,10 @@ export default async function PublicationPage({
   );
 
   return (
-    <main className="recipes-main" aria-labelledby="page-title">
+    <main
+      className={`recipes-main${publication.publication_type === 'collection' ? ' recipe-tin-theme' : ''}`}
+      aria-labelledby="page-title"
+    >
       <div className="publication-detail-heading">
         <PublicationCover imageUrl={publicationCover?.thumbnail_url} publication={publication} />
         <div>
@@ -133,28 +113,19 @@ export default async function PublicationPage({
             </a>
           )}
         </div>
-        <div className="publication-detail-actions">
-          <PublicationEditAction
-            assets={publicationCover ? [publicationCover] : []}
-            destinations={destinations}
-            hasRecipes={(recipeCount ?? 0) > 0}
-            publication={publication}
-            selectedTagIds={publicationTags.map((tag) => tag.id)}
-            tags={tags}
-          />
-          <div className="publication-detail-mobile-controls">
-            <RecipeSearchToolbar
-              columnSelections={columnSelections}
-              direction={direction}
-              filters={[]}
-              options={recipeSortOptions}
-              path={`/publications/${publication.id}`}
-              query=""
-              sort={sort}
-              view={view}
-              viewOptions={[...recipeViewOptions]}
+        <div
+          className={`publication-detail-actions${publication.publication_type === 'collection' ? ' publication-detail-actions-collection' : ''}`}
+        >
+          {publication.publication_type !== 'collection' && (
+            <PublicationEditAction
+              assets={publicationCover ? [publicationCover] : []}
+              destinations={destinations}
+              hasRecipes={(recipeCount ?? 0) > 0}
+              publication={publication}
+              selectedTagIds={publicationTags.map((tag) => tag.id)}
+              tags={tags}
             />
-          </div>
+          )}
           <Link
             className="recipe-secondary-link collection-add-action publication-new-recipe"
             href={`/recipes/new?publication=${publication.id}`}
@@ -163,6 +134,21 @@ export default async function PublicationPage({
           </Link>
         </div>
       </div>
+      {explorerSearchParams.status === 'trashed' && (
+        <p className="recipe-status-message" role="status">
+          Recipe moved to Trash. <Link href="/recipes/trash">Open Trash</Link>
+        </p>
+      )}
+      {explorerSearchParams.status === 'conflict' && (
+        <p className="recipe-status-message" role="alert">
+          This recipe changed or is no longer available. Reload the Recipe Tin and try again.
+        </p>
+      )}
+      {explorerSearchParams.status === 'error' && (
+        <p className="recipe-status-message" role="alert">
+          The recipe could not be moved to Trash. Try again.
+        </p>
+      )}
       <PublicationRecipeExplorer
         publicationId={publication.id}
         searchParams={explorerSearchParams}
