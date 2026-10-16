@@ -14,6 +14,7 @@ import {
   type MeasurementSystem,
 } from '../../../lib/recipes/measurement-rules';
 import { createClient } from '../../../lib/supabase/server';
+import { ExportAction } from '../../export-action';
 import { RecipePhotoGallery } from '../../media/media-display';
 import { TagChips } from '../../tags/tag-controls';
 import { RecipePrintAction } from '../recipe-detail-actions';
@@ -238,6 +239,13 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           <div className="recipe-detail-title-row">
             <h1 id="page-title">{recipe.name}</h1>
             <div className="recipe-detail-heading-actions recipe-screen-only">
+              <ExportAction
+                ariaLabel="Export recipe"
+                buttonLabel="Export recipe"
+                buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
+                className="recipe-detail-export-action"
+                scope={{ type: 'recipe', id: recipe.id }}
+              />
               <RecipePrintAction />
               <Link
                 aria-label="Edit"

@@ -46,6 +46,7 @@ export function PublicationEditAction({
         onClick={() => setIsOpen(true)}
       >
         <Pencil aria-hidden="true" size={17} strokeWidth={2} />
+        <span className="publication-edit-label">Edit</span>
       </button>
       {isOpen && (
         <PublicationEditDialog

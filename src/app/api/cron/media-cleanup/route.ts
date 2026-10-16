@@ -1,3 +1,4 @@
+import { processExportCleanup } from '../../../../lib/exports/server';
 import { processMediaCleanup } from '../../../../lib/media/server';
 import { createAdminClient } from '../../../../lib/supabase/admin';
 
@@ -13,17 +14,27 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Media cleanup authorization failed.' }, { status: 401 });
   }
 
-  const result = await processMediaCleanup(createAdminClient());
-  if (result.failed.length > 0) {
+  const admin = createAdminClient();
+  const [mediaResult, exportResult] = await Promise.all([
+    processMediaCleanup(admin),
+    processExportCleanup(admin),
+  ]);
+  const failedCount = mediaResult.failed.length + exportResult.failed.length;
+  if (failedCount > 0) {
     return Response.json(
       {
-        processed: result.processed,
-        failed: result.failed.length,
-        error: 'Some stored images could not be deleted; they remain queued for retry.',
+        processed: mediaResult.processed,
+        exportsProcessed: exportResult.processed,
+        failed: failedCount,
+        error: 'Some stored objects could not be deleted; they remain queued for retry.',
       },
       { status: 503 },
     );
   }
 
-  return Response.json({ processed: result.processed, failed: 0 });
+  return Response.json({
+    processed: mediaResult.processed,
+    exportsProcessed: exportResult.processed,
+    failed: 0,
+  });
 }

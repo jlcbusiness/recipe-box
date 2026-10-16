@@ -149,7 +149,8 @@ time is broken down into specific categories:
   queues all object paths for deletion; failed Storage deletions remain queued
   for retry. Public recipe photos are deferred to Slice 22 and must be exposed
   only after the public-link authorization check. Publication covers remain
-  owner-only. Image export/import is deferred.
+  owner-only. Image export is delivered in Slice 20; image import remains
+  deferred to Slice 21.
 
 ### 2.4 Recipe Metadata Entry Presentation
 
@@ -1044,23 +1045,39 @@ When an unauthenticated guest accesses a valid public recipe link:
 
 ### 11.1 ZIP Bundle Formats
 
-Export is built for catastrophic disaster recovery and migration. The app's own ZIP export is the only backup mechanism;
-Supabase backups are not used, so a full-database import into an empty account must reproduce the account completely.
-All exports produce standard `.zip` files containing:
+Export is built for disaster recovery and migration. The app's ZIP export is the
+user-facing backup mechanism; Supabase backups are not used. Version 1 archives
+contain:
 
-- `manifest.json` : Schema version, export date, bundle scope (`database`, `publication` , or `recipe` ), app version,
-  and asset file checksums.
-- `data.json`: Normalized relational JSON export of records.
-- `/images/`: Folder containing original binary image files for covers and photos.
+- `manifest.json`: Format and schema versions, UTC creation time, scope, app
+  version, and each payload file's uncompressed byte count and SHA-256 digest.
+- `data.json`: Normalized relational JSON using fixed record-table and
+  per-table field allow-lists. Owner account IDs, Auth user IDs, admin and
+  sign-in-method fields, signed URLs, private Storage paths, and export
+  timestamps are omitted. Product preferences and recipe privacy are retained.
+- `images/<asset-id>/full.webp` and `images/<asset-id>/thumbnail.webp`: Both
+  ready WebP variants for every included media asset, addressed by stable asset
+  UUID. Pending uploads and history are excluded.
+
+The manifest lists every payload file except itself. Archive paths are limited
+to `data.json` and UUID-scoped full or thumbnail WebP paths. The portable
+contract and compatibility rules are defined in
+[import-export-format.md](import-export-format.md).
 
 ### 11.2 Export Scopes
 
-1. **Database Export:** Accessible in Settings. Dumps the entire account: all recipes, publications, ingredients,
-   densities, picklists, tags, views, and images.
-2. **Publication Export:** Accessible in Library view on any publication card. Dumps the publication, all its recipes,
-   linked references, and associated images.
-3. **Recipe Export:** Accessible on any recipe card beside `New Recipe` . Dumps the single recipe, its ingredient rows,
-   steps, images, and basic publication metadata.
+1. **Database Export:** Accessible in Settings. Includes all owned records,
+  including trashed-but-restorable rows, product preferences, and ready images.
+2. **Publication Export:** Accessible from publication detail, to the left of
+  Edit. Library cards do not expose publication export actions. Includes the
+  selected active publication, its recipes and dependent relational rows, and
+  their ready images. On mobile, Export and Edit are 40px square icon buttons;
+  Add Recipe is an icon in the same compact toolbar.
+3. **Recipe Export:** Accessible beside Print and Edit on recipe detail.
+  The icon action is 36px square to match Print and Edit. It includes the
+  selected active recipe graph and ready images, plus basic metadata for its
+  primary publication. Cross-scope recipe links retain their source IDs and
+  display text.
 
 ### 11.3 Import Conflict Resolution
 
@@ -1077,6 +1094,28 @@ Importing a ZIP bundle never silently overwrites data. When matching records are
 
 Because export is the only backup, Settings shows the date of the last full-database export and a gentle reminder when
 it is more than 30 days old.
+
+### 11.5 Export Delivery and Limits
+
+The normalized `data.json` is limited to 64 MiB and aggregate uncompressed
+images to 1 GiB. Exports exceeding either limit fail without advancing the
+full-database export date. Missing or unreadable ready images also fail rather
+than producing a partial archive.
+
+The server builds the ZIP as a Node.js stream and uploads it to a random
+owner-prefixed path in the private `recipe-exports` Storage bucket. The API
+returns a 15-minute signed URL instead of ZIP bytes, avoiding the Vercel
+Function 4.5 MiB response-body limit. A successful export is queued for deletion
+at least 24 hours later. The full-database timestamp advances only after the
+archive is finalized, uploaded, queued for cleanup, and its signed URL is
+created; scoped exports do not change it. Failed operations clean up partial
+objects and leave the timestamp unchanged. Navigating away aborts an in-flight
+export request, and the server removes or queues any partial archive for cleanup.
+
+Export feedback is displayed below its action without changing the action row
+or the position of following page content. Settings retains a 48px mobile
+action target; compact publication and recipe actions use their dimensions
+above.
 
 ---
 

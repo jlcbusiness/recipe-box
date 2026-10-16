@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
 import { normalizeHiddenRecipeColumns, normalizeRecipeColumnOrder } from '../../lib/explorer-state';
+import { isDatabaseExportReminderDue } from '../../lib/exports/rules';
 import type { PicklistCategory, TagOption } from '../../lib/recipes/data';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
+import { ExportAction } from '../export-action';
 import {
   type IngredientCatalogEntry,
   IngredientCatalogManager,
@@ -27,7 +29,7 @@ export default async function SettingsPage() {
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select(
-      'volume_system, weight_system, ingredient_presentation, hand_preference, recipe_column_order, recipe_hidden_columns',
+      'volume_system, weight_system, ingredient_presentation, hand_preference, recipe_column_order, recipe_hidden_columns, last_database_export_at',
     )
     .eq('id', data.user.id)
     .maybeSingle();
@@ -215,6 +217,27 @@ export default async function SettingsPage() {
         initialDensities={densityEntries}
         initialRevision={ingredientCatalogRevisionResult.data.revision}
       />
+      <section
+        aria-labelledby="data-management-title"
+        className="settings-section settings-data-management"
+      >
+        <h2 id="data-management-title">Data management</h2>
+        <div className="settings-data-management-content">
+          <div>
+            <p>
+              {account.last_database_export_at
+                ? `Last database export: ${new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(account.last_database_export_at))}`
+                : 'No database export yet'}
+            </p>
+            {isDatabaseExportReminderDue(account.last_database_export_at) && (
+              <p className="settings-export-reminder" role="note">
+                Make a database export now. Your backup reminder appears every 30 days.
+              </p>
+            )}
+          </div>
+          <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
+        </div>
+      </section>
     </main>
   );
 }

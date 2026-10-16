@@ -92,8 +92,9 @@ publication covers and private or trashed recipe photos are never public.
 - Add local test fixtures and focused unit, database/RLS, end-to-end, and
   accessibility coverage before the production implementation.
 
-Public recipe routes, public allow-list expansion, image export/import, a
-gallery/lightbox, cropping, video, and animated images remain out of scope.
+Public recipe routes, public allow-list expansion, a gallery/lightbox, cropping,
+video, and animated images remain out of scope for this slice. Image export is
+delivered in Slice 20; image import remains deferred to Slice 21.
 
 ## UI and interaction
 

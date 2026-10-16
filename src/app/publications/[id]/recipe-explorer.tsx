@@ -1,7 +1,7 @@
-import { Plus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
 import {
   createExplorerState,
   defaultExplorerDisplayPreferences,
@@ -92,9 +92,11 @@ function searchHref({
 export async function PublicationRecipeExplorer({
   publicationId,
   searchParams,
+  mobileToolbarActions,
 }: {
   publicationId: string;
   searchParams: RecipeExplorerSearchParams;
+  mobileToolbarActions: ReactNode;
 }) {
   const parsedColumnFilters = parseRecipeSearchColumnFilters(searchParams);
   const columnFilters = parsedColumnFilters.filters;
@@ -291,17 +293,7 @@ export async function PublicationRecipeExplorer({
           }
         }
         toolbar={toolbar}
-        toolbarAction={
-          <Link
-            aria-label="Add Recipe"
-            className="recipe-secondary-link collection-add-action publication-mobile-add"
-            href={`/recipes/new?publication=${publicationId}`}
-            title="Add Recipe"
-          >
-            <Plus aria-hidden="true" size={16} />
-            <span>Add</span>
-          </Link>
-        }
+        toolbarAction={mobileToolbarActions}
       >
         <p className="find-recipes-count" role="status">
           {countLabel}

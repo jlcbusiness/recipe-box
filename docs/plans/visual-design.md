@@ -23,6 +23,7 @@
     - [Design contract](#design-contract)
   - [Trusted Densities (Slice 15)](#trusted-densities-slice-15)
     - [Settings and editor behavior](#settings-and-editor-behavior)
+  - [Data Management and Export (Slice 20)](#data-management-and-export-slice-20)
   - [Desktop](#desktop)
     - [Current implementation](#current-implementation-3)
     - [Product direction](#product-direction)
@@ -364,6 +365,32 @@ the amount group and clear of the unit picker. Mobile density rows stack the
 ingredient and equation; inline amount/unit groups reflow without page-level
 horizontal overflow. The mobile recipe row popover uses the same derivation
 behavior and accessible status.
+
+## Data Management and Export (Slice 20)
+
+Settings places a full-width, unframed Data management section after the
+working preference and catalog sections. It shows the last completed full
+database export date, or `No database export yet`, and an explicit reminder
+when no export exists or the saved date is more than 30 days old.
+
+The Export database action starts immediately. While preparing, only that
+action is disabled and a live status announces progress; success starts the
+download and announces completion. Errors remain visible and retryable without
+leaving Settings. The action has a 48px minimum hit area and a visible focus
+state. Publication Export appears before Edit on publication detail, while
+recipe Export sits beside Print and Edit; Library cards have no export action.
+Publication toolbar actions use 40px square controls on mobile; recipe detail
+actions use 36px square controls to match Print and Edit.
+On standard recipe detail, Print uses the filled leaf treatment with a pale
+green edge, while Export and Edit use light backgrounds with green borders; the
+Recipe Tin keeps its brown palette, with Export and Edit both on light
+backgrounds.
+On mobile, publication Export and Edit are icon buttons and Add Recipe is
+icon-only in the compact toolbar. Export feedback overlays the page beneath its
+button without moving the action row or following content. Settings keeps its
+48px mobile target while scoped actions retain their compact dimensions. All
+three actions share the same progress, completion, retry, and visible-focus
+behavior. No confirmation modal or new card layout is introduced.
 
 ## Desktop
 

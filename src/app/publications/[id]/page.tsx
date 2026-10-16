@@ -1,9 +1,11 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: Explicit roles preserve table semantics after display: contents.
+import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublicationCover } from '../../../lib/media/data';
 import { getPublications, getTags, type PublicationOption } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
+import { ExportAction } from '../../export-action';
 import { TagChips } from '../../tags/tag-controls';
 import { PublicationCover } from '../publication-cover';
 import { PublicationEditAction } from '../publication-edit-action';
@@ -114,8 +116,15 @@ export default async function PublicationPage({
           )}
         </div>
         <div
-          className={`publication-detail-actions${publication.publication_type === 'collection' ? ' publication-detail-actions-collection' : ''}`}
+          className={`publication-detail-actions publication-desktop-actions${publication.publication_type === 'collection' ? ' publication-detail-actions-collection' : ''}`}
         >
+          <ExportAction
+            ariaLabel="Export publication"
+            buttonClassName="recipe-secondary-button publication-detail-export-button"
+            buttonLabel="Export"
+            className="publication-detail-export-action"
+            scope={{ type: 'publication', id: publication.id }}
+          />
           {publication.publication_type !== 'collection' && (
             <PublicationEditAction
               assets={publicationCover ? [publicationCover] : []}
@@ -127,7 +136,7 @@ export default async function PublicationPage({
             />
           )}
           <Link
-            className="recipe-secondary-link collection-add-action publication-new-recipe"
+            className="recipe-primary-link collection-add-action publication-new-recipe"
             href={`/recipes/new?publication=${publication.id}`}
           >
             Add Recipe
@@ -150,6 +159,35 @@ export default async function PublicationPage({
         </p>
       )}
       <PublicationRecipeExplorer
+        mobileToolbarActions={
+          <div className="publication-mobile-actions">
+            <ExportAction
+              ariaLabel="Export publication"
+              buttonClassName="recipe-secondary-button publication-detail-export-button"
+              buttonLabel="Export"
+              className="publication-detail-export-action"
+              scope={{ type: 'publication', id: publication.id }}
+            />
+            {publication.publication_type !== 'collection' && (
+              <PublicationEditAction
+                assets={publicationCover ? [publicationCover] : []}
+                destinations={destinations}
+                hasRecipes={(recipeCount ?? 0) > 0}
+                publication={publication}
+                selectedTagIds={publicationTags.map((tag) => tag.id)}
+                tags={tags}
+              />
+            )}
+            <Link
+              aria-label="Add Recipe"
+              className="recipe-primary-link collection-add-action publication-mobile-add"
+              href={`/recipes/new?publication=${publication.id}`}
+              title="Add Recipe"
+            >
+              <Plus aria-hidden="true" size={18} />
+            </Link>
+          </div>
+        }
         publicationId={publication.id}
         searchParams={explorerSearchParams}
       />
