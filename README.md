@@ -54,6 +54,27 @@ The first run downloads the Supabase container images and may take several
 minutes. The command starts the local Supabase stack, resets its database from
 the versioned migrations and seed script, then starts Next.js.
 
+Use `npm run dev` for routine starts; it applies pending migrations without
+resetting the local database. `npm run dev:local` is a destructive clean reset:
+it removes local database state, including local Auth users. Do not use it as a
+routine restart or against a shared local stack without explicit authorization.
+
+### Resetting and recovering local data
+
+Before an authorized reset, download a **full database export** from Settings
+and confirm the export completed. Keep the ZIP outside the local Supabase
+Storage bucket and any temporary project directory. `npm run dev:local`
+reapplies the versioned migrations and seed script; the local project
+configuration stays in the working copy. After it starts, create a fresh local
+Auth account, sign in, and import the ZIP from Settings.
+
+The ZIP restores account-owned records, preferences, and ready image variants;
+it does not restore Auth users, passwords, or change history. Recreating the
+local Auth account is a separate setup step, and import maps the restored data
+to that account. For destructive acceptance tests, prefer a dedicated isolated
+Supabase project to avoid disturbing the active local stack. See the
+[Slice 21 import brief](docs/plans/slices/21-import.md) for the import contract.
+
 - App: <http://localhost:3000>
 - Supabase API: <http://127.0.0.1:55421>
 - Supabase Studio: <http://127.0.0.1:55423>

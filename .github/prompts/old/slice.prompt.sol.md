@@ -95,6 +95,11 @@ accessibility, and geometry assertions. Run the focused tests first, then the
 required repository checks. Do not reset local data or stop a running service
 unless repository instructions and the user explicitly permit it.
 
+For an authorized reset, follow the [README recovery procedure](../../README.md#resetting-and-recovering-local-data).
+Reset setup reapplies migrations; recreate the local Auth account, then import.
+The ZIP restores account data and ready images, not Auth users or history.
+Prefer an isolated project for destructive tests.
+
 After implementation passes validation, reconcile the brief, visual guide,
 roadmap, and decision log with the behavior that actually shipped. Report what
 changed, what was verified, and any remaining gaps or deviations. Never claim a

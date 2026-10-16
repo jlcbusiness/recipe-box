@@ -15,6 +15,11 @@ brief.
 - Read `AGENTS.md` and inspect the worktree. Preserve user changes and follow
   repository safety rules; do not reset local data or stop a running service
   without authorization.
+- For an authorized reset, follow the [README recovery procedure](../../README.md#resetting-and-recovering-local-data).
+  Reset setup reapplies migrations while local configuration remains in the
+  working copy; recreate the local Auth account, then import. The ZIP restores
+  account data and ready images, not Auth users or history. Prefer an isolated
+  project for destructive tests.
 - Follow the roadmap's Mandatory Slice Preparation, Standing Rules, and
   Completion Rule. Read `first-draft-spec.md` first, then the selected roadmap
   entry and relevant sections of the comprehensive reference, data model,

@@ -44,7 +44,6 @@ in the same transaction. Trashed roots retain lifecycle history. Replacing a
 publication with a trashed one is rejected when doing so would affect an active
 recipe outside the imported graph.
 
-typecheck/lint/Markdown checks, and review of all remaining acceptance cases
 The complete Slice 21A gate passes. Eight isolated Playwright runs on Chromium
 and Fold 6 cover valid and invalid archives, progress and error recovery,
 accessible preview, all conflict choices, ambiguous target selection,
@@ -204,8 +203,10 @@ Slice 21B remains unstarted.
   operation, visible focus, accessible labels/status, axe, and responsive
   overflow at relevant layout boundaries.
 - Run focused unit and API tests first, then Chromium and Fold 6 acceptance,
-  TypeScript, Biome, Markdown lint, and `git diff --check`. Do not reset local
-  Supabase or start a competing dev server.
+  TypeScript, Biome, Markdown lint, and `git diff --check`. Reset only the
+  dedicated `/tmp/recipe-box-import-acceptance` Supabase project when its test
+  setup requires it. Never reset the active local stack or start a competing
+  dev server without explicit authorization.
 
 ## Assumptions and deferred decisions
 

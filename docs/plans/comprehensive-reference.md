@@ -1117,6 +1117,20 @@ or the position of following page content. Settings retains a 48px mobile
 action target; compact publication and recipe actions use their dimensions
 above.
 
+### 11.6 Recovery and reset boundaries
+
+A full database ZIP is an account-data backup, not a backup of the Supabase
+project. It restores account-owned records, preferences, and ready image
+variants. It does not include Auth users or credentials, or change history.
+Keep a completed full export outside Supabase Storage before any authorized
+local reset.
+
+To recover app data after a local reset, reapply the project's migrations and
+seed script, create a fresh local Auth account, and import the full database
+ZIP from Settings. Import is owner-derived, so it does not require the original
+Auth user ID. The local project configuration remains separate from the ZIP;
+this workflow restores account data, not Auth identities or history.
+
 ---
 
 ## 12. Change History and Forensic Audit
