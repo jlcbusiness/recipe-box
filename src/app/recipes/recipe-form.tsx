@@ -23,7 +23,7 @@ import {
 import {
   formatGroupedInteger,
   formatGroupedIntegerInput,
-  formatQuantityRange,
+  formatQuantityInput,
   parseGroupedInteger,
 } from '../../lib/recipes/measurement-rules';
 import {
@@ -179,7 +179,9 @@ export function RecipeForm({
           quantity:
             measurement.amount_min === null
               ? ''
-              : formatQuantityRange(measurement.amount_min, measurement.amount_max),
+              : formatQuantityInput(
+                  `${measurement.amount_min}${measurement.amount_max === null ? '' : `-${measurement.amount_max}`}`,
+                ),
           unitCode: measurement.unit_code ?? '',
           picklistValueId: measurement.picklist_value_id ?? '',
         })),

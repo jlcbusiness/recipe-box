@@ -101,7 +101,7 @@ describe('ingredient row rules', () => {
           },
         ],
       }),
-    ).toBe('1 1/2 cups / 120 g all-purpose flour, sifted');
+    ).toBe('1 ½ cups / 120 g all-purpose flour, sifted');
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Salt',
@@ -169,7 +169,7 @@ describe('ingredient row rules', () => {
       });
 
     expect(display(1, null, 'cup', 'volume')).toBe('1 cup flour');
-    expect(display(1.5, null, 'cup', 'volume')).toBe('1 1/2 cups flour');
+    expect(display(1.5, null, 'cup', 'volume')).toBe('1 ½ cups flour');
     expect(display(1, 2, 'cup', 'volume')).toBe('1-2 cups flour');
     expect(display(2, null, 'tsp', 'volume')).toBe('2 tsp flour');
     expect(display(1, null, 'tbsp', 'volume')).toBe('1 TBSP flour');
@@ -195,7 +195,7 @@ describe('ingredient row rules', () => {
 
     expect(display(1, null, 'Bunch')).toBe('1 bunch herbs');
     expect(display(2, null, 'Bunch')).toBe('2 bunches herbs');
-    expect(display(1.5, null, 'Sprig')).toBe('1 1/2 sprigs herbs');
+    expect(display(1.5, null, 'Sprig')).toBe('1 ½ sprigs herbs');
     expect(display(1, 2, 'Pinch of')).toBe('1-2 pinches of herbs');
   });
 

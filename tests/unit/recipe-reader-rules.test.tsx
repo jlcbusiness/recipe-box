@@ -125,8 +125,8 @@ describe('recipe reader measurement rules', () => {
 
   it('preserves a same-unit amount and formats fractions and decimal boundaries', () => {
     expect(convertUnitAmount(1.2345, 'volume', 'cup', 'cup')).toBe(1.2345);
-    expect(formatQuantity(0.5)).toBe('1/2');
-    expect(formatQuantity(2 + 1 / 4 + 0.029)).toBe('2 1/4');
+    expect(formatQuantity(0.5)).toBe('½');
+    expect(formatQuantity(2 + 1 / 4 + 0.029)).toBe('2 ¼');
     expect(formatQuantity(1 + 1 / 4 + 0.031)).toBe('1.28');
     expect(formatQuantity(1.234, 'metric')).toBe('1.23');
     expect(formatQuantity(1.236, 'metric')).toBe('1.24');

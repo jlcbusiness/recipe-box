@@ -81,7 +81,11 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     getExplorerState(supabase, 'recipes-find'),
     getRecipeColumnSettings(supabase),
   ]);
-  const recipeColumns = getExplorerColumns('recipes-find', recipeColumnSettings.order);
+  const recipeColumns = getExplorerColumns(
+    'recipes-find',
+    recipeColumnSettings.order,
+    recipeColumnSettings.hiddenColumns,
+  );
   if (!hasPersistedExplorerUrlState('recipes-find', params)) {
     if (rememberedState) {
       redirect(serializeExplorerState('/recipes/find', rememberedState, true));

@@ -113,7 +113,11 @@ export async function PublicationRecipeExplorer({
     getExplorerState(supabase, context),
     getRecipeColumnSettings(supabase),
   ]);
-  const recipeColumns = getExplorerColumns(context, recipeColumnSettings.order);
+  const recipeColumns = getExplorerColumns(
+    context,
+    recipeColumnSettings.order,
+    recipeColumnSettings.hiddenColumns,
+  );
   if (!hasPersistedExplorerUrlState(context, searchParams)) {
     if (rememberedState) {
       redirect(serializeExplorerState(path, rememberedState, true));

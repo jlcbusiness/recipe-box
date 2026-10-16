@@ -156,7 +156,24 @@ export function InstructionStepsEditor({
       return;
     }
 
-    const markdown = `${selectedStep.markdown.slice(0, currentSuggestion.start)}${marker}${selectedStep.markdown.slice(currentSuggestion.end)}`;
+    let replacementEnd = currentSuggestion.end;
+    const candidateSlug = ingredientSlug(candidate.name);
+    let matchedName = selectedStep.markdown.slice(currentSuggestion.start + 1, replacementEnd);
+    let matchedSlug = ingredientSlug(matchedName);
+    while (matchedSlug && candidateSlug.startsWith(`${matchedSlug}-`)) {
+      const nextWord = /^(\s+[\p{L}\p{N}-]+)/u.exec(selectedStep.markdown.slice(replacementEnd));
+      if (!nextWord) {
+        break;
+      }
+      matchedName += nextWord[0];
+      replacementEnd += nextWord[0].length;
+      matchedSlug = ingredientSlug(matchedName);
+      if (matchedSlug === candidateSlug) {
+        break;
+      }
+    }
+
+    const markdown = `${selectedStep.markdown.slice(0, currentSuggestion.start)}${marker}${selectedStep.markdown.slice(replacementEnd)}`;
     const selectionStart = currentSuggestion.start + marker.length;
     pendingFocus.current = {
       stepId: currentSuggestion.stepId,

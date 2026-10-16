@@ -496,8 +496,17 @@ system-released locks can be reacquired when the document becomes visible.
 Unit can display volume, weight, or both with ` / ` separating the dimensions.
 Things pluralize from their maximum range value; `cup` becomes `cups` above one
 while abbreviated fixed units remain unchanged. US customary quantities use
-familiar fractions when close to halves, thirds, quarters, or eighths; metric
-quantities never use fractions and display at most two decimal places. Scaling
+Unicode glyphs for familiar fractions when close to halves, thirds, quarters,
+or eighths; editors retain conventional fraction text such as `1 1/2` and
+optionally accept the same glyphs as input. Display glyphs are slightly larger
+and vertically centered with optical corrections where font metrics require
+them. Metric quantities never use fractions and display at
+most two decimal places. Structured instruction
+mentions remain readable inline buttons. Hover and keyboard focus reveal the
+current scaled and converted amount in one square popup above the mention,
+clamped to the visual viewport, with a strong background and small pointer
+tail; click or tap pins it, and Escape or outside interaction dismisses it.
+The popup contains no nested tooltip and does not print. Scaling
 controls retain the active scale and unit choices for print. Serves stays in
 recipe metadata and updates only after scale submission. The Scale icon is in
 the Ingredients toolbar and opens a compact pane with Scale, To, Reset when the

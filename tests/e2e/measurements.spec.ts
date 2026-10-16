@@ -618,7 +618,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await expect(page.getByRole('button', { name: 'Save recipe' })).toBeVisible();
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Measured recipe' })).toBeVisible();
-    await expect(page.getByText('1,200 cups / 4 1/4 oz flour', { exact: true })).toBeVisible();
+    await expect(page.getByText('1,200 cups / 4 ¼ oz flour', { exact: true })).toBeVisible();
     await expect(page.getByText('1 cup milk', { exact: true })).toBeVisible();
     await expect(page.getByText('4 oz butter', { exact: true })).toBeVisible();
     await expect(page.getByText('2-3 eggs', { exact: true })).toBeVisible();

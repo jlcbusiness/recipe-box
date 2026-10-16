@@ -2,6 +2,7 @@ import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getRecipePhotos } from '../../../lib/media/data';
+import type { RecipeIngredient } from '../../../lib/recipes/data';
 import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
 import {
   getSafeInstructionHref,
@@ -16,7 +17,12 @@ import { createClient } from '../../../lib/supabase/server';
 import { RecipePhotoGallery } from '../../media/media-display';
 import { TagChips } from '../../tags/tag-controls';
 import { RecipePrintAction } from '../recipe-detail-actions';
-import { RecipeReader, RecipeReaderProvider, RecipeServesControl } from '../recipe-reader';
+import {
+  RecipeInstructionMention,
+  RecipeReader,
+  RecipeReaderProvider,
+  RecipeServesControl,
+} from '../recipe-reader';
 import { RecipeSummaryLayout } from '../recipe-summary-layout';
 
 type RecipeDetailPageProps = {
@@ -38,12 +44,11 @@ function renderMarkdown(value: string) {
 
 function renderInstructionMarkdown(
   value: string,
-  ingredients: readonly { id: string; name: string }[],
+  ingredients: readonly RecipeIngredient[],
+  unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem },
 ) {
-  const namesById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient.name]));
+  const ingredientsById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient]));
   const headingTags = [null, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
-  const lowercaseFirst = (value: string) =>
-    value ? `${value[0].toLocaleLowerCase()}${value.slice(1)}` : '';
   const renderInline = (tokens: InstructionInlineToken[], prefix: string) => {
     let precedingText = '';
     return tokens.map((token, index) => {
@@ -77,19 +82,24 @@ function renderInstructionMarkdown(
           );
         }
         case 'mention': {
-          const name = namesById.get(token.id);
-          if (!name) {
+          const ingredient = ingredientsById.get(token.id);
+          if (!ingredient) {
             throw new Error(
               'Instruction mentions must reference an ingredient row in this recipe.',
             );
           }
           const startsSentence = !precedingText || /[.!?]["')\]]*\s*$/u.test(precedingText);
-          const displayName = startsSentence ? name : lowercaseFirst(name);
+          const displayName = startsSentence
+            ? ingredient.ingredient_name
+            : ingredient.ingredient_name.toLocaleLowerCase();
           precedingText += displayName;
           return (
-            <span className="recipe-instruction-mention" key={key}>
-              {displayName}
-            </span>
+            <RecipeInstructionMention
+              displayName={displayName}
+              ingredient={ingredient}
+              key={key}
+              unitSystems={unitSystems}
+            />
           );
         }
         default: {
@@ -204,19 +214,14 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Cooling', recipe.cooling_time_minutes],
     ['Rest', recipe.rest_time_minutes],
   ].filter(([, value]) => value !== null);
+  const unitSystems = { volume: volumeSystem, weight: weightSystem };
   const instructions = recipe.steps.length > 0 && (
     <section className="recipe-detail-section" aria-labelledby="instructions-title">
       <h2 id="instructions-title">Instructions</h2>
       <ol className="recipe-instruction-list">
         {recipe.steps.map((step) => (
           <li key={step.id}>
-            {renderInstructionMarkdown(
-              step.content_markdown,
-              recipe.ingredients.map((ingredient) => ({
-                id: ingredient.id,
-                name: ingredient.ingredient_name,
-              })),
-            )}
+            {renderInstructionMarkdown(step.content_markdown, recipe.ingredients, unitSystems)}
           </li>
         ))}
       </ol>

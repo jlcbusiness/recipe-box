@@ -162,6 +162,7 @@ test('List column preferences do not change recipe Grid cards @e2e', async ({ pa
     await page.getByRole('button', { name: 'Switch to Grid view' }).click();
     await expect(cards).toHaveCount(1);
     await expect(metadata).toHaveText('Recipe Tin ~ Tried ~ 20 min');
+    await expect(metadata).toHaveCSS('color', 'rgb(36, 40, 32)');
 
     await page.getByRole('button', { name: 'Switch to Details view' }).click();
     await page.getByRole('button', { name: 'Choose List columns' }).click();
@@ -177,6 +178,22 @@ test('List column preferences do not change recipe Grid cards @e2e', async ({ pa
     await page.getByRole('button', { name: 'Switch to Grid view' }).click();
     await expect(cards).toHaveCount(1);
     await expect(metadata).toHaveText('Recipe Tin ~ Tried ~ 20 min');
+
+    const tinResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=id&publication_type=eq.collection`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    expect(tinResponse.ok(), await tinResponse.text()).toBeTruthy();
+    const [{ id: tinId }] = (await tinResponse.json()) as { id: string }[];
+    await page.goto(`/publications/${tinId}?view=grid`);
+    const tinMetadata = page.locator('.find-recipes-grid-metadata').first();
+    await expect(tinMetadata).toHaveText('Tried ~ 20 min');
+    await expect(tinMetadata).toHaveCSS('color', 'rgb(40, 36, 32)');
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1215,6 +1232,14 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       await expect(desktopGridCards.nth(1)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
       await expect(secondRowStart).toHaveCSS('background-color', 'rgb(255, 255, 255)');
       await expect(secondRowNextCard).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
+      await expect(desktopGridCards.first().locator('.find-recipes-grid-metadata')).toHaveCSS(
+        'color',
+        'rgb(36, 40, 32)',
+      );
+      await expect(desktopGridCards.nth(1).locator('.find-recipes-grid-metadata')).toHaveCSS(
+        'color',
+        'rgb(36, 40, 32)',
+      );
       if (columnCount === 3) {
         await expect(desktopGridCards.nth(6)).toHaveAttribute('data-stripe-cell', 'odd');
         await expect(desktopGridCards.nth(7)).toHaveAttribute('data-stripe-cell', 'even');

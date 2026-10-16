@@ -29,6 +29,11 @@ describe('measurement rules', () => {
     ['1.25', { minimum: 1.25, maximum: null }],
     ['1/2', { minimum: 0.5, maximum: null }],
     ['1 1/4', { minimum: 1.25, maximum: null }],
+    ['½', { minimum: 0.5, maximum: null }],
+    ['⅓', { minimum: 1 / 3, maximum: null }],
+    ['⅔', { minimum: 2 / 3, maximum: null }],
+    ['1 ⅝', { minimum: 1.625, maximum: null }],
+    ['½-1 ⅝', { minimum: 0.5, maximum: 1.625 }],
     ['2-3', { minimum: 2, maximum: 3 }],
   ])('parses %s into normalized bounds', (input, expected) => {
     expect(parseQuantityInput(input)).toEqual(expected);
@@ -41,6 +46,7 @@ describe('measurement rules', () => {
     '1/0',
     '1 / 2',
     '1 2/3/4',
+    '⅕',
     '3-2',
     '2--3',
     'Infinity',
@@ -51,11 +57,18 @@ describe('measurement rules', () => {
   });
 
   it('formats common fractions and falls back to concise decimals', () => {
-    expect(formatQuantity(1.5)).toBe('1 1/2');
-    expect(formatQuantity(0.333333)).toBe('1/3');
-    expect(formatQuantity(1.625)).toBe('1 5/8');
+    expect(formatQuantity(0.5)).toBe('½');
+    expect(formatQuantity(1.5)).toBe('1 ½');
+    expect(formatQuantity(0.333333)).toBe('⅓');
+    expect(formatQuantity(2 / 3)).toBe('⅔');
+    expect(formatQuantity(0.25)).toBe('¼');
+    expect(formatQuantity(0.75)).toBe('¾');
+    expect(formatQuantity(0.125)).toBe('⅛');
+    expect(formatQuantity(0.375)).toBe('⅜');
+    expect(formatQuantity(0.625)).toBe('⅝');
+    expect(formatQuantity(0.875)).toBe('⅞');
     expect(formatQuantity(1.17)).toBe('1.17');
-    expect(formatQuantityRange(2, 3)).toBe('2-3');
+    expect(formatQuantityRange(0.5, 1.625)).toBe('½-1 ⅝');
   });
 
   it('formats metric quantities as decimals with at most two places', () => {
@@ -69,7 +82,7 @@ describe('measurement rules', () => {
 
   it('groups large quantities without changing customary fractions', () => {
     expect(formatQuantity(1234)).toBe('1,234');
-    expect(formatQuantity(1234.5)).toBe('1,234 1/2');
+    expect(formatQuantity(1234.5)).toBe('1,234 ½');
     expect(formatQuantity(1234.567)).toBe('1,234.57');
     expect(formatQuantity(1234.56, 'metric')).toBe('1,234.56');
     expect(formatQuantityRange(1234, 2345, 'metric')).toBe('1,234-2,345');
@@ -78,8 +91,11 @@ describe('measurement rules', () => {
   it('parses and formats grouped quantities and integer inputs', () => {
     expect(parseQuantityInput('1,234')).toEqual({ minimum: 1234, maximum: null });
     expect(parseQuantityInput('1,234 1/2')).toEqual({ minimum: 1234.5, maximum: null });
+    expect(parseQuantityInput('1 1/2')).toEqual({ minimum: 1.5, maximum: null });
     expect(parseQuantityInput('1,000-2,000')).toEqual({ minimum: 1000, maximum: 2000 });
     expect(formatQuantityInput('1234-2000', 'metric')).toBe('1,234-2,000');
+    expect(formatQuantityInput('1 1/2')).toBe('1 1/2');
+    expect(formatQuantityInput('1234 ½')).toBe('1,234 1/2');
     expect(formatGroupedInteger(1234567)).toBe('1,234,567');
     expect(formatGroupedIntegerInput('1234567')).toBe('1,234,567');
     expect(parseGroupedInteger('1,234,567')).toBe(1234567);
@@ -146,6 +162,7 @@ describe('measurement rules', () => {
 
   it('accepts valid measurement types and a Volume-plus-Weight pair', () => {
     expect(validateMeasurementSet([measurement('volume', '1 1/2', 'cup')])).toBeNull();
+    expect(validateMeasurementSet([measurement('volume', '1 ½', 'cup')])).toBeNull();
     expect(validateMeasurementSet([measurement('weight', '120', 'g')])).toBeNull();
     expect(validateMeasurementSet([measurement('count', '2')])).toBeNull();
     expect(

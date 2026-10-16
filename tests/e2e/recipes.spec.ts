@@ -1745,6 +1745,12 @@ test('owners can create an ingredient mention from an instruction # query @e2e',
     await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
       'iron',
     );
+    const ironMention = page.getByRole('button', { name: 'iron', exact: true });
+    await ironMention.focus();
+    await expect(page.getByRole('tooltip')).toHaveText('No amount listed');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tooltip')).toBeHidden();
+    await expect(ironMention).toBeFocused();
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1826,6 +1832,46 @@ test('instruction mentions search the ingredient catalog and render as sentence-
     await guideLink.click();
     await expect(page).toHaveURL('https://example.test/mixing');
     await expect(page).toHaveTitle('External guide');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('multi-word instruction mentions replace the full phrase and use sentence case @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const catalogIngredient = await request.post(`${config.apiUrl}/rest/v1/ingredients`, {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+      },
+      data: { account_id: user.id, name: 'Garlic Cloves' },
+    });
+    expect(catalogIngredient.ok(), await catalogIngredient.text()).toBeTruthy();
+
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Multi-word mention behavior');
+    await page.getByPlaceholder('Add instruction…').fill('Add garlic cloves before serving.');
+    const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
+    await instruction.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(4, 4));
+    await instruction.pressSequentially('#');
+    const suggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    await expect(suggestions.getByRole('option', { name: 'Garlic Cloves' })).toBeVisible();
+    await suggestions.getByRole('option', { name: 'Garlic Cloves' }).click();
+    await expect(instruction).toHaveValue(
+      /^Add \[\[ingredient:[^|]+\|garlic-cloves\]\] before serving\.$/,
+    );
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    const renderedInstruction = page.locator('.recipe-instruction-list > li').first();
+    await expect(renderedInstruction).toHaveText('Add garlic cloves before serving.');
+    await expect(renderedInstruction.getByRole('button', { name: 'garlic cloves' })).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
   }
@@ -2132,6 +2178,284 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
   }
 });
 
+test('instruction mention popups follow reader scale and unit overrides @e2e @a11y', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ingredientRowId = randomUUID();
+  const sugarRowId = randomUUID();
+  const ironRowId = randomUUID();
+  const stepId = randomUUID();
+
+  try {
+    await signIn(page, user.email, user.password);
+    const phraseResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id,value&account_id=eq.${user.id}&category=eq.unmeasured_phrase`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    expect(phraseResponse.ok(), await phraseResponse.text()).toBeTruthy();
+    const phrases = (await phraseResponse.json()) as { id: string; value: string }[];
+    const garnishPhraseId = phrases.find((phrase) => phrase.value === 'For garnish')?.id;
+    expect(garnishPhraseId).toBeTruthy();
+    const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${user.accessToken}`,
+      },
+      data: {
+        p_recipe_id: null,
+        p_expected_version: null,
+        p_name: 'Ingredient amount popup',
+        p_food_type_id: null,
+        p_state: 'want_to_try',
+        p_verdict_id: null,
+        p_enthusiasm_id: null,
+        p_occasion_details: null,
+        p_reason: null,
+        p_serves: 4,
+        p_prep_time_minutes: null,
+        p_mixing_time_minutes: null,
+        p_marinate_time_minutes: null,
+        p_chill_time_minutes: null,
+        p_freeze_time_minutes: null,
+        p_cook_time_minutes: null,
+        p_bake_time_minutes: null,
+        p_cooling_time_minutes: null,
+        p_rest_time_minutes: null,
+        p_total_time_minutes: null,
+        p_notes_markdown: '',
+        p_meal_type_ids: [],
+        p_cuisine_ids: [],
+        p_equipment_ids: [],
+        p_ingredient_rows: [
+          {
+            recipe_ingredient_id: ingredientRowId,
+            ingredient_id: null,
+            ingredient_name: 'Flour',
+            is_main: true,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'volume',
+                amount_min: 1.5,
+                amount_max: null,
+                unit_code: 'cup',
+                picklist_value_id: null,
+              },
+            ],
+          },
+          {
+            recipe_ingredient_id: sugarRowId,
+            ingredient_id: null,
+            ingredient_name: 'Sugar',
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'volume',
+                amount_min: 0.625,
+                amount_max: null,
+                unit_code: 'cup',
+                picklist_value_id: null,
+              },
+            ],
+          },
+          {
+            recipe_ingredient_id: ironRowId,
+            ingredient_id: null,
+            ingredient_name: 'Iron',
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'unmeasured',
+                amount_min: null,
+                amount_max: null,
+                unit_code: null,
+                picklist_value_id: garnishPhraseId,
+              },
+            ],
+          },
+        ],
+        p_instruction_steps: [
+          {
+            id: stepId,
+            position: 0,
+            content_markdown: `Mix [[ingredient:${ingredientRowId}|flour]], [[ingredient:${sugarRowId}|sugar]], and [[ingredient:${ironRowId}|iron]].`,
+            plain_text: 'Mix flour, sugar, and iron.',
+          },
+        ],
+      },
+    });
+    expect(saved.ok(), await saved.text()).toBeTruthy();
+
+    const recipeId = (await saved.json())[0].id as string;
+    await page.goto(`/recipes/${recipeId}`);
+    const rowHalfGlyph = page.locator(
+      '.recipe-ingredient-table .recipe-fraction-glyph[data-fraction="½"]:visible, .recipe-ingredient-list .recipe-fraction-glyph[data-fraction="½"]:visible',
+    );
+    await expect(rowHalfGlyph).toBeVisible();
+    const readRowHalfOffset = () =>
+      rowHalfGlyph.evaluate((element) => {
+        const transform = getComputedStyle(element).transform;
+        return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42;
+      });
+    await expect.poll(readRowHalfOffset).toBeGreaterThan(0);
+    const rowFiveEighthGlyph = page.locator(
+      '.recipe-ingredient-table .recipe-fraction-glyph[data-fraction="⅝"]:visible, .recipe-ingredient-list .recipe-fraction-glyph[data-fraction="⅝"]:visible',
+    );
+    await expect(rowFiveEighthGlyph).toBeVisible();
+    const rowFiveEighthOffset = await rowFiveEighthGlyph.evaluate(
+      (element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m42,
+    );
+    expect(rowFiveEighthOffset).toBeGreaterThan(-1);
+    expect(rowFiveEighthOffset).toBeLessThan(0);
+    const flourMention = page.getByRole('button', { name: 'flour', exact: true });
+    const sugarMention = page.getByRole('button', { name: 'sugar', exact: true });
+    const ironMention = page.getByRole('button', { name: 'iron', exact: true });
+    const amountPopup = page.getByRole('tooltip');
+    await flourMention.hover();
+    await expect(amountPopup).toHaveText('1 ½ cups');
+    await expect(amountPopup).toBeInViewport();
+    await expect(amountPopup).toHaveAttribute('data-placement', 'above');
+    const popupBounds = await amountPopup.boundingBox();
+    const mentionBounds = await flourMention.boundingBox();
+    expect(popupBounds && mentionBounds).not.toBeNull();
+    if (popupBounds && mentionBounds) {
+      expect(popupBounds.y + popupBounds.height).toBeLessThanOrEqual(mentionBounds.y);
+    }
+    const fractionSizing = await page
+      .locator('.recipe-fraction-glyph')
+      .first()
+      .evaluate((element) => ({
+        fraction: Number.parseFloat(getComputedStyle(element).fontSize),
+        surrounding: Number.parseFloat(getComputedStyle(element.parentElement!).fontSize),
+        verticalAlign: getComputedStyle(element).verticalAlign,
+      }));
+    expect(fractionSizing.fraction).toBeGreaterThan(fractionSizing.surrounding);
+    expect(fractionSizing.verticalAlign).toBe('middle');
+    const popupFraction = amountPopup.locator('.recipe-fraction-glyph');
+    await expect(popupFraction).toHaveAttribute('data-fraction', '½');
+    const popupFractionMetrics = await popupFraction.evaluate((element) => {
+      const adjacentText = element.nextSibling;
+      if (!adjacentText || adjacentText.nodeType !== Node.TEXT_NODE) {
+        throw new Error('Expected amount text immediately after the fraction glyph.');
+      }
+      const textRange = document.createRange();
+      textRange.selectNodeContents(adjacentText);
+      const textBounds = textRange.getBoundingClientRect();
+      const glyphBounds = element.getBoundingClientRect();
+      return {
+        fractionFontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+        surroundingFontSize: Number.parseFloat(
+          getComputedStyle(element.parentElement ?? element).fontSize,
+        ),
+        verticalAlign: getComputedStyle(element).verticalAlign,
+        centerOffset:
+          glyphBounds.top + glyphBounds.height / 2 - (textBounds.top + textBounds.height / 2),
+        transformY: new DOMMatrixReadOnly(getComputedStyle(element).transform).m42,
+      };
+    });
+    expect(popupFractionMetrics.fractionFontSize).toBeGreaterThan(
+      popupFractionMetrics.surroundingFontSize,
+    );
+    expect(popupFractionMetrics.verticalAlign).toBe('middle');
+    expect(Math.abs(popupFractionMetrics.centerOffset)).toBeLessThanOrEqual(0.5);
+    expect(popupFractionMetrics.transformY).toBeCloseTo(-0.75, 1);
+    await sugarMention.hover();
+    await expect(amountPopup).toHaveText('⅝ cup');
+    const popupFiveEighthOffset = await amountPopup
+      .locator('.recipe-fraction-glyph[data-fraction="⅝"]')
+      .evaluate((element) => {
+        return new DOMMatrixReadOnly(getComputedStyle(element).transform).m42;
+      });
+    expect(popupFiveEighthOffset).toBeLessThan(-1.5);
+    await ironMention.hover();
+    await expect(amountPopup).toHaveText('for garnish');
+    await expect(amountPopup).toHaveCSS('border-radius', '0px');
+    await expect(amountPopup.getByRole('button')).toHaveCount(0);
+    await expect(amountPopup.getByRole('tooltip')).toHaveCount(0);
+    const popupA11y = await new AxeBuilder({ page }).analyze();
+    expect(popupA11y.violations).toEqual([]);
+
+    await page.mouse.move(0, 0);
+    await expect(amountPopup).toBeHidden();
+    await flourMention.focus();
+    await page.keyboard.press('Escape');
+    await expect(amountPopup).toBeHidden();
+    await expect(flourMention).toBeFocused();
+    await flourMention.click();
+    await expect(amountPopup).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(amountPopup).toBeVisible();
+    await page.getByRole('heading', { name: 'Ingredients' }).click();
+    await expect(amountPopup).toBeHidden();
+
+    if (testInfo.project.name === 'Fold 6') {
+      await flourMention.tap();
+      await expect(amountPopup).toBeVisible();
+      await expect(amountPopup).toBeInViewport();
+      await flourMention.tap();
+      await expect(amountPopup).toBeHidden();
+    }
+
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    const scalePane = page.getByRole('dialog', { name: 'Scale recipe' });
+    await scalePane.getByLabel('To').fill('8');
+    await scalePane.getByRole('button', { name: 'Submit' }).click();
+    await flourMention.hover();
+    await expect(amountPopup).toHaveText('3 cups');
+    await page.mouse.move(0, 0);
+    await page.getByRole('combobox', { name: 'Change Flour volume unit' }).click();
+    await page.getByRole('option', { name: 'TBSP' }).click();
+    await flourMention.hover();
+    await expect(amountPopup).toHaveText('48 TBSP');
+    const ingredientContent = page.locator('.recipe-ingredient-list, .recipe-ingredient-table');
+    await expect(ingredientContent).toContainText('48 TBSP');
+    await expect(ingredientContent).toContainText('flour');
+
+    await page.emulateMedia({ media: 'print' });
+    await expect(amountPopup).toBeHidden();
+    await expect(page.locator('.recipe-instruction-mention')).toHaveText([
+      'flour',
+      'sugar',
+      'iron',
+    ]);
+    await expect(ingredientContent).toContainText('48 TBSP');
+    await expect(ingredientContent).toContainText('flour');
+    await page.emulateMedia({ media: 'screen' });
+    await page.getByRole('link', { name: 'Edit' }).click();
+    if (testInfo.project.name === 'Fold 6') {
+      await page.getByRole('button', { name: 'Edit 1 ½ cups flour' }).click();
+    }
+    const quantityInput = page.getByRole('textbox', { name: 'Volume amount, row 1' });
+    await expect(quantityInput).toHaveValue('1 1/2');
+    await quantityInput.fill('1 1/2');
+    await quantityInput.press('Tab');
+    await expect(quantityInput).toHaveValue('1 1/2');
+
+    const storedMeasurement = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=amount_min,amount_max,unit_code&recipe_ingredient_id=eq.${ingredientRowId}`,
+      { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
+    );
+    expect(await storedMeasurement.json()).toEqual([
+      { amount_min: 1.5, amount_max: null, unit_code: 'cup' },
+    ]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('recipe detail print matches the active presentation @e2e', async ({
   page,
   request,
@@ -2249,7 +2573,9 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(page.locator('.recipe-reader-subtitle')).toHaveText('standard, order entered');
     await expect(page.getByRole('button', { name: 'Print' })).toBeVisible();
     const printIngredient = page.locator('.recipe-ingredient-list li').first();
-    const ingredientText = '354.88 ml / 4 1/4 oz all-purpose flour, sifted';
+    const flourMention = page.getByRole('button', { name: 'flour', exact: true });
+    const amountPopup = page.getByRole('tooltip');
+    const ingredientText = '354.88 ml / 4 ¼ oz all-purpose flour, sifted';
     const scaledIngredientText = '709.76 ml / 8.47 oz all-purpose flour, sifted';
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
     await expect(page.getByText('Serves 4', { exact: true })).toBeVisible();
@@ -2364,6 +2690,10 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await scalePane.getByLabel('To').fill('8');
     await scalePane.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText('Serves 8', { exact: true })).toBeVisible();
+    await flourMention.hover();
+    await expect(amountPopup).toHaveText('709.76 ml / 8.47 oz');
+    await page.mouse.move(0, 0);
+    await expect(amountPopup).toBeHidden();
     await scaleButton.click();
     const scaleBounds = await scalePane.getByRole('combobox', { name: 'Scale' }).boundingBox();
     const countBounds = await scalePane.getByLabel('To').boundingBox();
@@ -2504,7 +2834,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText('Serves 2', { exact: true })).toBeVisible();
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
-      '177.44 ml / 2 1/8 oz all-purpose flour, sifted',
+      '177.44 ml / 2 ⅛ oz all-purpose flour, sifted',
     );
     await page.getByRole('combobox', { name: 'Change Flour volume unit' }).click();
     const unitMenu = page.getByRole('listbox');
@@ -2541,7 +2871,11 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
       '12 TBSP / 0.06 kg all-purpose flour, sifted',
     );
-    const activeIngredientText = '12 TBSP / 2 1/8 oz all-purpose flour, sifted';
+    await flourMention.hover();
+    await expect(amountPopup).toHaveText('12 TBSP / 0.06 kg');
+    await page.mouse.move(0, 0);
+    await expect(amountPopup).toBeHidden();
+    const activeIngredientText = '12 TBSP / 2 ⅛ oz all-purpose flour, sifted';
     const readerA11y = await new AxeBuilder({ page }).analyze();
     expect(readerA11y.violations).toEqual([]);
     if (testInfo.project.name === 'Fold 6') {
@@ -2590,7 +2924,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     const printedIngredientCells = printedIngredientRow.locator('td');
     await expect(printedIngredientCells).toHaveCount(3);
     await expect(printedIngredientCells.nth(0)).toContainText('12 TBSP');
-    await expect(printedIngredientCells.nth(1)).toContainText('2 1/8 oz');
+    await expect(printedIngredientCells.nth(1)).toContainText('2 ⅛ oz');
     await page.getByRole('button', { name: 'Print' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
 
@@ -2607,7 +2941,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(page.getByText('Mix flour.')).toBeVisible();
     await expect(printedIngredientRow.locator('th')).toContainText('flour');
     await expect(printedIngredientCells.nth(0)).toContainText('12 TBSP');
-    await expect(printedIngredientCells.nth(1)).toContainText('2 1/8 oz');
+    await expect(printedIngredientCells.nth(1)).toContainText('2 ⅛ oz');
     await expect(page.locator('.recipe-detail-section').first()).toHaveCSS('break-inside', 'avoid');
     const pdf = await page.pdf();
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -2623,7 +2957,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     const pdfText = pdfPages.join('\n');
     expect(pdfText).toContain('Serves 2');
     expect(pdfText).toContain('12 TBSP');
-    expect(pdfText).toContain('2 1/8 oz');
+    expect(pdfText).toContain('2 ⅛ oz');
     expect(pdfText).not.toContain('Submit');
     expect(pdfText).not.toContain('Reset');
 

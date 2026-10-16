@@ -230,9 +230,12 @@ trailing empty row.
 2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user
    can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside
    its row editor pane; menus remain within the viewport and use the available space above or below the field.
-3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fractions (`1/2`, `1 1/4` ), ranges (`2-3`), and
+3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fraction text (`1/2`, `1 1/4`),
+   and optionally equivalent Unicode fraction glyphs (`½`, `1 ¼`),
+   ranges (`2-3`), and
    comma-grouped whole-number parts (for example, `1,000` , `1,000 1/2` , or `1,000-2,000` ). Blank for Feel phrases.
-   Displayed quantities group thousands while retaining the existing fraction, range, and unit-system formatting.
+   Editor values retain fraction-text formatting. Recipe reading groups thousands and displays supported US customary
+   fractions as Unicode glyphs, while preserving range and unit-system formatting.
 4. **Measurement Category (fixed selector and fields):**
    - **Unit:** The default category. Shows separate Volume amount/unit and Weight amount/unit fields. Either or both
      dimensions may be entered; a slash separates them visually and in recipe display.
@@ -305,9 +308,13 @@ trailing empty row.
   - Feel items (`to taste`, `as needed`) are not scaled.
 - **Rounding and Fractions:**
   - Internally, values are preserved as high-precision floating numbers.
-  - US customary measurements display common cooking fractions with denominators 2, 3, 4, and 8 when within $0.03$ of
-    the fraction (e.g., $0.25 \rightarrow 1/4$ , $0.333 \rightarrow 1/3$ , $1.625 \rightarrow 1\ 5/8$ ). Otherwise, they
-    display as decimals rounded to two places (e.g., $1.17$ cups).
+  - US customary measurements display common cooking fractions with denominators 2, 3, 4, and 8 as Unicode glyphs when
+    within $0.03$ of the fraction (e.g., $0.25 \rightarrow ¼$ , $0.333 \rightarrow ⅓$ , $1.625 \rightarrow 1\ ⅝$ ).
+    Glyphs are slightly larger and vertically centered with surrounding digits, with optical corrections where font
+    metrics require them. Otherwise, quantities display as decimals
+    rounded to two places (e.g., $1.17$ cups). Quantity inputs display conventional
+    fraction text (e.g., `1/2`, `1 1/2`) and also accept fraction glyphs as an optional input convenience, preserving
+    the same numeric values when edited and saved.
   - Metric measurements always display as decimals rounded to at most two decimal places (e.g., $1.5$ L, $0.33$ g,
     $1.625$ g displayed as $1.63$ g); never display metric quantities as fractions.
 
@@ -446,7 +453,14 @@ preserved.
     1. Select an existing ingredient row.
     2. Select **Create new ingredient** (adds row to ingredients table and links it).
     3. Press `Escape` to cancel autocomplete and leave `#` as plain text.
-  - **Rendered Output:** Renders cleanly as normal readable text (e.g., "Add the all-purpose flour and mix").
+  - **Rendered Output:** Renders cleanly as normal readable text (e.g., "Add the all-purpose flour and mix"). In recipe
+    detail, each structured mention is a focusable inline button. Hover or keyboard focus reveals its current scaled and
+    converted amount in one compact popup above the mention; click or tap pins/toggles the popup. Escape, an outside
+    pointer action, or loss of hover/focus when unpinned dismisses it. Escape returns focus to the mention. The
+    viewport-bounded square bubble has a strong background and a small pointer tail, contains no nested tooltip, and
+    shows an unmeasured phrase or `No amount listed` when there is no numeric amount. The trigger retains sentence-aware
+    readable text. Popups and their controls are not printed; the readable mention and active amount in the ingredient
+    list remain printable.
   - **Trigger Symbol:** `#` on every platform. Phone keyboards have no convenient non-alphanumeric key, and `#` is a
     familiar mention convention.
   - **Degree Symbol Shortcut:** `Ctrl+.` inserts `°` at the caret and replaces any selected text.

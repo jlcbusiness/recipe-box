@@ -79,6 +79,25 @@ function getReaderViewportBounds() {
   };
 }
 
+function renderFractionGlyphs(value: string): ReactNode {
+  const parts: ReactNode[] = [];
+  let previousIndex = 0;
+  for (const match of value.matchAll(/½|⅓|⅔|¼|¾|⅛|⅜|⅝|⅞/gu)) {
+    const index = match.index ?? 0;
+    if (index > previousIndex) {
+      parts.push(value.slice(previousIndex, index));
+    }
+    parts.push(
+      <span className="recipe-fraction-glyph" data-fraction={match[0]} key={`fraction-${index}`}>
+        {match[0]}
+      </span>,
+    );
+    previousIndex = index + match[0].length;
+  }
+  parts.push(value.slice(previousIndex));
+  return parts;
+}
+
 type RecipeScaleContextValue = {
   scale: RecipeScale;
   multiplier: number;
@@ -95,6 +114,168 @@ function useRecipeScale(): RecipeScaleContextValue {
     throw new Error('Recipe reader controls must be inside RecipeReaderProvider.');
   }
   return context;
+}
+
+export function RecipeInstructionMention({
+  displayName,
+  ingredient,
+  unitSystems,
+}: {
+  displayName: string;
+  ingredient: RecipeIngredient;
+  unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem };
+}) {
+  const { multiplier, unitOverrides } = useRecipeScale();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLSpanElement>(null);
+  const popupId = useId();
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [escapeDismissed, setEscapeDismissed] = useState(false);
+  const [position, setPosition] = useState<{
+    left: number;
+    top: number;
+    placement: 'above' | 'below';
+  } | null>(null);
+  const displayIngredient = transformIngredientForDisplay(ingredient, {
+    multiplier,
+    unitSystems,
+    unitOverrides: unitOverrides[ingredient.id],
+  });
+  const parts = getIngredientDisplayParts(displayIngredient);
+  const amount =
+    [parts.amount, parts.unmeasuredPhrase].filter(Boolean).join(' ') || 'No amount listed';
+  const isOpen = isPinned || ((isHovered || isFocused) && !escapeDismissed);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPosition(null);
+      return;
+    }
+
+    const positionPopup = () => {
+      const trigger = buttonRef.current?.getBoundingClientRect();
+      const popup = popupRef.current;
+      if (!trigger || !popup) {
+        return;
+      }
+
+      const viewport = getReaderViewportBounds();
+      const bounds = popup.getBoundingClientRect();
+      const width = Math.min(bounds.width, viewport.width - 24);
+      const height = Math.min(bounds.height, viewport.height - 24);
+      const center = trigger.left + trigger.width / 2;
+      const left = Math.max(
+        viewport.left + 12,
+        Math.min(center - width / 2, viewport.left + viewport.width - width - 12),
+      );
+      const top = Math.max(viewport.top + 12, trigger.top - height - 8);
+      const tailLeft = Math.max(12, Math.min(center - left, width - 12));
+      popup.style.setProperty('--recipe-mention-tail-left', `${tailLeft}px`);
+      setPosition({ left, top, placement: 'above' });
+    };
+
+    const visualViewport = window.visualViewport;
+    const popup = popupRef.current;
+    positionPopup();
+    window.addEventListener('resize', positionPopup);
+    window.addEventListener('scroll', positionPopup, true);
+    visualViewport?.addEventListener('resize', positionPopup);
+    visualViewport?.addEventListener('scroll', positionPopup);
+    const resizeObserver = popup ? new ResizeObserver(positionPopup) : null;
+    if (popup) {
+      resizeObserver?.observe(popup);
+    }
+    return () => {
+      window.removeEventListener('resize', positionPopup);
+      window.removeEventListener('scroll', positionPopup, true);
+      visualViewport?.removeEventListener('resize', positionPopup);
+      visualViewport?.removeEventListener('scroll', positionPopup);
+      resizeObserver?.disconnect();
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        !popupRef.current?.contains(target) &&
+        !buttonRef.current?.contains(target)
+      ) {
+        setIsPinned(false);
+        setIsHovered(false);
+        setIsFocused(false);
+        setEscapeDismissed(false);
+      }
+    }
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
+  }, [isOpen]);
+
+  return (
+    <span className="recipe-instruction-mention-wrap">
+      <button
+        aria-controls={isOpen ? popupId : undefined}
+        aria-describedby={isOpen ? popupId : undefined}
+        aria-expanded={isOpen}
+        className="recipe-instruction-mention"
+        ref={buttonRef}
+        type="button"
+        onBlur={() => setIsFocused(false)}
+        onClick={() => {
+          if (isPinned) {
+            setIsPinned(false);
+            setEscapeDismissed(true);
+          } else {
+            setEscapeDismissed(false);
+            setIsPinned(true);
+          }
+        }}
+        onFocus={() => {
+          setEscapeDismissed(false);
+          setIsFocused(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && isOpen) {
+            event.preventDefault();
+            setIsPinned(false);
+            setEscapeDismissed(true);
+            buttonRef.current?.focus();
+          }
+        }}
+        onMouseEnter={() => {
+          setEscapeDismissed(false);
+          setIsHovered(true);
+        }}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {displayName}
+      </button>
+      {isOpen && (
+        <span
+          className="recipe-instruction-amount-popup recipe-screen-only"
+          data-placement={position?.placement ?? 'below'}
+          id={popupId}
+          ref={popupRef}
+          role="tooltip"
+          style={{
+            left: position?.left ?? 0,
+            top: position?.top ?? 0,
+            visibility: position ? 'visible' : 'hidden',
+          }}
+        >
+          {renderFractionGlyphs(amount)}
+        </span>
+      )}
+    </span>
+  );
 }
 
 function initialScale(serves: number | null): RecipeScale {
@@ -604,7 +785,7 @@ export function RecipeReader({
         return (
           <Fragment key={`${measurement.measurementType}-${measurement.unitCode}`}>
             {index > 0 && ' / '}
-            {measurement.quantity}
+            {renderFractionGlyphs(measurement.quantity)}
             {measurement.unitLabel && (
               <>
                 {' '}

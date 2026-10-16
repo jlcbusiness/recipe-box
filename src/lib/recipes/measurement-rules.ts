@@ -39,6 +39,30 @@ export type MeasurementUnit = {
   system: MeasurementSystem;
 };
 
+const unicodeFractionValues: Record<string, number> = {
+  '½': 1 / 2,
+  '⅓': 1 / 3,
+  '⅔': 2 / 3,
+  '¼': 1 / 4,
+  '¾': 3 / 4,
+  '⅛': 1 / 8,
+  '⅜': 3 / 8,
+  '⅝': 5 / 8,
+  '⅞': 7 / 8,
+};
+
+const unicodeFractionGlyphs: Record<string, string> = {
+  '1/2': '½',
+  '1/3': '⅓',
+  '2/3': '⅔',
+  '1/4': '¼',
+  '3/4': '¾',
+  '1/8': '⅛',
+  '3/8': '⅜',
+  '5/8': '⅝',
+  '7/8': '⅞',
+};
+
 export const volumeUnits: MeasurementUnit[] = [
   { code: 'tsp', label: 'Teaspoon', abbreviation: 'tsp', system: 'us_customary' },
   { code: 'tbsp', label: 'Tablespoon', abbreviation: 'TBSP', system: 'us_customary' },
@@ -78,6 +102,19 @@ function parsePositiveNumber(value: string): number | null {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
+  const unicodeMixed = value.match(
+    new RegExp(`^(${wholeNumber})\\s+(${Object.keys(unicodeFractionValues).join('|')})$`, 'u'),
+  );
+  if (unicodeMixed) {
+    const whole = Number(unicodeMixed[1].replaceAll(',', ''));
+    const parsed = whole + unicodeFractionValues[unicodeMixed[2]];
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  const unicodeFraction = unicodeFractionValues[value];
+  if (unicodeFraction !== undefined) {
+    return unicodeFraction;
+  }
   const fraction = value.match(/^(\d+)\/(\d+)$/);
   if (!fraction) {
     return null;
@@ -117,7 +154,7 @@ export function parseQuantityInput(value: string): ParsedQuantity | null {
   return { minimum, maximum };
 }
 
-function fractionText(value: number): string | null {
+function fractionText(value: number, useUnicodeGlyphs: boolean): string | null {
   const whole = Math.floor(value);
   const fraction = value - whole;
   if (fraction < 0.000001) {
@@ -138,7 +175,10 @@ function fractionText(value: number): string | null {
     return null;
   }
 
-  const fractionPart = `${closest.numerator}/${closest.denominator}`;
+  const fractionText = `${closest.numerator}/${closest.denominator}`;
+  const fractionPart = useUnicodeGlyphs
+    ? (unicodeFractionGlyphs[fractionText] ?? fractionText)
+    : fractionText;
   return whole > 0 ? `${whole} ${fractionPart}` : fractionPart;
 }
 
@@ -161,7 +201,11 @@ export function formatGroupedIntegerInput(value: string): string {
   return parsed === null ? value : formatGroupedInteger(parsed);
 }
 
-export function formatQuantity(value: number, system: MeasurementSystem = 'us_customary'): string {
+function formatQuantityValue(
+  value: number,
+  system: MeasurementSystem,
+  useUnicodeGlyphs: boolean,
+): string {
   if (!Number.isFinite(value) || value <= 0) {
     return '';
   }
@@ -172,7 +216,7 @@ export function formatQuantity(value: number, system: MeasurementSystem = 'us_cu
     }).format(value);
   }
 
-  const fraction = fractionText(value);
+  const fraction = fractionText(value, useUnicodeGlyphs);
   if (fraction !== null) {
     return fraction.replace(/^\d+/, (whole) => formatGroupedInteger(Number(whole)));
   }
@@ -180,6 +224,10 @@ export function formatQuantity(value: number, system: MeasurementSystem = 'us_cu
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(
     Number(value.toFixed(2)),
   );
+}
+
+export function formatQuantity(value: number, system: MeasurementSystem = 'us_customary'): string {
+  return formatQuantityValue(value, system, true);
 }
 
 export function formatQuantityRange(
@@ -196,7 +244,13 @@ export function formatQuantityInput(
   system: MeasurementSystem = 'us_customary',
 ): string {
   const parsed = parseQuantityInput(value);
-  return parsed ? formatQuantityRange(parsed.minimum, parsed.maximum, system) : value;
+  if (!parsed) {
+    return value;
+  }
+  const minimum = formatQuantityValue(parsed.minimum, system, false);
+  return parsed.maximum === null
+    ? minimum
+    : `${minimum}-${formatQuantityValue(parsed.maximum, system, false)}`;
 }
 
 export function validateMeasurementSet(measurements: MeasurementInput[]): string | null {
