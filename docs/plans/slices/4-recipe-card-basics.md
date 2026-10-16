@@ -68,7 +68,7 @@ control, and recipe creation/update history is recorded transactionally.
   Favorite, Delicious, Staple, Practice, Try again, Occasionally, Specific
   occasion, Once-a-year-rich, So-so, No, Hell no, MISTAKE.
 - Each recipe has `is_private` defaulting to false and a version starting at 1.
-  The private flag is stored but sharing routes arrive in Slice 20.
+  The private flag is stored but sharing routes arrive in Slice 22.
 - Explicit Save is the only persistence path. Form edits are drafts until Save;
   there is no autosave.
 - A transactional database function performs create/update and multi-select

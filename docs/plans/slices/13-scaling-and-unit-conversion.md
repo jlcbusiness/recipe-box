@@ -68,7 +68,7 @@ control. Printing reflects the current scale, converted units, and overrides.
   desktop. Show Trash as an icon-only mobile link with its accessible name and
   tooltip so the persistent mobile navigation retains room. Keep both controls
   keyboard-operable, visibly focused, and within the viewport.
-- Public recipe behavior is out of scope until Slice 20. Do not change public
+- Public recipe behavior is out of scope until Slice 22. Do not change public
   access or add unauthenticated preference storage.
 
 ## Data and calculation contract

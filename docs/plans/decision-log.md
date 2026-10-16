@@ -124,7 +124,7 @@ the product specification or a task list. The canonical behavior remains in
 | Slice 8 uses a daily Supabase Cron (`pg_cron`) job to trigger a parameterized recipe-purge function. | The lifecycle remains local-first and database-adjacent, while the explicit cutoff parameter makes the 30-day boundary deterministic in tests. |
 | Permanently purging a recipe also removes its retained recipe-history snapshots. | A history snapshot contains private recipe content; retaining it after a permanent purge would defeat the meaning of permanent deletion. |
 | Slice 12 accepts still JPEG, PNG, WebP, and HEIC/HEIF uploads up to 20 MiB; stores metadata-free WebP derivatives; limits each account to 1 GiB of processed media and each recipe to 12 photos. | Original uploads remain convenient on phones while normalized derivatives, explicit count limits, and an account quota constrain storage use. |
-| Recipe photos remain private until Slice 20 authorizes a public recipe link; publication covers are owner-only. | Possession of a private image URL must not bypass public-link privacy or publication ownership checks. |
+| Recipe photos remain private until Slice 22 authorizes a public recipe link; publication covers are owner-only. | Possession of a private image URL must not bypass public-link privacy or publication ownership checks. |
 
 ## Recording New Decisions
 

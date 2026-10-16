@@ -147,7 +147,7 @@ time is broken down into specific categories:
   144px on narrow mobile; additional photos use square thumbnails.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
-  for retry. Public recipe photos are deferred to Slice 20 and must be exposed
+  for retry. Public recipe photos are deferred to Slice 22 and must be exposed
   only after the public-link authorization check. Publication covers remain
   owner-only. Image export/import is deferred.
 
@@ -337,7 +337,7 @@ trailing empty row.
 - **Dimensions:** Conversion stays within volume or within weight. Volume-to-weight conversion needs a trusted density (3.3).
 - **Printing:** The printed recipe reflects the active scale, account defaults, and per-ingredient overrides while
   omitting the interactive controls.
-- **Public pages:** Public recipe behavior remains assigned to Slice 20; this slice adds no unauthenticated preference storage.
+- **Public pages:** Public recipe behavior remains assigned to Slice 22; this slice adds no unauthenticated preference storage.
 - **System naming:** The app uses "US customary", not "imperial", because UK imperial pints and gallons differ.
 
 ---
@@ -952,7 +952,7 @@ When an unauthenticated guest accesses a valid public recipe link:
   derivatives.
 - Image assets are served through 15-minute signed URLs generated on the
   server after validating owner access. Public recipe photos remain deferred
-  until Slice 20 verifies the public ID, privacy flag, and active lifecycle.
+  until Slice 22 verifies the public ID, privacy flag, and active lifecycle.
   Publication covers are never public.
 - Deletion queues every private object path. A Vercel daily cron invokes the
   protected cleanup endpoint; Storage failures remain queued and are retried.

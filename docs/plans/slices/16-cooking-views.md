@@ -47,7 +47,7 @@ Included:
 
 Excluded:
 
-- Public recipe pages, which are delivered in Slice 20; their Ingredient-first
+- Public recipe pages, which are delivered in Slice 22; their Ingredient-first
   default remains a requirement for that slice.
 - Persisting sort direction, check-off state, cook-mode state, or per-recipe
   presentation choices.

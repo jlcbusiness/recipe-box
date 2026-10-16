@@ -519,7 +519,7 @@ inline in natural recipe prose and open their own anchored picklist. Unit
 tokens underline on hover on desktop and remain underlined on mobile. Print
 follows the active presentation and hides reader controls and check-off state.
 The saved presentation is an account preference, not recipe data.
-Ingredient-first remains the required default for public share in Slice 20.
+Ingredient-first remains the required default for public share in Slice 22.
 
 ### Planned direction
 

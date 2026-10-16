@@ -42,7 +42,7 @@ chrome.
   append-only `recipe_history`. Recipe ingredients, measurements, steps, and
   step mentions already belong to the recipe. No publication or public-link ID
   exists yet.
-- Slice 20 owns public routes, random public-link IDs, private/trashed `404`
+- Slice 22 owns public routes, random public-link IDs, private/trashed `404`
   behavior, permanently purged `410` behavior, and the `purged_recipe`
   public-ID tombstone. Slice 8 must not create a public route or a speculative
   public identifier.
@@ -70,7 +70,7 @@ chrome.
 - Publication trash, restoration, and its three delete choices; publications
   are introduced in Slice 9.
 - Public recipe routes, public cache headers, random public IDs, and `404` or
-  `410` responses; Slice 20 owns those external semantics and tombstones.
+  `410` responses; Slice 22 owns those external semantics and tombstones.
 - User-facing permanent-delete, empty-trash, retention customization, or
   version restoration.
 - Scaling, unit conversion, and alternate reader presentations; Slice 13 adds

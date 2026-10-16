@@ -200,7 +200,7 @@ need combobox semantics.
   Slice 19, after this slice's fixed-field implementation.
 - Nested AND/OR groups, arbitrary clause grouping, query explanation, and
   advanced query serialization remain deferred.
-- Public recipe search or public search documents (Slice 20).
+- Public recipe search or public search documents (Slice 22).
 - Search by alias, typo-tolerant matching, OCR, recipe import, and fuzzy
   substring matching.
 - Rewriting recipe data, history, or ingredient order as a result of search,

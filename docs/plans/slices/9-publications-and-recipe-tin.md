@@ -61,7 +61,7 @@ a bounded tin-and-paper identity treatment.
   verify ownership server-side; page-level authentication alone is not an
   authorization boundary.
 - Publications and Recipe Tin assignment are private in this slice. Do not add
-  public routes, public identifiers, or public caching behavior; Slice 20 owns
+  public routes, public identifiers, or public caching behavior; Slice 22 owns
   public recipe access.
 
 ## Scope

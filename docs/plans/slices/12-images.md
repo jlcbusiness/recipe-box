@@ -27,7 +27,7 @@ publication covers and recipe photos. It extends the existing private
 A signed-in owner can upload, view, reorder, choose a primary recipe photo,
 replace or remove photos, and add or replace a publication cover from desktop
 or mobile. The public bucket remains disabled. An eligible public recipe may
-show its recipe photos only after the public-link authorization in Slice 20;
+show its recipe photos only after the public-link authorization in Slice 22;
 publication covers and private or trashed recipe photos are never public.
 
 ## Decisions
@@ -69,7 +69,7 @@ publication covers and private or trashed recipe photos are never public.
   request body.
 - Generate short-lived signed read URLs on the server after checking owner
   access. Public recipe media delivery is gated by the same active/public
-  recipe check as the public page and is wired when Slice 20 adds that route.
+  recipe check as the public page and is wired when Slice 22 adds that route.
 - Removing an image removes its metadata and queues every stored object path
   for Storage API deletion. A protected cleanup handler retries failed deletes;
   permanent recipe/publication purge must queue associated objects before
@@ -160,7 +160,7 @@ gallery/lightbox, cropping, video, and animated images remain out of scope.
   and image-count limit. Failures remove staged/partial derivatives or retain
   an explicit retryable cleanup record; they never report a successful save.
 - Signed read URLs are generated only after authorization and expire promptly.
-  Slice 20 must check the random public recipe ID, `is_private`, and trash/purge
+  Slice 22 must check the random public recipe ID, `is_private`, and trash/purge
   state before asking for a public recipe-image URL. Publication covers are
   owner-only.
 - Trashing a parent hides its images while retaining them for restore. Purging
@@ -210,7 +210,7 @@ parent purge. All Slice 12 completion criteria are verified locally.
   account.
 - HEIC/HEIF is converted into the same normalized output as supported raster
   formats; no upload retains EXIF or location metadata.
-- Public access is not added before Slice 20; the signed-URL boundary is ready
+- Public access is not added before Slice 22; the signed-URL boundary is ready
   for that route and has owner/public authorization tests.
 - Trash/restore retains image associations, purge queues object cleanup, and a
   failed Storage delete remains retryable.
