@@ -39,6 +39,7 @@ function createSnapshot() {
           id: firstRecipeId,
           account_id: ownerId,
           publication_id: firstPublicationId,
+          publication_page: 'Spring 2026',
           name: 'Lemon cake',
           is_private: true,
           public_link_id: 'future-public-link-identity',
@@ -158,6 +159,7 @@ describe('export rules', () => {
     });
 
     expect(output.records.publications.map((record) => record.id)).toEqual([firstPublicationId]);
+    expect(output.records.recipes[0].publication_page).toBe('Spring 2026');
     expect(output.records.recipes.map((record) => record.id)).toEqual([firstRecipeId]);
     expect(output.records.ingredients.map((record) => record.id)).toEqual([firstIngredientId]);
     expect(output.records.recipe_ingredients.map((record) => record.id)).toEqual([firstRowId]);

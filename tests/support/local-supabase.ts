@@ -17,14 +17,18 @@ export type TestUser = {
 };
 
 export async function getLocalSupabaseConfig(): Promise<LocalSupabaseConfig> {
-  const process = spawn('supabase', ['status', '--output', 'env'], {
+  const supabaseArgs = ['status', '--output', 'env'];
+  if (process.env.SUPABASE_WORKDIR) {
+    supabaseArgs.push('--workdir', process.env.SUPABASE_WORKDIR);
+  }
+  const childProcess = spawn('supabase', supabaseArgs, {
     stdio: ['ignore', 'pipe', 'ignore'],
   });
   let apiUrl: string | undefined;
   let anonKey: string | undefined;
   let serviceRoleKey: string | undefined;
 
-  for await (const line of createInterface({ input: process.stdout })) {
+  for await (const line of createInterface({ input: childProcess.stdout })) {
     if (line.startsWith('API_URL=')) {
       apiUrl = line.slice('API_URL='.length).replace(/^"|"$/g, '');
     } else if (line.startsWith('ANON_KEY=')) {
@@ -35,7 +39,7 @@ export async function getLocalSupabaseConfig(): Promise<LocalSupabaseConfig> {
   }
 
   const exitCode = await new Promise<number | null>((resolve) => {
-    process.once('close', resolve);
+    childProcess.once('close', resolve);
   });
 
   if (exitCode !== 0 || !apiUrl || !anonKey || !serviceRoleKey) {

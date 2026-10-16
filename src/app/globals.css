@@ -581,6 +581,113 @@ h1 {
   flex: 0 0 auto;
 }
 
+.settings-data-management-content > .database-import-action {
+  width: min(44ch, 100%);
+  flex: 1 1 320px;
+}
+
+.database-import-action {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.database-import-action input[type="file"] {
+  max-width: 100%;
+  min-height: 40px;
+}
+
+.database-import-preview {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+}
+
+.database-import-preview h3,
+.database-import-preview p {
+  margin: 0;
+}
+
+.database-import-preview h3 {
+  font-size: 16px;
+}
+
+.database-import-conflicts {
+  max-height: 360px;
+  margin: 0;
+  padding: 0 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.database-import-conflicts li {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.database-import-conflicts label,
+.database-import-file-label {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.database-import-conflicts select {
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 30px 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+
+.database-import-warning {
+  color: #8b2f22;
+}
+
+.database-import-button,
+.database-import-cancel {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 8px;
+}
+
+.database-import-cancel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--leaf);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.database-import-cancel:focus-visible,
+.database-import-action select:focus-visible,
+.database-import-action input:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+.database-import-feedback {
+  width: min(44ch, 100%);
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.database-import-error {
+  color: #8b2f22;
+}
+
 .settings-data-management-content p {
   margin: 0;
 }

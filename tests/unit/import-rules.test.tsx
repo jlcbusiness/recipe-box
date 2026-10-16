@@ -1,0 +1,394 @@
+import { createHash } from 'node:crypto';
+import { zipSync } from 'fflate';
+import { describe, expect, it } from 'vitest';
+import { buildBundleManifest, exportTableNames } from '../../src/lib/exports/rules';
+import { readImportArchive } from '../../src/lib/imports/archive';
+import {
+  findImportMatches,
+  normalizeImportName,
+  validateImportBundleFiles,
+} from '../../src/lib/imports/rules';
+
+const recipeId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+function createBundleEntries(options: {
+  scope?: { type: 'database' } | { type: 'recipe'; id: string };
+  manifestScope?: { type: 'database' } | { type: 'recipe'; id: string };
+  recipe?: Record<string, unknown>;
+  includeImages?: boolean;
+}) {
+  const scope = options.scope ?? { type: 'database' as const };
+  const data = {
+    format: 'recipe-box-data',
+    schema_version: 1,
+    scope,
+    account_preferences: {},
+    records: Object.fromEntries(
+      exportTableNames.map((table) => [
+        table,
+        table === 'recipes' && options.recipe ? [options.recipe] : [],
+      ]),
+    ),
+  };
+  const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
+  const files = [{ path: 'data.json', bytes: dataBytes }];
+  if (options.includeImages) {
+    files.push(
+      { path: `images/${assetId}/full.webp`, bytes: Buffer.from('full-image') },
+      { path: `images/${assetId}/thumbnail.webp`, bytes: Buffer.from('thumbnail-image') },
+    );
+    data.records.media_assets.push({
+      id: assetId,
+      recipe_id: recipeId,
+      publication_id: null,
+      asset_type: 'recipe_photo',
+      status: 'ready',
+      full_path: `images/${assetId}/full.webp`,
+      thumbnail_path: `images/${assetId}/thumbnail.webp`,
+      content_type: 'image/webp',
+      description: '',
+      position: 0,
+      is_primary: true,
+      byte_size: Buffer.byteLength('full-image') + Buffer.byteLength('thumbnail-image'),
+      width: 32,
+      height: 24,
+    });
+    const updatedDataBytes = Buffer.from(JSON.stringify(data), 'utf8');
+    files[0] = { path: 'data.json', bytes: updatedDataBytes };
+  }
+  const manifest = buildBundleManifest(
+    options.manifestScope ?? scope,
+    files,
+    '0.1.0',
+    new Date('2026-10-15T12:00:00.000Z'),
+  );
+  const manifestBytes = Buffer.from(JSON.stringify(manifest), 'utf8');
+  return new Map([
+    ['manifest.json', manifestBytes],
+    ...files.map(({ path, bytes }) => [path, bytes] as const),
+  ]);
+}
+
+describe('import bundle validation', () => {
+  it('streams a ZIP archive and rejects duplicate or unsupported paths', async () => {
+    const data = Buffer.from('portable data');
+    const archive = zipSync({ 'data.json': data, 'manifest.json': Buffer.from('{}') });
+    const result = await readImportArchive(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(archive);
+          controller.close();
+        },
+      }),
+    );
+    expect([...result.entries.keys()].sort()).toEqual(['data.json', 'manifest.json']);
+    expect(Buffer.from(result.entries.get('data.json') ?? [])).toEqual(data);
+
+    const unsupported = zipSync({ 'notes.txt': data });
+    await expect(
+      readImportArchive(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(unsupported);
+            controller.close();
+          },
+        }),
+      ),
+    ).rejects.toThrow(/unsafe|unsupported/i);
+  });
+
+  it('streams image entries to a sink without retaining their bytes in the result', async () => {
+    const imageBytes = Buffer.from('streamed image content');
+    const archive = zipSync({
+      'data.json': Buffer.from('{}'),
+      [`images/${assetId}/full.webp`]: imageBytes,
+      'manifest.json': Buffer.from('{}'),
+    });
+    const result = await readImportArchive(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(archive);
+          controller.close();
+        },
+      }),
+      async (_path, stream) => {
+        for await (const _chunk of stream) {
+        }
+      },
+    );
+
+    expect(result.entries.has(`images/${assetId}/full.webp`)).toBe(false);
+    expect(result.images.get(`images/${assetId}/full.webp`)?.size_bytes).toBe(
+      imageBytes.byteLength,
+    );
+    expect(result.images.get(`images/${assetId}/full.webp`)?.sha256).toBe(
+      createHash('sha256').update(imageBytes).digest('hex'),
+    );
+  });
+
+  it('accepts a complete v1 bundle and returns its normalized data and images', () => {
+    const entries = createBundleEntries({
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, name: 'Lemon cake', publication_id: null, is_private: true },
+      includeImages: true,
+    });
+
+    const bundle = validateImportBundleFiles(entries);
+
+    expect(bundle.manifest.schema_version).toBe(1);
+    expect(bundle.data.scope).toEqual({ type: 'recipe', id: recipeId });
+    expect(bundle.data.records.recipes).toEqual([
+      { id: recipeId, name: 'Lemon cake', publication_id: null, is_private: true },
+    ]);
+    expect([...bundle.images.keys()]).toEqual([
+      `images/${assetId}/full.webp`,
+      `images/${assetId}/thumbnail.webp`,
+    ]);
+  });
+
+  it('validates image checksums from streamed metadata without image buffers', () => {
+    const allEntries = createBundleEntries({
+      recipe: { id: recipeId, name: 'Lemon cake' },
+      includeImages: true,
+    });
+    const entries = new Map([...allEntries].filter(([path]) => !path.startsWith('images/')));
+    const streamedImages = new Map(
+      [...allEntries]
+        .filter(([path]) => path.startsWith('images/'))
+        .map(([path, bytes]) => [
+          path,
+          {
+            size_bytes: bytes.byteLength,
+            sha256: createHash('sha256').update(bytes).digest('hex'),
+          },
+        ]),
+    );
+
+    const bundle = validateImportBundleFiles(entries, streamedImages);
+
+    expect(bundle.images.get(`images/${assetId}/full.webp`)).toEqual(
+      streamedImages.get(`images/${assetId}/full.webp`),
+    );
+  });
+
+  it('rejects a payload whose checksum or byte count differs from the manifest', () => {
+    const entries = createBundleEntries({});
+    entries.set('data.json', Buffer.from('{"tampered":true}', 'utf8'));
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/checksum|size/i);
+  });
+
+  it('rejects missing and unlisted archive entries', () => {
+    const entries = createBundleEntries({});
+    entries.delete('data.json');
+    expect(() => validateImportBundleFiles(entries)).toThrow(/data\.json|missing/i);
+
+    const unlisted = createBundleEntries({});
+    unlisted.set('unexpected.txt', Buffer.from('not portable'));
+    expect(() => validateImportBundleFiles(unlisted)).toThrow(/entry|manifest|unexpected/i);
+  });
+
+  it('rejects mismatched scopes, unsupported versions, and owner identity fields', () => {
+    const mismatched = createBundleEntries({
+      scope: { type: 'database' },
+      manifestScope: { type: 'recipe', id: recipeId },
+    });
+    expect(() => validateImportBundleFiles(mismatched)).toThrow(/scope/i);
+
+    const unsupported = createBundleEntries({});
+    const manifest = JSON.parse(new TextDecoder().decode(unsupported.get('manifest.json')));
+    manifest.schema_version = 2;
+    unsupported.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
+    expect(() => validateImportBundleFiles(unsupported)).toThrow(/version/i);
+
+    const ownerData = createBundleEntries({ recipe: { id: recipeId, account_id: recipeId } });
+    expect(() => validateImportBundleFiles(ownerData)).toThrow(/field|account/i);
+  });
+
+  it('rejects ready media assets without both matching image variants', () => {
+    const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
+    const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.records.media_assets = [
+      {
+        id: assetId,
+        recipe_id: recipeId,
+        publication_id: null,
+        asset_type: 'recipe_photo',
+        status: 'ready',
+        full_path: `images/${assetId}/full.webp`,
+        thumbnail_path: `images/${assetId}/thumbnail.webp`,
+        content_type: 'image/webp',
+        byte_size: 10,
+        width: 32,
+        height: 24,
+      },
+    ];
+    const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
+    const manifest = buildBundleManifest(
+      { type: 'database' },
+      [{ path: 'data.json', bytes: dataBytes }],
+      '0.1.0',
+      new Date('2026-10-15T12:00:00.000Z'),
+    );
+    entries.set('data.json', dataBytes);
+    entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/image|variant|asset/i);
+  });
+
+  it('rejects database rows with an unresolved internal relationship', () => {
+    const entries = createBundleEntries({
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        food_type_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      },
+    });
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/reference|relationship/i);
+  });
+
+  it('accepts nullable linked recipe references in a database bundle', () => {
+    const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
+    const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.records.recipe_pairings = [
+      {
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        source_recipe_id: recipeId,
+        linked_recipe_id: null,
+        display_text: 'Serve with tea',
+        position: 0,
+      },
+    ];
+    const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
+    const manifest = buildBundleManifest(
+      { type: 'database' },
+      [{ path: 'data.json', bytes: dataBytes }],
+      '0.1.0',
+      new Date('2026-10-15T12:00:00.000Z'),
+    );
+    entries.set('data.json', dataBytes);
+    entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
+
+    expect(() => validateImportBundleFiles(entries)).not.toThrow();
+  });
+
+  it('rejects publication references without a publication ID', () => {
+    const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
+    const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.records.recipe_references = [
+      {
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        recipe_id: recipeId,
+        reference_type: 'publication',
+        publication_id: null,
+        display_text: 'Baking Annual',
+        url: null,
+        position: 0,
+        linked_recipe_id: null,
+      },
+    ];
+    const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
+    const manifest = buildBundleManifest(
+      { type: 'database' },
+      [{ path: 'data.json', bytes: dataBytes }],
+      '0.1.0',
+      new Date('2026-10-15T12:00:00.000Z'),
+    );
+    entries.set('data.json', dataBytes);
+    entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/publication reference/i);
+  });
+
+  it('accepts references whose publication ID is optional by type', () => {
+    const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
+    const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.records.recipe_references = [
+      {
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        recipe_id: recipeId,
+        reference_type: 'printed_citation',
+        publication_id: null,
+        display_text: 'Family notebook',
+        url: null,
+        position: 0,
+        linked_recipe_id: null,
+      },
+    ];
+    const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
+    const manifest = buildBundleManifest(
+      { type: 'database' },
+      [{ path: 'data.json', bytes: dataBytes }],
+      '0.1.0',
+      new Date('2026-10-15T12:00:00.000Z'),
+    );
+    entries.set('data.json', dataBytes);
+    entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
+
+    expect(() => validateImportBundleFiles(entries)).not.toThrow();
+  });
+
+  it('does not match a recipe through an unmatched source publication id', () => {
+    const dataBytes = createBundleEntries({
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        publication_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      },
+    }).get('data.json');
+    const incoming = JSON.parse(new TextDecoder().decode(dataBytes));
+    incoming.records.publications.push({
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      publication_type: 'cookbook',
+      name: 'Incoming Book',
+    });
+
+    expect(
+      findImportMatches(incoming, {
+        publications: [
+          {
+            id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            publication_type: 'magazine',
+            name: 'Unrelated publication',
+          },
+        ],
+        recipes: [
+          {
+            id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            publication_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            name: 'Lemon cake',
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it('normalizes Unicode and finds publication and recipe matches within source scope', () => {
+    const incoming = JSON.parse(
+      new TextDecoder().decode(
+        createBundleEntries({
+          recipe: { id: recipeId, name: 'Cafe\u0301 cake', publication_id: assetId },
+        }).get('data.json'),
+      ),
+    );
+    incoming.records.publications = [
+      { id: assetId, publication_type: 'book', name: 'Baking Annual' },
+    ];
+
+    expect(normalizeImportName('  Café  ')).toBe('café');
+    expect(
+      findImportMatches(incoming, {
+        publications: [{ id: 'local-book', publication_type: 'book', name: ' Baking Annual ' }],
+        recipes: [
+          { id: 'local-recipe', name: 'Café cake', publication_id: 'local-book' },
+          { id: 'unrelated-recipe', name: 'Café cake', publication_id: 'another-book' },
+        ],
+      }),
+    ).toEqual([
+      { incomingId: assetId, existingIds: ['local-book'], kind: 'publication' },
+      { incomingId: recipeId, existingIds: ['local-recipe'], kind: 'recipe' },
+    ]);
+  });
+});

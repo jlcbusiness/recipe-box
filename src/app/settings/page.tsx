@@ -5,6 +5,7 @@ import type { PicklistCategory, TagOption } from '../../lib/recipes/data';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
 import { ExportAction } from '../export-action';
+import { DatabaseImportAction } from './database-import-action';
 import {
   type IngredientCatalogEntry,
   IngredientCatalogManager,
@@ -236,6 +237,7 @@ export default async function SettingsPage() {
             )}
           </div>
           <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
+          <DatabaseImportAction />
         </div>
       </section>
     </main>

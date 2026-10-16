@@ -193,7 +193,7 @@ function relationId(record: ExportRecord, field: string): string | null {
   return typeof record[field] === 'string' ? (record[field] as string) : null;
 }
 
-const portableFields: Record<ExportTableName, readonly string[]> = {
+export const portableRecordFields: Record<ExportTableName, readonly string[]> = {
   recipes: [
     'id',
     'name',
@@ -317,7 +317,7 @@ const portableFields: Record<ExportTableName, readonly string[]> = {
 
 function portableRecord(table: ExportTableName, record: ExportRecord): ExportRecord {
   const portable = Object.fromEntries(
-    portableFields[table]
+    portableRecordFields[table]
       .filter((field) => record[field] !== undefined)
       .map((field) => [field, record[field]]),
   );
