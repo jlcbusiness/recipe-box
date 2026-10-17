@@ -36,6 +36,7 @@
     - [Planned direction](#planned-direction-1)
     - [Trash and baseline print (Slice 8 current implementation)](#trash-and-baseline-print-slice-8-current-implementation)
   - [Public Recipe View (Slice 22 current implementation)](#public-recipe-view-slice-22-current-implementation)
+  - [History (Slice 23 current implementation)](#history-slice-23-current-implementation)
   - [Publication Editing](#publication-editing)
   - [Publication Cover Fallbacks](#publication-cover-fallbacks)
   - [Find Recipes (Slice 17)](#find-recipes-slice-17)
@@ -602,6 +603,16 @@ Public and printed recipes will use the default bold dark-red styling.
   use the same Standard-view formatter and ordering as recipe detail; app chrome
   and editing controls are omitted. Amounts remain unscaled and unconverted.
 
+### History (Slice 23 current implementation)
+
+Recipe and publication detail place a labeled History link after the record's
+content. The history page is an unframed, newest-first ordered list with a
+separate heading, timestamp and actor for each event. Changed fields use a
+definition list with readable before/after values; long values wrap within the
+content width, and the two-column field layout becomes one column on narrow
+screens. A visible Back link returns to the active record. Empty history uses a
+compact message; public recipe pages have no history link or event content.
+
 ## Public Recipe View (Slice 22 current implementation)
 
 The guest recipe page has 24px horizontal gutters and a centered content width.
@@ -655,12 +666,16 @@ is shown on mobile. The image, camera, and remove icons share a toolbar row
 with Cancel and Submit right-aligned. Canceling the system picker leaves the
 management pane open.
 
-Recipe detail presents the first (default) photo centered before recipe content,
+Recipe detail presents the primary photo centered before recipe content,
 preserving its aspect ratio and capped at 280px high on desktop, 240px on tablet,
-and 144px on narrow mobile; additional photos appear as square thumbnails. In
-edit mode, the action beside the recipe name shows the primary photo contained
-in a compact thumbnail with a corner pencil, or a camera icon when no photo
-exists, and opens photo management. The pane has a
+and 144px on narrow mobile. Square thumbnail buttons for all photos, including
+the featured photo, sit below it. Selecting one temporarily changes the featured
+photo without changing primary status or stored order. The numbered controls
+expose selected state and work with keyboard activation; images remain
+decorative with empty alternative text. In edit mode, the action beside the
+recipe name shows the primary photo contained in a compact thumbnail with a
+corner pencil, or a camera icon when no photo exists, and opens photo
+management. The pane has a
 three-column mobile grid, immediate remove and reorder behavior, a
 rounded muted-orange default outline and attached `Default` tab, two-dimensional
 dragging, and Ctrl+Arrow keyboard reordering. Images are decorative and have

@@ -144,7 +144,11 @@ time is broken down into specific categories:
   compact, contained thumbnail with a corner pencil. When no photo exists, it
   shows a camera icon. In recipe detail, center the primary photo, preserve its
   aspect ratio, and cap its height at 280px on desktop, 240px on tablet, and
-  144px on narrow mobile; additional photos use square thumbnails.
+  144px on narrow mobile. Show every photo, including the featured photo, as a
+  square thumbnail button. Selecting one temporarily changes the featured
+  photo without changing primary status or stored order. The buttons have
+  accessible names, selected state, and native keyboard activation; the images
+  remain decorative with empty alternative text.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
   for retry. Public recipe photos are signed only after the public-link,

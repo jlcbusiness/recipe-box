@@ -795,6 +795,7 @@ test('image management panes stage covers and immediately manage decorative reci
 
     await page.goto(`/recipes/${recipeId}`);
     await expect(page.locator('.recipe-photo-gallery')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Recipe photos' })).toBeVisible();
     const featureImage = page.locator('.recipe-photo-feature-image');
     await expect(featureImage).toBeVisible();
     const imageMaxHeight = viewportWidth <= 640 ? 144 : viewportWidth <= 760 ? 240 : null;
@@ -833,7 +834,44 @@ test('image management panes stage covers and immediately manage decorative reci
         count,
       }));
     });
-    expect(thumbnailRows.map(({ count }) => count)).toEqual([4, 2]);
+    expect(thumbnailRows.map(({ count }) => count)).toEqual([4, 3]);
+    const thumbnailButtons = page.locator('.recipe-photo-thumbnails').getByRole('button');
+    await expect(thumbnailButtons).toHaveCount(7);
+    const originalThumbnailOrder = await thumbnailButtons.evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute('data-photo-id')),
+    );
+    const initialFeaturedPhotoId = await featureImage.getAttribute('data-photo-id');
+    const selectedThumbnail = page.getByRole('button', { name: 'Show photo 2' });
+    const selectedPhotoId = await selectedThumbnail.getAttribute('data-photo-id');
+    expect(selectedPhotoId).not.toBe(initialFeaturedPhotoId);
+    await selectedThumbnail.click();
+    await expect(featureImage).toHaveAttribute('data-photo-id', selectedPhotoId ?? '');
+    await expect(selectedThumbnail).toHaveAttribute('aria-pressed', 'true');
+    await expect(thumbnailButtons).toHaveCount(7);
+    expect(
+      await thumbnailButtons.evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('data-photo-id')),
+      ),
+    ).toEqual(originalThumbnailOrder);
+    const originalThumbnail = page.getByRole('button', { name: 'Show photo 1' });
+    await originalThumbnail.focus();
+    await originalThumbnail.press('Space');
+    await expect(featureImage).toHaveAttribute('data-photo-id', initialFeaturedPhotoId ?? '');
+    await selectedThumbnail.focus();
+    await selectedThumbnail.press('Enter');
+    await expect(featureImage).toHaveAttribute('data-photo-id', selectedPhotoId ?? '');
+    await page.reload();
+    await expect(featureImage).toHaveAttribute('data-photo-id', initialFeaturedPhotoId ?? '');
+    await expect(page.getByRole('button', { name: 'Show photo 1' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(
+      await page
+        .locator('.recipe-photo-thumbnails')
+        .getByRole('button')
+        .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-photo-id'))),
+    ).toEqual(originalThumbnailOrder);
     expect(thumbnailsBounds.width).toBeLessThanOrEqual(280);
     expect(
       Math.abs((thumbnailRows[0]?.center ?? 0) - (thumbnailRows[1]?.center ?? 0)),
@@ -893,7 +931,7 @@ test('image management panes stage covers and immediately manage decorative reci
     const compactGallery = page.locator('.recipe-photo-gallery');
     const compactImage = page.locator('.recipe-photo-feature-image');
     const compactThumbnails = page.locator('.recipe-photo-thumbnails');
-    await expect(compactThumbnails.locator('img')).toHaveCount(1);
+    await expect(compactThumbnails.locator('img')).toHaveCount(2);
     const [compactGalleryBounds, compactImageBounds, compactThumbnailBounds] = await Promise.all([
       compactGallery.boundingBox(),
       compactImage.boundingBox(),

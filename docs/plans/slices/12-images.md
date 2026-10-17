@@ -87,14 +87,16 @@ publication covers and private or trashed recipe photos are never public.
 - Add upload reservation, direct signed upload, finalization, reorder/primary,
   delete, and queued-cleanup boundaries.
 - Add desktop/mobile publication-cover and recipe-photo controls, signed image
-  rendering, responsive thumbnails, decorative empty-alt photo handling, and
-  empty/error states, while retaining the designed cover fallbacks.
+  rendering, selectable responsive detail thumbnails, decorative empty-alt
+  photo handling, and empty/error states, while retaining the designed cover
+  fallbacks.
 - Add local test fixtures and focused unit, database/RLS, end-to-end, and
   accessibility coverage before the production implementation.
 
-Public recipe routes, public allow-list expansion, a gallery/lightbox, cropping,
-video, and animated images remain out of scope for this slice. Image export is
-delivered in Slice 20; image import remains deferred to Slice 21.
+Public recipe routes, public allow-list expansion, a full-screen gallery or
+lightbox, cropping, video, and animated images remain out of scope for this
+slice. Image export is delivered in Slice 20; image import remains deferred to
+Slice 21.
 
 ## UI and interaction
 
@@ -106,10 +108,14 @@ delivered in Slice 20; image import remains deferred to Slice 21.
   existing Book and Magazine fallbacks and the Site globe. The remove control
   uses an inverted white-and-tomato treatment; device/camera actions share a
   toolbar row with Cancel and Submit aligned to the right.
-- Recipe detail shows the first (default) photo centered before recipe content,
-  preserving its aspect ratio and capped at 280px high on desktop, 240px on
-  tablet, and 144px on narrow mobile; additional photos appear in square
-  thumbnails. The edit action beside Name shows the primary
+- Recipe detail initially shows the primary photo centered before recipe
+  content, preserving its aspect ratio and capped at 280px high on desktop,
+  240px on tablet, and 144px on narrow mobile. Square thumbnail buttons for all
+  photos, including the featured photo, sit below it. Selecting a thumbnail
+  temporarily changes the featured photo without changing the primary photo or
+  stored order. Controls have numbered accessible names, expose the selected
+  state, and support Enter and Space; the images remain decorative with empty
+  alternative text. The edit action beside Name shows the primary
   photo contained in a compact thumbnail with a corner pencil, or a camera icon
   when no photo exists. It opens an image-management pane with an immediate
   device upload, `x`

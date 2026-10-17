@@ -412,6 +412,9 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           </ul>
         </section>
       )}
+      <Link className="recipe-history-link" href={`/recipes/${recipe.id}/history`}>
+        History
+      </Link>
     </main>
   );
 }

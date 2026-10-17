@@ -41,6 +41,12 @@ Control key.
 
 - Press `Escape` while a recipe picklist is open to close it and return focus to its trigger.
 
+## Browsing recipe photos
+
+- Use `Tab` and `Shift+Tab` to reach the numbered photo buttons beneath the featured image.
+- Press `Enter` or `Space` on a photo button to show that photo as the featured image. Selection is temporary and does
+  not change the recipe's primary photo or stored photo order.
+
 ## Managing recipe photos
 
 - When the photo-management pane opens, focus starts on its heading. Use `Tab` and `Shift+Tab` to reach its controls and

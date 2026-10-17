@@ -150,12 +150,18 @@ explorer controls remain keyboard-operable. On mobile, retain Name-first rows
 and prevent overlap or page-level horizontal overflow. Test widths around each
 existing reflow boundary and at an intermediate width.
 
+When an optional column is hidden, hide its header and cells from layout as well
+as from the visible track list. A hidden cell must not create an implicit grid
+track or wrap onto a second row, including when preferences were saved before a
+column was added.
+
 ## Acceptance criteria and tests
 
 | Criterion | Automated coverage |
 | --------- | ------------------ |
 | The settings icon opens a labeled column chooser in Find, Library, and publication recipe lists. | Browser tests for each route, the accessible name, keyboard menu operation, Escape dismissal, and focus return. |
 | Each context offers its documented fields, preserves current defaults, and keeps Name visible. | Unit validation plus browser tests for visibility toggles and reset-to-default. |
+| Hidden optional columns do not create implicit tracks or extra rows. | Browser test that hides Visibility and verifies its header and cells are hidden while visible row cells remain aligned. |
 | Visibility persists per account and exact explorer context across reloads without changing URL search state. | API/RLS and browser tests for reload, context isolation, URL precedence, and owner isolation. |
 | Mouse, pen, and touch drags resize columns within bounds; release persists and pointer cancellation restores the starting width. | Playwright pointer/touch tests with geometry assertions, reload, and page-overflow checks around responsive boundaries. |
 | Narrow responsive rows have no resize handles or horizontal page overflow; Grid results are unaffected. | Chromium and Fold 6 browser checks at breakpoints and an intermediate width. |

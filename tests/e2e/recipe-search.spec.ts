@@ -133,13 +133,30 @@ test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, r
 
     await page.goto('/recipes/find?column_visibility=private&sort=name&direction=asc&view=details');
     await expect(page.getByText('1 recipe found')).toBeVisible();
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Visibility' }).uncheck();
+    await expect(page.locator('.explorer-list-preferences')).not.toHaveAttribute(
+      'data-visible-columns',
+      /(?:^|\s)visibility(?:\s|$)/,
+    );
+    await expect(
+      page.locator('.find-recipes-list thead [data-explorer-column="visibility"]'),
+    ).toHaveCSS('display', 'none');
     const privateRow = page
       .locator('.find-recipes-list tbody tr')
       .filter({ has: page.getByRole('link', { name: privateRecipeName }) });
+    await expect(privateRow.locator('[data-explorer-column="visibility"]')).toHaveCSS(
+      'display',
+      'none',
+    );
+    const visibleCellTops = await privateRow
+      .locator('td:visible')
+      .evaluateAll((cells) => [
+        ...new Set(cells.map((cell) => Math.round(cell.getBoundingClientRect().top))),
+      ]);
+    expect(visibleCellTops).toHaveLength(1);
     await expect(privateRow.locator('[data-explorer-column="visibility"]')).toHaveText('Private');
-    await expect(
-      page.getByRole('link', { name: linkableRecipeName, exact: true }),
-    ).toHaveCount(0);
+    await expect(page.getByRole('link', { name: linkableRecipeName, exact: true })).toHaveCount(0);
 
     await page.goto('/recipes/find?tab=query&sort=name&direction=asc&view=details');
     await page.getByRole('button', { name: 'Add rule' }).click();
@@ -151,12 +168,8 @@ test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, r
     const linkableRow = page
       .locator('.find-recipes-list tbody tr')
       .filter({ has: page.getByRole('link', { name: linkableRecipeName }) });
-    await expect(linkableRow.locator('[data-explorer-column="visibility"]')).toHaveText(
-      'Linkable',
-    );
-    await expect(
-      page.getByRole('link', { name: privateRecipeName, exact: true }),
-    ).toHaveCount(0);
+    await expect(linkableRow.locator('[data-explorer-column="visibility"]')).toHaveText('Linkable');
+    await expect(page.getByRole('link', { name: privateRecipeName, exact: true })).toHaveCount(0);
   } finally {
     await deleteTestUser(request, user);
   }

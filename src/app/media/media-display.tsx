@@ -1,37 +1,52 @@
+'use client';
+
 import Image from 'next/image';
+import { useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 
 export function RecipePhotoGallery({ photos }: { photos: MediaAssetDisplay[] }) {
+  const [selectedPhotoId, setSelectedPhotoId] = useState('');
+
   if (photos.length === 0) {
     return null;
   }
 
   const primary = photos.find((photo) => photo.is_primary) ?? photos[0];
-  const otherPhotos = photos.filter((photo) => photo.id !== primary.id);
+  const selectedPhoto = photos.find((photo) => photo.id === selectedPhotoId) ?? primary;
 
   return (
-    <section aria-hidden="true" className="recipe-photo-gallery">
-      <figure className="recipe-photo-feature">
+    <section aria-label="Recipe photos" className="recipe-photo-gallery">
+      <figure aria-live="polite" className="recipe-photo-feature">
         <Image
           alt=""
           className="recipe-photo-feature-image"
-          height={primary.height}
-          src={primary.full_url}
+          data-photo-id={selectedPhoto.id}
+          height={selectedPhoto.height}
+          src={selectedPhoto.full_url}
           unoptimized
-          width={primary.width}
+          width={selectedPhoto.width}
         />
       </figure>
-      {otherPhotos.length > 0 && (
+      {photos.length > 1 && (
         <ul className="recipe-photo-thumbnails">
-          {otherPhotos.map((photo) => (
+          {photos.map((photo, index) => (
             <li key={photo.id}>
-              <Image
-                alt=""
-                height={photo.height}
-                src={photo.thumbnail_url}
-                unoptimized
-                width={photo.width}
-              />
+              <button
+                aria-label={`Show photo ${index + 1}`}
+                aria-pressed={photo.id === selectedPhoto.id}
+                className="recipe-photo-thumbnail-button"
+                data-photo-id={photo.id}
+                onClick={() => setSelectedPhotoId(photo.id)}
+                type="button"
+              >
+                <Image
+                  alt=""
+                  height={photo.height}
+                  src={photo.thumbnail_url}
+                  unoptimized
+                  width={photo.width}
+                />
+              </button>
             </li>
           ))}
         </ul>
