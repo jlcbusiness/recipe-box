@@ -116,6 +116,8 @@ function validateData(value: unknown, manifestScope: ExportScope): PortableData 
 
   if (scope.type === 'database') {
     validateDatabaseReferences(records as unknown as PortableData['records']);
+  } else {
+    validateScopedReferences(scope, records as unknown as PortableData['records']);
   }
 
   if (
@@ -132,6 +134,89 @@ function validateData(value: unknown, manifestScope: ExportScope): PortableData 
   }
 
   return data as unknown as PortableData;
+}
+
+function validateScopedReferences(
+  scope: Exclude<ExportScope, { type: 'database' }>,
+  records: PortableData['records'],
+) {
+  const recipeIds = new Set(
+    records.recipes.map((record) => record.id).filter((id): id is string => typeof id === 'string'),
+  );
+  const publicationIds = new Set(
+    records.publications
+      .map((record) => record.id)
+      .filter((id): id is string => typeof id === 'string'),
+  );
+
+  if (scope.type === 'recipe') {
+    const recipe = records.recipes[0];
+    if (records.recipes.length !== 1 || recipe?.id !== scope.id || recipe.trashed_at != null) {
+      throw new Error('A recipe bundle must contain only its selected active recipe.');
+    }
+    if (
+      (typeof recipe.publication_id === 'string' &&
+        (records.publications.length !== 1 || !publicationIds.has(recipe.publication_id))) ||
+      (recipe.publication_id == null && records.publications.length > 0)
+    ) {
+      throw new Error('A recipe bundle contains invalid primary publication metadata.');
+    }
+    if (records.publication_tags.length > 0) {
+      throw new Error('A recipe bundle cannot contain publication tag assignments.');
+    }
+  } else if (
+    records.publications.length !== 1 ||
+    records.publications[0].id !== scope.id ||
+    records.publications[0].trashed_at != null ||
+    records.recipes.some(
+      (recipe) => recipe.publication_id !== scope.id || recipe.trashed_at != null,
+    )
+  ) {
+    throw new Error(
+      'A publication bundle must contain only its selected active publication graph.',
+    );
+  }
+
+  if (records.explorer_state.length > 0) {
+    throw new Error('A scoped bundle cannot contain account explorer state.');
+  }
+  for (const listing of records.recipe_site_listings) {
+    if (!recipeIds.has(String(listing.recipe_id))) {
+      throw new Error('A Site listing must belong to a recipe in the scoped bundle.');
+    }
+    let url: URL;
+    try {
+      url = new URL(String(listing.recipe_url));
+    } catch {
+      throw new Error('A Site listing must contain an absolute HTTP(S) URL.');
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('A Site listing must contain an absolute HTTP(S) URL.');
+    }
+  }
+
+  validateDatabaseReferences({
+    ...records,
+    recipe_pairings: records.recipe_pairings.map((pairing) => ({
+      ...pairing,
+      linked_recipe_id:
+        typeof pairing.linked_recipe_id === 'string' && recipeIds.has(pairing.linked_recipe_id)
+          ? pairing.linked_recipe_id
+          : null,
+    })),
+    recipe_references: records.recipe_references.map((reference) => ({
+      ...reference,
+      publication_id:
+        typeof reference.publication_id === 'string' && publicationIds.has(reference.publication_id)
+          ? reference.publication_id
+          : null,
+      linked_recipe_id:
+        typeof reference.linked_recipe_id === 'string' && recipeIds.has(reference.linked_recipe_id)
+          ? reference.linked_recipe_id
+          : null,
+    })),
+    recipe_site_listings: [],
+  });
 }
 
 function validateDatabaseReferences(records: PortableData['records']) {
@@ -198,11 +283,7 @@ function validateDatabaseReferences(records: PortableData['records']) {
   }
   for (const reference of records.recipe_references) {
     requireReference('recipes', reference.recipe_id, 'recipe');
-    if (reference.reference_type === 'publication') {
-      requireReference('publications', reference.publication_id, 'publication reference');
-    } else {
-      optionalReference('publications', reference.publication_id, 'publication');
-    }
+    optionalReference('publications', reference.publication_id, 'publication');
     optionalReference('recipes', reference.linked_recipe_id, 'linked recipe');
   }
   for (const density of records.ingredient_densities) {
@@ -377,6 +458,7 @@ export function findImportMatches(
     const candidates = existing.publications
       .filter(
         (item) =>
+          item.trashed_at == null &&
           item.publication_type === publication.publication_type &&
           normalizeImportName(String(item.name ?? '')) ===
             normalizeImportName(String(publication.name ?? '')),
@@ -393,9 +475,23 @@ export function findImportMatches(
   }
 
   const destinationTinIds = existing.publications
-    .filter((item) => item.publication_type === 'recipe_tin')
+    .filter((item) => item.publication_type === 'collection' && item.trashed_at == null)
     .map((item) => String(item.id));
   for (const recipe of incoming.records.recipes) {
+    if (incoming.scope.type === 'recipe') {
+      const candidates = existing.recipes
+        .filter(
+          (item) =>
+            item.trashed_at == null &&
+            normalizeImportName(String(item.name ?? '')) ===
+              normalizeImportName(String(recipe.name ?? '')),
+        )
+        .map((item) => String(item.id));
+      if (candidates.length > 0) {
+        matches.push({ incomingId: String(recipe.id), existingIds: candidates, kind: 'recipe' });
+      }
+      continue;
+    }
     const sourcePublicationId = String(recipe.publication_id ?? '');
     const sourceCandidates = publicationMatches.get(sourcePublicationId);
     const resolvedPublicationId = publicationResolutions.get(sourcePublicationId);
@@ -411,8 +507,9 @@ export function findImportMatches(
     const candidates = existing.recipes
       .filter((item) => {
         if (
+          item.trashed_at != null ||
           normalizeImportName(String(item.name ?? '')) !==
-          normalizeImportName(String(recipe.name ?? ''))
+            normalizeImportName(String(recipe.name ?? ''))
         ) {
           return false;
         }

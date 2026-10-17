@@ -744,7 +744,11 @@ and a single-line mobile list:
   explorer controls and List/Grid views scoped to that publication. Grid shows
   the default recipe photo when available without cropping it. Filter and sort
   fields follow the recipe field catalog; Slice 18 restores its last-used
-  state without losing the publication scope.
+  state without losing the publication scope. On mobile, Sort, direction, and
+  View form a connected 40px group. List columns is a separate outlined 40px
+  button matching Edit's leaf border and paper background. Disconnected
+  controls have equal 8px gaps above 340px, reducing uniformly to 4px at 340px
+  and below without horizontal overflow.
 
 ---
 
@@ -1069,10 +1073,11 @@ contract and compatibility rules are defined in
 1. **Database Export:** Accessible in Settings. Includes all owned records,
   including trashed-but-restorable rows, product preferences, and ready images.
 2. **Publication Export:** Accessible from publication detail, to the left of
-  Edit. Library cards do not expose publication export actions. Includes the
-  selected active publication, its recipes and dependent relational rows, and
-  their ready images. On mobile, Export and Edit are 40px square icon buttons;
-  Add Recipe is an icon in the same compact toolbar.
+  Edit on desktop. Library cards do not expose publication export actions.
+  Includes the selected active publication, its recipes and dependent
+  relational rows, and their ready images. On mobile, a 40px transfer-menu
+  button offers `Export publication` and `Import recipe`; Edit and Add Recipe
+  remain separate icon actions in the compact toolbar.
 3. **Recipe Export:** Accessible beside Print and Edit on recipe detail.
   The icon action is 36px square to match Print and Edit. It includes the
   selected active recipe graph and ready images, plus basic metadata for its
@@ -1081,14 +1086,41 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Importing a ZIP bundle never silently overwrites data. When matching records are detected (by hash or title):
+Imports accept supported v1 bundles only after validating archive integrity,
+scope, and required graph data. They are source-independent: the authenticated
+destination account determines ownership, and the import does not require the
+source account or source Auth identity to exist locally.
 
-- Prompts user with options:
-  - **Keep Existing:** Discard incoming duplicate.
-  - **Create Duplicate:** Import as new copy with `(Imported)` appended to the title.
-  - **Replace:** Overwrite local record with the imported version.
-- Recipe import automatically offers to link to an existing publication if a match exists, or create a new publication
-  from the bundled metadata.
+Publication roots match by normalized publication type and name. Database and
+publication imports match recipe roots by normalized name within the resolved
+publication. Recipe-scoped imports match by normalized name across all active
+destination publications, regardless of the source publication. Source IDs and
+content hashes do not establish identity. Publication conflicts offer
+**Keep Existing**, **Create Duplicate**, or **Replace**. Recipe conflicts in
+database and publication imports offer **Replace**, **Duplicate**, or
+**Ignore**; recipe-scoped conflicts offer **Replace** or **Duplicate** only.
+Replace retains the destination root ID and the matched recipe's current
+destination publication. Recipes included in a publication bundle remain
+independently resolved roots.
+
+A recipe bundle's publication metadata is a dependency, not a second
+replaceable root. A unique active normalized type/name match is reused; if no
+match exists, the publication is created automatically. Recipe Tin maps to the
+destination owner's existing collection and is never imported as a
+publication record. New and duplicate recipes default to the source publication
+and can be assigned to another active destination publication.
+
+Import database remains in Settings. Selecting a ZIP starts upload and
+comparison automatically; the compact file row shows the filename and
+record/media counts together without private/public recipe counts or an
+`Import preview` heading. Import publication is available in the Library, and
+Import recipe is a separate publication-detail action on desktop and an item in
+the shared Export publication/Import recipe transfer menu on mobile. Scoped
+imports preserve recipe privacy, remap imported IDs, and resolve relationships
+using the bundle and destination data: an out-of-scope recipe link reconnects
+only to one unique active destination match, otherwise its display text remains
+without a link. Out-of-scope publication references retain their text without
+a foreign ID.
 
 ### 11.4 Backup Reminder
 

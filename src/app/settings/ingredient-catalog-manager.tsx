@@ -482,7 +482,7 @@ export function IngredientCatalogManager({
   return (
     <section
       aria-labelledby="ingredient-catalog-title"
-      className="settings-section ingredient-catalog-section"
+      className="settings-section ingredient-catalog-section settings-accordion-section"
     >
       <h2 className={styles.sectionHeading}>
         <button
@@ -589,9 +589,11 @@ export function IngredientCatalogManager({
             </div>
             {renderPane()}
           </div>
-          <p aria-live="polite" className={styles.status} role="status">
-            {isPending ? 'Saving...' : status}
-          </p>
+          {(isPending || status) && (
+            <p aria-live="polite" className={styles.status} role="status">
+              {isPending ? 'Saving...' : status}
+            </p>
+          )}
         </div>
       </div>
     </section>

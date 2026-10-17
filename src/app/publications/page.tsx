@@ -10,6 +10,7 @@ import {
 } from '../../lib/publications/search';
 import type { PublicationType } from '../../lib/recipes/data';
 import { createClient } from '../../lib/supabase/server';
+import { ImportAction } from '../settings/database-import-action';
 import { PublicationExplorer } from './publication-explorer';
 
 const pageSize = 50;
@@ -132,6 +133,7 @@ export default async function LibraryPage({
           <h1 id="page-title">Library</h1>
         </div>
         <div className="recipe-page-heading-actions publication-library-actions">
+          <ImportAction compact scope={{ type: 'publication' }} triggerLabel="Import publication" />
           <Link className="recipe-secondary-link collection-add-action" href="/publications/new">
             Add publication
           </Link>

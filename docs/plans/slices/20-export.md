@@ -108,11 +108,11 @@ old.
   `No database export yet`, and an explicit reminder when there is no export or
   the saved date is more than 30 days old. A labeled `Export database` action
   starts the download.
-- Publication detail exposes `Export` to the left of `Edit`; Library cards do
-  not expose publication export actions. Recipe detail exposes `Export recipe`
-  beside Print and Edit. On mobile, publication Export and Edit are icon
-  buttons sized 40px square, and Add Recipe is a 40px icon in the compact
-  toolbar. Recipe detail actions remain 36px square to match Print and Edit.
+- Publication detail exposes `Export` to the left of `Edit` on desktop; Library
+  cards do not expose publication export actions. On mobile, one 40px transfer
+  menu offers `Export publication` and `Import recipe`; Edit and Add Recipe
+  remain separate icon buttons. Recipe detail exposes `Export recipe` beside
+  Print and Edit, with all three actions remaining 36px square.
   These scoped actions do not change the database-export reminder.
 - Download filenames identify both the scope and exported item, for example
   `Recipe Box - Database Export.zip`, `<publication> - Publication Export.zip`,
@@ -156,9 +156,10 @@ Write focused automated tests before production code:
   progress/success/error and retry states, keyboard activation and visible focus,
   touch activation for all three scopes on Fold 6, navigation-away abort with
   server-side partial-archive cleanup, labels, axe, desktop/mobile layout, the
-  Settings action's 48px mobile target, compact scoped-action dimensions, stable
-  action/content positions during feedback, and no horizontal overflow. Test
-  just below, at, and above any layout reflow threshold.
+  Settings action's 48px mobile target, transfer-menu keyboard navigation,
+  compact scoped-action dimensions, stable action/content positions during
+  feedback, and no horizontal overflow. Test just below, at, and above any
+  layout reflow threshold.
 - Verify the future compatibility contract in the portable-format tests: v1
   retains current `is_private`, contains no future public-link identifier, and
   can be recognized after Slice 22 adds a later schema version. Slice 22 must

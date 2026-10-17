@@ -26,6 +26,11 @@ export type ImportPlan = {
 
 type ExistingRecords = Partial<Record<ExportTableName, ExportRecord[]>>;
 type ImportChoices = Readonly<Record<string, ImportChoice>>;
+export type RecipeImportOptions = {
+  destinationPublicationIds?: Readonly<Record<string, string>>;
+  omitMissingSourcePublication?: boolean;
+  omitRecipeIds?: readonly string[];
+};
 
 const conflictKey = (kind: 'recipe' | 'publication', id: string) => `${kind}:${id}`;
 
@@ -111,16 +116,13 @@ function mapCatalog(
   return { imported, reused };
 }
 
-export function planDatabaseImport(
+export function planImport(
   incoming: PortableData,
   existing: ExistingRecords,
   choices: ImportChoices,
   createId: () => string = randomUUID,
+  recipeOptions: RecipeImportOptions = {},
 ): ImportPlan {
-  if (incoming.scope.type !== 'database') {
-    throw new Error('Only database exports can be planned here.');
-  }
-
   const idMappings = Object.fromEntries(
     exportTableNames.map((table) => [table, new Map<string, string>()]),
   ) as Record<ExportTableName, Map<string, string>>;
@@ -130,6 +132,14 @@ export function planDatabaseImport(
   const keptPublicationIds = new Set<string>();
   const sourcePublicationResolutions = new Map<string, string>();
   const importedPublications: ExportRecord[] = [];
+  const omittedPublicationIds = new Set<string>();
+  const scope = incoming.scope;
+  const destinationPublicationIds = recipeOptions.destinationPublicationIds ?? {};
+  const omittedRecipeIds = new Set(recipeOptions.omitRecipeIds ?? []);
+  const incomingRecipeIds = new Set(incoming.records.recipes.map((recipe) => String(recipe.id)));
+  if ([...omittedRecipeIds].some((recipeId) => !incomingRecipeIds.has(recipeId))) {
+    throw new Error('The import plan cannot omit a recipe outside the archive.');
+  }
 
   const publicationMatches = findImportMatches(incoming, {
     recipes: [],
@@ -138,6 +148,50 @@ export function planDatabaseImport(
   for (const publication of incoming.records.publications) {
     const sourceId = String(publication.id);
     const match = publicationMatches.find((item) => item.incomingId === sourceId);
+    if (publication.publication_type === 'collection') {
+      const activePublications = rowsFrom(existing, 'publications').filter(
+        (item) => item.trashed_at == null,
+      );
+      const recipeTin = activePublications.find((item) => item.publication_type === 'collection');
+      if (!recipeTin) throw new Error('The destination Recipe Tin is unavailable.');
+      idMappings.publications.set(sourceId, String(recipeTin.id));
+      sourcePublicationResolutions.set(sourceId, String(recipeTin.id));
+      keptPublicationIds.add(sourceId);
+      continue;
+    }
+
+    if (scope.type === 'recipe') {
+      const activePublications = rowsFrom(existing, 'publications').filter(
+        (item) => item.trashed_at == null,
+      );
+      const candidates = (match?.existingIds ?? []).filter((id) =>
+        activePublications.some((item) => item.id === id),
+      );
+      const existingMatch = candidates.length === 1 ? candidates[0] : undefined;
+      const resolvedId = existingMatch ?? createId();
+      if (existingMatch) {
+        keptPublicationIds.add(sourceId);
+      } else {
+        importedPublications.push({
+          ...publication,
+          id: resolvedId,
+          name: candidates.length ? `${String(publication.name)} (Imported)` : publication.name,
+        });
+      }
+      idMappings.publications.set(sourceId, resolvedId);
+      sourcePublicationResolutions.set(sourceId, resolvedId);
+      continue;
+    }
+    if (
+      scope.type === 'publication' &&
+      recipeOptions.omitMissingSourcePublication &&
+      sourceId === scope.id &&
+      (match?.existingIds.length ?? 0) === 0
+    ) {
+      omittedPublicationIds.add(sourceId);
+      keptPublicationIds.add(sourceId);
+      continue;
+    }
     const result = mapRoot(
       'publication',
       publication,
@@ -172,26 +226,65 @@ export function planDatabaseImport(
   const importedRecipes: ExportRecord[] = [];
   for (const recipe of incoming.records.recipes) {
     const sourceId = String(recipe.id);
+    if (omittedRecipeIds.has(sourceId)) continue;
     const match = recipeMatches.find((item) => item.incomingId === sourceId);
+    const publicationChoice =
+      choices[conflictKey('publication', String(recipe.publication_id ?? ''))];
+    let recipeChoices = choices;
+    if (scope.type === 'publication' && publicationChoice?.action === 'replace' && match) {
+      if (match.existingIds.length !== 1) {
+        throw new Error(
+          'A matching recipe is ambiguous. Keep the publication and choose recipes individually.',
+        );
+      }
+      recipeChoices = {
+        ...choices,
+        [conflictKey('recipe', sourceId)]: {
+          action: 'replace',
+          targetId: match.existingIds[0],
+        },
+      };
+    }
     const result = mapRoot(
       'recipe',
       recipe,
       match?.existingIds ?? [],
-      choices,
+      recipeChoices,
       idMappings.recipes,
       createId,
       replaceRecipeIds,
       keptRecipeIds,
     );
     if (result.action !== 'keep') {
+      const selectedPublicationId = destinationPublicationIds[sourceId];
+      const targetRecipe =
+        result.action === 'replace'
+          ? rowsFrom(existing, 'recipes').find((item) => item.id === result.id)
+          : undefined;
+      let publicationId =
+        targetRecipe && typeof targetRecipe.publication_id === 'string'
+          ? targetRecipe.publication_id
+          : (sourcePublicationResolutions.get(String(recipe.publication_id ?? '')) ?? null);
+      if (
+        omittedPublicationIds.has(String(recipe.publication_id ?? '')) &&
+        !selectedPublicationId
+      ) {
+        throw new Error('Choose a destination publication for every imported recipe.');
+      }
+      if (result.action !== 'replace' && selectedPublicationId) {
+        const selectedPublication = rowsFrom(existing, 'publications').find(
+          (item) => item.id === selectedPublicationId && item.trashed_at == null,
+        );
+        if (!selectedPublication) {
+          throw new Error('Choose a current active destination publication.');
+        }
+        publicationId = selectedPublicationId;
+      }
       importedRecipes.push({
         ...recipe,
         id: result.id,
         name: result.action === 'duplicate' ? `${String(recipe.name)} (Imported)` : recipe.name,
-        publication_id:
-          typeof recipe.publication_id === 'string'
-            ? (sourcePublicationResolutions.get(recipe.publication_id) ?? null)
-            : null,
+        publication_id: publicationId,
         is_private: recipe.is_private !== false,
       });
     }
@@ -252,6 +345,18 @@ export function planDatabaseImport(
     if (!mapped) throw new Error(`The import plan cannot resolve a ${label} reference.`);
     return mapped;
   };
+  const mapRecipeLink = (value: unknown, displayText: unknown) => {
+    if (typeof value !== 'string') return null;
+    const mapped = idMappings.recipes.get(value);
+    if (mapped) return mapped;
+    if (typeof displayText !== 'string') return null;
+    const candidates = rowsFrom(existing, 'recipes').filter(
+      (record) =>
+        record.trashed_at == null &&
+        normalizeImportName(String(record.name ?? '')) === normalizeImportName(displayText),
+    );
+    return candidates.length === 1 ? (candidates[0].id ?? null) : null;
+  };
   const mapExplorerPublicationId = (value: unknown) => {
     if (typeof value === 'string') {
       return idMappings.publications.get(value) ?? value;
@@ -263,8 +368,10 @@ export function planDatabaseImport(
     }
     return value;
   };
-  const recipeOwned = (record: ExportRecord) =>
-    typeof record.recipe_id !== 'string' || !keptRecipeIds.has(record.recipe_id);
+  const recipeIncluded = (recipeId: unknown) =>
+    typeof recipeId !== 'string' ||
+    (!keptRecipeIds.has(recipeId) && !omittedRecipeIds.has(recipeId));
+  const recipeOwned = (record: ExportRecord) => recipeIncluded(record.recipe_id);
 
   const records = Object.fromEntries(
     exportTableNames.map((table) => [table, []]),
@@ -274,12 +381,13 @@ export function planDatabaseImport(
   records.ingredients = ingredients.imported;
   records.recipe_picklist_values = picklists.imported;
   records.tags = tags.imported;
-  records.explorer_state = incoming.records.explorer_state.map((record) => {
+  records.explorer_state = incoming.records.explorer_state.flatMap((record) => {
     const contextKey = record.context_key;
     const contextMatch =
       typeof contextKey === 'string'
         ? /^publication-recipes:([0-9a-f-]{36})$/i.exec(contextKey)
         : null;
+    if (contextMatch && !idMappings.publications.has(contextMatch[1])) return [];
     const state = record.state;
     const mappedState =
       state !== null && typeof state === 'object' && !Array.isArray(state)
@@ -302,13 +410,15 @@ export function planDatabaseImport(
               : (state as Record<string, unknown>).filters,
           }
         : state;
-    return {
-      ...record,
-      context_key: contextMatch
-        ? `publication-recipes:${mappedId('publications', contextMatch[1], 'publication')}`
-        : contextKey,
-      state: mappedState,
-    };
+    return [
+      {
+        ...record,
+        context_key: contextMatch
+          ? `publication-recipes:${mappedId('publications', contextMatch[1], 'publication')}`
+          : contextKey,
+        state: mappedState,
+      },
+    ];
   });
   records.ingredient_densities = incoming.records.ingredient_densities.flatMap((record) => {
     const ingredientId = mappedId('ingredients', record.ingredient_id, 'ingredient');
@@ -319,7 +429,7 @@ export function planDatabaseImport(
     return [{ ...record, ingredient_id: ingredientId }];
   });
   records.recipe_picklist_assignments = incoming.records.recipe_picklist_assignments
-    .filter((record) => !keptRecipeIds.has(String(record.recipe_id)))
+    .filter((record) => recipeIncluded(record.recipe_id))
     .map((record) => ({
       ...record,
       recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
@@ -381,21 +491,14 @@ export function planDatabaseImport(
         'recipe ingredient',
       ),
     }));
-  records.recipe_site_listings = incoming.records.recipe_site_listings
-    .filter(recipeOwned)
-    .map((record) => ({
-      ...record,
-      id: mappedId('recipe_site_listings', record.id, 'site listing'),
-      recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
-      site_publication_id: mappedId('publications', record.site_publication_id, 'publication'),
-    }));
+  records.recipe_site_listings = [];
   records.recipe_pairings = incoming.records.recipe_pairings
-    .filter((record) => !keptRecipeIds.has(String(record.source_recipe_id)))
+    .filter((record) => recipeIncluded(record.source_recipe_id))
     .map((record) => ({
       ...record,
       id: mappedId('recipe_pairings', record.id, 'recipe pairing'),
       source_recipe_id: mappedId('recipes', record.source_recipe_id, 'recipe'),
-      linked_recipe_id: mappedId('recipes', record.linked_recipe_id, 'linked recipe'),
+      linked_recipe_id: mapRecipeLink(record.linked_recipe_id, record.display_text),
     }));
   records.recipe_references = incoming.records.recipe_references
     .filter(recipeOwned)
@@ -406,14 +509,38 @@ export function planDatabaseImport(
       publication_id:
         record.publication_id === null
           ? null
-          : mappedId('publications', record.publication_id, 'publication'),
+          : (idMappings.publications.get(String(record.publication_id)) ?? null),
       linked_recipe_id:
         record.linked_recipe_id === null
           ? null
-          : mappedId('recipes', record.linked_recipe_id, 'linked recipe'),
+          : mapRecipeLink(record.linked_recipe_id, record.display_text),
     }));
+  const nextReferencePosition = new Map<string, number>();
+  for (const reference of records.recipe_references) {
+    const recipeId = String(reference.recipe_id);
+    const position = Number(reference.position);
+    nextReferencePosition.set(
+      recipeId,
+      Math.max(nextReferencePosition.get(recipeId) ?? -1, position),
+    );
+  }
+  for (const listing of incoming.records.recipe_site_listings.filter(recipeOwned)) {
+    const recipeId = String(mappedId('recipes', listing.recipe_id, 'recipe'));
+    const position = (nextReferencePosition.get(recipeId) ?? -1) + 1;
+    records.recipe_references.push({
+      id: createId(),
+      recipe_id: recipeId,
+      reference_type: 'external_url',
+      publication_id: null,
+      display_text: listing.recipe_url,
+      url: listing.recipe_url,
+      position,
+      linked_recipe_id: null,
+    });
+    nextReferencePosition.set(recipeId, position);
+  }
   records.recipe_tags = incoming.records.recipe_tags
-    .filter((record) => !keptRecipeIds.has(String(record.recipe_id)))
+    .filter((record) => recipeIncluded(record.recipe_id))
     .map((record) => ({
       ...record,
       recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
@@ -428,7 +555,7 @@ export function planDatabaseImport(
     }));
   records.media_assets = incoming.records.media_assets.flatMap((record) => {
     if (
-      (record.recipe_id && keptRecipeIds.has(String(record.recipe_id))) ||
+      (record.recipe_id && !recipeIncluded(record.recipe_id)) ||
       (record.publication_id && keptPublicationIds.has(String(record.publication_id)))
     ) {
       return [];
@@ -457,4 +584,16 @@ export function planDatabaseImport(
     reusedDensityIngredientIds,
     idMappings,
   };
+}
+
+export function planDatabaseImport(
+  incoming: PortableData,
+  existing: ExistingRecords,
+  choices: ImportChoices,
+  createId: () => string = randomUUID,
+): ImportPlan {
+  if (incoming.scope.type !== 'database') {
+    throw new Error('Only database exports can be planned here.');
+  }
+  return planImport(incoming, existing, choices, createId);
 }

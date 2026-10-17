@@ -79,25 +79,21 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
 
     const picklistsSection = page.getByRole('region', { name: 'Picklists' });
     const sectionSpacing = await picklistsSection.evaluate((section) => {
-      const unitControls = Array.from(
-        document.querySelectorAll<HTMLElement>('.settings-unit-picklist'),
-      );
-      const preferenceStatus = document.querySelector<HTMLElement>('.settings-unit-status');
       const heading = section.querySelector('h2');
-      if (!heading || unitControls.length === 0 || !preferenceStatus) {
-        throw new Error('Expected preference controls, status, and the Picklists heading.');
-      }
+      if (!heading) throw new Error('Expected the Picklists heading.');
 
       const ruleTop = section.getBoundingClientRect().top;
-      return {
-        beforeRule: ruleTop - preferenceStatus.getBoundingClientRect().bottom,
-        afterRule:
-          heading.getBoundingClientRect().top -
-          ruleTop -
-          Number.parseFloat(getComputedStyle(section).borderTopWidth),
-      };
+      return (
+        heading.getBoundingClientRect().top -
+        ruleTop -
+        Number.parseFloat(getComputedStyle(section).borderTopWidth)
+      );
     });
-    expect(sectionSpacing.beforeRule).toBeCloseTo(sectionSpacing.afterRule, 0);
+    await expect(page.getByRole('region', { name: 'Personal preferences' })).toHaveCSS(
+      'padding-bottom',
+      '28px',
+    );
+    expect(sectionSpacing).toBeCloseTo(8, 0);
 
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
@@ -237,12 +233,49 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
 
     const section = page.getByRole('region', { name: 'Ingredients' });
     const densitySection = page.getByRole('region', { name: 'Trusted densities' });
-    await expect(section).toHaveCSS('border-top-width', '0px');
-    await expect(densitySection).toHaveCSS('border-top-width', '0px');
-    await expect(densitySection).toHaveCSS('margin-top', '28px');
-    await expect(densitySection).toHaveCSS('padding-top', '0px');
-    await expect(section).toHaveCSS('margin-top', '28px');
-    await expect(section).toHaveCSS('padding-top', '0px');
+    const picklistsSection = page.getByRole('region', { name: 'Picklists' });
+    const recipeColumnsSection = page.getByRole('region', { name: 'Recipe columns' });
+    const tagsSection = page.getByRole('region', { name: 'Tags' });
+    const accordionSections = [
+      picklistsSection,
+      recipeColumnsSection,
+      section,
+      tagsSection,
+      densitySection,
+    ];
+    for (const accordionSection of accordionSections) {
+      await expect(accordionSection).toHaveCSS('border-top-width', '1px');
+      await expect(accordionSection).toHaveCSS('margin-top', '0px');
+      await expect(accordionSection).toHaveCSS('padding-top', '8px');
+      await expect(accordionSection).toHaveCSS('padding-bottom', '8px');
+      await expect(accordionSection.locator('h2')).toHaveCSS('min-height', '44px');
+    }
+    const accordionSpacing = await Promise.all(
+      accordionSections.map((accordionSection) =>
+        accordionSection.evaluate((section) => {
+          const heading = section.querySelector('h2');
+          if (!heading) throw new Error('Expected an accordion heading.');
+          const sectionBounds = section.getBoundingClientRect();
+          const headingBounds = heading.getBoundingClientRect();
+          const borderTop = Number.parseFloat(getComputedStyle(section).borderTopWidth);
+          return {
+            above: headingBounds.top - sectionBounds.top - borderTop,
+            below: sectionBounds.bottom - headingBounds.bottom,
+          };
+        }),
+      ),
+    );
+    for (const spacing of accordionSpacing) {
+      expect(spacing.above).toBeCloseTo(spacing.below, 0);
+    }
+    await expect(recipeColumnsSection.getByRole('button', { name: 'Check None' })).toHaveCSS(
+      'transform',
+      'none',
+    );
+    await expect(page.getByRole('region', { name: 'Data management' })).toHaveCSS(
+      'margin-top',
+      '0px',
+    );
     const toggle = section.getByRole('button', { name: 'Ingredients' });
     const picklistToggle = page.getByRole('button', { name: 'Picklists' });
     const tagToggle = page.getByRole('button', { name: 'Tags' });

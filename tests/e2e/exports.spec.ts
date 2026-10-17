@@ -24,7 +24,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/publications\/[^/]+$/);
 }
 
 async function expectKeyboardFocusVisible(
@@ -643,9 +643,42 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       0,
     );
     await page.goto(`/publications/${publicationId}`);
-    const publicationExport = page.getByRole('button', { name: 'Export publication' });
+    const isMobile = testInfo.project.name === 'Fold 6';
+    const transferTrigger = page.getByRole('button', { name: 'Publication transfer options' });
+    const publicationExport = isMobile
+      ? transferTrigger
+      : page.getByRole('button', { name: 'Export publication' });
+    const publicationImport = page.getByRole('button', { name: 'Import recipe' });
     const publicationEdit = page.getByRole('button', { name: 'Edit publication' });
     await expect(publicationExport).toBeVisible();
+    if (isMobile) {
+      await transferTrigger.focus();
+      await page.keyboard.press('Enter');
+      const transferMenu = page.getByRole('menu', { name: 'Publication transfer actions' });
+      const exportOption = transferMenu.getByRole('menuitem', { name: 'Export publication' });
+      const importOption = transferMenu.getByRole('menuitem', { name: 'Import recipe' });
+      await expect(exportOption).toBeVisible();
+      await expect(importOption).toBeVisible();
+      await expect(exportOption).toBeFocused();
+      await page.keyboard.press('ArrowDown');
+      await expect(importOption).toBeFocused();
+      await page.keyboard.press('Home');
+      await expect(exportOption).toBeFocused();
+      await page.keyboard.press('End');
+      await expect(importOption).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(transferMenu).toHaveCount(0);
+      await expect(transferTrigger).toBeFocused();
+
+      await activateExport(transferTrigger);
+      await activateExport(importOption);
+      const importDialog = page.getByRole('dialog', { name: 'Import recipe' });
+      await expect(importDialog).toBeVisible();
+      await importDialog.getByRole('button', { name: 'Close import dialog' }).click();
+      await expect(importDialog).not.toBeVisible();
+    } else {
+      await expect(publicationImport).toBeVisible();
+    }
     await expect(publicationEdit).toBeVisible();
     const publicationActionTops = await page
       .locator(
@@ -656,27 +689,66 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     expect((await publicationExport.boundingBox())?.x).toBeLessThan(
       (await publicationEdit.boundingBox())?.x ?? 0,
     );
-    if (testInfo.project.name === 'Fold 6') {
-      await expect(publicationExport.locator('.export-action-label')).toBeHidden();
+    if (isMobile) {
       await expect(publicationEdit.locator('.publication-edit-label')).toBeHidden();
       await expect(page.locator('.publication-mobile-add-label')).toBeHidden();
-      const toolbarActionTops = await page
-        .locator(
-          '.explorer-list-preferences-toolbar:has(.publication-mobile-add) button:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) a:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) select:visible',
-        )
-        .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
+      const exportBounds = await publicationExport.boundingBox();
+      const transferActions = page.locator('.publication-mobile-transfer-actions');
+      const transferBounds = await transferActions.boundingBox();
+      const editBounds = await publicationEdit.boundingBox();
+      expect(Math.round(exportBounds?.width ?? 0)).toBe(40);
+      expect(Math.round(exportBounds?.height ?? 0)).toBe(40);
+      const exportColors = await publicationExport.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return [styles.borderColor, styles.backgroundColor, styles.color];
+      });
+      const actionColors = await page
+        .locator('.publication-transfer-export-source .export-action-button')
+        .evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return [styles.borderColor, styles.backgroundColor, styles.color];
+        });
+      expect(actionColors).toEqual(exportColors);
+      expect((editBounds?.x ?? 0) - (transferBounds?.x ?? 0) - (transferBounds?.width ?? 0)).toBe(
+        8,
+      );
+      const toolbarActions = page.locator(
+        '.explorer-list-preferences-toolbar:has(.publication-mobile-add) button:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) a:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) select:visible',
+      );
+      const toolbarActionTops = await toolbarActions.evaluateAll((elements) =>
+        elements.map((element) => element.getBoundingClientRect().top),
+      );
       expect(new Set(toolbarActionTops).size).toBe(1);
-      const toolbarActionSizes = await page
-        .locator(
-          '.explorer-list-preferences-toolbar:has(.publication-mobile-add) button:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) a:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) select:visible',
-        )
-        .evaluateAll((elements) =>
+      const toolbarActionSizes = await toolbarActions.evaluateAll((elements) =>
+        elements.map((element) => {
+          const { width, height } = element.getBoundingClientRect();
+          return [Math.round(width), Math.round(height)];
+        }),
+      );
+      expect(toolbarActionSizes.every(([width, height]) => width === height)).toBe(true);
+      expect(
+        await page
+          .getByRole('button', { name: 'Choose List columns' })
+          .evaluate((element) => getComputedStyle(element).borderTopColor),
+      ).toBe(await publicationEdit.evaluate((element) => getComputedStyle(element).borderTopColor));
+      for (const [width, expectedGap] of [
+        [352, 8],
+        [320, 4],
+      ]) {
+        await page.setViewportSize({ width, height: 864 });
+        await expectNoHorizontalOverflow(page);
+        const toolbarActionBounds = await toolbarActions.evaluateAll((elements) =>
           elements.map((element) => {
-            const { width, height } = element.getBoundingClientRect();
-            return [Math.round(width), Math.round(height)];
+            const { x, width: itemWidth } = element.getBoundingClientRect();
+            return { x, width: itemWidth };
           }),
         );
-      expect(toolbarActionSizes.every(([width, height]) => width === height)).toBe(true);
+        const toolbarActionGaps = toolbarActionBounds
+          .slice(0, -1)
+          .map((item, index) => toolbarActionBounds[index + 1].x - item.x - item.width);
+        expect(toolbarActionGaps).toEqual([0, 0, ...Array(4).fill(expectedGap)]);
+      }
+      await page.setViewportSize({ width: 352, height: 864 });
     } else {
       await expect(publicationExport.locator('.export-action-label')).toHaveText('Export');
       await expect(publicationEdit.locator('.publication-edit-label')).toBeVisible();
@@ -716,9 +788,21 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       expect(Math.round(publicationExportBox?.height ?? 0)).toBe(40);
       await expectNoHorizontalOverflow(page);
     }
-    await activateExport(publicationExport);
+    const activatePublicationExport = async () => {
+      if (isMobile) {
+        await activateExport(transferTrigger);
+        await activateExport(
+          page.getByRole('menuitem', { name: 'Export publication', exact: true }),
+        );
+      } else {
+        await activateExport(publicationExport);
+      }
+    };
+    await activatePublicationExport();
     const publicationError = page.locator(
-      '.publication-detail-export-action .export-action-feedback-error',
+      isMobile
+        ? '.publication-mobile-transfer-actions .export-action-feedback-error'
+        : '.publication-detail-export-action .export-action-feedback-error',
     );
     await expect(publicationError).toHaveText('Unable to prepare the export. Please try again.');
     const publicationErrorBox = await publicationError.boundingBox();
@@ -746,15 +830,18 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       await expectNoHorizontalOverflow(page);
     }
     const publicationDownload = page.waitForEvent('download');
-    await activateExport(publicationExport);
+    await activatePublicationExport();
     const publicationDownloadResult = await publicationDownload;
     expect(publicationDownloadResult.suggestedFilename()).toBe(
       `${publicationName} - Publication Export.zip`,
     );
     expect(new URL(page.url()).pathname).toBe(`/publications/${publicationId}`);
-    await expect(
-      page.locator('.publication-detail-export-action .export-action-feedback'),
-    ).toHaveText('Publication export ready. Download started.');
+    const publicationFeedback = page.locator(
+      isMobile
+        ? '.publication-mobile-transfer-actions .export-action-feedback'
+        : '.publication-detail-export-action .export-action-feedback',
+    );
+    await expect(publicationFeedback).toHaveText('Publication export ready. Download started.');
     expect(
       await Promise.all(
         [publicationExport, publicationEdit, addRecipe].map(
@@ -778,9 +865,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
     expect(new Set(publicationTopsAfterExport).size).toBe(1);
     const publicationExportBox = await publicationExport.boundingBox();
-    const publicationFeedbackBox = await page
-      .locator('.publication-detail-export-action .export-action-feedback')
-      .boundingBox();
+    const publicationFeedbackBox = await publicationFeedback.boundingBox();
     expect(publicationFeedbackBox?.y).toBeGreaterThanOrEqual(
       (publicationExportBox?.y ?? 0) + (publicationExportBox?.height ?? 0),
     );

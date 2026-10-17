@@ -4,6 +4,7 @@ import { getTrashedPublications, getTrashedRecipes } from '../../../lib/recipes/
 import { createClient } from '../../../lib/supabase/server';
 import { restorePublication } from '../../publications/actions';
 import { restoreRecipe } from '../actions';
+import { TrashPurgeAction, TrashPurgeAllAction } from './trash-purge-action';
 
 type TrashPageProps = {
   searchParams: Promise<{ status?: string }>;
@@ -36,11 +37,33 @@ export default async function TrashPage({ searchParams }: TrashPageProps) {
           <p className="eyebrow">YOUR COOKBOOK SHELF</p>
           <h1 id="page-title">Trash</h1>
         </div>
+        {recipes.length > 0 || publications.length > 0 ? (
+          <div className="recipe-page-heading-actions">
+            <TrashPurgeAllAction />
+          </div>
+        ) : null}
       </div>
 
       {status === 'conflict' && (
         <p className="recipe-status-message" role="alert">
           An item changed or is no longer available. Refresh Trash and try again.
+        </p>
+      )}
+      {status === 'error' && (
+        <p className="recipe-status-message" role="alert">
+          Trash could not be purged. Try again.
+        </p>
+      )}
+      {status === 'migration-required' && (
+        <p className="recipe-status-message" role="alert">
+          Trash purge is unavailable until the pending database migrations are applied.
+        </p>
+      )}
+      {(status === 'purged' || status === 'purged-all') && (
+        <p className="recipe-status-message" role="status">
+          {status === 'purged-all'
+            ? 'Trash was permanently cleared.'
+            : 'The item was permanently deleted.'}
         </p>
       )}
 
@@ -91,21 +114,33 @@ export default async function TrashPage({ searchParams }: TrashPageProps) {
                                 </span>
                                 <span className="recipe-trash-recipe-name">{publication.name}</span>
                               </span>
-                              <form action={restorePublication}>
-                                <input name="publication_id" type="hidden" value={publication.id} />
-                                <input
-                                  name="expected_version"
-                                  type="hidden"
-                                  value={publication.version}
+                              <div className="recipe-trash-item-actions">
+                                <form action={restorePublication}>
+                                  <input
+                                    name="publication_id"
+                                    type="hidden"
+                                    value={publication.id}
+                                  />
+                                  <input
+                                    name="expected_version"
+                                    type="hidden"
+                                    value={publication.version}
+                                  />
+                                  <button
+                                    aria-label={`Restore ${publication.name}`}
+                                    className="recipe-trash-restore"
+                                    type="submit"
+                                  >
+                                    Restore
+                                  </button>
+                                </form>
+                                <TrashPurgeAction
+                                  itemId={publication.id}
+                                  itemName={publication.name}
+                                  itemType="publication"
+                                  version={publication.version}
                                 />
-                                <button
-                                  aria-label={`Restore ${publication.name}`}
-                                  className="recipe-trash-restore"
-                                  type="submit"
-                                >
-                                  Restore
-                                </button>
-                              </form>
+                              </div>
                             </div>
                           </td>
                           <td>
@@ -152,21 +187,29 @@ export default async function TrashPage({ searchParams }: TrashPageProps) {
                           <td>
                             <div className="recipe-trash-recipe">
                               <span className="recipe-trash-recipe-name">{recipe.name}</span>
-                              <form action={restoreRecipe}>
-                                <input name="recipe_id" type="hidden" value={recipe.id} />
-                                <input
-                                  name="expected_version"
-                                  type="hidden"
-                                  value={recipe.version}
+                              <div className="recipe-trash-item-actions">
+                                <form action={restoreRecipe}>
+                                  <input name="recipe_id" type="hidden" value={recipe.id} />
+                                  <input
+                                    name="expected_version"
+                                    type="hidden"
+                                    value={recipe.version}
+                                  />
+                                  <button
+                                    aria-label={`Restore ${recipe.name}`}
+                                    className="recipe-trash-restore"
+                                    type="submit"
+                                  >
+                                    Restore
+                                  </button>
+                                </form>
+                                <TrashPurgeAction
+                                  itemId={recipe.id}
+                                  itemName={recipe.name}
+                                  itemType="recipe"
+                                  version={recipe.version}
                                 />
-                                <button
-                                  aria-label={`Restore ${recipe.name}`}
-                                  className="recipe-trash-restore"
-                                  type="submit"
-                                >
-                                  Restore
-                                </button>
-                              </form>
+                              </div>
                             </div>
                           </td>
                           <td>

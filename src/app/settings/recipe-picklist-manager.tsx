@@ -894,7 +894,7 @@ export function RecipePicklistManager({
   return (
     <section
       aria-labelledby="recipe-picklists-title"
-      className="settings-section settings-picklists-section"
+      className="settings-section settings-picklists-section settings-accordion-section"
     >
       <h2 className={styles.sectionHeading}>
         <button
@@ -967,9 +967,11 @@ export function RecipePicklistManager({
             </div>
             {renderPane()}
           </div>
-          <p aria-live="polite" className={styles.status} role="status">
-            {isPending ? 'Saving...' : status}
-          </p>
+          {(isPending || status) && (
+            <p aria-live="polite" className={styles.status} role="status">
+              {isPending ? 'Saving...' : status}
+            </p>
+          )}
         </div>
       </div>
     </section>

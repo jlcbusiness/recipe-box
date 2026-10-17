@@ -152,49 +152,62 @@ export function PublicationDeleteAction({
                         type="hidden"
                         value={destinationPublicationId}
                       />
-                      <button
-                        aria-controls="destination-publication-options"
-                        aria-expanded={isDestinationOpen}
-                        aria-haspopup="listbox"
-                        aria-labelledby="destination-publication-label destination-publication-value"
-                        className="publication-delete-destination-button"
-                        ref={destinationButtonRef}
-                        type="button"
-                        onClick={() => setIsDestinationOpen((open) => !open)}
-                      >
-                        <span id="destination-publication-value">
-                          {selectedDestination
-                            ? `${selectedDestination.name} (${publicationTypeLabels[selectedDestination.publication_type]})`
-                            : 'Choose a publication'}
-                        </span>
-                        <ChevronDown aria-hidden="true" size={17} />
-                      </button>
-                      {isDestinationOpen && (
+                      <div className="publication-delete-destination-picker">
+                        <button
+                          aria-controls="destination-publication-options"
+                          aria-expanded={isDestinationOpen}
+                          aria-haspopup="listbox"
+                          aria-labelledby="destination-publication-label destination-publication-value"
+                          className="publication-delete-destination-button"
+                          ref={destinationButtonRef}
+                          type="button"
+                          onClick={() => setIsDestinationOpen((open) => !open)}
+                        >
+                          <span id="destination-publication-value">
+                            {selectedDestination
+                              ? `${selectedDestination.name} (${publicationTypeLabels[selectedDestination.publication_type]})`
+                              : 'Choose a publication'}
+                          </span>
+                          <ChevronDown aria-hidden="true" size={17} />
+                        </button>
                         <div
-                          aria-labelledby="destination-publication-label"
-                          className="publication-delete-destination-options"
-                          id="destination-publication-options"
-                          role="listbox"
+                          aria-hidden="true"
+                          className="publication-delete-destination-width-probe"
                         >
                           {destinations.map((destination) => (
-                            <button
-                              aria-selected={destination.id === destinationPublicationId}
-                              className="publication-delete-destination-option"
-                              key={destination.id}
-                              role="option"
-                              type="button"
-                              onClick={() => {
-                                setDestinationPublicationId(destination.id);
-                                setIsDestinationOpen(false);
-                                destinationButtonRef.current?.focus();
-                              }}
-                            >
-                              <span>{destination.name}</span>
-                              <small>{publicationTypeLabels[destination.publication_type]}</small>
-                            </button>
+                            <span key={destination.id}>
+                              {destination.name} (
+                              {publicationTypeLabels[destination.publication_type]})
+                            </span>
                           ))}
                         </div>
-                      )}
+                        {isDestinationOpen && (
+                          <div
+                            aria-labelledby="destination-publication-label"
+                            className="publication-delete-destination-options"
+                            id="destination-publication-options"
+                            role="listbox"
+                          >
+                            {destinations.map((destination) => (
+                              <button
+                                aria-selected={destination.id === destinationPublicationId}
+                                className="publication-delete-destination-option"
+                                key={destination.id}
+                                role="option"
+                                type="button"
+                                onClick={() => {
+                                  setDestinationPublicationId(destination.id);
+                                  setIsDestinationOpen(false);
+                                  destinationButtonRef.current?.focus();
+                                }}
+                              >
+                                <span>{destination.name}</span>
+                                <small>{publicationTypeLabels[destination.publication_type]}</small>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </fieldset>
                   )}
                   {destinations.length === 0 && (

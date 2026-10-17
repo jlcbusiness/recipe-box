@@ -130,7 +130,6 @@
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  transform: translateY(-7px);
 }
 
 .checkNone:hover:not(:disabled) {

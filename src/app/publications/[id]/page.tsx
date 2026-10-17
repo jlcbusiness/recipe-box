@@ -6,9 +6,11 @@ import { getPublicationCover } from '../../../lib/media/data';
 import { getPublications, getTags, type PublicationOption } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
 import { ExportAction } from '../../export-action';
+import { ImportAction } from '../../settings/database-import-action';
 import { TagChips } from '../../tags/tag-controls';
 import { PublicationCover } from '../publication-cover';
 import { PublicationEditAction } from '../publication-edit-action';
+import { PublicationTransferMenu } from '../publication-transfer-menu';
 import { PublicationRecipeExplorer } from './recipe-explorer';
 
 const publicationTypeLabels = {
@@ -118,13 +120,6 @@ export default async function PublicationPage({
         <div
           className={`publication-detail-actions publication-desktop-actions${publication.publication_type === 'collection' ? ' publication-detail-actions-collection' : ''}`}
         >
-          <ExportAction
-            ariaLabel="Export publication"
-            buttonClassName="recipe-secondary-button publication-detail-export-button"
-            buttonLabel="Export"
-            className="publication-detail-export-action"
-            scope={{ type: 'publication', id: publication.id }}
-          />
           {publication.publication_type !== 'collection' && (
             <PublicationEditAction
               assets={publicationCover ? [publicationCover] : []}
@@ -139,8 +134,22 @@ export default async function PublicationPage({
             className="recipe-primary-link collection-add-action publication-new-recipe"
             href={`/recipes/new?publication=${publication.id}`}
           >
+            <Plus aria-hidden="true" size={18} />
             Add Recipe
           </Link>
+          <ImportAction
+            compact
+            scope={{ type: 'recipe' }}
+            targetPublicationId={publication.id}
+            triggerLabel="Import recipe"
+          />
+          <ExportAction
+            ariaLabel="Export publication"
+            buttonClassName="recipe-secondary-button publication-detail-export-button"
+            buttonLabel="Export"
+            className="publication-detail-export-action"
+            scope={{ type: 'publication', id: publication.id }}
+          />
         </div>
       </div>
       {explorerSearchParams.status === 'trashed' && (
@@ -161,13 +170,7 @@ export default async function PublicationPage({
       <PublicationRecipeExplorer
         mobileToolbarActions={
           <div className="publication-mobile-actions">
-            <ExportAction
-              ariaLabel="Export publication"
-              buttonClassName="recipe-secondary-button publication-detail-export-button"
-              buttonLabel="Export"
-              className="publication-detail-export-action"
-              scope={{ type: 'publication', id: publication.id }}
-            />
+            <PublicationTransferMenu publicationId={publication.id} />
             {publication.publication_type !== 'collection' && (
               <PublicationEditAction
                 assets={publicationCover ? [publicationCover] : []}

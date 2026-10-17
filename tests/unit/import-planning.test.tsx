@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { exportTableNames, type PortableData } from '../../src/lib/exports/rules';
-import { planDatabaseImport } from '../../src/lib/imports/planning';
+import { planDatabaseImport, planImport } from '../../src/lib/imports/planning';
+import { findImportMatches } from '../../src/lib/imports/rules';
 
 const sourcePublicationId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const sourceRecipeId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -9,6 +10,11 @@ const destinationRecipeId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const newPublicationId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const newRecipeId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const newStepId = '11111111-1111-4111-8111-111111111111';
+const externalSourceRecipeId = '22222222-2222-4222-8222-222222222222';
+const externalDestinationRecipeId = '33333333-3333-4333-8333-333333333333';
+const externalSourcePublicationId = '44444444-4444-4444-8444-444444444444';
+const newPairingId = '55555555-5555-4555-8555-555555555555';
+const newReferenceId = '66666666-6666-4666-8666-666666666666';
 
 function emptyData(): PortableData {
   return {
@@ -288,6 +294,27 @@ describe('database import planning', () => {
     });
   });
 
+  it('skips explorer state whose publication context is absent from the archive', () => {
+    const { data, existing } = createInput();
+    const stalePublicationId = '77777777-7777-4777-8777-777777777777';
+    data.records.explorer_state = [
+      {
+        context_key: `publication-recipes:${stalePublicationId}`,
+        state: { schema_version: '1', filters: [], sort: 'name', direction: 'asc', view: 'list' },
+      },
+    ];
+
+    const plan = planDatabaseImport(data, existing, {
+      [`publication:${sourcePublicationId}`]: {
+        action: 'replace',
+        targetId: destinationPublicationId,
+      },
+      [`recipe:${sourceRecipeId}`]: { action: 'replace', targetId: destinationRecipeId },
+    });
+
+    expect(plan.records.explorer_state).toEqual([]);
+  });
+
   it('reuses normalized catalog records, keeps local densities, and preserves privacy', () => {
     const { data, existing } = createInput();
     const sourceIngredientId = '88888888-8888-4888-8888-888888888888';
@@ -359,5 +386,442 @@ describe('database import planning', () => {
     expect(plan.records.ingredient_densities).toEqual([]);
     expect(plan.reusedDensityIngredientIds).toEqual([localIngredientId]);
     expect(plan.reusedCatalogRecords).toHaveLength(3);
+  });
+});
+
+describe('scoped import planning', () => {
+  it('matches a recipe root by name across destination publications', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    const otherPublicationId = 'abababab-abab-4bab-8bab-abababababab';
+    const otherRecipeId = 'bcbcbcbc-bcbc-4cbc-8cbc-bcbcbcbcbcbc';
+    existing.publications.push({
+      id: 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd',
+      publication_type: 'book',
+      name: 'Another cookbook',
+    });
+    existing.recipes[0].id = otherRecipeId;
+    existing.recipes[0].publication_id = otherPublicationId;
+
+    const matches = findImportMatches(data, existing);
+
+    expect(matches.find((match) => match.kind === 'recipe')).toEqual({
+      kind: 'recipe',
+      incomingId: sourceRecipeId,
+      existingIds: [otherRecipeId],
+    });
+  });
+
+  it('keeps a publication root choice independent from its recipe conflicts', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'publication', id: sourcePublicationId };
+    const plan = planImport(
+      data,
+      existing,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'keep',
+          targetId: destinationPublicationId,
+        },
+        [`recipe:${sourceRecipeId}`]: {
+          action: 'duplicate',
+          targetId: destinationRecipeId,
+        },
+      },
+      () => newRecipeId,
+    );
+
+    expect(plan.records.publications).toEqual([]);
+    expect(plan.records.recipes).toEqual([
+      expect.objectContaining({
+        id: newRecipeId,
+        publication_id: destinationPublicationId,
+        name: 'Lemon cake (Imported)',
+      }),
+    ]);
+  });
+
+  it('replaces matching recipes automatically when a publication is replaced', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'publication', id: sourcePublicationId };
+    const plan = planImport(data, existing, {
+      [`publication:${sourcePublicationId}`]: {
+        action: 'replace',
+        targetId: destinationPublicationId,
+      },
+    });
+
+    expect(plan.records.publications[0].id).toBe(destinationPublicationId);
+    expect(plan.records.recipes).toEqual([
+      expect.objectContaining({
+        id: destinationRecipeId,
+        publication_id: destinationPublicationId,
+        name: 'Lemon cake',
+      }),
+    ]);
+    expect(plan.replaceRecipeIds).toEqual([destinationRecipeId]);
+  });
+
+  it('creates a missing source publication without a separate publication choice', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    existing.publications = [];
+    existing.recipes = [];
+    const generatedIds = [newPublicationId, newRecipeId, newStepId];
+
+    const plan = planImport(data, existing, {}, () => generatedIds.shift() ?? newStepId);
+
+    expect(plan.records.publications).toEqual([
+      expect.objectContaining({ id: newPublicationId, name: 'Baking Annual' }),
+    ]);
+    expect(plan.records.recipes).toEqual([
+      expect.objectContaining({ id: newRecipeId, publication_id: newPublicationId }),
+    ]);
+    expect(plan.replacePublicationIds).toEqual([]);
+  });
+
+  it('creates a new publication when the only same-name publication is in Trash', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'publication', id: sourcePublicationId };
+    const trashedExisting = {
+      publications: existing.publications.map((publication) => ({
+        ...publication,
+        trashed_at: '2026-10-15T12:00:00Z',
+      })),
+      recipes: existing.recipes.map((recipe) => ({
+        ...recipe,
+        trashed_at: '2026-10-15T12:00:00Z',
+      })),
+    };
+    const generatedIds = [newPublicationId, newRecipeId, newStepId];
+
+    const plan = planImport(data, trashedExisting, {}, () => generatedIds.shift() ?? newStepId);
+
+    expect(plan.records.publications).toEqual([
+      expect.objectContaining({ id: newPublicationId, name: 'Baking Annual' }),
+    ]);
+    expect(plan.records.recipes).toEqual([
+      expect.objectContaining({
+        id: newRecipeId,
+        publication_id: newPublicationId,
+        name: 'Lemon cake',
+      }),
+    ]);
+  });
+
+  it('omits an unmatched source publication when recipes choose destinations', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'publication', id: sourcePublicationId };
+    existing.publications = [
+      { id: destinationPublicationId, publication_type: 'magazine', name: 'Other publication' },
+    ];
+    existing.recipes = [];
+
+    const plan = planImport(data, existing, {}, () => newRecipeId, {
+      omitMissingSourcePublication: true,
+      destinationPublicationIds: { [sourceRecipeId]: destinationPublicationId },
+    });
+
+    expect(plan.records.publications).toEqual([]);
+    expect(plan.records.recipes).toEqual([
+      expect.objectContaining({
+        id: newRecipeId,
+        publication_id: destinationPublicationId,
+      }),
+    ]);
+  });
+
+  it('omits selected recipes and their recipe-owned records', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'publication', id: sourcePublicationId };
+
+    const plan = planImport(
+      data,
+      existing,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'keep',
+          targetId: destinationPublicationId,
+        },
+      },
+      () => newRecipeId,
+      { omitRecipeIds: [sourceRecipeId] },
+    );
+
+    expect(plan.records.recipes).toEqual([]);
+    expect(plan.records.recipe_ingredients).toEqual([]);
+    expect(plan.records.recipe_steps).toEqual([]);
+    expect(plan.records.recipe_tags).toEqual([]);
+  });
+
+  it('links the recipe dependency to an active normalized publication match', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    const plan = planImport(
+      data,
+      existing,
+      { [`recipe:${sourceRecipeId}`]: { action: 'keep', targetId: destinationRecipeId } },
+      () => newStepId,
+    );
+
+    expect(plan.records.publications).toEqual([]);
+    expect(plan.records.recipes).toEqual([]);
+    expect(plan.idMappings.publications.get(sourcePublicationId)).toBe(destinationPublicationId);
+  });
+
+  it('keeps the destination publication when replacing a recipe', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    const otherPublicationId = externalSourcePublicationId;
+    existing.publications.push({
+      id: otherPublicationId,
+      publication_type: 'magazine',
+      name: 'Weeknight Cooking',
+    });
+    existing.recipes[0].publication_id = otherPublicationId;
+
+    const plan = planImport(
+      data,
+      existing,
+      { [`recipe:${sourceRecipeId}`]: { action: 'replace', targetId: destinationRecipeId } },
+      () => newStepId,
+    );
+
+    expect(plan.records.recipes[0]).toMatchObject({
+      id: destinationRecipeId,
+      publication_id: otherPublicationId,
+    });
+  });
+
+  it('places a duplicate recipe in the selected destination publication', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    const otherPublicationId = externalSourcePublicationId;
+    existing.publications.push({
+      id: otherPublicationId,
+      publication_type: 'magazine',
+      name: 'Weeknight Cooking',
+    });
+
+    const plan = planImport(
+      data,
+      existing,
+      { [`recipe:${sourceRecipeId}`]: { action: 'duplicate', targetId: destinationRecipeId } },
+      () => newRecipeId,
+      { destinationPublicationIds: { [sourceRecipeId]: otherPublicationId } },
+    );
+
+    expect(plan.records.recipes[0]).toMatchObject({
+      id: newRecipeId,
+      publication_id: otherPublicationId,
+      name: 'Lemon cake (Imported)',
+    });
+  });
+
+  it('places a new recipe in the selected destination publication', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    existing.recipes = [];
+    const otherPublicationId = externalSourcePublicationId;
+    existing.publications.push({
+      id: otherPublicationId,
+      publication_type: 'magazine',
+      name: 'Weeknight Cooking',
+    });
+
+    const plan = planImport(data, existing, {}, () => newRecipeId, {
+      destinationPublicationIds: { [sourceRecipeId]: otherPublicationId },
+    });
+
+    expect(plan.records.recipes[0]).toMatchObject({
+      id: newRecipeId,
+      publication_id: otherPublicationId,
+    });
+  });
+
+  it('maps Recipe Tin to the destination collection without importing it', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.publications[0] = {
+      id: sourcePublicationId,
+      publication_type: 'collection',
+      name: 'Recipe Tin',
+    };
+    data.records.recipes[0].publication_id = sourcePublicationId;
+    existing.publications[0] = {
+      id: destinationPublicationId,
+      publication_type: 'collection',
+      name: 'Recipe Tin',
+    };
+    existing.recipes = [];
+
+    const plan = planImport(data, existing, {}, () => newRecipeId);
+
+    expect(plan.records.publications).toEqual([]);
+    expect(plan.records.recipes[0]).toMatchObject({ publication_id: destinationPublicationId });
+  });
+
+  it('links the bundled publication and reconnects unique external links without source IDs', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipe_steps = [];
+    data.records.recipe_pairings = [
+      {
+        id: '77777777-7777-4777-8777-777777777777',
+        source_recipe_id: sourceRecipeId,
+        linked_recipe_id: externalSourceRecipeId,
+        display_text: 'Soup',
+        position: 0,
+      },
+    ];
+    data.records.recipe_references = [
+      {
+        id: '88888888-8888-4888-8888-888888888888',
+        recipe_id: sourceRecipeId,
+        reference_type: 'publication',
+        publication_id: externalSourcePublicationId,
+        display_text: 'Family cookbook',
+        url: null,
+        position: 0,
+        linked_recipe_id: null,
+      },
+    ];
+    const scopedExisting = {
+      ...existing,
+      recipes: [
+        ...existing.recipes,
+        { id: externalDestinationRecipeId, name: ' Soup ', publication_id: 'another-publication' },
+      ],
+    };
+    const generatedIds = [newRecipeId, newPairingId, newReferenceId];
+
+    const plan = planImport(
+      data,
+      scopedExisting,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'keep',
+          targetId: destinationPublicationId,
+        },
+        [`recipe:${sourceRecipeId}`]: {
+          action: 'duplicate',
+          targetId: destinationRecipeId,
+        },
+      },
+      () => generatedIds.shift() ?? newStepId,
+    );
+
+    expect(plan.records.publications).toEqual([]);
+    expect(plan.records.recipes).toEqual([
+      expect.objectContaining({
+        id: newRecipeId,
+        publication_id: destinationPublicationId,
+        name: 'Lemon cake (Imported)',
+      }),
+    ]);
+    expect(plan.records.recipe_pairings).toEqual([
+      expect.objectContaining({
+        id: newPairingId,
+        source_recipe_id: newRecipeId,
+        linked_recipe_id: externalDestinationRecipeId,
+        display_text: 'Soup',
+      }),
+    ]);
+    expect(plan.records.recipe_references).toEqual([
+      expect.objectContaining({
+        id: newReferenceId,
+        recipe_id: newRecipeId,
+        reference_type: 'publication',
+        publication_id: null,
+        display_text: 'Family cookbook',
+      }),
+    ]);
+  });
+
+  it('clears an out-of-scope recipe link when the display name is ambiguous', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipe_steps = [];
+    data.records.recipe_pairings = [
+      {
+        id: '77777777-7777-4777-8777-777777777777',
+        source_recipe_id: sourceRecipeId,
+        linked_recipe_id: externalSourceRecipeId,
+        display_text: 'Soup',
+        position: 0,
+      },
+    ];
+    const scopedExisting = {
+      ...existing,
+      recipes: [
+        ...existing.recipes,
+        { id: externalDestinationRecipeId, name: 'Soup', publication_id: null, trashed_at: null },
+        { id: '99999999-9999-4999-8999-999999999999', name: ' soup ', publication_id: null },
+      ],
+    };
+
+    const plan = planImport(
+      data,
+      scopedExisting,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'keep',
+          targetId: destinationPublicationId,
+        },
+        [`recipe:${sourceRecipeId}`]: {
+          action: 'duplicate',
+          targetId: destinationRecipeId,
+        },
+      },
+      () => newPairingId,
+    );
+
+    expect(plan.records.recipe_pairings[0]).toMatchObject({
+      linked_recipe_id: null,
+      display_text: 'Soup',
+    });
+  });
+
+  it('preserves a retired secondary Site listing as an external URL reference', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipe_steps = [];
+    data.records.recipe_site_listings = [
+      {
+        id: '77777777-7777-4777-8777-777777777777',
+        recipe_id: sourceRecipeId,
+        site_publication_id: externalSourcePublicationId,
+        recipe_url: 'https://example.com/lemon-cake',
+      },
+    ];
+    const generatedIds = [newRecipeId, newStepId, newPairingId];
+
+    const plan = planImport(
+      data,
+      existing,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'keep',
+          targetId: destinationPublicationId,
+        },
+        [`recipe:${sourceRecipeId}`]: {
+          action: 'duplicate',
+          targetId: destinationRecipeId,
+        },
+      },
+      () => generatedIds.shift() ?? newReferenceId,
+    );
+
+    expect(plan.records.recipe_site_listings).toEqual([]);
+    expect(plan.records.recipe_references).toEqual([
+      expect.objectContaining({
+        recipe_id: newRecipeId,
+        reference_type: 'external_url',
+        publication_id: null,
+        display_text: 'https://example.com/lemon-cake',
+        url: 'https://example.com/lemon-cake',
+        position: 0,
+      }),
+    ]);
   });
 });

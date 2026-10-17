@@ -497,7 +497,10 @@ export function IngredientDensityManager({
   }
 
   return (
-    <section aria-label="Trusted densities" className="settings-section settings-density-section">
+    <section
+      aria-label="Trusted densities"
+      className="settings-section settings-density-section settings-accordion-section"
+    >
       <h2 className={styles.heading}>
         <button
           aria-controls="trusted-density-editor"
@@ -812,14 +815,16 @@ export function IngredientDensityManager({
           {availableIngredients.length === 0 && densities.length > 0 && (
             <p className={styles.emptyState}>Every ingredient already has a trusted density.</p>
           )}
-          <p
-            aria-live="polite"
-            className={error ? `${styles.status} ${styles.errorStatus}` : styles.status}
-            id={errorId}
-            role="status"
-          >
-            {isPending ? 'Saving...' : error || status}
-          </p>
+          {(isPending || error || status) && (
+            <p
+              aria-live="polite"
+              className={error ? `${styles.status} ${styles.errorStatus}` : styles.status}
+              id={errorId}
+              role="status"
+            >
+              {isPending ? 'Saving...' : error || status}
+            </p>
+          )}
         </div>
       </div>
     </section>

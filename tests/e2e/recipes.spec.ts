@@ -2042,6 +2042,44 @@ test('owners confirm before removing an ingredient referenced by instructions @e
   }
 });
 
+test('trashing a publication recipe returns to its publication @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Library' }).click();
+    await page.getByRole('link', { name: 'Add publication' }).click();
+    await page.getByRole('radio', { name: 'Book' }).check();
+    await page.getByLabel('Name').fill('Publication to keep open');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Publication to keep open' })).toBeVisible();
+    const publicationId = new URL(page.url()).pathname.split('/').at(-1);
+    if (!publicationId) {
+      throw new Error('The publication URL must include its ID.');
+    }
+
+    await page.getByRole('link', { name: 'Add Recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
+    await page.locator('.recipe-form').getByLabel('Name').fill('Recipe to trash from publication');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Recipe to trash from publication' }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Move recipe to Trash?' })
+      .getByRole('button', { name: 'Move to Trash' })
+      .click();
+
+    await expect(page).toHaveURL(`/publications/${publicationId}?status=trashed`);
+    await expect(page.getByRole('heading', { name: 'Publication to keep open' })).toBeVisible();
+    await expect(page.locator('.recipe-status-message')).toContainText('Recipe moved to Trash.');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('owners can move a recipe to Trash and restore it @e2e', async ({
   page,
   request,

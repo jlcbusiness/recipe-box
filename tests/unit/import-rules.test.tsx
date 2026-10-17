@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 import { zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { buildBundleManifest, exportTableNames } from '../../src/lib/exports/rules';
+import {
+  buildBundleManifest,
+  type ExportScope,
+  exportTableNames,
+  type PortableData,
+} from '../../src/lib/exports/rules';
 import { readImportArchive } from '../../src/lib/imports/archive';
 import {
   findImportMatches,
@@ -13,9 +18,11 @@ const recipeId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 function createBundleEntries(options: {
-  scope?: { type: 'database' } | { type: 'recipe'; id: string };
-  manifestScope?: { type: 'database' } | { type: 'recipe'; id: string };
+  scope?: ExportScope;
+  manifestScope?: ExportScope;
   recipe?: Record<string, unknown>;
+  publication?: Record<string, unknown>;
+  records?: Partial<PortableData['records']>;
   includeImages?: boolean;
 }) {
   const scope = options.scope ?? { type: 'database' as const };
@@ -27,9 +34,14 @@ function createBundleEntries(options: {
     records: Object.fromEntries(
       exportTableNames.map((table) => [
         table,
-        table === 'recipes' && options.recipe ? [options.recipe] : [],
+        options.records?.[table] ??
+          (table === 'recipes' && options.recipe
+            ? [options.recipe]
+            : table === 'publications' && options.publication
+              ? [options.publication]
+              : []),
       ]),
-    ),
+    ) as unknown as PortableData['records'],
   };
   const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
   const files = [{ path: 'data.json', bytes: dataBytes }];
@@ -145,6 +157,64 @@ describe('import bundle validation', () => {
       `images/${assetId}/full.webp`,
       `images/${assetId}/thumbnail.webp`,
     ]);
+  });
+
+  it('accepts publication roots and preserves out-of-scope relationship display text', () => {
+    const publicationEntries = createBundleEntries({
+      scope: { type: 'publication', id: assetId },
+      publication: { id: assetId, publication_type: 'book', name: 'Baking Annual' },
+    });
+    expect(() => validateImportBundleFiles(publicationEntries)).not.toThrow();
+
+    const recipeEntries = createBundleEntries({
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, publication_id: assetId, name: 'Lemon cake' },
+      publication: { id: assetId, publication_type: 'book', name: 'Baking Annual' },
+      records: {
+        recipe_pairings: [
+          {
+            id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            source_recipe_id: recipeId,
+            linked_recipe_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            display_text: 'Tomato soup',
+            position: 0,
+          },
+        ],
+        recipe_references: [
+          {
+            id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            recipe_id: recipeId,
+            reference_type: 'publication',
+            publication_id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+            display_text: 'Family cookbook',
+            url: null,
+            position: 0,
+            linked_recipe_id: null,
+          },
+        ],
+      },
+    });
+
+    expect(() => validateImportBundleFiles(recipeEntries)).not.toThrow();
+  });
+
+  it('accepts valid v1 secondary Site listing data without requiring its source publication', () => {
+    const entries = createBundleEntries({
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, publication_id: null, name: 'Lemon cake' },
+      records: {
+        recipe_site_listings: [
+          {
+            id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            recipe_id: recipeId,
+            site_publication_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            recipe_url: 'https://example.com/lemon-cake',
+          },
+        ],
+      },
+    });
+
+    expect(() => validateImportBundleFiles(entries)).not.toThrow();
   });
 
   it('validates image checksums from streamed metadata without image buffers', () => {
@@ -274,7 +344,7 @@ describe('import bundle validation', () => {
     expect(() => validateImportBundleFiles(entries)).not.toThrow();
   });
 
-  it('rejects publication references without a publication ID', () => {
+  it('accepts publication references retained as static text without a target ID', () => {
     const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
     const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
     data.records.recipe_references = [
@@ -299,7 +369,7 @@ describe('import bundle validation', () => {
     entries.set('data.json', dataBytes);
     entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
 
-    expect(() => validateImportBundleFiles(entries)).toThrow(/publication reference/i);
+    expect(() => validateImportBundleFiles(entries)).not.toThrow();
   });
 
   it('accepts references whose publication ID is optional by type', () => {
@@ -328,6 +398,25 @@ describe('import bundle validation', () => {
     entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
 
     expect(() => validateImportBundleFiles(entries)).not.toThrow();
+  });
+
+  it('rejects scoped recipe rows with unresolved internal references', () => {
+    const entries = createBundleEntries({
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, publication_id: null, name: 'Lemon cake' },
+      records: {
+        recipe_ingredients: [
+          {
+            id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            recipe_id: recipeId,
+            ingredient_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            position: 0,
+          },
+        ],
+      },
+    });
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/ingredient reference/i);
   });
 
   it('does not match a recipe through an unmatched source publication id', () => {

@@ -368,6 +368,18 @@ export async function trashRecipe(formData: FormData): Promise<void> {
     redirect('/');
   }
 
+  const { data: recipeContext, error: recipeContextError } = await supabase
+    .from('recipes')
+    .select('publication_id')
+    .eq('id', recipeId)
+    .maybeSingle();
+  if (recipeContextError) {
+    redirect('/recipes?status=error');
+  }
+  if (!recipeContext) {
+    redirect('/recipes?status=conflict');
+  }
+
   const { error } = await supabase.rpc('trash_recipe', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
@@ -383,7 +395,8 @@ export async function trashRecipe(formData: FormData): Promise<void> {
   revalidatePath('/recipes');
   revalidatePath('/recipes/trash');
   revalidatePath(`/recipes/${recipeId}`);
-  redirect('/recipes?status=trashed');
+  revalidatePath(`/publications/${recipeContext.publication_id}`);
+  redirect(`/publications/${recipeContext.publication_id}?status=trashed`);
 }
 
 export async function restoreRecipe(formData: FormData): Promise<void> {
@@ -411,4 +424,77 @@ export async function restoreRecipe(formData: FormData): Promise<void> {
   revalidatePath('/recipes/trash');
   revalidatePath(`/recipes/${recipeId}`);
   redirect(`/recipes/${recipeId}`);
+}
+
+export async function purgeTrashedItem(formData: FormData): Promise<void> {
+  const itemType = formText(formData, 'item_type');
+  const itemId = formText(formData, 'item_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  const recipeDisposition = formText(formData, 'recipe_purge_disposition');
+  if (
+    !['recipe', 'publication'].includes(itemType) ||
+    !itemId ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 1 ||
+    (itemType === 'publication' &&
+      !['all', 'deleted_with_publication', 'keep'].includes(recipeDisposition))
+  ) {
+    redirect('/recipes/trash?status=conflict');
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    redirect('/');
+  }
+
+  const { error } = await supabase.rpc('purge_trashed_item', {
+    p_item_type: itemType,
+    p_item_id: itemId,
+    p_expected_version: expectedVersion,
+    p_recipe_disposition: itemType === 'publication' ? recipeDisposition : null,
+  });
+  if (error) {
+    redirect(
+      error.code === '40001' || error.code === '55000' || error.code === 'P0002'
+        ? '/recipes/trash?status=conflict'
+        : error.code === 'PGRST202'
+          ? '/recipes/trash?status=migration-required'
+          : '/recipes/trash?status=error',
+    );
+  }
+
+  revalidatePath('/recipes/trash');
+  revalidatePath('/recipes');
+  if (itemType === 'publication') {
+    revalidatePath('/publications');
+    revalidatePath(`/publications/${itemId}`);
+  } else {
+    revalidatePath(`/recipes/${itemId}`);
+  }
+  redirect('/recipes/trash?status=purged');
+}
+
+export async function purgeAllTrashed(): Promise<void> {
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    redirect('/');
+  }
+
+  const { error } = await supabase.rpc('purge_all_trashed');
+  if (error) {
+    redirect(
+      error.code === '55000'
+        ? '/recipes/trash?status=conflict'
+        : error.code === 'PGRST202'
+          ? '/recipes/trash?status=migration-required'
+          : '/recipes/trash?status=error',
+    );
+  }
+
+  revalidatePath('/recipes/trash');
+  revalidatePath('/recipes');
+  revalidatePath('/publications');
+  redirect('/recipes/trash?status=purged-all');
 }

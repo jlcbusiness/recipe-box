@@ -416,7 +416,10 @@ export function RecipeColumnOrderManager({
   }
 
   return (
-    <section aria-label="Recipe columns" className={styles.manager}>
+    <section
+      aria-label="Recipe columns"
+      className={`${styles.manager} settings-section settings-accordion-section`}
+    >
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionHeading}>
           <button

@@ -47,11 +47,7 @@ export async function readStoredImportBundle(
 
   try {
     const archive = await readImportArchive(response.body, imageSink);
-    const bundle = validateImportBundleFiles(archive.entries, archive.images);
-    if (bundle.data.scope.type !== 'database') {
-      throw new ImportBundleError('Only database exports can be imported here.', 422);
-    }
-    return bundle;
+    return validateImportBundleFiles(archive.entries, archive.images);
   } catch (error) {
     if (error instanceof ImportBundleError) throw error;
     if (error instanceof Error) {

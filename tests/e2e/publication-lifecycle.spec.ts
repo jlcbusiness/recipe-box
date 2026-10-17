@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
 import sharp from 'sharp';
@@ -105,18 +106,20 @@ async function createPublication(
   config: LocalSupabaseConfig,
   user: TestUser,
   name: string,
+  publicationType: 'book' | 'site' = 'book',
+  siteUrl: string | null = null,
 ) {
   const response = await request.post(`${config.apiUrl}/rest/v1/rpc/create_publication`, {
     headers: ownerHeaders(config, user),
     data: {
       p_name: name,
-      p_publication_type: 'book',
+      p_publication_type: publicationType,
       p_author: null,
       p_edition: null,
       p_isbn: null,
       p_retailer_url: null,
       p_issue: null,
-      p_site_url: null,
+      p_site_url: siteUrl,
     },
   });
   expect(response.ok(), await response.text()).toBeTruthy();
@@ -165,38 +168,56 @@ async function createRecipe(
   return recipe;
 }
 
-async function assignRecipe(
-  request: APIRequestContext,
-  config: LocalSupabaseConfig,
-  recipeId: string,
-  publicationId: string,
-  publicationPage: string | null = null,
+function assignRecipes(
+  assignments: {
+    recipeId: string;
+    publicationId: string;
+    publicationPage?: string;
+    recipeUrl?: string;
+  }[],
 ) {
-  const response = await request.patch(`${config.apiUrl}/rest/v1/recipes?id=eq.${recipeId}`, {
-    headers: serviceHeaders(config),
-    data: { publication_id: publicationId, publication_page: publicationPage },
-  });
-  expect(response.ok(), await response.text()).toBeTruthy();
+  const assignmentValues = assignments
+    .map(({ recipeId, publicationId, publicationPage, recipeUrl }) => {
+      const escapedPage = publicationPage?.replaceAll("'", "''");
+      const escapedUrl = recipeUrl?.replaceAll("'", "''");
+      return `('${recipeId}'::uuid, '${publicationId}'::uuid, ${escapedPage === undefined ? 'null::text' : `'${escapedPage}'::text`}, ${escapedUrl === undefined ? 'null::text' : `'${escapedUrl}'::text`})`;
+    })
+    .join(',\n');
+  runLocalSqlCommand(`
+    with recipe_lifecycle_context as materialized (
+      select set_config('app.recipe_lifecycle_context', 'on', true)
+    ), assignments(recipe_id, publication_id, publication_page, recipe_url) as (
+      values ${assignmentValues}
+    )
+    update public.recipes as recipe
+    set publication_id = assignments.publication_id,
+        publication_page = assignments.publication_page,
+      recipe_url = assignments.recipe_url
+    from assignments, recipe_lifecycle_context
+    where recipe.id = assignments.recipe_id;
+  `);
 }
 
-async function readRecipe(
-  request: APIRequestContext,
-  config: LocalSupabaseConfig,
-  recipeId: string,
-) {
-  const response = await request.get(
-    `${config.apiUrl}/rest/v1/recipes?select=id,publication_id,publication_page,recipe_url,trashed_at,version&id=eq.${recipeId}`,
-    { headers: serviceHeaders(config) },
-  );
-  expect(response.ok(), await response.text()).toBeTruthy();
-  const [recipe] = (await response.json()) as {
+function assignRecipe(recipeId: string, publicationId: string, publicationPage?: string) {
+  assignRecipes([{ recipeId, publicationId, publicationPage }]);
+}
+
+function readRecipe(recipeId: string) {
+  const [recipe] = runLocalSql<{
     id: string;
     publication_id: string | null;
     publication_page: string | null;
     recipe_url: string | null;
     trashed_at: string | null;
     version: number;
-  }[];
+  }>(`
+    select id, publication_id, publication_page, recipe_url, trashed_at, version
+    from public.recipes
+    where id = '${recipeId}'::uuid;
+  `);
+  if (!recipe) {
+    throw new Error(`Test recipe ${recipeId} was not found.`);
+  }
   return recipe;
 }
 
@@ -231,7 +252,12 @@ async function expectErrorCode(
 
 function runLocalSqlCommand(sql: string): string {
   try {
-    return execFileSync('supabase', ['db', 'query', '--local', '--output-format', 'json', sql], {
+    const args = ['db', 'query', '--local'];
+    if (process.env.SUPABASE_WORKDIR) {
+      args.push('--workdir', process.env.SUPABASE_WORKDIR);
+    }
+    args.push('--output-format', 'json', sql);
+    return execFileSync('supabase', args, {
       encoding: 'utf8',
     });
   } catch (error) {
@@ -278,7 +304,7 @@ test('publication updates are owner-scoped, versioned, and preserve recipe locat
   try {
     const publicationId = await createPublication(request, config, owner, 'Original Cookbook');
     const recipe = await createRecipe(request, config, owner, 'Linked recipe');
-    await assignRecipe(request, config, recipe.id, publicationId, '18-19');
+    await assignRecipe(recipe.id, publicationId, '18-19');
     const [coverAsset] = runLocalSql<{ id: string }>(`
       with publication_lifecycle_context as materialized (
         select set_config('app.publication_lifecycle_context', 'on', true)
@@ -331,7 +357,7 @@ test('publication updates are owner-scoped, versioned, and preserve recipe locat
         version: 2,
       },
     ]);
-    expect(await readRecipe(request, config, recipe.id)).toMatchObject({
+    expect(readRecipe(recipe.id)).toMatchObject({
       publication_id: publicationId,
       publication_page: '18-19',
       trashed_at: null,
@@ -539,23 +565,72 @@ test('publication lifecycle applies recipe disposition atomically and restores r
     const destinationPublicationId = await createPublication(request, config, owner, 'Destination');
     const foreignPublicationId = await createPublication(request, config, other, 'Foreign');
     const deleteRecipe = await createRecipe(request, config, owner, 'Recipe to trash');
+    const previouslyTrashedRecipe = await createRecipe(
+      request,
+      config,
+      owner,
+      'Previously trashed',
+    );
     const tinRecipe = await createRecipe(request, config, owner, 'Recipe to unparent');
+    const previouslyTrashedTinRecipe = await createRecipe(
+      request,
+      config,
+      owner,
+      'Previously trashed in publication moved to Tin',
+    );
     const movedRecipe = await createRecipe(request, config, owner, 'Recipe to move');
     const invalidMoveRecipe = await createRecipe(request, config, owner, 'Recipe on invalid move');
+    const recipeTinResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=id&publication_type=eq.collection`,
+      { headers: ownerHeaders(config, owner) },
+    );
+    expect(recipeTinResponse.ok(), await recipeTinResponse.text()).toBeTruthy();
+    const [{ id: recipeTinId }] = (await recipeTinResponse.json()) as { id: string }[];
 
-    await assignRecipe(request, config, deleteRecipe.id, deletePublicationId, '12');
-    await assignRecipe(request, config, tinRecipe.id, tinPublicationId, '18');
-    await assignRecipe(request, config, movedRecipe.id, movePublicationId, '22');
-    await assignRecipe(request, config, invalidMoveRecipe.id, movePublicationId, '23');
+    assignRecipes([
+      { recipeId: deleteRecipe.id, publicationId: deletePublicationId, publicationPage: '12' },
+      {
+        recipeId: previouslyTrashedRecipe.id,
+        publicationId: deletePublicationId,
+        publicationPage: '13',
+      },
+      { recipeId: tinRecipe.id, publicationId: tinPublicationId, publicationPage: '18' },
+      {
+        recipeId: previouslyTrashedTinRecipe.id,
+        publicationId: tinPublicationId,
+        publicationPage: '19',
+      },
+      { recipeId: movedRecipe.id, publicationId: movePublicationId, publicationPage: '22' },
+      { recipeId: invalidMoveRecipe.id, publicationId: movePublicationId, publicationPage: '23' },
+    ]);
+
+    const previousTrashResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
+      headers: ownerHeaders(config, owner),
+      data: { p_recipe_id: previouslyTrashedRecipe.id, p_expected_version: 1 },
+    });
+    expect(previousTrashResponse.ok(), await previousTrashResponse.text()).toBeTruthy();
+    const previousTinTrashResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/trash_recipe`,
+      {
+        headers: ownerHeaders(config, owner),
+        data: { p_recipe_id: previouslyTrashedTinRecipe.id, p_expected_version: 1 },
+      },
+    );
+    expect(previousTinTrashResponse.ok(), await previousTinTrashResponse.text()).toBeTruthy();
 
     await expectErrorCode(
       await trashPublication(request, config, other, deletePublicationId, 1, 'delete'),
       'P0002',
     );
-    await expectErrorCode(
-      await trashPublication(request, config, owner, deletePublicationId, 0, 'delete'),
-      '40001',
-    );
+    expect(() =>
+      runLocalSqlCommand(`
+        with owner_context as materialized (
+          select set_config('request.jwt.claim.sub', '${owner.id}', true)
+        )
+        select public.trash_publication('${deletePublicationId}', 0, 'delete', null)
+        from owner_context;
+      `),
+    ).toThrow('Publication version is stale.');
     await expectErrorCode(
       await trashPublication(
         request,
@@ -568,9 +643,7 @@ test('publication lifecycle applies recipe disposition atomically and restores r
       ),
       'P0002',
     );
-    expect((await readRecipe(request, config, invalidMoveRecipe.id)).publication_id).toBe(
-      movePublicationId,
-    );
+    expect(readRecipe(invalidMoveRecipe.id).publication_id).toBe(movePublicationId);
 
     const deleteResponse = await trashPublication(
       request,
@@ -581,7 +654,7 @@ test('publication lifecycle applies recipe disposition atomically and restores r
       'delete',
     );
     expect(deleteResponse.ok(), await deleteResponse.text()).toBeTruthy();
-    const trashedRecipe = await readRecipe(request, config, deleteRecipe.id);
+    const trashedRecipe = readRecipe(deleteRecipe.id);
     expect(trashedRecipe.publication_id).toBe(deletePublicationId);
     expect(trashedRecipe.trashed_at).not.toBeNull();
     expect(trashedRecipe.version).toBe(2);
@@ -614,8 +687,8 @@ test('publication lifecycle applies recipe disposition atomically and restores r
       'recipe_tin',
     );
     expect(tinResponse.ok(), await tinResponse.text()).toBeTruthy();
-    expect(await readRecipe(request, config, tinRecipe.id)).toMatchObject({
-      publication_id: null,
+    expect(readRecipe(tinRecipe.id)).toMatchObject({
+      publication_id: recipeTinId,
       publication_page: null,
       recipe_url: null,
       trashed_at: null,
@@ -632,7 +705,7 @@ test('publication lifecycle applies recipe disposition atomically and restores r
       destinationPublicationId,
     );
     expect(moveResponse.ok(), await moveResponse.text()).toBeTruthy();
-    expect(await readRecipe(request, config, movedRecipe.id)).toMatchObject({
+    expect(readRecipe(movedRecipe.id)).toMatchObject({
       publication_id: destinationPublicationId,
       publication_page: '22',
       recipe_url: null,
@@ -645,43 +718,365 @@ test('publication lifecycle applies recipe disposition atomically and restores r
       data: { p_publication_id: deletePublicationId, p_expected_version: 2 },
     });
     expect(restoreResponse.ok(), await restoreResponse.text()).toBeTruthy();
-    await expectErrorCode(
-      await request.post(`${config.apiUrl}/rest/v1/rpc/restore_publication`, {
-        headers: ownerHeaders(config, owner),
-        data: { p_publication_id: deletePublicationId, p_expected_version: 2 },
-      }),
-      '40001',
-    );
-
-    const recipeRestoreResponse = await request.post(
-      `${config.apiUrl}/rest/v1/rpc/restore_recipe`,
-      {
-        headers: ownerHeaders(config, owner),
-        data: { p_recipe_id: deleteRecipe.id, p_expected_version: 2 },
-      },
-    );
-    expect(recipeRestoreResponse.ok(), await recipeRestoreResponse.text()).toBeTruthy();
-    expect(await readRecipe(request, config, deleteRecipe.id)).toMatchObject({
+    expect(readRecipe(deleteRecipe.id)).toMatchObject({
       publication_id: deletePublicationId,
       publication_page: '12',
-      recipe_url: null,
       trashed_at: null,
       version: 3,
     });
+    expect(readRecipe(previouslyTrashedRecipe.id)).toMatchObject({
+      publication_id: deletePublicationId,
+      trashed_at: expect.any(String),
+      version: 2,
+    });
+    expect(() =>
+      runLocalSqlCommand(`
+        with owner_context as materialized (
+          select set_config('request.jwt.claim.sub', '${owner.id}', true)
+        )
+        select public.restore_publication('${deletePublicationId}', 2)
+        from owner_context;
+      `),
+    ).toThrow('Publication version is stale.');
 
-    const publicationHistoryResponse = await request.get(
-      `${config.apiUrl}/rest/v1/publication_history?select=event_type&record_id=eq.${deletePublicationId}&order=created_at.asc`,
-      { headers: serviceHeaders(config) },
+    const tinRestoreResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/restore_publication`,
+      {
+        headers: ownerHeaders(config, owner),
+        data: { p_publication_id: tinPublicationId, p_expected_version: 2 },
+      },
     );
-    expect(publicationHistoryResponse.ok(), await publicationHistoryResponse.text()).toBeTruthy();
-    expect(
-      ((await publicationHistoryResponse.json()) as { event_type: string }[]).map(
-        ({ event_type }) => event_type,
-      ),
-    ).toEqual(['publication.created', 'publication.trashed', 'publication.restored']);
+    expect(tinRestoreResponse.ok(), await tinRestoreResponse.text()).toBeTruthy();
+    expect(readRecipe(tinRecipe.id)).toMatchObject({
+      publication_id: tinPublicationId,
+      publication_page: '18',
+      trashed_at: null,
+      version: 3,
+    });
+    expect(readRecipe(previouslyTrashedTinRecipe.id)).toMatchObject({
+      publication_id: tinPublicationId,
+      trashed_at: expect.any(String),
+      version: 2,
+    });
+
+    const moveRestoreResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/restore_publication`,
+      {
+        headers: ownerHeaders(config, owner),
+        data: { p_publication_id: movePublicationId, p_expected_version: 2 },
+      },
+    );
+    expect(moveRestoreResponse.ok(), await moveRestoreResponse.text()).toBeTruthy();
+    expect(readRecipe(movedRecipe.id)).toMatchObject({
+      publication_id: destinationPublicationId,
+      publication_page: '22',
+      trashed_at: null,
+      version: 2,
+    });
+    expect(readRecipe(invalidMoveRecipe.id)).toMatchObject({
+      publication_id: destinationPublicationId,
+      publication_page: '23',
+      trashed_at: null,
+      version: 2,
+    });
+
+    const publicationHistory = runLocalSql<{ event_type: string }>(`
+      select event_type
+      from public.publication_history
+      where record_id = '${deletePublicationId}'::uuid
+      order by created_at asc;
+    `);
+    expect(publicationHistory.map(({ event_type }) => event_type)).toEqual([
+      'publication.created',
+      'publication.trashed',
+      'publication.restored',
+    ]);
   } finally {
     await deleteTestUser(request, owner);
     await deleteTestUser(request, other);
+  }
+});
+
+test('publication restore retains a Site recipe URL after moving it to Recipe Tin @e2e', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const recipeUrl = 'https://site.example.test/recipes/roasted-carrots';
+
+  try {
+    const sitePublicationId = await createPublication(
+      request,
+      config,
+      owner,
+      'Recipe source site',
+      'site',
+      'https://site.example.test',
+    );
+    const recipe = await createRecipe(request, config, owner, 'Recipe with online source');
+    const recipeTinResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=id&publication_type=eq.collection`,
+      { headers: ownerHeaders(config, owner) },
+    );
+    expect(recipeTinResponse.ok(), await recipeTinResponse.text()).toBeTruthy();
+    const [{ id: recipeTinId }] = (await recipeTinResponse.json()) as { id: string }[];
+
+    assignRecipes([{ recipeId: recipe.id, publicationId: sitePublicationId, recipeUrl }]);
+    const trashResponse = await trashPublication(
+      request,
+      config,
+      owner,
+      sitePublicationId,
+      1,
+      'recipe_tin',
+    );
+    expect(trashResponse.ok(), await trashResponse.text()).toBeTruthy();
+    expect(readRecipe(recipe.id)).toMatchObject({
+      publication_id: recipeTinId,
+      recipe_url: null,
+      version: 2,
+    });
+
+    const restoreResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/restore_publication`, {
+      headers: ownerHeaders(config, owner),
+      data: { p_publication_id: sitePublicationId, p_expected_version: 2 },
+    });
+    expect(restoreResponse.ok(), await restoreResponse.text()).toBeTruthy();
+    expect(readRecipe(recipe.id)).toMatchObject({
+      publication_id: sitePublicationId,
+      publication_page: null,
+      recipe_url: recipeUrl,
+      trashed_at: null,
+      version: 3,
+    });
+  } finally {
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('Trash supports confirmed per-item and all-item purges @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const other = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipe = await createRecipe(request, config, owner, 'Recipe to permanently delete');
+    const trashRecipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
+      headers: ownerHeaders(config, owner),
+      data: { p_recipe_id: recipe.id, p_expected_version: recipe.version },
+    });
+    expect(trashRecipeResponse.ok(), await trashRecipeResponse.text()).toBeTruthy();
+    const otherRecipe = await createRecipe(request, config, other, 'Other account trash recipe');
+    const trashOtherRecipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/trash_recipe`,
+      {
+        headers: ownerHeaders(config, other),
+        data: { p_recipe_id: otherRecipe.id, p_expected_version: otherRecipe.version },
+      },
+    );
+    expect(trashOtherRecipeResponse.ok(), await trashOtherRecipeResponse.text()).toBeTruthy();
+
+    await expectErrorCode(
+      await request.post(`${config.apiUrl}/rest/v1/rpc/purge_trashed_item`, {
+        headers: ownerHeaders(config, other),
+        data: {
+          p_item_type: 'recipe',
+          p_item_id: recipe.id,
+          p_expected_version: 2,
+          p_recipe_disposition: null,
+        },
+      }),
+      'P0002',
+    );
+    expect(() =>
+      runLocalSqlCommand(`
+        with owner_context as materialized (
+          select set_config('request.jwt.claim.sub', '${owner.id}', true)
+        )
+        select public.purge_trashed_item('recipe', '${recipe.id}', 1, null)
+        from owner_context;
+      `),
+    ).toThrow('Trash item version is stale.');
+
+    const publicationId = await createPublication(request, config, owner, 'Publication to clear');
+    const trashPublicationResponse = await trashPublication(
+      request,
+      config,
+      owner,
+      publicationId,
+      1,
+      'delete',
+    );
+    expect(trashPublicationResponse.ok(), await trashPublicationResponse.text()).toBeTruthy();
+
+    await signIn(page, owner.email, owner.password);
+    await page.goto('/recipes/trash');
+    const recipeRow = page.getByRole('row', { name: /Recipe to permanently delete/ });
+    await expect(recipeRow).toBeVisible();
+    await expect(page.getByRole('row', { name: /Other account trash recipe/ })).toHaveCount(0);
+    await recipeRow.hover();
+    await recipeRow.getByRole('button', { name: 'Purge Recipe to permanently delete' }).click();
+
+    const recipeDialog = page.getByRole('dialog', {
+      name: 'Permanently delete Recipe to permanently delete?',
+    });
+    await expect(recipeDialog).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await recipeDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(recipeDialog).not.toBeVisible();
+    await expect(recipeRow).toBeVisible();
+
+    await recipeRow.getByRole('button', { name: 'Purge Recipe to permanently delete' }).click();
+    await page
+      .getByRole('dialog', { name: 'Permanently delete Recipe to permanently delete?' })
+      .getByRole('button', { name: 'Permanently delete' })
+      .click();
+    await expect(page).toHaveURL(/\/recipes\/trash\?status=purged$/);
+    await expect(page.getByRole('status')).toContainText('permanently deleted');
+    await expect(page.getByRole('row', { name: /Recipe to permanently delete/ })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Purge all' }).click();
+    const purgeAllDialog = page.getByRole('dialog', { name: 'Permanently delete all Trash?' });
+    await expect(purgeAllDialog).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await purgeAllDialog.getByRole('button', { name: 'Purge all' }).click();
+    await expect(page).toHaveURL(/\/recipes\/trash\?status=purged-all$/);
+    await expect(page.getByRole('status')).toContainText('permanently cleared');
+    await expect(page.getByText('Trash is empty.')).toBeVisible();
+    const otherRecipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/list_trashed_recipes`,
+      { headers: ownerHeaders(config, other), data: {} },
+    );
+    expect(otherRecipeResponse.ok(), await otherRecipeResponse.text()).toBeTruthy();
+    expect(await otherRecipeResponse.json()).toContainEqual(
+      expect.objectContaining({ id: otherRecipe.id }),
+    );
+    const purgeOtherRecipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/purge_trashed_item`,
+      {
+        headers: ownerHeaders(config, other),
+        data: {
+          p_item_type: 'recipe',
+          p_item_id: otherRecipe.id,
+          p_expected_version: 2,
+          p_recipe_disposition: null,
+        },
+      },
+    );
+    expect(purgeOtherRecipeResponse.ok(), await purgeOtherRecipeResponse.text()).toBeTruthy();
+  } finally {
+    await deleteTestUser(request, owner);
+    await deleteTestUser(request, other);
+  }
+});
+
+test('publication purge applies the selected recipe disposition @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const [{ id: recipeTinId }] = runLocalSql<{ id: string }>(`
+    select id
+    from public.publications
+    where account_id = '${owner.id}'::uuid
+      and publication_type = 'collection';
+  `);
+  const choices = [
+    { value: 'all', label: /Every recipe from this publication/, expectedCount: 0 },
+    {
+      value: 'deleted_with_publication',
+      label: /Only recipes moved to Trash with it/,
+      expectedCount: 1,
+    },
+    { value: 'keep', label: /Keep all recipes/, expectedCount: 2 },
+  ] as const;
+
+  try {
+    await signIn(page, owner.email, owner.password);
+
+    for (const choice of choices) {
+      const publicationName = `Purge disposition ${choice.value} ${randomUUID()}`;
+      const publicationId = await createPublication(request, config, owner, publicationName);
+      const cascadeRecipe = await createRecipe(
+        request,
+        config,
+        owner,
+        `${publicationName} cascade recipe`,
+      );
+      const previouslyTrashedRecipe = await createRecipe(
+        request,
+        config,
+        owner,
+        `${publicationName} previously trashed recipe`,
+      );
+      assignRecipes([
+        { recipeId: cascadeRecipe.id, publicationId },
+        { recipeId: previouslyTrashedRecipe.id, publicationId },
+      ]);
+
+      const trashRecipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
+        headers: ownerHeaders(config, owner),
+        data: { p_recipe_id: previouslyTrashedRecipe.id, p_expected_version: 1 },
+      });
+      expect(trashRecipeResponse.ok(), await trashRecipeResponse.text()).toBeTruthy();
+      const trashPublicationResponse = await trashPublication(
+        request,
+        config,
+        owner,
+        publicationId,
+        1,
+        'delete',
+      );
+      expect(trashPublicationResponse.ok(), await trashPublicationResponse.text()).toBeTruthy();
+
+      await page.goto('/recipes/trash');
+      const publicationRow = page
+        .getByRole('table', { name: 'Trashed publications' })
+        .getByRole('row', { name: new RegExp(publicationName) });
+      await expect(publicationRow).toBeVisible();
+      await publicationRow.hover();
+      await publicationRow.getByRole('button', { name: `Purge ${publicationName}` }).click();
+
+      const dialog = page.getByRole('dialog', {
+        name: `Permanently delete ${publicationName}?`,
+      });
+      await expect(dialog.getByRole('radio')).toHaveCount(3);
+      await expect(dialog.getByRole('button', { name: 'Permanently delete' })).toBeDisabled();
+      await dialog.getByRole('radio', { name: choice.label }).check();
+      await dialog.getByRole('button', { name: 'Permanently delete' }).click();
+      await expect(page).toHaveURL(/\/recipes\/trash\?status=purged$/);
+
+      const remainingRecipes = runLocalSql<{
+        id: string;
+        publication_id: string | null;
+        publication_trash_id: string | null;
+        trashed_at: string | null;
+      }>(`
+        select id, publication_id, publication_trash_id, trashed_at
+        from public.recipes
+        where id in ('${cascadeRecipe.id}'::uuid, '${previouslyTrashedRecipe.id}'::uuid)
+        order by id;
+      `);
+      expect(remainingRecipes).toHaveLength(choice.expectedCount);
+      if (choice.value === 'all') {
+        expect(remainingRecipes).toEqual([]);
+      } else {
+        expect(
+          remainingRecipes.every(
+            (recipe) =>
+              recipe.publication_id === recipeTinId &&
+              recipe.publication_trash_id === null &&
+              recipe.trashed_at !== null,
+          ),
+        ).toBe(true);
+      }
+    }
+  } finally {
+    await deleteTestUser(request, owner);
   }
 });
 
@@ -710,7 +1105,7 @@ test('publication Trash purges retained recipes and history after 30 days @e2e',
   try {
     publicationId = await createPublication(request, config, owner, 'Expired publication');
     const recipe = await createRecipe(request, config, owner, 'Expired publication recipe');
-    await assignRecipe(request, config, recipe.id, publicationId);
+    await assignRecipe(recipe.id, publicationId);
     const trashResponse = await trashPublication(
       request,
       config,
@@ -721,14 +1116,16 @@ test('publication Trash purges retained recipes and history after 30 days @e2e',
     );
     expect(trashResponse.ok(), await trashResponse.text()).toBeTruthy();
 
-    const trashedPublicationResponse = await request.get(
-      `${config.apiUrl}/rest/v1/publications?select=trashed_at&id=eq.${publicationId}`,
-      { headers: serviceHeaders(config) },
-    );
-    expect(trashedPublicationResponse.ok(), await trashedPublicationResponse.text()).toBeTruthy();
-    const [trashedPublication] = (await trashedPublicationResponse.json()) as {
+    const [trashedPublication] = runLocalSql<{
       trashed_at: string;
-    }[];
+    }>(`
+      select trashed_at
+      from public.publications
+      where id = '${publicationId}'::uuid;
+    `);
+    if (!trashedPublication) {
+      throw new Error('The trashed publication fixture was not found.');
+    }
 
     const fixtureRecords = [
       { table: 'publications', id: publicationId, recordColumn: 'id' },
@@ -736,21 +1133,18 @@ test('publication Trash purges retained recipes and history after 30 days @e2e',
       { table: 'publication_history', id: publicationId, recordColumn: 'record_id' },
       { table: 'recipe_history', id: recipe.id, recordColumn: 'record_id' },
     ];
-    const fixtureRows = await Promise.all(
-      fixtureRecords.map(async (record) => {
-        const response = await request.get(
-          `${config.apiUrl}/rest/v1/${record.table}?select=${record.recordColumn}&${record.recordColumn}=eq.${record.id}`,
-          { headers: serviceHeaders(config) },
-        );
-        expect(response.ok(), await response.text()).toBeTruthy();
-        const rows = (await response.json()) as unknown[];
-        expect(
-          rows.length,
-          `Expected ${record.table} history/fixture rows before purge.`,
-        ).toBeGreaterThan(0);
-        return { record, rows };
-      }),
-    );
+    const fixtureRows = fixtureRecords.map((record) => {
+      const [row] = runLocalSql<{ count: number }>(`
+        select count(*)::integer as count
+        from public.${record.table}
+        where ${record.recordColumn} = '${record.id}'::uuid;
+      `);
+      expect(
+        row.count,
+        `Expected ${record.table} history/fixture rows before purge.`,
+      ).toBeGreaterThan(0);
+      return { record, count: row.count };
+    });
 
     runLocalSqlCommand(`do $purge_test$
 declare
@@ -793,16 +1187,15 @@ begin
 end;
 $purge_test$;`);
 
-    for (const { record, rows: expectedRows } of fixtureRows) {
-      const response = await request.get(
-        `${config.apiUrl}/rest/v1/${record.table}?select=${record.recordColumn}&${record.recordColumn}=eq.${record.id}`,
-        { headers: serviceHeaders(config) },
+    for (const { record, count: expectedCount } of fixtureRows) {
+      const [row] = runLocalSql<{ count: number }>(`
+        select count(*)::integer as count
+        from public.${record.table}
+        where ${record.recordColumn} = '${record.id}'::uuid;
+      `);
+      expect(row.count, `Expected ${record.table} rows to remain after rollback.`).toBe(
+        expectedCount,
       );
-      expect(response.ok(), await response.text()).toBeTruthy();
-      expect(
-        await response.json(),
-        `Expected ${record.table} rows to remain after rollback.`,
-      ).toHaveLength(expectedRows.length);
     }
 
     const cronJobs = runLocalSql<{ jobname: string; schedule: string; command: string }>(
@@ -872,7 +1265,7 @@ test('publication deletion requires a disposition and can be restored from Trash
     const publicationId = await createPublication(request, config, owner, 'Trash source');
     const destinationId = await createPublication(request, config, owner, 'Trash destination');
     const recipe = await createRecipe(request, config, owner, 'Recipe in Trash source');
-    await assignRecipe(request, config, recipe.id, publicationId);
+    await assignRecipe(recipe.id, publicationId);
     await signIn(page, owner.email, owner.password);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/publications/${publicationId}`);
@@ -1017,7 +1410,7 @@ $trash_display_fixture$;`);
     if (!createdRecipeId) {
       throw new Error('The created recipe URL must include its ID.');
     }
-    expect(await readRecipe(request, config, createdRecipeId)).toMatchObject({
+    expect(readRecipe(createdRecipeId)).toMatchObject({
       publication_id: publicationId,
       trashed_at: null,
     });
@@ -1122,8 +1515,8 @@ test('publication recipe list stays scoped and omits global search controls @e2e
     const scopedRecipe = await createRecipe(request, config, owner, 'ScopeSignal lemon cake');
     const otherRecipe = await createRecipe(request, config, owner, 'ScopeSignal lemon soup');
     const noPhotoRecipe = await createRecipe(request, config, owner, 'ScopeSignal lemon tart');
-    await assignRecipe(request, config, scopedRecipe.id, publicationId);
-    await assignRecipe(request, config, otherRecipe.id, otherPublicationId);
+    await assignRecipe(scopedRecipe.id, publicationId);
+    await assignRecipe(otherRecipe.id, otherPublicationId);
 
     await signIn(page, owner.email, owner.password);
     await page.goto(`/publications/${publicationId}`);
@@ -1139,7 +1532,7 @@ test('publication recipe list stays scoped and omits global search controls @e2e
     await expect(page.getByText('No recipes match these column filters.')).toBeVisible();
     await page.goto(`/publications/${publicationId}`);
 
-    await assignRecipe(request, config, noPhotoRecipe.id, publicationId);
+    await assignRecipe(noPhotoRecipe.id, publicationId);
     await page.goto(`/recipes/${scopedRecipe.id}/edit`);
     await page.getByRole('button', { name: 'Manage recipe photos' }).click();
     const photoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });

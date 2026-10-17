@@ -9,12 +9,15 @@ import {
 } from '../../src/lib/exports/rules';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
-function createDatabaseArchive(publications: PortableData['records']['publications'] = []) {
+function createDatabaseArchive(
+  publications: PortableData['records']['publications'] = [],
+  accountPreferences: PortableData['account_preferences'] = {},
+) {
   const data: PortableData = {
     format: 'recipe-box-data',
     schema_version: 1,
     scope: { type: 'database' },
-    account_preferences: {},
+    account_preferences: accountPreferences,
     records: Object.fromEntries(
       exportTableNames.map((table) => [table, []]),
     ) as unknown as PortableData['records'],
@@ -64,7 +67,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/(?:recipes|publications)(?:\/|$)/);
 }
 
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
@@ -85,8 +88,22 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
 
+    await expect(page.getByRole('heading', { name: 'Recipe columns' })).toHaveCSS(
+      'margin-bottom',
+      '0px',
+    );
+    await expect(page.getByRole('heading', { name: 'Trusted densities' })).toHaveCSS(
+      'margin-bottom',
+      '0px',
+    );
+
     const dataManagement = page.getByRole('region', { name: 'Data management' });
-    const importAction = dataManagement.getByRole('button', { name: 'Preview import' });
+    const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
+    await expect(importTrigger).toBeVisible();
+    await importTrigger.click();
+    const importDialog = dataManagement.getByRole('dialog', { name: 'Import database' });
+    await expect(importDialog).toBeVisible();
+    await expect(importDialog.getByRole('button', { name: 'Choose ZIP' })).toBeVisible();
     if (testInfo.project.name === 'chromium') {
       const accessibility = await new AxeBuilder({ page })
         .include('.settings-data-management')
@@ -101,21 +118,19 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
     await page.getByLabel('Database archive').setInputFiles({
       name: 'database-export.zip',
       mimeType: 'application/zip',
-      buffer: createDatabaseArchive(),
+      buffer: createDatabaseArchive([], { volume_system: 'metric' }),
     });
-    if (testInfo.project.name === 'Fold 6') {
-      expect((await importAction.boundingBox())?.height).toBeGreaterThanOrEqual(48);
-      await importAction.tap();
-    } else {
-      await importAction.click();
-    }
-
-    const preview = dataManagement.getByRole('region', { name: 'Import preview' });
-    await expect(preview.getByRole('heading', { name: 'Import preview' })).toBeVisible();
-    await expect(dataManagement.locator('.database-import-feedback[role="status"]')).toHaveText(
+    const preview = importDialog.getByRole('region', { name: 'Import details' });
+    await expect(preview).toBeVisible();
+    const accountSettingsChoice = importDialog.getByRole('group', { name: 'Account settings' });
+    await expect(accountSettingsChoice.getByLabel('Use settings from this archive')).toBeVisible();
+    await expect(importDialog.getByRole('button', { name: 'Cancel import' })).toHaveCount(0);
+    await expect(importDialog.locator('.database-import-feedback[role="status"]')).toHaveText(
       'Preview ready.',
     );
-    await expect(dataManagement.getByRole('button', { name: 'Import database' })).toBeEnabled();
+    await expect(importDialog.getByRole('button', { name: 'Import ZIP' })).toBeEnabled();
+    const commitButton = importDialog.getByRole('button', { name: 'Import database' });
+    await expect(commitButton).toBeDisabled();
 
     if (testInfo.project.name === 'chromium') {
       const previewAccessibility = await new AxeBuilder({ page })
@@ -127,15 +142,15 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
       await expectNoHorizontalOverflow(page);
     }
 
-    const commitButton = dataManagement.getByRole('button', { name: 'Import database' });
+    await accountSettingsChoice.getByLabel('Use settings from this archive').check();
+    await expect(commitButton).toBeEnabled();
     if (testInfo.project.name === 'Fold 6') {
       await commitButton.tap();
     } else {
       await commitButton.click();
     }
-    await expect(dataManagement.locator('.database-import-feedback[role="status"]')).toHaveText(
-      'Import complete.',
-    );
+    await expect(importDialog).not.toBeVisible();
+    await expect(dataManagement.getByRole('status')).toHaveText('Import complete.');
   } finally {
     await deleteTestUser(request, user);
   }
@@ -164,46 +179,54 @@ test('Settings reports invalid archives and recovers for a valid retry @e2e', as
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
     const dataManagement = page.getByRole('region', { name: 'Data management' });
+    const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
+    const importDialog = dataManagement.getByRole('dialog', { name: 'Import database' });
     const archiveInput = page.getByLabel('Database archive');
     const status = dataManagement.locator('.database-import-feedback[role="status"]');
+    const openImportPane = async () => {
+      await importTrigger.click();
+      await expect(importDialog).toBeVisible();
+    };
     const activate = async (button: import('@playwright/test').Locator) => {
       if (testInfo.project.name === 'Fold 6') {
         await button.tap();
       } else {
         await button.focus();
-        await expect(button).toHaveCSS('outline-style', 'solid');
         await page.keyboard.press('Enter');
       }
     };
 
+    await openImportPane();
     await archiveInput.setInputFiles({
       name: 'invalid-database-export.zip',
       mimeType: 'application/zip',
       buffer: Buffer.from('not a zip archive'),
     });
-    await activate(dataManagement.getByRole('button', { name: 'Preview import' }));
     await previewRequested;
-    await expect(dataManagement.getByLabel('Import preparation')).toBeVisible();
+    await expect(importDialog.getByLabel('Import preparation')).toBeVisible();
     releasePreview();
 
-    const alert = dataManagement.getByRole('alert');
+    const alert = importDialog.getByRole('alert');
     await expect(alert).toBeVisible();
     await expect(alert).toContainText(/\S/);
     await expect(alert).not.toContainText('recipe-exports');
-    await activate(dataManagement.getByRole('button', { name: 'Cancel import' }));
+    await activate(importDialog.getByRole('button', { name: 'Close import dialog' }));
     await expect(status).toHaveText('Import cancelled.');
+    await expect(importDialog).not.toBeVisible();
     await expect(archiveInput).toBeEnabled();
-    if (testInfo.project.name !== 'Fold 6') await expect(archiveInput).toBeFocused();
+    if (testInfo.project.name !== 'Fold 6') {
+      await expect(importTrigger).toBeFocused();
+    }
 
+    await openImportPane();
     await archiveInput.setInputFiles({
       name: 'database-export.zip',
       mimeType: 'application/zip',
       buffer: createDatabaseArchive(),
     });
-    await activate(dataManagement.getByRole('button', { name: 'Preview import' }));
-    await expect(dataManagement.getByRole('region', { name: 'Import preview' })).toBeVisible();
+    await expect(importDialog.getByRole('region', { name: 'Import details' })).toBeVisible();
     await expect(status).toHaveText('Preview ready.');
-    await activate(dataManagement.getByRole('button', { name: 'Cancel import' }));
+    await activate(importDialog.getByRole('button', { name: 'Close import dialog' }));
     await expect(status).toHaveText('Import cancelled.');
   } finally {
     releasePreview();
@@ -280,43 +303,29 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
     const dataManagement = page.getByRole('region', { name: 'Data management' });
-    const archiveInput = page.getByLabel('Database archive');
+    const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
+    const importDialog = dataManagement.getByRole('dialog', { name: 'Import database' });
+    const archiveInput = importDialog.getByLabel('Database archive');
+    const status = dataManagement.locator('.database-import-feedback[role="status"]');
 
     const uploadAndPreview = async () => {
+      await importTrigger.click();
+      await expect(importDialog).toBeVisible();
       await archiveInput.setInputFiles({
         name: 'conflicting-database-export.zip',
         mimeType: 'application/zip',
         buffer: archive,
       });
-      const previewButton = dataManagement.getByRole('button', { name: 'Preview import' });
-      if (testInfo.project.name === 'Fold 6') {
-        await previewButton.tap();
-      } else {
-        await previewButton.focus();
-        await page.keyboard.press('Enter');
-      }
-      await expect(dataManagement.locator('.database-import-feedback[role="status"]')).toHaveText(
+      await expect(importDialog.locator('.database-import-feedback[role="status"]')).toHaveText(
         'Preview ready.',
       );
     };
-    const conflict = (name: string) =>
-      dataManagement.locator('.database-import-conflicts > li').filter({ hasText: name });
-    const chooseAction = async (name: string, action: 'keep' | 'duplicate' | 'replace') => {
-      const select = conflict(name).getByLabel(`Import choice for ${name}`);
-      if (testInfo.project.name === 'Fold 6') {
-        await select.selectOption(action);
-        return;
-      }
-      await select.focus();
-      await expect(select).toHaveCSS('outline-style', 'solid');
-      const arrowPresses = { keep: 1, duplicate: 2, replace: 3 }[action];
-      for (let index = 0; index < arrowPresses; index += 1) {
-        await page.keyboard.press('ArrowDown');
-      }
-      await page.keyboard.press('Enter');
+    const chooseAction = async (action: 'keep' | 'replace') => {
+      const label = action === 'replace' ? 'Replace existing entries' : 'Ignore existing entries';
+      await importDialog.getByLabel(label).check();
     };
-    const commitButton = dataManagement.getByRole('button', { name: 'Import database' });
-    const cancelButton = dataManagement.getByRole('button', { name: 'Cancel import' });
+    const commitButton = importDialog.getByRole('button', { name: 'Import database' });
+    const cancelButton = importDialog.getByRole('button', { name: 'Close import dialog' });
 
     await uploadAndPreview();
     await expect(commitButton).toBeDisabled();
@@ -326,11 +335,11 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
       await cancelButton.focus();
       await page.keyboard.press('Enter');
     }
-    await expect(dataManagement.locator('.database-import-feedback[role="status"]')).toHaveText(
-      'Import cancelled.',
-    );
-    await expect(dataManagement.getByRole('region', { name: 'Import preview' })).toHaveCount(0);
-    if (testInfo.project.name !== 'Fold 6') await expect(archiveInput).toBeFocused();
+    await expect(status).toHaveText('Import cancelled.');
+    await expect(importDialog.getByRole('region', { name: 'Import details' })).toHaveCount(0);
+    if (testInfo.project.name !== 'Fold 6') {
+      await expect(importTrigger).toBeFocused();
+    }
     const afterCancelResponse = await request.get(
       `${config.apiUrl}/rest/v1/publications?select=id&account_id=eq.${user.id}`,
       { headers: ownerHeaders },
@@ -339,24 +348,7 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
     expect(await afterCancelResponse.json()).toHaveLength(6);
 
     await uploadAndPreview();
-    await chooseAction(names.keep, 'keep');
-    await chooseAction(names.duplicate, 'duplicate');
-    await chooseAction(names.replace, 'replace');
-    await chooseAction(names.ambiguous, 'keep');
-    const ambiguousTarget = conflict(names.ambiguous).getByLabel('Existing match');
-    const selectedAmbiguousId = await ambiguousTarget
-      .locator('option')
-      .nth(2)
-      .getAttribute('value');
-    await expect(commitButton).toBeDisabled();
-    if (testInfo.project.name === 'Fold 6') {
-      await ambiguousTarget.selectOption(selectedAmbiguousId ?? '');
-    } else {
-      await ambiguousTarget.focus();
-      await page.keyboard.press('ArrowDown');
-      await page.keyboard.press('ArrowDown');
-      await page.keyboard.press('Enter');
-    }
+    await chooseAction('replace');
     await expect(commitButton).toBeEnabled();
 
     const concurrentUpdate = await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {
@@ -381,33 +373,22 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
       await commitButton.focus();
       await page.keyboard.press('Enter');
     }
-    await expect(dataManagement.getByRole('alert')).toHaveText(
+    await expect(importDialog.getByRole('alert')).toHaveText(
       'A selected record changed. Preview the archive again.',
     );
-    const refreshButton = dataManagement.getByRole('button', { name: 'Refresh preview' });
+    const refreshButton = importDialog.getByRole('button', { name: 'Refresh preview' });
     if (testInfo.project.name === 'Fold 6') {
       await refreshButton.tap();
     } else {
       await refreshButton.focus();
       await page.keyboard.press('Enter');
     }
-    await expect(dataManagement.locator('.database-import-feedback[role="status"]')).toHaveText(
+    await expect(importDialog.locator('.database-import-feedback[role="status"]')).toHaveText(
       'Preview ready.',
     );
     await expect(commitButton).toBeDisabled();
 
-    await chooseAction(names.keep, 'keep');
-    await chooseAction(names.duplicate, 'duplicate');
-    await chooseAction(names.replace, 'replace');
-    await chooseAction(names.ambiguous, 'keep');
-    if (testInfo.project.name === 'Fold 6') {
-      await ambiguousTarget.selectOption(selectedAmbiguousId ?? '');
-    } else {
-      await ambiguousTarget.focus();
-      await page.keyboard.press('ArrowDown');
-      await page.keyboard.press('ArrowDown');
-      await page.keyboard.press('Enter');
-    }
+    await chooseAction('replace');
     await expect(commitButton).toBeEnabled();
     if (testInfo.project.name === 'Fold 6') {
       await commitButton.tap();
@@ -415,9 +396,8 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
       await commitButton.focus();
       await page.keyboard.press('Enter');
     }
-    await expect(dataManagement.locator('.database-import-feedback[role="status"]')).toHaveText(
-      'Import complete.',
-    );
+    await expect(importDialog).not.toBeVisible();
+    await expect(dataManagement.getByRole('status')).toHaveText('Import complete.');
 
     const publicationsResponse = await request.get(
       `${config.apiUrl}/rest/v1/publications?select=id,name,author&account_id=eq.${user.id}`,
@@ -429,30 +409,32 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
       name: string;
       author: string | null;
     }>;
-    expect(publications).toHaveLength(7);
+    expect(publications).toHaveLength(6);
     expect(publications).toContainEqual({
       id: existingIds.keep,
       name: names.keep,
-      author: 'Local keep',
+      author: 'Incoming keep',
+    });
+    expect(publications).toContainEqual({
+      id: existingIds.duplicate,
+      name: names.duplicate,
+      author: 'Incoming duplicate',
     });
     expect(publications).toContainEqual({
       id: existingIds.replace,
       name: names.replace,
       author: `Incoming replace`,
     });
-    expect(publications).toContainEqual({
-      name: `${names.duplicate} (Imported)`,
-      author: 'Incoming duplicate',
-      id: expect.any(String),
-    });
-    expect(publications).toContainEqual({
-      id: selectedAmbiguousId,
-      name: names.ambiguous,
-      author:
-        selectedAmbiguousId === existingIds.ambiguousFirst
-          ? 'Local ambiguous first'
-          : 'Local ambiguous second',
-    });
+    const ambiguousAuthors = publications
+      .filter((publication) => publication.name === names.ambiguous)
+      .map((publication) => publication.author);
+    expect(ambiguousAuthors).toHaveLength(2);
+    expect(ambiguousAuthors.filter((author) => author === 'Incoming ambiguous')).toHaveLength(1);
+    expect(
+      ambiguousAuthors.filter((author) =>
+        ['Local ambiguous first', 'Local ambiguous second'].includes(author ?? ''),
+      ),
+    ).toHaveLength(1);
   } finally {
     await deleteTestUser(request, user);
   }

@@ -3,7 +3,10 @@ import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 
 function runSupabase(args) {
-  const result = spawnSync('supabase', args, {
+  const workdirArgs = process.env.SUPABASE_WORKDIR
+    ? ['--workdir', process.env.SUPABASE_WORKDIR]
+    : [];
+  const result = spawnSync('supabase', [...args, ...workdirArgs], {
     stdio: 'ignore',
   });
 
@@ -14,7 +17,10 @@ function runSupabase(args) {
 }
 
 async function getLocalSupabaseConfig() {
-  const status = spawn('supabase', ['status', '--output', 'env'], {
+  const workdirArgs = process.env.SUPABASE_WORKDIR
+    ? ['--workdir', process.env.SUPABASE_WORKDIR]
+    : [];
+  const status = spawn('supabase', ['status', '--output', 'env', ...workdirArgs], {
     stdio: ['ignore', 'pipe', 'ignore'],
   });
   let apiUrl;

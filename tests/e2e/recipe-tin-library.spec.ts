@@ -259,7 +259,7 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     await expect(selectedSortOption).toHaveCSS('color', 'rgb(96, 76, 56)');
     await sortButton.click();
     if (isMobile) {
-      await expect(addRecipeLink).toHaveText('Add');
+      await expect(addRecipeLink).toHaveAttribute('aria-label', 'Add Recipe');
       const toolbarControlStyles = await page
         .locator(
           '.recipe-explorer-toolbar .recipe-explorer-sort-picklist, .recipe-explorer-toolbar .recipe-explorer-trigger, .explorer-list-preferences-trigger',
@@ -273,12 +273,16 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
             };
           }),
         );
-      expect(toolbarControlStyles).toEqual(
-        Array(4).fill({
+      expect(toolbarControlStyles).toEqual([
+        ...Array(3).fill({
           backgroundColor: 'rgb(255, 252, 241)',
           borderColor: 'rgb(154, 107, 63)',
         }),
-      );
+        {
+          backgroundColor: 'rgb(255, 249, 231)',
+          borderColor: 'rgb(96, 76, 56)',
+        },
+      ]);
       await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(96, 76, 56)');
       await expect(addRecipeLink).toHaveCSS('color', 'rgb(255, 249, 231)');
       await expect(addRecipeLink).toHaveCSS('border-color', 'rgb(96, 76, 56)');
@@ -290,7 +294,8 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       expect(columnsButtonBounds).not.toBeNull();
       if (!addRecipeBounds) throw new Error('Expected the Add Recipe action to be visible');
       if (!columnsButtonBounds) throw new Error('Expected List columns controls to be visible');
-      expect(addRecipeBounds.width).toBeGreaterThan(48);
+      expect(Math.round(addRecipeBounds.width)).toBe(40);
+      expect(Math.round(addRecipeBounds.height)).toBe(40);
       expect(columnsButtonBounds.x + columnsButtonBounds.width).toBeLessThan(addRecipeBounds.x);
       expect(Math.abs(columnsButtonBounds.y - addRecipeBounds.y)).toBeLessThanOrEqual(1);
       expect(addRecipeBounds.x + addRecipeBounds.width).toBeLessThanOrEqual(
@@ -298,23 +303,22 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       );
 
       const toolbarItemBounds = await page
-        .locator(
-          '.recipe-explorer-control-sort, .recipe-explorer-toolbar > .recipe-explorer-trigger, .explorer-list-preferences-trigger, .publication-mobile-add',
-        )
+        .locator('.explorer-list-preferences-toolbar:has(.publication-mobile-add) > *')
         .evaluateAll((elements) =>
           elements.map((element) => {
             const bounds = element.getBoundingClientRect();
             return { x: bounds.x, width: bounds.width };
           }),
         );
-      expect(toolbarItemBounds).toHaveLength(5);
-      const toolbarGaps = toolbarItemBounds.slice(1).map((bounds, index) => {
-        const previousBounds = toolbarItemBounds[index];
+      expect(toolbarItemBounds).toHaveLength(3);
+      const orderedToolbarItems = toolbarItemBounds.sort((left, right) => left.x - right.x);
+      const toolbarGaps = orderedToolbarItems.slice(1).map((bounds, index) => {
+        const previousBounds = orderedToolbarItems[index];
         if (!previousBounds) throw new Error('Expected toolbar item bounds');
         return bounds.x - previousBounds.x - previousBounds.width;
       });
-      for (const gap of toolbarGaps.slice(1)) {
-        expect(Math.abs(gap - toolbarGaps[0])).toBeLessThanOrEqual(1);
+      for (const gap of toolbarGaps) {
+        expect(Math.abs(gap - 8)).toBeLessThanOrEqual(1);
       }
 
       await columnsButton.click();

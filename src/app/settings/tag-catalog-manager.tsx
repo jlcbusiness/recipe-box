@@ -481,7 +481,10 @@ export function TagCatalogManager({
   }
 
   return (
-    <section aria-label="Tags" className={styles.manager}>
+    <section
+      aria-label="Tags"
+      className={`${styles.manager} settings-section settings-accordion-section`}
+    >
       <h2 className={styles.heading}>
         <button
           aria-expanded={isExpanded}

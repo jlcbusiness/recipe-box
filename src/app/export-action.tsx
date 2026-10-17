@@ -2,7 +2,7 @@
 
 import { Download } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import type { ExportScope } from '../lib/exports/rules';
 
 type ExportActionProps = {
@@ -11,6 +11,8 @@ type ExportActionProps = {
   buttonClassName?: string;
   ariaLabel?: string;
   className?: string;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
+  triggerHidden?: boolean;
 };
 
 type Feedback = {
@@ -28,6 +30,8 @@ export function ExportAction({
   buttonClassName = 'recipe-secondary-button',
   ariaLabel,
   className = '',
+  triggerRef,
+  triggerHidden = false,
 }: ExportActionProps) {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const activeRequest = useRef<AbortController | null>(null);
@@ -107,11 +111,14 @@ export function ExportAction({
     <div className={`export-action ${className}`.trim()}>
       <button
         aria-label={ariaLabel}
+        aria-hidden={triggerHidden || undefined}
         aria-busy={feedback?.kind === 'working'}
         aria-describedby={feedback ? `${buttonId}-feedback` : undefined}
         className={`${buttonClassName} export-action-button`}
         disabled={feedback?.kind === 'working'}
         onClick={startExport}
+        ref={triggerRef}
+        tabIndex={triggerHidden ? -1 : undefined}
         type="button"
       >
         <Download aria-hidden="true" size={16} />

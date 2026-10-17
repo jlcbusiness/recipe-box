@@ -23,7 +23,7 @@
     - [Design contract](#design-contract)
   - [Trusted Densities (Slice 15)](#trusted-densities-slice-15)
     - [Settings and editor behavior](#settings-and-editor-behavior)
-  - [Data Management and Export (Slice 20)](#data-management-and-export-slice-20)
+  - [Data Management, Export, and Import (Slices 20 and 21B)](#data-management-export-and-import-slices-20-and-21b)
   - [Desktop](#desktop)
     - [Current implementation](#current-implementation-3)
     - [Product direction](#product-direction)
@@ -366,7 +366,7 @@ ingredient and equation; inline amount/unit groups reflow without page-level
 horizontal overflow. The mobile recipe row popover uses the same derivation
 behavior and accessible status.
 
-## Data Management and Export (Slice 20)
+## Data Management, Export, and Import (Slices 20 and 21B)
 
 Settings places a full-width, unframed Data management section after the
 working preference and catalog sections. It shows the last completed full
@@ -385,12 +385,36 @@ On standard recipe detail, Print uses the filled leaf treatment with a pale
 green edge, while Export and Edit use light backgrounds with green borders; the
 Recipe Tin keeps its brown palette, with Export and Edit both on light
 backgrounds.
-On mobile, publication Export and Edit are icon buttons and Add Recipe is
-icon-only in the compact toolbar. Export feedback overlays the page beneath its
-button without moving the action row or following content. Settings keeps its
-48px mobile target while scoped actions retain their compact dimensions. All
-three actions share the same progress, completion, retry, and visible-focus
-behavior. No confirmation modal or new card layout is introduced.
+On mobile publication detail, Sort, direction, and view controls form a
+connected 40px group. List columns is a separate 40px outlined button with the
+same leaf border and paper background as Edit. The disconnected controls have
+equal 8px gaps above 340px and compact uniformly to 4px at 340px and below,
+without horizontal overflow.
+
+On desktop, publication Export and Import recipe remain separate actions. On
+mobile, one 40px transfer-menu button offers `Export publication` and `Import
+recipe`; Edit and Add Recipe remain icon-only actions in the compact toolbar.
+The menu supports keyboard navigation and returns focus to its trigger when
+closed. Export feedback overlays the page beneath its button without moving the
+action row or following content. Settings keeps its 48px mobile target while
+scoped actions retain their compact dimensions. All three actions share the
+same progress, completion, retry, and visible-focus behavior. No confirmation
+modal or new card layout is introduced.
+
+Import database remains in Settings. Import publication sits beside Add
+publication in the Library; on mobile it uses a 48px square Upload control with
+an accessible name and tooltip. Import recipe is a separate publication-detail
+action on desktop and an item in the shared transfer menu on mobile.
+Selecting a ZIP starts upload and comparison automatically. The compact
+preview keeps the archive filename and record/media counts together; it omits
+private/public recipe counts and the `Import preview` heading. After selection,
+`Choose another ZIP` restarts the flow and removes the prior temporary archive
+before uploading its replacement. Recipe-scoped conflicts offer Replace or
+Duplicate, with no Ignore action; publication imports retain per-recipe Ignore.
+Source publication resolution is automatic, and new or duplicate recipes can
+select an active destination publication; Replace retains the matched recipe's
+current publication. Dialog actions retain visible keyboard focus, and the
+mobile action rows fit without page-level horizontal overflow.
 
 ## Desktop
 

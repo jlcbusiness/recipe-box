@@ -883,6 +883,30 @@ test('publication recipe explorers restore only their route-owned state @e2e', a
     await expect(page).toHaveURL(
       new RegExp(`/publications/${firstPublicationId}\\?sort=updated_at&direction=desc&view=grid$`),
     );
+    const viewControls = page.getByRole('group', { name: 'Sort and view controls' });
+    const viewControlBounds = await viewControls.locator('button, a').evaluateAll((elements) =>
+      elements.map((element) => {
+        const { x, y, width, height, right } = element.getBoundingClientRect();
+        return { x, y, width, height, right };
+      }),
+    );
+    expect(viewControlBounds).toHaveLength(3);
+    for (const bounds of viewControlBounds) {
+      expect(bounds.width).toBe(40);
+      expect(bounds.height).toBe(40);
+    }
+    expect(viewControlBounds[1].x - viewControlBounds[0].right).toBe(0);
+    expect(viewControlBounds[2].x - viewControlBounds[1].right).toBe(0);
+    const mobileActions = page.locator('.publication-mobile-actions');
+    if (await mobileActions.isVisible()) {
+      const viewBounds = await viewControls.boundingBox();
+      const actionBounds = await mobileActions.boundingBox();
+      expect(viewBounds).not.toBeNull();
+      expect(actionBounds).not.toBeNull();
+      expect((viewBounds?.x ?? 0) + (viewBounds?.width ?? 0)).toBeLessThanOrEqual(
+        actionBounds?.x ?? 0,
+      );
+    }
     await expect(page.getByRole('button', { name: 'Switch to Details view' })).toBeVisible();
 
     await page.goto(`/publications/${secondPublicationId}`);

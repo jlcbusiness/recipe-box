@@ -106,9 +106,17 @@ Media asset rows describe ready assets only. Their full and thumbnail storage
 paths are represented by their matching relative `images/...` paths. Trashed
 records and their ready images are included in full database exports. Scoped
 exports include the selected active record graph and only the related rows and
-assets needed by that graph. Recipe links whose target is outside the selected
-graph retain their target ID and stored display text; import conflict and
-unresolved-link behavior belongs to Slice 21.
+assets needed by that graph. IDs in the archive describe source records and
+relationships; they do not establish identity in the destination account.
+Import maps included relationships to destination IDs. For an out-of-scope
+recipe link, import reconnects only to a unique active destination recipe
+matching the stored display text; otherwise it clears the link and preserves
+the text. An out-of-scope publication reference preserves its display text
+without a publication ID. For a recipe-scoped import, the destination recipe
+match uses normalized name across active destination publications. Source
+publication metadata resolves automatically; Recipe Tin maps to the
+destination owner's collection. See [Slice 21B](slices/21b-scoped-import.md)
+for the complete relationship and conflict rules.
 
 History, full-text-search documents, pending uploads, Storage deletion queue
 rows, and temporary export objects are never part of `records`.

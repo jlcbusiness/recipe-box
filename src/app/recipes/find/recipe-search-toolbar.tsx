@@ -91,78 +91,65 @@ export function RecipeSearchToolbar({
       view: next.view ?? view,
       tab: searchMode?.mode,
     });
+  const nextViewOption = viewOptions
+    ? viewOptions[
+        (viewOptions.findIndex((option) => option.value === view) + 1) % viewOptions.length
+      ]
+    : undefined;
+  const nextView = nextViewOption?.value ?? (view === 'list' ? 'grid' : 'list');
+  const nextViewLabel = nextViewOption?.label ?? (nextView === 'grid' ? 'Grid' : 'List');
 
   return (
     <fieldset className="recipe-explorer-toolbar">
       <legend className="sr-only">Recipe result controls</legend>
-      <div className="recipe-explorer-control recipe-explorer-control-sort">
-        <Picklist
-          className="recipe-explorer-sort-picklist"
-          label={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
-          menuClassName="recipe-explorer-sort-menu"
-          onSelect={(value) => router.push(hrefFor({ sort: value as RecipeSearchSortKey }))}
-          options={options}
-          showArrow={false}
-          sizeToContent={false}
-          title={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
-          value={sort}
+      <fieldset className="recipe-explorer-view-controls">
+        <legend className="sr-only">Sort and view controls</legend>
+        <div className="recipe-explorer-control recipe-explorer-control-sort">
+          <Picklist
+            className="recipe-explorer-sort-picklist"
+            label={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
+            menuClassName="recipe-explorer-sort-menu"
+            onSelect={(value) => router.push(hrefFor({ sort: value as RecipeSearchSortKey }))}
+            options={options}
+            showArrow={false}
+            sizeToContent={false}
+            title={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
+            value={sort}
+          >
+            <ArrowDownWideNarrow aria-hidden="true" size={19} />
+          </Picklist>
+        </div>
+        <Link
+          aria-label={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
+          className="recipe-explorer-trigger recipe-explorer-icon-trigger"
+          href={hrefFor({ direction: direction === 'asc' ? 'desc' : 'asc' })}
+          title={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
         >
-          <ArrowDownWideNarrow aria-hidden="true" size={19} />
-        </Picklist>
-      </div>
-      <Link
-        aria-label={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
-        className="recipe-explorer-trigger recipe-explorer-icon-trigger"
-        href={hrefFor({ direction: direction === 'asc' ? 'desc' : 'asc' })}
-        title={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
-      >
-        {direction === 'asc' ? (
-          <ArrowUp aria-hidden="true" size={19} />
-        ) : (
-          <ArrowDown aria-hidden="true" size={19} />
-        )}
-      </Link>
-      <button
-        aria-label={`Switch to ${
-          viewOptions
-            ? viewOptions[
-                (viewOptions.findIndex((option) => option.value === view) + 1) % viewOptions.length
-              ]?.label
-            : view === 'list'
-              ? 'Grid'
-              : 'List'
-        } view`}
-        aria-pressed={view === 'grid'}
-        className="recipe-explorer-trigger recipe-explorer-icon-trigger"
-        onClick={() => {
-          const nextView = viewOptions
-            ? viewOptions[
-                (viewOptions.findIndex((option) => option.value === view) + 1) % viewOptions.length
-              ]?.value
-            : view === 'list'
-              ? 'grid'
-              : 'list';
-          router.push(hrefFor({ view: nextView ?? 'list' }));
-        }}
-        title={`Switch to ${
-          viewOptions
-            ? viewOptions[
-                (viewOptions.findIndex((option) => option.value === view) + 1) % viewOptions.length
-              ]?.label
-            : view === 'list'
-              ? 'Grid'
-              : 'List'
-        } view`}
-        type="button"
-      >
-        {view === 'details' ? (
-          <Rows3 aria-hidden="true" size={19} />
-        ) : view === 'list' ? (
-          <List aria-hidden="true" size={19} />
-        ) : (
-          <LayoutGrid aria-hidden="true" size={19} />
-        )}
-      </button>
+          {direction === 'asc' ? (
+            <ArrowUp aria-hidden="true" size={19} />
+          ) : (
+            <ArrowDown aria-hidden="true" size={19} />
+          )}
+        </Link>
+        <button
+          aria-label={`Switch to ${nextViewLabel} view`}
+          aria-pressed={view === 'grid'}
+          className="recipe-explorer-trigger recipe-explorer-icon-trigger"
+          onClick={() => {
+            router.push(hrefFor({ view: nextView }));
+          }}
+          title={`Switch to ${nextViewLabel} view`}
+          type="button"
+        >
+          {view === 'details' ? (
+            <Rows3 aria-hidden="true" size={19} />
+          ) : view === 'list' ? (
+            <List aria-hidden="true" size={19} />
+          ) : (
+            <LayoutGrid aria-hidden="true" size={19} />
+          )}
+        </button>
+      </fieldset>
     </fieldset>
   );
 }

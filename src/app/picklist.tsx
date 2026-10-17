@@ -306,6 +306,10 @@ export function Picklist({
   );
   const measureRef = useRef<HTMLSpanElement>(null);
   const [triggerWidth, setTriggerWidth] = useState<number>();
+  const portalTarget =
+    typeof document === 'undefined'
+      ? null
+      : (triggerRef.current?.closest('dialog') ?? document.body);
 
   useLayoutEffect(() => {
     if (!showArrow || !sizeToContent) {
@@ -369,7 +373,7 @@ export function Picklist({
         )}
       </button>
       {isOpen &&
-        typeof document !== 'undefined' &&
+        portalTarget &&
         createPortal(
           <div
             className={`single-picklist-menu${menuClassName ? ` ${menuClassName}` : ''}`}
@@ -408,7 +412,7 @@ export function Picklist({
               </Fragment>
             ))}
           </div>,
-          document.body,
+          portalTarget,
         )}
     </>
   );

@@ -53,7 +53,15 @@ API acceptance cases. The unit suite passes 244 tests; TypeScript, Biome,
 Markdown lint, and `git diff --check` pass. Biome reports 53 non-blocking CSS
 specificity warnings. The isolated stack uses
 `/tmp/recipe-box-import-acceptance`; the active local database was not reset.
-Slice 21B remains unstarted.
+Slice 21B is complete. Publication and recipe scoped bundles reuse the
+validated archive, preview, planner, media, and transactional commit path.
+Import publication is available in the Library; Import recipe is available on
+publication detail. The workflows are source-independent and derive ownership
+from the authenticated destination account. Scoped browser acceptance passes
+on Chromium and Fold 6, including conflicts, cancellation, stale-preview
+recovery, navigation, accessibility, responsive layout, and real Storage media
+staging and cleanup. See [Slice 21B brief](21b-scoped-import.md) for detailed
+relationship behavior and verification evidence.
 
 ## Scope and dependencies
 
@@ -75,9 +83,11 @@ Slice 21B remains unstarted.
 
 ## Matching and conflict choices
 
-- Match publications by normalized publication type and name. Match recipes by
-  normalized name within the resolved primary publication; for Recipe Tin
-  records, match within the destination account's Recipe Tin.
+- Match publications by normalized publication type and name. Database and
+  publication imports match recipes within their resolved publication. Recipe-
+  scoped imports match by normalized name across active destination
+  publications so a changed source publication does not hide an existing
+  recipe.
 - Normalize match keys with Unicode NFKC normalization, trimming, and
   case-insensitive comparison. Do not use source IDs or content hashes as
   evidence of identity. If a key has multiple local candidates, require an
@@ -88,15 +98,19 @@ Slice 21B remains unstarted.
   reuse in the preview. Add unmatched values with new IDs. A conflicting
   trusted density keeps the local density and is called out before commit.
 - Keep existing skips the selected incoming root and all dependent rows owned
-  by that root. Create duplicate adds the `(Imported)` suffix to the root name
-  with a separating space and
-  imports its graph with new destination IDs. Replace keeps the matched root
-  ID and replaces its imported graph in the same transaction; the preview
-  identifies the records and relationships affected.
-- For a database import, publications and recipes are independently matched
-  and resolved. A recipe's source publication resolves through the publication
-  mapping before recipe matching. Unmatched local recipes are not deleted when
-  a publication is replaced.
+  by that root. Recipe-scoped conflicts call this choice Ignore. Create
+  duplicate adds the `(Imported)` suffix to the root name with a separating
+  space and imports its graph with new destination IDs. Replace keeps the
+  matched root ID and replaces its imported graph in the same transaction; a
+  recipe replacement also keeps its current destination publication.
+- For a recipe-scoped import, resolve source publication metadata
+  automatically. Reuse one active normalized match, create a missing source
+  publication, and map Recipe Tin to the destination owner's collection without
+  importing a collection record. New and duplicate recipes default to the
+  source publication and can be assigned to another active destination
+  publication. For a database import, publications and recipes are independently
+  matched and resolved. Unmatched local recipes are not deleted when a
+  publication is replaced.
 - Allocate fresh destination IDs for newly created records and graph children.
   Preserve matched recipe/publication root IDs on Replace. Rewrite every
   included foreign key through the source-to-destination map. An out-of-scope
@@ -153,14 +167,19 @@ Slice 21B remains unstarted.
   management section. Publication and recipe detail import actions are
   deferred to Slice 21B. The action accepts one `.zip` file and opens the
   accessible import workflow.
-- File selection is staged. Upload and validation show progress and disable
-  only the active import action. Cancel before commit abandons the import and
-  cleans up its temporary objects; changing the file starts a new validation.
+- Selecting a ZIP starts upload and comparison automatically. Upload and
+  validation show progress and disable only the active import action. The
+  compact file row shows the archive name and record/media counts together;
+  private/public recipe counts and an `Import preview` heading are omitted.
+  Cancel before commit abandons the import and cleans up its temporary objects.
 - A valid bundle preview shows scope, record/media counts, matched records,
-  ambiguous matches, catalog reuse, privacy summary, and any existing records
-  that Replace will update. Each conflict requires a deliberate choice; no
-  destructive default is preselected. The final Import action commits all
-  choices together. Cancel returns without changing records.
+  ambiguous matches, catalog reuse, and any existing records that Replace will
+  update. Each conflict requires a deliberate choice; no destructive default
+  is preselected. Database and publication imports offer Replace, Duplicate,
+  and Ignore for recipe conflicts; recipe-scoped conflicts offer Replace or
+  Duplicate only. New and duplicate recipes can select a destination
+  publication. The final Import action commits all choices together. Cancel
+  returns without changing records.
 - Validation errors identify the actionable problem without exposing server
   paths or database details. A commit failure keeps the user's choices and
   allows retry after refreshing stale matches. A successful commit announces
