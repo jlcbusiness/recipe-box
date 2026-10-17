@@ -53,17 +53,20 @@ describe('recipe search URL contract', () => {
       parseRecipeSearchColumnFilters({
         column_name: '__all__',
         column_state: '__none__',
+        column_visibility: ['private'],
         column_meal_type: ['meal-a', 'meal-b'],
         column_total_time_minutes: ['__blank__', '20'],
       }),
     ).toEqual({
       filters: [
         { field: 'state', operator: 'in', value: [] },
+        { field: 'visibility', operator: 'in', value: ['private'] },
         { field: 'total_time_minutes', operator: 'in', value: ['__blank__', 20] },
         { field: 'meal_type', operator: 'contains_any', value: ['meal-a', 'meal-b'] },
       ],
       selections: {
         state: [],
+        visibility: ['private'],
         meal_type: ['meal-a', 'meal-b'],
         total_time_minutes: ['__blank__', '20'],
       },

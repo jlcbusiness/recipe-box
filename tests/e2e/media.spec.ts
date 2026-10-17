@@ -370,6 +370,19 @@ test('image management panes stage covers and immediately manage decorative reci
       'object-fit',
       'contain',
     );
+    const [nameInputBounds, photoBounds] = await Promise.all([
+      page.locator('.recipe-name-field input').boundingBox(),
+      page.locator('.recipe-photo-manager-trigger img').boundingBox(),
+    ]);
+    expect(nameInputBounds).not.toBeNull();
+    expect(photoBounds).not.toBeNull();
+    expect(
+      Math.abs(
+        (photoBounds?.y ?? 0) +
+          (photoBounds?.height ?? 0) -
+          ((nameInputBounds?.y ?? 0) + (nameInputBounds?.height ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(1);
     await expect(page.locator('.recipe-photo-manager-pencil')).toBeVisible();
     const triggerPhotoSource = await page
       .locator('.recipe-photo-manager-trigger img')
@@ -842,9 +855,7 @@ test('image management panes stage covers and immediately manage decorative reci
       expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(281);
       expect(featureBounds.x + featureBounds.width).toBeLessThan(metadataBounds.x);
       expect(Math.abs((featureImageBounds?.y ?? 0) - metadataBounds.y)).toBeLessThanOrEqual(4);
-      expect(
-        Math.abs(titleBounds.y + titleBounds.height / 2 - actionBounds.y - actionBounds.height / 2),
-      ).toBeLessThanOrEqual(2);
+      expect(Math.abs(titleBounds.y - actionBounds.y)).toBeLessThanOrEqual(1);
       await expect(page.locator('main.recipes-main')).toHaveCSS('padding-top', '17px');
     } else {
       if (imageMaxHeight === null) {
@@ -903,6 +914,34 @@ test('image management panes stage covers and immediately manage decorative reci
         compactThumbnailBounds.x +
           compactThumbnailBounds.width / 2 -
           (compactGalleryBounds.x + compactGalleryBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+
+    await page.goto(`/recipes/${recipeId}/edit`);
+    await page.getByRole('button', { name: 'Manage recipe photos' }).click();
+    const singlePhotoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
+    await singlePhotoDialog.getByRole('button', { name: 'Remove photo 1' }).click();
+    await expect(singlePhotoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
+    await singlePhotoDialog.getByRole('button', { name: 'Done' }).click();
+    await page.goto(`/recipes/${recipeId}`);
+    const singlePhotoGallery = page.locator('.recipe-photo-gallery');
+    const singlePhotoImage = page.locator('.recipe-photo-feature-image');
+    await expect(singlePhotoGallery).toBeVisible();
+    await expect(page.locator('.recipe-photo-thumbnails')).toHaveCount(0);
+    const [singlePhotoGalleryBounds, singlePhotoImageBounds] = await Promise.all([
+      singlePhotoGallery.boundingBox(),
+      singlePhotoImage.boundingBox(),
+    ]);
+    expect(singlePhotoGalleryBounds).not.toBeNull();
+    expect(singlePhotoImageBounds).not.toBeNull();
+    if (!singlePhotoGalleryBounds || !singlePhotoImageBounds) {
+      throw new Error('Expected a centered single-photo gallery');
+    }
+    expect(
+      Math.abs(
+        singlePhotoImageBounds.x +
+          singlePhotoImageBounds.width / 2 -
+          (singlePhotoGalleryBounds.x + singlePhotoGalleryBounds.width / 2),
       ),
     ).toBeLessThanOrEqual(1);
 

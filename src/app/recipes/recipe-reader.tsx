@@ -119,10 +119,12 @@ function useRecipeScale(): RecipeScaleContextValue {
 export function RecipeInstructionMention({
   displayName,
   ingredient,
+  preserveStoredUnits = false,
   unitSystems,
 }: {
   displayName: string;
   ingredient: RecipeIngredient;
+  preserveStoredUnits?: boolean;
   unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem };
 }) {
   const { multiplier, unitOverrides } = useRecipeScale();
@@ -141,6 +143,7 @@ export function RecipeInstructionMention({
   const displayIngredient = transformIngredientForDisplay(ingredient, {
     multiplier,
     unitSystems,
+    preserveStoredUnits,
     unitOverrides: unitOverrides[ingredient.id],
   });
   const parts = getIngredientDisplayParts(displayIngredient);
@@ -620,6 +623,7 @@ export function RecipeReader({
   defaultPresentation,
   ingredients,
   instructions,
+  preserveStoredUnits = false,
   recipeId,
   serves,
   steps,
@@ -629,9 +633,10 @@ export function RecipeReader({
   defaultPresentation: IngredientPresentation;
   ingredients: RecipeIngredient[];
   instructions?: ReactNode;
+  preserveStoredUnits?: boolean;
   recipeId: string;
   serves: number | null;
-  steps: RecipeInstructionStep[];
+  steps: Array<Pick<RecipeInstructionStep, 'position' | 'content_markdown'>>;
   volumeSystem: MeasurementSystem;
   weightSystem: MeasurementSystem;
 }) {
@@ -834,7 +839,7 @@ export function RecipeReader({
 
   function renderIngredientRows() {
     return sortedIngredients.map((ingredient) => {
-      const displayOptions = { multiplier, unitSystems };
+      const displayOptions = { multiplier, preserveStoredUnits, unitSystems };
       const displayIngredient = transformIngredientForDisplay(ingredient, {
         ...displayOptions,
         unitOverrides: unitOverrides[ingredient.id],
@@ -970,7 +975,7 @@ export function RecipeReader({
                 aria-pressed={sortDirection === 'descending'}
                 className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-reader-icon-button recipe-sort-direction"
                 disabled={!hasSortDirection}
-                style={{ visibility: hasSortDirection ? 'visible' : 'hidden' }}
+                style={{ display: hasSortDirection ? 'inline-flex' : 'none' }}
                 title={`Sort ${sortDirection}; activate to reverse`}
                 type="button"
                 onClick={() =>

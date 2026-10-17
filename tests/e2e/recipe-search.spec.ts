@@ -29,7 +29,7 @@ async function createContractRecipe(
     notes: string;
     ingredients?: string[];
   },
-) {
+): Promise<string> {
   const response = await request.post(`${apiUrl}/rest/v1/rpc/save_recipe`, {
     headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
     data: {
@@ -69,8 +69,98 @@ async function createContractRecipe(
       p_instruction_steps: [],
     },
   });
-  expect(response.ok(), await response.text()).toBeTruthy();
+  const responseBody = await response.text();
+  expect(response.ok(), responseBody).toBeTruthy();
+  const [createdRecipe] = JSON.parse(responseBody) as { id: string; version: number }[];
+  return createdRecipe.id;
 }
+
+async function setContractRecipePrivate(
+  request: import('@playwright/test').APIRequestContext,
+  apiUrl: string,
+  anonKey: string,
+  accessToken: string,
+  recipeId: string,
+) {
+  const headers = { apikey: anonKey, Authorization: `Bearer ${accessToken}` };
+  const recipeResponse = await request.get(
+    `${apiUrl}/rest/v1/recipes?select=version&id=eq.${recipeId}`,
+    { headers },
+  );
+  const recipeResponseBody = await recipeResponse.text();
+  expect(recipeResponse.ok(), recipeResponseBody).toBeTruthy();
+  const [{ version }] = JSON.parse(recipeResponseBody) as { version: number }[];
+  const privacyResponse = await request.post(`${apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
+    headers,
+    data: { p_recipe_id: recipeId, p_expected_version: version, p_is_private: true },
+  });
+  expect(privacyResponse.ok(), await privacyResponse.text()).toBeTruthy();
+}
+
+test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const linkableRecipeName = 'Linkable visibility filter recipe';
+    const privateRecipeName = 'Private visibility filter recipe';
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: linkableRecipeName,
+      state: 'want_to_try',
+      totalTime: null,
+      notes: '',
+    });
+    const privateRecipeId = await createContractRecipe(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      { name: privateRecipeName, state: 'want_to_try', totalTime: null, notes: '' },
+    );
+    await setContractRecipePrivate(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      privateRecipeId,
+    );
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+
+    await page.goto('/recipes/find?column_visibility=private&sort=name&direction=asc&view=details');
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    const privateRow = page
+      .locator('.find-recipes-list tbody tr')
+      .filter({ has: page.getByRole('link', { name: privateRecipeName }) });
+    await expect(privateRow.locator('[data-explorer-column="visibility"]')).toHaveText('Private');
+    await expect(
+      page.getByRole('link', { name: linkableRecipeName, exact: true }),
+    ).toHaveCount(0);
+
+    await page.goto('/recipes/find?tab=query&sort=name&direction=asc&view=details');
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    const visibilityRule = page.locator('.recipe-filter-row').first();
+    await selectFilterOption(page, visibilityRule, 'Field', 'Visibility');
+    await selectFilterValue(page, visibilityRule, 'Linkable');
+    await visibilityRule.getByRole('button', { name: 'Value: Linkable' }).press('Enter');
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    const linkableRow = page
+      .locator('.find-recipes-list tbody tr')
+      .filter({ has: page.getByRole('link', { name: linkableRecipeName }) });
+    await expect(linkableRow.locator('[data-explorer-column="visibility"]')).toHaveText(
+      'Linkable',
+    );
+    await expect(
+      page.getByRole('link', { name: privateRecipeName, exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
 
 test('Find Recipes updates mobile metadata when columns are toggled @e2e', async ({
   page,

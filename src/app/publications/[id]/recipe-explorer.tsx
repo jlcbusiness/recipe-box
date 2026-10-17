@@ -50,6 +50,7 @@ type RecipeExplorerSearchParams = {
   view?: string;
   column_name?: string | string[];
   column_state?: string | string[];
+  column_visibility?: string | string[];
   column_total_time_minutes?: string | string[];
   column_opinion?: string | string[];
   column_meal_type?: string | string[];
@@ -223,18 +224,24 @@ export async function PublicationRecipeExplorer({
         ] as const,
     ),
   );
-  const columnFacetOptions = Object.fromEntries(columnFacetEntries) as Record<
-    | 'name'
-    | 'state'
-    | 'total_time_minutes'
-    | 'opinion'
-    | 'meal_type'
-    | 'food_type'
-    | 'publication_page'
-    | 'recipe_url'
-    | 'citation',
-    RecipeSearchFacetOption[]
-  >;
+  const columnFacetOptions = {
+    ...(Object.fromEntries(columnFacetEntries) as Record<
+      | 'name'
+      | 'state'
+      | 'total_time_minutes'
+      | 'opinion'
+      | 'meal_type'
+      | 'food_type'
+      | 'publication_page'
+      | 'recipe_url'
+      | 'citation',
+      RecipeSearchFacetOption[]
+    >),
+    visibility: [
+      { value: 'private', label: 'Private' },
+      { value: 'linkable', label: 'Linkable' },
+    ],
+  };
 
   const countLabel = `${matchingCount} ${matchingCount === 1 ? 'recipe' : 'recipes'} found`;
   const columnFilter = (field: keyof typeof columnFacetOptions) => (
@@ -308,6 +315,7 @@ export async function PublicationRecipeExplorer({
               [
                 'name',
                 'state',
+                                'visibility',
                 'opinion',
                 'meal_type',
                 'food_type',

@@ -33,6 +33,7 @@ export default async function PublicationPage({
     view?: string;
     column_name?: string | string[];
     column_state?: string | string[];
+      column_visibility?: string | string[];
     column_total_time_minutes?: string | string[];
     column_opinion?: string | string[];
     column_meal_type?: string | string[];

@@ -17,6 +17,17 @@ export type TestUser = {
 };
 
 export async function getLocalSupabaseConfig(): Promise<LocalSupabaseConfig> {
+  const configuredApiUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const configuredAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const configuredServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (configuredApiUrl && configuredAnonKey && configuredServiceRoleKey) {
+    return {
+      apiUrl: configuredApiUrl,
+      anonKey: configuredAnonKey,
+      serviceRoleKey: configuredServiceRoleKey,
+    };
+  }
+
   const supabaseArgs = ['status', '--output', 'env'];
   if (process.env.SUPABASE_WORKDIR) {
     supabaseArgs.push('--workdir', process.env.SUPABASE_WORKDIR);

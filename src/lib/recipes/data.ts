@@ -119,6 +119,8 @@ type RecipeMeasurementRecord = Omit<RecipeMeasurement, 'picklist_value'> & {
 
 export type RecipeRecord = {
   id: string;
+  public_id: string;
+  is_private: boolean;
   name: string;
   publication_id: string;
   publication_page: string | null;
@@ -287,7 +289,7 @@ export async function getRecipe(
   const { data, error } = await supabase
     .from('recipes')
     .select(
-      'id, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, version, created_at, updated_at',
+      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, version, created_at, updated_at',
     )
     .eq('id', recipeId)
     .is('trashed_at', null)
@@ -521,7 +523,7 @@ export async function getRecipeExplorerColumnValues(
     supabase
       .from('recipes')
       .select(
-        'id, publication_id, publication_page, recipe_url, state, food_type_id, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, created_at, updated_at',
+        'id, publication_id, publication_page, recipe_url, state, is_private, food_type_id, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, created_at, updated_at',
       )
       .in('id', recipeIds),
     supabase
@@ -677,6 +679,7 @@ export async function getRecipeExplorerColumnValues(
         recipe_url: recipe.recipe_url,
         citation: citationsByRecipe.get(recipe.id)?.join(', ') ?? null,
         state: recipeStateLabels[recipe.state as RecipeState],
+          visibility: recipe.is_private ? 'Private' : 'Linkable',
         enthusiasm,
         verdict,
         reason: recipe.reason,

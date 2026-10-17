@@ -29,6 +29,7 @@ export type IngredientDisplayOptions = {
   multiplier: number;
   unitSystems: MeasurementUnitSystems;
   unitOverrides?: IngredientUnitOverrides;
+  preserveStoredUnits?: boolean;
 };
 
 const usFluidOunceMilliliters = 29.5735295625;
@@ -202,7 +203,7 @@ function ingredientSize(ingredient: RecipeIngredient): { group: number; amount: 
 
 export function sortRecipeIngredients(
   ingredients: readonly RecipeIngredient[],
-  steps: readonly RecipeInstructionStep[],
+  steps: readonly Pick<RecipeInstructionStep, 'position' | 'content_markdown'>[],
   mode: IngredientSortMode,
   direction: IngredientSortDirection = 'ascending',
 ): RecipeIngredient[] {
@@ -322,12 +323,14 @@ export function transformIngredientForDisplay(
       }
       const targetUnitCode =
         options.unitOverrides?.[dimension] ??
-        resolveDisplayUnit(
-          dimension,
-          sourceUnitCode,
-          options.unitSystems[dimension],
-          scaled.minimum,
-        );
+        (options.preserveStoredUnits
+          ? sourceUnitCode
+          : resolveDisplayUnit(
+              dimension,
+              sourceUnitCode,
+              options.unitSystems[dimension],
+              scaled.minimum,
+            ));
       const amountMin = convertUnitAmount(
         scaled.minimum,
         dimension,

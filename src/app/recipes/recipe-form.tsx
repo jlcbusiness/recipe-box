@@ -39,6 +39,7 @@ import { IngredientRowsEditor } from './ingredient-rows-editor';
 import { InstructionStepsEditor } from './instruction-steps-editor';
 import { MultiPicklist, type RecipeMultiSelectCategory } from './multi-picklist';
 import { PublicationPicker } from './publication-picker';
+import { RecipeDeleteAction } from './recipe-detail-actions';
 import { RecipeRelationshipsEditor } from './recipe-relationships-editor';
 
 type RecipeFormProps = {
@@ -382,8 +383,14 @@ export function RecipeForm({
     setInstructionStepsError('');
   }
 
-  return (
-    <form action={formAction} className="recipe-form" onSubmit={handleSubmit} ref={formRef}>
+  const form = (
+    <form
+      action={formAction}
+      className="recipe-form"
+      id="recipe-form"
+      onSubmit={handleSubmit}
+      ref={formRef}
+    >
       <input name="ingredient_rows" type="hidden" defaultValue="[]" />
       <input name="instruction_steps" type="hidden" defaultValue="[]" />
       {recipe && (
@@ -532,6 +539,13 @@ export function RecipeForm({
             onToggle={() => togglePicklist('cuisine')}
             onClose={() => setOpenPicklist(null)}
           />
+          {recipe && (
+            <div className="recipe-form-save-row">
+              <button className="recipe-primary-button" disabled={pending} type="submit">
+                {pending ? 'Saving…' : 'Save recipe'}
+              </button>
+            </div>
+          )}
         </div>
         <TagMultiSelect tags={tags} selectedIds={recipe?.tags.map((tag) => tag.id)} />
       </fieldset>
@@ -673,14 +687,34 @@ export function RecipeForm({
           {actionState.error}
         </p>
       )}
+    </form>
+  );
+
+  return (
+    <>
+      {form}
       <div className="recipe-form-actions">
         <a className="recipe-secondary-link" href={recipe ? `/recipes/${recipe.id}` : '/recipes'}>
           Cancel
         </a>
-        <button className="recipe-primary-button" disabled={pending} type="submit">
-          {pending ? 'Saving…' : 'Save recipe'}
-        </button>
+        {recipe ? (
+          <RecipeDeleteAction
+            buttonLabel="Delete"
+            recipeId={recipe.id}
+            recipeName={recipe.name}
+            version={recipe.version}
+          />
+        ) : (
+          <button
+            className="recipe-primary-button"
+            disabled={pending}
+            form="recipe-form"
+            type="submit"
+          >
+            {pending ? 'Saving…' : 'Save recipe'}
+          </button>
+        )}
       </div>
-    </form>
+    </>
   );
 }

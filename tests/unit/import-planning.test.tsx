@@ -380,6 +380,7 @@ describe('database import planning', () => {
     expect(plan.records.recipe_picklist_values).toEqual([]);
     expect(plan.records.tags).toEqual([]);
     expect(plan.records.recipes[0].is_private).toBe(false);
+    expect(plan.records.recipes[0]).not.toHaveProperty('public_id');
     expect(plan.records.recipe_ingredients[0].ingredient_id).toBe(localIngredientId);
     expect(plan.records.recipe_picklist_assignments[0].picklist_value_id).toBe(localPicklistId);
     expect(plan.records.recipe_tags[0].tag_id).toBe(localTagId);

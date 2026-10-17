@@ -25,7 +25,7 @@ export function PrivateShell({
   navigation: PrivateNavItem[];
   wideContent?: boolean;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const emailName = email.split('@')[0] ?? email;
   const nameParts = emailName.split(/[._-]+/).filter(Boolean);
   const initials =

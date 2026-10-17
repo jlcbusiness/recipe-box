@@ -354,17 +354,19 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(desktopEditLink.locator('svg')).toBeVisible();
     await expect(desktopEditLink).toHaveAttribute('title', 'Edit recipe');
     const desktopEditBounds = await desktopEditLink.boundingBox();
+    const desktopTitleBounds = await page
+      .getByRole('heading', { name: 'Sunday tomato soup' })
+      .boundingBox();
+    const desktopActionsBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
     const desktopTagRow = page.locator('.recipe-detail-tags-row');
-    const desktopTagRowBounds = await desktopTagRow.boundingBox();
     expect(desktopEditBounds?.height).toBe(36);
     await expect(desktopTagRow).toHaveCSS('margin-top', '8px');
     await expect(desktopTagRow).toHaveCSS('margin-bottom', '8px');
+    await expect(desktopTagRow).toHaveCSS('grid-column', '1 / -1');
+    expect(desktopTitleBounds).not.toBeNull();
+    expect(desktopActionsBounds).not.toBeNull();
     expect(
-      Math.abs(
-        (desktopEditBounds?.y ?? 0) +
-          (desktopEditBounds?.height ?? 0) / 2 -
-          ((desktopTagRowBounds?.y ?? 0) + (desktopTagRowBounds?.height ?? 0) / 2),
-      ),
+      Math.abs((desktopTitleBounds?.y ?? 0) - (desktopActionsBounds?.y ?? 0)),
     ).toBeLessThanOrEqual(1);
     const desktopTagList = desktopTagRow.locator('ul');
     const trailingTagActions = desktopTagList.locator('> li').last();
@@ -490,11 +492,20 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(mobileEditLink.locator('svg')).toBeVisible();
     await expect(mobileEditLink).toHaveAttribute('title', 'Edit recipe');
     const mobileEditBounds = await mobileEditLink.boundingBox();
+    const mobileTitleBounds = await page
+      .getByRole('heading', { name: 'Sunday tomato soup' })
+      .boundingBox();
+    const mobileActionsBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
     const mobileTagRow = page.locator('.recipe-detail-tags-row');
-    const mobileTagRowBounds = await mobileTagRow.boundingBox();
     await expect(mobileTagRow).toHaveCSS('margin-top', '4px');
     await expect(mobileTagRow).toHaveCSS('margin-bottom', '4px');
+    await expect(mobileTagRow).toHaveCSS('grid-column', '1 / -1');
     expect(mobileEditBounds?.height).toBe(36);
+    expect(mobileTitleBounds).not.toBeNull();
+    expect(mobileActionsBounds).not.toBeNull();
+    expect(
+      Math.abs((mobileTitleBounds?.y ?? 0) - (mobileActionsBounds?.y ?? 0)),
+    ).toBeLessThanOrEqual(1);
     await expect(mobileEditLink).toHaveCSS('position', 'relative');
     await expect(mobileEditLink).toHaveCSS('height', '36px');
     const mobileEditHitArea = await mobileEditLink.evaluate((element) =>
@@ -516,14 +527,6 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
           ((mobileTagActionsBounds?.x ?? 0) + (mobileTagActionsBounds?.width ?? 0)),
       ),
     ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(
-        (mobileEditBounds?.y ?? 0) +
-          (mobileEditBounds?.height ?? 0) / 2 -
-          ((mobileTagRowBounds?.y ?? 0) + (mobileTagRowBounds?.height ?? 0) / 2),
-      ),
-    ).toBeLessThanOrEqual(1);
-
     await mobileEditLink.click();
     await expect(page.getByLabel('Serves')).toHaveValue('1,200');
     await expect(page.getByLabel('Prep time (minutes)')).toHaveValue('1,015');
@@ -1305,7 +1308,7 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
   }
 });
 
-test('mobile recipe edit centers Cancel text while keeping the action left-aligned @e2e', async ({
+test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e', async ({
   page,
   request,
 }) => {
@@ -1313,7 +1316,7 @@ test('mobile recipe edit centers Cancel text while keeping the action left-align
 
   try {
     await signIn(page, user.email, user.password);
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 352, height: 844 });
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('Cancel alignment recipe');
     await selectSinglePicklist(page, 'State', 'Want to Try');
@@ -1321,17 +1324,102 @@ test('mobile recipe edit centers Cancel text while keeping the action left-align
     await expect(page.getByRole('heading', { name: 'Cancel alignment recipe' })).toBeVisible();
     await page.getByRole('link', { name: 'Edit' }).click();
 
+    await expect(page.locator('.recipe-name-field > span')).toHaveCSS('font-weight', '400');
+    await expect(page.locator('.recipe-single-picklist > span:first-child').first()).toHaveCSS(
+      'font-weight',
+      '400',
+    );
+    await expect(
+      page.locator('.recipe-classification-fields > fieldset > legend').first(),
+    ).toHaveCSS('font-weight', '400');
+
     const cancelLink = page.getByRole('link', { name: 'Cancel', exact: true });
+    const deleteButton = page.getByRole('button', { name: 'Delete', exact: true });
     const saveRecipeButton = page.getByRole('button', { name: 'Save recipe' });
-    const [cancelBounds, saveBounds] = await Promise.all([
+    const saveRow = page.locator('.recipe-form-save-row');
+    const [
+      cancelBounds,
+      deleteBounds,
+      saveBounds,
+      saveRowBounds,
+      classificationBounds,
+      cuisineBounds,
+      foodTypeBounds,
+      mealTypeBounds,
+    ] = await Promise.all([
       cancelLink.boundingBox(),
+      deleteButton.boundingBox(),
       saveRecipeButton.boundingBox(),
+      saveRow.boundingBox(),
+      page.locator('.recipe-classification-fields').boundingBox(),
+      page.getByRole('button', { name: 'Cuisine: Select' }).boundingBox(),
+      page.locator('.recipe-classification-fields .recipe-picklist-trigger').nth(0).boundingBox(),
+      page.locator('.recipe-classification-fields .recipe-picklist-trigger').nth(1).boundingBox(),
     ]);
     expect(cancelBounds).not.toBeNull();
+    expect(deleteBounds).not.toBeNull();
     expect(saveBounds).not.toBeNull();
-    expect(cancelBounds?.x).toBeLessThan(saveBounds?.x ?? 0);
+    expect(saveRowBounds).not.toBeNull();
+    expect(classificationBounds).not.toBeNull();
+    expect(cuisineBounds).not.toBeNull();
+    expect(foodTypeBounds).not.toBeNull();
+    expect(mealTypeBounds).not.toBeNull();
+    expect(
+      (mealTypeBounds?.x ?? 0) - ((foodTypeBounds?.x ?? 0) + (foodTypeBounds?.width ?? 0)),
+    ).toBeCloseTo(8, 0);
+    expect((mealTypeBounds?.x ?? 0) + (mealTypeBounds?.width ?? 0)).toBeCloseTo(
+      (saveBounds?.x ?? 0) + (saveBounds?.width ?? 0),
+      1,
+    );
+    expect(
+      Math.abs(
+        (saveBounds?.x ?? 0) +
+          (saveBounds?.width ?? 0) -
+          ((classificationBounds?.x ?? 0) + (classificationBounds?.width ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect((saveBounds?.y ?? 0) + (saveBounds?.height ?? 0)).toBeCloseTo(
+      (cuisineBounds?.y ?? 0) + (cuisineBounds?.height ?? 0),
+      1,
+    );
+    expect(saveBounds?.y).toBeLessThan(cancelBounds?.y ?? 0);
+    expect(deleteBounds?.width).toBe(cancelBounds?.width);
+    expect(deleteBounds?.height).toBe(cancelBounds?.height);
     await expect(cancelLink).toHaveCSS('text-align', 'center');
     await expect(cancelLink).toHaveCSS('justify-content', 'center');
+    await expect(deleteButton).toHaveCSS('border-color', 'rgb(180, 62, 50)');
+    await deleteButton.hover();
+    await expect(deleteButton).toHaveCSS('background-color', 'rgb(180, 62, 50)');
+    await expect(deleteButton).toHaveCSS('color', 'rgb(255, 255, 255)');
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const desktopSaveBounds = await saveRecipeButton.boundingBox();
+    const desktopSaveRowBounds = await page.locator('.recipe-form-save-row').boundingBox();
+    const desktopClassificationBounds = await page
+      .locator('.recipe-classification-fields')
+      .boundingBox();
+    const desktopCuisineBounds = await page
+      .getByRole('button', { name: 'Cuisine: Select' })
+      .boundingBox();
+    expect(desktopSaveBounds).not.toBeNull();
+    expect(desktopSaveRowBounds).not.toBeNull();
+    expect(desktopClassificationBounds).not.toBeNull();
+    expect(desktopCuisineBounds).not.toBeNull();
+    expect(
+      Math.abs(
+        (desktopSaveBounds?.x ?? 0) +
+          (desktopSaveBounds?.width ?? 0) -
+          ((desktopSaveRowBounds?.x ?? 0) + (desktopSaveRowBounds?.width ?? 0)),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect((desktopSaveBounds?.y ?? 0) + (desktopSaveBounds?.height ?? 0)).toBeCloseTo(
+      (desktopCuisineBounds?.y ?? 0) + (desktopCuisineBounds?.height ?? 0),
+      1,
+    );
+    expect((desktopSaveRowBounds?.x ?? 0) + (desktopSaveRowBounds?.width ?? 0)).toBeCloseTo(
+      (desktopClassificationBounds?.x ?? 0) + (desktopClassificationBounds?.width ?? 0),
+      1,
+    );
   } finally {
     await deleteTestUser(request, user);
   }

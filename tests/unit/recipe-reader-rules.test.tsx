@@ -302,6 +302,50 @@ describe('recipe reader measurement rules', () => {
     );
   });
 
+  it('preserves stored units on the initial render when requested', () => {
+    render(
+      <RecipeReaderProvider serves={4}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[
+            {
+              id: 'flour-row',
+              ingredient_id: 'flour',
+              ingredient_name: 'Flour',
+              position: 0,
+              is_main: true,
+              detail: '',
+              preparation: '',
+              measurements: [
+                {
+                  id: 'flour-volume',
+                  position: 0,
+                  measurement_type: 'volume',
+                  amount_min: 250,
+                  amount_max: null,
+                  unit_code: 'ml',
+                  picklist_value_id: null,
+                  picklist_value: null,
+                },
+              ],
+            },
+          ]}
+          preserveStoredUnits
+          recipeId="recipe-id"
+          serves={4}
+          steps={[]}
+          volumeSystem="us_customary"
+          weightSystem="us_customary"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('listitem').textContent?.replace(/\s+/gu, ' ').trim()).toBe(
+      '250 ml flour',
+    );
+    expect(screen.getByRole('combobox', { name: 'Change Flour volume unit' })).toBeDefined();
+  });
+
   it('stages scaling in a compact pane and commits it to the recipe Serves field', () => {
     render(
       <RecipeReaderProvider serves={4}>

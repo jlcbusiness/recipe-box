@@ -12,7 +12,6 @@ import {
   getTags,
 } from '../../../../lib/recipes/data';
 import { createClient } from '../../../../lib/supabase/server';
-import { RecipeDeleteAction } from '../../recipe-detail-actions';
 import { RecipeForm } from '../../recipe-form';
 
 type EditRecipePageProps = {
@@ -52,14 +51,6 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
         >
           <X aria-hidden="true" size={24} />
         </Link>
-      </div>
-      <div className="recipe-edit-delete-row">
-        <RecipeDeleteAction
-          buttonLabel="Delete"
-          recipeId={recipe.id}
-          recipeName={recipe.name}
-          version={recipe.version}
-        />
       </div>
       <RecipeForm
         ingredients={ingredients}

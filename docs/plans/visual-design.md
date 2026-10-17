@@ -35,6 +35,7 @@
     - [Current implementation](#current-implementation-5)
     - [Planned direction](#planned-direction-1)
     - [Trash and baseline print (Slice 8 current implementation)](#trash-and-baseline-print-slice-8-current-implementation)
+  - [Public Recipe View (Slice 22 current implementation)](#public-recipe-view-slice-22-current-implementation)
   - [Publication Editing](#publication-editing)
   - [Publication Cover Fallbacks](#publication-cover-fallbacks)
   - [Find Recipes (Slice 17)](#find-recipes-slice-17)
@@ -600,6 +601,19 @@ Public and printed recipes will use the default bold dark-red styling.
 - Print uses the active detail content and a light paper layout. Ingredients
   use the same Standard-view formatter and ordering as recipe detail; app chrome
   and editing controls are omitted. Amounts remain unscaled and unconverted.
+
+## Public Recipe View (Slice 22 current implementation)
+
+The guest recipe page has 24px horizontal gutters and a centered content width.
+Keep Print right-aligned on the title row. When the recipe has a serving count,
+append `- serves n` to its title, separated by a space, in regular 16px text.
+Do not repeat Serves in the separate metadata summary.
+
+Public photos are limited to 420px wide and `min(280px, 60vh)` high. At widths
+above 760px, position the photo gallery beside the Times and Equipment summary;
+at 760px and below, stack the summary after the photos. Keep Ingredients below
+this overview. See [Slice 22](slices/22-public-links-and-privacy.md) for the
+public data and interaction contract.
 
 ## Publication Editing
 

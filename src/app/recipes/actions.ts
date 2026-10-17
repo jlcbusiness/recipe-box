@@ -355,6 +355,43 @@ export async function saveRecipe(
   redirect(`/recipes/${savedRecipe.id}`);
 }
 
+export async function setRecipePrivacy(formData: FormData): Promise<void> {
+  const recipeId = formText(formData, 'recipe_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  const privacyValue = formText(formData, 'is_private');
+  if (
+    !recipeId ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 1 ||
+    !['true', 'false'].includes(privacyValue)
+  ) {
+    redirect('/recipes?status=conflict');
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    redirect('/');
+  }
+
+  const { error } = await supabase.rpc('set_recipe_privacy', {
+    p_recipe_id: recipeId,
+    p_expected_version: expectedVersion,
+    p_is_private: privacyValue === 'true',
+  });
+  if (error) {
+    redirect(
+      error.code === '40001' || error.code === '55000' || error.code === 'P0002'
+        ? `/recipes/${recipeId}?status=conflict`
+        : `/recipes/${recipeId}?status=error`,
+    );
+  }
+
+  revalidatePath('/recipes');
+  revalidatePath(`/recipes/${recipeId}`);
+  redirect(`/recipes/${recipeId}`);
+}
+
 export async function trashRecipe(formData: FormData): Promise<void> {
   const recipeId = formText(formData, 'recipe_id');
   const expectedVersion = Number(formText(formData, 'expected_version'));

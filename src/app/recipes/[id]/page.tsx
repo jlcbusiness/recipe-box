@@ -24,6 +24,7 @@ import {
   RecipeReaderProvider,
   RecipeServesControl,
 } from '../recipe-reader';
+import { RecipeShareActions } from '../recipe-share-actions';
 import { RecipeSummaryLayout } from '../recipe-summary-layout';
 
 type RecipeDetailPageProps = {
@@ -236,27 +237,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     >
       <div className="recipe-page-heading recipe-detail-heading">
         <div className="recipe-detail-title">
-          <div className="recipe-detail-title-row">
-            <h1 id="page-title">{recipe.name}</h1>
-            <div className="recipe-detail-heading-actions recipe-screen-only">
-              <ExportAction
-                ariaLabel="Export recipe"
-                buttonLabel="Export recipe"
-                buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
-                className="recipe-detail-export-action"
-                scope={{ type: 'recipe', id: recipe.id }}
-              />
-              <RecipePrintAction />
-              <Link
-                aria-label="Edit"
-                className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
-                href={`/recipes/${recipe.id}/edit`}
-                title="Edit recipe"
-              >
-                <Pencil aria-hidden="true" size={16} strokeWidth={2} />
-              </Link>
-            </div>
-          </div>
+          <h1 id="page-title">{recipe.name}</h1>
           {recipe.publication && (
             <p className="recipe-attribution">
               <span>
@@ -276,12 +257,36 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               )}
             </p>
           )}
-          {recipe.tags.length > 0 && (
-            <div className="recipe-detail-tags-row">
-              <TagChips tags={recipe.tags} />
-            </div>
-          )}
         </div>
+        <div className="recipe-detail-heading-actions recipe-screen-only">
+          <RecipeShareActions
+            isPrivate={recipe.is_private}
+            publicId={recipe.public_id}
+            recipeId={recipe.id}
+            version={recipe.version}
+          />
+          <RecipePrintAction />
+          <ExportAction
+            ariaLabel="Export recipe"
+            buttonLabel="Export recipe"
+            buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
+            className="recipe-detail-export-action"
+            scope={{ type: 'recipe', id: recipe.id }}
+          />
+          <Link
+            aria-label="Edit"
+            className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
+            href={`/recipes/${recipe.id}/edit`}
+            title="Edit recipe"
+          >
+            <Pencil aria-hidden="true" size={16} strokeWidth={2} />
+          </Link>
+        </div>
+        {recipe.tags.length > 0 && (
+          <div className="recipe-detail-tags-row">
+            <TagChips tags={recipe.tags} />
+          </div>
+        )}
       </div>
       <RecipeReaderProvider serves={recipe.serves}>
         <RecipeSummaryLayout hasPhotos={photos.length > 0}>

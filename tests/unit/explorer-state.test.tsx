@@ -75,6 +75,7 @@ describe('explorer state contract', () => {
         'publication_page',
         'recipe_url',
         'citation',
+        'visibility',
         'occasion_details',
         'serves',
         'equipment',
@@ -148,6 +149,22 @@ describe('explorer state contract', () => {
     expect(serializeExplorerState('/recipes/find', state)).toBe(
       '/recipes/find?column_state=tried&sort=name&direction=asc&view=list',
     );
+  });
+
+  it('persists visibility filters and column selections', () => {
+    const state = createExplorerState('recipes-find', {
+      column_filters: { visibility: ['private'] },
+      direction: 'asc',
+      filters: [{ field: 'visibility', operator: 'not_in', value: ['linkable'] }],
+      sort: 'visibility',
+      view: 'details',
+    });
+
+    expect(state?.column_filters).toEqual({ visibility: ['private'] });
+    expect(state?.filters).toEqual([
+      { field: 'visibility', operator: 'not_in', value: ['linkable'] },
+    ]);
+    expect(state?.sort).toBe('visibility');
   });
 
   it('accepts the Library type filter but rejects unsupported state values and extra payload keys', () => {
@@ -298,3 +315,19 @@ describe('explorer state contract', () => {
     expect(hasPersistedExplorerUrlState('recipes-find', { type: 'magazine' })).toBe(false);
   });
 });
+
+  it('persists visibility filters and column selections', () => {
+    const state = createExplorerState('recipes-find', {
+      column_filters: { visibility: ['private'] },
+      direction: 'asc',
+      filters: [{ field: 'visibility', operator: 'not_in', value: ['linkable'] }],
+      sort: 'visibility',
+      view: 'details',
+    });
+
+    expect(state?.column_filters).toEqual({ visibility: ['private'] });
+    expect(state?.filters).toEqual([
+      { field: 'visibility', operator: 'not_in', value: ['linkable'] },
+    ]);
+    expect(state?.sort).toBe('visibility');
+  });

@@ -62,6 +62,7 @@ type FindRecipesPageProps = {
     column_name?: string | string[];
     column_publication?: string | string[];
     column_state?: string | string[];
+    column_visibility?: string | string[];
     column_total_time_minutes?: string | string[];
     column_publication_page?: string | string[];
     column_recipe_url?: string | string[];
@@ -281,6 +282,10 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     food_type: picklists
       .filter(({ category }) => category === 'food_type')
       .map(({ id, display_value }) => ({ value: id, label: display_value })),
+    visibility: [
+      { value: 'private', label: 'Private' },
+      { value: 'linkable', label: 'Linkable' },
+    ],
     meal_type: picklists
       .filter(({ category }) => category === 'meal_type')
       .map(({ id, display_value }) => ({ value: id, label: display_value })),
@@ -307,6 +312,10 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     name: nameFacets,
     publication: publicationFacets,
     state: stateFacets,
+    visibility: [
+      { value: 'private', label: 'Private' },
+      { value: 'linkable', label: 'Linkable' },
+    ],
     total_time_minutes: totalTimeFacets,
     publication_page: pageFacets,
     recipe_url: urlFacets,
@@ -438,6 +447,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                   'name',
                   'publication',
                   'state',
+                  'visibility',
                   'total_time_minutes',
                   'publication_page',
                   'recipe_url',

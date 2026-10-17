@@ -147,10 +147,9 @@ time is broken down into specific categories:
   144px on narrow mobile; additional photos use square thumbnails.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
-  for retry. Public recipe photos are deferred to Slice 22 and must be exposed
-  only after the public-link authorization check. Publication covers remain
-  owner-only. Image export is delivered in Slice 20; image import remains
-  deferred to Slice 21.
+  for retry. Public recipe photos are signed only after the public-link,
+  privacy, and active-lifecycle checks. Publication covers remain owner-only.
+  Image export is delivered in Slice 20; image import is delivered in Slice 21.
 
 ### 2.4 Recipe Metadata Entry Presentation
 
@@ -338,7 +337,8 @@ trailing empty row.
 - **Dimensions:** Conversion stays within volume or within weight. Volume-to-weight conversion needs a trusted density (3.3).
 - **Printing:** The printed recipe reflects the active scale, account defaults, and per-ingredient overrides while
   omitting the interactive controls.
-- **Public pages:** Public recipe behavior remains assigned to Slice 22; this slice adds no unauthenticated preference storage.
+- **Public pages:** Guests have no saved unit preferences. Public recipe pages
+  use US customary units and keep scaling and unit overrides transient.
 - **System naming:** The app uses "US customary", not "imperial", because UK imperial pints and gallons differ.
 
 ---
@@ -944,8 +944,16 @@ When an unauthenticated guest accesses a valid public recipe link:
   - No application navigation, sidebar, or account links.
   - No edit, delete, or clone buttons.
   - Publication name is displayed as static text attribution, not a clickable link.
-  - References section is displayed as static text.
+  - Safe external HTTP(S) references are clickable; in-app recipe references
+    remain static text.
   - In-app pairs-with links are displayed as static text.
+
+The public title and Print action share a row. When a base serving count exists,
+show `- serves n` inline after the title, separated by a space, in regular 16px
+text; do not repeat Serves in the summary. Use 24px horizontal page gutters. Cap public
+photos at 420px wide and `min(280px, 60vh)` high. Above 760px, show the photo
+gallery beside the Times and Equipment summary; at narrower widths, stack the
+summary below the photos.
 
 ### 9.4 Secure Image Delivery
 
@@ -956,16 +964,16 @@ When an unauthenticated guest accesses a valid public recipe link:
   the staged object and writes metadata-free WebP full and thumbnail
   derivatives.
 - Image assets are served through 15-minute signed URLs generated on the
-  server after validating owner access. Public recipe photos remain deferred
-  until Slice 22 verifies the public ID, privacy flag, and active lifecycle.
+  server after validating owner access. Public recipe photos are signed only
+  after the public ID, privacy flag, and active lifecycle are verified.
   Publication covers are never public.
 - Deletion queues every private object path. A Vercel daily cron invokes the
   protected cleanup endpoint; Storage failures remain queued and are retried.
 
 ### 9.5 Abuse Protection
 
-- Public recipe routes are rate limited. Initial target: 60 requests per minute per IP address, applied as a Vercel
-  Firewall rate-limit rule on the public recipe path.
+- The application does not implement public-route rate limiting. Configure a
+  Vercel Firewall rule for `/r/*` if deployment-level rate limiting is required.
 - Authentication endpoints keep Supabase's default rate limits.
 - Authentication emails (recovery, verification) require a custom SMTP provider; Supabase's built-in email sender is
   limited to 2 emails per hour.

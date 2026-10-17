@@ -26,8 +26,8 @@ publication covers and recipe photos. It extends the existing private
 
 A signed-in owner can upload, view, reorder, choose a primary recipe photo,
 replace or remove photos, and add or replace a publication cover from desktop
-or mobile. The public bucket remains disabled. An eligible public recipe may
-show its recipe photos only after the public-link authorization in Slice 22;
+or mobile. The public bucket remains disabled. Public recipe photos are signed
+only after the public-link, privacy, and active-lifecycle checks;
 publication covers and private or trashed recipe photos are never public.
 
 ## Decisions
@@ -68,8 +68,8 @@ publication covers and private or trashed recipe photos are never public.
   object. Do not send image bytes through a Server Action or Vercel Function
   request body.
 - Generate short-lived signed read URLs on the server after checking owner
-  access. Public recipe media delivery is gated by the same active/public
-  recipe check as the public page and is wired when Slice 22 adds that route.
+  access. Public recipe media delivery uses the same active/public recipe
+  check as the public page before signing each photo URL.
 - Removing an image removes its metadata and queues every stored object path
   for Storage API deletion. A protected cleanup handler retries failed deletes;
   permanent recipe/publication purge must queue associated objects before
@@ -161,9 +161,9 @@ delivered in Slice 20; image import remains deferred to Slice 21.
   and image-count limit. Failures remove staged/partial derivatives or retain
   an explicit retryable cleanup record; they never report a successful save.
 - Signed read URLs are generated only after authorization and expire promptly.
-  Slice 22 must check the random public recipe ID, `is_private`, and trash/purge
-  state before asking for a public recipe-image URL. Publication covers are
-  owner-only.
+  The public route checks the random public recipe ID, `is_private`, and
+  trash/purge state before asking for a public recipe-image URL. Publication
+  covers are owner-only.
 - Trashing a parent hides its images while retaining them for restore. Purging
   a parent queues object deletion. A storage API failure leaves a durable queue
   row for a later retry.

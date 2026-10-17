@@ -23,6 +23,7 @@ export type RecipeSearchFilterField =
   | 'citation'
   | 'ingredient'
   | 'state'
+  | 'visibility'
   | 'food_type'
   | 'verdict'
   | 'enthusiasm'
@@ -58,6 +59,7 @@ export type RecipeSearchColumnKey =
   | 'name'
   | 'publication'
   | 'state'
+  | 'visibility'
   | 'total_time_minutes'
   | 'opinion'
   | 'meal_type'
@@ -88,6 +90,7 @@ export type RecipeSearchSortKey =
   | 'publication_page'
   | 'recipe_url'
   | 'state'
+  | 'visibility'
   | 'occasion_details'
   | 'serves'
   | 'equipment'
@@ -161,6 +164,7 @@ export function parseRecipeSearchColumnFilters(params: {
   column_name?: string | string[];
   column_publication?: string | string[];
   column_state?: string | string[];
+  column_visibility?: string | string[];
   column_total_time_minutes?: string | string[];
   column_opinion?: string | string[];
   column_meal_type?: string | string[];
@@ -179,6 +183,7 @@ export function parseRecipeSearchColumnFilters(params: {
     { key: 'name', parameter: 'column_name', field: 'name' },
     { key: 'publication', parameter: 'column_publication', field: 'publication_id' },
     { key: 'state', parameter: 'column_state', field: 'state' },
+    { key: 'visibility', parameter: 'column_visibility', field: 'visibility' },
     {
       key: 'total_time_minutes',
       parameter: 'column_total_time_minutes',

@@ -60,6 +60,7 @@ export function RecipeColumnFilter({
     name: 'Name',
     publication: 'Publication',
     state: 'State',
+    visibility: 'Visibility',
     total_time_minutes: 'Total Time',
     opinion: 'Opinion',
     meal_type: 'Meal Type',

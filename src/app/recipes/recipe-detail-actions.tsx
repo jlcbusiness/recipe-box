@@ -20,7 +20,7 @@ export function RecipeDeleteAction({
   return (
     <>
       <button
-        className="recipe-secondary-button recipe-detail-action recipe-delete-action"
+        className="recipe-secondary-link recipe-delete-action"
         type="button"
         onClick={() => dialogRef.current?.showModal()}
       >

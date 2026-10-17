@@ -123,13 +123,12 @@ rows, and temporary export objects are never part of `records`.
 
 ## Version compatibility
 
-Version 1 includes the current recipe `is_private` value and does not include a
-public-link identifier, which is introduced by Slice 22. A later format version
-must retain the ability to read version 1. For a v1 import after Slice 22, the
-importer preserves `is_private` when present and lets the destination create a
-new public-link identity rather than reusing a nonexistent source ID. Version
-upgrades never reinterpret a missing field as permission to expose private
-content.
+Version 1 includes the current recipe `is_private` value and excludes the
+public-link identifier. A v1 import preserves `is_private` when present and
+lets the destination database generate a new public-link identity rather than
+reusing a source ID. The import planner does not include `public_id` in recipe
+records. Version upgrades never reinterpret a missing field as permission to
+expose private content.
 
 An importer must validate both `schema_version` fields, require them to match,
 verify all file sizes and checksums before creating records, and reject unknown

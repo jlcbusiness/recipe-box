@@ -44,6 +44,7 @@ const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
   },
   { key: 'recipe_url', label: 'URL', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   { key: 'state', label: 'State', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'visibility', label: 'Visibility', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   {
     key: 'occasion_details',
     label: 'Occasion Details',
@@ -161,7 +162,7 @@ export const explorerColumnDefinitions: Record<
   'recipes-find' | 'publications' | 'publication-recipes',
   ExplorerColumnDefinition[]
 > = {
-  'recipes-find': recipeColumns(['publication', 'state', 'total_time_minutes']),
+  'recipes-find': recipeColumns(['publication', 'state', 'visibility', 'total_time_minutes']),
   publications: [
     nameColumn,
     { key: 'author', label: 'Author', defaultVisible: true, minWidth: 96, maxWidth: 600 },
@@ -177,7 +178,7 @@ export const explorerColumnDefinitions: Record<
       maxWidth: 600,
     },
   ],
-  'publication-recipes': recipeColumns(['publication', 'state']).filter(
+  'publication-recipes': recipeColumns(['publication', 'state', 'visibility']).filter(
     ({ key }) => key !== 'publication',
   ),
 };
@@ -274,6 +275,7 @@ const recipeFilterFields = new Set([
   'citation',
   'ingredient',
   'state',
+  'visibility',
   'food_type',
   'verdict',
   'enthusiasm',
@@ -333,6 +335,7 @@ const recipeFinderColumnFilterFields = new Set([
   'name',
   'publication',
   'state',
+  'visibility',
   'total_time_minutes',
   'publication_page',
   'recipe_url',
@@ -342,6 +345,7 @@ const recipeFinderColumnFilterFields = new Set([
 const publicationRecipeColumnFilterFields = new Set([
   'name',
   'state',
+  'visibility',
   'total_time_minutes',
   'opinion',
   'meal_type',

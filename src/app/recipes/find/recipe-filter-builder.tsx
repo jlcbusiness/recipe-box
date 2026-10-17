@@ -10,6 +10,7 @@ import { useRecipeSearchMode } from './recipe-search-tabs';
 type FilterOption = { value: string; label: string };
 type RecipeFilterOptions = {
   food_type: FilterOption[];
+  visibility: FilterOption[];
   meal_type: FilterOption[];
   cuisine: FilterOption[];
   equipment: FilterOption[];
@@ -41,6 +42,7 @@ const filterDefinitions: FilterDefinition[] = [
   { field: 'publication_author', label: 'Publication Author', kind: 'text' },
   { field: 'ingredient', label: 'Ingredient', kind: 'multi' },
   { field: 'state', label: 'State', kind: 'enum' },
+  { field: 'visibility', label: 'Visibility', kind: 'enum' },
   { field: 'food_type', label: 'Food Type', kind: 'enum' },
   { field: 'verdict', label: 'Verdict', kind: 'enum' },
   { field: 'enthusiasm', label: 'Enthusiasm', kind: 'enum' },
@@ -109,6 +111,10 @@ const stateOptions: FilterOption[] = [
   { value: 'tried', label: 'Tried' },
   { value: 'will_not_try', label: 'Will Not Try' },
 ];
+const visibilityOptions: FilterOption[] = [
+  { value: 'private', label: 'Private' },
+  { value: 'linkable', label: 'Linkable' },
+];
 
 function definitionFor(field: RecipeSearchFilterField | '') {
   return filterDefinitions.find((definition) => definition.field === field);
@@ -116,6 +122,7 @@ function definitionFor(field: RecipeSearchFilterField | '') {
 
 function optionsFor(field: RecipeSearchFilterField | '', options: RecipeFilterOptions) {
   if (field === 'state') return stateOptions;
+  if (field === 'visibility') return options.visibility;
   if (
     field === 'food_type' ||
     field === 'meal_type' ||
