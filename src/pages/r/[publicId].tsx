@@ -202,7 +202,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
   return (
     <main className="recipes-main recipe-public-main" aria-labelledby="page-title">
       <Head>
-        <title>{recipe.name} | Recipe Box</title>
+        <title>{`${recipe.name} | Recipe Box`}</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
       <div className="recipe-page-heading recipe-detail-heading">

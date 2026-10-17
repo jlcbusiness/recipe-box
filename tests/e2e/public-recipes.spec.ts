@@ -565,6 +565,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(
       page.getByRole('heading', { name: 'Public cooking view - serves 4' }),
     ).toBeVisible();
+    await expect(page).toHaveTitle('Public cooking view | Recipe Box');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-size', '16px');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-weight', '400');
     await expect(page.getByText('Fold flour into batter.')).toBeVisible();
