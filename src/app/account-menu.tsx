@@ -1,10 +1,30 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { clearPrivateOfflineCaches } from '../lib/offline/cache-client';
 import { signOut } from './actions/auth';
 
 export function AccountMenu({ email, initials }: { email: string; initials: string }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSignOut(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+
+    setPending(true);
+    setError('');
+    try {
+      await clearPrivateOfflineCaches();
+    } catch {
+      setError('Private offline recipes could not be cleared. You are still signed in. Try again.');
+      setPending(false);
+      return;
+    }
+
+    await signOut();
+  }
 
   useEffect(() => {
     function closeOnOutsidePointer(event: PointerEvent) {
@@ -27,8 +47,15 @@ export function AccountMenu({ email, initials }: { email: string; initials: stri
       </summary>
       <div className="account-menu-panel">
         <p>{email}</p>
-        <form action={signOut}>
-          <button type="submit">Sign out</button>
+        <form onSubmit={handleSignOut}>
+          {error && (
+            <p className="account-menu-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button disabled={pending} type="submit">
+            {pending ? 'Clearing offline copies...' : 'Sign out'}
+          </button>
         </form>
       </div>
     </details>

@@ -37,6 +37,7 @@
     - [Trash and baseline print (Slice 8 current implementation)](#trash-and-baseline-print-slice-8-current-implementation)
   - [Public Recipe View (Slice 22 current implementation)](#public-recipe-view-slice-22-current-implementation)
   - [History (Slice 23 current implementation)](#history-slice-23-current-implementation)
+  - [Install and Offline (Slice 24)](#install-and-offline-slice-24)
   - [Publication Editing](#publication-editing)
   - [Publication Cover Fallbacks](#publication-cover-fallbacks)
   - [Find Recipes (Slice 17)](#find-recipes-slice-17)
@@ -612,6 +613,18 @@ definition list with readable before/after values; long values wrap within the
 content width, and the two-column field layout becomes one column on narrow
 screens. A visible Back link returns to the active record. Empty history uses a
 compact message; public recipe pages have no history link or event content.
+
+## Install and offline (Slice 24)
+
+The installable app uses the browser's native installation affordance; it does
+not add an in-app install prompt. When offline, the root page lists at most 10
+recently viewed active recipes as native links. An offline detail is a
+read-only snapshot with the app's responsive recipe styling and a visible
+status notice. It omits photos, scripts, forms, and server-dependent controls.
+Uncached routes show a generic offline message. Sign out clears private
+snapshots before ending the server session; if cleanup fails, the Account menu
+keeps the session active and offers retry. Physical-device installation steps
+remain part of Slice 25.
 
 ## Public Recipe View (Slice 22 current implementation)
 

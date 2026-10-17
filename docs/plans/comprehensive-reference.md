@@ -1276,8 +1276,13 @@ Both account controls open the same menu with the email and Sign out action.
 - **Database:** Supabase Postgres.
 - **Auth:** Supabase Auth (Email/Password + Google OAuth).
 - **Storage:** Supabase Storage (Private media buckets with signed URLs).
-- **Client Architecture:** Progressive Web App (PWA) with manifest, offline view caching for viewed recipes, and service
-  worker.
+- **Client Architecture:** Progressive Web App (PWA) with a manifest and root
+  service worker. The worker keeps at most 10 recently viewed active recipe
+  detail snapshots in browser-local Cache Storage for read-only offline access;
+  snapshots omit remote media and server-dependent controls. Public pages and
+  API responses are excluded, and sign-out clears every private offline cache
+  before the server session ends. Browser installation is native; physical
+  device checks are deferred to Slice 25.
 - **Concurrent Edits:** Each recipe carries a version number. A save based on a stale version is rejected, and the user
   chooses between reloading the current version and keeping their edits.
 - **Environments:** Development runs entirely locally: a local Supabase stack, a local email catcher, open sign-up, and

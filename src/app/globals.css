@@ -425,6 +425,20 @@ a {
   cursor: pointer;
 }
 
+.account-menu-error {
+  max-width: 260px;
+  color: var(--tomato);
+  font-size: 13px;
+}
+
+.offline-page-status {
+  margin: 0 0 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .private-content {
   display: flex;
   min-width: 0;

@@ -16,6 +16,7 @@ import {
 import { createClient } from '../../../lib/supabase/server';
 import { ExportAction } from '../../export-action';
 import { RecipePhotoGallery } from '../../media/media-display';
+import { OfflineSnapshotCapture } from '../../offline-snapshot-capture';
 import { TagChips } from '../../tags/tag-controls';
 import { RecipePrintAction } from '../recipe-detail-actions';
 import {
@@ -235,6 +236,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}`}
       aria-labelledby="page-title"
     >
+      <OfflineSnapshotCapture recipeId={recipe.id} />
       <div className="recipe-page-heading recipe-detail-heading">
         <div className="recipe-detail-title">
           <h1 id="page-title">{recipe.name}</h1>

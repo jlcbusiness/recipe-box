@@ -1,6 +1,7 @@
 import '@fontsource-variable/dm-sans';
 import './globals.css';
 import type { Metadata } from 'next';
+import { PwaRegistration } from './pwa-registration';
 
 export const metadata: Metadata = {
   title: 'Recipe Box',
@@ -14,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <PwaRegistration />
+        {children}
+      </body>
     </html>
   );
 }
