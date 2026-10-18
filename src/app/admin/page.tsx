@@ -124,20 +124,22 @@ export default async function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map(({ id, email, account }) => (
+                {users.map(({ id, email, account: rowAccount }) => (
                   <tr key={id}>
                     <td>{email}</td>
-                    <td>{account?.sign_in_method === 'google' ? 'Google' : 'Email'}</td>
-                    <td>{account?.is_owner ? 'Owner' : account?.is_admin ? 'Admin' : 'Member'}</td>
+                    <td>{rowAccount?.sign_in_method === 'google' ? 'Google' : 'Email'}</td>
                     <td>
-                      {account && (
+                      {rowAccount?.is_owner ? 'Owner' : rowAccount?.is_admin ? 'Admin' : 'Member'}
+                    </td>
+                    <td>
+                      {rowAccount && (
                         <AdminAccountActions
                           accountId={id}
                           currentAccountId={data.user.id}
                           currentIsOwner={account.is_owner}
                           email={email}
-                          isAdmin={account.is_admin}
-                          isOwner={account.is_owner}
+                          isAdmin={rowAccount.is_admin}
+                          isOwner={rowAccount.is_owner}
                         />
                       )}
                     </td>
