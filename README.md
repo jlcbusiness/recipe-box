@@ -178,8 +178,8 @@ the repository. Review the dry-run output before applying it. Do not run
 2. **Make sign-up invite-only.** In **Authentication > Sign In / Providers**,
    under **User Signups**, turn off **Allow new users to sign up** and leave
    **Confirm email** on. The first setting disables public registration; the
-   second requires new users to verify their email. Admin invitations and the
-   one-time setup command still work. Separately, set
+  second requires new users to verify their email. After creating the first
+  administrator in step 7, admins can still invite other users. Separately, set
    `SIGNUP_MODE=invite_only` in the Vercel Production environment (step 5) so
    Recipe Box disables its own self-sign-up path. Under
    **Authentication > Sign In / Providers > Auth Providers**, open the **Email**
@@ -289,36 +289,30 @@ This rule protects public recipe links without limiting signed-in app routes.
 Rate-limit counters are tracked per region, and plan limits and pricing can
 change; see Vercel's current [rate-limiting documentation](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting).
 
-### 7. Send the first administrator invitation
+### 7. Create the first administrator account
 
-The first administrator is not created through public sign-up or a SQL editor.
-The one-time bootstrap command sends a normal email invitation and gives that
-invited account the administrator role. The first administrator uses
-email/password; after setup, an administrator can choose either sign-in method
-for later invitations.
+Because you own this instance, create your own account in Supabase rather than
+sending yourself an invitation. Complete these steps in order:
 
-Install and authenticate the Vercel CLI, then link the downloaded project folder
-to the Vercel project:
+1. In the Supabase Dashboard, open **Authentication > Users** and select
+  **Add user**. Choose the option to create a user, not the invite option.
+2. Enter your email and a strong password. Confirm the email address in the
+  form, then create the user. The database trigger creates the matching Recipe
+  Box account with email/password sign-in.
+3. Open the new user's details and copy the **UID**.
+4. Open the Supabase **SQL Editor**. Replace `OWNER_AUTH_USER_UUID` in this
+  query with the UID you copied, then run it:
 
-```bash
-npm install --global vercel
-vercel login
-vercel link
-```
+   ```sql
+   select public.claim_first_admin('OWNER_AUTH_USER_UUID'::uuid);
+   ```
 
-From that folder, run the command below with the email address that will own the
-instance:
-
-```bash
-vercel env run -e production -- npm run bootstrap:admin -- owner@example.com
-```
-
-This runs locally with the linked Vercel Production variables without writing
-them to an environment file. The command refuses to proceed if an administrator
-or account already exists, so run it only once against the new project. It sends
-the invitation through Supabase Auth and reports whether it succeeded. The
-owner opens the invitation email, finishes setting a password, and signs in.
-The invitation expires according to the Auth OTP expiry you configured.
+5. Confirm the query returns `true`. This function atomically assigns the first
+  admin and refuses later claims. Do not update `accounts.is_admin` directly.
+  If the query returns `false`, stop and check whether an admin was already
+  claimed and whether you used the UID of the account you just created.
+6. Sign in to the Production app with the email and password you set in
+  Supabase.
 
 ### 8. Invite other people
 

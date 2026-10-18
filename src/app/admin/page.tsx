@@ -29,6 +29,21 @@ export default async function AdminPage() {
   ]);
 
   if (authUsers.error || accountRows.error) {
+    console.error('Unable to load account administration.', {
+      authUsers: authUsers.error
+        ? {
+            name: authUsers.error.name,
+            status: authUsers.error.status,
+            code: authUsers.error.code,
+          }
+        : null,
+      accountRows: accountRows.error
+        ? {
+            name: accountRows.error.name,
+            code: accountRows.error.code,
+          }
+        : null,
+    });
     throw new Error('Unable to load account administration.');
   }
 

@@ -444,3 +444,5 @@ FodyWeavers.xsd
 *.msp
 
 temp/
+.vercel
+.env*
