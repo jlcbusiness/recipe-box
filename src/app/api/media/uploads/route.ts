@@ -1,4 +1,8 @@
-import { discardPendingMediaUpload } from '../../../../lib/media/server';
+import {
+  discardPendingMediaUpload,
+  processMediaDeletions,
+  type PendingMediaUpload,
+} from '../../../../lib/media/server';
 import { createAdminClient } from '../../../../lib/supabase/admin';
 import { createClient } from '../../../../lib/supabase/server';
 
@@ -90,4 +94,58 @@ export async function POST(request: Request) {
     },
     { status: 201 },
   );
+}
+
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return Response.json({ error: 'Sign in before cancelling image uploads.' }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: 'The cancellation request is invalid.' }, { status: 400 });
+  }
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    return Response.json({ error: 'Choose a publication for this image.' }, { status: 400 });
+  }
+
+  const payload = body as Record<string, unknown>;
+  if (
+    payload.parentType !== 'publication' ||
+    typeof payload.parentId !== 'string' ||
+    !uuidPattern.test(payload.parentId)
+  ) {
+    return Response.json({ error: 'Choose a valid publication.' }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('media_assets')
+    .select(
+      'id, account_id, asset_type, recipe_id, publication_id, status, staging_path, full_path, thumbnail_path, created_by_user_id',
+    )
+    .eq('account_id', authData.user.id)
+    .eq('created_by_user_id', authData.user.id)
+    .eq('publication_id', payload.parentId)
+    .eq('asset_type', 'publication_cover')
+    .eq('status', 'pending')
+    .maybeSingle();
+  if (error) {
+    throw new Error('Unable to check for an incomplete cover upload.');
+  }
+  if (!data) {
+    return Response.json({ cancelled: false, cleanupPending: false });
+  }
+
+  const upload = data as PendingMediaUpload;
+  await discardPendingMediaUpload(admin, upload);
+  const cleanup = await processMediaDeletions(
+    admin,
+    upload.staging_path ? [upload.staging_path] : [],
+  );
+  return Response.json({ cancelled: true, cleanupPending: cleanup.failed.length > 0 });
 }

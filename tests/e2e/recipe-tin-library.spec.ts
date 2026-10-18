@@ -269,20 +269,20 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
             const styles = getComputedStyle(element);
             return {
               backgroundColor: styles.backgroundColor,
-              borderColor: styles.borderColor,
+              borderTopColor: styles.borderTopColor,
+              borderRightColor: styles.borderRightColor,
+              borderBottomColor: styles.borderBottomColor,
             };
           }),
         );
-      expect(toolbarControlStyles).toEqual([
-        ...Array(3).fill({
+      expect(toolbarControlStyles).toEqual(
+        Array(4).fill({
           backgroundColor: 'rgb(255, 252, 241)',
-          borderColor: 'rgb(154, 107, 63)',
+          borderTopColor: 'rgb(154, 107, 63)',
+          borderRightColor: 'rgb(154, 107, 63)',
+          borderBottomColor: 'rgb(154, 107, 63)',
         }),
-        {
-          backgroundColor: 'rgb(255, 249, 231)',
-          borderColor: 'rgb(96, 76, 56)',
-        },
-      ]);
+      );
       await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(96, 76, 56)');
       await expect(addRecipeLink).toHaveCSS('color', 'rgb(255, 249, 231)');
       await expect(addRecipeLink).toHaveCSS('border-color', 'rgb(96, 76, 56)');
@@ -290,13 +290,19 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       const columnsButton = page.getByRole('button', { name: 'Choose List columns' });
       await expect(columnsButton).toBeVisible();
       const columnsButtonBounds = await columnsButton.boundingBox();
+      const viewControlsBounds = await page.locator('.recipe-explorer-view-controls').boundingBox();
       expect(addRecipeBounds).not.toBeNull();
       expect(columnsButtonBounds).not.toBeNull();
+      expect(viewControlsBounds).not.toBeNull();
       if (!addRecipeBounds) throw new Error('Expected the Add Recipe action to be visible');
       if (!columnsButtonBounds) throw new Error('Expected List columns controls to be visible');
+      if (!viewControlsBounds) throw new Error('Expected explorer view controls to be visible');
       expect(Math.round(addRecipeBounds.width)).toBe(40);
       expect(Math.round(addRecipeBounds.height)).toBe(40);
       expect(columnsButtonBounds.x + columnsButtonBounds.width).toBeLessThan(addRecipeBounds.x);
+      expect(
+        Math.abs(columnsButtonBounds.x - viewControlsBounds.x - viewControlsBounds.width),
+      ).toBeLessThanOrEqual(1);
       expect(Math.abs(columnsButtonBounds.y - addRecipeBounds.y)).toBeLessThanOrEqual(1);
       expect(addRecipeBounds.x + addRecipeBounds.width).toBeLessThanOrEqual(
         page.viewportSize()?.width ?? 0,
@@ -318,8 +324,23 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
         return bounds.x - previousBounds.x - previousBounds.width;
       });
       for (const gap of toolbarGaps) {
-        expect(Math.abs(gap - 8)).toBeLessThanOrEqual(1);
+        expect(Math.abs(gap - (gap === toolbarGaps[0] ? 0 : 8))).toBeLessThanOrEqual(1);
       }
+
+      const toolbarBounds = await page
+        .locator('.explorer-list-preferences-toolbar:has(.publication-mobile-add)')
+        .boundingBox();
+      const actionGroupBounds = await page.locator('.publication-mobile-actions').boundingBox();
+      expect(toolbarBounds).not.toBeNull();
+      expect(actionGroupBounds).not.toBeNull();
+      if (!toolbarBounds || !actionGroupBounds) {
+        throw new Error('Expected the toolbar and mobile action group to be visible');
+      }
+      expect(
+        Math.abs(
+          toolbarBounds.x + toolbarBounds.width - actionGroupBounds.x - actionGroupBounds.width,
+        ),
+      ).toBeLessThanOrEqual(1);
 
       await columnsButton.click();
       const columnsPane = page.locator('.explorer-list-preferences-popover');

@@ -8,8 +8,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import { MAX_IMAGE_UPLOAD_BYTES, MAX_RECIPE_PHOTOS } from '../../lib/media/rules';
 import type { PublicationOption } from '../../lib/recipes/data';
-import { createClient } from '../../lib/supabase/browser';
 import { PublicationCover } from '../publications/publication-cover';
+import { uploadMediaFiles } from './upload-files';
 
 type MediaParent = 'recipe' | 'publication';
 
@@ -66,7 +66,6 @@ export function MediaManager({
   const [optimisticPhotoOrder, setOptimisticPhotoOrder] = useState<string[] | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const deviceInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLUListElement>(null);
   const pointerDragRef = useRef<ActivePointerDrag | null>(null);
   const suppressClickRef = useRef(false);
@@ -115,15 +114,11 @@ export function MediaManager({
   }, [pendingCoverFile]);
 
   useEffect(() => {
-    const fileInputs = [deviceInputRef.current, cameraInputRef.current];
+    const fileInput = deviceInputRef.current;
     const preventDialogCancel = (event: Event) => event.stopPropagation();
-    for (const input of fileInputs) {
-      input?.addEventListener('cancel', preventDialogCancel);
-    }
+    fileInput?.addEventListener('cancel', preventDialogCancel);
     return () => {
-      for (const input of fileInputs) {
-        input?.removeEventListener('cancel', preventDialogCancel);
-      }
+      fileInput?.removeEventListener('cancel', preventDialogCancel);
     };
   }, []);
 
@@ -180,70 +175,20 @@ export function MediaManager({
     setError('');
     setStatus('');
 
-    const storage = createClient();
     let uploaded = 0;
-    let cleanupPending = false;
     try {
-      for (const [index, file] of files.entries()) {
-        if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
-          throw new Error(`${file.name}: images must be 20 MiB or smaller.`);
-        }
-        setStatus(`Uploading image ${index + 1} of ${files.length}…`);
-
-        const reservationResponse = await fetch('/api/media/uploads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ parentType, parentId }),
-        });
-        if (!reservationResponse.ok) {
-          throw new Error(
-            await responseError(reservationResponse, 'Unable to start image upload.'),
-          );
-        }
-
-        const reservation = (await reservationResponse.json()) as {
-          assetId: string;
-          path: string;
-          token: string;
-        };
-        const { error: storageError } = await storage.storage
-          .from('recipe-media')
-          .uploadToSignedUrl(reservation.path, reservation.token, file, {
-            contentType: file.type || 'application/octet-stream',
-            upsert: false,
-          });
-        if (storageError) {
-          const cancelled = await fetch(`/api/media/uploads/${reservation.assetId}`, {
-            method: 'DELETE',
-          });
-          if (!cancelled.ok) {
-            throw new Error(
-              'The image could not be uploaded, and its temporary upload could not be cancelled.',
-            );
-          }
-          throw new Error('Unable to upload this image. Choose it again and retry.');
-        }
-
-        const completionResponse = await fetch(`/api/media/uploads/${reservation.assetId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: '' }),
-        });
-        if (!completionResponse.ok) {
-          throw new Error(
-            await responseError(
-              completionResponse,
-              'Unable to process this image. Choose it again.',
-            ),
-          );
-        }
-        const completion = (await completionResponse.json()) as ApiError;
-        uploaded += 1;
-        cleanupPending ||= Boolean(completion.cleanupPending);
-      }
+      const result = await uploadMediaFiles(
+        parentType,
+        parentId,
+        files,
+        (index, total) => setStatus(`Uploading image ${index} of ${total}…`),
+        () => {
+          uploaded += 1;
+        },
+      );
 
       setStatus(
-        cleanupPending
+        result.cleanupPending
           ? 'Image saved. Temporary-file cleanup is queued for retry.'
           : uploaded === 1
             ? recipePhotos
@@ -484,6 +429,35 @@ export function MediaManager({
         setRemoveCoverOnSubmit(false);
         dialogRef.current?.close();
       }
+    }
+  }
+
+  async function cancelStalledCoverUpload() {
+    if (!pendingCoverFile) return;
+
+    setWorking(true);
+    setError('');
+    try {
+      const response = await fetch('/api/media/uploads', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentType: 'publication', parentId }),
+      });
+      if (!response.ok) {
+        throw new Error(await responseError(response, 'Unable to cancel the incomplete upload.'));
+      }
+      if (await uploadFiles([pendingCoverFile])) {
+        setPendingCoverFile(null);
+        dialogRef.current?.close();
+      }
+    } catch (cancelError) {
+      setError(
+        cancelError instanceof Error
+          ? cancelError.message
+          : 'Unable to cancel the incomplete upload.',
+      );
+    } finally {
+      setWorking(false);
     }
   }
 
@@ -779,21 +753,6 @@ export function MediaManager({
                   type="file"
                 />
               </label>
-              <label className="media-icon-action media-camera-picker" title="Take cover photo">
-                <Camera aria-hidden="true" size={20} />
-                <input
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                  aria-label="Take cover photo"
-                  capture="environment"
-                  disabled={working}
-                  onChange={(event) => {
-                    chooseCoverFile(event.currentTarget.files?.[0] ?? null);
-                    event.currentTarget.value = '';
-                  }}
-                  ref={cameraInputRef}
-                  type="file"
-                />
-              </label>
               <div className="publication-cover-editor-buttons">
                 <button
                   className="recipe-secondary-button"
@@ -831,6 +790,18 @@ export function MediaManager({
             {error}
           </p>
         )}
+        {!recipePhotos &&
+          pendingCoverFile &&
+          error.includes('A cover upload is already in progress.') && (
+            <button
+              className="recipe-secondary-button media-manager-recover-upload"
+              disabled={working}
+              onClick={() => void cancelStalledCoverUpload()}
+              type="button"
+            >
+              {working ? 'Retrying…' : 'Cancel previous upload and retry'}
+            </button>
+          )}
       </dialog>
 
       {!dialogRef.current?.open && status && (

@@ -1,6 +1,11 @@
 import heicConvert from 'heic-convert';
 import sharp from 'sharp';
-import { FULL_IMAGE_MAX_EDGE, type SourceImageFormat, THUMBNAIL_MAX_EDGE } from './rules';
+import {
+  FULL_IMAGE_MAX_EDGE,
+  MAX_IMAGE_PIXELS,
+  type SourceImageFormat,
+  THUMBNAIL_MAX_EDGE,
+} from './rules';
 
 export type ProcessedImageVariant = {
   buffer: Buffer;
@@ -23,8 +28,6 @@ export class ImageProcessingError extends Error {
     this.code = code;
   }
 }
-
-const MAX_IMAGE_PIXELS = 40_000_000;
 
 export async function normalizeImage(
   source: Buffer,

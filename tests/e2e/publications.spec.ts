@@ -19,6 +19,61 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
 }
 
+test('Site publication covers stay circular on the detail page @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
+
+  try {
+    const response = await request.post(`${apiUrl}/rest/v1/rpc/create_publication`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${user.accessToken}` },
+      data: {
+        p_name: 'Circular Site Cover',
+        p_publication_type: 'site',
+        p_author: null,
+        p_edition: null,
+        p_isbn: null,
+        p_retailer_url: null,
+        p_issue: null,
+        p_site_url: 'https://example.test',
+      },
+    });
+    expect(response.ok(), await response.text()).toBeTruthy();
+    const publicationId = (await response.json()) as string;
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.goto(`/publications/${publicationId}`);
+
+    const siteCover = page.locator('.publication-detail-heading .publication-cover-site');
+    await expect(siteCover).toBeVisible();
+    await expect(siteCover).toHaveCSS('width', '56px');
+    await expect(siteCover).toHaveCSS('height', '56px');
+    await expect(siteCover).toHaveCSS('border-radius', '50%');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(siteCover).toHaveCSS('width', '48px');
+    await expect(siteCover).toHaveCSS('height', '48px');
+
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    const editor = page.getByRole('dialog', { name: 'Edit publication' });
+    await page.getByRole('button', { name: 'Manage Circular Site Cover cover' }).click();
+    const coverEditor = page.getByRole('dialog', { name: 'Manage publication cover' });
+    const siteCoverPreview = coverEditor.locator(
+      '.publication-cover-editor-preview .publication-cover-site',
+    );
+    await expect(siteCoverPreview).toBeVisible();
+    await expect(siteCoverPreview).toHaveCSS('width', '140px');
+    await expect(siteCoverPreview).toHaveCSS('height', '140px');
+    await coverEditor.getByRole('button', { name: 'Cancel' }).click();
+    await editor.getByRole('button', { name: 'Close publication editor' }).click();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('publication metadata edits preserve type, support all source fields, and detect stale saves @e2e @a11y', async ({
   page,
   request,
@@ -228,6 +283,12 @@ test('publication metadata edits preserve type, support all source fields, and d
     dialog = page.getByRole('dialog', { name: 'Edit publication' });
     await expect(dialog.getByLabel('Site URL')).toHaveValue('https://old.example.test');
     await expect(dialog.getByLabel('Author')).toHaveCount(0);
+    const siteCoverBounds = await page
+      .locator('.publication-detail-heading .publication-cover-site')
+      .boundingBox();
+    expect(siteCoverBounds).not.toBeNull();
+    if (!siteCoverBounds) throw new Error('Expected the Site cover to be measurable');
+    expect(siteCoverBounds.width).toBeCloseTo(siteCoverBounds.height, 0);
     await dialog.getByLabel('Name', { exact: true }).fill('Updated Site');
     await dialog.getByLabel('Site URL').fill('recipes.example.test');
     await dialog.getByRole('button', { name: 'Save', exact: true }).click();
@@ -1364,8 +1425,33 @@ test('publication records and creation history stay private to their owner @e2e'
     await page.getByRole('link', { name: 'Add publication' }).click();
     await page.getByRole('radio', { name: 'Book' }).check();
     await page.getByLabel('Name').fill('Private Cookbook');
+    const coverBuffer = await sharp({
+      create: {
+        width: 72,
+        height: 96,
+        channels: 3,
+        background: { r: 170, g: 90, b: 55 },
+      },
+    })
+      .jpeg()
+      .toBuffer();
+    const coverPicker = page.locator(
+      'input[type="file"][aria-label="Add publication cover image"]',
+    );
+    await expect(coverPicker).toHaveCount(1);
+    await coverPicker.setInputFiles({
+      name: 'private-cookbook.jpg',
+      mimeType: 'image/jpeg',
+      buffer: coverBuffer,
+    });
+    await expect(page.getByRole('button', { name: 'Remove selected cover image' })).toBeVisible();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Private Cookbook' })).toBeVisible();
+    const coverImage = page.locator('.publication-detail-heading .publication-cover-image-content');
+    await expect(coverImage).toBeVisible();
+    await expect
+      .poll(() => coverImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
 
     const publicationId = new URL(page.url()).pathname.split('/').at(-1);
     expect(publicationId).toBeTruthy();
@@ -1380,9 +1466,14 @@ test('publication records and creation history stay private to their owner @e2e'
     });
     expect(ownerHistoryResponse.ok()).toBe(true);
     const ownerHistory = await ownerHistoryResponse.json();
-    expect(ownerHistory).toHaveLength(1);
-    expect(ownerHistory[0].event_type).toBe('publication.created');
-    expect(ownerHistory[0].after_data.name).toBe('Private Cookbook');
+    expect(ownerHistory).toHaveLength(2);
+    expect(ownerHistory.map((event: { event_type: string }) => event.event_type)).toEqual(
+      expect.arrayContaining(['publication.created', 'publication.cover_added']),
+    );
+    const creationEvent = ownerHistory.find(
+      (event: { event_type: string }) => event.event_type === 'publication.created',
+    );
+    expect(creationEvent.after_data.name).toBe('Private Cookbook');
 
     const publicationUrl = new URL(`${apiUrl}/rest/v1/publications`);
     publicationUrl.searchParams.set('select', 'id');
@@ -1409,7 +1500,7 @@ test('publication records and creation history stay private to their owner @e2e'
     await expect(page.getByRole('link', { name: 'Other Account Cookbook' })).toHaveCount(0);
     await page.getByRole('link', { name: 'Recipe Tin' }).click();
     await page.getByRole('link', { name: 'Add Recipe' }).click();
-    await page.getByLabel('Name').fill('Rejected foreign assignment');
+    await page.locator('.recipe-form').getByLabel('Name').fill('Rejected foreign assignment');
     await page.locator('input[name="publication_id"]').evaluate((input, value) => {
       (input as HTMLInputElement).value = value;
     }, foreignPublicationId);
@@ -1417,7 +1508,7 @@ test('publication records and creation history stay private to their owner @e2e'
     await expect(page.locator('.recipe-form').getByRole('alert')).toContainText(
       'This recipe is no longer available.',
     );
-    await expect(page).toHaveURL(/\/recipes\/new$/);
+    expect(new URL(page.url()).pathname).toBe('/recipes/new');
   } finally {
     await deleteTestUser(request, otherOwner);
     await deleteTestUser(request, owner);

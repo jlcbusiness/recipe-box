@@ -66,6 +66,26 @@ describe('image normalization', () => {
     expect(result.thumbnail.bytes).toBe(result.thumbnail.buffer.byteLength);
   });
 
+  it('normalizes a 48-megapixel phone JPEG', async () => {
+    const source = await sharp({
+      create: {
+        width: 8064,
+        height: 6048,
+        channels: 3,
+        background: { r: 170, g: 90, b: 55 },
+      },
+    })
+      .jpeg({ quality: 40 })
+      .toBuffer();
+
+    const result = await normalizeImage(source, 'jpeg');
+
+    expect(result.full.width).toBe(2048);
+    expect(result.full.height).toBe(1536);
+    expect(result.thumbnail.width).toBe(480);
+    expect(result.thumbnail.height).toBe(360);
+  });
+
   it('rejects malformed image bytes with a typed processing error', async () => {
     await expect(normalizeImage(Buffer.from('not an image'), 'jpeg')).rejects.toMatchObject({
       code: 'invalid_image',

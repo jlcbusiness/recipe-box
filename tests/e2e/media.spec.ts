@@ -205,17 +205,8 @@ test('image management panes stage covers and immediately manage decorative reci
         ?.dispatchEvent(new Event('cancel', { bubbles: true }));
     });
     await expect(coverDialog).toBeVisible();
-    if (viewportWidth <= 640) {
-      await expect(coverDialog.locator('.media-camera-picker')).toBeVisible();
-      await coverDialog.evaluate((dialog) => {
-        dialog
-          .querySelector<HTMLInputElement>('input[aria-label="Take cover photo"]')
-          ?.dispatchEvent(new Event('cancel', { bubbles: true }));
-      });
-      await expect(coverDialog).toBeVisible();
-    } else {
-      await expect(coverDialog.locator('.media-camera-picker')).not.toBeVisible();
-    }
+    await expect(coverDialog.locator('.media-camera-picker')).toHaveCount(0);
+    await expect(coverDialog.locator('input[aria-label="Take cover photo"]')).toHaveCount(0);
     const coverControls = await Promise.all([
       coverDialog.locator('.media-icon-action').first().boundingBox(),
       coverDialog.getByRole('button', { name: 'Cancel' }).boundingBox(),
@@ -237,6 +228,18 @@ test('image management panes stage covers and immediately manage decorative reci
     await coverDialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(coverDialog).not.toBeVisible();
 
+    const abandonedReservation = await page.evaluate(async (parentId) => {
+      const response = await fetch('/api/media/uploads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentType: 'publication', parentId }),
+      });
+      return { ok: response.ok, status: response.status };
+    }, publicationId);
+    expect(abandonedReservation.ok, `Reservation failed: ${abandonedReservation.status}`).toBe(
+      true,
+    );
+
     await page.getByRole('button', { name: `Manage ${publicationName} cover` }).click();
     await coverDialog.locator('input[aria-label="Choose cover image"]').setInputFiles({
       name: 'cover.png',
@@ -245,10 +248,17 @@ test('image management panes stage covers and immediately manage decorative reci
     });
     await expect(coverDialog.locator('.publication-cover-editor-image')).toBeVisible();
     await coverDialog.getByRole('button', { name: 'Submit' }).click();
+    await expect(coverDialog.locator('.media-manager-error')).toHaveText(
+      'A cover upload is already in progress.',
+    );
+    await coverDialog.getByRole('button', { name: 'Cancel previous upload and retry' }).click();
     await expect(coverDialog).not.toBeVisible();
     await expect(
       page.locator('.publication-edit-cover .publication-cover-manager-image'),
     ).toBeVisible();
+    await expect(
+      page.locator('.publication-edit-cover .publication-cover-manager-image'),
+    ).toHaveCSS('object-fit', 'contain');
     await expect(
       page.locator('.publication-detail-heading .publication-cover-image-content'),
     ).toBeVisible();

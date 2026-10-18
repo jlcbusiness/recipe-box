@@ -1,11 +1,14 @@
 'use client';
 
+import { ImagePlus, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { MAX_IMAGE_UPLOAD_BYTES } from '../../lib/media/rules';
 import { formatIsbnInput, normalizeIsbn } from '../../lib/publications/validation';
 import type { PublicationOption, TagOption } from '../../lib/recipes/data';
+import { uploadMediaFiles } from '../media/upload-files';
 import { TagMultiSelect } from '../tags/tag-controls';
 import { createPublication } from './actions';
 
@@ -34,9 +37,53 @@ export function PublicationCreateForm({
   const [publicationType, setPublicationType] = useState<PublicationType>('book');
   const [isbn, setIsbn] = useState('');
   const [isbnError, setIsbnError] = useState('');
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [createdPublication, setCreatedPublication] = useState<PublicationOption | null>(null);
+  const [coverUploadPending, setCoverUploadPending] = useState(false);
+  const [coverUploadStatus, setCoverUploadStatus] = useState('');
+  const [coverUploadError, setCoverUploadError] = useState('');
   const isbnInputRef = useRef<HTMLInputElement>(null);
   const handledId = useRef('');
+  const finishedId = useRef('');
   const router = useRouter();
+
+  const finishCreation = useCallback(
+    (publication: PublicationOption) => {
+      if (finishedId.current === publication.id) return;
+      finishedId.current = publication.id;
+      if (onCreated) {
+        onCreated(publication);
+      } else {
+        router.push(`/publications/${publication.id}`);
+      }
+    },
+    [onCreated, router],
+  );
+
+  const uploadCoverAndFinish = useCallback(
+    async (publication: PublicationOption, file: File) => {
+      setCoverUploadPending(true);
+      setCoverUploadError('');
+      setCoverUploadStatus('Uploading cover image…');
+      try {
+        const result = await uploadMediaFiles('publication', publication.id, [file]);
+        setCoverUploadStatus(
+          result.cleanupPending
+            ? 'Cover saved. Temporary-file cleanup is queued for retry.'
+            : 'Publication cover saved.',
+        );
+        router.refresh();
+        finishCreation(publication);
+      } catch (error) {
+        setCoverUploadError(
+          error instanceof Error ? error.message : 'Unable to upload the cover image. Try again.',
+        );
+      } finally {
+        setCoverUploadPending(false);
+      }
+    },
+    [finishCreation, router],
+  );
 
   useEffect(() => {
     const publication = actionState?.publication;
@@ -44,18 +91,34 @@ export function PublicationCreateForm({
       return;
     }
     handledId.current = publication.id;
-    if (onCreated) {
-      onCreated(publication);
+    if (coverFile) {
+      setCreatedPublication(publication);
+      void uploadCoverAndFinish(publication, coverFile);
     } else {
-      router.push(`/publications/${publication.id}`);
+      finishCreation(publication);
     }
-  }, [actionState, onCreated, router]);
+  }, [actionState, coverFile, finishCreation, uploadCoverAndFinish]);
+
+  function selectCoverFile(file: File | null) {
+    setCoverUploadStatus('');
+    setCoverUploadError('');
+    if (file && file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setCoverFile(null);
+      setCoverUploadError(`${file.name}: images must be 20 MiB or smaller.`);
+      return;
+    }
+    setCoverFile(file);
+  }
 
   return (
     <form
       action={formAction}
       className="publication-form"
       onSubmit={(event) => {
+        if (createdPublication) {
+          event.preventDefault();
+          return;
+        }
         if (publicationType === 'book' && isbn.trim() && !normalizeIsbn(isbn)) {
           event.preventDefault();
           setIsbnError('Enter a valid ISBN-10 or ISBN-13.');
@@ -173,10 +236,42 @@ export function PublicationCreateForm({
           <input id="publication-site-url" inputMode="url" name="site_url" required type="text" />
         </label>
       )}
+      <div className="publication-cover-create">
+        <label className="publication-cover-create-picker">
+          <ImagePlus aria-hidden="true" size={18} />
+          <span>{coverFile?.name ?? 'Add cover image'}</span>
+          <input
+            accept="image/jpeg,.jpg,.jpeg,image/png,image/webp,image/heic,image/heif"
+            aria-label="Add publication cover image"
+            disabled={coverUploadPending}
+            onChange={(event) => {
+              selectCoverFile(event.currentTarget.files?.[0] ?? null);
+              event.currentTarget.value = '';
+            }}
+            type="file"
+          />
+        </label>
+        {coverFile && !coverUploadPending && (
+          <button
+            aria-label="Remove selected cover image"
+            className="publication-cover-create-remove"
+            onClick={() => selectCoverFile(null)}
+            title="Remove selected cover image"
+            type="button"
+          >
+            <X aria-hidden="true" size={16} />
+          </button>
+        )}
+      </div>
       <TagMultiSelect tags={tags} />
-      {(isbnError || actionState?.error) && (
+      {(isbnError || coverUploadError || actionState?.error) && (
         <p className="publication-form-error" role="alert">
-          {isbnError || actionState?.error}
+          {isbnError || coverUploadError || actionState?.error}
+        </p>
+      )}
+      {coverUploadStatus && (
+        <p className="publication-form-status" role="status">
+          {coverUploadStatus}
         </p>
       )}
       <div className="publication-form-actions">
@@ -191,9 +286,34 @@ export function PublicationCreateForm({
             </button>
           )
         )}
-        <button className="recipe-primary-button" disabled={pending} type="submit">
-          {pending ? 'Saving…' : 'Save'}
+        <button
+          className="recipe-primary-button"
+          disabled={pending || coverUploadPending}
+          onClick={
+            createdPublication && coverFile
+              ? () => void uploadCoverAndFinish(createdPublication, coverFile)
+              : undefined
+          }
+          type={createdPublication ? 'button' : 'submit'}
+        >
+          {pending
+            ? 'Saving…'
+            : coverUploadPending
+              ? 'Uploading…'
+              : createdPublication && coverFile
+                ? 'Retry cover upload'
+                : 'Save'}
         </button>
+        {createdPublication && coverFile && (
+          <button
+            className="recipe-secondary-button"
+            disabled={coverUploadPending}
+            onClick={() => finishCreation(createdPublication)}
+            type="button"
+          >
+            Continue without image
+          </button>
+        )}
       </div>
     </form>
   );
