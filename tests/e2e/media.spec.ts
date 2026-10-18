@@ -278,7 +278,25 @@ test('image management panes stage covers and immediately manage decorative reci
     await expect(coverDialog.locator('.media-manager-error')).toHaveText(
       'A cover upload is already in progress.',
     );
-    await coverDialog.getByRole('button', { name: 'Cancel upload and retry' }).click();
+    const recoveryButton = coverDialog.getByRole('button', { name: 'Cancel upload and retry' });
+    await page.route('**/api/media/uploads', async (route) => {
+      if (route.request().method() === 'DELETE') {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Unable to cancel the incomplete upload.' }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+    await recoveryButton.click();
+    await expect(coverDialog.locator('.media-manager-error')).toHaveText(
+      'Unable to cancel the incomplete upload.',
+    );
+    await expect(recoveryButton).toBeVisible();
+    await page.unroute('**/api/media/uploads');
+    await recoveryButton.click();
     await expect(coverDialog).not.toBeVisible();
     await expect(
       page.locator('.publication-edit-cover .publication-cover-manager-image'),

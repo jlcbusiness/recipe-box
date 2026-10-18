@@ -2,6 +2,7 @@ import {
   discardPendingMediaUpload,
   type PendingMediaUpload,
   processMediaDeletions,
+  queueMediaDeletions,
 } from '../../../../lib/media/server';
 import { createAdminClient } from '../../../../lib/supabase/admin';
 import { createClient } from '../../../../lib/supabase/server';
@@ -142,14 +143,41 @@ export async function DELETE(request: Request) {
   }
 
   const upload = data as PendingMediaUpload;
-  await discardPendingMediaUpload(admin, upload);
   let cleanupPending = false;
+  try {
+    await discardPendingMediaUpload(admin, upload);
+  } catch {
+    const { data: pendingUpload, error: verificationError } = await admin
+      .from('media_assets')
+      .select('id')
+      .eq('id', upload.id)
+      .eq('account_id', authData.user.id)
+      .eq('status', 'pending')
+      .maybeSingle();
+    if (verificationError || pendingUpload) {
+      throw new Error('Unable to cancel the incomplete upload.');
+    }
+
+    const cleanupPaths = [upload.staging_path, upload.full_path, upload.thumbnail_path];
+    try {
+      await queueMediaDeletions(admin, upload.account_id, cleanupPaths);
+    } catch {
+      const paths = cleanupPaths.filter((path): path is string => Boolean(path));
+      if (paths.length > 0) {
+        const { error: storageError } = await admin.storage.from('recipe-media').remove(paths);
+        cleanupPending = Boolean(storageError);
+      }
+    }
+  }
+
   try {
     const cleanup = await processMediaDeletions(
       admin,
-      upload.staging_path ? [upload.staging_path] : [],
+      [upload.staging_path, upload.full_path, upload.thumbnail_path].filter(
+        (path): path is string => Boolean(path),
+      ),
     );
-    cleanupPending = cleanup.failed.length > 0;
+    cleanupPending ||= cleanup.failed.length > 0;
   } catch {
     cleanupPending = true;
   }

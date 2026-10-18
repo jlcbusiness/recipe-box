@@ -58,6 +58,7 @@ export function MediaManager({
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+  const [coverUploadRecoveryAvailable, setCoverUploadRecoveryAvailable] = useState(false);
   const [removeCoverOnSubmit, setRemoveCoverOnSubmit] = useState(false);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -148,6 +149,7 @@ export function MediaManager({
   function cancelPane() {
     if (!recipePhotos) {
       setPendingCoverFile(null);
+      setCoverUploadRecoveryAvailable(false);
       setRemoveCoverOnSubmit(false);
     }
     setError('');
@@ -163,6 +165,7 @@ export function MediaManager({
       return;
     }
     setPendingCoverFile(file);
+    setCoverUploadRecoveryAvailable(false);
     setRemoveCoverOnSubmit(false);
     setError('');
   }
@@ -196,9 +199,17 @@ export function MediaManager({
               : 'Publication cover saved.'
             : `${uploaded} photos uploaded.`,
       );
+      setCoverUploadRecoveryAvailable(false);
       router.refresh();
       return true;
     } catch (uploadError) {
+      if (
+        !recipePhotos &&
+        uploadError instanceof Error &&
+        uploadError.message.includes('A cover upload is already in progress.')
+      ) {
+        setCoverUploadRecoveryAvailable(true);
+      }
       setError(
         uploadError instanceof Error ? uploadError.message : 'Image upload failed. Try again.',
       );
@@ -472,6 +483,7 @@ export function MediaManager({
       setRemoveCoverOnSubmit(true);
     }
     setPendingCoverFile(null);
+    setCoverUploadRecoveryAvailable(false);
     setError('');
   }
 
@@ -790,18 +802,16 @@ export function MediaManager({
             {error}
           </p>
         )}
-        {!recipePhotos &&
-          pendingCoverFile &&
-          error.includes('A cover upload is already in progress.') && (
-            <button
-              className="recipe-secondary-button media-manager-recover-upload"
-              disabled={working}
-              onClick={() => void cancelStalledCoverUpload()}
-              type="button"
-            >
-              {working ? 'Retrying…' : 'Cancel upload and retry'}
-            </button>
-          )}
+        {!recipePhotos && pendingCoverFile && coverUploadRecoveryAvailable && (
+          <button
+            className="recipe-secondary-button media-manager-recover-upload"
+            disabled={working}
+            onClick={() => void cancelStalledCoverUpload()}
+            type="button"
+          >
+            {working ? 'Retrying…' : 'Cancel upload and retry'}
+          </button>
+        )}
       </dialog>
 
       {!dialogRef.current?.open && status && (
