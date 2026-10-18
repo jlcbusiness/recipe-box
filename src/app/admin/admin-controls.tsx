@@ -21,7 +21,7 @@ export function InviteForm() {
   const [signInMethod, setSignInMethod] = useState('email_password');
 
   return (
-    <form action={action} className="auth-form">
+    <form action={action} className="auth-form admin-invite-form">
       <label htmlFor="invite-email">Invite email</label>
       <input id="invite-email" name="email" type="email" autoComplete="email" required />
       <label htmlFor="invite-sign-in-method">Sign-in method</label>
@@ -116,7 +116,7 @@ export function AdminAccountActions({
         <ConfirmedAdminActionForm
           accountId={accountId}
           action={grantAdmin}
-          buttonLabel="Grant admin"
+          buttonLabel="Make admin"
           confirmation={`Grant administrator access to ${email}?`}
         />
       )}
@@ -132,7 +132,7 @@ export function AdminAccountActions({
         <ConfirmedAdminActionForm
           accountId={accountId}
           action={transferAccountOwner}
-          buttonLabel="Make Owner"
+          buttonLabel="Make owner"
           confirmation={`Make ${email} the owner? You will remain an administrator, and your libraries will stay separate.`}
         />
       )}

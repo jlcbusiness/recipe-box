@@ -1,7 +1,7 @@
 import {
   discardPendingMediaUpload,
-  processMediaDeletions,
   type PendingMediaUpload,
+  processMediaDeletions,
 } from '../../../../lib/media/server';
 import { createAdminClient } from '../../../../lib/supabase/admin';
 import { createClient } from '../../../../lib/supabase/server';
@@ -143,9 +143,15 @@ export async function DELETE(request: Request) {
 
   const upload = data as PendingMediaUpload;
   await discardPendingMediaUpload(admin, upload);
-  const cleanup = await processMediaDeletions(
-    admin,
-    upload.staging_path ? [upload.staging_path] : [],
-  );
-  return Response.json({ cancelled: true, cleanupPending: cleanup.failed.length > 0 });
+  let cleanupPending = false;
+  try {
+    const cleanup = await processMediaDeletions(
+      admin,
+      upload.staging_path ? [upload.staging_path] : [],
+    );
+    cleanupPending = cleanup.failed.length > 0;
+  } catch {
+    cleanupPending = true;
+  }
+  return Response.json({ cancelled: true, cleanupPending });
 }

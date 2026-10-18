@@ -227,6 +227,15 @@ a {
   margin-top: 32px;
 }
 
+.auth-form.admin-invite-form {
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.auth-form.admin-invite-form label {
+  margin-top: 0;
+}
+
 .auth-google-form {
   margin-top: 8px;
 }
@@ -589,6 +598,83 @@ a {
   white-space: nowrap;
 }
 
+@media (max-width: 640px) {
+  .admin-table-scroll {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .admin-table-scroll table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .admin-table-scroll thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .admin-table-scroll tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .admin-table-scroll tbody td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  .admin-account-email,
+  .admin-account-actions-cell {
+    grid-column: 1 / -1;
+  }
+
+  .admin-account-email {
+    overflow-wrap: anywhere;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .admin-account-sign-in,
+  .admin-account-role {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .admin-account-mobile-label {
+    font-weight: 600;
+  }
+
+  .admin-table-scroll tbody td.admin-account-actions-cell {
+    padding-top: 4px;
+  }
+
+  .admin-account-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+    white-space: normal;
+  }
+
+  .admin-table-scroll .admin-account-action-form button {
+    min-height: 34px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+}
+
 .private-nav a:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
@@ -600,6 +686,27 @@ a {
   align-content: center;
   justify-items: start;
   padding-block: 48px;
+}
+
+.private-content main.admin-main {
+  display: block;
+  flex: initial;
+  align-content: initial;
+  justify-items: initial;
+  width: 100%;
+  padding-block: 24px;
+}
+
+.private-content main.admin-main > .eyebrow {
+  margin-bottom: 9px;
+}
+
+.private-content main.admin-main h1 {
+  font-size: 16pt;
+}
+
+.private-content main.admin-main section {
+  margin-top: 14px;
 }
 
 h1 {
@@ -9176,11 +9283,19 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .explorer-list-preferences-toolbar:has(.publication-mobile-add) {
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add)
+    .explorer-list-preferences-controls {
+    margin-left: -2px;
   }
 
   .publication-mobile-actions {
     gap: 4px;
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 }
 

@@ -183,6 +183,34 @@ test('image management panes stage covers and immediately manage decorative reci
 
     await page.goto(`/publications/${publicationId}`);
     await expect(page.getByRole('heading', { name: publicationName })).toBeVisible();
+    const viewportWidth = page.viewportSize()?.width ?? 1280;
+    if (viewportWidth <= 340) {
+      const viewControls = await page.locator('.recipe-explorer-view-controls').boundingBox();
+      const columnsButton = page.getByRole('button', { name: 'Choose List columns' }).first();
+      const columnsBounds = await columnsButton.boundingBox();
+      const firstActionBounds = await page
+        .locator('.publication-mobile-actions > *')
+        .first()
+        .boundingBox();
+      expect(viewControls).not.toBeNull();
+      expect(columnsBounds).not.toBeNull();
+      expect(firstActionBounds).not.toBeNull();
+      if (!viewControls || !columnsBounds || !firstActionBounds) {
+        throw new Error('Expected the narrow publication toolbar controls to be visible');
+      }
+      expect(columnsBounds.x + columnsBounds.width).toBeGreaterThanOrEqual(
+        viewControls.x + viewControls.width - 1,
+      );
+      const rightBorderWidth = await columnsButton.evaluate(
+        (button) => getComputedStyle(button).borderRightWidth,
+      );
+      expect(Number.parseFloat(rightBorderWidth)).toBeGreaterThan(0);
+      if (Math.abs(firstActionBounds.y - columnsBounds.y) <= 1) {
+        expect(firstActionBounds.x).toBeGreaterThanOrEqual(columnsBounds.x + columnsBounds.width);
+      } else {
+        expect(firstActionBounds.y).toBeGreaterThanOrEqual(columnsBounds.y + columnsBounds.height);
+      }
+    }
     await expect(page.locator('.publication-cover-manager-pencil')).toHaveCount(0);
     await expect(
       page.locator('.publication-detail-heading .publication-cover-image-content'),
@@ -198,7 +226,6 @@ test('image management panes stage covers and immediately manage decorative reci
       'placeholder',
       expect.stringContaining('Ctrl+V'),
     );
-    const viewportWidth = page.viewportSize()?.width ?? 1280;
     await coverDialog.evaluate((dialog) => {
       dialog
         .querySelector<HTMLInputElement>('input[aria-label="Choose cover image"]')
@@ -251,7 +278,7 @@ test('image management panes stage covers and immediately manage decorative reci
     await expect(coverDialog.locator('.media-manager-error')).toHaveText(
       'A cover upload is already in progress.',
     );
-    await coverDialog.getByRole('button', { name: 'Cancel previous upload and retry' }).click();
+    await coverDialog.getByRole('button', { name: 'Cancel upload and retry' }).click();
     await expect(coverDialog).not.toBeVisible();
     await expect(
       page.locator('.publication-edit-cover .publication-cover-manager-image'),
@@ -844,7 +871,19 @@ test('image management panes stage covers and immediately manage decorative reci
         count,
       }));
     });
-    expect(thumbnailRows.map(({ count }) => count)).toEqual([4, 3]);
+    const thumbnailCapacity = await page.locator('.recipe-photo-thumbnails').evaluate((list) => {
+      const firstButton = list.querySelector('button');
+      if (!firstButton) return 0;
+      const styles = getComputedStyle(list);
+      const gap = Number.parseFloat(styles.columnGap) || 0;
+      const itemWidth = firstButton.getBoundingClientRect().width;
+      return Math.floor((list.clientWidth + gap) / (itemWidth + gap));
+    });
+    const expectedThumbnailRows = Array.from(
+      { length: Math.ceil(7 / thumbnailCapacity) },
+      (_, index) => Math.min(thumbnailCapacity, 7 - index * thumbnailCapacity),
+    );
+    expect(thumbnailRows.map(({ count }) => count)).toEqual(expectedThumbnailRows);
     const thumbnailButtons = page.locator('.recipe-photo-thumbnails').getByRole('button');
     await expect(thumbnailButtons).toHaveCount(7);
     const originalThumbnailOrder = await thumbnailButtons.evaluateAll((buttons) =>

@@ -104,7 +104,7 @@ export default async function AdminPage() {
         { href: '/admin', label: 'Administration', current: true },
       ]}
     >
-      <main aria-labelledby="page-title">
+      <main aria-labelledby="page-title" className="admin-main">
         <p className="eyebrow">ACCOUNT ACCESS</p>
         <h1 id="page-title">Account administration</h1>
         <section aria-labelledby="invite-title">
@@ -126,12 +126,16 @@ export default async function AdminPage() {
               <tbody>
                 {users.map(({ id, email, account: rowAccount }) => (
                   <tr key={id}>
-                    <td>{email}</td>
-                    <td>{rowAccount?.sign_in_method === 'google' ? 'Google' : 'Email'}</td>
-                    <td>
+                    <td className="admin-account-email">{email}</td>
+                    <td className="admin-account-sign-in">
+                      <span className="admin-account-mobile-label">Sign-in: </span>
+                      {rowAccount?.sign_in_method === 'google' ? 'Google' : 'Email'}
+                    </td>
+                    <td className="admin-account-role">
+                      <span className="admin-account-mobile-label">Role: </span>
                       {rowAccount?.is_owner ? 'Owner' : rowAccount?.is_admin ? 'Admin' : 'Member'}
                     </td>
-                    <td>
+                    <td className="admin-account-actions-cell">
                       {rowAccount && (
                         <AdminAccountActions
                           accountId={id}

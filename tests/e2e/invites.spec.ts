@@ -363,9 +363,9 @@ test('an existing admin can grant admin status to another account @e2e', async (
 
     const memberRow = page.getByRole('row', { name: new RegExp(member.email) });
     await expect(memberRow).toContainText('Member');
-    await memberRow.getByRole('button', { name: 'Grant admin' }).click();
+    await memberRow.getByRole('button', { name: 'Make admin' }).click();
     await expect(memberRow).toContainText('Admin');
-    await expect(memberRow.getByRole('button', { name: 'Grant admin' })).toHaveCount(0);
+    await expect(memberRow.getByRole('button', { name: 'Make admin' })).toHaveCount(0);
 
     const accountTrigger = page.locator('.account-menu-trigger');
     await accountTrigger.focus();
@@ -390,6 +390,7 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
   request,
 }) => {
   const admin = await createAdminTestUser(request);
+  const member = await createTestUser(request);
 
   try {
     await page.goto('/');
@@ -408,7 +409,44 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
       .analyze();
     expect(desktopA11y.violations).toEqual([]);
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 307, height: 629 });
+    await expect(page.locator('.admin-main')).toHaveCSS('padding-top', '24px');
+    await expect(page.locator('.admin-main section').first()).toHaveCSS('margin-top', '14px');
+    await expect(page.locator('.admin-invite-form')).toHaveCSS('margin-top', '16px');
+    const titleFontSize = await page
+      .locator('.admin-main h1')
+      .evaluate((heading) => Number.parseFloat(getComputedStyle(heading).fontSize));
+    expect(titleFontSize).toBeCloseTo(21.33, 1);
+    const memberRow = page.getByRole('row', { name: new RegExp(member.email) });
+    const emailCell = memberRow.locator('.admin-account-email');
+    const signInCell = memberRow.locator('.admin-account-sign-in');
+    const roleCell = memberRow.locator('.admin-account-role');
+    const actionsCell = memberRow.locator('.admin-account-actions-cell');
+    await expect(emailCell).toHaveText(member.email);
+    await expect(signInCell).toHaveText('Sign-in: Email');
+    await expect(roleCell).toHaveText('Role: Member');
+    const [emailBounds, signInBounds, roleBounds, actionsBounds] = await Promise.all([
+      emailCell.boundingBox(),
+      signInCell.boundingBox(),
+      roleCell.boundingBox(),
+      actionsCell.boundingBox(),
+    ]);
+    expect(emailBounds).not.toBeNull();
+    expect(signInBounds).not.toBeNull();
+    expect(roleBounds).not.toBeNull();
+    expect(actionsBounds).not.toBeNull();
+    if (!emailBounds || !signInBounds || !roleBounds || !actionsBounds) {
+      throw new Error('Expected the mobile account row content to be visible');
+    }
+    expect(signInBounds.y).toBeGreaterThanOrEqual(emailBounds.y + emailBounds.height);
+    expect(roleBounds.y).toBe(signInBounds.y);
+    expect(actionsBounds.y).toBeGreaterThanOrEqual(roleBounds.y + roleBounds.height);
+    await expect(memberRow.getByRole('button', { name: 'Make admin' })).toBeVisible();
+    const tableDimensions = await page.locator('.admin-table-scroll').evaluate((table) => ({
+      clientWidth: table.clientWidth,
+      scrollWidth: table.scrollWidth,
+    }));
+    expect(tableDimensions.scrollWidth).toBeLessThanOrEqual(tableDimensions.clientWidth);
     const overflowingElements = await page.evaluate(() => {
       const viewportWidth = document.documentElement.clientWidth;
       return Array.from(document.querySelectorAll<HTMLElement>('*'))
@@ -422,13 +460,14 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
     });
     expect(overflowingElements).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      390,
+      307,
     );
     const mobileA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
     expect(mobileA11y.violations).toEqual([]);
   } finally {
+    await deleteTestUser(request, member);
     await deleteTestUser(request, admin);
   }
 });

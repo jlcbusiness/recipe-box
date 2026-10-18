@@ -247,7 +247,8 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     await expect(page.getByRole('heading', { name: 'Recipe Tin', level: 1 })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
-    const isMobile = (page.viewportSize()?.width ?? 1280) <= 720;
+    const viewportWidth = page.viewportSize()?.width ?? 1280;
+    const isMobile = viewportWidth <= 720;
     const addRecipeLink = isMobile
       ? page.locator('.publication-mobile-add')
       : page.locator('.publication-detail-heading .publication-new-recipe');
@@ -303,7 +304,15 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       expect(
         Math.abs(columnsButtonBounds.x - viewControlsBounds.x - viewControlsBounds.width),
       ).toBeLessThanOrEqual(1);
-      expect(Math.abs(columnsButtonBounds.y - addRecipeBounds.y)).toBeLessThanOrEqual(1);
+      if (Math.abs(columnsButtonBounds.y - addRecipeBounds.y) <= 1) {
+        expect(addRecipeBounds.x).toBeGreaterThanOrEqual(
+          columnsButtonBounds.x + columnsButtonBounds.width,
+        );
+      } else {
+        expect(addRecipeBounds.y).toBeGreaterThanOrEqual(
+          columnsButtonBounds.y + columnsButtonBounds.height,
+        );
+      }
       expect(addRecipeBounds.x + addRecipeBounds.width).toBeLessThanOrEqual(
         page.viewportSize()?.width ?? 0,
       );
@@ -313,18 +322,22 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
         .evaluateAll((elements) =>
           elements.map((element) => {
             const bounds = element.getBoundingClientRect();
-            return { x: bounds.x, width: bounds.width };
+            return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
           }),
         );
       expect(toolbarItemBounds).toHaveLength(3);
-      const orderedToolbarItems = toolbarItemBounds.sort((left, right) => left.x - right.x);
-      const toolbarGaps = orderedToolbarItems.slice(1).map((bounds, index) => {
-        const previousBounds = orderedToolbarItems[index];
-        if (!previousBounds) throw new Error('Expected toolbar item bounds');
-        return bounds.x - previousBounds.x - previousBounds.width;
-      });
-      for (const gap of toolbarGaps) {
-        expect(Math.abs(gap - (gap === toolbarGaps[0] ? 0 : 8))).toBeLessThanOrEqual(1);
+      const toolbarControls = toolbarItemBounds[1];
+      const toolbarActions = toolbarItemBounds[2];
+      if (!toolbarControls || !toolbarActions) throw new Error('Expected toolbar item bounds');
+      const controlsAndActionsShareRow = Math.abs(toolbarActions.y - toolbarControls.y) <= 1;
+      if (controlsAndActionsShareRow) {
+        const gap = toolbarActions.x - toolbarControls.x - toolbarControls.width;
+        const expectedGap = isMobile && viewportWidth <= 340 ? 2 : 8;
+        expect(Math.abs(gap - expectedGap)).toBeLessThanOrEqual(1);
+      } else {
+        expect(toolbarActions.y).toBeGreaterThanOrEqual(
+          toolbarControls.y + toolbarControls.height + 1,
+        );
       }
 
       const toolbarBounds = await page

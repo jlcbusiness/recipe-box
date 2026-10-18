@@ -799,7 +799,7 @@ export function MediaManager({
               onClick={() => void cancelStalledCoverUpload()}
               type="button"
             >
-              {working ? 'Retrying…' : 'Cancel previous upload and retry'}
+              {working ? 'Retrying…' : 'Cancel upload and retry'}
             </button>
           )}
       </dialog>
