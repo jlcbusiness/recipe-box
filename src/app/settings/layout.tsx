@@ -22,6 +22,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
 
   return (
     <PrivateShell
+      avatarUrl={data.user.user_metadata.avatar_url ?? data.user.user_metadata.picture}
       email={data.user.email ?? 'Unknown email'}
       handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
       wideContent

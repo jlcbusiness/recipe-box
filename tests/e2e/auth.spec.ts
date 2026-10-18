@@ -15,6 +15,15 @@ test('rejected credentials produce an accessible sign-in error @e2e', async ({ p
   await expect(page).toHaveURL(/\/$/);
 });
 
+test('Google sign-in can start without email or password @e2e', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Continue with Google' }).click();
+
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.has('error') || url.hostname !== 'localhost' || url.pathname !== '/',
+  );
+});
+
 test('a user can reset their password through the local recovery email @e2e', async ({
   page,
   request,
@@ -138,7 +147,11 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(page.getByRole('link', { name: 'Trash', exact: true })).toBeVisible();
     const accountTrigger = page.locator('.account-menu-trigger');
     await expect(accountTrigger).toHaveAttribute('aria-label', `Account options for ${user.email}`);
-    await expect(accountTrigger).toContainText(user.email);
+    await expect(accountTrigger.locator('.account-menu-email')).toHaveText(
+      user.email.split('@')[0],
+    );
+    await expect(accountTrigger.locator('.account-menu-email')).toHaveCSS('white-space', 'nowrap');
+    await expect(accountTrigger.locator('.account-avatar')).toBeVisible();
     const desktopNavBounds = await page
       .getByRole('navigation', { name: 'Main navigation' })
       .boundingBox();

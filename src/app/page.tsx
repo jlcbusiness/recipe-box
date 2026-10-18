@@ -1,7 +1,13 @@
 import { isSelfSignupAllowed } from '../lib/auth/signup-mode';
 import { SignInForm } from './sign-in-form';
 
-export function HomePageView({ selfSignupAllowed }: { selfSignupAllowed: boolean }) {
+export function HomePageView({
+  selfSignupAllowed,
+  isLocalDevelopment = false,
+}: {
+  selfSignupAllowed: boolean;
+  isLocalDevelopment?: boolean;
+}) {
   return (
     <div className="workspace-shell">
       <header className="topbar">
@@ -28,7 +34,7 @@ export function HomePageView({ selfSignupAllowed }: { selfSignupAllowed: boolean
       </main>
 
       <footer className="footer">
-        <span>Local development</span>
+        {isLocalDevelopment && <span>Local development</span>}
         <span>Recipe Box</span>
       </footer>
     </div>
@@ -36,5 +42,13 @@ export function HomePageView({ selfSignupAllowed }: { selfSignupAllowed: boolean
 }
 
 export default function HomePage() {
-  return <HomePageView selfSignupAllowed={isSelfSignupAllowed()} />;
+  const isLocalDevelopment =
+    process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_ENV !== 'preview';
+
+  return (
+    <HomePageView
+      isLocalDevelopment={isLocalDevelopment}
+      selfSignupAllowed={isSelfSignupAllowed()}
+    />
+  );
 }

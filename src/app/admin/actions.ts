@@ -98,8 +98,8 @@ export async function sendInvitation(
   if (accountError) {
     console.error('Invitation setup failed.', {
       stage: 'accountSignInMethod',
-      name: accountError.name,
       code: accountError.code,
+      message: accountError.message,
     });
     await admin.auth.admin.deleteUser(data.user.id);
     return { error: 'Unable to prepare the invitation. Try again.' };

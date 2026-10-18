@@ -12,15 +12,36 @@ export type PrivateNavItem = {
   current?: boolean;
 };
 
+function getGoogleAvatarUrl(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== 'https:' ||
+      (url.hostname !== 'googleusercontent.com' && !url.hostname.endsWith('.googleusercontent.com'))
+    ) {
+      return null;
+    }
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 export function PrivateShell({
   children,
   email,
+  avatarUrl,
   handPreference = 'right',
   navigation,
   wideContent = false,
 }: {
   children: ReactNode;
   email: string;
+  avatarUrl?: unknown;
   handPreference?: 'left' | 'right';
   navigation: PrivateNavItem[];
   wideContent?: boolean;
@@ -36,6 +57,7 @@ export function PrivateShell({
           .join('')
           .toUpperCase()
       : (nameParts[0]?.slice(0, 2).toUpperCase() ?? '?');
+  const profileImageUrl = getGoogleAvatarUrl(avatarUrl);
   const mainNavigation = navigation.filter(
     ({ href }) => href !== '/settings' && href !== '/recipes/find',
   );
@@ -107,7 +129,7 @@ export function PrivateShell({
               <span className="private-nav-utility-label">{settingsNavigation.label}</span>
             </a>
           )}
-          <AccountMenu email={email} initials={initials} />
+          <AccountMenu avatarUrl={profileImageUrl} email={email} initials={initials} />
         </div>
       </nav>
       <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>

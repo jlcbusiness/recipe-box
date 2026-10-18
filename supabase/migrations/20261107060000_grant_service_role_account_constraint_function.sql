@@ -1,0 +1,1 @@
+grant execute on function public.is_valid_recipe_hidden_columns(text[]) to service_role;

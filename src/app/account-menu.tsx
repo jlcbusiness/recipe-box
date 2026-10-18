@@ -1,10 +1,19 @@
 'use client';
 
+import Image from 'next/image';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { clearPrivateOfflineCaches } from '../lib/offline/cache-client';
 import { signOut } from './actions/auth';
 
-export function AccountMenu({ email, initials }: { email: string; initials: string }) {
+export function AccountMenu({
+  email,
+  initials,
+  avatarUrl,
+}: {
+  email: string;
+  initials: string;
+  avatarUrl: string | null;
+}) {
   const menuRef = useRef<HTMLDetailsElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -40,9 +49,21 @@ export function AccountMenu({ email, initials }: { email: string; initials: stri
   return (
     <details className="account-menu" ref={menuRef}>
       <summary aria-label={`Account options for ${email}`} className="account-menu-trigger">
-        <span className="account-menu-email">{email}</span>
+        <span className="account-menu-email">{email.split('@')[0] ?? email}</span>
         <span aria-hidden="true" className="account-avatar">
-          {initials}
+          {avatarUrl ? (
+            <Image
+              alt=""
+              className="account-avatar-image"
+              height={32}
+              referrerPolicy="no-referrer"
+              src={avatarUrl}
+              unoptimized
+              width={32}
+            />
+          ) : (
+            initials
+          )}
         </span>
       </summary>
       <div className="account-menu-panel">

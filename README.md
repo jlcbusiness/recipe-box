@@ -157,15 +157,17 @@ These commands create the app schema, storage buckets, and database rules from
 the repository. Review the dry-run output before applying it. Do not run
 `supabase db reset` against a hosted project; reset is destructive.
 
-The migrations grant `service_role` `SELECT` access to `public.accounts` and
-`UPDATE` access to only the `is_admin` and `sign_in_method` columns. These
-permissions are required for the Administration screen because automatic table
-exposure is disabled. If you already applied the migrations before these
-grants were added, run this once in the Supabase SQL Editor:
+The migrations grant `service_role` `SELECT` access to `public.accounts`,
+`UPDATE` access to only the `is_admin` and `sign_in_method` columns, and
+`EXECUTE` access to the `public.is_valid_recipe_hidden_columns(text[])`
+constraint function. These permissions are required for the Administration
+screen because automatic table exposure is disabled. If you already applied the
+migrations before these grants were added, run this in the Supabase SQL Editor:
 
 ```sql
 grant select on table public.accounts to service_role;
 grant update (is_admin, sign_in_method) on table public.accounts to service_role;
+grant execute on function public.is_valid_recipe_hidden_columns(text[]) to service_role;
 ```
 
 ### 4. Configure Supabase Auth and email
@@ -208,6 +210,16 @@ grant update (is_admin, sign_in_method) on table public.accounts to service_role
   verify your sender domain as the service requires, and enter the SMTP host,
   port, username, password, and sender address in Supabase. These SMTP
   credentials belong in Supabase, not GitHub or Vercel.
+
+4. **Configure the invitation email template.** In the Supabase Dashboard, open
+  **Authentication > Email Templates > Invite User**. Set the subject to
+  `Your Recipe Box invitation` and replace the body with the contents of
+  [`supabase/templates/invite.html`](supabase/templates/invite.html). This
+  hosted-project setting is separate from `supabase/config.toml`, which only
+  configures local Supabase. Keep the template link's `token_hash` and `type`
+  query parameters: the app verifies the invitation on the server at
+  `/auth/confirm`, and the default confirmation URL returns session data in a
+  URL fragment that the server cannot read.
 
 #### Optional: enable Google sign-in
 

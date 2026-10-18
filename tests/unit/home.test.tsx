@@ -30,4 +30,16 @@ describe('home page', () => {
 
     expect(screen.queryByRole('link', { name: /create an account/i })).toBeNull();
   });
+
+  it('hides the local development label for hosted environments', () => {
+    render(<HomePageView isLocalDevelopment={false} selfSignupAllowed={false} />);
+
+    expect(screen.queryByText('Local development')).toBeNull();
+  });
+
+  it('shows the local development label outside hosted environments', () => {
+    render(<HomePageView isLocalDevelopment selfSignupAllowed={false} />);
+
+    expect(screen.getByText('Local development')).toBeDefined();
+  });
 });

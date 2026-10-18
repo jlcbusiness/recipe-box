@@ -7,6 +7,11 @@ export async function GET(request: NextRequest) {
   const type = url.searchParams.get('type');
 
   if (!tokenHash || type !== 'invite') {
+    console.error('Invite confirmation rejected.', {
+      stage: 'parameters',
+      hasTokenHash: Boolean(tokenHash),
+      isInviteType: type === 'invite',
+    });
     return NextResponse.redirect(new URL('/sign-up?error=invalid-invite', url.origin));
   }
 
@@ -17,6 +22,13 @@ export async function GET(request: NextRequest) {
   });
 
   if (error || !data.user?.app_metadata.invitation_pending) {
+    console.error('Invite confirmation rejected.', {
+      stage: error ? 'verifyOtp' : 'invitationMetadata',
+      code: error?.code ?? null,
+      status: error?.status ?? null,
+      hasUser: Boolean(data.user),
+      invitationPending: Boolean(data.user?.app_metadata.invitation_pending),
+    });
     await supabase.auth.signOut({ scope: 'local' });
     return NextResponse.redirect(new URL('/sign-up?error=invalid-invite', url.origin));
   }
