@@ -258,6 +258,10 @@ a {
 }
 
 @media (min-width: 641px) {
+  .auth-form .admin-invite-sign-in-method-picklist {
+    justify-self: start;
+  }
+
   .auth-form .admin-invite-submit {
     width: fit-content;
     justify-self: start;

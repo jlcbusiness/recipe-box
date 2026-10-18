@@ -263,6 +263,10 @@ test('an admin can invite a Google-only account @e2e', async ({ page, request })
       .locator('.auth-form')
       .evaluate((form) => form.getBoundingClientRect().width);
     expect(buttonWidth).toBeLessThan(formWidth);
+    const picklistWidth = await page
+      .getByRole('combobox', { name: 'Sign-in method' })
+      .evaluate((picklist) => picklist.getBoundingClientRect().width);
+    expect(picklistWidth).toBeLessThan(formWidth);
     await page.getByRole('combobox', { name: 'Sign-in method' }).click();
     await page.getByRole('option', { name: 'Google' }).click();
     await inviteButton.click();

@@ -81,6 +81,12 @@ export async function sendInvitation(
   });
 
   if (metadataError) {
+    console.error('Invitation setup failed.', {
+      stage: 'authMetadata',
+      name: metadataError.name,
+      status: metadataError.status,
+      code: metadataError.code,
+    });
     await admin.auth.admin.deleteUser(data.user.id);
     return { error: 'Unable to prepare the invitation. Try again.' };
   }
@@ -90,6 +96,11 @@ export async function sendInvitation(
     .update({ sign_in_method: signInMethod })
     .eq('id', data.user.id);
   if (accountError) {
+    console.error('Invitation setup failed.', {
+      stage: 'accountSignInMethod',
+      name: accountError.name,
+      code: accountError.code,
+    });
     await admin.auth.admin.deleteUser(data.user.id);
     return { error: 'Unable to prepare the invitation. Try again.' };
   }
