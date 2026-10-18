@@ -124,7 +124,7 @@ export function AdminAccountActions({
         <ConfirmedAdminActionForm
           accountId={accountId}
           action={demoteAdmin}
-          buttonLabel="Demote admin"
+          buttonLabel="Demote"
           confirmation={`Remove administrator access from ${email}?`}
         />
       )}
@@ -132,7 +132,7 @@ export function AdminAccountActions({
         <ConfirmedAdminActionForm
           accountId={accountId}
           action={transferAccountOwner}
-          buttonLabel="Transfer ownership"
+          buttonLabel="Make Owner"
           confirmation={`Make ${email} the owner? You will remain an administrator, and your libraries will stay separate.`}
         />
       )}
@@ -140,7 +140,7 @@ export function AdminAccountActions({
         <ConfirmedAdminActionForm
           accountId={accountId}
           action={deleteAccount}
-          buttonLabel="Delete account"
+          buttonLabel="Delete"
           confirmation={`Permanently delete ${email} and all of their recipes, publications, and account data? This cannot be undone.`}
         />
       )}

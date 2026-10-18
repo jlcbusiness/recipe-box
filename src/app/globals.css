@@ -539,8 +539,13 @@ a {
 .admin-account-actions {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.admin-account-action {
+  flex: 0 0 auto;
 }
 
 .admin-account-action-form {
@@ -574,6 +579,13 @@ a {
 .admin-table-scroll button:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
+}
+
+.admin-table-scroll .admin-account-action-form button {
+  min-height: 40px;
+  padding: 6px 9px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .private-nav a:focus-visible {
