@@ -257,6 +257,14 @@ a {
   cursor: pointer;
 }
 
+@media (min-width: 641px) {
+  .auth-form .admin-invite-submit {
+    width: fit-content;
+    justify-self: start;
+    padding-inline: 20px;
+  }
+}
+
 .auth-secondary-actions {
   display: flex;
   align-items: center;

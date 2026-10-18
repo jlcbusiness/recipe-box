@@ -157,6 +157,17 @@ These commands create the app schema, storage buckets, and database rules from
 the repository. Review the dry-run output before applying it. Do not run
 `supabase db reset` against a hosted project; reset is destructive.
 
+The migrations grant `service_role` `SELECT` access to `public.accounts` and
+`UPDATE` access to only the `is_admin` and `sign_in_method` columns. These
+permissions are required for the Administration screen because automatic table
+exposure is disabled. If you already applied the migrations before these
+grants were added, run this once in the Supabase SQL Editor:
+
+```sql
+grant select on table public.accounts to service_role;
+grant update (is_admin, sign_in_method) on table public.accounts to service_role;
+```
+
 ### 4. Configure Supabase Auth and email
 
 1. **Set the URLs.** In the Supabase Dashboard, open
@@ -249,7 +260,7 @@ before saving.
 | `NEXT_PUBLIC_SUPABASE_URL` | Config | In the Supabase project linked and migrated in step 3, open **Connect** and copy the **Project URL**. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Config | In that Supabase project, copy the **Publishable key** (`sb_publishable_...`) from **Connect** or **Project Settings > API Keys**. This app's variable name is older; a legacy `anon` key also works. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Secret | In that Supabase project, copy the **Secret key** (`sb_secret_...`) from **Project Settings > API Keys**; create one there if needed. This app's variable name is older; a legacy `service_role` key also works. This key bypasses row-level security. |
-| `NEXT_PUBLIC_SITE_URL` | Config | The exact HTTPS Production origin from step 2, for example `https://your-project.vercel.app`. |
+| `NEXT_PUBLIC_SITE_URL` | Config | The exact HTTPS Production origin from step 2, for example `https://your-project.vercel.app`. Use this exact variable name; the invitation flow uses it to build email redirect URLs. |
 | `SIGNUP_MODE` | Config | Set this app option to `invite_only`. |
 | `CRON_SECRET` | Secret | Generate a unique value locally with Node.js using `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. This produces 64 hexadecimal characters (32 random bytes, 256 bits); paste the output here. |
 

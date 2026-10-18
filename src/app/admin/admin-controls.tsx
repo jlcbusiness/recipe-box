@@ -1,20 +1,33 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
+import { Picklist, type PicklistOption } from '../picklist';
 import { grantAdmin, sendInvitation } from './actions';
+
+const signInMethodOptions: PicklistOption[] = [
+  { value: 'email_password', label: 'Email and password' },
+  { value: 'google', label: 'Google' },
+];
 
 export function InviteForm() {
   const [state, action, pending] = useActionState(sendInvitation, undefined);
+  const [signInMethod, setSignInMethod] = useState('email_password');
 
   return (
     <form action={action} className="auth-form">
       <label htmlFor="invite-email">Invite email</label>
       <input id="invite-email" name="email" type="email" autoComplete="email" required />
       <label htmlFor="invite-sign-in-method">Sign-in method</label>
-      <select id="invite-sign-in-method" name="signInMethod" defaultValue="email_password">
-        <option value="email_password">Email and password</option>
-        <option value="google">Google</option>
-      </select>
+      <input name="signInMethod" type="hidden" value={signInMethod} />
+      <Picklist
+        className="admin-invite-sign-in-method-picklist"
+        disabled={pending}
+        id="invite-sign-in-method"
+        label="Sign-in method"
+        onSelect={setSignInMethod}
+        options={signInMethodOptions}
+        value={signInMethod}
+      />
       {state?.error && (
         <p className="auth-feedback" role="alert">
           {state.error}
@@ -25,7 +38,7 @@ export function InviteForm() {
           {state.message}
         </p>
       )}
-      <button disabled={pending} type="submit">
+      <button className="admin-invite-submit" disabled={pending} type="submit">
         {pending ? 'Sending...' : 'Send invitation'}
       </button>
     </form>

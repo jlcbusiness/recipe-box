@@ -253,9 +253,19 @@ test('an admin can invite a Google-only account @e2e', async ({ page, request })
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/recipes$/);
     await page.goto('/admin');
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByLabel('Invite email').fill(recipient);
-    await page.getByLabel('Sign-in method').selectOption('google');
-    await page.getByRole('button', { name: 'Send invitation' }).click();
+    const inviteButton = page.getByRole('button', { name: 'Send invitation' });
+    const buttonWidth = await inviteButton.evaluate(
+      (button) => button.getBoundingClientRect().width,
+    );
+    const formWidth = await page
+      .locator('.auth-form')
+      .evaluate((form) => form.getBoundingClientRect().width);
+    expect(buttonWidth).toBeLessThan(formWidth);
+    await page.getByRole('combobox', { name: 'Sign-in method' }).click();
+    await page.getByRole('option', { name: 'Google' }).click();
+    await inviteButton.click();
     await expect(page.getByRole('status')).toHaveText(`Invitation sent to ${recipient}.`);
 
     const usersResponse = await request.get(

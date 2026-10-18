@@ -4,6 +4,39 @@ import { createClient } from '../../lib/supabase/server';
 import { PrivateShell } from '../private-shell';
 import { GrantAdminForm, InviteForm } from './admin-controls';
 
+function getAdminCredentialMetadata() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    return { format: 'missing', jwtRole: 'unknown' };
+  }
+
+  if (key.startsWith('sb_secret_')) {
+    return { format: 'supabase-secret', jwtRole: 'opaque' };
+  }
+
+  if (key.startsWith('sb_publishable_')) {
+    return { format: 'supabase-publishable', jwtRole: 'public' };
+  }
+
+  const payload = key.split('.')[1];
+  if (!payload) {
+    return { format: 'other', jwtRole: 'unknown' };
+  }
+
+  try {
+    const claims: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (claims && typeof claims === 'object' && 'role' in claims) {
+      const role = claims.role;
+      if (role === 'service_role' || role === 'anon' || role === 'authenticated') {
+        return { format: 'jwt', jwtRole: role };
+      }
+    }
+    return { format: 'jwt', jwtRole: 'other-or-missing' };
+  } catch {
+    return { format: 'jwt', jwtRole: 'unparseable' };
+  }
+}
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
@@ -30,6 +63,7 @@ export default async function AdminPage() {
 
   if (authUsers.error || accountRows.error) {
     console.error('Unable to load account administration.', {
+      adminCredential: getAdminCredentialMetadata(),
       authUsers: authUsers.error
         ? {
             name: authUsers.error.name,
