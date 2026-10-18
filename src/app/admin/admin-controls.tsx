@@ -1,8 +1,15 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { type FormEvent, useActionState, useState } from 'react';
 import { Picklist, type PicklistOption } from '../picklist';
-import { grantAdmin, sendInvitation } from './actions';
+import {
+  type AdminFormState,
+  deleteAccount,
+  demoteAdmin,
+  grantAdmin,
+  sendInvitation,
+  transferAccountOwner,
+} from './actions';
 
 const signInMethodOptions: PicklistOption[] = [
   { value: 'email_password', label: 'Email and password' },
@@ -45,11 +52,98 @@ export function InviteForm() {
   );
 }
 
-export function GrantAdminForm({ accountId }: { accountId: string }) {
+type ConfirmedAdminAction = (
+  previousState: AdminFormState | undefined,
+  formData: FormData,
+) => Promise<AdminFormState>;
+
+function ConfirmedAdminActionForm({
+  accountId,
+  action,
+  buttonLabel,
+  confirmation,
+}: {
+  accountId: string;
+  action: ConfirmedAdminAction;
+  buttonLabel: string;
+  confirmation: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, undefined);
+
   return (
-    <form action={grantAdmin}>
-      <input name="accountId" type="hidden" value={accountId} />
-      <button type="submit">Grant admin</button>
-    </form>
+    <div className="admin-account-action">
+      <form
+        action={formAction}
+        className="admin-account-action-form"
+        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          if (!window.confirm(confirmation)) {
+            event.preventDefault();
+          }
+        }}
+      >
+        <input name="accountId" type="hidden" value={accountId} />
+        <button disabled={pending} type="submit">
+          {pending ? 'Working...' : buttonLabel}
+        </button>
+      </form>
+      {state?.error && <p role="alert">{state.error}</p>}
+      {state?.message && <p role="status">{state.message}</p>}
+    </div>
+  );
+}
+
+export function AdminAccountActions({
+  accountId,
+  email,
+  isAdmin,
+  isOwner,
+  currentAccountId,
+  currentIsOwner,
+}: {
+  accountId: string;
+  email: string;
+  isAdmin: boolean;
+  isOwner: boolean;
+  currentAccountId: string;
+  currentIsOwner: boolean;
+}) {
+  const isCurrentAccount = accountId === currentAccountId;
+  const canManageTarget = !isOwner && !isCurrentAccount;
+
+  return (
+    <div className="admin-account-actions">
+      {!isAdmin && canManageTarget && (
+        <ConfirmedAdminActionForm
+          accountId={accountId}
+          action={grantAdmin}
+          buttonLabel="Grant admin"
+          confirmation={`Grant administrator access to ${email}?`}
+        />
+      )}
+      {currentIsOwner && canManageTarget && isAdmin && (
+        <ConfirmedAdminActionForm
+          accountId={accountId}
+          action={demoteAdmin}
+          buttonLabel="Demote admin"
+          confirmation={`Remove administrator access from ${email}?`}
+        />
+      )}
+      {currentIsOwner && canManageTarget && (
+        <ConfirmedAdminActionForm
+          accountId={accountId}
+          action={transferAccountOwner}
+          buttonLabel="Transfer ownership"
+          confirmation={`Make ${email} the owner? You will remain an administrator, and your libraries will stay separate.`}
+        />
+      )}
+      {canManageTarget && (!isAdmin || currentIsOwner) && (
+        <ConfirmedAdminActionForm
+          accountId={accountId}
+          action={deleteAccount}
+          buttonLabel="Delete account"
+          confirmation={`Permanently delete ${email} and all of their recipes, publications, and account data? This cannot be undone.`}
+        />
+      )}
+    </div>
   );
 }

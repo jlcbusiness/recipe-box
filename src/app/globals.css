@@ -536,6 +536,29 @@ a {
   border-bottom: 0;
 }
 
+.admin-account-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-account-action-form {
+  margin: 0;
+}
+
+.admin-account-action p {
+  max-width: 260px;
+  margin: 4px 0 0;
+  color: var(--tomato);
+  font-size: 12px;
+  white-space: normal;
+}
+
+.admin-account-action p[role="status"] {
+  color: var(--leaf);
+}
+
 .admin-table-scroll button {
   min-height: 48px;
   border: 1px solid var(--line);

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createAdminClient } from '../../lib/supabase/admin';
 import { createClient } from '../../lib/supabase/server';
 import { PrivateShell } from '../private-shell';
-import { GrantAdminForm, InviteForm } from './admin-controls';
+import { AdminAccountActions, InviteForm } from './admin-controls';
 
 function getAdminCredentialMetadata() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -47,7 +47,7 @@ export default async function AdminPage() {
 
   const { data: account } = await supabase
     .from('accounts')
-    .select('is_admin, hand_preference')
+    .select('is_admin, is_owner, hand_preference')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -58,7 +58,10 @@ export default async function AdminPage() {
   const admin = createAdminClient();
   const [authUsers, accountRows] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-    admin.from('accounts').select('id, is_admin, sign_in_method, created_at').order('created_at'),
+    admin
+      .from('accounts')
+      .select('id, is_admin, is_owner, sign_in_method, created_at')
+      .order('created_at'),
   ]);
 
   if (authUsers.error || accountRows.error) {
@@ -117,16 +120,27 @@ export default async function AdminPage() {
                   <th scope="col">Email</th>
                   <th scope="col">Sign-in method</th>
                   <th scope="col">Role</th>
-                  <th scope="col">Action</th>
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map(({ id, email, account }) => (
                   <tr key={id}>
                     <td>{email}</td>
-                    <td>{account?.sign_in_method}</td>
-                    <td>{account?.is_admin ? 'Admin' : 'Member'}</td>
-                    <td>{account?.is_admin ? null : <GrantAdminForm accountId={id} />}</td>
+                    <td>{account?.sign_in_method === 'google' ? 'Google' : 'Email'}</td>
+                    <td>{account?.is_owner ? 'Owner' : account?.is_admin ? 'Admin' : 'Member'}</td>
+                    <td>
+                      {account && (
+                        <AdminAccountActions
+                          accountId={id}
+                          currentAccountId={data.user.id}
+                          currentIsOwner={account.is_owner}
+                          email={email}
+                          isAdmin={account.is_admin}
+                          isOwner={account.is_owner}
+                        />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

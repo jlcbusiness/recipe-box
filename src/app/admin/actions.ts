@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { processMediaDeletions } from '../../lib/media/server';
 import { createAdminClient } from '../../lib/supabase/admin';
 import { createClient } from '../../lib/supabase/server';
 
@@ -9,7 +10,15 @@ export type AdminFormState = {
   message?: string;
 };
 
-async function getAdminClient() {
+type AdminContext = {
+  actorId: string;
+  isOwner: boolean;
+  admin: ReturnType<typeof createAdminClient>;
+};
+
+const accountIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getAdminContext(): Promise<AdminContext | null> {
   const sessionClient = await createClient();
   const { data, error } = await sessionClient.auth.getUser();
 
@@ -19,7 +28,7 @@ async function getAdminClient() {
 
   const { data: account } = await sessionClient
     .from('accounts')
-    .select('is_admin')
+    .select('is_admin, is_owner')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -27,7 +36,68 @@ async function getAdminClient() {
     return null;
   }
 
-  return createAdminClient();
+  return {
+    actorId: data.user.id,
+    isOwner: account.is_owner,
+    admin: createAdminClient(),
+  };
+}
+
+async function getTargetAccount(admin: AdminContext['admin'], accountId: string) {
+  const { data, error } = await admin
+    .from('accounts')
+    .select('is_admin, is_owner')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  return error ? null : data;
+}
+
+async function listStorageFiles(
+  admin: AdminContext['admin'],
+  bucket: string,
+  folder: string,
+): Promise<string[]> {
+  const paths: string[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await admin.storage.from(bucket).list(folder, { limit: 100, offset });
+    if (error) {
+      throw new Error('Unable to inspect account files.');
+    }
+
+    const entries = data ?? [];
+    for (const entry of entries) {
+      if (!entry.name || entry.name === '.' || entry.name === '..' || entry.name.includes('/')) {
+        throw new Error('Invalid account file path.');
+      }
+
+      const path = `${folder}/${entry.name}`;
+      if (entry.id === null) {
+        paths.push(...(await listStorageFiles(admin, bucket, path)));
+      } else {
+        paths.push(path);
+      }
+    }
+
+    if (entries.length < 100) {
+      return paths;
+    }
+    offset += 100;
+  }
+}
+
+async function deleteAccountExportArchives(admin: AdminContext['admin'], accountId: string) {
+  const paths = await listStorageFiles(admin, 'recipe-exports', accountId);
+  for (let offset = 0; offset < paths.length; offset += 100) {
+    const { error } = await admin.storage
+      .from('recipe-exports')
+      .remove(paths.slice(offset, offset + 100));
+    if (error) {
+      throw new Error('Unable to remove account export archives.');
+    }
+  }
 }
 
 export async function sendInvitation(
@@ -45,10 +115,11 @@ export async function sendInvitation(
     return { error: 'Choose a supported sign-in method.' };
   }
 
-  const admin = await getAdminClient();
-  if (!admin) {
+  const context = await getAdminContext();
+  if (!context) {
     return { error: 'You do not have permission to send invitations.' };
   }
+  const { admin } = context;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (!siteUrl) {
@@ -109,17 +180,163 @@ export async function sendInvitation(
   return { message: `Invitation sent to ${email}.` };
 }
 
-export async function grantAdmin(formData: FormData): Promise<void> {
+export async function grantAdmin(
+  _previousState: AdminFormState | undefined,
+  formData: FormData,
+): Promise<AdminFormState> {
   const targetId = String(formData.get('accountId') ?? '');
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId)) {
-    return;
+  if (!accountIdPattern.test(targetId)) {
+    return { error: 'Choose a valid account.' };
   }
 
-  const admin = await getAdminClient();
-  if (!admin) {
-    return;
+  const context = await getAdminContext();
+  if (!context) {
+    return { error: 'You do not have permission to grant administrator access.' };
   }
 
-  await admin.from('accounts').update({ is_admin: true }).eq('id', targetId);
+  const { data, error } = await context.admin
+    .from('accounts')
+    .update({ is_admin: true })
+    .eq('id', targetId)
+    .eq('is_owner', false)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) {
+    return { error: 'Unable to grant administrator access to that account.' };
+  }
+
   revalidatePath('/admin');
+  return { message: 'Administrator access granted.' };
+}
+
+export async function demoteAdmin(
+  _previousState: AdminFormState | undefined,
+  formData: FormData,
+): Promise<AdminFormState> {
+  const targetId = String(formData.get('accountId') ?? '');
+  if (!accountIdPattern.test(targetId)) {
+    return { error: 'Choose a valid account.' };
+  }
+
+  const context = await getAdminContext();
+  if (!context?.isOwner) {
+    return { error: 'Only the owner can remove administrator access.' };
+  }
+
+  const target = await getTargetAccount(context.admin, targetId);
+  if (!target) {
+    return { error: 'That account could not be found.' };
+  }
+  if (target.is_owner) {
+    return { error: 'The owner must transfer ownership before this account can be demoted.' };
+  }
+  if (!target.is_admin) {
+    return { error: 'That account is not an administrator.' };
+  }
+
+  const { data, error } = await context.admin
+    .from('accounts')
+    .update({ is_admin: false })
+    .eq('id', targetId)
+    .eq('is_owner', false)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) {
+    return { error: 'Unable to remove administrator access from that account.' };
+  }
+
+  revalidatePath('/admin');
+  return { message: 'Administrator access removed.' };
+}
+
+export async function transferAccountOwner(
+  _previousState: AdminFormState | undefined,
+  formData: FormData,
+): Promise<AdminFormState> {
+  const targetId = String(formData.get('accountId') ?? '');
+  if (!accountIdPattern.test(targetId)) {
+    return { error: 'Choose a valid account.' };
+  }
+
+  const context = await getAdminContext();
+  if (!context?.isOwner) {
+    return { error: 'Only the owner can transfer ownership.' };
+  }
+
+  const { data, error } = await context.admin.rpc('transfer_account_owner', {
+    p_current_owner_id: context.actorId,
+    p_new_owner_id: targetId,
+  });
+  if (error || data !== true) {
+    return { error: 'Unable to transfer ownership to that account.' };
+  }
+
+  revalidatePath('/admin');
+  return { message: 'Account ownership transferred.' };
+}
+
+export async function deleteAccount(
+  _previousState: AdminFormState | undefined,
+  formData: FormData,
+): Promise<AdminFormState> {
+  const targetId = String(formData.get('accountId') ?? '');
+  if (!accountIdPattern.test(targetId)) {
+    return { error: 'Choose a valid account.' };
+  }
+
+  const context = await getAdminContext();
+  if (!context) {
+    return { error: 'You do not have permission to delete accounts.' };
+  }
+  if (targetId === context.actorId) {
+    return { error: 'You cannot delete the account you are currently using.' };
+  }
+
+  const target = await getTargetAccount(context.admin, targetId);
+  if (!target) {
+    return { error: 'That account could not be found.' };
+  }
+  if (target.is_owner) {
+    return { error: 'The owner must transfer ownership before this account can be deleted.' };
+  }
+  if (target.is_admin && !context.isOwner) {
+    return { error: 'Only the owner can delete an administrator account.' };
+  }
+
+  try {
+    await deleteAccountExportArchives(context.admin, targetId);
+  } catch {
+    return { error: 'Account files could not be removed, so the account was not deleted.' };
+  }
+
+  const { error } = await context.admin.auth.admin.deleteUser(targetId);
+  if (error) {
+    return { error: 'Unable to delete that account.' };
+  }
+
+  revalidatePath('/admin');
+  let cleanupPending = false;
+  try {
+    const { data: queuedMedia, error: queueError } = await context.admin
+      .from('media_deletion_queue')
+      .select('object_path')
+      .eq('account_id', targetId);
+    if (queueError) {
+      cleanupPending = true;
+    } else if (queuedMedia?.length) {
+      const cleanup = await processMediaDeletions(
+        context.admin,
+        queuedMedia.map(({ object_path }) => object_path),
+      );
+      cleanupPending = cleanup.failed.length > 0 || cleanup.processed < queuedMedia.length;
+    }
+  } catch {
+    cleanupPending = true;
+  }
+
+  return {
+    message: cleanupPending
+      ? 'Account permanently deleted. Some photo files remain queued for cleanup.'
+      : 'Account permanently deleted.',
+  };
 }
