@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { signIn } from './actions/auth';
+import { signIn, startGoogleSignIn } from './actions/auth';
 
 export function SignInForm() {
   const [state, action, pending] = useActionState(signIn, undefined);
@@ -21,6 +21,9 @@ export function SignInForm() {
       {state?.error && <p role="alert">{state.error}</p>}
       <button disabled={pending} type="submit">
         {pending ? 'Signing in...' : 'Sign in'}
+      </button>
+      <button formAction={startGoogleSignIn} type="submit">
+        Continue with Google
       </button>
     </form>
   );

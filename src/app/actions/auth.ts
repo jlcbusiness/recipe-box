@@ -34,6 +34,26 @@ export async function signIn(
   redirect('/app');
 }
 
+export async function startGoogleSignIn(): Promise<void> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) {
+    redirect('/?error=google-sign-in');
+  }
+
+  const supabase = await createClient();
+  const redirectTo = new URL('/auth/callback?next=/app', siteUrl).toString();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo },
+  });
+
+  if (error || !data.url) {
+    redirect('/?error=google-sign-in');
+  }
+
+  redirect(data.url);
+}
+
 export async function signUp(
   _previousState: AuthFormState | undefined,
   formData: FormData,

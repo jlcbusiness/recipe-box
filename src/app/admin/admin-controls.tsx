@@ -10,6 +10,11 @@ export function InviteForm() {
     <form action={action} className="auth-form">
       <label htmlFor="invite-email">Invite email</label>
       <input id="invite-email" name="email" type="email" autoComplete="email" required />
+      <label htmlFor="invite-sign-in-method">Sign-in method</label>
+      <select id="invite-sign-in-method" name="signInMethod" defaultValue="email_password">
+        <option value="email_password">Email and password</option>
+        <option value="google">Google</option>
+      </select>
       {state?.error && (
         <p className="auth-feedback" role="alert">
           {state.error}

@@ -148,6 +148,10 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
       (user: { email?: string }) => user.email?.toLowerCase() === recipient,
     );
     expect(invitedUser).toBeDefined();
+    expect(invitedUser.app_metadata).toMatchObject({
+      invitation_pending: true,
+      sign_in_method: 'email_password',
+    });
     recipientUserId = invitedUser.id;
 
     let messageId: string | undefined;
@@ -195,7 +199,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     expect(inviteA11y.violations).toEqual([]);
     await page.getByLabel('Create password').fill(recipientPassword);
     await page.getByRole('button', { name: 'Set password' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications\/[^/]+$/);
     await expect(page.locator('.account-avatar')).toBeVisible();
     await page.setViewportSize({ width: 1280, height: 800 });
 
@@ -228,6 +232,98 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
         id: recipientUserId,
         email: recipient,
         password: recipientPassword,
+        accessToken: '',
+      });
+    }
+    await deleteTestUser(request, admin);
+  }
+});
+
+test('an admin can invite a Google-only account @e2e', async ({ page, request }) => {
+  await deletePendingInviteTestUsers(request);
+  const admin = await createAdminTestUser(request);
+  const recipient = `invite-google-${crypto.randomUUID()}@example.test`;
+  const config = await getLocalSupabaseConfig();
+  let recipientUserId: string | undefined;
+
+  try {
+    await page.goto('/');
+    await page.getByLabel('Email').fill(admin.email);
+    await page.getByLabel('Password').fill(admin.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/recipes$/);
+    await page.goto('/admin');
+    await page.getByLabel('Invite email').fill(recipient);
+    await page.getByLabel('Sign-in method').selectOption('google');
+    await page.getByRole('button', { name: 'Send invitation' }).click();
+    await expect(page.getByRole('status')).toHaveText(`Invitation sent to ${recipient}.`);
+
+    const usersResponse = await request.get(
+      `${config.apiUrl}/auth/v1/admin/users?page=1&per_page=1000`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+      },
+    );
+    const users = await usersResponse.json();
+    const invitedUser = users.users.find(
+      (user: { email?: string }) => user.email?.toLowerCase() === recipient,
+    );
+    expect(invitedUser).toBeDefined();
+    recipientUserId = invitedUser.id;
+
+    const accountResponse = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=sign_in_method&id=eq.${recipientUserId}`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+      },
+    );
+    expect(await accountResponse.json()).toEqual([{ sign_in_method: 'google' }]);
+
+    let messageId: string | undefined;
+    await expect
+      .poll(
+        async () => {
+          const response = await request.get(
+            `http://127.0.0.1:55425/api/v1/search?query=${encodeURIComponent(`to:${recipient}`)}`,
+          );
+          if (!response.ok()) return null;
+          const search = await response.json();
+          const message = search.messages?.find((item: { To?: { Address: string }[] }) =>
+            item.To?.some((address) => address.Address.toLowerCase() === recipient),
+          );
+          messageId = message?.ID;
+          return messageId ?? null;
+        },
+        { timeout: 10_000 },
+      )
+      .not.toBeNull();
+
+    const messageResponse = await request.get(`http://127.0.0.1:55425/api/v1/message/${messageId}`);
+    const message = await messageResponse.json();
+    const emailContent = `${message.HTML ?? ''}\n${message.Text ?? ''}`;
+    const rawLink = emailContent.match(/href="([^"]+)"/)?.[1];
+    if (!rawLink) throw new Error('The invitation email did not include a link.');
+
+    const inviteUrl = new URL(rawLink.replace(/&amp;/g, '&'));
+    expect(inviteUrl.searchParams.get('type')).toBe('invite');
+    expect(inviteUrl.searchParams.has('token_hash')).toBe(true);
+    await page.goto(inviteUrl.toString());
+    await expect(page).toHaveURL(/\/complete-invite$/);
+    await expect(page.getByRole('heading', { name: 'Finish creating your account' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+    await expect(page.getByLabel('Create password')).toHaveCount(0);
+  } finally {
+    if (recipientUserId) {
+      await deleteTestUser(request, {
+        id: recipientUserId,
+        email: recipient,
+        password: '',
         accessToken: '',
       });
     }

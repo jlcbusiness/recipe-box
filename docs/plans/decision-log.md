@@ -11,6 +11,7 @@ the product specification or a task list. The canonical behavior remains in
 
 | Decision | Rationale |
 | -------- | --------- |
+| A hosted personal instance starts from the source ZIP: extract it, create a new local repository in GitHub Desktop, copy the source files into it, and publish that repository privately. | A fresh repository has its own commit history and no inherited upstream remote; later upstream changes are not silently incorporated. This matches the intended source-only setup rather than a fork or clone. See [Slice 25](slices/25-go-online.md). |
 | Use Publication in the UI. | Book is too narrow for books, magazine issues, and websites. |
 | Sites remain standalone primary publications for recipes sourced from websites. | Many recipe websites publish recipes that have no print counterpart; they remain valid recipe origins without being secondary listings for Magazine recipes. |
 | Every recipe has a primary publication; Recipe Tin is a reserved collection publication, one per account. | Original recipes have a permanent Library home without being represented by a missing relationship. |

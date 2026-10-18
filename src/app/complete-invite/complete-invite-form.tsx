@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { completeInvitation } from './actions';
+import { beginGoogleInvitation, completeInvitation } from './actions';
 
 export function CompleteInviteForm() {
   const [state, action, pending] = useActionState(completeInvitation, undefined);
@@ -24,6 +24,23 @@ export function CompleteInviteForm() {
       )}
       <button disabled={pending} type="submit">
         {pending ? 'Setting password...' : 'Set password'}
+      </button>
+    </form>
+  );
+}
+
+export function GoogleInviteForm() {
+  const [state, action, pending] = useActionState(beginGoogleInvitation, undefined);
+
+  return (
+    <form action={action} className="auth-form">
+      {state?.error && (
+        <p className="auth-feedback" role="alert">
+          {state.error}
+        </p>
+      )}
+      <button disabled={pending} type="submit">
+        {pending ? 'Connecting...' : 'Continue with Google'}
       </button>
     </form>
   );

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
-import { CompleteInviteForm } from './complete-invite-form';
+import { CompleteInviteForm, GoogleInviteForm } from './complete-invite-form';
 
 export default async function CompleteInvitePage() {
   const supabase = await createClient();
@@ -9,6 +9,7 @@ export default async function CompleteInvitePage() {
   if (error || !data.user?.app_metadata.invitation_pending) {
     redirect('/sign-up?error=invalid-invite');
   }
+  const googleInvite = data.user.app_metadata.sign_in_method === 'google';
 
   return (
     <div className="workspace-shell">
@@ -25,8 +26,17 @@ export default async function CompleteInvitePage() {
         <section className="auth-panel">
           <p className="eyebrow">ACCOUNT ACCESS</p>
           <h1 id="page-title">Finish creating your account</h1>
-          <p className="welcome-copy">Choose a password for {data.user.email}.</p>
-          <CompleteInviteForm />
+          {googleInvite ? (
+            <>
+              <p className="welcome-copy">Continue with Google for {data.user.email}.</p>
+              <GoogleInviteForm />
+            </>
+          ) : (
+            <>
+              <p className="welcome-copy">Choose a password for {data.user.email}.</p>
+              <CompleteInviteForm />
+            </>
+          )}
         </section>
       </main>
       <footer className="footer">

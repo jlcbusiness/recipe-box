@@ -89,6 +89,11 @@ async function configureProject() {
     recursive: true,
   });
   await cp(resolve(repositoryRoot, 'supabase/seed.sql'), join(supabaseDirectory, 'seed.sql'));
+  await mkdir(join(supabaseDirectory, 'tests'), { recursive: true });
+  await cp(
+    resolve(repositoryRoot, 'supabase/tests/auth_provider_guard.test.sql'),
+    join(supabaseDirectory, 'tests/auth_provider_guard.test.sql'),
+  );
   await writeFile(join(supabaseDirectory, 'config.toml'), config);
   return { migrations, targetIndex, sourceMigrations };
 }
@@ -279,6 +284,59 @@ async function verifyMigrationAndRunBrowserTests() {
     await cp(join(sourceMigrations, migration), join(supabaseDirectory, 'migrations', migration));
   }
   runSupabase(['migration', 'up', '--local']);
+  runSupabase(['test', 'db', '--local', 'supabase/tests/auth_provider_guard.test.sql']);
+
+  const bootstrapEmail = `bootstrap-${randomUUID()}@example.test`;
+  const bootstrap = spawnSync(
+    process.execPath,
+    [resolve(repositoryRoot, 'scripts/bootstrap-first-admin.mjs'), bootstrapEmail],
+    {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_SITE_URL: 'http://localhost:3001',
+        NEXT_PUBLIC_SUPABASE_URL: config.apiUrl,
+        SUPABASE_SERVICE_ROLE_KEY: config.serviceRoleKey,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+  assert.equal(bootstrap.status, 0, bootstrap.stderr);
+  assert.match(bootstrap.stdout, new RegExp(`First administrator invitation sent to ${bootstrapEmail}`));
+
+  const bootstrapUsers = await apiCall(`${config.apiUrl}/auth/v1/admin/users?page=1&per_page=1000`, {
+    headers: serviceHeaders(config),
+  });
+  const bootstrapUser = bootstrapUsers.users.find((user) => user.email === bootstrapEmail);
+  assert.ok(bootstrapUser);
+  assert.equal(bootstrapUser.app_metadata.invitation_pending, true);
+  assert.equal(bootstrapUser.app_metadata.sign_in_method, 'email_password');
+  const bootstrapAccount = await apiCall(
+    `${config.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method&id=eq.${bootstrapUser.id}`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.deepEqual(bootstrapAccount, [
+    { id: bootstrapUser.id, is_admin: true, sign_in_method: 'email_password' },
+  ]);
+
+  const repeatedBootstrap = spawnSync(
+    process.execPath,
+    [resolve(repositoryRoot, 'scripts/bootstrap-first-admin.mjs'), `second-${bootstrapEmail}`],
+    {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_SITE_URL: 'http://localhost:3001',
+        NEXT_PUBLIC_SUPABASE_URL: config.apiUrl,
+        SUPABASE_SERVICE_ROLE_KEY: config.serviceRoleKey,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+  assert.notEqual(repeatedBootstrap.status, 0);
+  assert.match(repeatedBootstrap.stderr, /administrator already exists/u);
 
   const legacyRows = await apiCall(
     `${config.apiUrl}/rest/v1/recipes?select=id,public_id,is_private&id=eq.${legacyRecipe.id}`,
