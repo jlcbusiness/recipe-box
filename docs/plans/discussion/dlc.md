@@ -8,3 +8,19 @@
 - add the ability to favorite?
 - look up all deferred stuff from the slices, have copilot assemble
 - color library icon to automatically draw you to it
+- the ability to jump to a picklist item by typing the first letter when selected
+- the ability to enter an ingredient (second enter)
+- the ability to add a second set of ingredients and label both sets
+- a ratio field for "divided" and a size field for "cubed"
+  - if divided is used, ability to chooce which division in ingred reference
+- wrap the instructions arount the ingredients (and possible, start from the recipe details?)
+- include recipe images in instructions
+- add nutrition information (calc per serving)
+  - add known nutrition values per ingredient...?
+- if ingredient used more then once, use [ingred][n] in ref names
+  - if ingredient sets are involved, tag per set...?    
+- the ability to highlight temperatures and times
+- remove recipe width limit
+- don't show images in printed recipe, spread recipe details across a line
+  - default to landscape
+- add lists in steps
