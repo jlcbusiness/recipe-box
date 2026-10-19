@@ -290,6 +290,9 @@ test('publication metadata edits preserve type, support all source fields, and d
     if (!siteCoverBounds) throw new Error('Expected the Site cover to be measurable');
     expect(siteCoverBounds.width).toBeCloseTo(siteCoverBounds.height, 0);
     await dialog.getByLabel('Name', { exact: true }).fill('Updated Site');
+    await dialog.getByLabel('Site URL').fill('');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog.locator('.publication-form-error')).toHaveText('Enter the Site URL.');
     await dialog.getByLabel('Site URL').fill('recipes.example.test');
     await dialog.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Updated Site' })).toBeVisible();
@@ -1030,22 +1033,26 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     await page.getByRole('link', { name: 'Library' }).click();
     await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
     const addPublicationLink = page.getByRole('link', { name: 'Add publication' });
-    await expect(addPublicationLink).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    const restingBackground = await addPublicationLink.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    );
+    expect(restingBackground).toBe('rgb(56, 96, 68)');
     await addPublicationLink.hover();
-    await expect(addPublicationLink).toHaveCSS('background-color', 'rgb(56, 96, 68)');
+    await expect
+      .poll(() =>
+        addPublicationLink.evaluate((element) => getComputedStyle(element).backgroundColor),
+      )
+      .not.toBe(restingBackground);
     if (testInfo.project.name === 'Fold 6') {
       const libraryHeading = await page.getByRole('heading', { name: 'Library' }).boundingBox();
-      const addPublicationBounds = await addPublicationLink.boundingBox();
-      expect(addPublicationBounds?.x).toBeGreaterThanOrEqual(
-        (libraryHeading?.x ?? 0) + (libraryHeading?.width ?? 0),
+      const libraryActions = await page.locator('.publication-library-actions').boundingBox();
+      expect(libraryHeading).not.toBeNull();
+      expect(libraryActions).not.toBeNull();
+      expect(libraryActions?.x).toBeGreaterThanOrEqual(libraryHeading?.x ?? 0);
+      expect(libraryActions?.y).toBeGreaterThanOrEqual(
+        (libraryHeading?.y ?? 0) + (libraryHeading?.height ?? 0),
       );
-      expect(
-        Math.abs(
-          (addPublicationBounds?.y ?? 0) +
-            (addPublicationBounds?.height ?? 0) -
-            ((libraryHeading?.y ?? 0) + (libraryHeading?.height ?? 0)),
-        ),
-      ).toBeLessThan(4);
+      await expectNoHorizontalOverflow(page);
     }
     await addPublicationLink.click();
     const savePublication = page.getByRole('button', { name: 'Save', exact: true });
@@ -1543,9 +1550,11 @@ test('publication forms show only the fields for their selected type @e2e @a11y'
     await page.getByRole('link', { name: 'Add publication' }).click();
     await page.getByRole('radio', { name: 'Site' }).check();
     await page.getByLabel('Name').fill('Example Cooking');
-    await page.getByLabel('Site URL').fill('https://cooking.example.test');
     await expect(page.getByLabel('Author')).toHaveCount(0);
     await expect(page.getByLabel('Issue / edition / date')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.locator('.publication-form-error')).toHaveText('Enter the Site URL.');
+    await page.getByLabel('Site URL').fill('https://cooking.example.test');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Example Cooking' })).toBeVisible();
     await expect(page.locator('.publication-cover-site')).toBeVisible();

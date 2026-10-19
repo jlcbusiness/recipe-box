@@ -268,10 +268,10 @@ function PublicationEditDialog({
           >
             <span>Site URL</span>
             <input
+              aria-required="true"
               id={`publication-edit-site-url-${publication.id}`}
               inputMode="url"
               name="site_url"
-              required
               type="text"
               value={draft.siteUrl}
               onChange={(event) => setDraft({ ...draft, siteUrl: event.currentTarget.value })}

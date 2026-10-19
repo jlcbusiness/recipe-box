@@ -240,7 +240,7 @@ export function PublicationDeleteAction({
                 form={formId}
                 type="submit"
               >
-                Move to Trash
+                Move
               </button>
             </div>
           </dialog>,

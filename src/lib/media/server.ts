@@ -54,12 +54,10 @@ export async function discardPendingMediaUpload(
   admin: AdminSupabaseClient,
   upload: PendingMediaUpload,
 ) {
-  const { error } = await admin
-    .from('media_assets')
-    .delete()
-    .eq('id', upload.id)
-    .eq('account_id', upload.account_id)
-    .eq('status', 'pending');
+  const { error } = await admin.rpc('discard_pending_media_upload', {
+    p_asset_id: upload.id,
+    p_account_id: upload.account_id,
+  });
   if (error) {
     throw new Error('Unable to cancel the incomplete image upload.');
   }

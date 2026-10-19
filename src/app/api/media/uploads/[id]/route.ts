@@ -92,6 +92,8 @@ export async function POST(request: Request, context: UploadRouteContext) {
     .from('recipe-media')
     .download(stagingPath);
   if (downloadError || !original) {
+    await discardPendingMediaUpload(admin, upload);
+    await processMediaDeletions(admin, [stagingPath]);
     return Response.json(
       { error: 'The image did not finish uploading. Choose it again and retry.' },
       { status: 409 },

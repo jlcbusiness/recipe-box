@@ -35,6 +35,8 @@ export function PublicationCreateForm({
 }) {
   const [actionState, formAction, pending] = useActionState(createPublication, undefined);
   const [publicationType, setPublicationType] = useState<PublicationType>('book');
+  const [name, setName] = useState(initialName ?? '');
+  const [siteUrl, setSiteUrl] = useState('');
   const [isbn, setIsbn] = useState('');
   const [isbnError, setIsbnError] = useState('');
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -154,10 +156,11 @@ export function PublicationCreateForm({
         <span>{publicationType === 'magazine' ? 'Magazine name' : 'Name'}</span>
         <input
           autoComplete="off"
-          defaultValue={initialName}
           id="publication-name"
           name="name"
           required
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
         />
       </label>
       {publicationType === 'book' && (
@@ -233,7 +236,15 @@ export function PublicationCreateForm({
           htmlFor="publication-site-url"
         >
           <span>Site URL</span>
-          <input id="publication-site-url" inputMode="url" name="site_url" required type="text" />
+          <input
+            aria-required="true"
+            id="publication-site-url"
+            inputMode="url"
+            name="site_url"
+            type="text"
+            value={siteUrl}
+            onChange={(event) => setSiteUrl(event.currentTarget.value)}
+          />
         </label>
       )}
       <div className="publication-cover-create">

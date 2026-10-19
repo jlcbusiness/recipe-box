@@ -129,7 +129,6 @@ export default async function LibraryPage({
     <main className="recipes-main" aria-labelledby="page-title">
       <div className="recipe-page-heading publication-library-heading">
         <div>
-          <p className="eyebrow">YOUR COLLECTION</p>
           <h1 id="page-title">Library</h1>
         </div>
         <div className="recipe-page-heading-actions publication-library-actions">

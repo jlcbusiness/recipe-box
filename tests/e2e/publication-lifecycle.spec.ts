@@ -1242,11 +1242,11 @@ test('empty publication deletion confirms without a recipe disposition @e2e @a11
     await expect(dialog).toContainText('no active recipes to move');
     await expect(dialog.locator('.publication-delete-dispositions')).toHaveCount(0);
     await expect(dialog.locator('input[name="recipe_disposition"]')).toHaveValue('delete');
-    await expect(dialog.getByRole('button', { name: 'Move to Trash' })).toBeEnabled();
+    await expect(dialog.getByRole('button', { name: 'Move' })).toBeEnabled();
     const dialogA11y = await new AxeBuilder({ page }).analyze();
     expect(dialogA11y.violations).toEqual([]);
 
-    await dialog.getByRole('button', { name: 'Move to Trash' }).click();
+    await dialog.getByRole('button', { name: 'Move' }).click();
     await expect(page).toHaveURL(/\/publications\?status=trashed$/);
     await expect(page.getByRole('status')).toContainText('moved to Trash');
   } finally {
@@ -1294,7 +1294,7 @@ test('publication deletion requires a disposition and can be restored from Trash
     await deletePublicationButton.click();
     const dialog = page.getByRole('dialog', { name: 'Move publication to Trash?' });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Move to Trash' })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: 'Move' })).toBeDisabled();
     const dialogA11y = await new AxeBuilder({ page }).analyze();
     expect(dialogA11y.violations).toEqual([]);
 
@@ -1315,7 +1315,7 @@ test('publication deletion requires a disposition and can be restored from Trash
     await expect(dialog.locator('input[name="destination_publication_id"]')).toHaveValue(
       destinationId,
     );
-    await dialog.getByRole('button', { name: 'Move to Trash' }).click();
+    await dialog.getByRole('button', { name: 'Move' }).click();
 
     await expect(page).toHaveURL(/\/publications\?status=trashed$/);
     await expect(page.getByRole('status')).toContainText('moved to Trash');

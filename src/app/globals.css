@@ -6181,19 +6181,19 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .recipe-page-heading.publication-library-heading {
-    align-items: flex-end;
-    flex-direction: row;
-    justify-content: space-between;
-    gap: 12px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .publication-library-heading .recipe-page-heading-actions.publication-library-actions {
     display: flex;
-    width: auto;
-    flex: 0 0 auto;
+    width: 100%;
+    flex: 1 1 auto;
   }
 
   .publication-library-heading .recipe-page-heading-actions > a {
+    flex: 1 1 auto;
     width: auto;
     white-space: nowrap;
   }
