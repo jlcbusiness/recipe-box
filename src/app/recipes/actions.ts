@@ -16,6 +16,7 @@ import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
   error?: string;
+  recipeId?: string;
 };
 
 type RecipeRelationshipsPayload = {
@@ -352,7 +353,10 @@ export async function saveRecipe(
       revalidatePath(`/recipes/${pairing.linked_recipe_id}`);
     }
   }
-  redirect(`/recipes/${savedRecipe.id}`);
+  if (recipeId) {
+    redirect(`/recipes/${savedRecipe.id}`);
+  }
+  return { recipeId: savedRecipe.id };
 }
 
 export async function setRecipePrivacy(formData: FormData): Promise<void> {

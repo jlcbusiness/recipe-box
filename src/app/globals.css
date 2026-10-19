@@ -3457,7 +3457,6 @@ h1 {
 
 .recipe-time-total-row {
   display: flex;
-  flex: 0 0 100%;
   align-items: flex-end;
   gap: 8px;
 }
@@ -4581,6 +4580,29 @@ h1 {
   display: none;
 }
 
+.media-manager-paste-action-mobile {
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  gap: 8px;
+  margin: -8px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 8px 10px;
+  background: white;
+  color: var(--leaf);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.media-manager-paste-action-mobile:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .media-manager-paste-hint::placeholder {
   color: var(--muted);
   opacity: 1;
@@ -4650,6 +4672,26 @@ h1 {
   list-style: none;
 }
 
+.recipe-draft-photo-input {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.recipe-photo-draft-grid {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.recipe-draft-photo-picker {
+  position: relative;
+  width: 100%;
+}
+
 .recipe-photo-grid-item {
   position: relative;
   min-width: 0;
@@ -4678,6 +4720,7 @@ h1 {
   cursor: pointer;
   font-size: 13px;
   font-weight: 700;
+  text-align: center;
 }
 
 .recipe-photo-add-action:hover {
@@ -8851,7 +8894,7 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .media-manager-paste-hint-mobile {
-    display: block;
+    display: flex;
   }
 
   .publication-detail-heading > .media-manager {

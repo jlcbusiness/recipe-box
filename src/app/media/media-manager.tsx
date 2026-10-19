@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, ImagePlus, Pencil, X } from 'lucide-react';
+import { Camera, ClipboardPaste, ImagePlus, Pencil, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ClipboardEvent, PointerEvent } from 'react';
@@ -427,6 +427,55 @@ export function MediaManager({
     }
   }
 
+  async function pasteFromClipboard() {
+    setError('');
+    if (!navigator.clipboard?.read) {
+      setError('Clipboard image access is unavailable. Use Add photo to choose an image.');
+      return;
+    }
+
+    const extensions: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/heic': 'heic',
+      'image/heif': 'heif',
+    };
+    try {
+      const files: File[] = [];
+      for (const item of await navigator.clipboard.read()) {
+        const type = item.types.find((itemType) => itemType in extensions);
+        if (!type) {
+          continue;
+        }
+        files.push(
+          new File(
+            [await item.getType(type)],
+            `pasted-photo-${files.length + 1}.${extensions[type]}`,
+            {
+              type,
+            },
+          ),
+        );
+      }
+      if (files.length === 0) {
+        setError(
+          'The clipboard does not contain a supported image. Use Add photo to choose a file.',
+        );
+        return;
+      }
+      if (recipePhotos) {
+        await uploadFiles(files.slice(0, remainingPhotos));
+      } else {
+        chooseCoverFile(files[0] ?? null);
+      }
+    } catch {
+      setError(
+        'Unable to read an image from the clipboard. Check browser permission or use Add photo.',
+      );
+    }
+  }
+
   async function submitCoverChanges() {
     if (pendingCoverFile) {
       if (await uploadFiles([pendingCoverFile])) {
@@ -576,17 +625,16 @@ export function MediaManager({
           )}
         </div>
         {recipePhotos ? (
-          <textarea
-            aria-label="Paste an image here"
-            className="media-manager-paste-hint media-manager-paste-hint-mobile"
-            onChange={(event) => {
-              event.currentTarget.value = '';
-            }}
-            spellCheck={false}
-            tabIndex={-1}
-            placeholder="Tap and hold here, then choose Paste."
-            rows={2}
-          />
+          <button
+            aria-label="Paste image from clipboard"
+            className="media-manager-paste-hint-mobile media-manager-paste-action-mobile"
+            disabled={working || remainingPhotos === 0}
+            onClick={() => void pasteFromClipboard()}
+            type="button"
+          >
+            <ClipboardPaste aria-hidden="true" size={18} />
+            <span>Paste image from clipboard</span>
+          </button>
         ) : (
           <textarea
             aria-label="Paste an image here"

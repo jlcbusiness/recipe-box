@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { type FormEvent, useActionState, useEffect, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import type {
@@ -32,6 +33,8 @@ import {
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
 import { MediaManager } from '../media/media-manager';
+import { RecipePhotoDraftPicker } from '../media/recipe-photo-draft-picker';
+import { uploadMediaFiles } from '../media/upload-files';
 import { Picklist } from '../picklist';
 import { TagMultiSelect } from '../tags/tag-controls';
 import { saveRecipe } from './actions';
@@ -164,7 +167,12 @@ export function RecipeForm({
   recipe,
 }: RecipeFormProps) {
   const [actionState, formAction, pending] = useActionState(saveRecipe, undefined);
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const handledCreatedRecipeIdRef = useRef<string | null>(null);
+  const [draftPhotoFiles, setDraftPhotoFiles] = useState<File[]>([]);
+  const [uploadingDraftPhotos, setUploadingDraftPhotos] = useState(false);
+  const [draftPhotoUploadError, setDraftPhotoUploadError] = useState('');
   const [ingredientRows, setIngredientRows] = useState<IngredientRowDraft[]>(
     () =>
       recipe?.ingredients.map((row) => ({
@@ -229,6 +237,30 @@ export function RecipeForm({
       dialog.close();
     }
   }, [pendingIngredientDeletion]);
+
+  useEffect(() => {
+    const createdRecipeId = actionState?.recipeId;
+    if (!createdRecipeId || handledCreatedRecipeIdRef.current === createdRecipeId) {
+      return;
+    }
+    handledCreatedRecipeIdRef.current = createdRecipeId;
+
+    if (draftPhotoFiles.length === 0) {
+      router.replace(`/recipes/${createdRecipeId}`);
+      return;
+    }
+
+    setUploadingDraftPhotos(true);
+    void uploadMediaFiles('recipe', createdRecipeId, draftPhotoFiles)
+      .then(() => router.replace(`/recipes/${createdRecipeId}`))
+      .catch((uploadError: unknown) => {
+        const detail = uploadError instanceof Error ? ` ${uploadError.message}` : '';
+        setDraftPhotoUploadError(
+          `The recipe was saved, but its photos could not all be uploaded.${detail}`,
+        );
+      })
+      .finally(() => setUploadingDraftPhotos(false));
+  }, [actionState?.recipeId, draftPhotoFiles, router]);
 
   function togglePicklist(category: RecipePicklistKey) {
     setOpenPicklist((current) => (current === category ? null : category));
@@ -401,17 +433,31 @@ export function RecipeForm({
       )}
       <fieldset className="recipe-metadata-section">
         <legend>Recipe</legend>
-        <div className="recipe-name-media-row">
-          <RecipeNameField initialName={recipe?.name ?? ''} />
-          {recipe && (
+        {recipe ? (
+          <div className="recipe-name-media-row">
+            <RecipeNameField initialName={recipe.name} />
             <MediaManager
               assets={mediaAssets}
               parentId={recipe.id}
               parentName={recipe.name}
               parentType="recipe"
             />
-          )}
-        </div>
+          </div>
+        ) : (
+          <RecipePhotoDraftPicker
+            disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
+            nameField={<RecipeNameField initialName="" />}
+            onFilesChange={setDraftPhotoFiles}
+          />
+        )}
+        {draftPhotoUploadError && actionState?.recipeId && (
+          <p className="recipe-form-error" role="alert">
+            {draftPhotoUploadError}{' '}
+            <a href={`/recipes/${actionState.recipeId}/edit`}>
+              Open the recipe editor to manage photos.
+            </a>
+          </p>
+        )}
         <PublicationPicker
           initialPage={recipe?.publication_page ?? null}
           initialPublicationId={recipe?.publication_id ?? initialPublicationId ?? null}
@@ -707,11 +753,11 @@ export function RecipeForm({
         ) : (
           <button
             className="recipe-primary-button"
-            disabled={pending}
+            disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
             form="recipe-form"
             type="submit"
           >
-            {pending ? 'Saving…' : 'Save recipe'}
+            {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save recipe'}
           </button>
         )}
       </div>

@@ -164,6 +164,42 @@ async function createImageBuffer() {
     .toBuffer();
 }
 
+test('a new recipe can upload photos selected before saving @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const recipeName = `Recipe with a draft photo ${randomUUID()}`;
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Add Recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
+    await page.locator('.recipe-form').getByLabel('Name').fill(recipeName);
+    await page.getByLabel('Choose recipe photos').setInputFiles({
+      name: 'draft-recipe-photo.png',
+      mimeType: 'image/png',
+      buffer: await createImageBuffer(),
+    });
+    await expect(page.locator('.recipe-photo-draft-item')).toHaveCount(1);
+    const [nameRowBounds, draftGridBounds] = await Promise.all([
+      page.locator('.recipe-name-media-row').boundingBox(),
+      page.locator('.recipe-photo-draft-grid').boundingBox(),
+    ]);
+    expect(nameRowBounds).not.toBeNull();
+    expect(draftGridBounds).not.toBeNull();
+    expect(draftGridBounds?.y).toBeGreaterThanOrEqual(
+      (nameRowBounds?.y ?? 0) + (nameRowBounds?.height ?? 0),
+    );
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(page.locator('.recipe-photo-feature-image')).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('image management panes stage covers and immediately manage decorative recipe photos @e2e @a11y', async ({
   page,
   request,
@@ -383,16 +419,13 @@ test('image management panes stage covers and immediately manage decorative reci
     await expect(photoDialog).toBeVisible();
     await expect(photoDialog.locator('#media-manager-title')).toBeFocused();
     if (viewportWidth <= 640) {
-      const pasteTarget = photoDialog.getByRole('textbox', { name: 'Paste an image here' });
-      await expect(pasteTarget).toHaveAttribute(
-        'placeholder',
-        'Tap and hold here, then choose Paste.',
+      const pasteAction = photoDialog.getByRole('button', { name: 'Paste image from clipboard' });
+      await expect(pasteAction).toBeVisible();
+      await expect(photoDialog.getByRole('textbox', { name: 'Paste an image here' })).toHaveCount(
+        0,
       );
-      await expect(pasteTarget).toHaveAttribute('tabindex', '-1');
       await page.keyboard.press('Tab');
-      await expect(pasteTarget).not.toBeFocused();
-      await pasteTarget.click();
-      await expect(pasteTarget).toBeFocused();
+      await expect(pasteAction).toBeFocused();
     } else {
       const pasteInstruction = photoDialog.locator('.media-manager-paste-instruction-desktop');
       await expect(pasteInstruction).toHaveText('Paste an image with Ctrl+V or Command+V.');
@@ -420,6 +453,10 @@ test('image management panes stage covers and immediately manage decorative reci
       },
     ]);
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(6);
+    await expect(photoDialog.locator('.recipe-photo-add-action span')).toHaveCSS(
+      'text-align',
+      'center',
+    );
     await expect(page.locator('.recipe-photo-manager-trigger img')).toBeVisible();
     await expect(page.locator('.recipe-photo-manager-trigger img')).toHaveCSS(
       'object-fit',
@@ -470,14 +507,33 @@ test('image management panes stage covers and immediately manage decorative reci
       expect(storedMetadata.iptc).toBeUndefined();
       expect(storedMetadata.xmp).toBeUndefined();
     }
-    await page.evaluate((encodedImage) => {
-      const bytes = Uint8Array.from(atob(encodedImage), (character) => character.charCodeAt(0));
-      const transfer = new DataTransfer();
-      transfer.items.add(new File([bytes], 'pasted-photo.png', { type: 'image/png' }));
-      document
-        .querySelector('.media-manager-dialog')
-        ?.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData: transfer }));
-    }, imageBuffer.toString('base64'));
+    if (viewportWidth <= 640) {
+      await page.evaluate((encodedImage) => {
+        const bytes = Uint8Array.from(atob(encodedImage), (character) => character.charCodeAt(0));
+        const image = new Blob([bytes], { type: 'image/png' });
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            read: async () => [
+              {
+                types: ['image/png'],
+                getType: async () => image,
+              },
+            ],
+          },
+        });
+      }, imageBuffer.toString('base64'));
+      await photoDialog.getByRole('button', { name: 'Paste image from clipboard' }).click();
+    } else {
+      await page.evaluate((encodedImage) => {
+        const bytes = Uint8Array.from(atob(encodedImage), (character) => character.charCodeAt(0));
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([bytes], 'pasted-photo.png', { type: 'image/png' }));
+        document
+          .querySelector('.media-manager-dialog')
+          ?.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData: transfer }));
+      }, imageBuffer.toString('base64'));
+    }
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(7);
     await expect(photoDialog.locator('.recipe-photo-add-tile')).toBeVisible();
     const photoStatus = photoDialog.locator('.media-manager-status:visible');

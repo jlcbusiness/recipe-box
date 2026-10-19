@@ -21,6 +21,44 @@ async function selectSinglePicklist(
   await page.getByRole('option', { name: option, exact: true }).click();
 }
 
+test('recipe time controls do not overlap the Pairings or Notes sections @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Add Recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
+    await page.setViewportSize({ width: 384, height: 915 });
+
+    const calculateBounds = await page
+      .getByRole('button', { name: 'Calculate total time' })
+      .boundingBox();
+    const pairingBounds = await page
+      .locator('#recipe-form > fieldset')
+      .filter({ has: page.getByText('Pairs With', { exact: true }) })
+      .boundingBox();
+    const notesBounds = await page
+      .locator('#recipe-form > fieldset')
+      .filter({ has: page.getByText('Notes', { exact: true }) })
+      .boundingBox();
+
+    expect(calculateBounds).not.toBeNull();
+    expect(pairingBounds).not.toBeNull();
+    expect(notesBounds).not.toBeNull();
+    expect(pairingBounds?.y).toBeGreaterThanOrEqual(
+      (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
+    );
+    expect(notesBounds?.y).toBeGreaterThanOrEqual(
+      (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
+    );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('private navigation links to Settings and keeps Units out of the nav @e2e @a11y', async ({
   page,
   request,
