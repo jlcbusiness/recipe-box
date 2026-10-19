@@ -7,3 +7,4 @@
 - convert the verdicts into actual ratings
 - add the ability to favorite?
 - look up all deferred stuff from the slices, have copilot assemble
+- color library icon to automatically draw you to it
