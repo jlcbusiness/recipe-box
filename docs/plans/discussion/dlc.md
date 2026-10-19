@@ -12,9 +12,11 @@
 - the ability to enter an ingredient (second enter)
 - the ability to add a second set of ingredients and label both sets
 - a ratio field for "divided" and a size field for "cubed"
+  - might need to wrap this for mobile 
   - if divided is used, ability to chooce which division in ingred reference
 - wrap the instructions arount the ingredients (and possible, start from the recipe details?)
 - include recipe images in instructions
+  - as references! Like the ingredient sizes! 
 - add nutrition information (calc per serving)
   - add known nutrition values per ingredient...?
 - if ingredient used more then once, use [ingred][n] in ref names
@@ -24,3 +26,9 @@
 - don't show images in printed recipe, spread recipe details across a line
   - default to landscape
 - add lists in steps
+- grams don't have an underline to show you can change them
+- use of hr in times (maybe auto-translate times over 60?)
+  - change "Times" to "Time Breakdown"
+- swap view buttons and text, left-align buttons
+- oof. Okay, if the user hits screen lock, remove the app margin on ingredients to make space for the checkbox
+- add "pinch" as an automatic conversion for 1/16 tsp
