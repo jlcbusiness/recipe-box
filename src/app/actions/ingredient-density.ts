@@ -77,7 +77,7 @@ export async function manageIngredientDensity(
     p_weight_unit_code: action === 'set' ? weightUnitCode : null,
   });
 
-  if (error?.code === '40001') {
+  if (error?.code === '40001' || error?.code === 'PT409') {
     return {
       status: 'conflict',
       message: 'The ingredient catalog changed in another session. The latest values are loading.',

@@ -670,6 +670,10 @@ cover image, show a white magazine-shaped rectangle with a black border and
 normal title text sized to fit. A saved cover replaces the fallback in the
 publication detail and Explorer.
 
+Uploaded covers are informative source imagery: show the whole image within its
+reserved frame, preserve its aspect ratio, and do not crop it to fill, including
+in the compact mobile Grid.
+
 Publication covers are managed from the cover itself: in edit mode, the image
 is a quiet clickable target with a lower-right pencil affordance and a
 desktop-only hover border. Its management pane stages selection or removal

@@ -330,7 +330,7 @@ export async function saveRecipe(
   });
 
   if (error) {
-    if (error.code === '40001') {
+    if (error.code === '40001' || error.code === 'PT409') {
       return { error: 'This recipe changed in another session. Reload before saving again.' };
     }
     if (error.code === 'P0002') {
@@ -381,7 +381,10 @@ export async function setRecipePrivacy(formData: FormData): Promise<void> {
   });
   if (error) {
     redirect(
-      error.code === '40001' || error.code === '55000' || error.code === 'P0002'
+      error.code === '40001' ||
+        error.code === 'PT409' ||
+        error.code === '55000' ||
+        error.code === 'P0002'
         ? `/recipes/${recipeId}?status=conflict`
         : `/recipes/${recipeId}?status=error`,
     );
@@ -423,7 +426,7 @@ export async function trashRecipe(formData: FormData): Promise<void> {
   });
   if (error) {
     redirect(
-      error.code === '40001' || error.code === '55000'
+      error.code === '40001' || error.code === 'PT409' || error.code === '55000'
         ? '/recipes?status=conflict'
         : '/recipes?status=error',
     );
@@ -493,7 +496,10 @@ export async function purgeTrashedItem(formData: FormData): Promise<void> {
   });
   if (error) {
     redirect(
-      error.code === '40001' || error.code === '55000' || error.code === 'P0002'
+      error.code === '40001' ||
+        error.code === 'PT409' ||
+        error.code === '55000' ||
+        error.code === 'P0002'
         ? '/recipes/trash?status=conflict'
         : error.code === 'PGRST202'
           ? '/recipes/trash?status=migration-required'

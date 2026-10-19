@@ -163,7 +163,7 @@ test('lifecycle RPCs enforce ownership, versions, state, and history @e2e', asyn
       headers: ownerHeaders(config, owner),
       data: { p_recipe_id: recipe.id, p_expected_version: 0 },
     });
-    await expectErrorCode(staleTrash, '40001');
+    await expectErrorCode(staleTrash, 'PT409');
 
     const trashed = await request.post(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
       headers: ownerHeaders(config, owner),
@@ -247,7 +247,7 @@ test('lifecycle RPCs enforce ownership, versions, state, and history @e2e', asyn
       headers: ownerHeaders(config, owner),
       data: { p_recipe_id: recipe.id, p_expected_version: 1 },
     });
-    await expectErrorCode(staleRestore, '40001');
+    await expectErrorCode(staleRestore, 'PT409');
 
     const restored = await request.post(`${config.apiUrl}/rest/v1/rpc/restore_recipe`, {
       headers: ownerHeaders(config, owner),

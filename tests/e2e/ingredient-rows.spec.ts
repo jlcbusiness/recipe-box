@@ -300,7 +300,7 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
         p_expected_version: 1,
       },
     });
-    expect((await staleResponse.json()).code).toBe('40001');
+    expect((await staleResponse.json()).code).toBe('PT409');
     const staleIngredientQuery = new URLSearchParams({
       select: 'id',
       account_id: `eq.${owner.id}`,
@@ -729,7 +729,7 @@ test('ingredient catalog normalizes names and rejects duplicates and stale revis
       },
     );
     expect(staleResponse.ok()).toBeFalsy();
-    expect(await staleResponse.json()).toMatchObject({ code: '40001' });
+    expect(await staleResponse.json()).toMatchObject({ code: 'PT409' });
 
     const finalCatalogResponse = await request.get(
       `${config.apiUrl}/rest/v1/ingredients?select=id,name&account_id=eq.${owner.id}&order=name.asc`,

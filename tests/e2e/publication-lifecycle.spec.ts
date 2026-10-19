@@ -453,7 +453,7 @@ test('publication updates are owner-scoped, versioned, and preserve recipe locat
           p_site_url: null,
         },
       }),
-      '40001',
+      'PT409',
     );
     await expectErrorCode(
       await request.post(`${config.apiUrl}/rest/v1/rpc/update_publication`, {

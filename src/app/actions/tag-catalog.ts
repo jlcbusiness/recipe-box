@@ -65,7 +65,7 @@ export async function manageTagCatalog(
       p_name: name?.trim() ?? '',
       p_expected_revision: revision,
     });
-    if (error?.code === '40001') {
+    if (error?.code === '40001' || error?.code === 'PT409') {
       return {
         status: 'conflict',
         message: 'The tag catalog changed in another session. The latest values are loading.',
@@ -104,7 +104,7 @@ export async function manageTagCatalog(
     p_replacement_id: replacementId,
   });
 
-  if (error?.code === '40001') {
+  if (error?.code === '40001' || error?.code === 'PT409') {
     return {
       status: 'conflict',
       message: 'The tag catalog changed in another session. The latest values are loading.',
@@ -199,7 +199,7 @@ export async function setTagColor(
     p_color_key: colorKey,
     p_expected_revision: revision,
   });
-  if (error?.code === '40001') {
+  if (error?.code === '40001' || error?.code === 'PT409') {
     return {
       status: 'conflict',
       message: 'The tag catalog changed in another session. The latest values are loading.',

@@ -277,7 +277,7 @@ test('instruction mention rows stay ordered, owner-scoped, and atomic across rec
         1,
       ),
     });
-    expect((await staleVersion.json()).code).toBe('40001');
+    expect((await staleVersion.json()).code).toBe('PT409');
 
     const recipeResponse = await request.get(
       `${config.apiUrl}/rest/v1/recipes?select=name,version&id=eq.${recipeId}`,

@@ -69,7 +69,7 @@ export async function manageIngredientCatalog(
     p_replacement_id: replacementId,
   });
 
-  if (error?.code === '40001') {
+  if (error?.code === '40001' || error?.code === 'PT409') {
     return {
       status: 'conflict',
       message: 'The ingredient catalog changed in another session. The latest values are loading.',

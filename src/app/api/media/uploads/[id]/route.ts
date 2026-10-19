@@ -28,7 +28,7 @@ function uploadErrorStatus(code: string) {
   if (code === '54000') {
     return 413;
   }
-  if (code === '40001' || code === '55000') {
+  if (code === '40001' || code === 'PT409' || code === '55000') {
     return 409;
   }
   return 422;

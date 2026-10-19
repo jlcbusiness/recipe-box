@@ -374,7 +374,7 @@ test('recipe source links save atomically and remain recoverable through Trash @
       storedRelationships,
     );
     expect(staleSaveWithTrashedTargets.ok()).toBe(false);
-    expect(await staleSaveWithTrashedTargets.json()).toMatchObject({ code: '40001' });
+    expect(await staleSaveWithTrashedTargets.json()).toMatchObject({ code: 'PT409' });
     const saveWithTrashedTargets = await saveRecipe(headers, 2, storedRelationships);
     expect(saveWithTrashedTargets.ok(), await saveWithTrashedTargets.text()).toBeTruthy();
     expect(await saveWithTrashedTargets.json()).toEqual([{ id: sourceRecipe.id, version: 3 }]);

@@ -54,7 +54,7 @@ export async function PATCH(request: Request, context: MediaAssetRouteContext) {
     const status =
       error.code === 'P0002'
         ? 404
-        : error.code === '40001' || error.code === '55000'
+        : error.code === '40001' || error.code === 'PT409' || error.code === '55000'
           ? 409
           : error.code === '42501'
             ? 403

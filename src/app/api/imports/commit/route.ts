@@ -423,7 +423,7 @@ export async function POST(request: Request) {
         );
       }
       stagedPaths.clear();
-      if (error.code === '40001' || error.code === 'P0001') {
+      if (error.code === '40001' || error.code === 'PT409' || error.code === 'P0001') {
         return jsonResponse(
           { error: 'A selected record changed. Preview the archive again.' },
           409,

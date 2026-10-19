@@ -91,7 +91,12 @@ export async function updatePublication(
   if (error?.code === '23505') {
     return { error: 'A Magazine with this title already exists.' };
   }
-  if (error?.code === '40001' || error?.code === '55000' || error?.code === 'P0002') {
+  if (
+    error?.code === '40001' ||
+    error?.code === 'PT409' ||
+    error?.code === '55000' ||
+    error?.code === 'P0002'
+  ) {
     return {
       error:
         'This publication changed in another session. Close and reopen the editor to load the current details.',
@@ -216,7 +221,10 @@ export async function trashPublication(formData: FormData): Promise<void> {
   });
   if (error) {
     redirect(
-      error.code === '40001' || error.code === '55000' || error.code === 'P0002'
+      error.code === '40001' ||
+        error.code === 'PT409' ||
+        error.code === '55000' ||
+        error.code === 'P0002'
         ? '/publications?status=conflict'
         : '/publications?status=error',
     );

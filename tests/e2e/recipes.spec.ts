@@ -1037,7 +1037,7 @@ test('recipe saves preserve conditional data and reject stale versions atomicall
       p_name: 'Stale recipe edit',
       p_meal_type_ids: [],
     });
-    expect((await staleUpdate.json()).code).toBe('40001');
+    expect((await staleUpdate.json()).code).toBe('PT409');
 
     const invalidAssociationUpdate = await save({
       p_recipe_id: recipeId,

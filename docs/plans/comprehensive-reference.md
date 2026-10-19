@@ -724,8 +724,10 @@ and a single-line mobile list:
     truncated without wrapping or horizontal scrolling.
   - **Grid:** Shows the existing cover, publication name, author when present,
     and active recipe count. Authors appear on separate lines on desktop, with
-    no publication-type prefix. Desktop covers are 72px wide; mobile cards
-    use 48px covers and truncate long titles and authors to one line.
+    no publication-type prefix. Uploaded covers preserve the complete image
+    and its aspect ratio inside the cover frame; do not crop to fill. Desktop
+    covers are 72px wide; mobile cards use 48px covers and truncate long titles
+    and authors to one line.
 - **Compact Controls:** Type, View, Sort by, and Sort direction use separate
   icon buttons. The Type button keeps a stable width sized for the Magazines
   label and uses the active filter's icon. View toggles directly between List

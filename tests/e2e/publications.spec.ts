@@ -1456,6 +1456,7 @@ test('publication records and creation history stay private to their owner @e2e'
     await expect(page.getByRole('heading', { name: 'Private Cookbook' })).toBeVisible();
     const coverImage = page.locator('.publication-detail-heading .publication-cover-image-content');
     await expect(coverImage).toBeVisible();
+    await expect(coverImage).toHaveCSS('object-fit', 'contain');
     await expect
       .poll(() => coverImage.evaluate((image) => (image as HTMLImageElement).naturalWidth))
       .toBeGreaterThan(0);

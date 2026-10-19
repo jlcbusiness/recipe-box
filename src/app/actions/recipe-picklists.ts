@@ -88,7 +88,7 @@ export async function manageRecipePicklist(
     p_clear_optional: formData.get('clear_optional') === 'true',
   });
 
-  if (error?.code === '40001') {
+  if (error?.code === '40001' || error?.code === 'PT409') {
     return {
       status: 'conflict',
       message: 'This picklist changed in another session. The latest values are loading.',
