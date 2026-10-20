@@ -67,6 +67,7 @@ export function MediaManager({
   const [optimisticPhotoOrder, setOptimisticPhotoOrder] = useState<string[] | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const deviceInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLUListElement>(null);
   const pointerDragRef = useRef<ActivePointerDrag | null>(null);
   const suppressClickRef = useRef(false);
@@ -115,11 +116,17 @@ export function MediaManager({
   }, [pendingCoverFile]);
 
   useEffect(() => {
-    const fileInput = deviceInputRef.current;
+    const fileInputs = [deviceInputRef.current, cameraInputRef.current].filter(
+      (input): input is HTMLInputElement => input !== null,
+    );
     const preventDialogCancel = (event: Event) => event.stopPropagation();
-    fileInput?.addEventListener('cancel', preventDialogCancel);
+    for (const input of fileInputs) {
+      input.addEventListener('cancel', preventDialogCancel);
+    }
     return () => {
-      fileInput?.removeEventListener('cancel', preventDialogCancel);
+      for (const input of fileInputs) {
+        input.removeEventListener('cancel', preventDialogCancel);
+      }
     };
   }, []);
 
@@ -754,6 +761,25 @@ export function MediaManager({
                           handleRecipeFiles(event.currentTarget.files, event.currentTarget)
                         }
                         ref={deviceInputRef}
+                        type="file"
+                      />
+                    </label>
+                  </li>
+                )}
+                {remainingPhotos > 0 && (
+                  <li className="recipe-photo-add-tile recipe-photo-camera-tile">
+                    <label className="recipe-photo-add-action" title="Take photo">
+                      <Camera aria-hidden="true" size={30} />
+                      <span>Take photo</span>
+                      <input
+                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                        aria-label="Take photo with camera"
+                        capture="environment"
+                        disabled={working}
+                        onChange={(event) =>
+                          handleRecipeFiles(event.currentTarget.files, event.currentTarget)
+                        }
+                        ref={cameraInputRef}
                         type="file"
                       />
                     </label>

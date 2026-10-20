@@ -177,6 +177,43 @@ describe('database import planning', () => {
     ).toThrow(/match|choice/i);
   });
 
+  it('remaps recipe picklist references to newly allocated destination IDs', () => {
+    const { data, existing } = createInput();
+    const sourceFoodTypeId = '10101010-1010-4010-8010-101010101010';
+    const sourceVerdictId = '20202020-2020-4020-8020-202020202020';
+    const sourceEnthusiasmId = '30303030-3030-4030-8030-303030303030';
+    data.records.recipe_picklist_values = [
+      { id: sourceFoodTypeId, category: 'food_type', value: 'Casserole' },
+      { id: sourceVerdictId, category: 'verdict', value: 'Favorite' },
+      { id: sourceEnthusiasmId, category: 'enthusiasm', value: 'Absolutely' },
+    ];
+    Object.assign(data.records.recipes[0], {
+      food_type_id: sourceFoodTypeId,
+      verdict_id: sourceVerdictId,
+      enthusiasm_id: sourceEnthusiasmId,
+    });
+
+    const plan = planDatabaseImport(data, existing, {
+      [`publication:${sourcePublicationId}`]: {
+        action: 'replace',
+        targetId: destinationPublicationId,
+      },
+      [`recipe:${sourceRecipeId}`]: { action: 'replace', targetId: destinationRecipeId },
+    });
+    const recipe = plan.records.recipes[0];
+
+    expect(recipe.food_type_id).toBe(plan.idMappings.recipe_picklist_values.get(sourceFoodTypeId));
+    expect(recipe.verdict_id).toBe(plan.idMappings.recipe_picklist_values.get(sourceVerdictId));
+    expect(recipe.enthusiasm_id).toBe(
+      plan.idMappings.recipe_picklist_values.get(sourceEnthusiasmId),
+    );
+    expect(plan.records.recipe_picklist_values.map((record) => record.id)).toEqual([
+      recipe.food_type_id,
+      recipe.verdict_id,
+      recipe.enthusiasm_id,
+    ]);
+  });
+
   it('maps media assets to fresh destination IDs while keeping parent links', () => {
     const { data, existing } = createInput();
     const sourceAssetId = '33333333-3333-4333-8333-333333333333';

@@ -215,6 +215,20 @@ export function planImport(
     }
   }
 
+  const picklists = mapCatalog(
+    'recipe_picklist_values',
+    incoming.records.recipe_picklist_values,
+    rowsFrom(existing, 'recipe_picklist_values'),
+    idMappings.recipe_picklist_values,
+    createId,
+  );
+  const mappedId = (table: ExportTableName, value: unknown, label: string) => {
+    if (typeof value !== 'string') return value;
+    const mapped = idMappings[table].get(value);
+    if (!mapped) throw new Error(`The import plan cannot resolve a ${label} reference.`);
+    return mapped;
+  };
+
   const recipeMatches = findImportMatches(
     incoming,
     {
@@ -285,6 +299,9 @@ export function planImport(
         id: result.id,
         name: result.action === 'duplicate' ? `${String(recipe.name)} (Imported)` : recipe.name,
         publication_id: publicationId,
+        food_type_id: mappedId('recipe_picklist_values', recipe.food_type_id, 'food type'),
+        verdict_id: mappedId('recipe_picklist_values', recipe.verdict_id, 'verdict'),
+        enthusiasm_id: mappedId('recipe_picklist_values', recipe.enthusiasm_id, 'enthusiasm'),
         is_private: recipe.is_private !== false,
       });
     }
@@ -295,13 +312,6 @@ export function planImport(
     incoming.records.ingredients,
     rowsFrom(existing, 'ingredients'),
     idMappings.ingredients,
-    createId,
-  );
-  const picklists = mapCatalog(
-    'recipe_picklist_values',
-    incoming.records.recipe_picklist_values,
-    rowsFrom(existing, 'recipe_picklist_values'),
-    idMappings.recipe_picklist_values,
     createId,
   );
   const tags = mapCatalog(
@@ -339,12 +349,6 @@ export function planImport(
     }
   }
 
-  const mappedId = (table: ExportTableName, value: unknown, label: string) => {
-    if (typeof value !== 'string') return value;
-    const mapped = idMappings[table].get(value);
-    if (!mapped) throw new Error(`The import plan cannot resolve a ${label} reference.`);
-    return mapped;
-  };
   const mapRecipeLink = (value: unknown, displayText: unknown) => {
     if (typeof value !== 'string') return null;
     const mapped = idMappings.recipes.get(value);

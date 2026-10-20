@@ -4704,6 +4704,16 @@ h1 {
   aspect-ratio: 1;
 }
 
+.recipe-photo-camera-tile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .recipe-photo-camera-tile {
+    display: block;
+  }
+}
+
 .recipe-photo-add-action {
   position: relative;
   display: flex;

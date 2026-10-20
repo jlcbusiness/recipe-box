@@ -12,6 +12,8 @@ import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../suppo
 function createDatabaseArchive(
   publications: PortableData['records']['publications'] = [],
   accountPreferences: PortableData['account_preferences'] = {},
+  recipes: PortableData['records']['recipes'] = [],
+  picklistValues: PortableData['records']['recipe_picklist_values'] = [],
 ) {
   const data: PortableData = {
     format: 'recipe-box-data',
@@ -23,6 +25,8 @@ function createDatabaseArchive(
     ) as unknown as PortableData['records'],
   };
   data.records.publications = publications;
+  data.records.recipes = recipes;
+  data.records.recipe_picklist_values = picklistValues;
   const dataBytes = strToU8(JSON.stringify(data));
   const manifest = buildBundleManifest(
     { type: 'database' },
@@ -35,6 +39,83 @@ function createDatabaseArchive(
       'data.json': dataBytes,
       'manifest.json': strToU8(JSON.stringify(manifest)),
     }),
+  );
+}
+
+function createRecipeWithPicklistArchive(
+  accountPreferences: PortableData['account_preferences'] = {},
+) {
+  const suffix = randomUUID();
+  const createdAt = new Date().toISOString();
+  const publicationId = randomUUID();
+  const recipeId = randomUUID();
+  const foodTypeId = randomUUID();
+  const verdictId = randomUUID();
+  const enthusiasmId = randomUUID();
+  const values = [
+    { id: foodTypeId, category: 'food_type', value: `Import casserole ${suffix}` },
+    { id: verdictId, category: 'verdict', value: `Import verdict ${suffix}` },
+    { id: enthusiasmId, category: 'enthusiasm', value: `Import enthusiasm ${suffix}` },
+  ];
+  const picklistValues = values.map((value) => ({
+    ...value,
+    display_value: value.value,
+    sort_order: 0,
+    is_protected: false,
+    created_at: createdAt,
+  }));
+
+  return createDatabaseArchive(
+    [
+      {
+        id: publicationId,
+        publication_type: 'book',
+        name: `Import publication ${suffix}`,
+        author: null,
+        edition: null,
+        isbn: null,
+        retailer_url: null,
+        site_url: null,
+        version: 1,
+        created_at: createdAt,
+        updated_at: createdAt,
+        trashed_at: null,
+      },
+    ],
+    accountPreferences,
+    [
+      {
+        id: recipeId,
+        name: `Import recipe ${suffix}`,
+        food_type_id: foodTypeId,
+        state: 'tried',
+        verdict_id: verdictId,
+        enthusiasm_id: null,
+        occasion_details: null,
+        reason: null,
+        serves: null,
+        prep_time_minutes: null,
+        mixing_time_minutes: null,
+        marinate_time_minutes: null,
+        chill_time_minutes: null,
+        freeze_time_minutes: null,
+        cook_time_minutes: null,
+        bake_time_minutes: null,
+        cooling_time_minutes: null,
+        rest_time_minutes: null,
+        total_time_minutes: null,
+        notes_markdown: '',
+        is_private: true,
+        version: 1,
+        created_at: createdAt,
+        updated_at: createdAt,
+        trashed_at: null,
+        publication_id: publicationId,
+        publication_page: null,
+        recipe_url: null,
+      },
+    ],
+    picklistValues,
   );
 }
 
@@ -118,7 +199,7 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
     await page.getByLabel('Database archive').setInputFiles({
       name: 'database-export.zip',
       mimeType: 'application/zip',
-      buffer: createDatabaseArchive([], { volume_system: 'metric' }),
+      buffer: createRecipeWithPicklistArchive({ volume_system: 'metric' }),
     });
     const preview = importDialog.getByRole('region', { name: 'Import details' });
     await expect(preview).toBeVisible();

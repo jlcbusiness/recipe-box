@@ -440,6 +440,13 @@ test('image management panes stage covers and immediately manage decorative reci
     }
     const devicePicker = photoDialog.getByLabel('Upload from device');
     await expect(devicePicker).not.toHaveAttribute('capture');
+    const cameraPicker = photoDialog.getByLabel('Take photo with camera');
+    await expect(cameraPicker).toHaveAttribute('capture', 'environment');
+    if (viewportWidth <= 640) {
+      await expect(photoDialog.locator('.recipe-photo-camera-tile')).toBeVisible();
+    } else {
+      await expect(photoDialog.locator('.recipe-photo-camera-tile')).toBeHidden();
+    }
     await devicePicker.setInputFiles([
       ...Array.from({ length: 5 }, (_, index) => ({
         name: `photo-${index + 1}.png`,
@@ -453,10 +460,11 @@ test('image management panes stage covers and immediately manage decorative reci
       },
     ]);
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(6);
-    await expect(photoDialog.locator('.recipe-photo-add-action span')).toHaveCSS(
-      'text-align',
-      'center',
-    );
+    await expect(
+      photoDialog.locator(
+        '.recipe-photo-add-tile:not(.recipe-photo-camera-tile) .recipe-photo-add-action span',
+      ),
+    ).toHaveCSS('text-align', 'center');
     await expect(page.locator('.recipe-photo-manager-trigger img')).toBeVisible();
     await expect(page.locator('.recipe-photo-manager-trigger img')).toHaveCSS(
       'object-fit',
@@ -535,13 +543,15 @@ test('image management panes stage covers and immediately manage decorative reci
       }, imageBuffer.toString('base64'));
     }
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(7);
-    await expect(photoDialog.locator('.recipe-photo-add-tile')).toBeVisible();
+    await expect(
+      photoDialog.locator('.recipe-photo-add-tile:not(.recipe-photo-camera-tile)'),
+    ).toBeVisible();
     const photoStatus = photoDialog.locator('.media-manager-status:visible');
     await expect(photoStatus).toBeVisible();
     const photoActions = await Promise.all([
       photoDialog.locator('.media-manager-photo-meta').boundingBox(),
       photoDialog.locator('.media-manager-dialog-footer button').boundingBox(),
-      photoDialog.locator('.recipe-photo-add-tile').boundingBox(),
+      photoDialog.locator('.recipe-photo-add-tile:not(.recipe-photo-camera-tile)').boundingBox(),
       photoDialog.locator('.recipe-photo-grid-item').first().boundingBox(),
       photoDialog.locator('.recipe-photo-remove-icon').first().boundingBox(),
     ]);
