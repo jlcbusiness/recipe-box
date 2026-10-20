@@ -35,6 +35,56 @@ function getActiveOption(trigger: HTMLElement) {
   return activeId ? document.getElementById(activeId)?.textContent : null;
 }
 
+describe('shared picklist portal target', () => {
+  it('prefers the nearest dialog over a containing main landmark', () => {
+    const onSelect = vi.fn();
+    render(
+      <main>
+        <dialog open>
+          <Picklist
+            className="test-picklist"
+            label="Food Type"
+            onSelect={onSelect}
+            options={options}
+            value="starter"
+          />
+        </dialog>
+      </main>,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Food Type' }));
+
+    const listbox = screen.getByRole('listbox');
+    expect(listbox.parentElement).toBe(screen.getByRole('dialog'));
+  });
+
+  it('portals to the nearest main landmark when no dialog contains the trigger', () => {
+    const onSelect = vi.fn();
+    render(
+      <main>
+        <Picklist
+          className="test-picklist"
+          label="Food Type"
+          onSelect={onSelect}
+          options={options}
+          value="starter"
+        />
+      </main>,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Food Type' }));
+
+    expect(screen.getByRole('listbox').parentElement).toBe(screen.getByRole('main'));
+  });
+
+  it('falls back to body when no dialog or main landmark contains the trigger', () => {
+    const { trigger } = renderPicklist();
+    fireEvent.click(trigger);
+
+    expect(screen.getByRole('listbox').parentElement).toBe(document.body);
+  });
+});
+
 describe('shared picklist type-ahead', () => {
   it('refines a short prefix without selecting the active option', () => {
     const { onSelect, trigger } = renderPicklist();

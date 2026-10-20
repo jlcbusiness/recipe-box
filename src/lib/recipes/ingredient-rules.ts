@@ -55,6 +55,10 @@ export type IngredientDisplayParts = {
   preparation: string | null;
 };
 
+export type IngredientDisplayOptions = {
+  aliasPinch?: boolean;
+};
+
 export function isEmptyIngredientRow(row: IngredientRowDraft): boolean {
   return (
     !row.ingredientId &&
@@ -105,6 +109,7 @@ function pluralizeUnit(value: string): string {
 
 export function getIngredientDisplayParts(
   ingredient: IngredientDisplayInput,
+  options: IngredientDisplayOptions = {},
 ): IngredientDisplayParts {
   const name = ingredient.ingredient_name.trim();
   const detail = ingredient.detail.trim();
@@ -133,14 +138,20 @@ export function getIngredientDisplayParts(
           : measurement.measurement_type === 'weight'
             ? weightUnits.find((option) => option.code === unitCode)
             : undefined;
-      const quantity = formatQuantityRange(
-        measurement.amount_min,
-        measurement.amount_max,
-        unit?.system,
-      );
-      const unitLabel = unit?.abbreviation ?? measurement.picklist_value;
-      const unitText =
-        unitLabel && measurement.measurement_type === 'informal'
+      const isPinch =
+        options.aliasPinch === true &&
+        measurement.measurement_type === 'volume' &&
+        unitCode === 'tsp' &&
+        measurement.amount_max === null &&
+        measurement.amount_min > 1 / 32 &&
+        measurement.amount_min < 3 / 32;
+      const quantity = isPinch
+        ? ''
+        : formatQuantityRange(measurement.amount_min, measurement.amount_max, unit?.system);
+      const unitLabel = isPinch ? 'pinch' : (unit?.abbreviation ?? measurement.picklist_value);
+      const unitText = isPinch
+        ? 'pinch'
+        : unitLabel && measurement.measurement_type === 'informal'
           ? (measurement.amount_max ?? measurement.amount_min) > 1
             ? pluralizeUnit(unitLabel)
             : lowercaseFirst(unitLabel)

@@ -4935,7 +4935,7 @@ h1 {
 .recipe-reader-heading-main {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   min-width: 0;
   gap: 12px;
 }
@@ -4982,8 +4982,8 @@ h1 {
   align-items: center;
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  justify-content: flex-end;
-  margin-left: auto;
+  justify-content: flex-start;
+  margin-left: 0;
   gap: 8px;
 }
 
@@ -4994,7 +4994,7 @@ h1 {
   }
 
   .recipe-reader-controls {
-    margin-left: auto;
+    margin-left: 0;
   }
 }
 
@@ -5493,7 +5493,7 @@ h1 {
   color: inherit;
   font: inherit;
   text-align: inherit;
-  text-decoration: none;
+  text-decoration: underline;
   text-underline-offset: 3px;
 }
 
@@ -6533,8 +6533,11 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .recipe-reader-unit-trigger {
-    margin: -16px -2px;
-    padding: 16px 2px;
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    margin: 0 -2px;
+    padding: 0 2px;
     text-decoration: underline;
   }
 
@@ -6600,18 +6603,22 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .recipe-time-total-row {
-    column-gap: 1px;
     column-gap: 8px;
   }
 
   @media (max-width: 640px) {
-    .recipe-classification-fields > fieldset:has(.recipe-picklist-trigger[aria-label^="Meal Type:"]) {
+    .recipe-classification-fields
+      > fieldset:has(.recipe-picklist-trigger[aria-label^="Meal Type:"]) {
       flex: 1 1 auto;
       min-width: 0;
     }
 
-    .recipe-classification-fields > fieldset:has(.recipe-picklist-trigger[aria-label^="Meal Type:"]) > div,
-    .recipe-classification-fields > fieldset:has(.recipe-picklist-trigger[aria-label^="Meal Type:"]) .recipe-picklist-trigger {
+    .recipe-classification-fields
+      > fieldset:has(.recipe-picklist-trigger[aria-label^="Meal Type:"])
+      > div,
+    .recipe-classification-fields
+      > fieldset:has(.recipe-picklist-trigger[aria-label^="Meal Type:"])
+      .recipe-picklist-trigger {
       width: 100%;
     }
   }

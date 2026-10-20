@@ -74,6 +74,7 @@ Verify the navigation at 641px and 640px as well as representative 1280px and
 | Authenticated sign-in and direct `/app` visits, including reload, land in the Library; `/` remains sign-in. | Auth E2E assertions; verify the current Library link and page heading. |
 | Type-ahead handles prefix refinement, repeated initials, wraparound, and no match without changing the selected value. | Focused `Picklist` component tests. |
 | Arrow keys, Enter selection, Escape dismissal, focus return, and active-option announcement remain correct. | Focused `Picklist` component tests. |
+| Shared picklist menus use the nearest `dialog`, then `main`, and fall back to `body` only when neither contains the trigger. | Focused portal-target component tests and the Settings E2E assertion that an open listbox is inside `main`. |
 | Library active treatment is visible and labeled at desktop/mobile sizes and across the 640px reflow boundary. | Auth E2E geometry/style assertions and axe checks at 1280px, 641px, 640px, and 390px. |
 | No keyboard-only, label, landmark, or contrast regression is introduced. | Keyboard-visible-focus assertions and automated axe checks for the private navigation and open picklist. |
 

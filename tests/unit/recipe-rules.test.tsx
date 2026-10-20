@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateTotalMinutes,
   clearConditionalValuesForStateChange,
+  formatRecipeDuration,
   shouldShowOccasionDetails,
 } from '../../src/lib/recipes/recipe-rules';
 
@@ -57,5 +58,17 @@ describe('recipe metadata rules', () => {
         total: 999,
       }),
     ).toBe(190);
+  });
+
+  it.each([
+    [0, '0 min'],
+    [1, '1 min'],
+    [59, '59 min'],
+    [60, '1 hr'],
+    [61, '1 hr 1 min'],
+    [120, '2 hr'],
+    [1056, '17 hr 36 min'],
+  ])('formats %s minutes for recipe reading', (minutes, expected) => {
+    expect(formatRecipeDuration(minutes)).toBe(expected);
   });
 });

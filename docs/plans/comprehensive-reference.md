@@ -109,6 +109,10 @@ time is broken down into specific categories:
   - Rest time (meat resting, dough proofing)
   - Total time
 - **Card Display Rule:** Only non-zero/applicable times are displayed on the recipe card.
+- **Reader Display Rule:** Time summaries use the heading “Time Breakdown.”
+  Durations below one hour display as `N min`; durations of at least one hour
+  display as `N hr` or `N hr M min`, omitting zero minutes. Private, public,
+  and print views share this formatting while stored values remain minutes.
 - **Integer Formatting:** Serves and duration values display with comma grouping for thousands. Time fields accept valid
   comma-grouped integers and normalize their display on blur; total-time calculation also accepts grouped values.
 - **Total Time Calculation Behavior:**
@@ -207,7 +211,7 @@ time is broken down into specific categories:
   Details when present, Serves, Total Time, Equipment, Food Type, Meal Type,
   Cuisine, remaining times, then Notes. On desktop, Food Type, Meal Type, and
   Cuisine occupy a dedicated full-width row. On mobile, component times appear
-  in a separate subsection with a divider and small-caps “Times” title; Total
+  in a separate subsection with a divider and small-caps “Time Breakdown” title; Total
   Time remains in the main metadata. Recipe Tin does not appear as a
   duplicate breadcrumb or attribution when it is already selected in navigation.
   Recipe-page headings are about 16pt (about 21.33px). A recipe assigned to a
@@ -405,6 +409,18 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
     introduces alternate reader views, print uses Standard presentation while
     retaining Slice 13's active scale and unit choices.
   - Public share view: Defaults to Ingredient-First.
+
+- Reader unit tokens are underlined at rest so unit changes are discoverable
+  without hover. Unit overrides and scale remain transient. A scalar US
+  customary teaspoon value displays as `pinch` only when it is closer to
+  `1/16 tsp` than to `0` or `1/8 tsp`; midpoint ties, ranges, other units, and
+  values shown outside teaspoons remain numeric. This alias never changes the
+  saved measurement.
+- Reader controls share the Ingredients heading line and start immediately
+  after its label. The sort-direction control keeps its slot when unavailable,
+  so changing sort modes does not shift the toolbar. Cook-mode check-off keeps
+  its 48px target and may reclaim only the ingredient-side spacing needed for
+  its checkbox rail at narrow widths.
 
 ### 4.2 Ingredient Sorting Options
 
@@ -998,11 +1014,16 @@ When an unauthenticated guest accesses a valid public recipe link:
     remain static text.
   - In-app pairs-with links are displayed as static text.
 
+The public time summary is labeled “Time Breakdown” and follows the shared
+duration format in 2.2. Public ingredients use the same transient scalar
+teaspoon `pinch` display rule; saved account unit preferences are never read or
+exposed.
+
 The public title and Print action share a row. When a base serving count exists,
 show `- serves n` inline after the title, separated by a space, in regular 16px
 text; do not repeat Serves in the summary. Use 24px horizontal page gutters. Cap public
 photos at 420px wide and `min(280px, 60vh)` high. Above 760px, show the photo
-gallery beside the Times and Equipment summary; at narrower widths, stack the
+gallery beside the Time Breakdown and Equipment summary; at narrower widths, stack the
 summary below the photos.
 
 ### 9.4 Secure Image Delivery

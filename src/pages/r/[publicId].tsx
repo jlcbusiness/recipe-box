@@ -18,6 +18,7 @@ import {
   getSafePublicReferenceHref,
   type PublicRecipePayload,
 } from '../../lib/recipes/public-rules';
+import { formatRecipeDuration } from '../../lib/recipes/recipe-rules';
 
 type PublicRecipePageProps =
   | { state: 'unavailable' | 'gone' }
@@ -246,12 +247,12 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
             <div className="recipe-public-summary">
               {times.length > 0 && (
                 <section className="recipe-detail-section" aria-labelledby="timings-title">
-                  <h2 id="timings-title">Times</h2>
+                  <h2 id="timings-title">Time Breakdown</h2>
                   <dl className="recipe-metadata recipe-time-list">
                     {times.map(([label, value]) => (
                       <div key={label}>
                         <dt>{label}</dt>
-                        <dd>{formatGroupedInteger(value as number)} min</dd>
+                        <dd>{formatRecipeDuration(value as number)}</dd>
                       </div>
                     ))}
                   </dl>

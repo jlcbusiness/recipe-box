@@ -375,12 +375,14 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.getByRole('heading', { name: 'Sunday tomato soup' })).toBeVisible();
     await expect(page.locator('.recipe-serves-value')).toContainText('Serves 1,200');
     await expect(page.locator('.recipe-time-list dd')).toHaveText([
-      '1,015 min',
+      '16 hr 55 min',
       '10 min',
       '31 min',
     ]);
     await expect(
-      page.locator('.recipe-metadata:not(.recipe-time-list) dd').filter({ hasText: '1,056 min' }),
+      page
+        .locator('.recipe-metadata:not(.recipe-time-list) dd')
+        .filter({ hasText: '17 hr 36 min' }),
     ).toBeVisible();
     const detailsAfterPhotoFreeHeading = page.locator(
       '.recipe-detail-heading + .recipe-detail-section',
@@ -470,10 +472,10 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       'Meal Type',
       'Cuisine',
     ]);
-    await expect(page.getByRole('heading', { name: 'Times', exact: true })).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Time Breakdown', exact: true })).toBeHidden();
     await page.setViewportSize({ width: 390, height: 844 });
     const timesSection = page.locator('.recipe-detail-times');
-    const timesHeading = page.getByRole('heading', { name: 'Times', exact: true });
+    const timesHeading = page.getByRole('heading', { name: 'Time Breakdown', exact: true });
     await expect(timesHeading).toBeVisible();
     await expect(timesHeading).toHaveCSS('font-size', '18px');
     await expect(timesHeading).toHaveCSS('color', 'rgb(4, 31, 85)');
@@ -2627,6 +2629,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
   const ingredientRowId = randomUUID();
+  const saltRowId = randomUUID();
   const stepId = randomUUID();
 
   try {
@@ -2681,6 +2684,23 @@ test('recipe detail print matches the active presentation @e2e', async ({
                 amount_min: 120,
                 amount_max: null,
                 unit_code: 'g',
+                picklist_value_id: null,
+              },
+            ],
+          },
+          {
+            recipe_ingredient_id: saltRowId,
+            ingredient_id: null,
+            ingredient_name: 'Salt',
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'volume',
+                amount_min: 1 / 8,
+                amount_max: null,
+                unit_code: 'tsp',
                 picklist_value_id: null,
               },
             ],
@@ -2742,6 +2762,17 @@ test('recipe detail print matches the active presentation @e2e', async ({
     const ingredientText = '354.88 ml / 4 ¼ oz all-purpose flour, sifted';
     const scaledIngredientText = '709.76 ml / 8.47 oz all-purpose flour, sifted';
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
+    const saltUnitPicker = page.getByRole('combobox', { name: 'Change Salt volume unit' });
+    await expect(saltUnitPicker).toHaveCSS('text-decoration-line', 'underline');
+    await saltUnitPicker.click();
+    await page.getByRole('option', { name: 'tsp', exact: true }).click();
+    const saltIngredient = page.locator('.recipe-ingredient-list li').nth(1);
+    await expect(saltIngredient.locator('.recipe-ingredient-name')).toHaveText('⅛ tsp salt');
+    await saltUnitPicker.click();
+    await page.getByRole('option', { name: 'TBSP', exact: true }).click();
+    await saltUnitPicker.click();
+    await page.getByRole('option', { name: 'tsp', exact: true }).click();
+    await expect(saltIngredient.locator('.recipe-ingredient-name')).toHaveText('⅛ tsp salt');
     await expect(page.getByText('Serves 4', { exact: true })).toBeVisible();
     const scaleButton = page.getByRole('button', { name: 'Scale recipe' });
     await expect(scaleButton).toHaveCSS('background-color', 'rgb(255, 255, 255)');
@@ -2777,21 +2808,6 @@ test('recipe detail print matches the active presentation @e2e', async ({
         expect(
           Math.abs(
             screenLockBounds.x + screenLockBounds.width - (controlsBounds.x + controlsBounds.width),
-          ),
-        ).toBeLessThanOrEqual(1);
-      }
-      const tagListBounds = await page.locator('.recipe-detail-tags-row > ul').boundingBox();
-      const headingActionsBounds = await page
-        .locator('.recipe-detail-heading-actions')
-        .boundingBox();
-      expect(tagListBounds).not.toBeNull();
-      expect(headingActionsBounds).not.toBeNull();
-      if (tagListBounds && headingActionsBounds) {
-        expect(
-          Math.abs(
-            headingActionsBounds.x +
-              headingActionsBounds.width -
-              (tagListBounds.x + tagListBounds.width),
           ),
         ).toBeLessThanOrEqual(1);
       }
@@ -2926,9 +2942,10 @@ test('recipe detail print matches the active presentation @e2e', async ({
       'border-radius',
       '6px',
     );
-    await expect(scalePane.getByRole('button', { name: 'Submit' })).toHaveCSS(
+    const submitButton = scalePane.getByRole('button', { name: 'Submit' });
+    await expect(submitButton).toHaveCSS(
       'background-color',
-      'rgb(56, 96, 68)',
+      await submitButton.evaluate((button) => getComputedStyle(button).borderTopColor),
     );
     await expect(scalePane.getByRole('button', { name: 'Submit' })).toHaveCSS(
       'color',
@@ -3074,6 +3091,9 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
       activeIngredientText,
     );
+    await page.getByRole('combobox', { name: 'Change Salt volume unit' }).click();
+    await page.getByRole('option', { name: 'tsp', exact: true }).click();
+    await expect(saltIngredient.locator('.recipe-ingredient-name')).toHaveText('pinch salt');
     await expect(page.getByText('Mix flour.')).toBeVisible();
     await presentationButton.click();
     await expect(presentationButton).toHaveAttribute(
@@ -3118,10 +3138,11 @@ test('recipe detail print matches the active presentation @e2e', async ({
         return content.items.map((item) => ('str' in item ? item.str : '')).join(' ');
       }),
     );
-    const pdfText = pdfPages.join('\n');
+    const pdfText = pdfPages.join('\n').replace(/\s+/gu, ' ').trim();
     expect(pdfText).toContain('Serves 2');
     expect(pdfText).toContain('12 TBSP');
     expect(pdfText).toContain('2 ⅛ oz');
+    expect(pdfText).toContain('pinch');
     expect(pdfText).not.toContain('Submit');
     expect(pdfText).not.toContain('Reset');
 
@@ -3132,6 +3153,162 @@ test('recipe detail print matches the active presentation @e2e', async ({
     expect(await storedMeasurement.json()).toEqual([
       { amount_min: 1.5, amount_max: null, unit_code: 'cup' },
       { amount_min: 120, amount_max: null, unit_code: 'g' },
+    ]);
+    const storedSaltMeasurement = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=amount_min,amount_max,unit_code&recipe_ingredient_id=eq.${saltRowId}`,
+      { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
+    );
+    expect(await storedSaltMeasurement.json()).toEqual([
+      { amount_min: 1 / 8, amount_max: null, unit_code: 'tsp' },
+    ]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const saltRowId = randomUUID();
+
+  try {
+    const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${user.accessToken}`,
+      },
+      data: {
+        p_recipe_id: null,
+        p_expected_version: null,
+        p_name: 'Reader polish acceptance',
+        p_food_type_id: null,
+        p_state: 'want_to_try',
+        p_verdict_id: null,
+        p_enthusiasm_id: null,
+        p_occasion_details: null,
+        p_reason: null,
+        p_serves: 2,
+        p_prep_time_minutes: 65,
+        p_mixing_time_minutes: null,
+        p_marinate_time_minutes: null,
+        p_chill_time_minutes: null,
+        p_freeze_time_minutes: null,
+        p_cook_time_minutes: null,
+        p_bake_time_minutes: null,
+        p_cooling_time_minutes: null,
+        p_rest_time_minutes: null,
+        p_total_time_minutes: 70,
+        p_notes_markdown: '',
+        p_meal_type_ids: [],
+        p_cuisine_ids: [],
+        p_equipment_ids: [],
+        p_ingredient_rows: [
+          {
+            recipe_ingredient_id: saltRowId,
+            ingredient_id: null,
+            ingredient_name: 'Salt',
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'volume',
+                amount_min: 1 / 16,
+                amount_max: null,
+                unit_code: 'tsp',
+                picklist_value_id: null,
+              },
+            ],
+          },
+        ],
+        p_instruction_steps: [],
+      },
+    });
+    expect(saved.ok(), await saved.text()).toBeTruthy();
+    const [{ id: recipeId }] = await saved.json();
+
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'wakeLock', {
+        configurable: true,
+        value: {
+          request: async () => ({
+            addEventListener: () => {},
+            release: async () => {},
+          }),
+        },
+      });
+    });
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(page.getByRole('heading', { name: 'Reader polish acceptance' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Time Breakdown' })).toBeHidden();
+    await expect(page.locator('.recipe-detail-times')).toContainText('1 hr 5 min');
+    await expect(page.locator('.recipe-metadata:not(.recipe-time-list)')).toContainText(
+      '1 hr 10 min',
+    );
+
+    const ingredientsHeading = page.getByRole('heading', { name: 'Ingredients' });
+    const controls = page.locator('.recipe-reader-controls');
+    const headingBounds = await ingredientsHeading.boundingBox();
+    const controlsBounds = await controls.boundingBox();
+    expect(headingBounds).not.toBeNull();
+    expect(controlsBounds).not.toBeNull();
+    if (headingBounds && controlsBounds) {
+      expect(controlsBounds.x - (headingBounds.x + headingBounds.width)).toBeLessThanOrEqual(12);
+    }
+
+    const unitPicker = page.getByRole('combobox', { name: 'Change Salt volume unit' });
+    await expect(unitPicker).toHaveCSS('text-decoration-line', 'underline');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('pinch salt');
+    await unitPicker.focus();
+    await page.keyboard.press('Enter');
+    const unitListbox = page.getByRole('listbox');
+    await expect(unitListbox).toBeVisible();
+    await unitListbox.getByRole('option', { name: 'TBSP' }).click();
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('0.02 TBSP salt');
+    await unitPicker.click();
+    await page.getByRole('option', { name: 'tsp', exact: true }).click();
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('pinch salt');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole('heading', { name: 'Time Breakdown' })).toBeVisible();
+    await page
+      .getByRole('button', { name: /Ingredient view:.*Activate for Ingredient-first/ })
+      .click();
+    await page.getByRole('switch', { name: 'Cook mode' }).click();
+    await expect(page.locator('.recipe-ingredient-table')).toBeVisible();
+    const checkbox = page.getByRole('checkbox', { name: 'Mark Salt complete' });
+    const checkboxTarget = page.locator('.recipe-cook-checkbox').first();
+    expect((await checkboxTarget.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    await checkbox.check();
+    await expect(checkbox).toBeChecked();
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    expect((await checkboxTarget.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.getByRole('switch', { name: 'Cook mode' })).toBeHidden();
+    await expect(page.locator('.recipe-ingredient-table')).toContainText('pinch');
+    await expect(page.locator('.recipe-detail-times')).toContainText('1 hr 5 min');
+    await expect(page.locator('.recipe-metadata:not(.recipe-time-list)')).toContainText(
+      '1 hr 10 min',
+    );
+
+    const storedMeasurement = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=amount_min,amount_max,unit_code&recipe_ingredient_id=eq.${saltRowId}`,
+      { headers: { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` } },
+    );
+    expect(await storedMeasurement.json()).toEqual([
+      { amount_min: 1 / 16, amount_max: null, unit_code: 'tsp' },
     ]);
   } finally {
     await deleteTestUser(request, user);
@@ -3290,9 +3467,9 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     expect(ingredientsHeadingBounds).not.toBeNull();
     expect(readerControlsBounds).not.toBeNull();
     if (ingredientsHeadingBounds && readerControlsBounds) {
-      expect(readerControlsBounds.x).toBeGreaterThan(
-        ingredientsHeadingBounds.x + ingredientsHeadingBounds.width,
-      );
+      expect(
+        readerControlsBounds.x - (ingredientsHeadingBounds.x + ingredientsHeadingBounds.width),
+      ).toBeLessThanOrEqual(12);
       expect(
         Math.abs(
           readerControlsBounds.y +

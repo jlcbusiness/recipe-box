@@ -146,7 +146,7 @@ export function RecipeInstructionMention({
     preserveStoredUnits,
     unitOverrides: unitOverrides[ingredient.id],
   });
-  const parts = getIngredientDisplayParts(displayIngredient);
+  const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
   const amount =
     [parts.amount, parts.unmeasuredPhrase].filter(Boolean).join(' ') || 'No amount listed';
   const isOpen = isPinned || ((isHovered || isFocused) && !escapeDismissed);
@@ -772,7 +772,7 @@ export function RecipeReader({
     defaultIngredient: IngredientDisplayInput,
     measurementTypes?: MeasurementType[],
   ) {
-    const parts = getIngredientDisplayParts(displayIngredient);
+    const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
     return parts.measurements
       .filter(
         (measurement) =>
@@ -845,7 +845,7 @@ export function RecipeReader({
         unitOverrides: unitOverrides[ingredient.id],
       });
       const defaultIngredient = transformIngredientForDisplay(ingredient, displayOptions);
-      const parts = getIngredientDisplayParts(displayIngredient);
+      const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
       const checked = Boolean(checkedIngredients[ingredient.id]);
 
       if (presentation === 'ingredient_first') {
@@ -975,7 +975,7 @@ export function RecipeReader({
                 aria-pressed={sortDirection === 'descending'}
                 className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-reader-icon-button recipe-sort-direction"
                 disabled={!hasSortDirection}
-                style={{ display: hasSortDirection ? 'inline-flex' : 'none' }}
+                style={{ visibility: hasSortDirection ? 'visible' : 'hidden' }}
                 title={`Sort ${sortDirection}; activate to reverse`}
                 type="button"
                 onClick={() =>

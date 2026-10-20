@@ -679,7 +679,7 @@ export async function getRecipeExplorerColumnValues(
         recipe_url: recipe.recipe_url,
         citation: citationsByRecipe.get(recipe.id)?.join(', ') ?? null,
         state: recipeStateLabels[recipe.state as RecipeState],
-          visibility: recipe.is_private ? 'Private' : 'Linkable',
+        visibility: recipe.is_private ? 'Private' : 'Linkable',
         enthusiasm,
         verdict,
         reason: recipe.reason,

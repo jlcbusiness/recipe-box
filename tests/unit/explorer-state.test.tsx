@@ -316,18 +316,18 @@ describe('explorer state contract', () => {
   });
 });
 
-  it('persists visibility filters and column selections', () => {
-    const state = createExplorerState('recipes-find', {
-      column_filters: { visibility: ['private'] },
-      direction: 'asc',
-      filters: [{ field: 'visibility', operator: 'not_in', value: ['linkable'] }],
-      sort: 'visibility',
-      view: 'details',
-    });
-
-    expect(state?.column_filters).toEqual({ visibility: ['private'] });
-    expect(state?.filters).toEqual([
-      { field: 'visibility', operator: 'not_in', value: ['linkable'] },
-    ]);
-    expect(state?.sort).toBe('visibility');
+it('persists visibility filters and column selections', () => {
+  const state = createExplorerState('recipes-find', {
+    column_filters: { visibility: ['private'] },
+    direction: 'asc',
+    filters: [{ field: 'visibility', operator: 'not_in', value: ['linkable'] }],
+    sort: 'visibility',
+    view: 'details',
   });
+
+  expect(state?.column_filters).toEqual({ visibility: ['private'] });
+  expect(state?.filters).toEqual([
+    { field: 'visibility', operator: 'not_in', value: ['linkable'] },
+  ]);
+  expect(state?.sort).toBe('visibility');
+});

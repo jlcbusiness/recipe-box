@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ensureTrailingIngredientRow,
   formatIngredientDisplay,
+  getIngredientDisplayParts,
   moveIngredientRow,
   moveIngredientRowTo,
   serializeIngredientRows,
@@ -144,6 +145,51 @@ describe('ingredient row rules', () => {
         ],
       }),
     ).toBe('1.5 L / 0.33-1.67 g flour');
+  });
+
+  it('shows a display-only pinch for scalar teaspoon values nearest to 1/16 tsp', () => {
+    const volume = (amount_min: number, amount_max: number | null = null, unit_code = 'tsp') => ({
+      ingredient_name: 'Salt',
+      detail: '',
+      preparation: '',
+      measurements: [
+        {
+          measurement_type: 'volume' as const,
+          amount_min,
+          amount_max,
+          unit_code,
+          picklist_value: null,
+        },
+      ],
+    });
+
+    expect(getIngredientDisplayParts(volume(1 / 16), { aliasPinch: true }).amount).toBe('pinch');
+    expect(getIngredientDisplayParts(volume(1 / 32), { aliasPinch: true }).amount).toBe('0.03 tsp');
+    expect(getIngredientDisplayParts(volume(3 / 32), { aliasPinch: true }).amount).toBe('0.09 tsp');
+    expect(getIngredientDisplayParts(volume(1 / 32 + 0.0001), { aliasPinch: true }).amount).toBe(
+      'pinch',
+    );
+    expect(getIngredientDisplayParts(volume(3 / 32 - 0.0001), { aliasPinch: true }).amount).toBe(
+      'pinch',
+    );
+    expect(getIngredientDisplayParts(volume(1 / 32, 3 / 32), { aliasPinch: true }).amount).toBe(
+      '0.03-0.09 tsp',
+    );
+    expect(
+      getIngredientDisplayParts(volume(1 / 16, null, 'tbsp'), { aliasPinch: true }).amount,
+    ).toBe('0.06 TBSP');
+    expect(getIngredientDisplayParts(volume(1 / 16), { aliasPinch: true }).measurements[0]).toEqual(
+      {
+        quantity: '',
+        unitLabel: 'pinch',
+        measurementType: 'volume',
+        unitCode: 'tsp',
+      },
+    );
+    expect(volume(1 / 16).measurements[0]).toMatchObject({
+      amount_min: 1 / 16,
+      unit_code: 'tsp',
+    });
   });
 
   it('pluralizes cups above one while leaving unit abbreviations unchanged', () => {

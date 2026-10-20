@@ -13,6 +13,7 @@ import {
   formatGroupedInteger,
   type MeasurementSystem,
 } from '../../../lib/recipes/measurement-rules';
+import { formatRecipeDuration } from '../../../lib/recipes/recipe-rules';
 import { createClient } from '../../../lib/supabase/server';
 import { ExportAction } from '../../export-action';
 import { RecipePhotoGallery } from '../../media/media-display';
@@ -195,9 +196,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Serves', recipe.serves === null ? null : formatGroupedInteger(recipe.serves)],
     [
       'Total time',
-      recipe.total_time_minutes === null
-        ? null
-        : `${formatGroupedInteger(recipe.total_time_minutes)} min`,
+      recipe.total_time_minutes === null ? null : formatRecipeDuration(recipe.total_time_minutes),
     ],
     ['Equipment', assignedValues('equipment', recipe.equipment_ids).join(', ')],
   ].filter(([, value]) => Boolean(value));
@@ -321,12 +320,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             )}
             {times.length > 0 && (
               <div className="recipe-detail-times">
-                <h3 className="recipe-detail-times-title">Times</h3>
+                <h3 className="recipe-detail-times-title">Time Breakdown</h3>
                 <dl className="recipe-metadata recipe-time-list">
                   {times.map(([label, value]) => (
                     <div key={label}>
                       <dt>{label}</dt>
-                      <dd>{formatGroupedInteger(value as number)} min</dd>
+                      <dd>{formatRecipeDuration(value as number)}</dd>
                     </div>
                   ))}
                 </dl>

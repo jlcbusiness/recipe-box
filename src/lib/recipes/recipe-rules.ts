@@ -1,3 +1,5 @@
+import { formatGroupedInteger } from './measurement-rules';
+
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
 
 export type ConditionalRecipeValues = {
@@ -53,4 +55,20 @@ export function calculateTotalMinutes(times: RecipeComponentTimes): number {
     (times.cooling ?? 0) +
     (times.rest ?? 0)
   );
+}
+
+export function formatRecipeDuration(minutes: number): string {
+  if (!Number.isSafeInteger(minutes) || minutes < 0) {
+    throw new Error('Recipe duration must be a non-negative safe integer.');
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) {
+    return `${formatGroupedInteger(minutes)} min`;
+  }
+
+  return remainingMinutes === 0
+    ? `${formatGroupedInteger(hours)} hr`
+    : `${formatGroupedInteger(hours)} hr ${remainingMinutes} min`;
 }

@@ -315,7 +315,7 @@ export async function PublicationRecipeExplorer({
               [
                 'name',
                 'state',
-                                'visibility',
+                'visibility',
                 'opinion',
                 'meal_type',
                 'food_type',

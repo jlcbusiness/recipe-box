@@ -34,6 +34,7 @@ async function createRecipe(
   includeCookingData = false,
 ) {
   const ingredientRowId = includeCookingData ? randomUUID() : null;
+  const saltRowId = includeCookingData ? randomUUID() : null;
   const endpoint = publicationId ? 'save_recipe_with_relationships' : 'save_recipe';
   const response = await request.post(`${config.apiUrl}/rest/v1/rpc/${endpoint}`, {
     headers: ownerHeaders(config, user),
@@ -48,7 +49,7 @@ async function createRecipe(
       p_occasion_details: null,
       p_reason: null,
       p_serves: includeCookingData ? 4 : 8,
-      p_prep_time_minutes: 15,
+      p_prep_time_minutes: includeCookingData ? 65 : 15,
       p_mixing_time_minutes: null,
       p_marinate_time_minutes: null,
       p_chill_time_minutes: null,
@@ -77,6 +78,23 @@ async function createRecipe(
                   amount_min: 250,
                   amount_max: null,
                   unit_code: 'ml',
+                  picklist_value_id: null,
+                },
+              ],
+            },
+            {
+              recipe_ingredient_id: saltRowId,
+              ingredient_id: null,
+              ingredient_name: 'Salt',
+              is_main: false,
+              detail: '',
+              preparation: '',
+              measurements: [
+                {
+                  measurement_type: 'volume',
+                  amount_min: 1 / 16,
+                  amount_max: null,
+                  unit_code: 'tsp',
                   picklist_value_id: null,
                 },
               ],
@@ -586,7 +604,9 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     );
     const summary = page.locator('.recipe-public-summary');
     await expect(summary).not.toContainText('serves 4');
-    await expect(summary.getByRole('heading', { name: 'Times' })).toBeVisible();
+    await expect(summary.getByRole('heading', { name: 'Time Breakdown' })).toBeVisible();
+    await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
+    await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
     const publicPhoto = page.locator('.recipe-public-photo');
     await expect(publicPhoto).toBeVisible();
     const [summaryBox, ingredientsBox, photoBox] = await Promise.all([
@@ -600,6 +620,12 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(summaryBox.y + summaryBox.height).toBeLessThan(ingredientsBox.y);
     await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
       '250 ml',
+    );
+    await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
+      'pinch',
+    );
+    await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
+      'salt',
     );
     expect(photoBox.width).toBeLessThanOrEqual(420);
     expect(photoBox.height).toBeLessThanOrEqual(281);
@@ -631,6 +657,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.locator('html')).toHaveAttribute('data-printed', 'true');
     await page.emulateMedia({ media: 'print' });
     await expect(ingredientContent).toContainText('33.81 TBSP');
+    await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
+    await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
     await expect(page.getByRole('button', { name: 'Print recipe' })).toBeHidden();
   } finally {
     await deleteTestUser(request, user);

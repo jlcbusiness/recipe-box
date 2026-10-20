@@ -11,8 +11,9 @@ const ignoredDirectories = new Set([
   'coverage',
   'out',
 ]);
-const ignoredPaths = new Set(['docs/plans/discussion']);
+const ignoredPaths = new Set(['docs/plans/discussion', '.github/prompts/update.prompt.md']);
 const ignoredAgentFiles = new Set(['AGENTS.md', 'CLAUDE.md']);
+const ignoredMarkdownFiles = new Set(['.github/prompts/update.prompt.md']);
 
 async function collectMarkdownFiles() {
   const files = [];
@@ -38,7 +39,8 @@ async function collectMarkdownFiles() {
       } else if (
         entry.isFile() &&
         entry.name.endsWith('.md') &&
-        !ignoredAgentFiles.has(relativePath)
+        !ignoredAgentFiles.has(relativePath) &&
+        !ignoredMarkdownFiles.has(relativePath)
       ) {
         files.push(relativePath);
       }

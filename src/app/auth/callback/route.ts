@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
       if (destination === '/complete-invite') {
         const { data } = await supabase.auth.getUser();
         const user = data.user;
-        const hasGoogleIdentity = user?.identities?.some((identity) => identity.provider === 'google');
+        const hasGoogleIdentity = user?.identities?.some(
+          (identity) => identity.provider === 'google',
+        );
         if (
           !user?.app_metadata.invitation_pending ||
           user.app_metadata.sign_in_method !== 'google' ||
