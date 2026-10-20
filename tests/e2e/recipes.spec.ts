@@ -3335,12 +3335,25 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     }
     const checkbox = page.getByRole('checkbox', { name: 'Mark Salt complete' });
     const checkboxTarget = page.locator('.recipe-cook-checkbox').first();
+    const checkboxCell = page.locator('.recipe-cook-checkbox-cell').first();
     const checkboxBounds = await checkbox.boundingBox();
     const checkboxTargetBounds = await checkboxTarget.boundingBox();
+    const checkboxCellBounds = await checkboxCell.boundingBox();
+    const ingredientNameBounds = await ingredientFirstTable
+      .locator('tbody tr')
+      .first()
+      .locator('th')
+      .boundingBox();
     expect(checkboxBounds).not.toBeNull();
     expect(checkboxTargetBounds?.height).toBeGreaterThanOrEqual(48);
-    if (checkboxBounds && checkboxTargetBounds) {
-      expect(Math.abs(checkboxBounds.x - checkboxTargetBounds.x)).toBeLessThanOrEqual(1);
+    expect(checkboxCellBounds).not.toBeNull();
+    expect(ingredientNameBounds).not.toBeNull();
+    if (checkboxBounds && checkboxTargetBounds && checkboxCellBounds && ingredientNameBounds) {
+      const checkboxCenter = checkboxBounds.x + checkboxBounds.width / 2;
+      const targetCenter = checkboxTargetBounds.x + checkboxTargetBounds.width / 2;
+      const gapToIngredient = ingredientNameBounds.x - (checkboxBounds.x + checkboxBounds.width);
+      expect(Math.abs(checkboxCenter - targetCenter)).toBeLessThanOrEqual(1);
+      expect(gapToIngredient).toBeLessThanOrEqual(20);
     }
     await checkbox.check();
     await expect(checkbox).toBeChecked();
