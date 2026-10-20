@@ -1051,7 +1051,7 @@ export function RecipeReader({
         {presentation === 'ingredient_first' ? (
           <table
             aria-label="Recipe ingredients"
-            className="recipe-ingredient-table recipe-ingredient-first-table"
+            className={`recipe-ingredient-table recipe-ingredient-first-table${cookMode ? ' recipe-ingredient-first-table-cook-mode' : ''}`}
           >
             <thead>
               <tr>

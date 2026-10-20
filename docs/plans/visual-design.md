@@ -574,8 +574,10 @@ reports the actual wake-lock state and its warning can be dismissed. In
 Ingredient-first, active cook mode adds an unlabeled checkbox column before the
 Ingredient column. Exiting mode or changing recipes clears check-off, and
 system-released locks can be reacquired when the document becomes visible.
-Unit labels, including single-letter abbreviations such as `g`, are visibly
-underlined at rest. Time summaries use the heading “Time
+Unit labels, including single-letter abbreviations such as `g`, have one
+continuous underline at rest. In mobile Ingredient-first cook mode, the table
+stays aligned to the section's left edge when the checkbox rail is present.
+Time summaries use the heading “Time
 Breakdown” and display durations below an hour in minutes, then in hours with
 any remaining minutes. A scalar US customary teaspoon amount closer to `1/16`
 than to `0` or `1/8 tsp` displays as `pinch`; ranges and other units stay

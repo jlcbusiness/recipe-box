@@ -3282,6 +3282,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     const unitPicker = page.getByRole('combobox', { name: 'Change Salt volume unit' });
     const saltUnitLabel = unitPicker.locator('.recipe-reader-unit-label');
     await expect(saltUnitLabel).toHaveCSS('text-decoration-line', 'underline');
+    await expect(saltUnitLabel).toHaveCSS('text-decoration-skip-ink', 'none');
     await expect(saltUnitLabel).toHaveCSS('text-decoration-thickness', '2px');
     await expect(saltUnitLabel).toHaveCSS('text-underline-offset', '4px');
     await expect(page.locator('.recipe-ingredient-list')).toContainText('pinch salt');
@@ -3320,7 +3321,17 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       .getByRole('button', { name: /Ingredient view:.*Activate for Ingredient-first/ })
       .click();
     await page.getByRole('switch', { name: 'Cook mode' }).click();
-    await expect(page.locator('.recipe-ingredient-table')).toBeVisible();
+    const ingredientFirstTable = page.locator('.recipe-ingredient-table');
+    await expect(ingredientFirstTable).toBeVisible();
+    const ingredientRegionBounds = await page
+      .getByRole('region', { name: 'Ingredients' })
+      .boundingBox();
+    const cookModeTableBounds = await ingredientFirstTable.boundingBox();
+    expect(ingredientRegionBounds).not.toBeNull();
+    expect(cookModeTableBounds).not.toBeNull();
+    if (ingredientRegionBounds && cookModeTableBounds) {
+      expect(Math.abs(cookModeTableBounds.x - ingredientRegionBounds.x)).toBeLessThanOrEqual(1);
+    }
     const checkbox = page.getByRole('checkbox', { name: 'Mark Salt complete' });
     const checkboxTarget = page.locator('.recipe-cook-checkbox').first();
     expect((await checkboxTarget.boundingBox())?.height).toBeGreaterThanOrEqual(48);
@@ -3361,10 +3372,10 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     await gramUnitPicker.click();
     await page.getByRole('option', { name: 'g', exact: true }).click();
     await expect(gramUnitPicker).toHaveText('g');
-    await expect(gramUnitPicker).toHaveCSS('text-decoration-line', 'underline');
     const gramUnitLabel = gramUnitPicker.locator('.recipe-reader-unit-label');
     await expect(gramUnitLabel).toHaveText('g');
     await expect(gramUnitLabel).toHaveCSS('text-decoration-line', 'underline');
+    await expect(gramUnitLabel).toHaveCSS('text-decoration-skip-ink', 'none');
     await expect(gramUnitLabel).toHaveCSS('text-decoration-thickness', '2px');
     await expect(gramUnitLabel).toHaveCSS('text-underline-offset', '4px');
 

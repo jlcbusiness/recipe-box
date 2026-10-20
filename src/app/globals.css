@@ -5119,6 +5119,10 @@ h1 {
   text-align: left;
 }
 
+.recipe-ingredient-first-table-cook-mode {
+  margin-left: 0;
+}
+
 .private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table th,
 .private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table td {
   height: auto;
@@ -5493,11 +5497,13 @@ h1 {
   color: inherit;
   font: inherit;
   text-align: inherit;
+  text-decoration: none;
 }
 
 .recipe-reader-unit-label,
 .recipe-reader-unit-trigger:hover .recipe-reader-unit-label {
   text-decoration: underline;
+  text-decoration-skip-ink: none;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
@@ -5971,6 +5977,10 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .recipe-ingredient-first-table {
     margin-left: auto;
+  }
+
+  .recipe-ingredient-first-table-cook-mode {
+    margin-left: 0;
   }
 
   .recipe-reader-controls {
