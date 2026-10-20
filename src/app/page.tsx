@@ -4,9 +4,11 @@ import { SignInForm } from './sign-in-form';
 export function HomePageView({
   selfSignupAllowed,
   isLocalDevelopment = false,
+  googleSignInError = false,
 }: {
   selfSignupAllowed: boolean;
   isLocalDevelopment?: boolean;
+  googleSignInError?: boolean;
 }) {
   return (
     <div className="workspace-shell">
@@ -25,6 +27,12 @@ export function HomePageView({
           <p className="eyebrow">YOUR COOKBOOK SHELF</p>
           <h1 id="page-title">Sign in</h1>
           <p className="welcome-copy">Open your private recipe library.</p>
+          {googleSignInError && (
+            <p className="auth-feedback" role="alert">
+              Google sign-in couldn&apos;t be completed. Try again. If this continues, contact your
+              administrator.
+            </p>
+          )}
           <SignInForm />
           <div className="auth-secondary-actions">
             <a href="/forgot-password">Forgot password?</a>
@@ -41,13 +49,19 @@ export function HomePageView({
   );
 }
 
-export default function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string | string[] }>;
+}) {
+  const { error } = await searchParams;
   const isLocalDevelopment =
     process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_ENV !== 'preview';
 
   return (
     <HomePageView
       isLocalDevelopment={isLocalDevelopment}
+      googleSignInError={error === 'google-sign-in'}
       selfSignupAllowed={isSelfSignupAllowed()}
     />
   );

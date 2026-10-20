@@ -31,6 +31,12 @@ describe('home page', () => {
     expect(screen.queryByRole('link', { name: /create an account/i })).toBeNull();
   });
 
+  it('shows an accessible error when Google sign-in fails', () => {
+    render(<HomePageView googleSignInError selfSignupAllowed={false} />);
+
+    expect(screen.getByRole('alert').textContent).toMatch(/google sign-in couldn.t be completed/i);
+  });
+
   it('hides the local development label for hosted environments', () => {
     render(<HomePageView isLocalDevelopment={false} selfSignupAllowed={false} />);
 
