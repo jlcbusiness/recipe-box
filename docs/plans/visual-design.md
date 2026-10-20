@@ -548,7 +548,10 @@ Add reference and Add pairing controls: 36px high, with their existing widths
 retained. The toolbar shares the first heading line with Ingredients and orders
 the controls as sort direction, Sort, Presentation, Scale, and Screen Lock. The
 control group starts directly after the heading rather than being pushed to the
-far edge. The sort-direction button keeps its slot when hidden and disabled. The
+far edge. The sort-direction button keeps its slot when hidden and disabled on
+wider layouts; the slot collapses on mobile so visible controls align with the
+heading. The Screen Lock control follows Scale at the standard mobile toolbar
+gap. The
 lowercase, normal-size italic summary sits below the heading with its vertical
 spacing below the subtitle, and reflects the current presentation and sort,
 for example `first, alphabetical`. When the screen wake lock is active, the
@@ -571,7 +574,8 @@ reports the actual wake-lock state and its warning can be dismissed. In
 Ingredient-first, active cook mode adds an unlabeled checkbox column before the
 Ingredient column. Exiting mode or changing recipes clears check-off, and
 system-released locks can be reacquired when the document becomes visible.
-Unit tokens are underlined at rest. Time summaries use the heading “Time
+Unit labels, including single-letter abbreviations such as `g`, are visibly
+underlined at rest. Time summaries use the heading “Time
 Breakdown” and display durations below an hour in minutes, then in hours with
 any remaining minutes. A scalar US customary teaspoon amount closer to `1/16`
 than to `0` or `1/8 tsp` displays as `pinch`; ranges and other units stay

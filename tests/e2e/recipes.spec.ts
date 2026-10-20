@@ -3173,6 +3173,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
   const saltRowId = randomUUID();
+  const chickenRowId = randomUUID();
 
   try {
     const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
@@ -3223,6 +3224,23 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
               },
             ],
           },
+          {
+            recipe_ingredient_id: chickenRowId,
+            ingredient_id: null,
+            ingredient_name: 'Chicken thighs',
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'weight',
+                amount_min: 226.8,
+                amount_max: null,
+                unit_code: 'g',
+                picklist_value_id: null,
+              },
+            ],
+          },
         ],
         p_instruction_steps: [],
       },
@@ -3262,7 +3280,10 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     }
 
     const unitPicker = page.getByRole('combobox', { name: 'Change Salt volume unit' });
-    await expect(unitPicker).toHaveCSS('text-decoration-line', 'underline');
+    const saltUnitLabel = unitPicker.locator('.recipe-reader-unit-label');
+    await expect(saltUnitLabel).toHaveCSS('text-decoration-line', 'underline');
+    await expect(saltUnitLabel).toHaveCSS('text-decoration-thickness', '2px');
+    await expect(saltUnitLabel).toHaveCSS('text-underline-offset', '4px');
     await expect(page.locator('.recipe-ingredient-list')).toContainText('pinch salt');
     await unitPicker.focus();
     await page.keyboard.press('Enter');
@@ -3274,8 +3295,27 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     await page.getByRole('option', { name: 'tsp', exact: true }).click();
     await expect(page.locator('.recipe-ingredient-list')).toContainText('pinch salt');
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 360, height: 844 });
     await expect(page.getByRole('heading', { name: 'Time Breakdown' })).toBeVisible();
+    const mobileHeadingBounds = await page
+      .getByRole('heading', { name: 'Ingredients', exact: true })
+      .boundingBox();
+    const mobileSortBounds = await page
+      .getByRole('button', { name: /^Sort ingredients:/ })
+      .boundingBox();
+    expect(mobileHeadingBounds).not.toBeNull();
+    expect(mobileSortBounds).not.toBeNull();
+    if (mobileHeadingBounds && mobileSortBounds) {
+      const sortButtonCenter = mobileSortBounds.y + mobileSortBounds.height / 2;
+      const headingCenter = mobileHeadingBounds.y + mobileHeadingBounds.height / 2;
+      if (Math.abs(sortButtonCenter - headingCenter) <= 1) {
+        const headingGap = mobileSortBounds.x - (mobileHeadingBounds.x + mobileHeadingBounds.width);
+        expect(headingGap).toBeGreaterThanOrEqual(0);
+        expect(headingGap).toBeLessThanOrEqual(12);
+      } else {
+        expect(Math.abs(mobileSortBounds.x - mobileHeadingBounds.x)).toBeLessThanOrEqual(1);
+      }
+    }
     await page
       .getByRole('button', { name: /Ingredient view:.*Activate for Ingredient-first/ })
       .click();
@@ -3294,6 +3334,39 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
     expect((await checkboxTarget.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    const narrowHeadingBounds = await page
+      .getByRole('heading', { name: 'Ingredients', exact: true })
+      .boundingBox();
+    const narrowSortBounds = await page
+      .getByRole('button', { name: /^Sort ingredients:/ })
+      .boundingBox();
+    const narrowScaleBounds = await page
+      .getByRole('button', { name: 'Scale recipe' })
+      .boundingBox();
+    const narrowLockBounds = await page.getByRole('switch', { name: 'Cook mode' }).boundingBox();
+    expect(narrowHeadingBounds).not.toBeNull();
+    expect(narrowSortBounds).not.toBeNull();
+    expect(narrowScaleBounds).not.toBeNull();
+    expect(narrowLockBounds).not.toBeNull();
+    if (narrowHeadingBounds && narrowSortBounds && narrowScaleBounds && narrowLockBounds) {
+      expect(Math.abs(narrowSortBounds.x - narrowHeadingBounds.x)).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(narrowLockBounds.x - (narrowScaleBounds.x + narrowScaleBounds.width) - 4),
+      ).toBeLessThanOrEqual(1);
+    }
+
+    const gramUnitPicker = page.getByRole('combobox', {
+      name: 'Change Chicken thighs weight unit',
+    });
+    await gramUnitPicker.click();
+    await page.getByRole('option', { name: 'g', exact: true }).click();
+    await expect(gramUnitPicker).toHaveText('g');
+    await expect(gramUnitPicker).toHaveCSS('text-decoration-line', 'underline');
+    const gramUnitLabel = gramUnitPicker.locator('.recipe-reader-unit-label');
+    await expect(gramUnitLabel).toHaveText('g');
+    await expect(gramUnitLabel).toHaveCSS('text-decoration-line', 'underline');
+    await expect(gramUnitLabel).toHaveCSS('text-decoration-thickness', '2px');
+    await expect(gramUnitLabel).toHaveCSS('text-underline-offset', '4px');
 
     await page.emulateMedia({ media: 'print' });
     await expect(page.getByRole('switch', { name: 'Cook mode' })).toBeHidden();

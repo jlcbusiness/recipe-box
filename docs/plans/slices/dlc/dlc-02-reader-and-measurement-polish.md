@@ -31,11 +31,13 @@ where their existing contracts allow them. All conversions remain transient.
 
 - Left-align the Ingredients reader controls with their heading and keep the
   current/next mode available in each button's accessible name and tooltip.
-- Keep the reader's presentation summary associated with the heading; reserve
-  the sort-direction slot so changing sort modes does not shift controls.
-- Make editable volume and weight unit tokens visibly underlined at rest on
-  pointer and touch layouts. Keep the existing picklist, keyboard behavior,
-  accessible name, conversion choices, and transient override state.
+- Keep the reader's presentation summary associated with the heading. Reserve
+  the sort-direction slot on wider layouts, but collapse it when unavailable
+  on mobile so visible controls align with the heading.
+- Make editable volume and weight unit labels, including single-letter units
+  such as `g`, visibly underlined at rest on pointer and touch layouts. Keep
+  the existing picklist, keyboard behavior, accessible name, conversion
+  choices, and transient override state.
 - Reduce only the ingredient-side spacing that crowds cook-mode checkboxes.
   Preserve the 48px checkbox target and existing wake-lock lifecycle. Check-off
   remains available when Wake Lock is unsupported or denied.
@@ -79,10 +81,12 @@ where their existing contracts allow them. All conversions remain transient.
 
 - Reader buttons remain icon-only, keyboard-operable controls with visible
   focus and names/tooltips that announce the current and next mode. The summary
-  remains readable text and controls remain stable when modes change.
+  remains readable text; controls remain stable when modes change on wider
+  layouts and align with the heading on mobile.
 - Unit tokens are still buttons/listbox triggers. Underlining is visible before
-  hover or focus; selection, Escape, focus return, and transient conversion
-  continue to use the existing picklist contract.
+  hover or focus, including for single-letter units such as `g`; selection,
+  Escape, focus return, and transient conversion continue to use the existing
+  picklist contract.
 - Cook mode keeps labeled native checkboxes and minimum 48px hit targets. The
   ingredient table/list may reclaim only the margin needed for the checkbox
   rail at narrow widths; no page-level horizontal overflow is permitted.
@@ -97,10 +101,11 @@ where their existing contracts allow them. All conversions remain transient.
   hours), omission of zero minutes, and pinch values below, at, and above both
   midpoint boundaries. They also prove ranges, metric values, and non-teaspoon
   values are not aliased and source measurements remain unchanged.
-- Private recipe browser tests verify control alignment and stable ordering,
-  resting unit-token affordance, keyboard opening/selection/focus behavior,
-  cook-mode geometry and 48px targets at mobile and narrow widths, the new time
-  heading/format, active print formatting, and unchanged stored measurements.
+- Private recipe browser tests verify desktop control ordering, mobile
+  alignment and Scale-to-Screen-Lock spacing, resting underlines including for
+  `g`, keyboard opening/selection/focus behavior, cook-mode geometry and 48px
+  targets at mobile and narrow widths, the new time heading/format, active
+  print formatting, and unchanged stored measurements.
 - Public browser tests verify `Time Breakdown`, duration formatting, and the
   shared pinch display without exposing private fields or unit preferences.
 - Axe checks cover the changed private/public reader states. Existing

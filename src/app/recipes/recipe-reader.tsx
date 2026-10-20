@@ -614,7 +614,7 @@ function ReaderUnitPicklist({
       value={isOverridden ? unitCode : defaultUnitCode}
       onSelect={(value) => onSelect(value === '__recipe_default' ? '' : value)}
     >
-      {unitLabel}
+      <span className="recipe-reader-unit-label">{unitLabel}</span>
     </ReaderPicklist>
   );
 }

@@ -5493,12 +5493,13 @@ h1 {
   color: inherit;
   font: inherit;
   text-align: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
-.recipe-reader-unit-trigger:hover {
+.recipe-reader-unit-label,
+.recipe-reader-unit-trigger:hover .recipe-reader-unit-label {
   text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 .recipe-scaling-error {
@@ -5974,6 +5975,10 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .recipe-reader-controls {
     gap: 4px;
+  }
+
+  .recipe-reader-controls .recipe-sort-direction[aria-hidden="true"] {
+    display: none;
   }
 
   .recipe-cook-toggle {

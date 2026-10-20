@@ -410,17 +410,19 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
     retaining Slice 13's active scale and unit choices.
   - Public share view: Defaults to Ingredient-First.
 
-- Reader unit tokens are underlined at rest so unit changes are discoverable
-  without hover. Unit overrides and scale remain transient. A scalar US
+- Reader unit labels, including single-letter units such as `g`, are visibly
+  underlined at rest so unit changes are discoverable without hover. Unit
+  overrides and scale remain transient. A scalar US
   customary teaspoon value displays as `pinch` only when it is closer to
   `1/16 tsp` than to `0` or `1/8 tsp`; midpoint ties, ranges, other units, and
   values shown outside teaspoons remain numeric. This alias never changes the
   saved measurement.
 - Reader controls share the Ingredients heading line and start immediately
-  after its label. The sort-direction control keeps its slot when unavailable,
-  so changing sort modes does not shift the toolbar. Cook-mode check-off keeps
-  its 48px target and may reclaim only the ingredient-side spacing needed for
-  its checkbox rail at narrow widths.
+  after its label. The sort-direction control keeps its slot when unavailable
+  on wider layouts, but collapses on mobile so visible controls align with the
+  heading. The Screen Lock control follows Scale at the standard mobile toolbar
+  gap. Cook-mode check-off keeps its 48px target and may reclaim only the
+  ingredient-side spacing needed for its checkbox rail at narrow widths.
 
 ### 4.2 Ingredient Sorting Options
 
