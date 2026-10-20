@@ -3346,14 +3346,16 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       .boundingBox();
     expect(checkboxBounds).not.toBeNull();
     expect(checkboxTargetBounds?.height).toBeGreaterThanOrEqual(48);
+    expect(checkboxTargetBounds?.width).toBe(32);
     expect(checkboxCellBounds).not.toBeNull();
+    expect(checkboxCellBounds?.width).toBe(32);
     expect(ingredientNameBounds).not.toBeNull();
     if (checkboxBounds && checkboxTargetBounds && checkboxCellBounds && ingredientNameBounds) {
       const checkboxCenter = checkboxBounds.x + checkboxBounds.width / 2;
       const targetCenter = checkboxTargetBounds.x + checkboxTargetBounds.width / 2;
       const gapToIngredient = ingredientNameBounds.x - (checkboxBounds.x + checkboxBounds.width);
       expect(Math.abs(checkboxCenter - targetCenter)).toBeLessThanOrEqual(1);
-      expect(gapToIngredient).toBeLessThanOrEqual(20);
+      expect(gapToIngredient).toBeLessThanOrEqual(10);
     }
     await checkbox.check();
     await expect(checkbox).toBeChecked();

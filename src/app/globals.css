@@ -5136,15 +5136,20 @@ h1 {
   .recipe-reading-layout
   .recipe-ingredient-first-table
   .recipe-cook-checkbox-heading {
-  width: 48px;
-  min-width: 48px;
+  width: 32px;
+  min-width: 32px;
   border-bottom-color: transparent;
   padding: 0;
 }
 
 .recipe-cook-checkbox-cell {
-  width: 48px;
-  min-width: 48px;
+  width: 32px;
+  min-width: 32px;
+}
+
+.recipe-cook-checkbox-cell .recipe-cook-checkbox {
+  width: 32px;
+  min-width: 32px;
 }
 
 .private-content
