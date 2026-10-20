@@ -577,6 +577,11 @@ system-released locks can be reacquired when the document becomes visible.
 Unit labels, including single-letter abbreviations such as `g`, have one
 continuous underline at rest. In mobile Ingredient-first cook mode, the table
 stays aligned to the section's left edge when the checkbox rail is present.
+In the private reader's automatic same-system display, fractions at or above
+`1/4` stay in their current unit unless they equal exactly one smaller unit.
+Amounts below `1/4` step down until they reach at least `1/4` or no smaller unit
+exists. Keep each measurement in one unit, and preserve stored units on public
+pages.
 Time summaries use the heading “Time
 Breakdown” and display durations below an hour in minutes, then in hours with
 any remaining minutes. A scalar US customary teaspoon amount closer to `1/16`

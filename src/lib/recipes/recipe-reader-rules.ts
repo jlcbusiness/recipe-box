@@ -59,6 +59,22 @@ const unitsByDimension: Record<MeasurementDimension, Record<string, number>> = {
   },
 };
 
+const smallerUnitsByDimension: Record<MeasurementDimension, Record<string, string>> = {
+  volume: {
+    tbsp: 'tsp',
+    fl_oz: 'tbsp',
+    cup: 'tbsp',
+    pt: 'cup',
+    qt: 'pt',
+    gal: 'qt',
+    l: 'ml',
+  },
+  weight: {
+    lb: 'oz',
+    kg: 'g',
+  },
+};
+
 function isPositiveFinite(value: number): boolean {
   return Number.isFinite(value) && value > 0;
 }
@@ -271,7 +287,29 @@ function resolveDisplayUnit(
   scaledMinimum: number,
 ): string {
   if (systemForUnit(dimension, sourceUnitCode) === targetSystem) {
-    return sourceUnitCode;
+    const smallerUnits: { amount: number; unitCode: string }[] = [];
+    let unitCode = sourceUnitCode;
+    while (smallerUnitsByDimension[dimension][unitCode]) {
+      unitCode = smallerUnitsByDimension[dimension][unitCode];
+      smallerUnits.push({
+        amount: convertUnitAmount(scaledMinimum, dimension, sourceUnitCode, unitCode),
+        unitCode,
+      });
+    }
+
+    const exactLowerUnit = smallerUnits.find(({ amount }) => Math.abs(amount - 1) <= 1e-10);
+    if (exactLowerUnit) {
+      return exactLowerUnit.unitCode;
+    }
+    if (scaledMinimum >= 1 / 4) {
+      return sourceUnitCode;
+    }
+
+    return (
+      smallerUnits.find(({ amount }) => amount >= 1 / 4)?.unitCode ??
+      smallerUnits.at(-1)?.unitCode ??
+      sourceUnitCode
+    );
   }
 
   const targetUnits = unitsFor(dimension)

@@ -344,9 +344,14 @@ trailing empty row.
 - **Preference writes:** A narrow authenticated database function derives the account from `auth.uid()` , validates the
   requested systems, and updates only the preference fields. Direct authenticated account updates remain restricted;
   admin and sign-in-method fields are not writable through this function.
-- **Best-fit conversion:** Preserve a stored unit when it matches the selected system. Otherwise, choose the largest
-  target-system unit whose converted lower amount is at least one; if none qualifies, use the target system's smallest
-  unit. Both endpoints of a range use the same unit.
+- **Best-fit conversion:** When a stored unit differs from the selected system, choose the largest target-system unit
+  whose converted lower amount is at least one; if none qualifies, use the target system's smallest unit. Both
+  endpoints of a range use the same unit.
+- **Automatic same-system display simplification:** In the private reader, preserve fractions at or above `1/4` unless
+  the amount equals exactly one smaller unit (for example, `1/2 qt` becomes `1 pt`, and `1/4 qt` becomes `1 cup`).
+  Amounts below `1/4` step down the supported unit ladder until the displayed amount is at least `1/4` or no smaller
+  unit exists. Keep each measurement in one unit; do not decompose it into mixed units. Apply this after scaling and
+  only in the private reader's automatic same-system resolution. Public pages continue to preserve stored units.
 - **Recipe-level override (view time):** While viewing a recipe, the user can switch an individual ingredient to a
   specific unit within its dimension (e.g., teaspoons instead of tablespoons, or ounces instead of grams). These
   overrides and scale values are transient reader state, never saved to the recipe or account.

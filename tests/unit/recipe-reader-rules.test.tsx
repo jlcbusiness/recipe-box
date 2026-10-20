@@ -192,6 +192,67 @@ describe('recipe reader measurement rules', () => {
     });
   });
 
+  it('preserves familiar fractions and simplifies smaller amounts for display', () => {
+    const displayAmount = (
+      measurement: RecipeIngredient['measurements'][number],
+      multiplier = 1,
+      weightSystem: MeasurementSystem = 'us_customary',
+    ) =>
+      transformIngredientForDisplay(
+        ingredientRow('small-amount', 'Small amount', 0, [measurement]),
+        { multiplier, unitSystems: { volume: 'us_customary', weight: weightSystem } },
+      ).measurements?.[0];
+
+    expect(displayAmount(amount('volume', 1 / 2, 'cup'))).toMatchObject({
+      amount_min: 1 / 2,
+      unit_code: 'cup',
+    });
+    expect(displayAmount(amount('volume', 1 / 2, 'qt'))).toMatchObject({
+      amount_min: 1,
+      unit_code: 'pt',
+    });
+    expect(displayAmount(amount('volume', 1 / 4, 'qt'))).toMatchObject({
+      amount_min: 1,
+      unit_code: 'cup',
+    });
+    expect(displayAmount(amount('volume', 1 / 16, 'cup'))).toMatchObject({
+      amount_min: 1,
+      unit_code: 'tbsp',
+    });
+    expect(displayAmount(amount('volume', 1 / 12, 'cup'))).toMatchObject({
+      amount_min: 4 / 3,
+      unit_code: 'tbsp',
+    });
+    expect(displayAmount(amount('volume', 1 / 4, 'cup'), 0.5)).toMatchObject({
+      amount_min: 2,
+      unit_code: 'tbsp',
+    });
+    expect(displayAmount(amount('volume', 1 / 8, 'gal'))).toMatchObject({
+      amount_min: 1,
+      unit_code: 'pt',
+    });
+    expect(displayAmount(amount('volume', 1 / 8, 'tbsp'))).toMatchObject({
+      amount_min: 3 / 8,
+      unit_code: 'tsp',
+    });
+    expect(displayAmount(amount('weight', 1 / 8, 'lb'))).toMatchObject({
+      amount_min: 2,
+      unit_code: 'oz',
+    });
+    expect(displayAmount(amount('weight', 1 / 8, 'kg'), 1, 'metric')).toMatchObject({
+      amount_min: 125,
+      unit_code: 'g',
+    });
+    expect(displayAmount(amount('volume', 1 / 4, 'cup'))).toMatchObject({
+      amount_min: 1 / 4,
+      unit_code: 'cup',
+    });
+    expect(displayAmount(amount('volume', 1 / 4 + 0.001, 'cup'))).toMatchObject({
+      amount_min: 1 / 4 + 0.001,
+      unit_code: 'cup',
+    });
+  });
+
   it('uses an exact per-ingredient unit override without changing the source', () => {
     const display = transformIngredientForDisplay(flour, {
       multiplier: 1,

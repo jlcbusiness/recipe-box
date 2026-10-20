@@ -48,13 +48,22 @@ where their existing contracts allow them. All conversions remain transient.
   closer to 1/16 tsp than to 0 or 1/8 tsp. The exact midpoint ties remain
   numeric. Do not alias ranges, metric volumes, or values displayed in a unit
   other than teaspoons. Scaling is applied before this display decision.
+- In the private reader's automatic same-system unit display, preserve
+  fractions at or above 1/4 unless the amount equals exactly one smaller unit
+  (for example, 1/2 qt becomes 1 pt and 1/4 qt becomes 1 cup). Step amounts
+  below 1/4 down the supported unit ladder until the displayed amount is at
+  least 1/4 or no smaller unit exists. Keep each measurement in one unit; do
+  not decompose it into mixed units. Public pages continue to preserve stored
+  units.
 
 ## Exclusions and dependencies
 
 - No migration, new database field, unit code, picklist option, or settings
   preference. `pinch` is not a selectable or stored unit.
 - Do not change the exact measurement, saved unit, recipe version, history,
-  export format, account defaults, scale behavior, or unit-override behavior.
+  export format, account defaults, scale multiplier behavior, or manual
+  unit-override behavior. Automatic same-system display simplification is the
+  only added unit behavior.
 - Preserve Slice 16's presentation, sorting, cook-mode, and Wake Lock contracts;
   preserve DLC 08's public privacy and print contracts.
 - Preserve the public page's stored-unit default and its existing public
@@ -66,6 +75,10 @@ where their existing contracts allow them. All conversions remain transient.
 - The existing recipe record remains the sole persisted source for minutes and
   measurements. Formatting is pure display logic over saved or transiently
   scaled/converted values.
+- Automatic unit simplification runs after scaling, affects only the private
+  reader's derived display, and never changes the stored amount or unit.
+  Explicit per-ingredient unit overrides remain exact, and public pages keep
+  their stored-unit behavior.
 - Unit overrides, scale values, presentation, sort, cook-mode check-off, and
   wake-lock status remain transient. Reset, recipe changes, and wake-lock
   failures retain their existing Slice 16 behavior.
@@ -102,7 +115,10 @@ where their existing contracts allow them. All conversions remain transient.
 - Unit tests cover duration boundaries (`0`, `59`, `60`, `61`, and multiple
   hours), omission of zero minutes, and pinch values below, at, and above both
   midpoint boundaries. They also prove ranges, metric values, and non-teaspoon
-  values are not aliased and source measurements remain unchanged.
+  values are not aliased and source measurements remain unchanged. Unit
+  simplification tests cover fraction preservation, exact lower-unit
+  equivalents, amounts below 1/4, single-unit output, and unchanged source
+  measurements.
 - Private recipe browser tests verify desktop control ordering, mobile
   alignment and Scale-to-Screen-Lock spacing, resting underlines including for
   `g` without duplicate decoration, keyboard opening/selection/focus behavior,
