@@ -133,7 +133,9 @@ and Equipment use the recipe-specific `MultiPicklist` module and a narrow
 trigger whose width is reserved for the longest option including its checkmark,
 so selecting or clearing an option cannot resize it. Standard triggers and
 menus fit the longest entry plus 1mm, then add only required indicator and
-border/padding space. The popup lists options vertically in configured order.
+border/padding space. Shared menu portals stay within the nearest dialog or
+`main` landmark, falling back to `body` only when neither exists. The popup
+lists options vertically in configured order.
 A selected option shows a checkmark and bold leaf-green text on a pale green
 background; color is supplementary to the checkmark, never the only selection
 signal. The picker does not display native checkboxes or blue text-selection

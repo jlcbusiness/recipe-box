@@ -55,6 +55,7 @@ test('Library stays visually distinct and shared picklists support type-ahead @e
 
     const volumeSelect = page.getByRole('combobox', { name: 'Volume', exact: true });
     await volumeSelect.press('Enter');
+    await expect(page.getByRole('listbox')).toBeVisible();
     await volumeSelect.press('m');
     const metricOption = page.getByRole('option', { name: 'Metric', exact: true });
     await expect(metricOption).toHaveClass(/is-active/);

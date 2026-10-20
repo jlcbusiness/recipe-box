@@ -42,7 +42,9 @@ existing `aria-current` state.
 
 The shared `Picklist` keeps DOM focus on its trigger and exposes active options
 through `aria-activedescendant`. Type-ahead must not select an option or move
-DOM focus. Picklist menus remain transient and anchored; no persistence or
+DOM focus. The menu portal targets the nearest dialog or `main` landmark, using
+`body` only when neither exists; this keeps open options covered by page
+landmarks. Picklist menus remain transient and anchored; no persistence or
 additional catalog behavior is introduced.
 
 No external service or persistent data is involved. A failed or unmatched
@@ -73,7 +75,7 @@ Verify the navigation at 641px and 640px as well as representative 1280px and
 | Type-ahead handles prefix refinement, repeated initials, wraparound, and no match without changing the selected value. | Focused `Picklist` component tests. |
 | Arrow keys, Enter selection, Escape dismissal, focus return, and active-option announcement remain correct. | Focused `Picklist` component tests. |
 | Library active treatment is visible and labeled at desktop/mobile sizes and across the 640px reflow boundary. | Auth E2E geometry/style assertions and axe checks at 1280px, 641px, 640px, and 390px. |
-| No keyboard-only, label, or contrast regression is introduced. | Keyboard-visible-focus assertions and automated axe checks for the private navigation and open picklist. |
+| No keyboard-only, label, landmark, or contrast regression is introduced. | Keyboard-visible-focus assertions and automated axe checks for the private navigation and open picklist. |
 
 ## Decisions, research, and assumptions
 

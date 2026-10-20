@@ -171,7 +171,9 @@ time is broken down into specific categories:
 - Single-choice fields use the shared portal `Picklist`; Meal Type, Cuisine, and
   Equipment use the recipe-specific `MultiPicklist`. `RecipeForm` coordinates
   their open state, and selected multi-values serialize as repeated hidden
-  `*_ids` inputs.
+  `*_ids` inputs. Shared picklist portals target the nearest dialog or `main`
+  landmark, falling back to `body` only when neither exists, so open options
+  remain within the active page's landmark structure.
 - While a shared single-choice picklist is open, printable non-space characters
   build a case-insensitive prefix query for 700ms. The active option moves to
   the next matching label and wraps; repeating the same character cycles
