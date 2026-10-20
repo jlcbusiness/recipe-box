@@ -24,11 +24,14 @@
 - the ability to highlight temperatures and times
 - remove recipe width limit
 - don't show images in printed recipe, spread recipe details across a line
+  - oof, haha, also fix public recipes!
+    - actually, public recipes and printed recipes should probably mirror each other
   - default to landscape
 - add lists in steps
 - grams don't have an underline to show you can change them
-- use of hr in times (maybe auto-translate times over 60?)
+- use of hour in times (maybe auto-translate times over 60?)
   - change "Times" to "Time Breakdown"
 - swap view buttons and text, left-align buttons
 - oof. Okay, if the user hits screen lock, remove the app margin on ingredients to make space for the checkbox
 - add "pinch" as an automatic conversion for 1/16 tsp
+- have app default to library, not recipe tin

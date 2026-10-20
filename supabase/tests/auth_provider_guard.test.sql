@@ -1,5 +1,7 @@
 begin;
 
+set local search_path = extensions, public;
+
 select plan(5);
 
 insert into auth.users (

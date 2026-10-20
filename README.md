@@ -314,28 +314,51 @@ change; see Vercel's current [rate-limiting documentation](https://vercel.com/do
 
 ### 7. Create the first administrator account
 
-Because you own this instance, create your own account in Supabase rather than
-sending yourself an invitation. Complete these steps in order:
+The one-time bootstrap sends a normal email-bound administrator invitation; it
+does not open sign-up or create an Auth user directly. From the root of the
+fresh private repository, install the dependencies, sign in to the Vercel CLI,
+and link this directory to the project created in step 2:
 
-1. In the Supabase Dashboard, open **Authentication > Users** and select
-  **Add user**. Choose the option to create a user, not the invite option.
-2. Enter your email and a strong password. Confirm the email address in the
-  form, then create the user. The database trigger creates the matching Recipe
-  Box account with email/password sign-in.
-3. Open the new user's details and copy the **UID**.
-4. Open the Supabase **SQL Editor**. Replace `OWNER_AUTH_USER_UUID` in this
-  query with the UID you copied, then run it:
+```bash
+npm install
+npx vercel login
+npx vercel link
+```
 
-   ```sql
-   select public.claim_first_admin('OWNER_AUTH_USER_UUID'::uuid);
-   ```
+Choose the same Vercel project deployed in step 2. Confirm that its Production
+environment has `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
+`NEXT_PUBLIC_SITE_URL` configured. Pull the Production variables to a local,
+git-ignored file:
 
-5. Confirm the query returns `true`. This function atomically assigns the first
-  admin and refuses later claims. Do not update `accounts.is_admin` directly.
-  If the query returns `false`, stop and check whether an admin was already
-  claimed and whether you used the UID of the account you just created.
-6. Sign in to the Production app with the email and password you set in
-  Supabase.
+```bash
+npx vercel env pull .env.bootstrap --environment=production
+```
+
+Vercel does not allow the CLI to pull protected Secret values. Get the Supabase
+Secret key from **Supabase > Project Settings > API Keys**. In Bash, enter it
+at a hidden prompt, then run the bootstrap using the pulled settings:
+
+```bash
+read -rsp "Supabase Secret key: " SUPABASE_SERVICE_ROLE_KEY
+printf '\n'
+export SUPABASE_SERVICE_ROLE_KEY
+node --env-file=.env.bootstrap scripts/bootstrap-first-admin.mjs owner@example.com
+unset SUPABASE_SERVICE_ROLE_KEY
+```
+
+Replace `owner@example.com` with the owner's email. `.env.bootstrap` matches the
+repository's `.env.*` ignore rule; do not force-add or commit it. The bootstrap
+refuses to run if an administrator already exists or that email already has an
+Auth account. It sends an email/password invitation and atomically claims the
+first administrator. Do not create the user manually in Supabase or update
+`accounts.is_admin` directly. If the command reports that an administrator
+already exists, stop instead of trying to claim another one. This is only for a
+new project before its first account is accepted; existing installations must
+keep their current owner and skip this step.
+
+Accept the invitation from the owner's email, choose a strong password, and
+sign in to the Production app. If invitation delivery fails, correct the
+Supabase SMTP configuration before retrying.
 
 ### 8. Invite other people
 

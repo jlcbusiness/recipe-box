@@ -161,7 +161,7 @@ email, but must never print Auth tokens, SMTP credentials, or service keys.
 | Acceptance criterion | Automated evidence |
 | -------------------- | ------------------ |
 | Production-default signup is closed in the UI and the server action; direct Auth signup cannot create a new user in production configuration. | Unit tests for mode defaults and server action; local Supabase Auth integration with production flags. |
-| The first-admin bootstrap sends one email-bound invite only when no admin exists, sets admin status and the selected sign-in method server-side, and refuses repeat/incorrect bootstrap attempts. | Focused script tests with a fake Supabase client or injectable admin boundary; isolated local Auth acceptance for invite, metadata, and account row. |
+| The first-admin bootstrap sends one email-bound invite only when no admin exists, sets admin status and the selected sign-in method server-side, and refuses repeat/incorrect bootstrap attempts. | `npm run test:bootstrap-admin` covers failure branches with a fake client. `npm run test:migration:public-links` runs the real command against isolated local Auth and checks pending invitation metadata, owner/admin status, and repeat refusal; it does not redeem that bootstrap email. The separate invite E2E covers email-link redemption and password setup. |
 | Only an admin can invite; the invitation form offers exactly email/password or Google; successful acceptance sets one immutable method and no privilege. | Focused server-action tests and Chromium/Fold 6 admin/invite browser tests, including keyboard use and Axe. |
 | A Google invitation can be accepted without creating a password identity; an email/password invitation uses the existing password completion flow. | Local controlled Auth integration/browser tests; provider OAuth exchange itself is a documented hosted manual check. |
 | Automatic same-email Google/email identity linking cannot combine providers on an existing account; an explicitly invited matching provider can be completed. | Database migration acceptance inserts representative Auth identities and asserts matching method/pending-invite behavior and mismatch rejection. |
@@ -184,6 +184,19 @@ email, but must never print Auth tokens, SMTP credentials, or service keys.
 - Test an invitation to a mailbox the operator controls, then test a separate
   Google-only invite. Re-test the blocked cross-provider attempt against an
   already accepted account.
+- On Android, use Chrome to open the production HTTPS URL, install Recipe Box
+  from the browser menu, and launch it from the home-screen icon. While signed
+  in and online, open a recipe; then enable airplane mode, launch the installed
+  app, and confirm the offline index and that cached recipe work while an
+  uncached route shows the generic offline message. Restore connectivity, sign
+  out, go offline again, and confirm the cached recipe is no longer available.
+- Open a recipe on Android and enable Cook mode. Wait longer than the device's
+  screen timeout and confirm the screen stays awake; leave Cook mode and
+  confirm the wake lock is released. Create a disposable recipe, add a photo
+  using the Android camera or image picker, and confirm it finishes uploading.
+- In a disposable recipe's instructions, type `#` and an ingredient query with
+  the on-screen keyboard open. Tap a suggestion and confirm it inserts the
+  ingredient mention without clipping or horizontal overflow.
 - Physical-device checks are manual; do not infer them from desktop browser
   coverage.
 
@@ -191,15 +204,69 @@ email, but must never print Auth tokens, SMTP credentials, or service keys.
 
 - Local implementation includes the first-admin bootstrap command, a
   single-method database guard, production invite-only configuration, and
-  email/password and Google invitation paths. Migration and controlled local
-  Auth/browser tests cover the provider boundary and invitation workflows.
-- The README now documents a fresh private repository populated from the
-  downloaded source ZIP, then the hosted setup through account invitations and
-  local ZIP import.
-- Hosted Supabase migrations, live SMTP delivery, Google OAuth credentials,
-  Vercel deployment and Firewall behavior, production import, and real-phone
-  checks have not been performed. Slice 25 remains incomplete until those
-  manual acceptance checks are recorded against an isolated hosted project.
+  email/password and Google invitation paths. The bootstrap command has focused
+  fake-client tests and is exercised against isolated local Auth by the
+  public-links migration harness. That harness verifies the pending invite,
+  owner/admin row, and one-time refusal; it does not redeem the bootstrap email.
+  The separate invitation E2E covers email-link redemption and password setup.
+- The README documents a fresh private repository populated from the
+  downloaded source ZIP, uses the one-time bootstrap invitation for the first
+  administrator, and continues through later invitations and local ZIP import.
+- The existing Vercel production deployment is live and points to the original,
+  populated Supabase project. The public recipe HTTP 500 was caused by missing
+  `SELECT` grants for `service_role` on 11 public-recipe loader tables (SQLSTATE
+  `42501`). Migration `20261110020000_grant_public_recipe_data_service_role.sql`
+  is now applied to project `syjdaguodkwnnwssdfsw`; a direct privilege check
+  returned true for all 11 tables. A clean deployment from production commit
+  `0a149781d395e75e4ad828fdbc2c71f959fe68f4` replaced the temporary diagnostic
+  build. The hosted public recipe smoke test now returns HTTP 200, and a
+  well-formed unknown UUID returns 404. Supabase Auth self-signup remains
+  disabled. On 2026-10-19, the operator confirmed invitation delivery and
+  account creation with both email/password and Google sign-in. Explicit
+  first-admin bootstrap acceptance, recovery email, the same-email
+  provider-conflict boundary, production export/import, and real-phone checks
+  remain open. The database export returns HTTP 503 because the production
+  `service_role` lacks `UPDATE` on `accounts.last_database_export_at`, which
+  the handler writes after preparing the archive. Migration
+  `20261110030000_grant_export_timestamp_service_role.sql` is now applied.
+  Production confirms the timestamp column is updateable while table-wide
+  account updates and updates to `accounts.id` remain denied. The focused local
+  pgTAP test passes; a signed-in export retry is still needed. A focused hosted
+  pgTAP attempt stopped before assertions because `plan(integer)` is
+  unavailable on production; the direct privilege query passed.
+  Slice 25 remains incomplete until those acceptance checks are recorded.
+
+## Verification record
+
+Record dates, deployment or project identifiers, outcomes, and non-secret
+evidence here. Never include passwords, tokens, private keys, or full
+environment-variable values.
+
+### Local verification
+
+| Date | Command | Result | Evidence and limits |
+| ---- | ------- | ------ | ------------------- |
+| 2026-10-19 | `npm run test:migration:public-links` | Pass | Isolated local Supabase applied the migration set; provider-guard SQL tests passed 5/5 and export timestamp ACL tests passed 2/2. The real bootstrap created a pending email/password invite, set `is_admin` and `is_owner`, and refused a second claim. Production build passed. Public-link E2E/Axe passed 10/10 across Chromium and Fold 6. The harness did not redeem the bootstrap email. |
+| 2026-10-19 | `npx supabase test db --local` | Pass, 10 tests | All three pgTAP files passed against local Supabase after explicitly setting the test search path. |
+| 2026-10-19 | `npm run test:bootstrap-admin` | Pass, 8 tests | Fake-client tests cover success, repeat/existing-account refusal, HTTPS validation, rollback, and unconfirmed cleanup. |
+| 2026-10-19 | Typecheck, focused Biome, Markdown lint, `git diff --check` | Pass | Focused checks for the touched bootstrap and documentation files. |
+| 2026-10-19 | `npm run test:unit` | Partial: 308 passed, 3 failed | The three failures are in `explorer-list-preferences.test.tsx`, unrelated to Slice 25. Re-run the full suite and resolve or triage these before treating the repository-wide unit gate as clean. |
+| 2026-10-19 | `npx supabase db push --linked --yes`; `npx supabase migration list --linked` | Applied to separate empty project; not production | Project ref `rqcjyszxxgwcqvqtpfrl` belongs to `delete-this`, not the deployed app. The 116 migrations were applied there by mistake during setup; do not use it for production acceptance. The original production project was not changed by this push. |
+| 2026-10-19 | `npx supabase test db --linked` | Blocked before assertions on separate project | The linked test runner reports `function plan(integer) does not exist`, despite a direct query finding pgTAP on that separate project. pgTAP was temporarily installed for diagnosis and then removed. No hosted assertions ran against the production project. Local pgTAP passes 10/10. |
+
+### Hosted and device acceptance
+
+| Check | Status | Record when complete |
+| ----- | ------ | -------------------- |
+| Vercel project configuration and deployment | Deployment Ready; backend signup verified closed; public route smoke test passes | Project `recipe-box`, alias `https://recipe-box-gray-chi.vercel.app`; clean production deployment `recipe-1vvrwsgd8-jlcbusiness-projects.vercel.app` from commit `0a149781d395e75e4ad828fdbc2c71f959fe68f4`. Temporary diagnostic logging was removed. `SIGNUP_MODE=invite_only`; configured site URL host matches the deployment. Supabase Auth settings returned HTTP 200 and `disable_signup=true` after the operator's change. A public recipe returning 200 confirms the service-role configuration works for the loader; the cron secret's validity remains unverified because Vercel masks its value. `/` and `/sign-up` returned 200; `/auth/callback`, `/settings`, and `/app` returned 307. |
+| Supabase production migration acceptance | Public-recipe and export timestamp grants applied | Production points to project ref `syjdaguodkwnnwssdfsw` (`recipe-box-db`). Both `20261110020000_grant_public_recipe_data_service_role.sql` and `20261110030000_grant_export_timestamp_service_role.sql` are recorded in the remote ledger. The 11 public-recipe table grants and the export timestamp column privilege are verified; table-wide account updates and updates to `accounts.id` remain denied. The focused hosted pgTAP test stopped before assertions because `plan(integer)` is unavailable; no hosted test assertions ran. |
+| Admin invitation delivery and account creation by email/password and Google | Operator-confirmed pass, 2026-10-19 | The operator reports invitations were sent and received and accounts were created using both sign-in methods. The explicit first-admin bootstrap flow and recovery email remain unverified. |
+| Google same-email provider-conflict boundary | Pending / optional | Basic Google account creation/sign-in is operator-confirmed; test that an existing email/password account cannot accept or link a Google identity unless specifically invited for that method. |
+| Production database export | Grant applied; signed-in retry pending | Vercel recorded a POST to `/api/exports` with status 503 and no runtime log entry before the fix. Read-only production checks found the snapshot RPC, private `recipe-exports` bucket, and cleanup queue permissions present, but `service_role` could not update `accounts.last_database_export_at`. The narrow column grant now passes isolated local tests and is verified in production. Retry export from the signed-in Settings page to verify the full ZIP/download flow. |
+| Vercel `/r/*` rate limit and public routes | Rate rule active; post-fix route and threshold checks pass | Active rule matches `/r/` and applies a 100-request per-IP, 60-second fixed window. Before the database grant fix, a 101-request check returned 500 for the first 100 requests and 429 for the 101st; `/settings` and `/app` were not rate-limited (307 to sign-in), and `/sign-up` returned 200. After the fix and clean redeploy, an active public recipe returned 200 and a well-formed unknown UUID returned 404. A 101-request post-fix burst to a malformed `/r/*` path returned 100 404 responses and one 429 in about two seconds; malformed IDs return before database access. |
+| Production ZIP import | Pending | Date, test archive identifier, and import result; do not attach private recipe data. |
+| Android HTTPS install/offline, wake lock, camera, and touch autocomplete | Pending | Device model, OS, browser/version, date, and result per capability. |
+| iOS HTTPS install/offline, wake lock, camera, and touch autocomplete | Pending | Device model, OS, browser/version, date, and result per capability. |
 
 ## Resolved setup decisions
 

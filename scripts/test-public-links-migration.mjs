@@ -94,6 +94,10 @@ async function configureProject() {
     resolve(repositoryRoot, 'supabase/tests/auth_provider_guard.test.sql'),
     join(supabaseDirectory, 'tests/auth_provider_guard.test.sql'),
   );
+  await cp(
+    resolve(repositoryRoot, 'supabase/tests/export_service_role_access.test.sql'),
+    join(supabaseDirectory, 'tests/export_service_role_access.test.sql'),
+  );
   await writeFile(join(supabaseDirectory, 'config.toml'), config);
   return { migrations, targetIndex, sourceMigrations };
 }
@@ -285,6 +289,7 @@ async function verifyMigrationAndRunBrowserTests() {
   }
   runSupabase(['migration', 'up', '--local']);
   runSupabase(['test', 'db', '--local', 'supabase/tests/auth_provider_guard.test.sql']);
+  runSupabase(['test', 'db', '--local', 'supabase/tests/export_service_role_access.test.sql']);
 
   const bootstrapEmail = `bootstrap-${randomUUID()}@example.test`;
   const bootstrap = spawnSync(
@@ -303,21 +308,27 @@ async function verifyMigrationAndRunBrowserTests() {
     },
   );
   assert.equal(bootstrap.status, 0, bootstrap.stderr);
-  assert.match(bootstrap.stdout, new RegExp(`First administrator invitation sent to ${bootstrapEmail}`));
+  assert.match(
+    bootstrap.stdout,
+    new RegExp(`First administrator invitation sent to ${bootstrapEmail}`),
+  );
 
-  const bootstrapUsers = await apiCall(`${config.apiUrl}/auth/v1/admin/users?page=1&per_page=1000`, {
-    headers: serviceHeaders(config),
-  });
+  const bootstrapUsers = await apiCall(
+    `${config.apiUrl}/auth/v1/admin/users?page=1&per_page=1000`,
+    {
+      headers: serviceHeaders(config),
+    },
+  );
   const bootstrapUser = bootstrapUsers.users.find((user) => user.email === bootstrapEmail);
   assert.ok(bootstrapUser);
   assert.equal(bootstrapUser.app_metadata.invitation_pending, true);
   assert.equal(bootstrapUser.app_metadata.sign_in_method, 'email_password');
   const bootstrapAccount = await apiCall(
-    `${config.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method&id=eq.${bootstrapUser.id}`,
+    `${config.apiUrl}/rest/v1/accounts?select=id,is_admin,is_owner,sign_in_method&id=eq.${bootstrapUser.id}`,
     { headers: serviceHeaders(config) },
   );
   assert.deepEqual(bootstrapAccount, [
-    { id: bootstrapUser.id, is_admin: true, sign_in_method: 'email_password' },
+    { id: bootstrapUser.id, is_admin: true, is_owner: true, sign_in_method: 'email_password' },
   ]);
 
   const repeatedBootstrap = spawnSync(
