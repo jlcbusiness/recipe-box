@@ -15,6 +15,7 @@ import {
 import { createPortal } from 'react-dom';
 
 const CSS_PIXELS_PER_MILLIMETER = 96 / 25.4;
+const TYPEAHEAD_TIMEOUT_MS = 700;
 
 function getViewportBounds() {
   const viewport = window.visualViewport;
@@ -58,6 +59,8 @@ export function usePicklistMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [hasSelectedSinceFocus, setHasSelectedSinceFocus] = useState(false);
+  const typeaheadBufferRef = useRef('');
+  const typeaheadUpdatedAtRef = useRef(0);
   const isOpen = open ?? uncontrolledOpen;
   const [activeIndex, setActiveIndex] = useState(
     Math.max(
@@ -164,6 +167,13 @@ export function usePicklistMenu({
     }
   }, [activeIndex, isOpen, listId]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      typeaheadBufferRef.current = '';
+      typeaheadUpdatedAtRef.current = 0;
+    }
+  }, [isOpen]);
+
   function select(optionValue: string, returnFocus = true) {
     setHasSelectedSinceFocus(true);
     onSelect(optionValue);
@@ -250,6 +260,34 @@ export function usePicklistMenu({
       event.stopPropagation();
       setIsOpen(false);
       triggerRef.current?.focus();
+    } else if (
+      isOpen &&
+      event.key.length === 1 &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
+      event.preventDefault();
+      const now = Date.now();
+      const typedCharacter = event.key.toLocaleLowerCase();
+      const bufferIsFresh = now - typeaheadUpdatedAtRef.current <= TYPEAHEAD_TIMEOUT_MS;
+      const previousBuffer = bufferIsFresh ? typeaheadBufferRef.current : '';
+      const isRepeatedCharacter =
+        previousBuffer.length > 0 &&
+        Array.from(previousBuffer).every((character) => character === typedCharacter);
+      const searchText = isRepeatedCharacter
+        ? typedCharacter
+        : `${previousBuffer}${typedCharacter}`;
+      typeaheadBufferRef.current = searchText;
+      typeaheadUpdatedAtRef.current = now;
+
+      for (let offset = 1; offset <= options.length; offset += 1) {
+        const candidateIndex = (activeIndex + offset) % options.length;
+        if (options[candidateIndex].label.toLocaleLowerCase().startsWith(searchText)) {
+          setActiveIndex(candidateIndex);
+          break;
+        }
+      }
     }
   }
 
@@ -343,7 +381,9 @@ export function Picklist({
   const portalTarget =
     typeof document === 'undefined'
       ? null
-      : (triggerRef.current?.closest('dialog') ?? document.body);
+      : (triggerRef.current?.closest('dialog') ??
+        triggerRef.current?.closest('main') ??
+        document.body);
 
   useEffect(() => {
     if (!isOpen) {

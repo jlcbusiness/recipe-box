@@ -36,7 +36,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/(?:recipes|publications\/[0-9a-f-]+)$/);
+  await expect(page).toHaveURL(/\/(?:recipes|publications(?:\/[0-9a-f-]+)?)$/);
 }
 
 async function dragByPointer(page: Page, source: Locator, target: Locator) {

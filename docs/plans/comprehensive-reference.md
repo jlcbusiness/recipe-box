@@ -172,6 +172,14 @@ time is broken down into specific categories:
   Equipment use the recipe-specific `MultiPicklist`. `RecipeForm` coordinates
   their open state, and selected multi-values serialize as repeated hidden
   `*_ids` inputs.
+- While a shared single-choice picklist is open, printable non-space characters
+  build a case-insensitive prefix query for 700ms. The active option moves to
+  the next matching label and wraps; repeating the same character cycles
+  options with that initial. A no-match key leaves the active option unchanged.
+  Type-ahead changes active focus, not selection. Enter, Space, click, and Tab
+  retain their existing selection behavior; Escape closes the menu and returns
+  focus to its trigger. The active option remains exposed through
+  `aria-activedescendant`.
 - Single- and multi-picklist labels use the same 13px bold typography. All
   trigger text is regular weight by default, regardless of selection.
 - Meal Type, Cuisine, and Equipment use narrow dropdown triggers sized once to
@@ -1296,9 +1304,13 @@ Keep the private navigation available while the main content scrolls. On
 desktop, pin the full-height left sidebar to the viewport and let it scroll
 independently if its contents exceed the viewport. Place the utility controls
 at the bottom in this order: Trash, Settings, then Account. On mobile, use a
-wrapping horizontal navigation row with icon-only links for Recipe Tin, Library,
-Trash, and Settings; place Settings between Trash and the 48px circular initials
-account control. Preserve descriptive accessible names for each icon link.
+  wrapping horizontal navigation row with icon-only links for Library, Find
+  Recipes, Trash, and Settings; place Settings between Trash and the 48px circular
+  initials account control. Preserve descriptive accessible names for each icon
+  link. The Library link stays leaf green; when current, its pale green surface and
+  stronger circular outline make the state visible without color alone. On
+  desktop, its current state also uses an underline. `/` remains the sign-in page;
+  the authenticated `/app` entry opens the Library.
 
 Both account controls open the same menu with the email and Sign out action.
 

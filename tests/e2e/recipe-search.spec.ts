@@ -194,7 +194,7 @@ test('Find Recipes updates mobile metadata when columns are toggled @e2e', async
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications$/);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/recipes/find?sort=name&direction=asc&page=1&view=details');
 
@@ -246,7 +246,7 @@ test('List column preferences do not change recipe Grid cards @e2e', async ({ pa
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications$/);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/recipes/find?view=details');
 
@@ -721,7 +721,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications$/);
     await page.goto('/publications');
     const searchLink = page
       .getByRole('navigation', { name: 'Main navigation' })
@@ -1405,7 +1405,7 @@ test('Find Recipes shows a recoverable query error and preserves filters @e2e', 
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications$/);
     await page.goto(`/recipes/find?filter=${encodeURIComponent(filter)}&tab=query&view=grid`);
 
     await expect(
@@ -1433,7 +1433,7 @@ test('Find Recipes sorts by every display column in Details view @e2e', async ({
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications$/);
     await page.goto('/recipes/find?sort=name&direction=asc&view=details');
 
     await page.getByRole('combobox', { name: 'Sort by Name' }).click();

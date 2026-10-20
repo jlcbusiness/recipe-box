@@ -85,7 +85,7 @@ async function signIn(page: Page, user: TestUser) {
   await page.getByLabel('Email').fill(user.email);
   await page.getByLabel('Password').fill(user.password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/publications$/);
 }
 
 async function waitForServiceWorker(page: Page) {

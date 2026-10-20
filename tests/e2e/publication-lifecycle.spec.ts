@@ -82,7 +82,7 @@ async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/publications$/);
 }
 
 async function expectNoHorizontalOverflow(page: Page) {

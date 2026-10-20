@@ -361,6 +361,17 @@ a {
   text-underline-offset: 4px;
 }
 
+.private-nav-links a[href="/publications"] {
+  color: var(--leaf);
+}
+
+.private-nav-links a[href="/publications"][aria-current="page"] {
+  background-color: var(--tin-wash);
+  text-decoration: underline;
+  text-decoration-color: var(--leaf);
+  text-decoration-thickness: 2px;
+}
+
 .private-nav-mobile-icon {
   display: none;
 }
@@ -1397,6 +1408,15 @@ h1 {
     border-radius: 50%;
     background: white;
     color: var(--ink);
+    text-decoration: none;
+  }
+
+  .private-nav-links a[href="/publications"] {
+    border-color: var(--leaf);
+  }
+
+  .private-nav-links a[href="/publications"][aria-current="page"] {
+    border-width: 2px;
     text-decoration: none;
   }
 

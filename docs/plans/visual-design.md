@@ -227,6 +227,12 @@ icon-only links for Library, Find Recipes, Trash, and Settings, with Settings
 after Trash and before the Account control. Give each icon link a descriptive
 accessible name and tooltip.
 
+The Library icon on mobile and label on desktop stay leaf green as a distinct
+destination. When Library is current, add a pale green surface, a desktop
+underline, and a stronger mobile circle outline; retain `aria-current` and the
+gold keyboard-focus outline. The authenticated `/app` entry opens Library while
+`/` remains sign-in.
+
 The account menu uses the same options everywhere. On desktop, show the account
 email at the bottom of the pinned left navigation, after the Trash and Settings
 utility links. On mobile, show a 48px circular initials button at the right of

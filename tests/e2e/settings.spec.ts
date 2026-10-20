@@ -30,8 +30,47 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/publications$/);
 }
+
+test('Library stays visually distinct and shared picklists support type-ahead @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Settings' }).click();
+
+    const libraryLink = page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('link', { name: 'Library' });
+    const isMobile = (page.viewportSize()?.width ?? 0) <= 640;
+    await expect(libraryLink).not.toHaveAttribute('aria-current');
+    await expect(libraryLink).toHaveCSS('color', 'rgb(56, 96, 68)');
+    if (isMobile) {
+      await expect(libraryLink).toHaveCSS('border-color', 'rgb(56, 96, 68)');
+    }
+
+    const volumeSelect = page.getByRole('combobox', { name: 'Volume', exact: true });
+    await volumeSelect.press('Enter');
+    await volumeSelect.press('m');
+    const metricOption = page.getByRole('option', { name: 'Metric', exact: true });
+    await expect(metricOption).toHaveClass(/is-active/);
+    await expect(volumeSelect).toContainText('US customary');
+    expect(await volumeSelect.getAttribute('aria-activedescendant')).toBe(
+      await metricOption.getAttribute('id'),
+    );
+
+    const openPicklistA11y = await new AxeBuilder({ page }).analyze();
+    expect(openPicklistA11y.violations).toEqual([]);
+    await volumeSelect.press('Escape');
+    await expect(volumeSelect).toBeFocused();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
 
 test('Settings owns unit preferences without a navigation Units menu @e2e @a11y', async ({
   page,

@@ -90,8 +90,8 @@ test('a user can reset their password through the local recovery email @e2e', as
 
     await page.getByRole('textbox', { name: 'New password' }).fill('replacement-password-84');
     await page.getByRole('button', { name: 'Save password' }).click();
-    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
-    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+    await expect(page).toHaveURL(/\/publications$/);
+    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
 
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.locator('.account-menu-trigger').click();
@@ -99,8 +99,8 @@ test('a user can reset their password through the local recovery email @e2e', as
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill('replacement-password-84');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
-    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+    await expect(page).toHaveURL(/\/publications$/);
+    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
   }
@@ -120,7 +120,7 @@ test('recovery and reset screens are accessible @a11y', async ({ page, request }
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications$/);
 
     await page.goto('/reset-password');
     await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
@@ -148,8 +148,15 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
 
-    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
-    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+    await expect(page).toHaveURL(/\/publications$/);
+    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
+    const desktopLibraryLink = page.getByRole('link', { name: 'Library' });
+    await expect(desktopLibraryLink).toHaveAttribute('aria-current', 'page');
+    await expect(desktopLibraryLink).toHaveCSS('color', 'rgb(56, 96, 68)');
+    await expect(desktopLibraryLink).toHaveCSS('text-decoration-line', 'underline');
+    await page.reload();
+    await expect(page).toHaveURL(/\/publications$/);
+    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Workspace' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Trash', exact: true })).toBeVisible();
@@ -185,6 +192,10 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
       390,
     );
     const mobileLibraryLink = page.getByRole('link', { name: 'Library' });
+    await expect(mobileLibraryLink).toHaveAttribute('aria-current', 'page');
+    await expect(mobileLibraryLink).toHaveCSS('border-width', '2px');
+    await expect(mobileLibraryLink).toHaveCSS('background-color', 'rgb(237, 244, 233)');
+    await expect(mobileLibraryLink).toHaveCSS('color', 'rgb(56, 96, 68)');
     const mobileSearchLink = page.getByRole('link', { name: 'Search' });
     const mobileSettingsLink = page.getByRole('link', { name: 'Settings' });
     await expect(mobileLibraryLink.locator('.private-nav-mobile-icon')).toBeVisible();
@@ -222,7 +233,23 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
       .analyze();
     expect(mobileA11y.violations).toEqual([]);
 
+    for (const width of [641, 640]) {
+      await page.setViewportSize({ width, height: 844 });
+      await expect(mobileLibraryLink).toHaveCSS('border-width', width <= 640 ? '2px' : '0px');
+      await expect(mobileLibraryLink).toHaveCSS(
+        'text-decoration-line',
+        width <= 640 ? 'none' : 'underline',
+      );
+    }
+    await page.goto('/recipes');
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
+    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+    await page.goto('/app');
+    await expect(page).toHaveURL(/\/publications$/);
+    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
+
     await page.setViewportSize({ width: 1280, height: 800 });
+    await accountTrigger.click();
     await page.getByRole('button', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.goto('/app');
