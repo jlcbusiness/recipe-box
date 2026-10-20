@@ -6578,6 +6578,15 @@ section.recipe-detail-section .recipe-relationship-list a {
     padding: 0 2px;
   }
 
+  .private-content
+    .recipes-main
+    .recipe-reading-layout
+    .recipe-ingredient-first-table
+    .recipe-reader-unit-trigger {
+    min-height: 0;
+    height: auto;
+  }
+
   .recipe-scaling-pane .single-picklist-trigger,
   .recipe-scaling-to,
   .recipe-scaling-pane .recipe-scaling-close {

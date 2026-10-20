@@ -3362,6 +3362,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       const styles = getComputedStyle(cell);
       return Number.parseFloat(styles.lineHeight) / Number.parseFloat(styles.fontSize);
     });
+    expect((await unitPicker.boundingBox())?.height).toBeLessThanOrEqual(32);
     const mobileWeightPicker = page.getByRole('combobox', {
       name: 'Change Chicken thighs weight unit',
     });
@@ -3371,6 +3372,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       const styles = getComputedStyle(cell);
       return Number.parseFloat(styles.lineHeight) / Number.parseFloat(styles.fontSize);
     });
+    expect((await mobileWeightPicker.boundingBox())?.height).toBeLessThanOrEqual(32);
     expect(volumeLineHeightRatio).toBeGreaterThanOrEqual(1.2);
     expect(volumeLineHeightRatio).toBeLessThanOrEqual(1.3);
     expect(weightLineHeightRatio).toBeGreaterThanOrEqual(1.2);
