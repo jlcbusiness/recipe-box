@@ -430,6 +430,16 @@ preserved.
   Preparation Tab advances to the next row's Ingredient. Enter commits a
   Specifics edit directly; clearing Ingredient and leaving the field removes the
   nameless row.
+- Ingredient amount and amount-type controls follow the same two-Enter
+  contract: the first Enter selects the active option in an open suggestion or
+  measurement listbox, and the next Enter commits the field/row. Enter in a
+  quantity or Specifics input commits the row when no suggestion list is open.
+  Tab accepts an active suggestion or measurement option before advancing;
+  ArrowUp and ArrowDown open a closed listbox and move its active option.
+  Non-submit Enter never submits the recipe form. On desktop, committing a row
+  focuses the trailing Add ingredient row cell; on mobile, it submits the
+  ingredient-details popover. Escape closes a listbox or cancels the active
+  edit/popover. Only the explicit Save recipe action saves the recipe.
 - Reordering changes only the canonical entered order. Temporary view sorts do
   not rewrite it.
 
@@ -445,6 +455,13 @@ preserved.
   Literal unconfirmed `#` text remains plain text and is not indexed as a
   structured mention. The editor's plain-text projection uses the readable
   `#<slug>` form and omits the stored marker.
+- Instruction steps support unordered (`-`, `*`, `+`) and ordered (`1.`, `1)`)
+  Markdown list markers, whether the list starts after a blank line or a single
+  newline. Enter continues a list within the current step; Enter on an empty
+  list marker exits the list line. Shift+Enter inserts a newline within the
+  current step, while Enter on a non-list line creates the next step. Rendered
+  unordered and ordered lists retain visible bullets/numbers and indentation in
+  private, public, and print views.
 - **`#` Autocomplete Behavior:**
   - Typing `#` triggers an inline autocomplete menu. A bare `#` shows existing
     ingredients on the current recipe.
@@ -769,8 +786,25 @@ implemented.
 
 ### 8.1 Centralized Picklist Management
 
-All picklists are managed in the Settings area to prevent duplicate, misspelled,
-or orphaned options:
+Picklist catalogs are managed in Settings to prevent duplicate, misspelled, or
+orphaned options. Equipment, Food Type, Meal Type, and Cuisine also support
+confirmed inline value creation from their open recipe-editor menus:
+
+- Typing is draft-only. Escape or closing the menu discards unconfirmed text.
+- Confirming with Enter or the Add button trims outer whitespace, collapses
+  internal whitespace runs to one space, preserves entered casing, and matches
+  existing values case-insensitively within the signed-in account and category.
+- A matching value is selected without creating a duplicate or changing the
+  catalog revision. Otherwise, the server action uses the existing owner-scoped
+  picklist management function to append the value, increment its revision, and
+  record `picklist.added` history.
+- The new/reused catalog value is selected in the recipe draft; recipe
+  assignments remain staged until the explicit Save recipe action. If adding
+  the catalog value fails, the draft remains intact and an accessible error is
+  shown. A confirmed catalog value remains manageable in Settings even if the
+  recipe is later canceled or fails to save.
+
+The managed catalogs are:
 
 - **Picklists Managed:**
   - Ingredients (canonical ingredient names; each may carry a trusted density, see 8.2)
@@ -1213,8 +1247,9 @@ History events are recorded on save (never on individual keystrokes):
 ### 13.1 Desktop Ergonomics
 
 - **Keyboard Navigation:** Tab and arrow key traversal through the ingredient edit grid.
-  - **Shortcut Actions:** Shortcuts for quick save (`Ctrl+S` / `Cmd+S` ), adding ingredient rows (`Enter` in the last
-    column), triggering autocomplete (`#`), and inserting a degree symbol in an instruction (`Ctrl+.`).
+  - **Shortcut Actions:** Add ingredient rows with Enter in the last column,
+    trigger autocomplete with `#`, and insert a degree symbol in an instruction
+    with `Ctrl+.`. Only the explicit Save recipe action submits the recipe form.
 - **No Drag-and-Drop Reliance:** Reordering ingredients and steps uses explicit keyboard-friendly up/down buttons or
   index input fields.
 
@@ -1243,11 +1278,13 @@ History events are recorded on save (never on individual keystrokes):
   drag handles outside the data columns; `Ctrl+ArrowUp` and `Ctrl+ArrowDown`
   provide keyboard reordering. The only row action is a compact delete `x` for
   populated rows, revealed on desktop hover or focus and visible on mobile.
-- Picklist Enter selects the active option without committing; a second Enter
-  commits. Tab accepts a typed or keyboard-selected suggestion and commits it;
-  Ingredient advances to same-row Specifics, and Preparation advances to the next
-  row's Ingredient. Specifics remains a direct text edit, so Enter commits it
-  immediately.
+- Ingredient and measurement picklists use first Enter to select an active
+  option and the next Enter to commit. Tab accepts an active option before
+  advancing, and ArrowUp/ArrowDown opens closed picklists and moves the active
+  option. Quantity and Specifics inputs commit on Enter when no suggestion is
+  open. Enter never submits the recipe form; only Save recipe does. See
+  [Ingredient editing](#43-manual-reordering) for row focus progression and
+  mobile behavior.
 - Mobile uses a one-column ingredient list and a compact row editor popover.
   Keep its controls compact and accessible.
 - Custom cell editors, suggestions, and popovers require focused keyboard,

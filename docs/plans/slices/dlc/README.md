@@ -25,7 +25,7 @@ crop/framing and full-screen viewing remain open in DLC 06.
 
 ### Phase 0: Repair existing editor workflows
 
-- **DLC 25 (complete):** [Recipe editor entry and picklist behavior](dlc-25-recipe-editor-entry-and-picklist-behavior.md)
+- **DLC 25 (implementation delivered):** [Recipe editor entry and picklist behavior](dlc-25-recipe-editor-entry-and-picklist-behavior.md)
 
 ### Phase 1: Navigation and authoring foundations
 
@@ -63,9 +63,17 @@ crop/framing and full-screen viewing remain open in DLC 06.
 - **DLC 23:** [Households and account roles](dlc-23-households-and-account-roles.md)
 - **DLC 24:** [Account content reset](dlc-24-account-content-reset.md)
 
+### Phase 5: Recipe-editor workflow follow-up
+
+- **DLC 26 (planned):** Add `Ctrl+S` (and `Cmd+S` on macOS) to invoke the
+  explicit Save recipe flow, reusing its validation and error handling without
+  introducing autosave. A focused brief is still needed.
+
 ## Sequencing notes
 
-- Execute DLC 25 before new authoring work; it repairs current editor behavior.
+- DLC 25's implementation establishes the current recipe-editor baseline for
+  inline picklist creation, ingredient keyboard entry, and instruction lists.
+  Its remaining acceptance-test coverage gaps are recorded in the brief.
 - Build ingredient sets (DLC 03) before group-aware amounts and references
   (DLC 04), then add structured instruction references (DLC 05).
 - Extend media (DLC 06–07) before setting the shared reading, public, and print

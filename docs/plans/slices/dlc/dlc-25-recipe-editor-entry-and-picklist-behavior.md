@@ -36,10 +36,11 @@ in instruction steps.
   - Nothing is saved while typing; pressing `Escape` or closing the menu discards
     unconfirmed text in the add input without side effects.
   - Confirming via `Enter` in the add input or activating the `Add` button calls
-    an owner-derived server action (`createOrGetRecipePicklistValue`)
-    that trims outer whitespace, collapses internal whitespace runs (`[[:space:]]+`
-    to `' '`), preserves entered casing in `display_value`, and matches existing
-    values case-insensitively within the account and category.
+    the owner-derived `createOrGetRecipePicklistValue` server action. It trims
+    outer whitespace, collapses internal whitespace runs (`[[:space:]]+` to
+    `' '`), preserves entered casing in `display_value`, and matches existing
+    values case-insensitively within the account and category. New values are
+    created through the existing `manage_recipe_picklist` function.
   - If a normalized match already exists in that category, it is returned and
     selected in the recipe draft without creating a duplicate or incrementing
     the catalog revision. Otherwise, a new value is appended at the end of
@@ -108,7 +109,8 @@ in instruction steps.
 
 ## Verification
 
-- **Status:** Complete (2026-10-19).
+- **Status:** Implementation complete; acceptance verification has coverage
+  gaps (2026-10-19).
 - **Automated coverage:**
   - Unit tests (`tests/unit/instruction-markdown.test.tsx`,
     `tests/unit/recipe-picklists.test.tsx`, and the full 36-file / 320-test
@@ -117,18 +119,26 @@ in instruction steps.
     `createOrGetRecipePicklistValue` validation, normalization,
     case-insensitive deduplication, revision-guarded creation, and error
     reporting.
-  - Browser & accessibility E2E tests (`tests/e2e/measurements.spec.ts`,
-    `tests/e2e/ingredient-rows.spec.ts`, `tests/e2e/recipes.spec.ts`) across
-    desktop (`chromium`) and mobile (`Fold 6`) verify inline creation and
-    persistence of Food Type, Equipment, Meal Type, and Cuisine values,
-    duplicate prevention, `Escape` discard, `ArrowUp`/`ArrowDown`
-    open-and-advance, `Tab` active-option acceptance and field progression,
-    two-`Enter` selection and row commit without submitting `#recipe-form`,
-    unordered list authoring and `list-style-type: disc` rendering, and zero
-    axe violations.
-  - TypeScript (`tsc --noEmit`), Biome check on all modified files, Markdown
-    lint (`scripts/lint-markdown.mjs`, 81 files, 0 errors), `git diff --check`,
-    and `npm run build` pass.
+  - Focused browser and accessibility tests in `tests/e2e/measurements.spec.ts`
+    and `tests/e2e/recipes.spec.ts` passed on desktop (`chromium`) and mobile
+    (`Fold 6`), covering inline creation and persistence of all four values,
+    duplicate prevention, Escape discard, ArrowUp/ArrowDown open-and-advance,
+    Tab option acceptance and field progression, two-Enter selection/commit
+    without submitting `#recipe-form`, unordered list authoring and rendering,
+    and axe checks. Focused ingredient-row and measurement E2E cases also pass
+    on both projects. The broader adjacent `recipe-picklists.spec.ts` run had
+    two failures in Settings manager toggle/pane-placement assertions, outside
+    this slice's editor workflows.
+  - The recipe-detail E2E test asserts unordered-list rendering. Public and
+    print unordered-list rendering are not explicitly asserted by a focused
+    browser test. Picklist-add action errors are unit-tested, but browser tests
+    do not explicitly assert draft preservation and accessible error reporting
+    after a failed picklist add or recipe save. These acceptance paths remain
+    unverified.
+  - TypeScript typecheck and `npm run build` pass. Biome check on the changed
+    implementation and test files reports no errors; existing CSS specificity
+    and style warnings remain. Markdown lint (`scripts/lint-markdown.mjs`, 81
+    files) and `git diff --check` pass.
 
 ## References
 

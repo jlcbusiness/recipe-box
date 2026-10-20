@@ -17,6 +17,9 @@ This inventory consolidates work explicitly deferred by the 36 slice briefs (Sli
 
 ### Recipe, reader, and media
 
+- Add a recipe-editor save shortcut: `Ctrl+S` (`Cmd+S` on macOS) invokes the
+	existing explicit Save recipe flow and its validation/error handling; this
+	does not introduce autosave. Planned as DLC 26 in the [DLC roadmap](../slices/dlc/README.md).
 - Introduce a dedicated Yield/Servings model beyond the numeric `serves` value used for scaling. ([Slice 4](../slices/4-recipe-card-basics.md), [Slice 13](../slices/13-scaling-and-unit-conversion.md))
 - Extend density support with multiple or context-dependent profiles per ingredient, temperature/pressure/packing corrections, derivation for Count/Things/Feel, automatic updates to saved recipe quantities when density changes, and density-derived conversion on public or printed recipes. ([Slice 15](../slices/15-trusted-density.md))
 - Build a full-screen or navigation-replacing cooking experience beyond the current temporary reader mode. ([Slice 16](../slices/16-cooking-views.md))

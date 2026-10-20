@@ -139,6 +139,11 @@ background; color is supplementary to the checkmark, never the only selection
 signal. The picker does not display native checkboxes or blue text-selection
 highlighting. Multi-select groups use fieldset/legend semantics and options
 expose their pressed state.
+Food Type, Equipment, Meal Type, and Cuisine menus end with a labeled Add
+input and compact Add button. Text remains uncommitted until Enter or Add;
+Escape and menu close discard it. Confirming creates or reuses a normalized,
+account-owned value and selects it in the recipe draft, while recipe saving
+remains a separate explicit action.
 Single- and multi-picklist labels share the same 13px bold typography. Trigger
 text stays regular-weight whether selected or not, so neither control type
 looks heavier by default.
@@ -442,7 +447,13 @@ For Ingredient and Preparation picklists, Enter selects the active option and a
 second Enter commits; Tab accepts and commits the active suggestion, moving
 from Ingredient to same-row Specifics and from Preparation to the next row's
 Ingredient. Enter commits Specifics text directly.
-`Ctrl+S` / `Cmd+S` saves the recipe.
+Measurement picklists follow the same first-Enter selection and next-Enter row
+commit behavior. ArrowUp/ArrowDown opens a closed listbox and moves its active
+option; Tab accepts an active option before advancing. Enter in an amount or
+Specifics input commits the row when no suggestion is open. Non-submit Enter
+does not submit the recipe form; only Save recipe saves the recipe. Committing
+focuses the trailing Add ingredient row cell on desktop and submits the row
+popover on mobile. Escape closes a listbox or cancels the active edit/popover.
 
 The desktop Amount interaction has one fixed category picker—**Unit**, **Count**,
 **Things**, or **Feel**—and a single adjacent Amount area. The picker is only
@@ -489,6 +500,10 @@ wide enough for fractional paired values at the supported mobile width, with
 short quantity padding and deliberate amount-to-unit spacing. Picklists,
 overlay placement, and the 48px Submit hit area adapt to the viewport; the page
 does not scroll horizontally.
+Food Type, Equipment, Meal Type, and Cuisine menus place the labeled Add input
+and compact Add button at the bottom of the open menu. Keep both menu and input
+within the viewport; confirmation updates the selected draft value without
+saving the recipe.
 
 ### Planned direction
 
