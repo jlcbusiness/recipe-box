@@ -3356,6 +3356,25 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       expect(Math.abs(checkboxTargetBounds.x - checkboxCellBounds.x)).toBeLessThanOrEqual(1);
       expect(gapToIngredient).toBeLessThanOrEqual(20);
     }
+    const volumeLineHeightRatio = await unitPicker.evaluate((element) => {
+      const cell = element.closest('td');
+      if (!cell) throw new Error('Expected the volume picker to be inside a table cell.');
+      const styles = getComputedStyle(cell);
+      return Number.parseFloat(styles.lineHeight) / Number.parseFloat(styles.fontSize);
+    });
+    const mobileWeightPicker = page.getByRole('combobox', {
+      name: 'Change Chicken thighs weight unit',
+    });
+    const weightLineHeightRatio = await mobileWeightPicker.evaluate((element) => {
+      const cell = element.closest('td');
+      if (!cell) throw new Error('Expected the weight picker to be inside a table cell.');
+      const styles = getComputedStyle(cell);
+      return Number.parseFloat(styles.lineHeight) / Number.parseFloat(styles.fontSize);
+    });
+    expect(volumeLineHeightRatio).toBeGreaterThanOrEqual(1.2);
+    expect(volumeLineHeightRatio).toBeLessThanOrEqual(1.3);
+    expect(weightLineHeightRatio).toBeGreaterThanOrEqual(1.2);
+    expect(weightLineHeightRatio).toBeLessThanOrEqual(1.3);
     await checkbox.check();
     await expect(checkbox).toBeChecked();
     const accessibility = await new AxeBuilder({ page }).analyze();

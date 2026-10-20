@@ -5135,6 +5135,15 @@ h1 {
   .recipes-main
   .recipe-reading-layout
   .recipe-ingredient-first-table
+  tbody
+  td:not(:last-child) {
+  line-height: 1.25;
+}
+
+.private-content
+  .recipes-main
+  .recipe-reading-layout
+  .recipe-ingredient-first-table
   .recipe-cook-checkbox-heading {
   width: 32px;
   min-width: 32px;
