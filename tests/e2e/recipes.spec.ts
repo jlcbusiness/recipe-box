@@ -9,7 +9,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/(?:recipes|publications\/[0-9a-f-]+)$/);
 }
 
 async function selectSinglePicklist(
@@ -3597,6 +3597,135 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     await expect(table.locator('tbody tr').filter({ hasText: 'flour' })).toHaveCSS(
       'text-decoration-line',
       'none',
+    );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('owners can create Equipment, Food Type, Meal Type, and Cuisine values in the recipe editor and author unordered instruction lists @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('DLC 25 editor workflow recipe');
+
+    const foodTypeTrigger = page.getByRole('combobox', { name: 'Food Type', exact: true });
+    await foodTypeTrigger.click();
+    const addFoodTypeInput = page.getByRole('textbox', { name: 'Add Food Type' });
+    await expect(addFoodTypeInput).toBeVisible();
+    await addFoodTypeInput.fill('Unconfirmed food type');
+    await addFoodTypeInput.press('Escape');
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+
+    await foodTypeTrigger.click();
+    await expect(page.getByRole('option', { name: 'Unconfirmed food type' })).toHaveCount(0);
+    await page.getByRole('textbox', { name: 'Add Food Type' }).fill('  Savory   Galette  ');
+    await page.getByRole('textbox', { name: 'Add Food Type' }).press('Enter');
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+    await expect(foodTypeTrigger).toContainText('Savory Galette');
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+
+    await page.getByRole('button', { name: 'Equipment: Select' }).click();
+    const equipmentMenu = page.getByRole('group', { name: 'Equipment options' });
+    const addEquipmentInput = equipmentMenu.getByRole('textbox', { name: 'Add Equipment' });
+    await addEquipmentInput.fill('Carbon steel wok');
+    await addEquipmentInput.press('Enter');
+    const wokOption = equipmentMenu.getByRole('button', { name: 'Carbon steel wok', exact: true });
+    await expect(wokOption).toHaveAttribute('aria-pressed', 'true');
+    await addEquipmentInput.fill('  carbon   STEEL wok ');
+    await equipmentMenu.getByRole('button', { name: 'Add Equipment' }).click();
+    await expect(
+      equipmentMenu.getByRole('button', { name: 'Carbon steel wok', exact: true }),
+    ).toHaveCount(1);
+    const openMenuA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(openMenuA11y.violations).toEqual([]);
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('button', { name: 'Meal Type: Select' }).click();
+    const mealTypeMenu = page.getByRole('group', { name: 'Meal Type options' });
+    await mealTypeMenu.getByRole('textbox', { name: 'Add Meal Type' }).fill('Late night');
+    await mealTypeMenu.getByRole('button', { name: 'Add Meal Type' }).click();
+    await expect(
+      mealTypeMenu.getByRole('button', { name: 'Late night', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('button', { name: 'Cuisine: Select' }).click();
+    const cuisineMenu = page.getByRole('group', { name: 'Cuisine options' });
+    await cuisineMenu.getByRole('textbox', { name: 'Add Cuisine' }).fill('Peruvian Nikkei');
+    await cuisineMenu.getByRole('textbox', { name: 'Add Cuisine' }).press('Enter');
+    await expect(
+      cuisineMenu.getByRole('button', { name: 'Peruvian Nikkei', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Escape');
+
+    const instructionDraft = page.getByPlaceholder('Add instruction…');
+    await instructionDraft.click();
+    await instructionDraft.pressSequentially('Prep the aromatics:');
+    const firstStep = page.getByRole('textbox', { name: 'Instruction step 1' });
+    await firstStep.press('Shift+Enter');
+    await firstStep.pressSequentially('- Mince #garlic');
+    const suggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    await expect(
+      suggestions.getByRole('option', { name: 'Create ingredient “garlic”' }),
+    ).toBeVisible();
+    await firstStep.press('Enter');
+    await expect(firstStep).toHaveValue(/\[\[ingredient:[^|]+\|garlic\]\]/);
+    await firstStep.press('Enter');
+    await expect(page.locator('.recipe-instruction-edit-step')).toHaveCount(2);
+    await expect(firstStep).toHaveValue(
+      /Prep the aromatics:\n- Mince \[\[ingredient:[^|]+\|garlic\]\]\n- $/,
+    );
+    await firstStep.pressSequentially('Dice **onion**');
+    await firstStep.press('Enter');
+    await expect(firstStep).toHaveValue(
+      /Prep the aromatics:\n- Mince \[\[ingredient:[^|]+\|garlic\]\]\n- Dice \*\*onion\*\*\n- $/,
+    );
+    await firstStep.press('Enter');
+    await expect(firstStep).toHaveValue(
+      /Prep the aromatics:\n- Mince \[\[ingredient:[^|]+\|garlic\]\]\n- Dice \*\*onion\*\*\n$/,
+    );
+
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'DLC 25 editor workflow recipe' }),
+    ).toBeVisible();
+    await expect(page.locator('.recipe-metadata').first()).toContainText('Carbon steel wok');
+    await expect(page.locator('.recipe-detail-classification')).toContainText('Savory Galette');
+    await expect(page.locator('.recipe-detail-classification')).toContainText('Late night');
+    await expect(page.locator('.recipe-detail-classification')).toContainText('Peruvian Nikkei');
+
+    const stepItem = page.locator('.recipe-instruction-list > li').first();
+    await expect(stepItem.locator('p')).toHaveText('Prep the aromatics:');
+    const unorderedList = stepItem.locator('ul');
+    await expect(unorderedList).toBeVisible();
+    await expect(unorderedList).toHaveCSS('list-style-type', 'disc');
+    expect(
+      await unorderedList.evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).paddingLeft),
+      ),
+    ).toBeGreaterThanOrEqual(16);
+    await expect(unorderedList.locator('li')).toHaveCount(2);
+    await expect(unorderedList.locator('li').nth(0)).toContainText('Mince garlic');
+    await expect(unorderedList.locator('li').nth(1).locator('strong')).toHaveText('onion');
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('combobox', { name: 'Food Type', exact: true })).toContainText(
+      'Savory Galette',
+    );
+    await expect(page.getByRole('button', { name: /Equipment:.*Carbon steel wok/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Meal Type:.*Late night/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Cuisine:.*Peruvian Nikkei/ })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      /Prep the aromatics:\n- Mince \[\[ingredient:[^|]+\|garlic\]\]\n- Dice \*\*onion\*\*$/,
     );
   } finally {
     await deleteTestUser(request, user);

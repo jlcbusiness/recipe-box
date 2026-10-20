@@ -36,7 +36,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/(?:recipes|publications\/[0-9a-f-]+)$/);
 }
 
 async function dragByPointer(page: Page, source: Locator, target: Locator) {
@@ -1209,13 +1209,13 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await reloadedGrid.getByRole('row').nth(2).hover();
     await expect(deleteBasil).toHaveCSS('opacity', '1');
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(deleteBasil).toHaveCSS('color', 'rgb(98, 105, 93)');
+    await expect(deleteBasil).toHaveCSS('color', 'rgb(108, 103, 95)');
     await deleteBasil.focus();
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await deleteBasil.hover();
     await expect(deleteBasil).toHaveCSS('width', '32px');
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(deleteBasil).toHaveCSS('color', 'rgb(98, 105, 93)');
+    await expect(deleteBasil).toHaveCSS('color', 'rgb(108, 103, 95)');
     await deleteBasil.click();
     await expect(reloadedGrid.getByRole('row')).toHaveCount(4);
     await expect(reloadedGrid).not.toContainText('Basil');

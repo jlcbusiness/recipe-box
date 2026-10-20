@@ -32,6 +32,10 @@ import {
   clearConditionalValuesForStateChange,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
+import {
+  createOrGetRecipePicklistValue,
+  type EditorPicklistCategory,
+} from '../actions/recipe-picklists';
 import { MediaManager } from '../media/media-manager';
 import { RecipePhotoDraftPicker } from '../media/recipe-photo-draft-picker';
 import { uploadMediaFiles } from '../media/upload-files';
@@ -96,6 +100,7 @@ function SinglePicklist({
   isOpen,
   onOpenChange,
   onChange,
+  onAddOption,
 }: {
   label: string;
   name: string;
@@ -105,6 +110,7 @@ function SinglePicklist({
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onChange: (value: string) => void;
+  onAddOption?: (value: string) => Promise<{ valueId?: string; error?: string }>;
 }) {
   const selectedOption = options.find((option) => option.value === value);
 
@@ -116,6 +122,7 @@ function SinglePicklist({
         label={label}
         measureLabel={placeholder}
         menuClassName="recipe-picklist-menu"
+        onAddOption={onAddOption}
         onOpenChange={onOpenChange}
         onSelect={onChange}
         open={isOpen}
@@ -209,6 +216,7 @@ export function RecipeForm({
   const [pendingIngredientDeletion, setPendingIngredientDeletion] =
     useState<IngredientRowDraft | null>(null);
   const ingredientDeletionDialogRef = useRef<HTMLDialogElement>(null);
+  const [availablePicklists, setAvailablePicklists] = useState(picklists);
   const [state, setState] = useState<RecipeState>(recipe?.state ?? 'want_to_try');
   const [foodTypeId, setFoodTypeId] = useState(recipe?.food_type_id ?? '');
   const [serves, setServes] = useState(formatOptionalInteger(recipe?.serves));
@@ -218,13 +226,30 @@ export function RecipeForm({
   const [reason, setReason] = useState(recipe?.reason ?? '');
   const [openPicklist, setOpenPicklist] = useState<RecipePicklistKey | null>(null);
 
+  useEffect(() => {
+    setAvailablePicklists(picklists);
+  }, [picklists]);
+
   const valuesFor = (category: RecipePicklistValue['category']) =>
-    picklists.filter((picklist) => picklist.category === category);
-  const picklistValue = (id: string) => picklists.find((picklist) => picklist.id === id)?.value;
+    availablePicklists.filter((picklist) => picklist.category === category);
+  const picklistValue = (id: string) =>
+    availablePicklists.find((picklist) => picklist.id === id)?.value;
   const selectedResponse = state === 'want_to_try' ? enthusiasmId : verdictId;
   const showOccasion = shouldShowOccasionDetails(
     picklistValue(selectedResponse)?.toLowerCase().replaceAll(' ', '_') ?? null,
   );
+
+  async function addPicklistOption(category: EditorPicklistCategory, rawValue: string) {
+    const result = await createOrGetRecipePicklistValue(category, rawValue);
+    if (!result.value) {
+      return { error: result.error ?? 'Picklist value could not be added. Try again.' };
+    }
+    const addedValue = result.value;
+    setAvailablePicklists((current) =>
+      current.some((item) => item.id === addedValue.id) ? current : [...current, addedValue],
+    );
+    return { valueId: addedValue.id };
+  }
 
   useEffect(() => {
     const dialog = ingredientDeletionDialogRef.current;
@@ -420,6 +445,15 @@ export function RecipeForm({
       action={formAction}
       className="recipe-form"
       id="recipe-form"
+      onKeyDown={(event) => {
+        if (
+          event.key === 'Enter' &&
+          !(event.target instanceof HTMLButtonElement && event.target.type === 'submit') &&
+          !(event.target instanceof HTMLTextAreaElement)
+        ) {
+          event.preventDefault();
+        }
+      }}
       onSubmit={handleSubmit}
       ref={formRef}
     >
@@ -551,6 +585,7 @@ export function RecipeForm({
             isOpen={openPicklist === 'equipment'}
             onToggle={() => togglePicklist('equipment')}
             onClose={() => setOpenPicklist(null)}
+            onAddOption={(value) => addPicklistOption('equipment', value)}
           />
         </div>
         <div className="recipe-form-fields recipe-classification-fields">
@@ -566,6 +601,7 @@ export function RecipeForm({
             isOpen={openPicklist === 'food_type'}
             onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'food_type' : null)}
             onChange={setFoodTypeId}
+            onAddOption={(value) => addPicklistOption('food_type', value)}
           />
           <MultiPicklist
             category="meal_type"
@@ -575,6 +611,7 @@ export function RecipeForm({
             isOpen={openPicklist === 'meal_type'}
             onToggle={() => togglePicklist('meal_type')}
             onClose={() => setOpenPicklist(null)}
+            onAddOption={(value) => addPicklistOption('meal_type', value)}
           />
           <MultiPicklist
             category="cuisine"
@@ -584,6 +621,7 @@ export function RecipeForm({
             isOpen={openPicklist === 'cuisine'}
             onToggle={() => togglePicklist('cuisine')}
             onClose={() => setOpenPicklist(null)}
+            onAddOption={(value) => addPicklistOption('cuisine', value)}
           />
           {recipe && (
             <div className="recipe-form-save-row">
@@ -599,7 +637,7 @@ export function RecipeForm({
         <legend>Ingredients</legend>
         <IngredientRowsEditor
           ingredients={ingredients}
-          picklists={picklists}
+          picklists={availablePicklists}
           preparationOptions={preparationOptions}
           rows={ingredientRows}
           validateMeasurements={Boolean(ingredientRowsError)}

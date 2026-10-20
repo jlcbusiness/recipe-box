@@ -1,6 +1,7 @@
 import { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import {
+  continueInstructionListOnEnter,
   createInstructionExtensions,
   getSafeInstructionHref,
   parseInstructionMarkdown,
@@ -57,6 +58,82 @@ describe('instruction Markdown', () => {
         items: [[{ type: 'text', value: 'Mix' }], [{ type: 'text', value: 'Bake' }]],
       },
     ]);
+  });
+
+  it('parses unordered and ordered lists separated from preceding text by a single newline', () => {
+    expect(
+      parseInstructionMarkdown(
+        `Prep the aromatics:\n- Mince [[ingredient:${ingredientId}|cake-flour]]\n* Add **salt**\n+ Whisk well\nThen finish:\n1. Simmer\n2. Serve`,
+      ),
+    ).toEqual([
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', value: 'Prep the aromatics:' }],
+      },
+      {
+        type: 'list',
+        ordered: false,
+        items: [
+          [
+            { type: 'text', value: 'Mince ' },
+            { type: 'mention', id: ingredientId, slug: 'cake-flour' },
+          ],
+          [
+            { type: 'text', value: 'Add ' },
+            { type: 'strong', value: 'salt' },
+          ],
+          [{ type: 'text', value: 'Whisk well' }],
+        ],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', value: 'Then finish:' }],
+      },
+      {
+        type: 'list',
+        ordered: true,
+        items: [[{ type: 'text', value: 'Simmer' }], [{ type: 'text', value: 'Serve' }]],
+      },
+    ]);
+  });
+
+  it('continues unordered and ordered list items on Enter and exits on an empty list marker', () => {
+    const unorderedSource = 'Prep:\n- Mince garlic';
+    expect(
+      continueInstructionListOnEnter(
+        unorderedSource,
+        unorderedSource.length,
+        unorderedSource.length,
+      ),
+    ).toEqual({
+      markdown: 'Prep:\n- Mince garlic\n- ',
+      caret: 'Prep:\n- Mince garlic\n- '.length,
+    });
+
+    const orderedSource = '1. First item';
+    expect(
+      continueInstructionListOnEnter(orderedSource, orderedSource.length, orderedSource.length),
+    ).toEqual({
+      markdown: '1. First item\n2. ',
+      caret: '1. First item\n2. '.length,
+    });
+
+    const emptyMarkerSource = 'Prep:\n- Mince garlic\n- ';
+    expect(
+      continueInstructionListOnEnter(
+        emptyMarkerSource,
+        emptyMarkerSource.length,
+        emptyMarkerSource.length,
+      ),
+    ).toEqual({
+      markdown: 'Prep:\n- Mince garlic\n',
+      caret: 'Prep:\n- Mince garlic\n'.length,
+    });
+
+    const plainParagraph = 'Stir gently for 5 minutes.';
+    expect(
+      continueInstructionListOnEnter(plainParagraph, plainParagraph.length, plainParagraph.length),
+    ).toBeNull();
   });
 
   it('round-trips structured mentions with the current ingredient label', () => {

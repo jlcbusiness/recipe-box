@@ -63,34 +63,109 @@ export function parseInstructionMarkdown(markdown: string): InstructionMarkdownB
 
   for (const block of source.split(/\n\s*\n/gu)) {
     const lines = block.split('\n');
-    const heading = /^(#{1,6})\s+(.+)$/u.exec(lines[0] ?? '');
-    if (heading) {
-      blocks.push({
-        type: 'heading',
-        level: heading[1]?.length ?? 1,
-        content: parseInstructionInline(heading[2] ?? ''),
-      });
-      continue;
+    let paragraphLines: string[] = [];
+    let pendingList: { ordered: boolean; items: InstructionInlineToken[][] } | null = null;
+
+    const flushParagraph = () => {
+      if (paragraphLines.length > 0) {
+        blocks.push({
+          type: 'paragraph',
+          content: parseInstructionInline(paragraphLines.join(' ')),
+        });
+        paragraphLines = [];
+      }
+    };
+
+    const flushList = () => {
+      if (pendingList && pendingList.items.length > 0) {
+        blocks.push({
+          type: 'list',
+          ordered: pendingList.ordered,
+          items: pendingList.items,
+        });
+        pendingList = null;
+      }
+    };
+
+    for (const rawLine of lines) {
+      const heading = /^(#{1,6})\s+(.+)$/u.exec(rawLine);
+      if (heading) {
+        flushParagraph();
+        flushList();
+        blocks.push({
+          type: 'heading',
+          level: heading[1]?.length ?? 1,
+          content: parseInstructionInline(heading[2] ?? ''),
+        });
+        continue;
+      }
+
+      const listItem = /^\s*(?:(\d+)[.)]|([-+*]))\s+(.+)$/u.exec(rawLine);
+      if (listItem) {
+        flushParagraph();
+        const ordered = Boolean(listItem[1]);
+        if (pendingList && pendingList.ordered !== ordered) {
+          flushList();
+        }
+        if (!pendingList) {
+          pendingList = { ordered, items: [] };
+        }
+        pendingList.items.push(parseInstructionInline(listItem[3] ?? ''));
+        continue;
+      }
+
+      const trimmed = rawLine.trim();
+      if (trimmed) {
+        flushList();
+        paragraphLines.push(trimmed);
+      }
     }
 
-    const firstListItem = /^\s*(?:(\d+)[.)]|[-+*])\s+(.+)$/u.exec(lines[0] ?? '');
-    if (firstListItem) {
-      const ordered = Boolean(firstListItem[1]);
-      const items = lines.flatMap((line) => {
-        const item = /^\s*(?:(\d+)[.)]|[-+*])\s+(.+)$/u.exec(line);
-        return item ? [parseInstructionInline(item[2] ?? '')] : [];
-      });
-      blocks.push({ type: 'list', ordered, items });
-      continue;
-    }
-
-    blocks.push({
-      type: 'paragraph',
-      content: parseInstructionInline(lines.map((line) => line.trim()).join(' ')),
-    });
+    flushParagraph();
+    flushList();
   }
 
   return blocks;
+}
+
+export function continueInstructionListOnEnter(
+  markdown: string,
+  selectionStart: number,
+  selectionEnd: number,
+): { markdown: string; caret: number } | null {
+  const lineStart = selectionStart > 0 ? markdown.lastIndexOf('\n', selectionStart - 1) + 1 : 0;
+  const lineBeforeCaret = markdown.slice(lineStart, selectionStart);
+  const lineEndIndex = markdown.indexOf('\n', selectionEnd);
+  const lineAfterCaret = markdown.slice(
+    selectionEnd,
+    lineEndIndex === -1 ? markdown.length : lineEndIndex,
+  );
+  const listMatch = /^(\s*)(?:(\d+)([.)])|([-+*]))\s+(.*)$/u.exec(lineBeforeCaret);
+  if (!listMatch) {
+    return null;
+  }
+
+  const indent = listMatch[1] ?? '';
+  const numberText = listMatch[2];
+  const orderedDelimiter = listMatch[3] ?? '.';
+  const bullet = listMatch[4] ?? '-';
+  const itemBeforeCaret = listMatch[5] ?? '';
+
+  if (itemBeforeCaret.trim() === '' && lineAfterCaret.trim() === '') {
+    return {
+      markdown: `${markdown.slice(0, lineStart)}${markdown.slice(selectionEnd)}`,
+      caret: lineStart,
+    };
+  }
+
+  const nextMarker = numberText
+    ? `${indent}${Number.parseInt(numberText, 10) + 1}${orderedDelimiter} `
+    : `${indent}${bullet} `;
+  const insertion = `\n${nextMarker}`;
+  return {
+    markdown: `${markdown.slice(0, selectionStart)}${insertion}${markdown.slice(selectionEnd)}`,
+    caret: selectionStart + insertion.length,
+  };
 }
 
 export function getSafeInstructionHref(href: string): string | null {

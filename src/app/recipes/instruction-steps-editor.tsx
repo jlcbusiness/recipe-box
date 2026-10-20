@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
+import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
 import { type InstructionStepDraft, ingredientSlug } from '../../lib/recipes/instruction-rules';
 import { useReorderDrag } from './use-reorder-drag';
 
@@ -498,7 +499,25 @@ export function InstructionStepsEditor({
                     moveStep(step.id, 1);
                   } else if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
-                    if (!isPlaceholder) {
+                    const textarea = event.currentTarget;
+                    const listContinuation = continueInstructionListOnEnter(
+                      textarea.value,
+                      textarea.selectionStart,
+                      textarea.selectionEnd,
+                    );
+                    if (listContinuation) {
+                      const updatedStepId = updateMarkdown(
+                        step.id,
+                        listContinuation.markdown,
+                        textarea,
+                      );
+                      pendingFocus.current = {
+                        stepId: updatedStepId,
+                        selectionStart: listContinuation.caret,
+                        selectionEnd: listContinuation.caret,
+                      };
+                      setSuggestion(null);
+                    } else if (!isPlaceholder) {
                       insertStepAfter(step.id);
                     }
                   } else if (event.key === 'Escape') {

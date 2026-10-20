@@ -82,6 +82,12 @@ test('a user can reset their password through the local recovery email @e2e', as
       .analyze();
     expect(resetA11y.violations).toEqual([]);
 
+    await page.getByRole('textbox', { name: 'New password' }).fill(user.password);
+    await page.getByRole('button', { name: 'Save password' }).click();
+    await expect(page.locator('.auth-feedback[role="alert"]')).toHaveText(
+      'Choose a password different from your current password.',
+    );
+
     await page.getByRole('textbox', { name: 'New password' }).fill('replacement-password-84');
     await page.getByRole('button', { name: 'Save password' }).click();
     await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);

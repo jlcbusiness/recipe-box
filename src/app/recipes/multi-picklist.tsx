@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
 import type { RecipePicklistValue } from '../../lib/recipes/data';
 import styles from './multi-picklist.module.css';
 
@@ -16,6 +16,7 @@ type MultiPicklistProps = {
   onToggle: () => void;
   onClose: () => void;
   onSelectionChange?: (selectedIds: string[]) => void;
+  onAddOption?: (value: string) => Promise<{ valueId?: string; error?: string }>;
   onFocusLeave?: (relatedTarget: EventTarget | null) => void;
   onEnter?: () => boolean;
   emptyLabel?: string;
@@ -33,6 +34,7 @@ export function MultiPicklist({
   onToggle,
   onClose,
   onSelectionChange,
+  onAddOption,
   onFocusLeave,
   onEnter,
   emptyLabel = 'Select',
@@ -41,6 +43,9 @@ export function MultiPicklist({
 }: MultiPicklistProps) {
   const [localSelectedOptionIds, setLocalSelectedOptionIds] = useState(selectedIds);
   const selectedOptionIds = onSelectionChange ? selectedIds : localSelectedOptionIds;
+  const [addDraft, setAddDraft] = useState('');
+  const [addError, setAddError] = useState('');
+  const [isAdding, startAddTransition] = useTransition();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLFieldSetElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -58,6 +63,13 @@ export function MultiPicklist({
   const optionsId = controlId ? `${controlId}-options` : `${category}-options`;
 
   useEffect(() => {
+    if (!isOpen) {
+      setAddDraft('');
+      setAddError('');
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (filterMode) return;
     const measuredWidth = measureRef.current?.getBoundingClientRect().width;
     if (measuredWidth) {
@@ -71,11 +83,22 @@ export function MultiPicklist({
     }
     focusOptionOnOpenRef.current = false;
     const selectedOption = menuRef.current?.querySelector<HTMLButtonElement>(
-      'button[aria-pressed="true"]',
+      'button[data-multi-option="true"][aria-pressed="true"]',
     );
-    const firstOption = menuRef.current?.querySelector<HTMLButtonElement>('button');
+    const firstOption = menuRef.current?.querySelector<HTMLButtonElement>(
+      'button[data-multi-option="true"]',
+    );
     (selectedOption ?? firstOption)?.focus();
   }, [isOpen]);
+
+  function selectOption(valueId: string) {
+    if (selectedOptionIds.includes(valueId)) {
+      return;
+    }
+    const nextValues = [...selectedOptionIds, valueId];
+    if (onSelectionChange) onSelectionChange(nextValues);
+    else setLocalSelectedOptionIds(nextValues);
+  }
 
   function toggleOption(valueId: string) {
     const nextValues = selectedOptionIds.includes(valueId)
@@ -83,6 +106,27 @@ export function MultiPicklist({
       : [...selectedOptionIds, valueId];
     if (onSelectionChange) onSelectionChange(nextValues);
     else setLocalSelectedOptionIds(nextValues);
+  }
+
+  function submitAddOption() {
+    if (!onAddOption || isAdding) {
+      return;
+    }
+    const rawValue = addDraft.trim();
+    if (!rawValue) {
+      setAddError(`Enter a ${label.toLocaleLowerCase()} value before adding.`);
+      return;
+    }
+    setAddError('');
+    startAddTransition(async () => {
+      const result = await onAddOption(addDraft);
+      if (result.error || !result.valueId) {
+        setAddError(result.error ?? `${label} could not be added. Try again.`);
+        return;
+      }
+      setAddDraft('');
+      selectOption(result.valueId);
+    });
   }
 
   function handleTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
@@ -98,9 +142,11 @@ export function MultiPicklist({
     event.preventDefault();
     if (isOpen) {
       const selectedOption = menuRef.current?.querySelector<HTMLButtonElement>(
-        'button[aria-pressed="true"]',
+        'button[data-multi-option="true"][aria-pressed="true"]',
       );
-      const firstOption = menuRef.current?.querySelector<HTMLButtonElement>('button');
+      const firstOption = menuRef.current?.querySelector<HTMLButtonElement>(
+        'button[data-multi-option="true"]',
+      );
       (selectedOption ?? firstOption)?.focus();
       return;
     }
@@ -123,7 +169,8 @@ export function MultiPicklist({
 
     event.preventDefault();
     const options = Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [],
+      menuRef.current?.querySelectorAll<HTMLButtonElement>('button[data-multi-option="true"]') ??
+        [],
     );
     const currentIndex = options.indexOf(event.currentTarget);
     const nextIndex =
@@ -199,6 +246,7 @@ export function MultiPicklist({
                 <button
                   aria-pressed={isSelected}
                   className={styles.option}
+                  data-multi-option="true"
                   key={value.id}
                   type="button"
                   onClick={() => toggleOption(value.id)}
@@ -211,6 +259,55 @@ export function MultiPicklist({
                 </button>
               );
             })}
+            {onAddOption && (
+              <>
+                <div className={styles.addRow}>
+                  <input
+                    aria-label={`Add ${label}`}
+                    autoComplete="off"
+                    className={styles.addInput}
+                    placeholder={`Add ${label}…`}
+                    size={8}
+                    type="text"
+                    value={addDraft}
+                    onChange={(event) => {
+                      setAddDraft(event.target.value);
+                      if (addError) {
+                        setAddError('');
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        submitAddOption();
+                      } else if (event.key === 'Escape') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setAddDraft('');
+                        setAddError('');
+                        onClose();
+                        triggerRef.current?.focus();
+                      }
+                    }}
+                  />
+                  <button
+                    aria-label={`Add ${label}`}
+                    className={styles.addButton}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={submitAddOption}
+                  >
+                    +
+                  </button>
+                </div>
+                {addError && (
+                  <p className={styles.addError} role="alert">
+                    {addError}
+                  </p>
+                )}
+              </>
+            )}
           </fieldset>
         )}
       </div>

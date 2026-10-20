@@ -100,6 +100,7 @@ function SuggestionCellEditor({
   options,
   initialCharacter,
   onCommit,
+  onEnterCommit,
   onCancel,
   onDraftChange,
   onTabCommit,
@@ -112,6 +113,7 @@ function SuggestionCellEditor({
   options: string[];
   initialCharacter?: string;
   onCommit: (value: string) => void;
+  onEnterCommit?: (value: string) => void;
   onCancel: () => void;
   onDraftChange?: (value: string) => void;
   onTabCommit?: () => void;
@@ -209,10 +211,16 @@ function SuggestionCellEditor({
     if (event.key === 'ArrowDown' && suggestions.length > 0) {
       event.preventDefault();
       setHasNavigated(true);
+      if (!isOpen) {
+        setIsOpen(true);
+      }
       setActiveIndex((current) => (current + 1) % suggestions.length);
     } else if (event.key === 'ArrowUp' && suggestions.length > 0) {
       event.preventDefault();
       setHasNavigated(true);
+      if (!isOpen) {
+        setIsOpen(true);
+      }
       setActiveIndex((current) => (current - 1 + suggestions.length) % suggestions.length);
     } else if (event.key === 'Enter') {
       event.preventDefault();
@@ -221,7 +229,11 @@ function SuggestionCellEditor({
         choose(suggestions[activeIndex] ?? draft);
       } else {
         skipBlurCommit.current = true;
-        onCommit(draft.trim());
+        if (onEnterCommit) {
+          onEnterCommit(draft.trim());
+        } else {
+          onCommit(draft.trim());
+        }
       }
     } else if (
       event.key === 'Tab' &&
@@ -337,16 +349,19 @@ function InlineTextEditor({
   value,
   initialCharacter,
   onCommit,
+  onEnterCommit,
   onCancel,
 }: {
   label: string;
   value: string;
   initialCharacter?: string;
   onCommit: (value: string) => void;
+  onEnterCommit?: (value: string) => void;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState(initialCharacter ?? value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const skipBlurCommit = useRef(false);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -358,13 +373,24 @@ function InlineTextEditor({
       className="ingredient-cell-input"
       ref={inputRef}
       value={draft}
-      onBlur={() => onCommit(draft.trim())}
+      onBlur={() => {
+        if (skipBlurCommit.current) {
+          skipBlurCommit.current = false;
+        } else {
+          onCommit(draft.trim());
+        }
+      }}
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
           event.stopPropagation();
-          onCommit(draft.trim());
+          skipBlurCommit.current = true;
+          if (onEnterCommit) {
+            onEnterCommit(draft.trim());
+          } else {
+            onCommit(draft.trim());
+          }
         } else if (event.key === 'Escape') {
           event.preventDefault();
           event.stopPropagation();
@@ -400,10 +426,16 @@ function MobileIngredientEditor({
   const [detail, setDetail] = useState(row.detail);
   const [preparation, setPreparation] = useState(row.preparation);
   const [measurements, setMeasurements] = useState(row.measurements);
+  const measurementsRef = useRef(row.measurements);
   const [position, setPosition] = useState<{ left: number; top: number; maxHeight: number } | null>(
     null,
   );
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  function updateMobileMeasurements(nextMeasurements: IngredientRowDraft['measurements']) {
+    measurementsRef.current = nextMeasurements;
+    setMeasurements(nextMeasurements);
+  }
 
   function densityForName(name: string) {
     return ingredients.find(
@@ -413,7 +445,11 @@ function MobileIngredientEditor({
 
   function changeIngredientName(name: string) {
     setIngredientName(name);
-    setMeasurements((current) => reconcileDensityIngredientChange(current, densityForName(name)));
+    const nextMeasurements = reconcileDensityIngredientChange(
+      measurementsRef.current,
+      densityForName(name),
+    );
+    updateMobileMeasurements(nextMeasurements);
   }
 
   const positionPopover = useCallback(() => {
@@ -496,7 +532,7 @@ function MobileIngredientEditor({
       ingredientName: ingredientName.trim(),
       detail: detail.trim(),
       preparation: preparation.trim(),
-      measurements,
+      measurements: measurementsRef.current,
     });
   }
 
@@ -535,6 +571,25 @@ function MobileIngredientEditor({
           value={ingredientName}
           onDraftChange={changeIngredientName}
           onCommit={changeIngredientName}
+          onEnterCommit={(value) => {
+            const nextName = value.trim();
+            const nextMeasurements = reconcileDensityIngredientChange(
+              measurements,
+              densityForName(nextName),
+            );
+            onSubmit({
+              ...row,
+              ingredientId:
+                ingredients.find(
+                  (ingredient) =>
+                    ingredient.name.toLocaleLowerCase() === nextName.toLocaleLowerCase(),
+                )?.id ?? null,
+              ingredientName: nextName,
+              detail: detail.trim(),
+              preparation: preparation.trim(),
+              measurements: nextMeasurements,
+            });
+          }}
           onCancel={() => {}}
         />
       </div>
@@ -550,7 +605,8 @@ function MobileIngredientEditor({
           picklists={picklists}
           density={densityForName(ingredientName)}
           validate={validateMeasurements}
-          onChange={setMeasurements}
+          onChange={updateMobileMeasurements}
+          onCommitRow={submit}
         />
       </div>
       <div className="recipe-mobile-picker-field">
@@ -563,6 +619,21 @@ function MobileIngredientEditor({
           value={preparation}
           onDraftChange={setPreparation}
           onCommit={setPreparation}
+          onEnterCommit={(value) => {
+            onSubmit({
+              ...row,
+              ingredientId:
+                ingredients.find(
+                  (ingredient) =>
+                    ingredient.name.toLocaleLowerCase() ===
+                    ingredientName.trim().toLocaleLowerCase(),
+                )?.id ?? null,
+              ingredientName: ingredientName.trim(),
+              detail: detail.trim(),
+              preparation: value.trim(),
+              measurements,
+            });
+          }}
           onCancel={() => {}}
         />
       </div>
@@ -718,7 +789,31 @@ export function IngredientRowsEditor({
     commitRows(rowsRef.current.filter((current) => current.id !== rowId));
   };
 
-  const commitCell = (rowId: string, field: IngredientField, value: string) => {
+  const focusTrailingAddRow = () => {
+    const trailingRow = rowsRef.current.find((candidate) => isEmptyIngredientRow(candidate));
+    if (!trailingRow) {
+      return;
+    }
+    pendingFocusCell.current = { rowId: trailingRow.id, field: 'ingredientName' };
+    setActiveCell(null);
+    requestAnimationFrame(() => {
+      const cells =
+        ingredientTableRef.current?.querySelectorAll<HTMLTableCellElement>('[data-field]');
+      Array.from(cells ?? [])
+        .find(
+          (cell) =>
+            cell.dataset.rowId === trailingRow.id && cell.dataset.field === 'ingredientName',
+        )
+        ?.focus();
+    });
+  };
+
+  const commitCell = (
+    rowId: string,
+    field: IngredientField,
+    value: string,
+    reason: 'blur' | 'enter' | 'tab' = 'blur',
+  ) => {
     const currentRows = rowsRef.current;
     if (field === 'ingredientName' && !value.trim()) {
       commitRows(currentRows.filter((row) => row.id !== rowId));
@@ -768,6 +863,12 @@ export function IngredientRowsEditor({
     const clickedCell = pendingClickCell.current;
     pendingClickCell.current = null;
     commitRows(updatedRows);
+    if (reason === 'enter' && !clickedCell) {
+      const trailingRow = rowsRef.current.find((candidate) => isEmptyIngredientRow(candidate));
+      if (trailingRow) {
+        pendingFocusCell.current = { rowId: trailingRow.id, field: 'ingredientName' };
+      }
+    }
     setActiveCell(
       clickedCell
         ? {
@@ -953,7 +1054,8 @@ export function IngredientRowsEditor({
             value={displayValue}
             initialCharacter={initialCharacter}
             onCancel={() => setActiveCell(null)}
-            onCommit={(value) => commitCell(row.id, field, value)}
+            onCommit={(value) => commitCell(row.id, field, value, 'tab')}
+            onEnterCommit={(value) => commitCell(row.id, field, value, 'enter')}
             onTabCommit={() => focusNextCell(row.id, field)}
           />
         ) : isActive && field === 'preparation' ? (
@@ -963,7 +1065,8 @@ export function IngredientRowsEditor({
             value={displayValue}
             initialCharacter={initialCharacter}
             onCancel={() => setActiveCell(null)}
-            onCommit={(value) => commitCell(row.id, field, value)}
+            onCommit={(value) => commitCell(row.id, field, value, 'tab')}
+            onEnterCommit={(value) => commitCell(row.id, field, value, 'enter')}
             onTabCommit={() => focusNextCell(row.id, field)}
           />
         ) : isActive ? (
@@ -972,7 +1075,8 @@ export function IngredientRowsEditor({
             value={displayValue}
             initialCharacter={initialCharacter}
             onCancel={() => setActiveCell(null)}
-            onCommit={(value) => commitCell(row.id, field, value)}
+            onCommit={(value) => commitCell(row.id, field, value, 'blur')}
+            onEnterCommit={(value) => commitCell(row.id, field, value, 'enter')}
           />
         ) : (
           <span className="recipe-ingredient-cell-value">
@@ -1005,6 +1109,7 @@ export function IngredientRowsEditor({
         onChange={(measurements) =>
           commitRows(updateIngredientRow(rowsRef.current, row.id, { measurements }))
         }
+        onCommitRow={focusTrailingAddRow}
       />
     );
   }

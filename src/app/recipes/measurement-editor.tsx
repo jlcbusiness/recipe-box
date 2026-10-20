@@ -1,7 +1,7 @@
 'use client';
 
 import { Calculator } from 'lucide-react';
-import { Fragment, useId } from 'react';
+import { Fragment, useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { RecipePicklistValue } from '../../lib/recipes/data';
 import { deriveDensityCounterpart, type IngredientDensity } from '../../lib/recipes/density-rules';
@@ -121,6 +121,8 @@ function MeasurementPicklist({
   describedBy,
   invalid,
   onSelect,
+  onCommitEnter,
+  onTabSelect,
 }: {
   label: string;
   prompt: string;
@@ -130,6 +132,8 @@ function MeasurementPicklist({
   describedBy?: string;
   invalid?: boolean;
   onSelect: (valueId: string) => void;
+  onCommitEnter?: () => void;
+  onTabSelect?: (valueId: string) => boolean | undefined;
 }) {
   const selectedValue = options.find((option) => option.id === selectedId);
   const menu = usePicklistMenu({
@@ -140,7 +144,9 @@ function MeasurementPicklist({
       group: option.group,
     })),
     onSelect,
-    selectOnTab: false,
+    onCommitEnter,
+    onTabSelect,
+    selectOnTab: true,
   });
 
   return (
@@ -159,6 +165,7 @@ function MeasurementPicklist({
         ref={menu.triggerRef}
         role="combobox"
         type="button"
+        onBlur={menu.clearPendingSelection}
         onClick={menu.toggle}
         onKeyDown={menu.handleKeyDown}
       >
@@ -188,7 +195,7 @@ function MeasurementPicklist({
                   id={`${menu.listId}-${index}`}
                   role="option"
                   tabIndex={-1}
-                  onMouseEnter={() => menu.setActiveIndex(index)}
+                  onPointerMove={() => menu.setActiveIndex(index)}
                   onClick={() => menu.select(option.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -216,6 +223,7 @@ export function MeasurementEditor({
   validate,
   layout = 'mobile',
   onChange,
+  onCommitRow,
 }: {
   rowNumber: number;
   measurements: MeasurementDraft[];
@@ -224,8 +232,11 @@ export function MeasurementEditor({
   validate: boolean;
   layout?: 'desktop' | 'mobile';
   onChange: (measurements: MeasurementDraft[]) => void;
+  onCommitRow?: () => void;
 }) {
   const editorId = useId();
+  const fieldsContainerRef = useRef<HTMLElement | null>(null);
+  const pendingCategoryTabFocusRef = useRef<MeasurementCategory | null>(null);
   const category = categoryFor(measurements);
   const activeCategory = category ?? 'units';
   let validationError: string | null = null;
@@ -236,6 +247,22 @@ export function MeasurementEditor({
       validationError = error instanceof Error ? error.message : 'Check this measurement.';
     }
   }
+
+  useLayoutEffect(() => {
+    if (pendingCategoryTabFocusRef.current !== activeCategory) {
+      return;
+    }
+    pendingCategoryTabFocusRef.current = null;
+    const focusFirstField = () => {
+      fieldsContainerRef.current
+        ?.querySelector<HTMLElement>(
+          'input.recipe-measurement-quantity, .recipe-measurement-control:not(.recipe-measurement-category) button.recipe-measurement-picklist-trigger',
+        )
+        ?.focus();
+    };
+    focusFirstField();
+    requestAnimationFrame(focusFirstField);
+  }, [activeCategory]);
 
   const errorId = `${editorId}-error`;
   const describedBy = validationError ? errorId : undefined;
@@ -249,6 +276,26 @@ export function MeasurementEditor({
 
   function changeCategory(value: MeasurementCategory) {
     onChange(measurementsForCategory(value));
+  }
+
+  function commitQuantityInput(type: MeasurementType, measurement: MeasurementDraft) {
+    const formattedQuantity = formatQuantityInput(
+      measurement.quantity,
+      quantitySystem(type, measurement.unitCode),
+    );
+    let nextMeasurements =
+      formattedQuantity !== measurement.quantity
+        ? measurements.map((current) =>
+            current.id === measurement.id ? { ...current, quantity: formattedQuantity } : current,
+          )
+        : measurements;
+    if ((type === 'volume' || type === 'weight') && !measurement.quantity.trim() && density) {
+      const sourceType = type === 'volume' ? 'weight' : 'volume';
+      nextMeasurements = deriveDensityCounterpart(nextMeasurements, sourceType, density);
+    }
+    if (nextMeasurements !== measurements) {
+      onChange(nextMeasurements);
+    }
   }
 
   function updateMeasurement(type: MeasurementType, update: Partial<MeasurementDraft>) {
@@ -293,6 +340,11 @@ export function MeasurementEditor({
           selectedId={activeCategory}
           describedBy={describedBy}
           invalid={Boolean(validationError)}
+          onCommitEnter={onCommitRow}
+          onTabSelect={(value) => {
+            pendingCategoryTabFocusRef.current = isMeasurementCategory(value) ? value : 'units';
+            return true;
+          }}
           onSelect={(value) => {
             if (isMeasurementCategory(value)) {
               changeCategory(value);
@@ -338,27 +390,13 @@ export function MeasurementEditor({
             type="text"
             value={measurement.quantity}
             onChange={(event) => updateMeasurement(type, { quantity: event.target.value })}
-            onBlur={() => {
-              const formattedQuantity = formatQuantityInput(
-                measurement.quantity,
-                quantitySystem(type, measurement.unitCode),
-              );
-              if (formattedQuantity !== measurement.quantity) {
-                onChange(
-                  measurements.map((current) =>
-                    current.id === measurement.id
-                      ? { ...current, quantity: formattedQuantity }
-                      : current,
-                  ),
-                );
-              }
-              if (
-                (type === 'volume' || type === 'weight') &&
-                !measurement.quantity.trim() &&
-                density
-              ) {
-                const sourceType = type === 'volume' ? 'weight' : 'volume';
-                onChange(deriveDensityCounterpart(measurements, sourceType, density));
+            onBlur={() => commitQuantityInput(type, measurement)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                event.stopPropagation();
+                commitQuantityInput(type, measurement);
+                onCommitRow?.();
               }
             }}
           />
@@ -401,6 +439,7 @@ export function MeasurementEditor({
           }`}
           describedBy={describedBy}
           invalid={Boolean(validationError)}
+          onCommitEnter={onCommitRow}
           onSelect={(unitCode) => updateMeasurement(type, { unitCode })}
         />
       </div>
@@ -426,6 +465,7 @@ export function MeasurementEditor({
           selectedId={measurement.picklistValueId}
           describedBy={describedBy}
           invalid={Boolean(validationError)}
+          onCommitEnter={onCommitRow}
           onSelect={(picklistValueId) => updateMeasurement(type, { picklistValueId })}
         />
       </div>
@@ -504,7 +544,12 @@ export function MeasurementEditor({
             </p>
           )}
         </td>
-        <td className="recipe-ingredient-measurement-cell recipe-ingredient-amount-cell">
+        <td
+          className="recipe-ingredient-measurement-cell recipe-ingredient-amount-cell"
+          ref={(element) => {
+            fieldsContainerRef.current = element;
+          }}
+        >
           {desktopFields}
         </td>
       </>
@@ -515,6 +560,9 @@ export function MeasurementEditor({
     <fieldset
       aria-label={`Measurements for ingredient row ${rowNumber}`}
       className="recipe-measurement-editor"
+      ref={(element) => {
+        fieldsContainerRef.current = element;
+      }}
     >
       <legend className="visually-hidden">Measurements for ingredient row {rowNumber}</legend>
       {renderCategoryPicker()}

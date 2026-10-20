@@ -10,6 +10,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useTransition,
 } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -35,6 +36,8 @@ export function usePicklistMenu({
   value,
   options,
   onSelect,
+  onCommitEnter,
+  onTabSelect,
   scope,
   selectOnTab = true,
   open,
@@ -43,6 +46,8 @@ export function usePicklistMenu({
   value: string;
   options: PicklistOption[];
   onSelect: (value: string) => void;
+  onCommitEnter?: () => void;
+  onTabSelect?: (value: string) => boolean | undefined;
   scope?: string;
   selectOnTab?: boolean;
   open?: boolean;
@@ -52,6 +57,7 @@ export function usePicklistMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const [hasSelectedSinceFocus, setHasSelectedSinceFocus] = useState(false);
   const isOpen = open ?? uncontrolledOpen;
   const [activeIndex, setActiveIndex] = useState(
     Math.max(
@@ -159,11 +165,16 @@ export function usePicklistMenu({
   }, [activeIndex, isOpen, listId]);
 
   function select(optionValue: string, returnFocus = true) {
+    setHasSelectedSinceFocus(true);
     onSelect(optionValue);
     setIsOpen(false);
     if (returnFocus) {
       triggerRef.current?.focus();
     }
+  }
+
+  function clearPendingSelection() {
+    setHasSelectedSinceFocus(false);
   }
 
   function toggle() {
@@ -181,12 +192,17 @@ export function usePicklistMenu({
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       if (!isOpen) {
-        setActiveIndex(
-          Math.max(
-            0,
-            options.findIndex((option) => option.value === value),
-          ),
-        );
+        const selectedIndex = options.findIndex((option) => option.value === value);
+        const offset = event.key === 'ArrowDown' ? 1 : -1;
+        const nextIndex =
+          options.length === 0
+            ? 0
+            : selectedIndex >= 0
+              ? (selectedIndex + offset + options.length) % options.length
+              : event.key === 'ArrowDown'
+                ? 0
+                : options.length - 1;
+        setActiveIndex(nextIndex);
         setIsOpen(true);
         return;
       }
@@ -202,7 +218,13 @@ export function usePicklistMenu({
       setActiveIndex(event.key === 'Home' ? 0 : Math.max(0, options.length - 1));
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      event.stopPropagation();
       if (!isOpen) {
+        if (event.key === 'Enter' && hasSelectedSinceFocus && onCommitEnter) {
+          setHasSelectedSinceFocus(false);
+          onCommitEnter();
+          return;
+        }
         setActiveIndex(
           Math.max(
             0,
@@ -215,7 +237,11 @@ export function usePicklistMenu({
       }
     } else if (event.key === 'Tab' && isOpen) {
       if (selectOnTab && options[activeIndex]) {
-        select(options[activeIndex].value, false);
+        const chosenValue = options[activeIndex].value;
+        select(chosenValue, false);
+        if (onTabSelect?.(chosenValue)) {
+          event.preventDefault();
+        }
       } else {
         setIsOpen(false);
       }
@@ -229,6 +255,7 @@ export function usePicklistMenu({
 
   return {
     activeIndex,
+    clearPendingSelection,
     handleKeyDown,
     isOpen,
     listId,
@@ -259,6 +286,7 @@ export function Picklist({
   invalid,
   open,
   onOpenChange,
+  onAddOption,
   onEnter,
   onFocusLeave,
   measureLabel,
@@ -281,6 +309,7 @@ export function Picklist({
   invalid?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onAddOption?: (value: string) => Promise<{ valueId?: string; error?: string }>;
   onEnter?: () => boolean;
   onFocusLeave?: (relatedTarget: EventTarget | null) => void;
   measureLabel?: string;
@@ -289,6 +318,7 @@ export function Picklist({
 }) {
   const {
     activeIndex,
+    clearPendingSelection,
     handleKeyDown,
     isOpen,
     listId,
@@ -296,9 +326,13 @@ export function Picklist({
     menuRef,
     select,
     setActiveIndex,
+    setIsOpen,
     toggle,
     triggerRef,
   } = usePicklistMenu({ value, options, onSelect, scope, open, onOpenChange });
+  const [addDraft, setAddDraft] = useState('');
+  const [addError, setAddError] = useState('');
+  const [isAdding, startAddTransition] = useTransition();
   const selectedOption = options.find((option) => option.value === value);
   const longestOption = options.reduce(
     (longest, option) => (option.label.length > longest.length ? option.label : longest),
@@ -310,6 +344,34 @@ export function Picklist({
     typeof document === 'undefined'
       ? null
       : (triggerRef.current?.closest('dialog') ?? document.body);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAddDraft('');
+      setAddError('');
+    }
+  }, [isOpen]);
+
+  function submitAddOption() {
+    if (!onAddOption || isAdding) {
+      return;
+    }
+    const rawValue = addDraft.trim();
+    if (!rawValue) {
+      setAddError(`Enter a ${label.toLocaleLowerCase()} value before adding.`);
+      return;
+    }
+    setAddError('');
+    startAddTransition(async () => {
+      const result = await onAddOption(addDraft);
+      if (result.error || !result.valueId) {
+        setAddError(result.error ?? `${label} could not be added. Try again.`);
+        return;
+      }
+      setAddDraft('');
+      select(result.valueId);
+    });
+  }
 
   useLayoutEffect(() => {
     if (!showArrow || !sizeToContent) {
@@ -355,7 +417,13 @@ export function Picklist({
         title={title}
         type="button"
         onClick={toggle}
-        onBlur={(event) => onFocusLeave?.(event.relatedTarget)}
+        onBlur={(event) => {
+          clearPendingSelection();
+          if (menuRef.current?.contains(event.relatedTarget as Node)) {
+            return;
+          }
+          onFocusLeave?.(event.relatedTarget);
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && onEnter?.()) {
             event.preventDefault();
@@ -375,43 +443,133 @@ export function Picklist({
       {isOpen &&
         portalTarget &&
         createPortal(
-          <div
-            className={`single-picklist-menu${menuClassName ? ` ${menuClassName}` : ''}`}
-            data-picklist-scope={scope}
-            id={listId}
-            ref={menuRef}
-            role="listbox"
-            style={{
-              ...(menuPosition ?? { left: 0, top: 0, maxHeight: 220 }),
-              visibility: menuPosition ? 'visible' : 'hidden',
-            }}
-            onMouseDown={(event) => event.preventDefault()}
-          >
-            {options.map((option, index) => (
-              <Fragment key={option.value}>
-                {option.group && options[index - 1]?.group !== option.group && (
-                  <div className="single-picklist-group" role="presentation">
-                    {option.group}
-                  </div>
-                )}
+          onAddOption ? (
+            <div
+              className={`single-picklist-menu single-picklist-menu-with-add${menuClassName ? ` ${menuClassName}` : ''}`}
+              data-picklist-scope={scope}
+              ref={menuRef}
+              style={{
+                ...(menuPosition ?? { left: 0, top: 0, maxHeight: 260 }),
+                visibility: menuPosition ? 'visible' : 'hidden',
+              }}
+            >
+              <div
+                aria-label={label}
+                className="single-picklist-options"
+                id={listId}
+                role="listbox"
+                onMouseDown={(event) => event.preventDefault()}
+              >
+                {options.map((option, index) => (
+                  <Fragment key={option.value}>
+                    {option.group && options[index - 1]?.group !== option.group && (
+                      <div className="single-picklist-group" role="presentation">
+                        {option.group}
+                      </div>
+                    )}
+                    <button
+                      aria-selected={option.value === value}
+                      className={`single-picklist-option${index === activeIndex ? ' is-active' : ''}`}
+                      id={`${listId}-${index}`}
+                      role="option"
+                      tabIndex={-1}
+                      type="button"
+                      onClick={() => select(option.value)}
+                      onPointerMove={() => setActiveIndex(index)}
+                    >
+                      <span aria-hidden="true" className="single-picklist-check">
+                        {option.value === value ? '✓' : ''}
+                      </span>
+                      <span>{option.label}</span>
+                    </button>
+                  </Fragment>
+                ))}
+              </div>
+              <div className="single-picklist-add-row">
+                <input
+                  aria-label={`Add ${label}`}
+                  autoComplete="off"
+                  className="single-picklist-add-input"
+                  placeholder={`Add ${label}…`}
+                  size={8}
+                  type="text"
+                  value={addDraft}
+                  onChange={(event) => {
+                    setAddDraft(event.target.value);
+                    if (addError) {
+                      setAddError('');
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      submitAddOption();
+                    } else if (event.key === 'Escape') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setAddDraft('');
+                      setAddError('');
+                      setIsOpen(false);
+                      triggerRef.current?.focus();
+                    }
+                  }}
+                />
                 <button
-                  aria-selected={option.value === value}
-                  className={`single-picklist-option${index === activeIndex ? ' is-active' : ''}`}
-                  id={`${listId}-${index}`}
-                  role="option"
-                  tabIndex={-1}
+                  aria-label={`Add ${label}`}
+                  className="single-picklist-add-button"
                   type="button"
-                  onClick={() => select(option.value)}
-                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={submitAddOption}
                 >
-                  <span aria-hidden="true" className="single-picklist-check">
-                    {option.value === value ? '✓' : ''}
-                  </span>
-                  <span>{option.label}</span>
+                  +
                 </button>
-              </Fragment>
-            ))}
-          </div>,
+              </div>
+              {addError && (
+                <p className="single-picklist-add-error" role="alert">
+                  {addError}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div
+              className={`single-picklist-menu${menuClassName ? ` ${menuClassName}` : ''}`}
+              data-picklist-scope={scope}
+              id={listId}
+              ref={menuRef}
+              role="listbox"
+              style={{
+                ...(menuPosition ?? { left: 0, top: 0, maxHeight: 220 }),
+                visibility: menuPosition ? 'visible' : 'hidden',
+              }}
+              onMouseDown={(event) => event.preventDefault()}
+            >
+              {options.map((option, index) => (
+                <Fragment key={option.value}>
+                  {option.group && options[index - 1]?.group !== option.group && (
+                    <div className="single-picklist-group" role="presentation">
+                      {option.group}
+                    </div>
+                  )}
+                  <button
+                    aria-selected={option.value === value}
+                    className={`single-picklist-option${index === activeIndex ? ' is-active' : ''}`}
+                    id={`${listId}-${index}`}
+                    role="option"
+                    tabIndex={-1}
+                    type="button"
+                    onClick={() => select(option.value)}
+                    onPointerMove={() => setActiveIndex(index)}
+                  >
+                    <span aria-hidden="true" className="single-picklist-check">
+                      {option.value === value ? '✓' : ''}
+                    </span>
+                    <span>{option.label}</span>
+                  </button>
+                </Fragment>
+              ))}
+            </div>
+          ),
           portalTarget,
         )}
     </>

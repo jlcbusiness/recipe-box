@@ -1,10 +1,20 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+import type { RecipePicklistValue } from '../../lib/recipes/data';
 import { createClient } from '../../lib/supabase/server';
 
 export type RecipePicklistActionState = {
   status?: 'saved' | 'conflict' | 'error';
   message?: string;
+};
+
+export type EditorPicklistCategory = 'food_type' | 'meal_type' | 'cuisine' | 'equipment';
+
+export type RecipePicklistCreateResult = {
+  value?: RecipePicklistValue;
+  created?: boolean;
+  error?: string;
 };
 
 const categories = new Set([
@@ -16,6 +26,12 @@ const categories = new Set([
   'enthusiasm',
   'informal_unit',
   'unmeasured_phrase',
+]);
+const editorCategories = new Set<EditorPicklistCategory>([
+  'food_type',
+  'meal_type',
+  'cuisine',
+  'equipment',
 ]);
 const actions = new Set(['add', 'rename', 'reorder', 'delete', 'merge']);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -99,4 +115,90 @@ export async function manageRecipePicklist(
   }
 
   return { status: 'saved', message: 'Recipe picklist updated.' };
+}
+
+function normalizePicklistText(value: string): string {
+  return value.trim().replace(/\s+/gu, ' ');
+}
+
+export async function createOrGetRecipePicklistValue(
+  category: EditorPicklistCategory,
+  rawValue: string,
+): Promise<RecipePicklistCreateResult> {
+  if (typeof category !== 'string' || !editorCategories.has(category)) {
+    return { error: 'Choose a valid picklist category.' };
+  }
+  const normalizedValue = typeof rawValue === 'string' ? normalizePicklistText(rawValue) : '';
+  if (!normalizedValue) {
+    return { error: 'Enter a value before adding.' };
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { error: 'Sign in before adding a picklist value.' };
+  }
+
+  const normalizedKey = normalizedValue.toLocaleLowerCase();
+  const findExisting = async (): Promise<RecipePicklistValue | null> => {
+    const { data: rows, error } = await supabase
+      .from('recipe_picklist_values')
+      .select('id, category, value, display_value, sort_order, is_protected')
+      .eq('account_id', authData.user.id)
+      .eq('category', category)
+      .order('sort_order', { ascending: true });
+    if (error || !Array.isArray(rows)) {
+      return null;
+    }
+    const matched = (rows as RecipePicklistValue[]).find(
+      (row) =>
+        normalizePicklistText(row.display_value ?? row.value).toLocaleLowerCase() === normalizedKey,
+    );
+    return matched ? { ...matched, value: matched.display_value } : null;
+  };
+
+  const existing = await findExisting();
+  if (existing) {
+    return { value: existing, created: false };
+  }
+
+  const { data: revisionRow, error: revisionError } = await supabase
+    .from('recipe_picklist_revisions')
+    .select('revision')
+    .eq('account_id', authData.user.id)
+    .eq('category', category)
+    .maybeSingle();
+  const revision = revisionRow?.revision;
+  if (revisionError || typeof revision !== 'number' || revision < 1) {
+    return { error: 'Picklist value could not be added. Try again.' };
+  }
+
+  const { error: addError } = await supabase.rpc('manage_recipe_picklist', {
+    p_action: 'add',
+    p_category: category,
+    p_expected_revision: revision,
+    p_value_id: null,
+    p_value: normalizedValue,
+    p_ordered_ids: [],
+    p_source_ids: [],
+    p_target_id: null,
+    p_replacement_id: null,
+    p_clear_optional: false,
+  });
+
+  if (addError) {
+    const concurrentMatch = await findExisting();
+    if (concurrentMatch) {
+      return { value: concurrentMatch, created: false };
+    }
+    return { error: 'Picklist value could not be added. Try again.' };
+  }
+
+  const created = await findExisting();
+  if (!created) {
+    return { error: 'Picklist value could not be added. Try again.' };
+  }
+
+  revalidatePath('/settings');
+  return { value: created, created: true };
 }

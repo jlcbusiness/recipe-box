@@ -37,7 +37,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page).toHaveURL(/\/(?:recipes|publications\/[0-9a-f-]+)$/);
 }
 
 test('measurement saves are owner-scoped, validated, and included in history @e2e @measurements', async ({
@@ -762,7 +762,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     );
     await expect(mobileUnitMenu.locator('.ingredient-cell-option-group').first()).toHaveCSS(
       'text-decoration-color',
-      'rgb(98, 105, 93)',
+      'rgb(108, 103, 95)',
     );
     await expect(mobileUnitMenu.getByRole('option', { name: 'cup', exact: true })).toBeVisible();
     const mobileUnitMenuBounds = await mobileUnitMenu.evaluate((element) => {
@@ -812,6 +812,159 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('ingredient amount and amount-type controls support Arrow open-and-advance, Tab accept, and two-Enter commit without submitting the recipe form @e2e @measurements', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Keyboard amount entry recipe');
+
+    if (testInfo.project.name === 'Fold 6') {
+      const mobileList = page.getByRole('table', {
+        name: 'Recipe ingredients on mobile',
+        exact: true,
+      });
+      await mobileList.getByRole('button', { name: 'Enter ingredient' }).click();
+      const popover = page.getByRole('dialog', { name: 'Ingredient details' });
+      const ingredientInput = popover.getByRole('combobox', { name: 'Ingredient', exact: true });
+      await ingredientInput.fill('Garlic');
+      await ingredientInput.press('Enter');
+      await expect(popover).toBeVisible();
+      await expect(ingredientInput).toHaveValue('Garlic');
+
+      const typePicker = popover.getByRole('combobox', { name: 'Ingredient type, row 1' });
+      await typePicker.focus();
+      await page.keyboard.press('ArrowDown');
+      await expect(
+        page.getByRole('listbox').getByRole('option', { name: 'Count', exact: true }),
+      ).toHaveClass(/is-active/);
+      await page.keyboard.press('Tab');
+      await expect(typePicker).toHaveText('Count');
+      const countAmount = popover.getByRole('textbox', { name: 'Count amount, row 1' });
+      await expect(countAmount).toBeFocused();
+      await countAmount.fill('1200');
+      await countAmount.press('Enter');
+      await expect(popover).toBeHidden();
+      await expect(page).toHaveURL(/\/recipes\/new$/);
+
+      await mobileList.getByRole('button', { name: 'Enter ingredient' }).click();
+      const secondIngredient = popover.getByRole('combobox', { name: 'Ingredient', exact: true });
+      await secondIngredient.fill('Sugar');
+      await secondIngredient.press('Enter');
+      const volumeAmount = popover.getByRole('textbox', { name: 'Volume amount, row 2' });
+      await volumeAmount.fill('1 1/2');
+      const volumeUnit = popover.getByRole('combobox', { name: 'Volume unit, row 2' });
+      await volumeUnit.focus();
+      await page.keyboard.press('ArrowUp');
+      await expect(
+        page.getByRole('listbox').getByRole('option', { name: 'fl oz', exact: true }),
+      ).toHaveClass(/is-active/);
+      await page.keyboard.press('Enter');
+      await expect(popover).toBeVisible();
+      await expect(volumeUnit).toHaveText('fl oz');
+      await page.keyboard.press('Enter');
+      await expect(popover).toBeHidden();
+      await expect(page).toHaveURL(/\/recipes\/new$/);
+
+      await page.getByRole('button', { name: 'Save recipe' }).click();
+      await expect(
+        page.getByRole('heading', { name: 'Keyboard amount entry recipe' }),
+      ).toBeVisible();
+      await expect(page.getByRole('table', { name: 'Recipe ingredients' })).toContainText('1,200');
+      await expect(page.getByRole('table', { name: 'Recipe ingredients' })).toContainText(
+        '1 ½ fl oz',
+      );
+      return;
+    }
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+
+    await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+    const firstIngredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
+    await firstIngredient.fill('Garlic');
+    await firstIngredient.press('Tab');
+    await expect(grid.locator('[aria-label="Specifics, row 1"]')).toBeFocused();
+    await page.keyboard.press('Tab');
+
+    const firstTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
+    await expect(firstTypePicker).toBeFocused();
+    await expect(firstTypePicker).toHaveText('Unit');
+
+    await page.keyboard.press('ArrowDown');
+    const typeListbox = page.getByRole('listbox');
+    await expect(typeListbox).toBeVisible();
+    await expect(typeListbox.getByRole('option', { name: 'Count', exact: true })).toHaveClass(
+      /is-active/,
+    );
+    await page.keyboard.press('ArrowDown');
+    await expect(typeListbox.getByRole('option', { name: 'Things', exact: true })).toHaveClass(
+      /is-active/,
+    );
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+    await expect(firstTypePicker).toHaveText('Things');
+    await expect(firstTypePicker).toBeFocused();
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+    await expect(grid.getByRole('cell', { name: 'Add ingredient row' })).toBeFocused();
+
+    await firstTypePicker.focus();
+    await page.keyboard.press('ArrowUp');
+    await expect(
+      page.getByRole('listbox').getByRole('option', { name: 'Count', exact: true }),
+    ).toHaveClass(/is-active/);
+    await page.keyboard.press('Tab');
+    await expect(firstTypePicker).toHaveText('Count');
+    const countAmount = page.getByRole('textbox', { name: 'Count amount, row 1' });
+    await expect(countAmount).toBeFocused();
+    await countAmount.fill('1200');
+    await countAmount.press('Enter');
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+    await expect(countAmount).toHaveValue('1,200');
+    await expect(grid.getByRole('cell', { name: 'Add ingredient row' })).toBeFocused();
+
+    await page.keyboard.press('s');
+    const secondIngredient = page.getByRole('combobox', { name: 'Ingredient, row 2' });
+    await expect(secondIngredient).toBeFocused();
+    await secondIngredient.pressSequentially('ugar');
+    await secondIngredient.press('Enter');
+    await expect(secondIngredient).toHaveValue('sugar');
+    await secondIngredient.press('Enter');
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+    await expect(grid.getByRole('cell', { name: 'Add ingredient row' })).toBeFocused();
+
+    const volumeAmountRow2 = page.getByRole('textbox', { name: 'Volume amount, row 2' });
+    await volumeAmountRow2.fill('1 1/2');
+    await volumeAmountRow2.press('Tab');
+    const volumeUnitRow2 = page.getByRole('combobox', { name: 'Volume unit, row 2' });
+    await expect(volumeUnitRow2).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(
+      page.getByRole('listbox').getByRole('option', { name: 'fl oz', exact: true }),
+    ).toHaveClass(/is-active/);
+    await page.keyboard.press('Enter');
+    await expect(volumeUnitRow2).toHaveText('fl oz');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+    await expect(grid.getByRole('cell', { name: 'Add ingredient row' })).toBeFocused();
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Keyboard amount entry recipe' })).toBeVisible();
+    await expect(page.getByText('1,200 garlic', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 ½ fl oz sugar', { exact: true })).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
   }
