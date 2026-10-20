@@ -74,7 +74,7 @@ describe('ExplorerListPreferences', () => {
     const view = renderPreferences();
     const root = view.container.querySelector('.explorer-list-preferences');
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name publication state total_time_minutes',
+      'name publication state visibility total_time_minutes',
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Choose List columns' }));
@@ -84,13 +84,15 @@ describe('ExplorerListPreferences', () => {
     ).toBe(true);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Publication' }));
 
-    expect(root?.getAttribute('data-visible-columns')).toBe('name state total_time_minutes');
+    expect(root?.getAttribute('data-visible-columns')).toBe(
+      'name state visibility total_time_minutes',
+    );
     await waitFor(() => {
       expect(saveExplorerState).toHaveBeenCalledWith('recipes-find', {
         ...state,
         schema_version: 2,
         display_preferences: {
-          visible_columns: ['state', 'total_time_minutes'],
+          visible_columns: ['state', 'visibility', 'total_time_minutes'],
           column_widths: {},
         },
       });
@@ -108,7 +110,9 @@ describe('ExplorerListPreferences', () => {
     const publication = screen.getByRole('checkbox', { name: 'Publication' });
     fireEvent.click(publication);
 
-    expect(root?.getAttribute('data-visible-columns')).toBe('name state total_time_minutes');
+    expect(root?.getAttribute('data-visible-columns')).toBe(
+      'name state visibility total_time_minutes',
+    );
     expect((await screen.findByRole('alert')).textContent).toBe(
       'Explorer preference could not be saved.',
     );
@@ -116,7 +120,7 @@ describe('ExplorerListPreferences', () => {
     fireEvent.click(publication);
 
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name publication state total_time_minutes',
+      'name publication state visibility total_time_minutes',
     );
     await waitFor(() => {
       expect(saveExplorerState).toHaveBeenCalledTimes(2);
@@ -147,7 +151,7 @@ describe('ExplorerListPreferences', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset columns' }));
 
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name publication state total_time_minutes',
+      'name publication state visibility total_time_minutes',
     );
     expect(root?.style.getPropertyValue('--explorer-column-width-name')).toBe('');
     await waitFor(() => {
@@ -155,7 +159,7 @@ describe('ExplorerListPreferences', () => {
         ...state,
         schema_version: 2,
         display_preferences: {
-          visible_columns: ['publication', 'state', 'total_time_minutes'],
+          visible_columns: ['publication', 'state', 'visibility', 'total_time_minutes'],
           column_widths: {},
         },
       });

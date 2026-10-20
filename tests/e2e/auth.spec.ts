@@ -84,7 +84,8 @@ test('a user can reset their password through the local recovery email @e2e', as
 
     await page.getByRole('textbox', { name: 'New password' }).fill('replacement-password-84');
     await page.getByRole('button', { name: 'Save password' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
+    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
 
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.locator('.account-menu-trigger').click();
@@ -92,7 +93,8 @@ test('a user can reset their password through the local recovery email @e2e', as
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill('replacement-password-84');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
+    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
   }
@@ -140,8 +142,8 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
 
-    await expect(page).toHaveURL(/\/recipes$/);
-    await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
+    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Workspace' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Trash', exact: true })).toBeVisible();
@@ -176,11 +178,11 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
-    const mobileRecipeLink = page.getByRole('link', { name: 'Recipe Tin' });
     const mobileLibraryLink = page.getByRole('link', { name: 'Library' });
+    const mobileSearchLink = page.getByRole('link', { name: 'Search' });
     const mobileSettingsLink = page.getByRole('link', { name: 'Settings' });
-    await expect(mobileRecipeLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileLibraryLink.locator('.private-nav-mobile-icon')).toBeVisible();
+    await expect(mobileSearchLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileSettingsLink.locator('svg')).toBeVisible();
     const mobileTrashLink = page.getByRole('link', { name: 'Trash', exact: true });
     await expect(mobileTrashLink).toBeVisible();
@@ -197,7 +199,15 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(accountTrigger.locator('.account-menu-email')).toBeHidden();
     expect(mobileAccountBounds?.width).toBeGreaterThanOrEqual(44);
     expect(mobileAccountBounds?.height).toBeGreaterThanOrEqual(44);
-    expect((mobileAccountBounds?.x ?? 0) - (mobileNavBounds?.x ?? 0)).toBeLessThanOrEqual(20);
+    const handPreference = await page.locator('.private-shell').getAttribute('data-hand');
+    const accountEdgeGap =
+      handPreference === 'left'
+        ? (mobileAccountBounds?.x ?? 0) - (mobileNavBounds?.x ?? 0)
+        : (mobileNavBounds?.x ?? 0) +
+          (mobileNavBounds?.width ?? 0) -
+          ((mobileAccountBounds?.x ?? 0) + (mobileAccountBounds?.width ?? 0));
+    expect(accountEdgeGap).toBeGreaterThanOrEqual(0);
+    expect(accountEdgeGap).toBeLessThanOrEqual(20);
     await accountTrigger.focus();
     await accountTrigger.press('Enter');
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();

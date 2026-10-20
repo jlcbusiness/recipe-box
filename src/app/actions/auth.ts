@@ -134,6 +134,10 @@ export async function updatePassword(
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
+    if (error.code === 'same_password') {
+      return { error: 'Choose a password different from your current password.' };
+    }
+
     return { error: 'Unable to update the password right now. Try again shortly.' };
   }
 

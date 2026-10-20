@@ -1,5 +1,6 @@
 begin;
 
+set local role postgres;
 set local search_path = extensions, public;
 
 select plan(5);
@@ -100,11 +101,17 @@ select throws_ok(
   'A linked Google account cannot be changed to email and password sign-in'
 );
 
+with claim_state as materialized (
+  select
+    not exists (select 1 from public.accounts where is_admin)
+    and not exists (select 1 from public.first_admin_claims where singleton) as can_claim
+)
 select is(
   public.claim_first_admin('10000000-0000-4000-8000-000000000002'),
-  true,
-  'The first accepted invitation can claim administrator status'
-);
+  claim_state.can_claim,
+  'Only the first unclaimed invitation can claim administrator status'
+)
+from claim_state;
 
 select is(
   public.claim_first_admin('10000000-0000-4000-8000-000000000001'),
