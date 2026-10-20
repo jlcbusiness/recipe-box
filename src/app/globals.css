@@ -5150,6 +5150,7 @@ h1 {
 .recipe-cook-checkbox-cell .recipe-cook-checkbox {
   width: 32px;
   min-width: 32px;
+  justify-content: flex-start;
 }
 
 .private-content
