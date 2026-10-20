@@ -3335,7 +3335,13 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     }
     const checkbox = page.getByRole('checkbox', { name: 'Mark Salt complete' });
     const checkboxTarget = page.locator('.recipe-cook-checkbox').first();
-    expect((await checkboxTarget.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    const checkboxBounds = await checkbox.boundingBox();
+    const checkboxTargetBounds = await checkboxTarget.boundingBox();
+    expect(checkboxBounds).not.toBeNull();
+    expect(checkboxTargetBounds?.height).toBeGreaterThanOrEqual(48);
+    if (checkboxBounds && checkboxTargetBounds) {
+      expect(Math.abs(checkboxBounds.x - checkboxTargetBounds.x)).toBeLessThanOrEqual(1);
+    }
     await checkbox.check();
     await expect(checkbox).toBeChecked();
     const accessibility = await new AxeBuilder({ page }).analyze();

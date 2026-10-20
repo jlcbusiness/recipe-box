@@ -5147,6 +5147,10 @@ h1 {
   min-width: 48px;
 }
 
+.recipe-cook-checkbox-cell .recipe-cook-checkbox {
+  justify-content: flex-start;
+}
+
 .recipe-reader-label-mobile {
   display: none;
 }
