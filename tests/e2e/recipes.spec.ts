@@ -3281,9 +3281,10 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
 
     const unitPicker = page.getByRole('combobox', { name: 'Change Salt volume unit' });
     const saltUnitLabel = unitPicker.locator('.recipe-reader-unit-label');
+    await expect(unitPicker).toHaveCSS('text-decoration-line', 'none');
     await expect(saltUnitLabel).toHaveCSS('text-decoration-line', 'underline');
     await expect(saltUnitLabel).toHaveCSS('text-decoration-skip-ink', 'none');
-    await expect(saltUnitLabel).toHaveCSS('text-decoration-thickness', '2px');
+    await expect(saltUnitLabel).toHaveCSS('text-decoration-thickness', '1px');
     await expect(saltUnitLabel).toHaveCSS('text-underline-offset', '4px');
     await expect(page.locator('.recipe-ingredient-list')).toContainText('pinch salt');
     await unitPicker.focus();
@@ -3372,11 +3373,12 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     await gramUnitPicker.click();
     await page.getByRole('option', { name: 'g', exact: true }).click();
     await expect(gramUnitPicker).toHaveText('g');
+    await expect(gramUnitPicker).toHaveCSS('text-decoration-line', 'none');
     const gramUnitLabel = gramUnitPicker.locator('.recipe-reader-unit-label');
     await expect(gramUnitLabel).toHaveText('g');
     await expect(gramUnitLabel).toHaveCSS('text-decoration-line', 'underline');
     await expect(gramUnitLabel).toHaveCSS('text-decoration-skip-ink', 'none');
-    await expect(gramUnitLabel).toHaveCSS('text-decoration-thickness', '2px');
+    await expect(gramUnitLabel).toHaveCSS('text-decoration-thickness', '1px');
     await expect(gramUnitLabel).toHaveCSS('text-underline-offset', '4px');
 
     await page.emulateMedia({ media: 'print' });

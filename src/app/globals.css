@@ -5504,7 +5504,7 @@ h1 {
 .recipe-reader-unit-trigger:hover .recipe-reader-unit-label {
   text-decoration: underline;
   text-decoration-skip-ink: none;
-  text-decoration-thickness: 2px;
+  text-decoration-thickness: 1px;
   text-underline-offset: 4px;
 }
 
@@ -6553,7 +6553,6 @@ section.recipe-detail-section .recipe-relationship-list a {
     align-items: center;
     margin: 0 -2px;
     padding: 0 2px;
-    text-decoration: underline;
   }
 
   .recipe-scaling-pane .single-picklist-trigger,
