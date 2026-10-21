@@ -598,7 +598,7 @@ test('recipe source links save atomically and remain recoverable through Trash @
     );
     await expect(page.locator('.recipe-form .recipe-field').first()).toHaveCSS(
       'font-weight',
-      '500',
+      '400',
     );
     const pairingRow = page
       .locator('.recipe-relationship-editor')

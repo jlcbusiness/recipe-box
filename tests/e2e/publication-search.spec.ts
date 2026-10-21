@@ -48,6 +48,12 @@ test('publication search indexes metadata and tags with owner-scoped typed resul
   const user = await createTestUser(request);
   const otherUser = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
+  const recipeTinResponse = await request.get(
+    `${config.apiUrl}/rest/v1/publications?select=id&publication_type=eq.collection`,
+    { headers: headers(config, user) },
+  );
+  expect(recipeTinResponse.ok(), await recipeTinResponse.text()).toBeTruthy();
+  const [{ id: recipeTinId }] = (await recipeTinResponse.json()) as { id: string }[];
 
   try {
     const tagRevisionResponse = await request.get(
@@ -172,7 +178,7 @@ test('publication search indexes metadata and tags with owner-scoped typed resul
       publication_id: string;
       total_count: number;
     }[];
-    expect(firstPage.total_count).toBe(2);
+    expect(firstPage.total_count).toBe(3);
     const secondPageResponse = await searchPublications(request, config, user, {
       sort: 'name',
       limit: 1,
@@ -268,7 +274,11 @@ test('publication search indexes metadata and tags with owner-scoped typed resul
         value: 'PUBLICATIONTITLE',
         expected: ['Zqpublicationtitleold', 'Zqpublicationtitleother'],
       },
-      { operator: 'does_not_contain', value: 'title', expected: ['Zqpublicationstats'] },
+      {
+        operator: 'does_not_contain',
+        value: 'title',
+        expected: ['Recipe Tin', 'Zqpublicationstats'],
+      },
       {
         operator: 'equals',
         value: 'Zqpublicationtitleold'.toLowerCase(),
@@ -293,7 +303,7 @@ test('publication search indexes metadata and tags with owner-scoped typed resul
         sort: 'name',
         filters: [{ field: 'author', operator: 'is_empty' }],
       }),
-    ).toEqual(['Zqpublicationstats', 'Zqpublicationtitleother']);
+    ).toEqual(['Recipe Tin', 'Zqpublicationstats', 'Zqpublicationtitleother']);
     expect(
       await searchNames({
         filters: [{ field: 'author', operator: 'is_not_empty' }],
@@ -304,14 +314,20 @@ test('publication search indexes metadata and tags with owner-scoped typed resul
         sort: 'name',
         filters: [{ field: 'publication_type', operator: 'not_in', value: ['site'] }],
       }),
-    ).toEqual(['Zqpublicationstats', 'Zqpublicationtitleold']);
+    ).toEqual(['Recipe Tin', 'Zqpublicationstats', 'Zqpublicationtitleold']);
 
     const tagCases = [
       { operator: 'contains_any', expected: ['Zqpublicationtitleold'] },
       { operator: 'contains_all', expected: ['Zqpublicationtitleold'] },
-      { operator: 'does_not_contain', expected: ['Zqpublicationstats', 'Zqpublicationtitleother'] },
+      {
+        operator: 'does_not_contain',
+        expected: ['Recipe Tin', 'Zqpublicationstats', 'Zqpublicationtitleother'],
+      },
       { operator: 'is', expected: ['Zqpublicationtitleold'] },
-      { operator: 'is_not', expected: ['Zqpublicationstats', 'Zqpublicationtitleother'] },
+      {
+        operator: 'is_not',
+        expected: ['Recipe Tin', 'Zqpublicationstats', 'Zqpublicationtitleother'],
+      },
     ];
     for (const tagCase of tagCases) {
       expect(
@@ -326,26 +342,31 @@ test('publication search indexes metadata and tags with owner-scoped typed resul
       {
         operator: 'equals',
         value: 0,
-        expected: ['Zqpublicationtitleold', 'Zqpublicationtitleother'],
+        expected: ['Recipe Tin', 'Zqpublicationtitleold', 'Zqpublicationtitleother'],
       },
       { operator: 'not_equals', value: 0, expected: ['Zqpublicationstats'] },
       { operator: 'greater_than', value: 0, expected: ['Zqpublicationstats'] },
       {
         operator: 'less_than',
         value: 1,
-        expected: ['Zqpublicationtitleold', 'Zqpublicationtitleother'],
+        expected: ['Recipe Tin', 'Zqpublicationtitleold', 'Zqpublicationtitleother'],
       },
       { operator: 'at_least', value: 1, expected: ['Zqpublicationstats'] },
       {
         operator: 'at_most',
         value: 0,
-        expected: ['Zqpublicationtitleold', 'Zqpublicationtitleother'],
+        expected: ['Recipe Tin', 'Zqpublicationtitleold', 'Zqpublicationtitleother'],
       },
       {
         operator: 'between',
         value: 0,
         value_to: 1,
-        expected: ['Zqpublicationstats', 'Zqpublicationtitleold', 'Zqpublicationtitleother'],
+        expected: [
+          'Recipe Tin',
+          'Zqpublicationstats',
+          'Zqpublicationtitleold',
+          'Zqpublicationtitleother',
+        ],
       },
     ];
     for (const countCase of countCases) {
@@ -364,20 +385,26 @@ test('publication search indexes metadata and tags with owner-scoped typed resul
       ).toEqual(countCase.expected);
     }
 
-    const authorOrder = ['Zqpublicationtitleold', 'Zqpublicationstats', 'Zqpublicationtitleother'];
+    const authorOrder = [
+      'Recipe Tin',
+      'Zqpublicationtitleold',
+      'Zqpublicationstats',
+      'Zqpublicationtitleother',
+    ];
     expect(await searchNames({ sort: 'author', direction: 'asc' })).toEqual(authorOrder);
     expect(await searchNames({ sort: 'author', direction: 'desc' })).toEqual(authorOrder);
     const authorPages = await Promise.all(
-      [0, 1, 2].map((offset) => searchRows({ sort: 'author', limit: 1, offset })),
+      [0, 1, 2, 3].map((offset) => searchRows({ sort: 'author', limit: 1, offset })),
     );
     expect(authorPages.map(([publication]) => publication?.name)).toEqual(authorOrder);
     expect(authorPages.flat().map(({ publication_id }) => publication_id)).toEqual([
+      recipeTinId,
       publicationId,
       statsPublicationId,
       secondPublicationId,
     ]);
-    expect(authorPages.flat().map(({ total_count }) => total_count)).toEqual([3, 3, 3]);
-    expect(await searchRows({ sort: 'author', limit: 1, offset: 3 })).toEqual([]);
+    expect(authorPages.flat().map(({ total_count }) => total_count)).toEqual([4, 4, 4, 4]);
+    expect(await searchRows({ sort: 'author', limit: 1, offset: 4 })).toEqual([]);
 
     const rankingPublications = await Promise.all(
       [

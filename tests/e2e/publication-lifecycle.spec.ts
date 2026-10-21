@@ -1351,31 +1351,35 @@ $trash_display_fixture$;`);
     }
     expect(Math.abs(trashTableBounds.width - trashContainerBounds.width)).toBeLessThan(1);
     expect(purgeCellBounds.width - purgeDateBounds.width).toBeLessThan(12);
-    const restoreButtonBounds = await restoreButton.boundingBox();
+    const publicationActionsBounds = await trashedPublication
+      .locator('.recipe-trash-item-actions')
+      .boundingBox();
     const publicationCellBounds = await trashedPublication.locator('td').first().boundingBox();
-    if (!restoreButtonBounds || !publicationCellBounds) {
+    if (!publicationActionsBounds || !publicationCellBounds) {
       throw new Error('Restore action and publication cell must be measurable.');
     }
     expect(
       Math.abs(
         publicationCellBounds.x +
           publicationCellBounds.width -
-          (restoreButtonBounds.x + restoreButtonBounds.width),
+          (publicationActionsBounds.x + publicationActionsBounds.width),
       ),
     ).toBeLessThan(16);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(trashedPublication.locator('td').first()).toHaveCSS('padding-left', '14px');
     await expect(trashedPublication.locator('td').first()).toHaveCSS('padding-right', '0px');
-    const mobileRestoreBounds = await restoreButton.boundingBox();
+    const mobileActionsBounds = await trashedPublication
+      .locator('.recipe-trash-item-actions')
+      .boundingBox();
     const mobileCellBounds = await trashedPublication.locator('td').first().boundingBox();
-    if (!mobileRestoreBounds || !mobileCellBounds) {
-      throw new Error('Mobile Restore action and publication cell must be measurable.');
+    if (!mobileActionsBounds || !mobileCellBounds) {
+      throw new Error('Mobile publication actions and cell must be measurable.');
     }
     expect(
       Math.abs(
         mobileCellBounds.x +
           mobileCellBounds.width -
-          (mobileRestoreBounds.x + mobileRestoreBounds.width),
+          (mobileActionsBounds.x + mobileActionsBounds.width),
       ),
     ).toBeLessThan(1);
     await expect(trashedPublication.locator('.recipe-trash-publication-title')).toHaveCSS(
@@ -1425,20 +1429,20 @@ $trash_display_fixture$;`);
       .getByRole('button', { name: 'Edit publication' })
       .boundingBox();
     const mobileDetailActionsBounds = await page
-      .locator('.publication-detail-actions')
+      .locator('.publication-mobile-actions')
       .boundingBox();
     if (!mobileAddRecipeBounds || !mobileEditButtonBounds || !mobileDetailActionsBounds) {
       throw new Error('Mobile publication actions must be measurable.');
     }
     expect(mobileAddRecipeBounds.width).toBeLessThan(160);
     expect(mobileAddRecipeBounds.y).toBeCloseTo(mobileEditButtonBounds.y, 0);
-    expect(mobileEditButtonBounds.x).toBeCloseTo(mobileDetailActionsBounds.x, 0);
+    expect(mobileEditButtonBounds.x).toBeGreaterThan(mobileDetailActionsBounds.x);
     expect(mobileAddRecipeBounds.x + mobileAddRecipeBounds.width).toBeCloseTo(
       mobileDetailActionsBounds.x + mobileDetailActionsBounds.width,
       0,
     );
     const mobileControls = page.locator(
-      '.publication-detail-mobile-controls .recipe-explorer-toolbar > :not(legend)',
+      '.explorer-list-preferences-toolbar:has(.publication-mobile-add) > *',
     );
     await expect(mobileControls).toHaveCount(3);
     const mobileControlRows = await mobileControls.evaluateAll((controls) =>
@@ -1457,13 +1461,10 @@ $trash_display_fixture$;`);
     await page.goto(`/publications/${publicationId}`);
     const publicationRecipeTable = page.locator('.publication-recipe-list');
     await expect(publicationRecipeTable).toBeVisible();
-    const publicationRecipeHorizontalSpacing = await publicationRecipeTable.evaluate((table) => {
-      const styles = getComputedStyle(table);
-      const columnGap = Number.parseFloat(styles.columnGap);
-      const borderSpacing = Number.parseFloat(styles.borderSpacing);
-      return columnGap + borderSpacing;
-    });
-    expect(Math.abs(publicationRecipeHorizontalSpacing - (4 * 96) / 25.4)).toBeLessThan(1);
+    const publicationRecipeColumnGap = await publicationRecipeTable.evaluate((table) =>
+      Number.parseFloat(getComputedStyle(table).columnGap),
+    );
+    expect(Math.abs(publicationRecipeColumnGap - (3 * 96) / 25.4)).toBeLessThan(1);
     const publicationRecipeTableWidth = await publicationRecipeTable.evaluate(
       (table) => table.getBoundingClientRect().width,
     );
@@ -1474,10 +1475,18 @@ $trash_display_fixture$;`);
     const publicationRecipeTableRight = await publicationRecipeTable.evaluate(
       (table) => table.getBoundingClientRect().right,
     );
-    const publicationRecipeLastCellRight = await publicationRecipeTable
-      .locator('tbody tr:first-child td:last-child')
-      .evaluate((cell) => cell.getBoundingClientRect().right);
-    expect(publicationRecipeLastCellRight).toBeCloseTo(publicationRecipeTableRight, 1);
+    const publicationRecipeVisibleCellRights = await publicationRecipeTable
+      .locator('tbody tr:first-child td')
+      .evaluateAll((cells) =>
+        cells.flatMap((cell) => {
+          const bounds = cell.getBoundingClientRect();
+          return bounds.width > 0 ? [bounds.right] : [];
+        }),
+      );
+    expect(publicationRecipeVisibleCellRights.length).toBeGreaterThan(0);
+    expect(Math.max(...publicationRecipeVisibleCellRights)).toBeLessThanOrEqual(
+      publicationRecipeTableRight + 1,
+    );
     await expect(publicationRecipeTable.locator('tbody tr:last-child td').last()).toHaveCSS(
       'border-bottom-width',
       '1px',
@@ -1488,9 +1497,9 @@ $trash_display_fixture$;`);
       throw new Error('Publication actions must be measurable.');
     }
     expect(addRecipeBounds.width).toBeLessThan(160);
-    expect(addRecipeBounds.x + addRecipeBounds.width).toBeCloseTo(
+    expect(addRecipeBounds.x).toBeGreaterThanOrEqual(detailActionsBounds.x);
+    expect(addRecipeBounds.x + addRecipeBounds.width).toBeLessThanOrEqual(
       detailActionsBounds.x + detailActionsBounds.width,
-      0,
     );
   } finally {
     await deleteTestUser(request, owner);

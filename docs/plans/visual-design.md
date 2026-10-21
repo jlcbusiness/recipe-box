@@ -578,10 +578,12 @@ Unit labels, including single-letter abbreviations such as `g`, have one
 continuous underline at rest. In mobile Ingredient-first cook mode, the table
 stays aligned to the section's left edge when the checkbox rail is present.
 In the private reader's automatic same-system display, fractions at or above
-`1/4` stay in their current unit unless they equal exactly one smaller unit.
-Amounts below `1/4` step down until they reach at least `1/4` or no smaller unit
-exists. Keep each measurement in one unit, and preserve stored units on public
-pages.
+`1/4` stay in their current unit unless they equal exactly one smaller unit or
+the immediate smaller unit expresses the amount as a fraction from `1/4` up to
+but not including one. Amounts below `1/4` step down until they reach at least
+`1/4`; if that value remains below one, continue down while the next smaller
+unit also remains below one. Keep each measurement in one unit, and preserve
+stored units on public pages.
 Time summaries use the heading “Time
 Breakdown” and display durations below an hour in minutes, then in hours with
 any remaining minutes. A scalar US customary teaspoon amount closer to `1/16`
@@ -594,11 +596,13 @@ Unit can display volume, weight, or both with ` / ` separating the dimensions.
 Things pluralize from their maximum range value; `cup` becomes `cups` above one
 while abbreviated fixed units remain unchanged. US customary quantities use
 Unicode glyphs for familiar fractions when close to halves, thirds, quarters,
-or eighths; editors retain conventional fraction text such as `1 1/2` and
-optionally accept the same glyphs as input. Display glyphs are slightly larger
-and vertically centered with optical corrections where font metrics require
-them. Metric quantities never use fractions and display at
-most two decimal places. Structured instruction
+or eighths. Quantity editors accept leading decimals such as `.5`, retain exact
+values expressible with supported fraction denominators as fraction text, and
+use shortest round-trip decimal text for other parsed values on blur; the same
+glyphs are also accepted as input. Display glyphs are slightly larger and
+vertically centered with optical corrections where font metrics require them.
+In reader display, metric quantities never use fractions and display at most
+two decimal places. Structured instruction
 mentions remain readable inline buttons. Hover and keyboard focus reveal the
 current scaled and converted amount in one square popup above the mention,
 clamped to the visual viewport, with a strong background and small pointer

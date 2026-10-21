@@ -27,6 +27,7 @@ describe('measurement rules', () => {
   it.each([
     ['2', { minimum: 2, maximum: null }],
     ['1.25', { minimum: 1.25, maximum: null }],
+    ['.5', { minimum: 0.5, maximum: null }],
     ['1/2', { minimum: 0.5, maximum: null }],
     ['1 1/4', { minimum: 1.25, maximum: null }],
     ['½', { minimum: 0.5, maximum: null }],
@@ -100,6 +101,27 @@ describe('measurement rules', () => {
     expect(formatGroupedIntegerInput('1234567')).toBe('1,234,567');
     expect(parseGroupedInteger('1,234,567')).toBe(1234567);
     expect(parseGroupedInteger('12,34')).toBeNull();
+  });
+
+  it('formats editor quantities without rounding away measurement precision', () => {
+    expect(formatQuantityInput('1/12')).toBe('1/12');
+    expect(formatQuantityInput('1/16')).toBe('1/16');
+    expect(formatQuantityInput((1 / 12).toString())).toBe('1/12');
+    expect(formatQuantityInput((1 / 16).toString())).toBe('1/16');
+    expect(formatQuantityInput('0.08')).toBe('0.08');
+    expect(formatQuantityInput('0.3333333333334')).toBe('0.3333333333334');
+
+    expect(
+      serializeMeasurements([
+        {
+          id: 'volume-entry',
+          type: 'volume',
+          quantity: formatQuantityInput('1/12'),
+          unitCode: 'cup',
+          picklistValueId: '',
+        },
+      ])[0].amount_min,
+    ).toBe(1 / 12);
   });
 
   it('defines the fixed Volume and Weight unit catalogs by system', () => {

@@ -215,6 +215,26 @@ describe('recipe reader measurement rules', () => {
       amount_min: 1,
       unit_code: 'cup',
     });
+    expect(displayAmount(amount('volume', 1 / 4, 'pt'))).toMatchObject({
+      amount_min: 1 / 2,
+      unit_code: 'cup',
+    });
+    expect(displayAmount(amount('volume', 1, 'pt'), 1 / 4)).toMatchObject({
+      amount_min: 1 / 2,
+      unit_code: 'cup',
+    });
+    expect(displayAmount(amount('volume', 1 / 8, 'gal'), 1 / 4)).toMatchObject({
+      amount_min: 1 / 2,
+      unit_code: 'cup',
+    });
+    expect(displayAmount(amount('volume', 1 / 3, 'pt'))).toMatchObject({
+      amount_min: 2 / 3,
+      unit_code: 'cup',
+    });
+    expect(displayAmount(amount('volume', 3 / 4, 'pt'))).toMatchObject({
+      amount_min: 3 / 4,
+      unit_code: 'pt',
+    });
     expect(displayAmount(amount('volume', 1 / 16, 'cup'))).toMatchObject({
       amount_min: 1,
       unit_code: 'tbsp',
@@ -235,6 +255,10 @@ describe('recipe reader measurement rules', () => {
       amount_min: 3 / 8,
       unit_code: 'tsp',
     });
+    expect(displayAmount(amount('volume', 1 / 4, 'tbsp'))).toMatchObject({
+      amount_min: 3 / 4,
+      unit_code: 'tsp',
+    });
     expect(displayAmount(amount('weight', 1 / 8, 'lb'))).toMatchObject({
       amount_min: 2,
       unit_code: 'oz',
@@ -250,6 +274,19 @@ describe('recipe reader measurement rules', () => {
     expect(displayAmount(amount('volume', 1 / 4 + 0.001, 'cup'))).toMatchObject({
       amount_min: 1 / 4 + 0.001,
       unit_code: 'cup',
+    });
+
+    const scaledButter = transformIngredientForDisplay(
+      ingredientRow('butter', 'Butter', 0, [amount('volume', 1 / 16, 'cup')]),
+      {
+        multiplier: 1 / 4,
+        unitSystems: { volume: 'us_customary', weight: 'us_customary' },
+      },
+    );
+    expect(scaledButter.ingredient_name).toBe('Butter');
+    expect(scaledButter.measurements?.[0]).toMatchObject({
+      amount_min: 3 / 4,
+      unit_code: 'tsp',
     });
   });
 

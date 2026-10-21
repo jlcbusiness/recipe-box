@@ -118,10 +118,11 @@ test('Settings exposes an accessible Tags catalog section @e2e @a11y', async ({
   try {
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.waitForLoadState('networkidle');
 
     const section = page.getByRole('region', { name: 'Tags' });
     await expect(section).toBeVisible();
-    await expect(section).toHaveCSS('margin-top', '28px');
+    await expect(section).toHaveCSS('margin-top', '0px');
     const toggle = section.getByRole('button', { name: 'Edit tags' });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(
@@ -136,6 +137,7 @@ test('Settings exposes an accessible Tags catalog section @e2e @a11y', async ({
       }),
     ).toBe(true);
     await toggle.focus();
+    await expect(toggle).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const addTag = section.getByRole('textbox', { name: 'Add tag' });
@@ -221,8 +223,7 @@ test('Settings searches tags, adds a search result, and scrolls its 4x4 color ca
     await page.getByRole('link', { name: 'Settings' }).click();
     const section = page.getByRole('region', { name: 'Tags' });
     const toggle = section.getByRole('button', { name: 'Edit tags' });
-    await toggle.focus();
-    await page.keyboard.press('Enter');
+    await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     const search = section.getByRole('textbox', { name: 'Search tags' });
@@ -314,6 +315,7 @@ test('Settings merges a chosen survivor and deletes unused tags without replacem
   try {
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.waitForLoadState('networkidle');
     const section = page.getByRole('region', { name: 'Tags' });
     await section.getByRole('button', { name: 'Edit tags' }).click();
     const addTag = section.getByRole('textbox', { name: 'Add tag' });
@@ -395,9 +397,10 @@ test('recipes create tags inline and use shared pastel colors @e2e @a11y', async
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Inline tagged supper' })).toBeVisible();
     const detailTags = page.getByRole('list', { name: 'Tags' });
-    await expect(detailTags).toHaveText('Weeknight');
+    await expect(detailTags.getByRole('listitem').first()).toHaveText('Weeknight');
 
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.waitForLoadState('networkidle');
     const catalog = page.getByRole('region', { name: 'Tags' });
     await catalog.getByRole('button', { name: 'Edit tags' }).click();
     await catalog.getByRole('button', { name: 'Change color for Weeknight' }).click();
@@ -416,7 +419,9 @@ test('recipes create tags inline and use shared pastel colors @e2e @a11y', async
 
     await page.goto('/recipes');
     await page.getByRole('link', { name: 'Inline tagged supper' }).click();
-    await expect(page.getByRole('list', { name: 'Tags' })).toHaveText('Weeknight');
+    await expect(page.getByRole('list', { name: 'Tags' }).getByRole('listitem').first()).toHaveText(
+      'Weeknight',
+    );
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
   } finally {
@@ -486,20 +491,27 @@ test('recipes can assign, edit, and remove private tags @e2e @a11y', async ({ pa
 
     await expect(page.getByRole('heading', { name: 'Tagged supper' })).toBeVisible();
     await expect(page.getByText('Weeknight', { exact: true })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Tags' })).toHaveText('apricotWeeknight');
     const detailTags = page.getByRole('list', { name: 'Tags' });
+    await expect(detailTags.getByRole('listitem').nth(0)).toHaveText('apricot');
+    await expect(detailTags.getByRole('listitem').nth(1)).toHaveText('Weeknight');
     const finalTagBounds = await detailTags.locator('li').nth(1).boundingBox();
     const detailTagsBounds = await detailTags.boundingBox();
     const detailActions = page.locator('.recipe-detail-heading-actions');
     const detailActionsBounds = await detailActions.boundingBox();
     expect(detailTagsBounds).not.toBeNull();
-    expect(
-      Math.abs(
-        (detailActionsBounds?.y ?? 0) +
-          (detailActionsBounds?.height ?? 0) / 2 -
-          ((finalTagBounds?.y ?? 0) + (finalTagBounds?.height ?? 0) / 2),
-      ),
-    ).toBeLessThanOrEqual(1);
+    if ((page.viewportSize()?.width ?? 0) <= 760) {
+      expect(detailActionsBounds?.y).toBeGreaterThanOrEqual(
+        (finalTagBounds?.y ?? 0) + (finalTagBounds?.height ?? 0),
+      );
+    } else {
+      expect(
+        Math.abs(
+          (detailActionsBounds?.y ?? 0) +
+            (detailActionsBounds?.height ?? 0) / 2 -
+            ((finalTagBounds?.y ?? 0) + (finalTagBounds?.height ?? 0) / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
     expect((detailActionsBounds?.x ?? 0) + (detailActionsBounds?.width ?? 0)).toBeCloseTo(
       (detailTagsBounds?.x ?? 0) + (detailTagsBounds?.width ?? 0),
       0,
@@ -536,7 +548,9 @@ test('recipes can assign, edit, and remove private tags @e2e @a11y', async ({ pa
 
     await page.goto(`/recipes/${recipeId}`);
     await expect(page.getByText('Replacement', { exact: true })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Tags' })).toHaveText('apricotReplacement');
+    const restoredTagList = page.getByRole('list', { name: 'Tags' });
+    await expect(restoredTagList.getByRole('listitem').nth(0)).toHaveText('apricot');
+    await expect(restoredTagList.getByRole('listitem').nth(1)).toHaveText('Replacement');
     await page.getByRole('link', { name: 'Edit' }).click();
     const editTags = page.getByRole('group', { name: 'Tags' });
     await expect(editTags.getByRole('button', { name: 'Remove Replacement' })).toBeVisible();

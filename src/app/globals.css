@@ -1922,15 +1922,17 @@ h1 {
   padding: 8px;
 }
 
-.recipe-secondary-button.recipe-delete-action,
-.recipe-secondary-link.recipe-delete-action {
+.recipe-secondary-button.recipe-delete-action:not(.publication-delete-action),
+.recipe-secondary-link.recipe-delete-action:not(.publication-delete-action) {
   border-color: var(--tomato);
   background: white;
   color: var(--tomato);
 }
 
-.recipe-delete-action:hover,
-.recipe-delete-action:focus-visible {
+.recipe-secondary-button.recipe-delete-action:hover,
+.recipe-secondary-link.recipe-delete-action:hover,
+.recipe-secondary-button.recipe-delete-action:focus-visible,
+.recipe-secondary-link.recipe-delete-action:focus-visible {
   background: var(--tomato);
   color: white;
 }
@@ -8529,7 +8531,7 @@ section.recipe-detail-section .recipe-relationship-list a {
   max-width: 100%;
   min-width: 0;
   column-gap: 3mm;
-  grid-template-columns: repeat(7, auto);
+  grid-template-columns: var(--explorer-list-grid-template-columns);
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -9540,6 +9542,17 @@ section.recipe-detail-section .recipe-relationship-list a {
   padding: 8px 12px 12px;
   background: var(--paper);
   box-shadow: 0 8px 24px rgb(34 45 31 / 16%);
+}
+
+@media (max-width: 640px) {
+  .explorer-list-preferences-popover {
+    position: fixed;
+    top: 50%;
+    right: 8px;
+    box-sizing: border-box;
+    width: min(300px, calc(100vw - 16px));
+    transform: translateY(-50%);
+  }
 }
 
 .explorer-list-preferences-popover > legend {

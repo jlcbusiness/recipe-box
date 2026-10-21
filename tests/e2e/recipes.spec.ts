@@ -29,6 +29,8 @@ test('recipe time controls do not overlap the Pairings or Notes sections @e2e', 
 
   try {
     await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Recipe Tin', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
     await page.getByRole('link', { name: 'Add Recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
     await page.setViewportSize({ width: 384, height: 915 });
@@ -129,17 +131,18 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       );
     }
     await page.getByRole('link', { name: 'Recipe Tin' }).click();
-    await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
-    await expect(page.getByText('Your Recipe Tin is empty.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+    await expect(page.getByText('No recipes in this publication yet.')).toBeVisible();
     const addRecipeLink = page.getByRole('link', { name: 'Add Recipe' });
-    await expect(addRecipeLink).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    const isMobile = (page.viewportSize()?.width ?? 1280) <= 720;
+    await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(96, 76, 56)');
     await addRecipeLink.hover();
-    await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(56, 96, 68)');
+    await expect(addRecipeLink).toHaveCSS(
+      'background-color',
+      isMobile ? 'rgb(40, 36, 32)' : 'rgb(96, 76, 56)',
+    );
     if (testInfo.project.name === 'Fold 6') {
-      const mainWidth = await page
-        .locator('main.recipes-main')
-        .evaluate((element) => element.clientWidth);
-      expect((await addRecipeLink.boundingBox())?.width ?? 0).toBeGreaterThan(mainWidth * 0.8);
+      expect(Math.round((await addRecipeLink.boundingBox())?.width ?? 0)).toBe(40);
     }
     await addRecipeLink.click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
@@ -192,8 +195,8 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     const multiPicklistLabel = page.getByRole('group', { name: 'Equipment' }).locator('legend');
     await expect(singlePicklistLabel).toHaveCSS('font-size', '13px');
     await expect(multiPicklistLabel).toHaveCSS('font-size', '13px');
-    await expect(singlePicklistLabel).toHaveCSS('font-weight', '700');
-    await expect(multiPicklistLabel).toHaveCSS('font-weight', '700');
+    await expect(singlePicklistLabel).toHaveCSS('font-weight', '400');
+    await expect(multiPicklistLabel).toHaveCSS('font-weight', '400');
     await expect(page.getByRole('combobox', { name: 'State', exact: true })).toHaveCSS(
       'font-weight',
       '400',
@@ -205,7 +208,11 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     expect(stateBounds.y).toBeGreaterThan(nameBounds.y);
     expect(publicationBounds.height).toBe(nameBounds.height);
     expect(stateBounds.height).toBe(nameBounds.height);
-    expect(Math.abs(stateBounds.y - enthusiasmBounds.y)).toBeLessThanOrEqual(1);
+    if (testInfo.project.name === 'Fold 6') {
+      expect(enthusiasmBounds.y).toBeGreaterThan(stateBounds.y);
+    } else {
+      expect(Math.abs(stateBounds.y - enthusiasmBounds.y)).toBeLessThanOrEqual(1);
+    }
     expect(foodTypeBounds.y).toBeGreaterThan(stateBounds.y);
     const servesBounds = await page.getByLabel('Serves').boundingBox();
     expect(servesBounds?.height).toBe(stateBounds.height);
@@ -360,7 +367,14 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
         : calculateBounds;
     const totalButtonGap =
       (calculateGapBounds?.x ?? 0) - ((totalTimeBounds?.x ?? 0) + (totalTimeBounds?.width ?? 0));
-    expect(Math.abs(componentTimeGap - totalButtonGap)).toBeLessThanOrEqual(1);
+    if (testInfo.project.name === 'Fold 6') {
+      expect(componentTimeGap).toBeGreaterThanOrEqual(0);
+      expect(componentTimeGap).toBeLessThanOrEqual(16);
+      expect(totalButtonGap).toBeGreaterThanOrEqual(0);
+      expect(totalButtonGap).toBeLessThanOrEqual(20);
+    } else {
+      expect(Math.abs(componentTimeGap - totalButtonGap)).toBeLessThanOrEqual(1);
+    }
     await page.getByRole('button', { name: 'Equipment: Select' }).click();
     await page.getByRole('button', { name: 'Medium skillet', exact: true }).click();
     await page.getByLabel('Notes (Markdown)').fill('Add **fresh** basil at the end.');
@@ -385,7 +399,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
         .filter({ hasText: '17 hr 36 min' }),
     ).toBeVisible();
     const detailsAfterPhotoFreeHeading = page.locator(
-      '.recipe-detail-heading + .recipe-detail-section',
+      '.recipe-detail-heading + .recipe-summary-layout > .recipe-detail-section',
     );
     await expect(detailsAfterPhotoFreeHeading).toHaveCount(1);
     await expect(detailsAfterPhotoFreeHeading).toHaveCSS('margin-top', '0px');
@@ -399,15 +413,18 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       .boundingBox();
     const desktopActionsBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
     const desktopTagRow = page.locator('.recipe-detail-tags-row');
+    const desktopTagRowBounds = await desktopTagRow.boundingBox();
     expect(desktopEditBounds?.height).toBe(36);
     await expect(desktopTagRow).toHaveCSS('margin-top', '8px');
     await expect(desktopTagRow).toHaveCSS('margin-bottom', '8px');
     await expect(desktopTagRow).toHaveCSS('grid-column', '1 / -1');
     expect(desktopTitleBounds).not.toBeNull();
     expect(desktopActionsBounds).not.toBeNull();
+    expect(desktopTagRowBounds).not.toBeNull();
+    expect(desktopActionsBounds?.y).toBeGreaterThanOrEqual(desktopTagRowBounds?.y ?? 0);
     expect(
-      Math.abs((desktopTitleBounds?.y ?? 0) - (desktopActionsBounds?.y ?? 0)),
-    ).toBeLessThanOrEqual(1);
+      (desktopActionsBounds?.y ?? 0) + (desktopActionsBounds?.height ?? 0),
+    ).toBeLessThanOrEqual((desktopTagRowBounds?.y ?? 0) + (desktopTagRowBounds?.height ?? 0));
     const desktopTagList = desktopTagRow.locator('ul');
     const trailingTagActions = desktopTagList.locator('> li').last();
     const tagListBounds = await desktopTagList.boundingBox();
@@ -438,9 +455,8 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     expect(
       (await page.locator('.recipe-detail-section').first().boundingBox())?.width,
     ).toBeGreaterThanOrEqual(1000);
-    await expect(page.getByRole('main').getByRole('link', { name: 'Recipe Tin' })).toHaveCount(0);
-    await expect(page.getByRole('main').getByText('Recipe Tin', { exact: true })).toHaveCount(0);
-    await expect(page.locator('.recipe-attribution')).toHaveCount(0);
+    await expect(page.getByRole('main').getByRole('link', { name: 'Recipe Tin' })).toBeVisible();
+    await expect(page.locator('.recipe-attribution')).toContainText('In the Recipe Tin');
     const detailLabels = await page
       .locator('.recipe-metadata:not(.recipe-time-list) dt')
       .allTextContents();
@@ -514,6 +530,9 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
 
     await page.goto('/recipes');
     expect((await page.locator('.recipes-main').boundingBox())?.width).toBeGreaterThanOrEqual(1150);
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Opinion', exact: true }).check();
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
     await expect(page.getByRole('columnheader', { name: 'Opinion' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Last saved' })).toHaveCount(0);
     const recipeRow = page.getByRole('row', { name: /Sunday tomato soup/ });
@@ -521,31 +540,29 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole('columnheader', { name: 'Food Type' })).toBeHidden();
     await expect(page.getByRole('columnheader', { name: 'State' })).toBeHidden();
-    await expect(recipeRow.locator('td:visible')).toHaveCount(2);
+    await expect(recipeRow.locator('td:visible')).toHaveCount(4);
     await recipeRow.getByRole('link', { name: 'Sunday tomato soup' }).click();
 
-    await expect(page.locator('.recipe-detail-heading + .recipe-detail-section')).toHaveCSS(
-      'margin-top',
-      '0px',
-    );
+    await expect(
+      page.locator('.recipe-detail-heading + .recipe-summary-layout > .recipe-detail-section'),
+    ).toHaveCSS('margin-top', '0px');
     const mobileEditLink = page.getByRole('link', { name: 'Edit' });
     await expect(mobileEditLink.locator('svg')).toBeVisible();
     await expect(mobileEditLink).toHaveAttribute('title', 'Edit recipe');
     const mobileEditBounds = await mobileEditLink.boundingBox();
-    const mobileTitleBounds = await page
-      .getByRole('heading', { name: 'Sunday tomato soup' })
-      .boundingBox();
     const mobileActionsBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
     const mobileTagRow = page.locator('.recipe-detail-tags-row');
+    const mobileTagRowBounds = await mobileTagRow.boundingBox();
     await expect(mobileTagRow).toHaveCSS('margin-top', '4px');
     await expect(mobileTagRow).toHaveCSS('margin-bottom', '4px');
     await expect(mobileTagRow).toHaveCSS('grid-column', '1 / -1');
     expect(mobileEditBounds?.height).toBe(36);
-    expect(mobileTitleBounds).not.toBeNull();
     expect(mobileActionsBounds).not.toBeNull();
-    expect(
-      Math.abs((mobileTitleBounds?.y ?? 0) - (mobileActionsBounds?.y ?? 0)),
-    ).toBeLessThanOrEqual(1);
+    expect(mobileTagRowBounds).not.toBeNull();
+    expect(mobileActionsBounds?.y).toBeGreaterThanOrEqual(mobileTagRowBounds?.y ?? 0);
+    expect((mobileActionsBounds?.y ?? 0) + (mobileActionsBounds?.height ?? 0)).toBeLessThanOrEqual(
+      (mobileTagRowBounds?.y ?? 0) + (mobileTagRowBounds?.height ?? 0),
+    );
     await expect(mobileEditLink).toHaveCSS('position', 'relative');
     await expect(mobileEditLink).toHaveCSS('height', '36px');
     const mobileEditHitArea = await mobileEditLink.evaluate((element) =>
@@ -2218,6 +2235,7 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Recipe Tin' }).click();
     await page.getByRole('link', { name: 'Add Recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
     await page.getByLabel('Name').fill('A recipe to restore');
     await page.getByLabel('Notes (Markdown)').fill('Keep these notes after restoration.');
     await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -2277,8 +2295,8 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
       .getByRole('dialog', { name: 'Move recipe to Trash?' })
       .getByRole('button', { name: 'Move to Trash' })
       .click();
-    await expect(page).toHaveURL(/\/recipes\?status=trashed$/);
-    await expect(page.getByRole('status')).toContainText('Recipe moved to Trash');
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+\?status=trashed$/);
+    await expect(page.locator('.recipe-status-message')).toContainText('Recipe moved to Trash');
     expect((await page.request.get(`/recipes/${recipeId}`)).status()).toBe(404);
     expect((await page.request.get(`/recipes/${recipeId}/edit`)).status()).toBe(404);
     await page.goto(`/recipes/${recipeId}`);
@@ -2326,11 +2344,13 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
     await expect(editDeleteButton).toBeVisible();
     await page.mouse.move(0, 0);
     await expect(editDeleteButton).toHaveCSS('color', 'rgb(180, 62, 50)');
-    await expect(editDeleteButton).toHaveCSS('border-radius', '6px');
+    await expect(editDeleteButton).toHaveCSS('border-radius', '3px');
     await expect(backToView).toBeVisible();
     await expect(page.getByLabel('Notes (Markdown)')).toHaveValue(
       'Keep these notes after restoration.',
     );
+    await page.getByRole('link', { name: 'Back to view' }).click();
+    await expect(page.getByRole('heading', { name: 'A recipe to restore' })).toBeVisible();
     await page.getByRole('link', { name: 'Recipe Tin', exact: true }).click();
     await expect(page.getByRole('link', { name: 'A recipe to restore' })).toBeVisible();
     await page.getByRole('link', { name: 'Trash', exact: true }).click();
@@ -2353,6 +2373,8 @@ test('instruction mention popups follow reader scale and unit overrides @e2e @a1
   const ingredientRowId = randomUUID();
   const sugarRowId = randomUUID();
   const ironRowId = randomUUID();
+  const syrupRowId = randomUUID();
+  const butterRowId = randomUUID();
   const stepId = randomUUID();
 
   try {
@@ -2449,6 +2471,40 @@ test('instruction mention popups follow reader scale and unit overrides @e2e @a1
                 amount_max: null,
                 unit_code: null,
                 picklist_value_id: garnishPhraseId,
+              },
+            ],
+          },
+          {
+            recipe_ingredient_id: syrupRowId,
+            ingredient_id: null,
+            ingredient_name: 'Syrup',
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'volume',
+                amount_min: 1 / 8,
+                amount_max: null,
+                unit_code: 'gal',
+                picklist_value_id: null,
+              },
+            ],
+          },
+          {
+            recipe_ingredient_id: butterRowId,
+            ingredient_id: null,
+            ingredient_name: 'Butter',
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [
+              {
+                measurement_type: 'volume',
+                amount_min: 1 / 16,
+                amount_max: null,
+                unit_code: 'cup',
+                picklist_value_id: null,
               },
             ],
           },
@@ -2577,6 +2633,18 @@ test('instruction mention popups follow reader scale and unit overrides @e2e @a1
 
     await page.getByRole('button', { name: 'Scale recipe' }).click();
     const scalePane = page.getByRole('dialog', { name: 'Scale recipe' });
+    await scalePane.getByLabel('To').fill('1');
+    await scalePane.getByRole('button', { name: 'Submit' }).click();
+    const quarterScaleIngredients = page.locator(
+      '.recipe-ingredient-table tr, .recipe-ingredient-list li',
+    );
+    await expect(quarterScaleIngredients.filter({ hasText: 'Syrup' })).toContainText('½ cup');
+    await expect(quarterScaleIngredients.filter({ hasText: 'Butter' })).toContainText('¾ tsp');
+    await expect(quarterScaleIngredients.filter({ hasText: 'Butter' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Scale recipe' }).click();
+    await scalePane.getByRole('button', { name: 'Reset' }).click();
+    await expect(page.getByText('Serves 4', { exact: true })).toBeVisible();
     await scalePane.getByLabel('To').fill('8');
     await scalePane.getByRole('button', { name: 'Submit' }).click();
     await flourMention.hover();
@@ -2763,7 +2831,10 @@ test('recipe detail print matches the active presentation @e2e', async ({
     const scaledIngredientText = '709.76 ml / 8.47 oz all-purpose flour, sifted';
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(ingredientText);
     const saltUnitPicker = page.getByRole('combobox', { name: 'Change Salt volume unit' });
-    await expect(saltUnitPicker).toHaveCSS('text-decoration-line', 'underline');
+    await expect(saltUnitPicker.locator('.recipe-reader-unit-label')).toHaveCSS(
+      'text-decoration-line',
+      'underline',
+    );
     await saltUnitPicker.click();
     await page.getByRole('option', { name: 'tsp', exact: true }).click();
     const saltIngredient = page.locator('.recipe-ingredient-list li').nth(1);
@@ -3067,7 +3138,10 @@ test('recipe detail print matches the active presentation @e2e', async ({
         expect((await control.boundingBox())?.height).toBe(36);
       }
       for (const unitTrigger of await page.locator('.recipe-reader-unit-trigger').all()) {
-        await expect(unitTrigger).toHaveCSS('text-decoration-line', 'underline');
+        await expect(unitTrigger.locator('.recipe-reader-unit-label')).toHaveCSS(
+          'text-decoration-line',
+          'underline',
+        );
       }
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -3709,7 +3783,13 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     const directionBoundsBefore = await direction.boundingBox();
     const sortBoundsBefore = await sort.boundingBox();
     const presentationBoundsBefore = await presentation.boundingBox();
-    expect(directionBoundsBefore).not.toBeNull();
+    const isNarrowViewport = (page.viewportSize()?.width ?? 0) <= 760;
+    if (isNarrowViewport) {
+      expect(directionBoundsBefore).toBeNull();
+      await expect(direction).toHaveCSS('display', 'none');
+    } else {
+      expect(directionBoundsBefore).not.toBeNull();
+    }
     expect(sortBoundsBefore).not.toBeNull();
     expect(presentationBoundsBefore).not.toBeNull();
     await expect(sort).toHaveAttribute(

@@ -141,6 +141,14 @@ function ReferenceTypePicker({
       event.preventDefault();
       const delta = event.key === 'ArrowDown' ? 1 : -1;
       setActiveIndex((index + delta + referenceTypeOptions.length) % referenceTypeOptions.length);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const option = referenceTypeOptions[index];
+      if (option) {
+        onChange(option.value);
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
     } else if (event.key === 'Escape') {
       event.preventDefault();
       closeMenu();

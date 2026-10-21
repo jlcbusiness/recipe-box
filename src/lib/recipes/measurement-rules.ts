@@ -85,8 +85,11 @@ export const weightUnits: MeasurementUnit[] = [
 function parsePositiveNumber(value: string): number | null {
   const wholeNumber = '(?:\\d+|\\d{1,3}(?:,\\d{3})+)';
   const decimal = value.match(new RegExp(`^(${wholeNumber})(?:\\.(\\d+))?$`));
-  if (decimal) {
-    const parsed = Number(`${decimal[1].replaceAll(',', '')}${decimal[2] ? `.${decimal[2]}` : ''}`);
+  const leadingDecimal = value.match(/^\.(\d+)$/);
+  if (decimal || leadingDecimal) {
+    const integerPart = decimal ? decimal[1].replaceAll(',', '') : '0';
+    const fractionalPart = decimal?.[2] ?? leadingDecimal?.[1];
+    const parsed = Number(`${integerPart}${fractionalPart ? `.${fractionalPart}` : ''}`);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
@@ -241,16 +244,59 @@ export function formatQuantityRange(
 
 export function formatQuantityInput(
   value: string,
-  system: MeasurementSystem = 'us_customary',
+  _system: MeasurementSystem = 'us_customary',
 ): string {
   const parsed = parseQuantityInput(value);
   if (!parsed) {
     return value;
   }
-  const minimum = formatQuantityValue(parsed.minimum, system, false);
+  const minimum = formatEditableQuantityValue(parsed.minimum);
   return parsed.maximum === null
     ? minimum
-    : `${minimum}-${formatQuantityValue(parsed.maximum, system, false)}`;
+    : `${minimum}-${formatEditableQuantityValue(parsed.maximum)}`;
+}
+
+function formatEditableQuantityValue(value: number): string {
+  const whole = Math.floor(value);
+  const fraction = value - whole;
+  if (fraction === 0) {
+    return formatGroupedInteger(whole);
+  }
+
+  const fractionDenominators = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 32, 64];
+  for (const denominator of fractionDenominators) {
+    const numerator = Math.round(fraction * denominator);
+    const candidate = whole + numerator / denominator;
+    if (numerator > 0 && numerator < denominator && value === candidate) {
+      const fractionText = `${numerator}/${denominator}`;
+      return whole > 0 ? `${formatGroupedInteger(whole)} ${fractionText}` : fractionText;
+    }
+  }
+
+  const expanded = expandScientificNotation(value.toString());
+  const [integerPart, fractionalPart] = expanded.split('.');
+  const groupedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return fractionalPart ? `${groupedInteger}.${fractionalPart}` : groupedInteger;
+}
+
+function expandScientificNotation(value: string): string {
+  const [coefficient, exponentText] = value.toLowerCase().split('e');
+  if (exponentText === undefined) {
+    return coefficient;
+  }
+
+  const exponent = Number(exponentText);
+  const decimalPosition =
+    coefficient.indexOf('.') < 0 ? coefficient.length : coefficient.indexOf('.');
+  const digits = coefficient.replace('.', '');
+  const expandedPosition = decimalPosition + exponent;
+  if (expandedPosition <= 0) {
+    return `0.${'0'.repeat(-expandedPosition)}${digits}`;
+  }
+  if (expandedPosition >= digits.length) {
+    return `${digits}${'0'.repeat(expandedPosition - digits.length)}`;
+  }
+  return `${digits.slice(0, expandedPosition)}.${digits.slice(expandedPosition)}`;
 }
 
 export function validateMeasurementSet(measurements: MeasurementInput[]): string | null {

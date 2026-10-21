@@ -323,7 +323,7 @@ test('Settings stages, searches, edits, and removes trusted ingredient densities
     await weightAmount.fill('62.5');
     await weightAmount.press('Enter');
     await expect(section.getByRole('status')).toHaveText('Density saved.');
-    await expect(breadRow).toContainText('1/2 cup / 62.5 g - 0.528 g/mL');
+    await expect(breadRow).toContainText('½ cup / 62.5 g - 0.528 g/mL');
 
     await search.fill('trusted');
     await expect(breadRow).toBeVisible();
@@ -443,7 +443,7 @@ test('Settings stages, searches, edits, and removes trusted ingredient densities
       confirmation.getByText(/existing recipe amounts will remain unchanged/i),
     ).toBeVisible();
     await confirmation.getByRole('button', { name: 'Cancel' }).click();
-    await expect(breadRow).toContainText('1/2 cup / 62.5 g - 0.528 g/mL');
+    await expect(breadRow).toContainText('½ cup / 62.5 g - 0.528 g/mL');
 
     await breadRow.getByRole('button', { name: 'Remove density for Trusted Bread Flour' }).click();
     await section
@@ -617,8 +617,8 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
       await volumeAmount.fill('1/7');
       await weightAmount.fill('');
       await weightAmount.press('Tab');
-      await expect(weightAmount).toHaveValue('15');
-      await expect(volumeAmount).toHaveValue('1/8');
+      await expect(weightAmount).toHaveValue('17.14');
+      await expect(volumeAmount).toHaveValue('1/7');
       await volumeAmount.fill('1/8');
       await expect(weightAmount).toHaveValue('15');
       await expect(editor.getByText('Derived from density')).toHaveClass('visually-hidden');
@@ -638,7 +638,7 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
       await chooseUnit('Volume unit, row 1', 'cup');
       await volumeAmount.fill('1/8');
       await chooseUnit('Weight unit, row 1', 'oz');
-      await expect(weightAmount).toHaveValue('1/2');
+      await expect(weightAmount).toHaveValue('½');
       await chooseUnit('Weight unit, row 1', 'g');
       await expect(weightAmount).toHaveValue('15');
       await volumeAmount.fill('invalid');
@@ -749,7 +749,7 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
       await chooseUnit('Volume unit, row 1', 'cup');
       await volumeAmount.fill('1/8');
       await chooseUnit('Weight unit, row 1', 'oz');
-      await expect(weightAmount).toHaveValue('1/2');
+      await expect(weightAmount).toHaveValue('½');
       await chooseUnit('Weight unit, row 1', 'g');
       await expect(weightAmount).toHaveValue('15');
       await volumeAmount.fill('invalid');

@@ -224,7 +224,7 @@ test('Find Recipes updates mobile metadata when columns are toggled @e2e', async
     await expect
       .poll(() => metadata.evaluate((element) => (element as HTMLElement).innerText))
       .toBe('Recipe Tin ~ Want to try ~ 20 min');
-    await columnsButton.click();
+    await page.keyboard.press('Escape');
   } finally {
     await deleteTestUser(request, user);
   }
@@ -274,7 +274,7 @@ test('List column preferences do not change recipe Grid cards @e2e', async ({ pa
     await page.getByRole('checkbox', { name: 'Total Time', exact: true }).uncheck();
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name',
+      'name visibility',
     );
 
     await page.getByRole('button', { name: 'Switch to List view' }).click();
@@ -742,8 +742,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toBeVisible();
     await expect(page.getByText('YOUR COLLECTION', { exact: true })).toHaveCount(0);
 
-    await page.getByRole('searchbox', { name: 'Search recipes' }).fill('cardamom notesearch');
+    const searchInput = page.getByRole('searchbox', { name: 'Search recipes' });
+    await searchInput.fill('cardamom notesearch');
+    await expect(searchInput).toHaveValue('cardamom notesearch');
+    await expect(searchInput).toHaveAttribute('name', 'q');
     await page.getByRole('button', { name: 'Search' }).click();
+    await expect(page).toHaveURL((url) => url.searchParams.get('q') === 'cardamom notesearch');
 
     await expect(page.getByRole('link', { name: 'Searchable saffron rice' })).toBeVisible();
     await expect(page.getByText('1 recipe found')).toBeVisible();
@@ -1061,6 +1065,9 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await expect(page.getByText('1 recipe found')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Searchable saffron rice' })).toBeVisible();
 
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Date Added', exact: true }).check();
+    await page.keyboard.press('Escape');
     await page.getByRole('combobox', { name: 'Sort by Name' }).click();
     await page
       .locator('.recipe-explorer-sort-menu')
@@ -1158,10 +1165,10 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       expect(new Set(toolbarRows).size).toBe(1);
       await expect(
         page.locator('.find-recipes-list tbody td[data-explorer-column="state"]'),
-      ).toHaveCSS('white-space', 'nowrap');
+      ).toHaveCSS('white-space', 'normal');
       await expect(
         page.locator('.find-recipes-list tbody td[data-explorer-column="total_time_minutes"]'),
-      ).toHaveCSS('white-space', 'nowrap');
+      ).toHaveCSS('white-space', 'normal');
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBeTruthy();
@@ -1190,7 +1197,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       .evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().height)));
     expect(new Set(gridCardHeights).size).toBeGreaterThan(1);
     await expect(noTimeGridCard.locator('.find-recipes-grid-metadata')).toHaveText(
-      'Recipe Tin ~ Tried',
+      'Search Source Magazine ~ Tried',
     );
     const noImageTitleHeight = await noTimeGridCard
       .locator('strong')
@@ -1198,22 +1205,10 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     expect(noImageTitleHeight).toBeGreaterThan(24);
     await page.goto('/recipes/find?sort=name&direction=asc&page=1&view=details');
     await expect(page.locator('.find-recipes-list thead')).toHaveCSS('display', 'none');
-    await expect(page.locator('.find-recipes-mobile-thumbnail-placeholder')).toHaveCount(2);
-    await expect(page.locator('.find-recipes-mobile-thumbnail-placeholder').first()).toHaveCSS(
-      'border-width',
-      '0px',
-    );
-    await expect(page.locator('.find-recipes-mobile-thumbnail-placeholder').first()).toHaveCSS(
-      'background-color',
-      'rgba(0, 0, 0, 0)',
-    );
-    await expect(page.locator('.find-recipes-mobile-thumbnail').first()).toHaveCSS(
-      'object-fit',
-      'contain',
-    );
+    await expect(page.locator('.find-recipes-mobile-link img')).toHaveCount(0);
     await expect(
       page.locator('.find-recipes-list tbody tr').first().locator('.find-recipes-mobile-metadata'),
-    ).toHaveText('Recipe Tin ~ Tried');
+    ).toHaveText('Search Source Magazine ~ Tried');
     const clippedTitle = page
       .locator('.find-recipes-mobile-title')
       .filter({ hasText: 'Apricot roast with a very long title that wraps on a narrow screen' })
@@ -1244,26 +1239,30 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     });
     expect(firstColumnShare).toBeLessThanOrEqual(0.55);
     const columnStartOffsets = await page
-      .locator('.find-recipes-list thead th')
+      .locator('.find-recipes-list thead th:visible')
       .evaluateAll((headers) =>
-        headers.map((header, index) => {
+        headers.flatMap((header) => {
+          const column = header.getAttribute('data-explorer-column');
           const button = header.querySelector('button');
-          const cell = header
-            .closest('table')
-            ?.querySelectorAll('tbody tr:first-child td')
-            .item(index);
-          if (!button || !cell) return Number.POSITIVE_INFINITY;
+          const cell = Array.from(
+            header.closest('table')?.querySelectorAll('tbody tr:first-child td') ?? [],
+          ).find((candidate) => candidate.getAttribute('data-explorer-column') === column);
+          if (!button || !cell) return [];
           const headerRange = document.createRange();
           headerRange.selectNodeContents(button);
           const cellRange = document.createRange();
           cellRange.selectNodeContents(cell);
-          return headerRange.getBoundingClientRect().left - cellRange.getBoundingClientRect().left;
+          return [
+            headerRange.getBoundingClientRect().left - cellRange.getBoundingClientRect().left,
+          ];
         }),
       );
-    expect(columnStartOffsets.every((offset) => Math.abs(offset) < 2)).toBeTruthy();
+    expect(
+      columnStartOffsets.every((offset) => Number.isFinite(offset) && Math.abs(offset) < 2),
+    ).toBe(true);
     await expect(
       page.locator('.find-recipes-list tbody tr').first().locator('td').first(),
-    ).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
+    ).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(
       page.locator('.find-recipes-list tbody tr').first().locator('td:first-child a'),
     ).toHaveCSS('font-weight', '400');
@@ -1411,7 +1410,8 @@ test('Find Recipes shows a recoverable query error and preserves filters @e2e', 
     await expect(
       page.getByRole('alert').filter({ hasText: 'Unable to search recipes.' }),
     ).toHaveText('Unable to search recipes. Your query refinements are preserved. Try again.');
-    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue('');
+    await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Query' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.recipe-empty-state')).toHaveCount(0);
     await expect(page).toHaveURL((url) => {
       const params = new URL(url).searchParams;
@@ -1450,7 +1450,7 @@ test('Find Recipes sorts by every display column in Details view @e2e', async ({
       'data-visible-columns',
       /(^|\s)opinion(\s|$)/,
     );
-    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.keyboard.press('Escape');
     await page.getByRole('combobox', { name: 'Sort by Name' }).click();
     await expect(sortMenu.getByRole('option', { name: 'Opinion' })).toBeVisible();
     await expect(sortMenu.getByRole('option', { name: 'Citation' })).toHaveCount(0);

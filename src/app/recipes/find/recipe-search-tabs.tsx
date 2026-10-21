@@ -54,6 +54,7 @@ export function RecipeSearchInput({
   const { mode } = searchMode;
   const [value, setValue] = useState(defaultValue);
   const previousModeRef = useRef(mode);
+  const previousDefaultValueRef = useRef(defaultValue);
 
   useEffect(() => {
     if (previousModeRef.current === mode) return;
@@ -62,6 +63,8 @@ export function RecipeSearchInput({
   }, [mode]);
 
   useEffect(() => {
+    if (previousDefaultValueRef.current === defaultValue) return;
+    previousDefaultValueRef.current = defaultValue;
     setValue(defaultValue);
   }, [defaultValue]);
 

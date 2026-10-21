@@ -302,14 +302,26 @@ function resolveDisplayUnit(
       return exactLowerUnit.unitCode;
     }
     if (scaledMinimum >= 1 / 4) {
+      const nextSmallerUnit = smallerUnits[0];
+      if (nextSmallerUnit && nextSmallerUnit.amount >= 1 / 4 && nextSmallerUnit.amount < 1) {
+        return nextSmallerUnit.unitCode;
+      }
       return sourceUnitCode;
     }
 
-    return (
-      smallerUnits.find(({ amount }) => amount >= 1 / 4)?.unitCode ??
-      smallerUnits.at(-1)?.unitCode ??
-      sourceUnitCode
-    );
+    const firstUsefulUnitIndex = smallerUnits.findIndex(({ amount }) => amount >= 1 / 4);
+    if (firstUsefulUnitIndex < 0) {
+      return smallerUnits.at(-1)?.unitCode ?? sourceUnitCode;
+    }
+
+    let selectedUnit = smallerUnits[firstUsefulUnitIndex];
+    for (const smallerUnit of smallerUnits.slice(firstUsefulUnitIndex + 1)) {
+      if (smallerUnit.amount >= 1) {
+        break;
+      }
+      selectedUnit = smallerUnit;
+    }
+    return selectedUnit.unitCode;
   }
 
   const targetUnits = unitsFor(dimension)

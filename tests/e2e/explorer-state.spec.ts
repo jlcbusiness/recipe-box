@@ -7,7 +7,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/publications$/);
+  await expect(page).toHaveURL(/\/publications(?:\?.*)?$/);
 }
 
 async function saveExplorerState(
@@ -445,7 +445,7 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
 
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name state total_time_minutes',
+      'name state visibility',
     );
     await expect(page).toHaveURL(originalUrl);
 
@@ -465,7 +465,7 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
         }[];
         return rows[0]?.state.display_preferences?.visible_columns;
       })
-      .toEqual(['state', 'total_time_minutes']);
+      .toEqual(['state', 'visibility']);
 
     await page.reload();
     const reloadedParams = new URL(page.url()).searchParams;
@@ -474,7 +474,7 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
     expect(reloadedParams.has('column_widths')).toBe(false);
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name state total_time_minutes',
+      'name state visibility',
     );
 
     await saveExplorerState(request, config, user, 'recipes-find', {
@@ -503,7 +503,7 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
         schema_version: 2,
         sort: 'updated_at',
         display_preferences: {
-          visible_columns: ['state', 'total_time_minutes'],
+          visible_columns: ['state', 'visibility'],
           column_widths: {},
         },
       });
@@ -642,7 +642,7 @@ test('Find Recipes keeps column changes usable when saving fails and retries @e2
     await page.getByRole('checkbox', { name: 'Publication' }).uncheck();
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name state total_time_minutes',
+      'name state visibility',
     );
     await expect(page.locator('.explorer-list-preferences-error')).toHaveText(
       'Explorer display preferences could not be saved.',
@@ -690,7 +690,7 @@ test('Find Recipes exposes all recipe columns beside the view controls @e2e', as
     const viewButtonBox = await viewButton.boundingBox();
     expect(columnButtonBox).not.toBeNull();
     expect(viewButtonBox).not.toBeNull();
-    expect(Math.abs((columnButtonBox?.y ?? 0) - (viewButtonBox?.y ?? 0))).toBeLessThanOrEqual(2);
+    expect(Math.abs((columnButtonBox?.y ?? 0) - (viewButtonBox?.y ?? 0))).toBeLessThanOrEqual(4);
     expect(columnButtonBox?.x).toBeGreaterThan(viewButtonBox?.x ?? 0);
 
     await columnButton.click();

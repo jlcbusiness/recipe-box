@@ -37,6 +37,7 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
   try {
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.waitForLoadState('networkidle');
 
     const section = page.getByRole('region', { name: 'Picklists' });
     await expect(section).toBeVisible();

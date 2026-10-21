@@ -173,6 +173,7 @@ test('a new recipe can upload photos selected before saving @e2e @a11y', async (
 
   try {
     await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Recipe Tin', exact: true }).click();
     await page.getByRole('link', { name: 'Add Recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
     await page.locator('.recipe-form').getByLabel('Name').fill(recipeName);
@@ -1015,18 +1016,21 @@ test('image management panes stage covers and immediately manage decorative reci
         .getByRole('heading', { name: 'Recipe details' })
         .boundingBox();
       const actionBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
-      const titleBounds = await page.getByRole('heading', { level: 1 }).boundingBox();
+      const tagsRowBounds = await page.locator('.recipe-detail-tags-row').boundingBox();
       expect(metadataBounds).not.toBeNull();
       expect(actionBounds).not.toBeNull();
-      expect(titleBounds).not.toBeNull();
-      if (!metadataBounds || !featureBounds || !actionBounds || !titleBounds) {
+      expect(tagsRowBounds).not.toBeNull();
+      if (!metadataBounds || !featureBounds || !actionBounds || !tagsRowBounds) {
         throw new Error('Expected desktop recipe summary and title controls to be visible');
       }
       await expect(featureImage).toHaveCSS('max-height', '280px');
       expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(281);
       expect(featureBounds.x + featureBounds.width).toBeLessThan(metadataBounds.x);
       expect(Math.abs((featureImageBounds?.y ?? 0) - metadataBounds.y)).toBeLessThanOrEqual(4);
-      expect(Math.abs(titleBounds.y - actionBounds.y)).toBeLessThanOrEqual(1);
+      expect(actionBounds.y).toBeGreaterThanOrEqual(tagsRowBounds.y);
+      expect(actionBounds.y + actionBounds.height).toBeLessThanOrEqual(
+        tagsRowBounds.y + tagsRowBounds.height,
+      );
       await expect(page.locator('main.recipes-main')).toHaveCSS('padding-top', '17px');
     } else {
       if (imageMaxHeight === null) {

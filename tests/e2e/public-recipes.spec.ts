@@ -25,6 +25,12 @@ function serviceHeaders(config: LocalSupabaseConfig) {
   };
 }
 
+function expectNoStoreOrRevalidation(headers: Record<string, string>) {
+  const cacheControl = headers['cache-control'] ?? '';
+  expect(cacheControl).toMatch(/no-store|no-cache/);
+  expect(cacheControl).toContain('must-revalidate');
+}
+
 async function createRecipe(
   request: import('@playwright/test').APIRequestContext,
   config: LocalSupabaseConfig,
@@ -177,7 +183,7 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
 
     const publicResponse = await request.get(`/r/${publicId}`);
     expect(publicResponse.status()).toBe(200);
-    expect(publicResponse.headers()['cache-control']).toContain('no-store');
+    expectNoStoreOrRevalidation(publicResponse.headers());
     const publicHtml = await publicResponse.text();
     expect(publicHtml).toContain('Guest citrus cake');
     expect(publicHtml).not.toContain('Private note sentinel');
@@ -216,7 +222,7 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
 
     const privateResponse = await request.get(`/r/${publicId}`);
     expect(privateResponse.status()).toBe(404);
-    expect(privateResponse.headers()['cache-control']).toContain('no-store');
+    expectNoStoreOrRevalidation(privateResponse.headers());
     const privateHtml = await privateResponse.text();
     expect(privateHtml).toContain('This recipe is currently unavailable.');
     expect(privateHtml).not.toContain('Guest citrus cake');
@@ -238,7 +244,7 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
     expect(trash.ok(), await trash.text()).toBeTruthy();
     const trashedResponse = await request.get(`/r/${publicId}`);
     expect(trashedResponse.status()).toBe(404);
-    expect(trashedResponse.headers()['cache-control']).toContain('no-store');
+    expectNoStoreOrRevalidation(trashedResponse.headers());
     expect(await trashedResponse.text()).toContain('This recipe is currently unavailable.');
     expect(await trashedResponse.text()).not.toContain('Guest citrus cake');
 
@@ -257,7 +263,7 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
 
     const unknownResponse = await request.get(`/r/${randomUUID()}`);
     expect(unknownResponse.status()).toBe(404);
-    expect(unknownResponse.headers()['cache-control']).toContain('no-store');
+    expectNoStoreOrRevalidation(unknownResponse.headers());
     expect(await unknownResponse.text()).toContain('This recipe is currently unavailable.');
 
     const historyResponse = await request.get(
@@ -286,7 +292,7 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
 
     const goneResponse = await request.get(`/r/${tombstoneId}`);
     expect(goneResponse.status()).toBe(410);
-    expect(goneResponse.headers()['cache-control']).toContain('no-store');
+    expectNoStoreOrRevalidation(goneResponse.headers());
     expect(await goneResponse.text()).not.toContain('Guest citrus cake');
   } finally {
     if (otherUser) {

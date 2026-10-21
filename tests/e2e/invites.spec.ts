@@ -102,7 +102,7 @@ test('a user cannot self-promote or change their sign-in method @e2e', async ({
     await expect(page).toHaveURL(/\/publications$/);
     await expect(page.getByRole('link', { name: 'Administration' })).toHaveCount(0);
     await page.goto('/admin');
-    await expect(page).toHaveURL(/\/recipes$/);
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -112,6 +112,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
   page,
   request,
 }) => {
+  test.setTimeout(60_000);
   await deletePendingInviteTestUsers(request);
   const admin = await createAdminTestUser(request);
   const recipient = `invite-${crypto.randomUUID()}@example.test`;
@@ -133,21 +134,25 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.getByRole('button', { name: 'Send invitation' }).click();
     await expect(page.getByRole('status')).toHaveText(`Invitation sent to ${recipient}.`);
 
-    const usersResponse = await request.get(
-      `${config.apiUrl}/auth/v1/admin/users?page=1&per_page=1000`,
-      {
-        headers: {
-          apikey: config.serviceRoleKey,
-          Authorization: `Bearer ${config.serviceRoleKey}`,
+    const getInvitedUser = async () => {
+      const usersResponse = await request.get(
+        `${config.apiUrl}/auth/v1/admin/users?page=1&per_page=1000`,
+        {
+          headers: {
+            apikey: config.serviceRoleKey,
+            Authorization: `Bearer ${config.serviceRoleKey}`,
+          },
         },
-      },
-    );
-    expect(usersResponse.ok()).toBeTruthy();
-    const users = await usersResponse.json();
-    const invitedUser = users.users.find(
-      (user: { email?: string }) => user.email?.toLowerCase() === recipient,
-    );
-    expect(invitedUser).toBeDefined();
+      );
+      expect(usersResponse.ok()).toBeTruthy();
+      const users = await usersResponse.json();
+      return users.users.find(
+        (user: { email?: string }) => user.email?.toLowerCase() === recipient,
+      );
+    };
+    await expect.poll(async () => Boolean(await getInvitedUser()), { timeout: 30_000 }).toBe(true);
+    const invitedUser = await getInvitedUser();
+    if (!invitedUser) throw new Error('The invited Auth user must be visible before verification.');
     expect(invitedUser.app_metadata).toMatchObject({
       invitation_pending: true,
       sign_in_method: 'email_password',
@@ -161,9 +166,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
           const response = await request.get(
             `http://127.0.0.1:55425/api/v1/search?query=${encodeURIComponent(`to:${recipient}`)}`,
           );
-          if (!response.ok()) {
-            return null;
-          }
+          if (!response.ok()) return null;
 
           const search = await response.json();
           const message = search.messages?.find((item: { To?: { Address: string }[] }) =>
@@ -363,7 +366,12 @@ test('an existing admin can grant admin status to another account @e2e', async (
 
     const memberRow = page.getByRole('row', { name: new RegExp(member.email) });
     await expect(memberRow).toContainText('Member');
+    const confirmationPromise = page.waitForEvent('dialog').then(async (confirmation) => {
+      expect(confirmation.message()).toContain(member.email);
+      await confirmation.accept();
+    });
     await memberRow.getByRole('button', { name: 'Make admin' }).click();
+    await confirmationPromise;
     await expect(memberRow).toContainText('Admin');
     await expect(memberRow.getByRole('button', { name: 'Make admin' })).toHaveCount(0);
 

@@ -216,6 +216,18 @@ async function activate(
   }
 }
 
+async function openRecipeImport(page: import('@playwright/test').Page, isMobile: boolean) {
+  if (isMobile) {
+    await activate(page, page.getByRole('button', { name: 'Publication transfer options' }), true);
+    const menu = page.getByRole('menu', { name: 'Publication transfer actions' });
+    await expect(menu).toBeVisible();
+    await activate(page, menu.getByRole('menuitem', { name: 'Import recipe' }), true);
+    return;
+  }
+
+  await activate(page, page.getByRole('button', { name: 'Import recipe' }), false);
+}
+
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
   const overflow = await page.evaluate(() => {
     const viewportWidth = document.documentElement.clientWidth;
@@ -387,9 +399,11 @@ test('imports publication and recipe bundles from their entry points @e2e @a11y'
     });
 
     await page.goto(`/publications/${destinationPublicationId}`);
-    const recipeImport = page.getByRole('button', { name: 'Import recipe' });
-    if (isMobile) expect((await recipeImport.boundingBox())?.height).toBeCloseTo(40, 0);
-    await activate(page, recipeImport, isMobile);
+    if (isMobile) {
+      const transferTrigger = page.getByRole('button', { name: 'Publication transfer options' });
+      expect((await transferTrigger.boundingBox())?.height).toBeCloseTo(40, 0);
+    }
+    await openRecipeImport(page, isMobile);
 
     dialog = page.getByRole('dialog', { name: 'Import recipe' });
     await dialog.getByLabel('Recipe archive').setInputFiles({
@@ -415,7 +429,7 @@ test('imports publication and recipe bundles from their entry points @e2e @a11y'
 
     const reviewRecipeArchive = async (archive: Buffer) => {
       await page.goto(`/publications/${destinationPublicationId}`);
-      await activate(page, page.getByRole('button', { name: 'Import recipe' }), isMobile);
+      await openRecipeImport(page, isMobile);
       const recipeDialog = page.getByRole('dialog', { name: 'Import recipe' });
       await recipeDialog.getByLabel('Recipe archive').setInputFiles({
         name: 'recipe-export.zip',
@@ -461,7 +475,7 @@ test('imports publication and recipe bundles from their entry points @e2e @a11y'
 
     const cancelledRecipeName = `Cancelled cake ${randomUUID()}`;
     await page.goto(`/publications/${destinationPublicationId}`);
-    await activate(page, page.getByRole('button', { name: 'Import recipe' }), isMobile);
+    await openRecipeImport(page, isMobile);
     recipeDialog = page.getByRole('dialog', { name: 'Import recipe' });
     await recipeDialog.getByLabel('Recipe archive').setInputFiles({
       name: 'cancelled-recipe-export.zip',
@@ -527,7 +541,7 @@ test('imports publication and recipe bundles from their entry points @e2e @a11y'
     const newPublicationName = `Created publication ${randomUUID()}`;
     const newRecipeName = `Unmatched recipe ${randomUUID()}`;
     await page.goto(`/publications/${destinationPublicationId}`);
-    await activate(page, page.getByRole('button', { name: 'Import recipe' }), isMobile);
+    await openRecipeImport(page, isMobile);
     recipeDialog = page.getByRole('dialog', { name: 'Import recipe' });
     await recipeDialog.getByLabel('Recipe archive').setInputFiles({
       name: 'new-publication-recipe.zip',
@@ -547,7 +561,7 @@ test('imports publication and recipe bundles from their entry points @e2e @a11y'
     await expect(page.getByRole('link', { name: newPublicationName })).toBeVisible();
 
     await page.goto(`/publications/${duplicatePublicationId}`);
-    await activate(page, page.getByRole('button', { name: 'Import recipe' }), isMobile);
+    await openRecipeImport(page, isMobile);
     recipeDialog = page.getByRole('dialog', { name: 'Import recipe' });
     await recipeDialog.getByLabel('Recipe archive').setInputFiles({
       name: 'new-publication-recipe.zip',
@@ -978,7 +992,7 @@ test('replaces a public Recipe Tin recipe without importing the collection @e2e'
 
     const importArchive = async () => {
       await page.goto(`/publications/${recipeTin.id}`);
-      await page.getByRole('button', { name: 'Import recipe' }).click();
+      await openRecipeImport(page, (page.viewportSize()?.width ?? 1280) <= 720);
       const dialog = page.getByRole('dialog', { name: 'Import recipe' });
       await dialog.getByLabel('Recipe archive').setInputFiles({
         name: 'public-milk-toast.zip',

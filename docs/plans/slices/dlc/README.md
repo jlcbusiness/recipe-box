@@ -30,7 +30,7 @@ crop/framing and full-screen viewing remain open in DLC 06.
 ### Phase 1: Navigation and authoring foundations
 
 - **DLC 01 (delivered):** [Navigation and picklist typeahead](dlc-01-navigation-and-picklist-typeahead.md)
-- **DLC 02:** [Recipe reader and measurement polish](dlc-02-reader-and-measurement-polish.md)
+- **DLC 02 (delivered):** [Recipe reader and measurement polish](dlc-02-reader-and-measurement-polish.md)
 - **DLC 03:** [Ingredient sets](dlc-03-ingredient-sets.md)
 - **DLC 04:** [Ingredient amount semantics and references](dlc-04-ingredient-amounts-and-references.md)
 - **DLC 05:** [Instruction authoring and references](dlc-05-instruction-authoring-and-references.md)

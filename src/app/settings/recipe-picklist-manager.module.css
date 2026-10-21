@@ -18,6 +18,10 @@
   font: inherit;
   cursor: pointer;
   padding: 0 3px;
+
+  :global(.private-content) .pane {
+    margin-top: 0;
+  }
   text-decoration: none;
 }
 

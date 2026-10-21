@@ -248,12 +248,15 @@ trailing empty row.
 2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user
    can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside
    its row editor pane; menus remain within the viewport and use the available space above or below the field.
-3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, fraction text (`1/2`, `1 1/4`),
-   and optionally equivalent Unicode fraction glyphs (`½`, `1 ¼`),
+3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, including
+  leading-decimal forms such as `.5`, fraction text (`1/2`, `1 1/4`), and
+  optionally equivalent Unicode fraction glyphs (`½`, `1 ¼`),
    ranges (`2-3`), and
    comma-grouped whole-number parts (for example, `1,000` , `1,000 1/2` , or `1,000-2,000` ). Blank for Feel phrases.
-   Editor values retain fraction-text formatting. Recipe reading groups thousands and displays supported US customary
-   fractions as Unicode glyphs, while preserving range and unit-system formatting.
+   On blur, the editor preserves exact values expressible with supported fraction denominators as fraction text;
+   other parsed values retain shortest round-trip decimal text instead of being rounded to hundredths. Recipe reading
+   groups thousands and displays supported US customary fractions as Unicode glyphs, while preserving range and
+   unit-system formatting.
 4. **Measurement Category (fixed selector and fields):**
    - **Unit:** The default category. Shows separate Volume amount/unit and Weight amount/unit fields. Either or both
      dimensions may be entered; a slash separates them visually and in recipe display.
@@ -326,13 +329,13 @@ trailing empty row.
   - Feel items (`to taste`, `as needed`) are not scaled.
 - **Rounding and Fractions:**
   - Internally, values are preserved as high-precision floating numbers.
-  - US customary measurements display common cooking fractions with denominators 2, 3, 4, and 8 as Unicode glyphs when
+  - US customary reader display uses common cooking fractions with denominators 2, 3, 4, and 8 as Unicode glyphs when
     within $0.03$ of the fraction (e.g., $0.25 \rightarrow ¼$ , $0.333 \rightarrow ⅓$ , $1.625 \rightarrow 1\ ⅝$ ).
     Glyphs are slightly larger and vertically centered with surrounding digits, with optical corrections where font
-    metrics require them. Otherwise, quantities display as decimals
-    rounded to two places (e.g., $1.17$ cups). Quantity inputs display conventional
-    fraction text (e.g., `1/2`, `1 1/2`) and also accept fraction glyphs as an optional input convenience, preserving
-    the same numeric values when edited and saved.
+    metrics require them. Other reader quantities display as decimals rounded to two places (e.g., $1.17$ cups).
+    Quantity inputs separately accept leading decimals, conventional fraction text, and optional fraction glyphs.
+    On blur, exact values expressible with supported fraction denominators remain fraction text; other parsed values
+    use shortest round-trip decimal text so formatting does not change their numeric value before save.
   - Metric measurements always display as decimals rounded to at most two decimal places (e.g., $1.5$ L, $0.33$ g,
     $1.625$ g displayed as $1.63$ g); never display metric quantities as fractions.
 
@@ -348,10 +351,12 @@ trailing empty row.
   whose converted lower amount is at least one; if none qualifies, use the target system's smallest unit. Both
   endpoints of a range use the same unit.
 - **Automatic same-system display simplification:** In the private reader, preserve fractions at or above `1/4` unless
-  the amount equals exactly one smaller unit (for example, `1/2 qt` becomes `1 pt`, and `1/4 qt` becomes `1 cup`).
-  Amounts below `1/4` step down the supported unit ladder until the displayed amount is at least `1/4` or no smaller
-  unit exists. Keep each measurement in one unit; do not decompose it into mixed units. Apply this after scaling and
-  only in the private reader's automatic same-system resolution. Public pages continue to preserve stored units.
+  the amount equals exactly one smaller unit (for example, `1/2 qt` becomes `1 pt`, and `1/4 qt` becomes `1 cup`),
+  or the immediate smaller unit expresses it as a fraction from `1/4` up to but not including one (for example,
+  `1/4 pt` becomes `1/2 cup`). Amounts below `1/4` step down the supported unit ladder until the displayed amount
+  is at least `1/4`; if that value is still below one, continue down while the next smaller unit also stays below one.
+  Keep each measurement in one unit; do not decompose it into mixed units. Apply this after scaling and only in the
+  private reader's automatic same-system resolution. Public pages continue to preserve stored units.
 - **Recipe-level override (view time):** While viewing a recipe, the user can switch an individual ingredient to a
   specific unit within its dimension (e.g., teaspoons instead of tablespoons, or ounces instead of grams). These
   overrides and scale values are transient reader state, never saved to the recipe or account.

@@ -728,6 +728,7 @@ export function RecipePicklistManager({
         style={
           panePosition
             ? {
+                marginTop: 0,
                 top: panePosition.top ?? 'auto',
                 bottom: panePosition.bottom ?? 'auto',
                 left: panePosition.left,

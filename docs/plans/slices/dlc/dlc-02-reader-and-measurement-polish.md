@@ -50,31 +50,40 @@ where their existing contracts allow them. All conversions remain transient.
   other than teaspoons. Scaling is applied before this display decision.
 - In the private reader's automatic same-system unit display, preserve
   fractions at or above 1/4 unless the amount equals exactly one smaller unit
-  (for example, 1/2 qt becomes 1 pt and 1/4 qt becomes 1 cup). Step amounts
-  below 1/4 down the supported unit ladder until the displayed amount is at
-  least 1/4 or no smaller unit exists. Keep each measurement in one unit; do
-  not decompose it into mixed units. Public pages continue to preserve stored
-  units.
+  (for example, 1/2 qt becomes 1 pt and 1/4 qt becomes 1 cup), or the immediate
+  smaller unit expresses it as a fraction from 1/4 up to but not including one
+  (for example, 1/4 pt becomes 1/2 cup). Step amounts below 1/4 down the
+  supported unit ladder until the displayed amount is at least 1/4; if that
+  value is still below one, continue down while the next smaller unit also
+  stays below one. Keep each measurement in one unit; do not decompose it into
+  mixed units. Public pages continue to preserve stored units.
+- Quantity entry accepts leading-decimal input such as `.5`. On blur, exact
+  values expressible with supported fraction denominators remain fraction text;
+  other parsed values use shortest round-trip decimal text rather than rounding
+  to hundredths.
 
 ## Exclusions and dependencies
 
 - No migration, new database field, unit code, picklist option, or settings
   preference. `pinch` is not a selectable or stored unit.
-- Do not change the exact measurement, saved unit, recipe version, history,
-  export format, account defaults, scale multiplier behavior, or manual
-  unit-override behavior. Automatic same-system display simplification is the
-  only added unit behavior.
+- Reader simplification must not change the exact saved measurement or unit. Do
+  not change recipe version, history, export format, account defaults, scale
+  multiplier behavior, or manual unit-override behavior. Quantity-editor
+  normalization preserves the parsed numeric value through explicit save.
 - Preserve Slice 16's presentation, sorting, cook-mode, and Wake Lock contracts;
   preserve DLC 08's public privacy and print contracts.
 - Preserve the public page's stored-unit default and its existing public
   allow-list. Do not introduce private reader controls or data to guests.
-- Do not change recipe form entry or measurement parsing.
+- Do not change recipe form fields or the measurement schema. Extend quantity
+  parsing only to accept leading-decimal notation such as `.5`; do not otherwise
+  expand the existing measurement grammar.
 
 ## Data, state, and failure boundaries
 
 - The existing recipe record remains the sole persisted source for minutes and
-  measurements. Formatting is pure display logic over saved or transiently
-  scaled/converted values.
+  measurements. Reader formatting is pure display logic over saved or
+  transiently scaled/converted values. Editor normalization changes only the
+  quantity text and preserves its parsed numeric value before explicit save.
 - Automatic unit simplification runs after scaling, affects only the private
   reader's derived display, and never changes the stored amount or unit.
   Explicit per-ingredient unit overrides remain exact, and public pages keep
@@ -112,19 +121,26 @@ where their existing contracts allow them. All conversions remain transient.
 
 ## Test-first acceptance
 
+- Quantity-rule tests cover leading-decimal `.5`, exact fraction-text
+  preservation such as `1/12` and `1/16`, round-trip decimal formatting, and
+  unchanged numeric serialization.
 - Unit tests cover duration boundaries (`0`, `59`, `60`, `61`, and multiple
   hours), omission of zero minutes, and pinch values below, at, and above both
   midpoint boundaries. They also prove ranges, metric values, and non-teaspoon
   values are not aliased and source measurements remain unchanged. Unit
   simplification tests cover fraction preservation, exact lower-unit
-  equivalents, amounts below 1/4, single-unit output, and unchanged source
-  measurements.
+  equivalents, fractional amounts below one immediate lower unit, scaled
+  amounts that cross multiple unit steps, amounts below 1/4, single-unit
+  output, and unchanged source measurements.
 - Private recipe browser tests verify desktop control ordering, mobile
   alignment and Scale-to-Screen-Lock spacing, resting underlines including for
   `g` without duplicate decoration, keyboard opening/selection/focus behavior,
   cook-mode table alignment and 48px targets at mobile and narrow widths, the
   new time heading/format, active print formatting, and unchanged stored
   measurements.
+- Ingredient editor browser tests verify density-derived quantities retain
+  uncommon fractions and that the displayed derived counterpart matches the
+  exact entered amount on mobile and desktop.
 - Public browser tests verify `Time Breakdown`, duration formatting, and the
   shared pinch display without exposing private fields or unit preferences.
 - Axe checks cover the changed private/public reader states. Existing
