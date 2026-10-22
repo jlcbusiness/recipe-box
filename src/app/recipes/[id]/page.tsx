@@ -218,7 +218,11 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   ].filter(([, value]) => value !== null);
   const unitSystems = { volume: volumeSystem, weight: weightSystem };
   const instructions = recipe.steps.length > 0 && (
-    <section className="recipe-detail-section" aria-labelledby="instructions-title">
+    <section
+      aria-labelledby="instructions-title"
+      className="recipe-detail-section"
+      key="recipe-instructions"
+    >
       <h2 id="instructions-title">Instructions</h2>
       <ol className="recipe-instruction-list">
         {recipe.steps.map((step) => (
@@ -339,6 +343,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           <RecipeReader
             defaultPresentation={ingredientPresentation}
             ingredients={recipe.ingredients}
+            ingredientSets={recipe.ingredient_sets}
             instructions={instructions}
             recipeId={recipe.id}
             serves={recipe.serves}

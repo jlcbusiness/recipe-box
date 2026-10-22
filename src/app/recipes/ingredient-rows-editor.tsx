@@ -1,20 +1,23 @@
 'use client';
 
+import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { IngredientOption, RecipePicklistValue } from '../../lib/recipes/data';
 import { reconcileDensityIngredientChange } from '../../lib/recipes/density-rules';
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
 import {
-  ensureTrailingIngredientRow,
   formatIngredientDisplay,
   isEmptyIngredientRow,
   moveIngredientRow,
-  moveIngredientRowTo,
 } from '../../lib/recipes/ingredient-rules';
+import {
+  type IngredientSetDraft,
+  normalizeIngredientSets,
+} from '../../lib/recipes/ingredient-set-rules';
 import { parseQuantityInput } from '../../lib/recipes/measurement-rules';
 import { MeasurementEditor } from './measurement-editor';
-import { useReorderDrag } from './use-reorder-drag';
+import { type ReorderDragBound, useReorderDrag } from './use-reorder-drag';
 
 const defaultPreparationOptions = [
   'chopped',
@@ -30,10 +33,18 @@ const defaultPreparationOptions = [
 ];
 
 type IngredientField = 'ingredientName' | 'detail' | 'preparation';
+type IngredientEditorEntry =
+  | { kind: 'section'; key: string; section: IngredientSetDraft; sectionIndex: number }
+  | { kind: 'ingredient'; key: string; row: IngredientRowDraft; rowIndex: number }
+  | { kind: 'add-ingredient'; key: string; row: IngredientRowDraft; rowIndex: number };
 
-function createEmptyIngredientRow(id = crypto.randomUUID()): IngredientRowDraft {
+function createEmptyIngredientRow(
+  id = crypto.randomUUID(),
+  ingredientSetId = '',
+): IngredientRowDraft {
   return {
     id,
+    ingredientSetId,
     ingredientId: null,
     ingredientName: '',
     isMain: false,
@@ -43,12 +54,105 @@ function createEmptyIngredientRow(id = crypto.randomUUID()): IngredientRowDraft 
   };
 }
 
+function ingredientPlaceholderId(setId: string, firstSetId: string | undefined) {
+  return setId === firstSetId ? 'ingredient-placeholder' : `ingredient-placeholder:${setId}`;
+}
+
+function isIngredientPlaceholderId(id: string) {
+  return id === 'ingredient-placeholder' || id.startsWith('ingredient-placeholder:');
+}
+
 function updateIngredientRow(
   rows: IngredientRowDraft[],
   rowId: string,
   update: Partial<IngredientRowDraft>,
 ): IngredientRowDraft[] {
   return rows.map((row) => (row.id === rowId ? { ...row, ...update } : row));
+}
+
+function updateSectionElementRef<T extends HTMLElement>(
+  refs: Map<string, Set<T>>,
+  setId: string,
+  element: T | null,
+) {
+  const elements = refs.get(setId) ?? new Set<T>();
+  if (element) {
+    elements.add(element);
+  } else {
+    for (const current of elements) {
+      if (!current.isConnected) elements.delete(current);
+    }
+  }
+  if (elements.size) {
+    refs.set(setId, elements);
+  } else {
+    refs.delete(setId);
+  }
+}
+
+function visibleSectionElement<T extends HTMLElement>(refs: Map<string, Set<T>>, setId: string) {
+  return Array.from(refs.get(setId) ?? []).find((element) => element.getClientRects().length > 0);
+}
+
+function ensureTrailingIngredientRowPerSet(
+  rows: IngredientRowDraft[],
+  sets: IngredientSetDraft[],
+  createEmpty: (setId: string) => IngredientRowDraft,
+): IngredientRowDraft[] {
+  const knownSetIds = new Set(sets.map((set) => set.id));
+  const sectionRows = sets.flatMap((set) => {
+    const rowsInSet = rows.filter((row) => row.ingredientSetId === set.id);
+    const populatedRows = rowsInSet.filter((row) => !isEmptyIngredientRow(row));
+    const emptyRow = rowsInSet.find(isEmptyIngredientRow) ?? createEmpty(set.id);
+    return [...populatedRows, emptyRow];
+  });
+  return [
+    ...sectionRows,
+    ...rows.filter((row) => !knownSetIds.has(row.ingredientSetId) && !isEmptyIngredientRow(row)),
+  ];
+}
+function buildIngredientEditorEntries(
+  sets: IngredientSetDraft[],
+  rows: IngredientRowDraft[],
+): IngredientEditorEntry[] {
+  return sets.flatMap((section, sectionIndex) => [
+    {
+      kind: 'section' as const,
+      key: `section-${section.id}`,
+      section,
+      sectionIndex,
+    },
+    ...rows
+      .filter((row) => row.ingredientSetId === section.id)
+      .map((row): IngredientEditorEntry => {
+        const rowIndex = rows.indexOf(row);
+        return isEmptyIngredientRow(row)
+          ? { kind: 'add-ingredient', key: row.id, row, rowIndex }
+          : { kind: 'ingredient', key: row.id, row, rowIndex };
+      }),
+  ]);
+}
+
+function getReorderEntryId(element: HTMLElement) {
+  if (element.dataset.reorderEntryId) {
+    return element.dataset.reorderEntryId;
+  }
+  if (element.dataset.rowId) {
+    return element.dataset.rowId;
+  }
+  return element.dataset.ingredientSetId ? `section-${element.dataset.ingredientSetId}` : undefined;
+}
+
+function getVisibleReorderEntries(editor: Element) {
+  const layout = [
+    editor.querySelector<HTMLElement>('.recipe-ingredient-table'),
+    editor.querySelector<HTMLElement>('.recipe-ingredient-mobile-list'),
+  ].find((table) => table && table.getBoundingClientRect().height > 0);
+  return Array.from(
+    layout?.querySelectorAll<HTMLElement>(
+      'tbody tr[data-row-id], tbody tr.recipe-ingredient-set-divider[data-ingredient-set-id], tbody tr[data-reorder-entry-id]',
+    ) ?? [],
+  );
 }
 
 function formatDraftIngredient(
@@ -646,6 +750,9 @@ function MobileIngredientEditor({
 
 export function IngredientRowsEditor({
   ingredients,
+  ingredientSets,
+  onIngredientSetsChange,
+  onRemoveSetRequested,
   picklists,
   preparationOptions,
   rows,
@@ -654,6 +761,9 @@ export function IngredientRowsEditor({
   onRowsChange,
 }: {
   ingredients: IngredientOption[];
+  ingredientSets: IngredientSetDraft[];
+  onIngredientSetsChange: (sets: IngredientSetDraft[]) => void;
+  onRemoveSetRequested: (setId: string) => boolean;
   picklists: RecipePicklistValue[];
   preparationOptions: string[];
   rows: IngredientRowDraft[];
@@ -662,7 +772,9 @@ export function IngredientRowsEditor({
   onRowsChange: (rows: IngredientRowDraft[]) => void;
 }) {
   const [draftRows, setDraftRows] = useState(() =>
-    ensureTrailingIngredientRow(rows, () => createEmptyIngredientRow('ingredient-placeholder')),
+    ensureTrailingIngredientRowPerSet(rows, ingredientSets, (setId) =>
+      createEmptyIngredientRow(ingredientPlaceholderId(setId, ingredientSets[0]?.id), setId),
+    ),
   );
   const [activeCell, setActiveCell] = useState<{
     rowId: string;
@@ -672,10 +784,16 @@ export function IngredientRowsEditor({
   const [mobileEditingRowId, setMobileEditingRowId] = useState<string | null>(null);
   const [mobileAnchorElement, setMobileAnchorElement] = useState<HTMLButtonElement | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
+  const [setLabelDraft, setSetLabelDraft] = useState('');
+  const setLabelInputRefs = useRef(new Map<string, Set<HTMLInputElement>>());
+  const setTitleButtonRefs = useRef(new Map<string, Set<HTMLButtonElement>>());
+  const [pendingSetTitleFocusId, setPendingSetTitleFocusId] = useState<string | null>(null);
   const [dropOffsets, setDropOffsets] = useState<Map<string, number>>(() => new Map());
   const [dropCommitPending, setDropCommitPending] = useState(false);
   const [settlingSourceId, setSettlingSourceId] = useState<string | null>(null);
   const ingredientTableRef = useRef<HTMLTableElement>(null);
+  const controlRailRef = useRef<HTMLFieldSetElement>(null);
   const pendingFocusCell = useRef<{ rowId: string; field: IngredientField } | null>(null);
   const pendingClickCell = useRef<{ rowId: string; field: IngredientField } | null>(null);
   const pendingDrop = useRef<{
@@ -686,14 +804,95 @@ export function IngredientRowsEditor({
   const rowsRef = useRef(draftRows);
   const reorderDrag = useReorderDrag();
   const dragPreview = reorderDrag.preview;
+  const editorEntries = buildIngredientEditorEntries(ingredientSets, draftRows);
 
   useEffect(() => {
-    const normalized = ensureTrailingIngredientRow(rows, () =>
-      createEmptyIngredientRow('ingredient-placeholder'),
+    const normalized = ensureTrailingIngredientRowPerSet(rows, ingredientSets, (setId) =>
+      createEmptyIngredientRow(ingredientPlaceholderId(setId, ingredientSets[0]?.id), setId),
     );
     rowsRef.current = normalized;
     setDraftRows(normalized);
-  }, [rows]);
+    if (
+      normalized.length !== rows.length ||
+      normalized.some((row, index) => row.id !== rows[index]?.id)
+    ) {
+      onRowsChange(normalized);
+    }
+  }, [rows, ingredientSets, onRowsChange]);
+
+  useLayoutEffect(() => {
+    const table = ingredientTableRef.current;
+    const controlRail = controlRailRef.current;
+    if (!table || !controlRail) {
+      return;
+    }
+
+    const syncControlRailHeights = () => {
+      const tableHeader = table.querySelector<HTMLElement>('thead tr');
+      const railHeader = controlRail.querySelector<HTMLElement>('.recipe-ingredient-rail-header');
+      if (tableHeader && railHeader) {
+        const height = tableHeader.getBoundingClientRect().height;
+        railHeader.style.height = `${height}px`;
+        railHeader.style.flexBasis = `${height}px`;
+      }
+
+      const sectionSpacers = new Map(
+        Array.from(
+          controlRail.querySelectorAll<HTMLElement>(
+            '.recipe-ingredient-rail-section-spacer[data-ingredient-set-id]',
+          ),
+        ).map((element) => [element.dataset.ingredientSetId ?? '', element]),
+      );
+      const ingredientRows = new Map(
+        Array.from(
+          controlRail.querySelectorAll<HTMLElement>('.recipe-ingredient-rail-row[data-row-id]'),
+        ).map((element) => [element.dataset.rowId ?? '', element]),
+      );
+
+      for (const tableRow of Array.from(table.querySelectorAll<HTMLElement>('tbody tr'))) {
+        const height = tableRow.getBoundingClientRect().height;
+        if (height <= 0) {
+          continue;
+        }
+        const railElement = tableRow.classList.contains('recipe-ingredient-set-divider')
+          ? sectionSpacers.get(tableRow.dataset.ingredientSetId ?? '')
+          : ingredientRows.get(tableRow.dataset.rowId ?? '');
+        if (railElement && Math.abs(railElement.getBoundingClientRect().height - height) > 0.5) {
+          railElement.style.height = `${height}px`;
+          railElement.style.flexBasis = `${height}px`;
+        }
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(syncControlRailHeights);
+    const observeTableRows = () => {
+      for (const row of Array.from(table.querySelectorAll('thead tr, tbody tr'))) {
+        resizeObserver.observe(row);
+      }
+      syncControlRailHeights();
+    };
+    const mutationObserver = new MutationObserver(observeTableRows);
+    mutationObserver.observe(table, { childList: true, subtree: true });
+    observeTableRows();
+    return () => {
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (editingSetId) {
+      const input = visibleSectionElement(setLabelInputRefs.current, editingSetId);
+      input?.focus();
+      input?.select();
+      return;
+    }
+    const pendingSetId = pendingSetTitleFocusId;
+    if (pendingSetId) {
+      visibleSectionElement(setTitleButtonRefs.current, pendingSetId)?.focus();
+      setPendingSetTitleFocusId(null);
+    }
+  }, [editingSetId, pendingSetTitleFocusId]);
 
   useLayoutEffect(() => {
     const requestedFocusTarget = pendingFocusCell.current;
@@ -731,15 +930,11 @@ export function IngredientRowsEditor({
 
     const editor = ingredientTableRef.current?.closest('.recipe-ingredient-editor');
     const offsets = new Map<string, number>();
-    for (const row of Array.from(
-      editor?.querySelectorAll<HTMLElement>(
-        '.recipe-ingredient-mobile-row[data-row-id], .recipe-ingredient-table tbody tr[data-row-id]',
-      ) ?? [],
-    )) {
-      const rowId = row.dataset.rowId;
-      const startingTop = rowId ? pending.rowTops.get(rowId) : undefined;
-      if (rowId && startingTop !== undefined && row.getBoundingClientRect().height > 0) {
-        offsets.set(rowId, startingTop - row.getBoundingClientRect().top);
+    for (const entry of editor ? getVisibleReorderEntries(editor) : []) {
+      const entryId = getReorderEntryId(entry);
+      const startingTop = entryId ? pending.rowTops.get(entryId) : undefined;
+      if (entryId && startingTop !== undefined && entry.getBoundingClientRect().height > 0) {
+        offsets.set(entryId, startingTop - entry.getBoundingClientRect().top);
       }
     }
     if (!offsets.size) {
@@ -753,14 +948,23 @@ export function IngredientRowsEditor({
     setSettlingSourceId(
       canAnimate && Math.abs(offsets.get(pending.sourceId) ?? 0) > 0.5 ? pending.sourceId : null,
     );
-    window.requestAnimationFrame(() => setDropOffsets(new Map()));
+    if (canAnimate) {
+      window.requestAnimationFrame(() =>
+        window.requestAnimationFrame(() => setDropOffsets(new Map())),
+      );
+    } else {
+      setDropOffsets(new Map());
+    }
   }, [dragPreview]);
 
   const commitRows = (nextRows: IngredientRowDraft[]) => {
-    const normalized = ensureTrailingIngredientRow(nextRows, createEmptyIngredientRow);
+    const normalized = ensureTrailingIngredientRowPerSet(nextRows, ingredientSets, (setId) =>
+      createEmptyIngredientRow(crypto.randomUUID(), setId),
+    );
     rowsRef.current = normalized;
     setDraftRows(normalized);
     onRowsChange(normalized);
+    return normalized;
   };
 
   const closeMobileEditor = () => {
@@ -822,7 +1026,7 @@ export function IngredientRowsEditor({
     }
 
     const persistedRowId =
-      field === 'ingredientName' && value.trim() && rowId === 'ingredient-placeholder'
+      field === 'ingredientName' && value.trim() && isIngredientPlaceholderId(rowId)
         ? crypto.randomUUID()
         : rowId;
     if (pendingFocusCell.current?.rowId === rowId && persistedRowId !== rowId) {
@@ -898,40 +1102,65 @@ export function IngredientRowsEditor({
   };
 
   const moveRow = (rowId: string, direction: 'up' | 'down') => {
-    const currentIndex = rowsRef.current.findIndex((row) => row.id === rowId);
-    const targetIndex = currentIndex + (direction === 'up' ? -1 : 1);
-    if (
-      currentIndex < 0 ||
-      targetIndex < 0 ||
-      targetIndex >= rowsRef.current.length ||
-      isEmptyIngredientRow(rowsRef.current[targetIndex])
-    ) {
-      return;
-    }
     const nextRows = moveIngredientRow(rowsRef.current, rowId, direction);
     if (nextRows === rowsRef.current) {
       return;
     }
-    const newIndex = nextRows.findIndex((row) => row.id === rowId);
+    const sourceRow = rowsRef.current.find((row) => row.id === rowId);
+    const committedRows = commitRows(nextRows);
+    const newIndex = committedRows.findIndex((row) => row.id === rowId);
+    const movedRow = committedRows[newIndex];
+    const sectionLabel = ingredientSets.find((set) => set.id === movedRow?.ingredientSetId)?.label;
     setAnnouncement(
-      `${nextRows[newIndex]?.ingredientName || 'Ingredient'} moved to row ${newIndex + 1}.`,
+      movedRow?.ingredientSetId !== sourceRow?.ingredientSetId && sectionLabel
+        ? `${movedRow?.ingredientName || 'Ingredient'} moved to ${sectionLabel}, row ${newIndex + 1}.`
+        : `${movedRow?.ingredientName || 'Ingredient'} moved to row ${newIndex + 1}.`,
     );
-    commitRows(nextRows);
   };
 
-  const commitDraggedRow = (sourceRowId: string, targetRowId: string) => {
-    if (!sourceRowId || sourceRowId === targetRowId) {
+  const commitDraggedRow = (sourceRowId: string, projectedOrder: string[]) => {
+    if (!sourceRowId || !projectedOrder.includes(sourceRowId)) {
       return;
     }
-    const nextRows = moveIngredientRowTo(rowsRef.current, sourceRowId, targetRowId);
-    if (nextRows === rowsRef.current) {
+    const sourceRow = rowsRef.current.find((row) => row.id === sourceRowId);
+    if (!sourceRow) {
       return;
     }
-    const newIndex = nextRows.findIndex((row) => row.id === sourceRowId);
-    setAnnouncement(
-      `${nextRows[newIndex]?.ingredientName || 'Ingredient'} moved to row ${newIndex + 1}.`,
+
+    const rowsById = new Map(rowsRef.current.map((row) => [row.id, row]));
+    const sectionByEntryId = new Map(
+      ingredientSets.map((section) => [`section-${section.id}`, section.id]),
     );
-    commitRows(nextRows);
+    let currentSetId: string | null = null;
+    const orderedRows = projectedOrder.flatMap((entryId) => {
+      const sectionId = sectionByEntryId.get(entryId);
+      if (sectionId) {
+        currentSetId = sectionId;
+        return [];
+      }
+      const row = rowsById.get(entryId);
+      if (!row) {
+        return [];
+      }
+      return [{ ...row, ingredientSetId: currentSetId ?? row.ingredientSetId }];
+    });
+    const orderedRowIds = new Set(orderedRows.map((row) => row.id));
+    const nextRows = [
+      ...orderedRows,
+      ...rowsRef.current.filter((row) => !orderedRowIds.has(row.id)),
+    ];
+    if (nextRows.every((row, index) => row === rowsRef.current[index])) {
+      return;
+    }
+    const committedRows = commitRows(nextRows);
+    const newIndex = committedRows.findIndex((row) => row.id === sourceRowId);
+    const movedRow = committedRows[newIndex];
+    const sectionLabel = ingredientSets.find((set) => set.id === movedRow?.ingredientSetId)?.label;
+    setAnnouncement(
+      movedRow?.ingredientSetId !== sourceRow.ingredientSetId && sectionLabel
+        ? `${movedRow?.ingredientName || 'Ingredient'} moved to ${sectionLabel}, row ${newIndex + 1}.`
+        : `${movedRow?.ingredientName || 'Ingredient'} moved to row ${newIndex + 1}.`,
+    );
   };
 
   function getReorderState(rowId: string) {
@@ -941,38 +1170,21 @@ export function IngredientRowsEditor({
     if (dragPreview.sourceId === rowId) {
       return 'dragging';
     }
-    const sourceIndex = draftRows.findIndex((row) => row.id === dragPreview.sourceId);
-    const targetIndex = draftRows.findIndex((row) => row.id === dragPreview.targetId);
-    const rowIndex = draftRows.findIndex((row) => row.id === rowId);
-    if (
-      (sourceIndex < targetIndex && rowIndex > sourceIndex && rowIndex <= targetIndex) ||
-      (sourceIndex > targetIndex && rowIndex >= targetIndex && rowIndex < sourceIndex)
-    ) {
-      return 'displaced';
-    }
-    return undefined;
+    const offset = dragPreview.offsets.get(rowId);
+    return offset !== undefined && Math.abs(offset) > 0.5 ? 'displaced' : undefined;
   }
 
-  function getReorderTransform(rowId: string, alignToSlot = false) {
+  function getReorderTransform(rowId: string) {
     if (!dragPreview) {
       const dropOffset = dropOffsets.get(rowId);
       return dropOffset === undefined ? undefined : `translateY(${dropOffset}px)`;
     }
-    if (dragPreview.sourceId === rowId) {
-      return `translateY(${alignToSlot ? dragPreview.slotOffset : dragPreview.pointerOffset}px)`;
-    }
-    if (getReorderState(rowId) !== 'displaced') {
-      return undefined;
-    }
-    const sourceIndex = draftRows.findIndex((row) => row.id === dragPreview.sourceId);
-    const targetIndex = draftRows.findIndex((row) => row.id === dragPreview.targetId);
-    return `translateY(${sourceIndex < targetIndex ? -dragPreview.offset : dragPreview.offset}px)`;
+    const offset = dragPreview.offsets.get(rowId);
+    return offset === undefined || Math.abs(offset) <= 0.5 ? undefined : `translateY(${offset}px)`;
   }
 
-  function getReorderTransition(rowId: string) {
-    return dragPreview?.sourceId === rowId && dragPreview.targetId !== rowId
-      ? 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)'
-      : undefined;
+  function getReorderTransition() {
+    return dragPreview ? 'transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1)' : undefined;
   }
 
   function handleGridKeyDown(event: React.KeyboardEvent<HTMLElement>) {
@@ -1114,6 +1326,134 @@ export function IngredientRowsEditor({
     );
   }
 
+  function moveSet(setId: string, direction: 'up' | 'down') {
+    const currentIndex = ingredientSets.findIndex((set) => set.id === setId);
+    const targetIndex = currentIndex + (direction === 'up' ? -1 : 1);
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= ingredientSets.length) {
+      return;
+    }
+    const next = [...ingredientSets];
+    [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
+    setPendingSetTitleFocusId(setId);
+    onIngredientSetsChange(
+      normalizeIngredientSets(next.map((set, position) => ({ ...set, position }))) ??
+        ingredientSets,
+    );
+  }
+
+  function renderSectionHeading(set: IngredientSetDraft, index: number) {
+    const isEditing = editingSetId === set.id;
+    const removeLabel = `Remove ${set.label || `Section ${index + 1}`} section`;
+    return (
+      <div
+        className={`recipe-ingredient-set-heading${ingredientSets.length > 1 ? ' has-actions' : ''}`}
+      >
+        <h2>
+          {isEditing ? (
+            <input
+              aria-label={`Section ${index + 1}`}
+              maxLength={80}
+              ref={(element) => updateSectionElementRef(setLabelInputRefs.current, set.id, element)}
+              value={setLabelDraft}
+              onBlur={() => {
+                onIngredientSetsChange(
+                  ingredientSets.map((current) =>
+                    current.id === set.id ? { ...current, label: setLabelDraft } : current,
+                  ),
+                );
+                setPendingSetTitleFocusId(set.id);
+                setEditingSetId(null);
+              }}
+              onChange={(event) => setSetLabelDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                } else if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setSetLabelDraft(set.label);
+                  setPendingSetTitleFocusId(set.id);
+                  setEditingSetId(null);
+                }
+              }}
+            />
+          ) : (
+            <button
+              aria-label={`Edit section title for ${set.label || `Section ${index + 1}`}`}
+              className="recipe-ingredient-set-title"
+              ref={(element) => {
+                updateSectionElementRef(setTitleButtonRefs.current, set.id, element);
+              }}
+              type="button"
+              onClick={() => {
+                setPendingSetTitleFocusId(null);
+                setSetLabelDraft(set.label);
+                setEditingSetId(set.id);
+              }}
+            >
+              {set.label || `Section ${index + 1}`}
+            </button>
+          )}
+        </h2>
+        {ingredientSets.length > 1 && (
+          <>
+            <div className="recipe-ingredient-set-move-actions">
+              {index > 0 && (
+                <button
+                  aria-label={`Move ${set.label} section up`}
+                  className="recipe-ingredient-set-action"
+                  title="Move section up"
+                  type="button"
+                  onClick={() => moveSet(set.id, 'up')}
+                >
+                  <ArrowUp aria-hidden="true" size={16} />
+                </button>
+              )}
+              {index < ingredientSets.length - 1 && (
+                <button
+                  aria-label={`Move ${set.label} section down`}
+                  className="recipe-ingredient-set-action"
+                  title="Move section down"
+                  type="button"
+                  onClick={() => moveSet(set.id, 'down')}
+                >
+                  <ArrowDown aria-hidden="true" size={16} />
+                </button>
+              )}
+            </div>
+            <button
+              aria-label={removeLabel}
+              className="recipe-ingredient-set-action recipe-ingredient-set-remove"
+              title="Remove section"
+              type="button"
+              onClick={() => {
+                const nextIndex = Math.min(index, ingredientSets.length - 2);
+                const focusSetId = ingredientSets[nextIndex]?.id;
+                if (onRemoveSetRequested(set.id)) {
+                  setPendingSetTitleFocusId(focusSetId ?? null);
+                }
+              }}
+            >
+              <X aria-hidden="true" size={16} />
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function addIngredientSet() {
+    const newSet = {
+      id: crypto.randomUUID(),
+      label: '',
+      position: ingredientSets.length,
+    };
+    setPendingSetTitleFocusId(newSet.id);
+    setSetLabelDraft('');
+    setEditingSetId(newSet.id);
+    onIngredientSetsChange([...ingredientSets, newSet]);
+  }
+
   function renderRailRow(row: IngredientRowDraft, index: number, isNestedMobileRail = false) {
     const reorderState = isNestedMobileRail
       ? undefined
@@ -1132,7 +1472,9 @@ export function IngredientRowsEditor({
           transition:
             !isNestedMobileRail && (dropCommitPending || dropOffsets.has(row.id))
               ? 'none'
-              : undefined,
+              : isNestedMobileRail
+                ? undefined
+                : getReorderTransition(),
         }}
         onTransitionEnd={(event) => {
           if (event.propertyName === 'transform' && settlingSourceId === row.id) {
@@ -1170,22 +1512,75 @@ export function IngredientRowsEditor({
                     ?.querySelectorAll<HTMLElement>('.recipe-ingredient-mobile-row[data-row-id]') ??
                     [],
                 );
-            const rowBounds = visibleRows.flatMap((visibleRow) => {
+            const sectionHeaders = new Map(
+              Array.from(
+                event.currentTarget
+                  .closest('.recipe-ingredient-editor')
+                  ?.querySelectorAll<HTMLElement>(
+                    '.recipe-ingredient-set-divider[data-ingredient-set-id]',
+                  ) ?? [],
+              )
+                .filter((header) => header.getBoundingClientRect().height > 0)
+                .map((header) => {
+                  const bounds = header.getBoundingClientRect();
+                  return [
+                    header.dataset.ingredientSetId ?? '',
+                    {
+                      id: `section-${header.dataset.ingredientSetId ?? ''}`,
+                      top: bounds.top + window.scrollY,
+                      bottom: bounds.bottom + window.scrollY,
+                    },
+                  ] as const;
+                }),
+            );
+            const seenSetIds = new Set<string>();
+            const rowBounds: ReorderDragBound[] = visibleRows.flatMap((visibleRow) => {
               const ingredientRow = rowsRef.current.find(
                 (currentRow) => currentRow.id === visibleRow.dataset.rowId,
               );
-              if (!ingredientRow || isEmptyIngredientRow(ingredientRow)) {
+              if (!ingredientRow) {
                 return [];
               }
               const bounds = visibleRow.getBoundingClientRect();
+              const rowTop = bounds.top + window.scrollY;
+              const setId = visibleRow.dataset.ingredientSetId ?? '';
+              const headerBounds = seenSetIds.has(setId) ? undefined : sectionHeaders.get(setId);
+              seenSetIds.add(setId);
+              const rowId = visibleRow.dataset.rowId ?? '';
               return [
+                ...(headerBounds
+                  ? [
+                      {
+                        id: headerBounds.id,
+                        targetId: rowId,
+                        top: headerBounds.top,
+                        bottom: headerBounds.bottom,
+                        isHeader: true,
+                      },
+                    ]
+                  : []),
                 {
-                  id: visibleRow.dataset.rowId ?? '',
-                  top: bounds.top + window.scrollY,
+                  id: rowId,
+                  top: rowTop,
                   bottom: bounds.bottom + window.scrollY,
+                  isEmpty: isEmptyIngredientRow(ingredientRow),
                 },
               ];
             });
+            const sectionAddRow = Array.from(
+              event.currentTarget
+                .closest('.recipe-ingredient-editor')
+                ?.querySelectorAll<HTMLElement>('.recipe-ingredient-set-add-row') ?? [],
+            ).find((candidate) => candidate.getBoundingClientRect().height > 0);
+            if (sectionAddRow) {
+              const bounds = sectionAddRow.getBoundingClientRect();
+              rowBounds.push({
+                id: sectionAddRow.dataset.reorderEntryId ?? 'section-add-control',
+                top: bounds.top + window.scrollY,
+                bottom: bounds.bottom + window.scrollY,
+                isTarget: false,
+              });
+            }
             reorderDrag.start(
               row.id,
               event.clientY,
@@ -1200,30 +1595,29 @@ export function IngredientRowsEditor({
               .elementFromPoint(event.clientX, event.clientY)
               ?.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
             const hitTargetRow = rowsRef.current.find(
-              (currentRow) => currentRow.id === hitTargetRowId && !isEmptyIngredientRow(currentRow),
+              (currentRow) => currentRow.id === hitTargetRowId,
             );
             const draggedRow = reorderDrag.finish(hitTargetRow?.id);
             if (draggedRow && draggedRow.sourceId !== draggedRow.targetId) {
-              const layoutRows = Array.from(
-                event.currentTarget
-                  .closest('.recipe-ingredient-editor')
-                  ?.querySelectorAll<HTMLElement>(
-                    '.recipe-ingredient-mobile-row[data-row-id], .recipe-ingredient-table tbody tr[data-row-id]',
-                  ) ?? [],
-              ).filter((layoutRow) => layoutRow.getBoundingClientRect().height > 0);
-              if (layoutRows.length) {
+              const editor = event.currentTarget.closest('.recipe-ingredient-editor');
+              const layoutEntries = editor
+                ? getVisibleReorderEntries(editor).filter(
+                    (entry) => entry.getBoundingClientRect().height > 0,
+                  )
+                : [];
+              if (layoutEntries.length) {
                 pendingDrop.current = {
                   sourceId: draggedRow.sourceId,
                   rowTops: new Map(
-                    layoutRows.flatMap((layoutRow) => {
-                      const rowId = layoutRow.dataset.rowId;
-                      return rowId ? [[rowId, layoutRow.getBoundingClientRect().top] as const] : [];
+                    layoutEntries.flatMap((entry) => {
+                      const entryId = getReorderEntryId(entry);
+                      return entryId ? [[entryId, entry.getBoundingClientRect().top] as const] : [];
                     }),
                   ),
                 };
                 setDropCommitPending(true);
               }
-              commitDraggedRow(draggedRow.sourceId, draggedRow.targetId);
+              commitDraggedRow(draggedRow.sourceId, draggedRow.order);
             }
           }}
           onPointerCancel={(event) => {
@@ -1262,17 +1656,37 @@ export function IngredientRowsEditor({
   }
   function renderControlRail() {
     return (
-      <fieldset aria-label="Ingredient row controls" className="recipe-ingredient-control-rail">
+      <fieldset
+        aria-label="Ingredient row controls"
+        className="recipe-ingredient-control-rail"
+        ref={controlRailRef}
+      >
         <legend className="visually-hidden">Ingredient row controls</legend>
         <div aria-hidden="true" className="recipe-ingredient-rail-header" />
-        {draftRows.map((row, index) => renderRailRow(row, index))}
+        {editorEntries.map((entry) =>
+          entry.kind === 'section' ? (
+            <div
+              aria-hidden="true"
+              className="recipe-ingredient-rail-section-spacer"
+              data-ingredient-set-id={entry.section.id}
+              data-reorder-state={getReorderState(entry.key)}
+              key={entry.key}
+              style={{
+                transform: getReorderTransform(entry.key),
+                transition: dragPreview ? getReorderTransition() : undefined,
+              }}
+            />
+          ) : (
+            renderRailRow(entry.row, entry.rowIndex)
+          ),
+        )}
       </fieldset>
     );
   }
 
   function submitMobileRow(row: IngredientRowDraft) {
     const submittedRow =
-      row.id === 'ingredient-placeholder' && row.ingredientName.trim()
+      isIngredientPlaceholderId(row.id) && row.ingredientName.trim()
         ? { ...row, id: crypto.randomUUID() }
         : row;
     const rowExists = rowsRef.current.some((current) => current.id === row.id);
@@ -1323,77 +1737,132 @@ export function IngredientRowsEditor({
               </tr>
             </thead>
             <tbody>
-              {draftRows.map((row, index) => (
-                <tr
-                  className={
-                    row.measurements.some((measurement) => measurement.derivedFromDensity)
-                      ? 'is-density-derived'
-                      : undefined
-                  }
-                  data-row-id={row.id}
-                  data-reorder-state={
-                    getReorderState(row.id) ??
-                    (settlingSourceId === row.id ? 'settling' : undefined)
-                  }
-                  key={row.id}
-                  style={{
-                    height: row.measurements.some((measurement) => measurement.derivedFromDensity)
-                      ? '58px'
-                      : undefined,
-                    transform: getReorderTransform(row.id),
-                    transition: dropCommitPending || dropOffsets.has(row.id) ? 'none' : undefined,
-                  }}
-                  onTransitionEnd={(event) => {
-                    if (event.propertyName === 'transform' && settlingSourceId === row.id) {
-                      setSettlingSourceId(null);
-                    }
-                  }}
-                >
-                  {isEmptyIngredientRow(row) && activeCell?.rowId !== row.id ? (
-                    <td
-                      aria-label="Add ingredient row"
-                      className="recipe-ingredient-value-cell is-empty"
-                      colSpan={6}
-                      data-field="ingredientName"
-                      data-row-id={row.id}
-                      tabIndex={activeCell?.rowId === row.id ? -1 : 0}
-                      onMouseDown={() => {
-                        pendingClickCell.current = { rowId: row.id, field: 'ingredientName' };
+              {editorEntries.map((entry) => {
+                if (entry.kind === 'section') {
+                  return (
+                    <tr
+                      className="recipe-ingredient-set-divider"
+                      data-ingredient-set-id={entry.section.id}
+                      data-reorder-state={getReorderState(entry.key)}
+                      key={entry.key}
+                      style={{
+                        transform: getReorderTransform(entry.key),
+                        transition:
+                          dropCommitPending || dropOffsets.has(entry.key)
+                            ? 'none'
+                            : dragPreview
+                              ? getReorderTransition()
+                              : undefined,
                       }}
-                      onClick={() => {
-                        pendingClickCell.current = null;
-                        setActiveCell({
-                          rowId: promotedRowIds.current.get(row.id) ?? row.id,
-                          field: 'ingredientName',
-                        });
-                      }}
-                      onKeyDown={handleGridKeyDown}
                     >
-                      <span className="recipe-ingredient-empty-prompt">add ingredient</span>
-                    </td>
-                  ) : (
-                    <>
-                      {renderDesktopCell(row, index, 'ingredientName')}
-                      {renderDesktopCell(row, index, 'detail')}
-                      {renderMeasurementCell(row, index)}
-                      {renderDesktopCell(row, index, 'preparation')}
-                      <td className="recipe-ingredient-delete-cell">
-                        {!isEmptyIngredientRow(row) && (
-                          <button
-                            aria-label={`Delete ingredient row ${index + 1}`}
-                            className="recipe-ingredient-delete-button"
-                            title="Delete ingredient row"
-                            type="button"
-                            onClick={() => deleteIngredientRow(row.id)}
-                          >
-                            ×
-                          </button>
-                        )}
+                      <th colSpan={6} scope="rowgroup">
+                        {renderSectionHeading(entry.section, entry.sectionIndex)}
+                      </th>
+                    </tr>
+                  );
+                }
+                const { row, rowIndex: index } = entry;
+                return (
+                  <tr
+                    className={
+                      row.measurements.some((measurement) => measurement.derivedFromDensity)
+                        ? 'is-density-derived'
+                        : undefined
+                    }
+                    data-row-id={row.id}
+                    data-ingredient-set-id={row.ingredientSetId}
+                    data-reorder-state={
+                      getReorderState(row.id) ??
+                      (settlingSourceId === row.id ? 'settling' : undefined)
+                    }
+                    key={row.id}
+                    style={{
+                      height: row.measurements.some((measurement) => measurement.derivedFromDensity)
+                        ? '58px'
+                        : undefined,
+                      transform: getReorderTransform(row.id),
+                      transition:
+                        dropCommitPending || dropOffsets.has(row.id)
+                          ? 'none'
+                          : dragPreview
+                            ? getReorderTransition()
+                            : undefined,
+                    }}
+                    onTransitionEnd={(event) => {
+                      if (event.propertyName === 'transform' && settlingSourceId === row.id) {
+                        setSettlingSourceId(null);
+                      }
+                    }}
+                  >
+                    {isEmptyIngredientRow(row) && activeCell?.rowId !== row.id ? (
+                      <td
+                        aria-label="Add ingredient row"
+                        className="recipe-ingredient-value-cell is-empty"
+                        colSpan={6}
+                        data-field="ingredientName"
+                        data-row-id={row.id}
+                        tabIndex={activeCell?.rowId === row.id ? -1 : 0}
+                        onMouseDown={() => {
+                          pendingClickCell.current = { rowId: row.id, field: 'ingredientName' };
+                        }}
+                        onClick={() => {
+                          pendingClickCell.current = null;
+                          setActiveCell({
+                            rowId: promotedRowIds.current.get(row.id) ?? row.id,
+                            field: 'ingredientName',
+                          });
+                        }}
+                        onKeyDown={handleGridKeyDown}
+                      >
+                        <span className="recipe-ingredient-empty-prompt">add ingredient</span>
                       </td>
-                    </>
-                  )}
-                </tr>
-              ))}
+                    ) : (
+                      <>
+                        {renderDesktopCell(row, index, 'ingredientName')}
+                        {renderDesktopCell(row, index, 'detail')}
+                        {renderMeasurementCell(row, index)}
+                        {renderDesktopCell(row, index, 'preparation')}
+                        <td className="recipe-ingredient-delete-cell">
+                          {!isEmptyIngredientRow(row) && (
+                            <button
+                              aria-label={`Delete ingredient row ${index + 1}`}
+                              className="recipe-ingredient-delete-button"
+                              title="Delete ingredient row"
+                              type="button"
+                              onClick={() => deleteIngredientRow(row.id)}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+              <tr
+                className="recipe-ingredient-set-add-row"
+                data-reorder-entry-id="section-add-control"
+                style={{
+                  transform: getReorderTransform('section-add-control'),
+                  transition:
+                    dropCommitPending || dropOffsets.has('section-add-control')
+                      ? 'none'
+                      : dragPreview
+                        ? getReorderTransition()
+                        : undefined,
+                }}
+              >
+                <td colSpan={6}>
+                  <button
+                    className="recipe-ingredient-set-add"
+                    type="button"
+                    onClick={addIngredientSet}
+                  >
+                    <Plus aria-hidden="true" size={16} /> add section
+                  </button>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1401,86 +1870,139 @@ export function IngredientRowsEditor({
       <div className="recipe-ingredient-mobile">
         <table aria-label="Recipe ingredients on mobile" className="recipe-ingredient-mobile-list">
           <tbody>
-            {draftRows.map((row, index) => (
-              <tr
-                className="recipe-ingredient-mobile-row"
-                data-row-id={row.id}
-                data-reorder-state={
-                  getReorderState(row.id) ?? (settlingSourceId === row.id ? 'settling' : undefined)
-                }
-                key={row.id}
-                style={{
-                  transform: getReorderTransform(row.id, true),
-                  transition:
-                    dropCommitPending || dropOffsets.has(row.id)
-                      ? 'none'
-                      : getReorderTransition(row.id),
-                }}
-                onTransitionEnd={(event) => {
-                  if (event.propertyName === 'transform' && settlingSourceId === row.id) {
-                    setSettlingSourceId(null);
-                  }
-                }}
-              >
-                <td className="recipe-ingredient-mobile-rail">{renderRailRow(row, index, true)}</td>
-                <td
-                  aria-label={
-                    isEmptyIngredientRow(row)
-                      ? 'Add ingredient row'
-                      : `Edit ${formatDraftIngredient(row, picklists)}`
-                  }
-                  className="recipe-ingredient-mobile-cell"
-                >
-                  <button
-                    aria-label={
-                      isEmptyIngredientRow(row)
-                        ? 'Enter ingredient'
-                        : `Edit ${formatDraftIngredient(row, picklists)}`
-                    }
-                    className="recipe-ingredient-mobile-value"
-                    type="button"
-                    onClick={(event) => {
-                      if (mobileEditingRowId === row.id) {
-                        closeMobileEditor();
-                      } else {
-                        setMobileEditingRowId(row.id);
-                        setMobileAnchorElement(event.currentTarget);
-                      }
+            {editorEntries.map((entry) => {
+              if (entry.kind === 'section') {
+                return (
+                  <tr
+                    className="recipe-ingredient-set-divider"
+                    data-ingredient-set-id={entry.section.id}
+                    data-reorder-state={getReorderState(entry.key)}
+                    key={entry.key}
+                    style={{
+                      transform: getReorderTransform(entry.key),
+                      transition:
+                        dropCommitPending || dropOffsets.has(entry.key)
+                          ? 'none'
+                          : dragPreview
+                            ? getReorderTransition()
+                            : undefined,
                     }}
                   >
-                    {isEmptyIngredientRow(row) ? (
-                      <span className="recipe-ingredient-empty-prompt">add ingredient</span>
-                    ) : (
-                      formatDraftIngredient(row, picklists)
-                    )}
-                  </button>
-                  {!isEmptyIngredientRow(row) && (
+                    <th colSpan={2} scope="rowgroup">
+                      {renderSectionHeading(entry.section, entry.sectionIndex)}
+                    </th>
+                  </tr>
+                );
+              }
+              const { row, rowIndex: index } = entry;
+              return (
+                <tr
+                  className="recipe-ingredient-mobile-row"
+                  data-row-id={row.id}
+                  data-ingredient-set-id={row.ingredientSetId}
+                  data-reorder-state={
+                    getReorderState(row.id) ??
+                    (settlingSourceId === row.id ? 'settling' : undefined)
+                  }
+                  key={row.id}
+                  style={{
+                    transform: getReorderTransform(row.id),
+                    transition:
+                      dropCommitPending || dropOffsets.has(row.id)
+                        ? 'none'
+                        : getReorderTransition(),
+                  }}
+                  onTransitionEnd={(event) => {
+                    if (event.propertyName === 'transform' && settlingSourceId === row.id) {
+                      setSettlingSourceId(null);
+                    }
+                  }}
+                >
+                  <td className="recipe-ingredient-mobile-rail">
+                    {renderRailRow(row, index, true)}
+                  </td>
+                  <td
+                    aria-label={
+                      isEmptyIngredientRow(row)
+                        ? 'Add ingredient row'
+                        : `Edit ${formatDraftIngredient(row, picklists)}`
+                    }
+                    className="recipe-ingredient-mobile-cell"
+                  >
                     <button
-                      aria-label={`Delete ingredient row ${index + 1}`}
-                      className="recipe-ingredient-delete-button recipe-ingredient-mobile-delete"
-                      title="Delete ingredient row"
+                      aria-label={
+                        isEmptyIngredientRow(row)
+                          ? 'Enter ingredient'
+                          : `Edit ${formatDraftIngredient(row, picklists)}`
+                      }
+                      className="recipe-ingredient-mobile-value"
                       type="button"
-                      onClick={() => deleteIngredientRow(row.id)}
+                      onClick={(event) => {
+                        if (mobileEditingRowId === row.id) {
+                          closeMobileEditor();
+                        } else {
+                          setMobileEditingRowId(row.id);
+                          setMobileAnchorElement(event.currentTarget);
+                        }
+                      }}
                     >
-                      ×
+                      {isEmptyIngredientRow(row) ? (
+                        <span className="recipe-ingredient-empty-prompt">add ingredient</span>
+                      ) : (
+                        formatDraftIngredient(row, picklists)
+                      )}
                     </button>
-                  )}
-                  {mobileEditingRowId === row.id && mobileAnchorElement && (
-                    <MobileIngredientEditor
-                      rowNumber={index + 1}
-                      ingredients={ingredients}
-                      anchorElement={mobileAnchorElement}
-                      picklists={picklists}
-                      preparationOptions={prepOptions}
-                      validateMeasurements={validateMeasurements}
-                      row={row}
-                      onClose={closeMobileEditor}
-                      onSubmit={submitMobileRow}
-                    />
-                  )}
-                </td>
-              </tr>
-            ))}
+                    {!isEmptyIngredientRow(row) && (
+                      <button
+                        aria-label={`Delete ingredient row ${index + 1}`}
+                        className="recipe-ingredient-delete-button recipe-ingredient-mobile-delete"
+                        title="Delete ingredient row"
+                        type="button"
+                        onClick={() => deleteIngredientRow(row.id)}
+                      >
+                        ×
+                      </button>
+                    )}
+                    {mobileEditingRowId === row.id && mobileAnchorElement && (
+                      <MobileIngredientEditor
+                        rowNumber={index + 1}
+                        ingredients={ingredients}
+                        anchorElement={mobileAnchorElement}
+                        picklists={picklists}
+                        preparationOptions={prepOptions}
+                        validateMeasurements={validateMeasurements}
+                        row={row}
+                        onClose={closeMobileEditor}
+                        onSubmit={submitMobileRow}
+                      />
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            <tr
+              className="recipe-ingredient-set-add-row"
+              data-reorder-entry-id="section-add-control"
+              style={{
+                transform: getReorderTransform('section-add-control'),
+                transition:
+                  dropCommitPending || dropOffsets.has('section-add-control')
+                    ? 'none'
+                    : dragPreview
+                      ? getReorderTransition()
+                      : undefined,
+              }}
+            >
+              <td colSpan={2}>
+                <button
+                  className="recipe-ingredient-set-add"
+                  type="button"
+                  onClick={addIngredientSet}
+                >
+                  <Plus aria-hidden="true" size={16} /> add section
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

@@ -19,7 +19,7 @@ const newReferenceId = '66666666-6666-4666-8666-666666666666';
 function emptyData(): PortableData {
   return {
     format: 'recipe-box-data',
-    schema_version: 1,
+    schema_version: 2,
     scope: { type: 'database' },
     account_preferences: {},
     records: Object.fromEntries(
@@ -294,6 +294,49 @@ describe('database import planning', () => {
       `Add [[ingredient:${plan.idMappings.recipe_ingredients.get(sourceRecipeIngredientId)}|Lemon]].`,
     );
     expect(plan.records.recipe_steps[0].content_markdown).not.toContain(sourceRecipeIngredientId);
+  });
+
+  it('remaps ingredient sets and row membership with the destination recipe graph', () => {
+    const { data, existing } = createInput();
+    const sourceSetId = '77777777-7777-4777-8777-777777777777';
+    const sourceIngredientId = '88888888-8888-4888-8888-888888888888';
+    const sourceIngredientRowId = '99999999-9999-4999-8999-999999999999';
+    data.records.recipe_ingredient_sets = [
+      { id: sourceSetId, recipe_id: sourceRecipeId, label: 'Main', position: 0 },
+    ];
+    data.records.ingredients = [{ id: sourceIngredientId, name: 'Lemon', sort_order: 0 }];
+    data.records.recipe_ingredients = [
+      {
+        id: sourceIngredientRowId,
+        recipe_id: sourceRecipeId,
+        ingredient_id: sourceIngredientId,
+        ingredient_set_id: sourceSetId,
+        position: 0,
+      },
+    ];
+
+    let generatedId = 0;
+    const plan = planDatabaseImport(
+      data,
+      existing,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'replace',
+          targetId: destinationPublicationId,
+        },
+        [`recipe:${sourceRecipeId}`]: { action: 'duplicate', targetId: destinationRecipeId },
+      },
+      () => `aaaaaaaa-bbbb-4aaa-8aaa-${(generatedId++).toString().padStart(12, '0')}`,
+    );
+    const plannedSet = plan.records.recipe_ingredient_sets[0];
+    const plannedIngredient = plan.records.recipe_ingredients[0];
+    const plannedRecipeId = plan.idMappings.recipes.get(sourceRecipeId);
+
+    expect(plannedSet.recipe_id).toBe(plannedRecipeId);
+    expect(plannedSet.id).toBe(plan.idMappings.recipe_ingredient_sets.get(sourceSetId));
+    expect(plannedIngredient.recipe_id).toBe(plannedRecipeId);
+    expect(plannedIngredient.ingredient_set_id).toBe(plannedSet.id);
+    expect(plannedIngredient.ingredient_set_id).not.toBe(sourceSetId);
   });
 
   it('remaps publication IDs in explorer contexts and filters', () => {

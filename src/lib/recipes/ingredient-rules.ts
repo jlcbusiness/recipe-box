@@ -10,6 +10,7 @@ import {
 
 export type IngredientRowDraft = {
   id: string;
+  ingredientSetId: string;
   ingredientId: string | null;
   ingredientName: string;
   isMain: boolean;
@@ -20,6 +21,7 @@ export type IngredientRowDraft = {
 
 export type IngredientRowPayload = {
   recipe_ingredient_id: string;
+  ingredient_set_id: string;
   ingredient_id: string | null;
   ingredient_name: string | null;
   is_main: boolean;
@@ -204,13 +206,39 @@ export function moveIngredientRow(
   direction: 'up' | 'down',
 ): IngredientRowDraft[] {
   const index = rows.findIndex((row) => row.id === rowId);
-  const targetIndex = index + (direction === 'up' ? -1 : 1);
-  if (index < 0 || targetIndex < 0 || targetIndex >= rows.length) {
+  const sourceRow = rows[index];
+  if (index < 0 || !sourceRow || isEmptyIngredientRow(sourceRow)) {
+    return rows;
+  }
+
+  const directionStep = direction === 'up' ? -1 : 1;
+  let targetIndex = index + directionStep;
+  while (targetIndex >= 0 && targetIndex < rows.length) {
+    const candidate = rows[targetIndex];
+    if (
+      candidate &&
+      (!isEmptyIngredientRow(candidate) || candidate.ingredientSetId !== sourceRow.ingredientSetId)
+    ) {
+      break;
+    }
+    targetIndex += directionStep;
+  }
+  const targetRow = rows[targetIndex];
+  if (!targetRow) {
     return rows;
   }
 
   const movedRows = [...rows];
-  [movedRows[index], movedRows[targetIndex]] = [movedRows[targetIndex], movedRows[index]];
+  const [movingRow] = movedRows.splice(index, 1);
+  if (!movingRow) {
+    return rows;
+  }
+  const remainingTargetIndex = movedRows.findIndex((row) => row.id === targetRow.id);
+  const insertionIndex = direction === 'up' ? remainingTargetIndex : remainingTargetIndex + 1;
+  movedRows.splice(insertionIndex, 0, {
+    ...movingRow,
+    ingredientSetId: targetRow.ingredientSetId,
+  });
   return movedRows;
 }
 
@@ -218,6 +246,7 @@ export function moveIngredientRowTo(
   rows: IngredientRowDraft[],
   rowId: string,
   targetRowId: string,
+  insertBeforeTarget = false,
 ): IngredientRowDraft[] {
   const sourceIndex = rows.findIndex((row) => row.id === rowId);
   const targetIndex = rows.findIndex((row) => row.id === targetRowId);
@@ -226,8 +255,18 @@ export function moveIngredientRowTo(
   }
 
   const movedRows = [...rows];
-  const [movedRow] = movedRows.splice(sourceIndex, 1);
-  movedRows.splice(targetIndex, 0, movedRow);
+  const [movingRow] = movedRows.splice(sourceIndex, 1);
+  const targetRow = rows[targetIndex];
+  if (!movingRow || !targetRow) {
+    return rows;
+  }
+  const targetPosition = movedRows.findIndex((row) => row.id === targetRowId);
+  const insertionIndex =
+    insertBeforeTarget || isEmptyIngredientRow(targetRow) ? targetPosition : targetIndex;
+  movedRows.splice(insertionIndex, 0, {
+    ...movingRow,
+    ingredientSetId: targetRow.ingredientSetId,
+  });
   return movedRows;
 }
 
@@ -249,6 +288,7 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
 
     payload.push({
       recipe_ingredient_id: row.id,
+      ingredient_set_id: row.ingredientSetId,
       ingredient_id: row.ingredientId,
       ingredient_name: row.ingredientId ? null : ingredientName,
       is_main: row.isMain,

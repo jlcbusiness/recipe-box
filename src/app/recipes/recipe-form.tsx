@@ -15,6 +15,10 @@ import type {
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
 import { isEmptyIngredientRow, serializeIngredientRows } from '../../lib/recipes/ingredient-rules';
 import {
+  type IngredientSetDraft,
+  normalizeIngredientSets,
+} from '../../lib/recipes/ingredient-set-rules';
+import {
   type InstructionStepDraft,
   instructionPlainText,
   parseIngredientMentions,
@@ -180,10 +184,16 @@ export function RecipeForm({
   const [draftPhotoFiles, setDraftPhotoFiles] = useState<File[]>([]);
   const [uploadingDraftPhotos, setUploadingDraftPhotos] = useState(false);
   const [draftPhotoUploadError, setDraftPhotoUploadError] = useState('');
+  const [ingredientSets, setIngredientSets] = useState<IngredientSetDraft[]>(() =>
+    recipe?.ingredient_sets.length
+      ? recipe.ingredient_sets.map((set) => ({ ...set }))
+      : [{ id: 'draft-main', label: 'Main', position: 0 }],
+  );
   const [ingredientRows, setIngredientRows] = useState<IngredientRowDraft[]>(
     () =>
       recipe?.ingredients.map((row) => ({
         id: row.id,
+        ingredientSetId: row.ingredient_set_id,
         ingredientId: row.ingredient_id,
         ingredientName: row.ingredient_name,
         isMain: row.is_main,
@@ -204,6 +214,7 @@ export function RecipeForm({
       })) ?? [],
   );
   const [ingredientRowsError, setIngredientRowsError] = useState('');
+  const [ingredientSetsError, setIngredientSetsError] = useState('');
   const [instructionSteps, setInstructionSteps] = useState<InstructionStepDraft[]>(
     () =>
       recipe?.steps.map((step) => ({
@@ -216,6 +227,15 @@ export function RecipeForm({
   const [pendingIngredientDeletion, setPendingIngredientDeletion] =
     useState<IngredientRowDraft | null>(null);
   const ingredientDeletionDialogRef = useRef<HTMLDialogElement>(null);
+  const [pendingIngredientSetRemoval, setPendingIngredientSetRemoval] = useState<{
+    set: IngredientSetDraft;
+    rows: IngredientRowDraft[];
+  } | null>(null);
+  const [ingredientSetRemovalMode, setIngredientSetRemovalMode] = useState<'delete' | 'move' | ''>(
+    '',
+  );
+  const [ingredientSetRemovalTargetId, setIngredientSetRemovalTargetId] = useState('');
+  const ingredientSetRemovalDialogRef = useRef<HTMLDialogElement>(null);
   const [availablePicklists, setAvailablePicklists] = useState(picklists);
   const [state, setState] = useState<RecipeState>(recipe?.state ?? 'want_to_try');
   const [foodTypeId, setFoodTypeId] = useState(recipe?.food_type_id ?? '');
@@ -262,6 +282,18 @@ export function RecipeForm({
       dialog.close();
     }
   }, [pendingIngredientDeletion]);
+
+  useEffect(() => {
+    const dialog = ingredientSetRemovalDialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (pendingIngredientSetRemoval && !dialog.open) {
+      dialog.showModal();
+    } else if (!pendingIngredientSetRemoval && dialog.open) {
+      dialog.close();
+    }
+  }, [pendingIngredientSetRemoval]);
 
   useEffect(() => {
     const createdRecipeId = actionState?.recipeId;
@@ -325,6 +357,7 @@ export function RecipeForm({
     };
     const ingredientRow: IngredientRowDraft = {
       id: ingredient.id,
+      ingredientSetId: ingredientSets[0]?.id ?? '',
       ingredientId,
       ingredientName: ingredient.name,
       isMain: false,
@@ -369,6 +402,70 @@ export function RecipeForm({
     setPendingIngredientDeletion(null);
   }
 
+  function requestIngredientSetRemoval(setId: string) {
+    if (ingredientSets.length <= 1) {
+      return false;
+    }
+    const set = ingredientSets.find((ingredientSet) => ingredientSet.id === setId);
+    if (!set) {
+      return false;
+    }
+    const rows = ingredientRows.filter(
+      (row) => row.ingredientSetId === setId && !isEmptyIngredientRow(row),
+    );
+    if (rows.length === 0) {
+      setIngredientSets((current) => current.filter((ingredientSet) => ingredientSet.id !== setId));
+      setIngredientRows((current) => current.filter((row) => row.ingredientSetId !== setId));
+      return true;
+    }
+
+    const firstDestination = ingredientSets.find((ingredientSet) => ingredientSet.id !== setId);
+    setIngredientSetRemovalMode('');
+    setIngredientSetRemovalTargetId(firstDestination?.id ?? '');
+    setPendingIngredientSetRemoval({ set, rows });
+    return false;
+  }
+
+  function confirmIngredientSetRemoval() {
+    const pendingRemoval = pendingIngredientSetRemoval;
+    if (!pendingRemoval || !ingredientSetRemovalMode) {
+      return;
+    }
+    if (
+      ingredientSetRemovalMode === 'move' &&
+      !ingredientSets.some((set) => set.id === ingredientSetRemovalTargetId)
+    ) {
+      return;
+    }
+
+    if (ingredientSetRemovalMode === 'move') {
+      setIngredientRows((current) =>
+        current.map((row) =>
+          row.ingredientSetId === pendingRemoval.set.id
+            ? { ...row, ingredientSetId: ingredientSetRemovalTargetId }
+            : row,
+        ),
+      );
+    } else {
+      setInstructionSteps((current) =>
+        current.map((step) => ({
+          ...step,
+          markdown: pendingRemoval.rows.reduce(
+            (markdown, row) => unlinkIngredientMentions(markdown, row.id, row.ingredientName),
+            step.markdown,
+          ),
+        })),
+      );
+      setIngredientRows((current) =>
+        current.filter((row) => row.ingredientSetId !== pendingRemoval.set.id),
+      );
+    }
+    setIngredientSets((current) => current.filter((set) => set.id !== pendingRemoval.set.id));
+    setPendingIngredientSetRemoval(null);
+    setIngredientSetRemovalMode('');
+    setIngredientSetRemovalTargetId('');
+  }
+
   function calculateTotal() {
     const form = formRef.current;
     if (!form) {
@@ -399,9 +496,34 @@ export function RecipeForm({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const normalizedSets = normalizeIngredientSets(ingredientSets);
+    if (!normalizedSets) {
+      event.preventDefault();
+      setIngredientSetsError(
+        'Add a unique, non-empty label of 80 characters or fewer for each section.',
+      );
+      return;
+    }
+    const setIdMap = new Map(
+      normalizedSets.map((set) => [
+        set.id,
+        /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(set.id) ? set.id : crypto.randomUUID(),
+      ]),
+    );
+    const submittedSets = normalizedSets.map((set) => ({
+      ...set,
+      id: setIdMap.get(set.id) ?? set.id,
+    }));
     let ingredientPayload: ReturnType<typeof serializeIngredientRows>;
     try {
-      ingredientPayload = serializeIngredientRows(ingredientRows);
+      ingredientPayload = serializeIngredientRows(ingredientRows).map((row) => ({
+        ...row,
+        ingredient_set_id: setIdMap.get(row.ingredient_set_id) ?? row.ingredient_set_id,
+      }));
+      const setIds = new Set(submittedSets.map((set) => set.id));
+      if (ingredientPayload.some((row) => !setIds.has(row.ingredient_set_id))) {
+        throw new Error('Choose a section for each ingredient row.');
+      }
     } catch (error) {
       event.preventDefault();
       setIngredientRowsError(
@@ -429,14 +551,19 @@ export function RecipeForm({
     }
 
     const ingredientInput = event.currentTarget.elements.namedItem('ingredient_rows');
+    const ingredientSetsInput = event.currentTarget.elements.namedItem('ingredient_sets');
     const instructionInput = event.currentTarget.elements.namedItem('instruction_steps');
     if (ingredientInput instanceof HTMLInputElement) {
       ingredientInput.value = JSON.stringify(ingredientPayload);
+    }
+    if (ingredientSetsInput instanceof HTMLInputElement) {
+      ingredientSetsInput.value = JSON.stringify(submittedSets);
     }
     if (instructionInput instanceof HTMLInputElement) {
       instructionInput.value = JSON.stringify(instructionPayload);
     }
     setIngredientRowsError('');
+    setIngredientSetsError('');
     setInstructionStepsError('');
   }
 
@@ -458,6 +585,7 @@ export function RecipeForm({
       ref={formRef}
     >
       <input name="ingredient_rows" type="hidden" defaultValue="[]" />
+      <input name="ingredient_sets" type="hidden" defaultValue="[]" />
       <input name="instruction_steps" type="hidden" defaultValue="[]" />
       {recipe && (
         <>
@@ -623,23 +751,33 @@ export function RecipeForm({
             onClose={() => setOpenPicklist(null)}
             onAddOption={(value) => addPicklistOption('cuisine', value)}
           />
-          {recipe && (
-            <div className="recipe-form-save-row">
-              <button className="recipe-primary-button" disabled={pending} type="submit">
-                {pending ? 'Saving…' : 'Save recipe'}
-              </button>
-            </div>
-          )}
+          <div className="recipe-form-save-row">
+            <button
+              className="recipe-primary-button"
+              disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
+              type="submit"
+            >
+              {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save recipe'}
+            </button>
+          </div>
         </div>
         <TagMultiSelect tags={tags} selectedIds={recipe?.tags.map((tag) => tag.id)} />
       </fieldset>
       <fieldset className="recipe-ingredient-section">
         <legend>Ingredients</legend>
+        {ingredientSetsError && (
+          <p className="recipe-form-error" role="alert">
+            {ingredientSetsError}
+          </p>
+        )}
         <IngredientRowsEditor
           ingredients={ingredients}
           picklists={availablePicklists}
           preparationOptions={preparationOptions}
           rows={ingredientRows}
+          ingredientSets={ingredientSets}
+          onIngredientSetsChange={setIngredientSets}
+          onRemoveSetRequested={requestIngredientSetRemoval}
           validateMeasurements={Boolean(ingredientRowsError)}
           onDeleteRequested={requestIngredientDeletion}
           onRowsChange={setIngredientRows}
@@ -696,6 +834,95 @@ export function RecipeForm({
             </button>
             <button type="button" onClick={confirmIngredientDeletion}>
               Remove ingredient
+            </button>
+          </div>
+        </dialog>
+      )}
+      {pendingIngredientSetRemoval && (
+        <dialog
+          aria-describedby="ingredient-set-removal-description"
+          aria-labelledby="ingredient-set-removal-title"
+          className="recipe-confirmation-dialog"
+          ref={ingredientSetRemovalDialogRef}
+          onCancel={(event) => {
+            event.preventDefault();
+            event.currentTarget.close();
+            setPendingIngredientSetRemoval(null);
+            setIngredientSetRemovalMode('');
+          }}
+        >
+          <h2 id="ingredient-set-removal-title">Remove section?</h2>
+          <p id="ingredient-set-removal-description">
+            {pendingIngredientSetRemoval.set.label} contains{' '}
+            {pendingIngredientSetRemoval.rows.length} ingredients. Choose what happens to them.
+          </p>
+          <fieldset className="publication-delete-dispositions">
+            <legend>Ingredient disposition</legend>
+            <label>
+              <input
+                checked={ingredientSetRemovalMode === 'delete'}
+                name="ingredient-set-removal-mode"
+                type="radio"
+                value="delete"
+                onChange={() => setIngredientSetRemovalMode('delete')}
+              />
+              Delete ingredients
+            </label>
+            <label>
+              <input
+                checked={ingredientSetRemovalMode === 'move'}
+                name="ingredient-set-removal-mode"
+                type="radio"
+                value="move"
+                onChange={() => setIngredientSetRemovalMode('move')}
+              />
+              Move ingredients to another section
+            </label>
+            {ingredientSetRemovalMode === 'move' && (
+              <label>
+                <span>Destination section</span>
+                <select
+                  value={ingredientSetRemovalTargetId}
+                  onChange={(event) => setIngredientSetRemovalTargetId(event.target.value)}
+                >
+                  {ingredientSets
+                    .filter((set) => set.id !== pendingIngredientSetRemoval.set.id)
+                    .map((set) => (
+                      <option key={set.id} value={set.id}>
+                        {set.label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+          </fieldset>
+          {ingredientSetRemovalMode === 'delete' && (
+            <p>Structured ingredient mentions will become plain text.</p>
+          )}
+          <div className="recipe-confirmation-actions">
+            <button
+              className="recipe-secondary-button"
+              type="button"
+              onClick={() => {
+                ingredientSetRemovalDialogRef.current?.close();
+                setPendingIngredientSetRemoval(null);
+                setIngredientSetRemovalMode('');
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="recipe-primary-button"
+              disabled={
+                !ingredientSetRemovalMode ||
+                (ingredientSetRemovalMode === 'move' && !ingredientSetRemovalTargetId)
+              }
+              type="button"
+              onClick={confirmIngredientSetRemoval}
+            >
+              {ingredientSetRemovalMode === 'move'
+                ? 'Move and remove section'
+                : 'Delete section and ingredients'}
             </button>
           </div>
         </dialog>
@@ -781,22 +1008,13 @@ export function RecipeForm({
         <a className="recipe-secondary-link" href={recipe ? `/recipes/${recipe.id}` : '/recipes'}>
           Cancel
         </a>
-        {recipe ? (
+        {recipe && (
           <RecipeDeleteAction
             buttonLabel="Delete"
             recipeId={recipe.id}
             recipeName={recipe.name}
             version={recipe.version}
           />
-        ) : (
-          <button
-            className="recipe-primary-button"
-            disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
-            form="recipe-form"
-            type="submit"
-          >
-            {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save recipe'}
-          </button>
         )}
       </div>
     </>

@@ -20,26 +20,41 @@ const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
+  schemaVersion?: 1 | 2;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   records?: Partial<PortableData['records']>;
   includeImages?: boolean;
 }) {
   const scope = options.scope ?? { type: 'database' as const };
+  const schemaVersion = options.schemaVersion ?? 2;
+  const tables =
+    schemaVersion === 1
+      ? exportTableNames.filter((table) => table !== 'recipe_ingredient_sets')
+      : exportTableNames;
   const data = {
     format: 'recipe-box-data',
-    schema_version: 1,
+    schema_version: schemaVersion,
     scope,
     account_preferences: {},
     records: Object.fromEntries(
-      exportTableNames.map((table) => [
+      tables.map((table) => [
         table,
         options.records?.[table] ??
           (table === 'recipes' && options.recipe
             ? [options.recipe]
             : table === 'publications' && options.publication
               ? [options.publication]
-              : []),
+              : table === 'recipe_ingredient_sets' && options.recipe
+                ? [
+                    {
+                      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                      recipe_id: options.recipe.id,
+                      label: 'Main',
+                      position: 0,
+                    },
+                  ]
+                : []),
       ]),
     ) as unknown as PortableData['records'],
   };
@@ -75,6 +90,7 @@ function createBundleEntries(options: {
     '0.1.0',
     new Date('2026-10-15T12:00:00.000Z'),
   );
+  manifest.schema_version = schemaVersion;
   const manifestBytes = Buffer.from(JSON.stringify(manifest), 'utf8');
   return new Map([
     ['manifest.json', manifestBytes],
@@ -141,8 +157,20 @@ describe('import bundle validation', () => {
 
   it('accepts a complete v1 bundle and returns its normalized data and images', () => {
     const entries = createBundleEntries({
+      schemaVersion: 1,
       scope: { type: 'recipe', id: recipeId },
       recipe: { id: recipeId, name: 'Lemon cake', publication_id: null, is_private: true },
+      records: {
+        ingredients: [{ id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', name: 'Lemon' }],
+        recipe_ingredients: [
+          {
+            id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            recipe_id: recipeId,
+            ingredient_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            position: 0,
+          },
+        ],
+      },
       includeImages: true,
     });
 
@@ -153,10 +181,61 @@ describe('import bundle validation', () => {
     expect(bundle.data.records.recipes).toEqual([
       { id: recipeId, name: 'Lemon cake', publication_id: null, is_private: true },
     ]);
+    expect(bundle.data.records.recipe_ingredient_sets).toHaveLength(1);
+    expect(bundle.data.records.recipe_ingredient_sets[0]).toMatchObject({
+      recipe_id: recipeId,
+      label: 'Main',
+      position: 0,
+    });
+    expect(bundle.data.records.recipe_ingredients[0]).toMatchObject({
+      ingredient_set_id: bundle.data.records.recipe_ingredient_sets[0].id,
+    });
     expect([...bundle.images.keys()]).toEqual([
       `images/${assetId}/full.webp`,
       `images/${assetId}/thumbnail.webp`,
     ]);
+  });
+
+  it('accepts v2 set membership and rejects an unresolved ingredient-set ID', () => {
+    const setId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const rowId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const valid = createBundleEntries({
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, name: 'Lemon cake', publication_id: null },
+      records: {
+        recipe_ingredient_sets: [{ id: setId, recipe_id: recipeId, label: 'Main', position: 0 }],
+        recipe_ingredients: [
+          {
+            id: rowId,
+            recipe_id: recipeId,
+            ingredient_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            ingredient_set_id: setId,
+            position: 0,
+          },
+        ],
+        ingredients: [{ id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Lemon' }],
+      },
+    });
+    expect(() => validateImportBundleFiles(valid)).not.toThrow();
+
+    const invalid = createBundleEntries({
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, name: 'Lemon cake', publication_id: null },
+      records: {
+        recipe_ingredient_sets: [{ id: setId, recipe_id: recipeId, label: 'Main', position: 0 }],
+        recipe_ingredients: [
+          {
+            id: rowId,
+            recipe_id: recipeId,
+            ingredient_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            ingredient_set_id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+            position: 0,
+          },
+        ],
+        ingredients: [{ id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Lemon' }],
+      },
+    });
+    expect(() => validateImportBundleFiles(invalid)).toThrow(/ingredient set/i);
   });
 
   it('accepts publication roots and preserves out-of-scope relationship display text', () => {
@@ -268,7 +347,7 @@ describe('import bundle validation', () => {
 
     const unsupported = createBundleEntries({});
     const manifest = JSON.parse(new TextDecoder().decode(unsupported.get('manifest.json')));
-    manifest.schema_version = 2;
+    manifest.schema_version = 3;
     unsupported.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
     expect(() => validateImportBundleFiles(unsupported)).toThrow(/version/i);
 

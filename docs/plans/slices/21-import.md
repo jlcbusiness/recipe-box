@@ -27,7 +27,7 @@ discarding the incoming graph or partially changing account records.
 
 ## Implementation status
 
-Slice 21A is complete. The implementation streams and validates v1 ZIP
+Slice 21A is complete. The implementation streams and validates supported v1/v2 ZIP
 bundles, provides an owner-scoped signed upload grant and read-only preview,
 plans database conflicts, catalog reuse, ID remapping, and privacy handling,
 and exposes an authenticated commit route backed by a service-role-only
@@ -65,8 +65,9 @@ relationship behavior and verification evidence.
 
 ## Scope and dependencies
 
-- Import schema version 1 bundles produced by Slice 20, including bundles made
-  before Slice 22 adds public-link identity.
+- Import schema version 1 and 2 bundles, including v1 bundles made before
+  Slice 22 adds public-link identity. V1 recipe rows receive a synthesized
+  `Main` ingredient set; v2 imports preserve ingredient sets and membership.
 - Support database-scope bundles, including trashed records, product
   preferences, explorer state, and ready media.
 - Reuse the existing recipe/publication detail and Settings workflows; only
@@ -78,7 +79,7 @@ relationship behavior and verification evidence.
   unsupported future bundle versions. Slice 21B adds publication and recipe
   scope entry points using this import engine. Slice 22 owns future public-link
   fields and must keep v1 import compatibility.
-- Preserve existing export behavior, the v1 on-disk contract, owner RLS, and
+- Preserve v1 import compatibility, schema v2 export behavior, owner RLS, and
   current recipe/publication save and lifecycle APIs.
 
 ## Matching and conflict choices

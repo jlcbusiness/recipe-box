@@ -98,6 +98,10 @@ async function configureProject() {
     resolve(repositoryRoot, 'supabase/tests/export_service_role_access.test.sql'),
     join(supabaseDirectory, 'tests/export_service_role_access.test.sql'),
   );
+  await cp(
+    resolve(repositoryRoot, 'supabase/tests/public_recipe_service_role_access.test.sql'),
+    join(supabaseDirectory, 'tests/public_recipe_service_role_access.test.sql'),
+  );
   await writeFile(join(supabaseDirectory, 'config.toml'), config);
   return { migrations, targetIndex, sourceMigrations };
 }
@@ -275,6 +279,38 @@ async function verifyMigrationAndRunBrowserTests() {
   const config = getSupabaseConfig();
   const owner = await createOwner(config);
   const legacyRecipe = await createRecipe(config, owner, 'Backfilled public recipe');
+  const trashedLegacyRecipe = await createRecipe(config, owner, 'Backfilled trashed recipe');
+  const [legacyIngredient] = await apiCall(`${config.apiUrl}/rest/v1/ingredients`, {
+    method: 'POST',
+    headers: serviceHeaders(config),
+    body: { account_id: owner.id, name: 'Backfilled ingredient' },
+  });
+  for (const recipe of [legacyRecipe, trashedLegacyRecipe]) {
+    await apiCall(`${config.apiUrl}/rest/v1/recipe_ingredients`, {
+      method: 'POST',
+      headers: serviceHeaders(config),
+      body: {
+        account_id: owner.id,
+        recipe_id: recipe.id,
+        ingredient_id: legacyIngredient.id,
+        position: 0,
+        is_main: false,
+        detail: '',
+        preparation: '',
+      },
+    });
+  }
+  await apiCall(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: { p_recipe_id: trashedLegacyRecipe.id, p_expected_version: 1 },
+  });
+  const trashedLegacyRows = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=id,trashed_at&id=eq.${trashedLegacyRecipe.id}`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.equal(trashedLegacyRows.length, 1);
+  assert.ok(trashedLegacyRows[0].trashed_at);
   const historyBefore = await apiCall(
     `${config.apiUrl}/rest/v1/recipe_history?select=id,event_type,after_data&record_id=eq.${legacyRecipe.id}&order=created_at.asc,id.asc`,
     { headers: serviceHeaders(config) },
@@ -290,6 +326,141 @@ async function verifyMigrationAndRunBrowserTests() {
   runSupabase(['migration', 'up', '--local']);
   runSupabase(['test', 'db', '--local', 'supabase/tests/auth_provider_guard.test.sql']);
   runSupabase(['test', 'db', '--local', 'supabase/tests/export_service_role_access.test.sql']);
+  runSupabase([
+    'test',
+    'db',
+    '--local',
+    'supabase/tests/public_recipe_service_role_access.test.sql',
+  ]);
+
+  const backfilledSets = await apiCall(
+    `${config.apiUrl}/rest/v1/recipe_ingredient_sets?select=id,recipe_id,label,position&recipe_id=in.(${legacyRecipe.id},${trashedLegacyRecipe.id})&order=recipe_id`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.equal(backfilledSets.length, 2);
+  assert.ok(backfilledSets.every((set) => set.label === 'Main' && set.position === 0));
+  const backfilledSetIds = new Map(backfilledSets.map((set) => [set.recipe_id, set.id]));
+  const backfilledIngredients = await apiCall(
+    `${config.apiUrl}/rest/v1/recipe_ingredients?select=recipe_id,ingredient_set_id&recipe_id=in.(${legacyRecipe.id},${trashedLegacyRecipe.id})&order=recipe_id`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.equal(backfilledIngredients.length, 2);
+  assert.ok(
+    backfilledIngredients.every(
+      (ingredient) => backfilledSetIds.get(ingredient.recipe_id) === ingredient.ingredient_set_id,
+    ),
+  );
+
+  const otherOwner = await createOwner(config);
+  const hiddenSets = await apiCall(
+    `${config.apiUrl}/rest/v1/recipe_ingredient_sets?select=id&recipe_id=eq.${legacyRecipe.id}`,
+    { headers: ownerHeaders(config, otherOwner) },
+  );
+  assert.deepEqual(hiddenSets, []);
+
+  const setEndpoint = `${config.apiUrl}/rest/v1/recipe_ingredient_sets`;
+  for (const invalidSet of [
+    { label: 'main', position: 1 },
+    { label: 'x'.repeat(81), position: 1 },
+    { label: 'Invalid position', position: -1 },
+    { label: ' Padded label ', position: 1 },
+  ]) {
+    const attempt = await apiAttempt(setEndpoint, {
+      method: 'POST',
+      headers: serviceHeaders(config),
+      body: {
+        id: randomUUID(),
+        account_id: owner.id,
+        recipe_id: legacyRecipe.id,
+        ...invalidSet,
+      },
+    });
+    assert.equal(attempt.ok, false, `invalid set was accepted: ${invalidSet.label}`);
+  }
+
+  const backfilledIngredientRows = await apiCall(
+    `${config.apiUrl}/rest/v1/recipe_ingredients?select=id,ingredient_set_id,position&recipe_id=eq.${legacyRecipe.id}&order=position`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.equal(backfilledIngredientRows.length, 1);
+  const staleSave = await apiAttempt(
+    `${config.apiUrl}/rest/v1/rpc/save_recipe_with_ingredient_sets`,
+    {
+      method: 'POST',
+      headers: ownerHeaders(config, owner),
+      body: {
+        p_recipe_id: legacyRecipe.id,
+        p_expected_version: 0,
+        p_name: 'Must not commit',
+        p_food_type_id: null,
+        p_state: 'want_to_try',
+        p_verdict_id: null,
+        p_enthusiasm_id: null,
+        p_occasion_details: null,
+        p_reason: null,
+        p_serves: 4,
+        p_prep_time_minutes: null,
+        p_mixing_time_minutes: null,
+        p_marinate_time_minutes: null,
+        p_chill_time_minutes: null,
+        p_freeze_time_minutes: null,
+        p_cook_time_minutes: null,
+        p_bake_time_minutes: null,
+        p_cooling_time_minutes: null,
+        p_rest_time_minutes: null,
+        p_total_time_minutes: null,
+        p_notes_markdown: '',
+        p_meal_type_ids: [],
+        p_cuisine_ids: [],
+        p_equipment_ids: [],
+        p_ingredient_rows: [
+          {
+            recipe_ingredient_id: backfilledIngredientRows[0].id,
+            ingredient_id: legacyIngredient.id,
+            ingredient_name: 'Backfilled ingredient',
+            ingredient_set_id: backfilledSetIds.get(legacyRecipe.id),
+            position: backfilledIngredientRows[0].position,
+            is_main: false,
+            detail: '',
+            preparation: '',
+            measurements: [],
+          },
+        ],
+        p_instruction_steps: [],
+        p_publication_id: null,
+        p_publication_page: null,
+        p_recipe_url: null,
+        p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+        p_tag_ids: [],
+        p_ingredient_sets: [
+          {
+            id: backfilledSetIds.get(legacyRecipe.id),
+            label: 'Changed before rejected save',
+            position: 0,
+          },
+        ],
+      },
+    },
+  );
+  assert.equal(staleSave.ok, false);
+  const setsAfterRejectedSave = await apiCall(
+    `${setEndpoint}?select=id,label,position&recipe_id=eq.${legacyRecipe.id}&order=position`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.deepEqual(setsAfterRejectedSave, [
+    {
+      id: backfilledSetIds.get(legacyRecipe.id),
+      label: 'Main',
+      position: 0,
+    },
+  ]);
+  const recipeAfterRejectedSave = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=id,name,version&id=eq.${legacyRecipe.id}`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.deepEqual(recipeAfterRejectedSave, [
+    { id: legacyRecipe.id, name: 'Backfilled public recipe', version: 1 },
+  ]);
 
   const bootstrapEmail = `bootstrap-${randomUUID()}@example.test`;
   const bootstrap = spawnSync(
@@ -422,6 +593,10 @@ async function verifyMigrationAndRunBrowserTests() {
       'node_modules/@playwright/test/cli.js',
       'test',
       'tests/e2e/public-recipes.spec.ts',
+      'tests/e2e/ingredient-sets.spec.ts',
+      'tests/e2e/ingredient-rows.spec.ts',
+      'tests/e2e/import-commit.spec.ts',
+      'tests/e2e/exports.spec.ts',
       '--project=chromium',
       '--project=Fold 6',
       '--workers=1',

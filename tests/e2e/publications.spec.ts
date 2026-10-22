@@ -75,6 +75,65 @@ test('Site publication covers stay circular on the detail page @e2e', async ({ p
   }
 });
 
+test('publication actions switch to compact icons when the heading is constrained @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
+
+  try {
+    const response = await request.post(`${apiUrl}/rest/v1/rpc/create_publication`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${user.accessToken}` },
+      data: {
+        p_name: 'A Long Book Title About Recipes That Need More Room',
+        p_publication_type: 'book',
+        p_author: null,
+        p_edition: null,
+        p_isbn: null,
+        p_retailer_url: null,
+        p_issue: null,
+        p_site_url: null,
+      },
+    });
+    expect(response.ok(), await response.text()).toBeTruthy();
+    const publicationId = (await response.json()) as string;
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto(`/publications/${publicationId}`);
+
+    const actions = page.locator('.publication-detail-actions');
+    const actionButtons = [
+      page.getByRole('button', { name: 'Edit publication' }),
+      page.getByRole('link', { name: 'Add Recipe' }),
+      page.getByRole('button', { name: 'Import recipe' }),
+      page.getByRole('button', { name: 'Export publication' }),
+    ];
+    const fullLabelWidths = await Promise.all(
+      actionButtons.map(async (button) => (await button.boundingBox())?.width ?? 0),
+    );
+    expect(fullLabelWidths.every((width) => width > 48)).toBe(true);
+
+    await page.setViewportSize({ width: 800, height: 900 });
+    for (const button of actionButtons) {
+      await expect(button).toHaveCSS('width', '48px');
+    }
+    const titleBounds = await page.locator('.publication-detail-heading h1').boundingBox();
+    const actionBounds = await actions.boundingBox();
+    expect(titleBounds).not.toBeNull();
+    expect(actionBounds).not.toBeNull();
+    expect((titleBounds?.x ?? 0) + (titleBounds?.width ?? 0)).toBeLessThanOrEqual(
+      (actionBounds?.x ?? 0) + 1,
+    );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('publication metadata edits preserve type, support all source fields, and detect stale saves @e2e @a11y', async ({
   page,
   request,

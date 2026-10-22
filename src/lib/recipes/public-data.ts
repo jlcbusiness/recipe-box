@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
-import type { RecipeIngredient, RecipeInstructionStep, RecipeMeasurement } from './data';
+import type {
+  RecipeIngredient,
+  RecipeIngredientSet,
+  RecipeInstructionStep,
+  RecipeMeasurement,
+} from './data';
 import {
   buildPublicRecipePayload,
   type PublicRecipePayload,
@@ -60,7 +65,7 @@ type PublicRecipeRow = {
 
 type IngredientRow = Pick<
   RecipeIngredient,
-  'id' | 'ingredient_id' | 'position' | 'is_main' | 'detail' | 'preparation'
+  'id' | 'ingredient_id' | 'ingredient_set_id' | 'position' | 'is_main' | 'detail' | 'preparation'
 >;
 
 type MeasurementRow = RecipeMeasurement & { recipe_ingredient_id: string };
@@ -145,6 +150,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   const [
     publicationResult,
     assignmentResult,
+    ingredientSetResult,
     stepResult,
     ingredientResult,
     pairingResult,
@@ -165,6 +171,12 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
       .eq('recipe_id', recipeRow.id)
       .eq('category', 'equipment'),
     supabase
+      .from('recipe_ingredient_sets')
+      .select('id, label, position')
+      .eq('account_id', recipeRow.account_id)
+      .eq('recipe_id', recipeRow.id)
+      .order('position'),
+    supabase
       .from('recipe_steps')
       .select('id, position, content_markdown, plain_text')
       .eq('account_id', recipeRow.account_id)
@@ -172,7 +184,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
       .order('position'),
     supabase
       .from('recipe_ingredients')
-      .select('id, ingredient_id, position, is_main, detail, preparation')
+      .select('id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation')
       .eq('account_id', recipeRow.account_id)
       .eq('recipe_id', recipeRow.id)
       .order('position'),
@@ -192,6 +204,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   for (const result of [
     publicationResult,
     assignmentResult,
+    ingredientSetResult,
     stepResult,
     ingredientResult,
     pairingResult,
@@ -282,6 +295,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   const source: PublicRecipeSource = {
     ...recipeRow,
     publication: publicationResult.data,
+    ingredient_sets: (ingredientSetResult.data ?? []) as RecipeIngredientSet[],
     ingredients,
     steps: (stepResult.data ?? []) as RecipeInstructionStep[],
     pairings: pairingResult.data ?? [],

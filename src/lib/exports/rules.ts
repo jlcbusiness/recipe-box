@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-export const EXPORT_SCHEMA_VERSION = 1;
+export const EXPORT_SCHEMA_VERSION = 2;
 export const EXPORT_DATA_BYTES_LIMIT = 64 * 1024 * 1024;
 export const EXPORT_MEDIA_BYTES_LIMIT = 1024 * 1024 * 1024;
 export const DATABASE_EXPORT_REMINDER_DAYS = 30;
@@ -23,6 +23,7 @@ export const exportTableNames = [
   'recipe_picklist_values',
   'recipe_picklist_assignments',
   'ingredients',
+  'recipe_ingredient_sets',
   'recipe_ingredients',
   'recipe_ingredient_measurements',
   'recipe_steps',
@@ -249,10 +250,12 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
   ],
   recipe_picklist_assignments: ['recipe_id', 'category', 'picklist_value_id'],
   ingredients: ['id', 'name', 'created_at', 'sort_order'],
+  recipe_ingredient_sets: ['id', 'recipe_id', 'label', 'position'],
   recipe_ingredients: [
     'id',
     'recipe_id',
     'ingredient_id',
+    'ingredient_set_id',
     'position',
     'is_main',
     'detail',
@@ -373,6 +376,9 @@ function makeRecordSet(
   const recipeIngredients = rows.recipe_ingredients.filter((row) =>
     recipeIds.has(relationId(row, 'recipe_id') ?? ''),
   );
+  const recipeIngredientSets = rows.recipe_ingredient_sets.filter((row) =>
+    recipeIds.has(relationId(row, 'recipe_id') ?? ''),
+  );
   const recipeIngredientIds = new Set(
     recipeIngredients.map(recordId).filter((id): id is string => id !== null),
   );
@@ -435,6 +441,7 @@ function makeRecordSet(
       scope.type === 'database'
         ? rows.ingredients
         : rows.ingredients.filter((row) => ingredientIds.has(recordId(row) ?? '')),
+    recipe_ingredient_sets: recipeIngredientSets,
     recipe_ingredients: recipeIngredients,
     recipe_ingredient_measurements: measurements,
     recipe_steps: recipeSteps,

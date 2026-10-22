@@ -439,6 +439,13 @@ export function planImport(
       recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
       picklist_value_id: mappedId('recipe_picklist_values', record.picklist_value_id, 'picklist'),
     }));
+  records.recipe_ingredient_sets = incoming.records.recipe_ingredient_sets
+    .filter((record) => recipeIncluded(record.recipe_id))
+    .map((record) => ({
+      ...record,
+      id: mappedId('recipe_ingredient_sets', record.id, 'ingredient set'),
+      recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
+    }));
   records.recipe_ingredients = incoming.records.recipe_ingredients
     .filter(recipeOwned)
     .map((record) => ({
@@ -446,6 +453,11 @@ export function planImport(
       id: mappedId('recipe_ingredients', record.id, 'recipe ingredient'),
       recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
       ingredient_id: mappedId('ingredients', record.ingredient_id, 'ingredient'),
+      ingredient_set_id: mappedId(
+        'recipe_ingredient_sets',
+        record.ingredient_set_id,
+        'ingredient set',
+      ),
     }));
   records.recipe_ingredient_measurements = incoming.records.recipe_ingredient_measurements
     .filter((record) => {

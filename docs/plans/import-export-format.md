@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 1 archive contains:
+A version 2 archive contains:
 
 ```text
 manifest.json
@@ -27,7 +27,7 @@ namespace permits only `data.json` and UUID-scoped `full.webp` or
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 1,
+  "schema_version": 2,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "0.1.0",
   "scope": {
@@ -66,7 +66,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 1,
+  "schema_version": 2,
   "scope": {
     "type": "database"
   },
@@ -77,6 +77,7 @@ backslashes, and unexpected ZIP entries.
     "recipe_picklist_values": [],
     "recipe_picklist_assignments": [],
     "ingredients": [],
+    "recipe_ingredient_sets": [],
     "recipe_ingredients": [],
     "recipe_ingredient_measurements": [],
     "recipe_steps": [],
@@ -95,8 +96,10 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v1; future
-database columns cannot enter the bundle without a format change.
+array contains only the normalized product fields selected for v2; future
+database columns cannot enter the bundle without a format change. Every v2
+recipe ingredient row includes `ingredient_set_id`, which references a set in
+`recipe_ingredient_sets` for the same recipe.
 `account_preferences` contains only product preferences. Domain record IDs and
 relationship IDs are preserved. Owner `account_id`, Auth user IDs, admin and
 sign-in-method values, signed URLs, private Storage paths, and export timestamps
@@ -123,17 +126,19 @@ rows, and temporary export objects are never part of `records`.
 
 ## Version compatibility
 
-Version 1 includes the current recipe `is_private` value and excludes the
-public-link identifier. A v1 import preserves `is_private` when present and
-lets the destination database generate a new public-link identity rather than
-reusing a source ID. The import planner does not include `public_id` in recipe
-records. Version upgrades never reinterpret a missing field as permission to
-expose private content.
+Version 2 is the current export format. It includes ingredient-set records and
+row membership, preserves the current recipe `is_private` value, and excludes
+the public-link identifier. Imports continue accepting version 1 bundles. A
+v1 import synthesizes one `Main` set per recipe and assigns that recipe's
+ingredient rows to it. Both versions let the destination database generate a
+new public-link identity rather than reusing a source ID. The import planner
+does not include `public_id` in recipe records. Version upgrades never
+reinterpret a missing field as permission to expose private content.
 
 An importer must validate both `schema_version` fields, require them to match,
-verify all file sizes and checksums before creating records, and reject unknown
-major format versions without partially applying the bundle. Slice 21 defines
-transaction and recovery behavior.
+accept only versions 1 and 2, verify all file sizes and checksums before
+creating records, and reject unknown versions without partially applying the
+bundle. Slice 21 defines transaction and recovery behavior.
 
 ## Export limits
 

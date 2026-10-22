@@ -70,6 +70,7 @@ test('database import commit is privileged, versioned, history-aware, and atomic
   const recipeId = randomUUID();
   const ingredientId = randomUUID();
   const recipeIngredientId = randomUUID();
+  const ingredientSetId = randomUUID();
   const stepId = randomUUID();
   const latePublicationId = randomUUID();
   const trashedPublicationId = randomUUID();
@@ -152,10 +153,19 @@ test('database import commit is privileged, versioned, history-aware, and atomic
         id: recipeIngredientId,
         recipe_id: recipeId,
         ingredient_id: ingredientId,
+        ingredient_set_id: ingredientSetId,
         position: 0,
         is_main: true,
         detail: '',
         preparation: '',
+      },
+    ],
+    recipe_ingredient_sets: [
+      {
+        id: ingredientSetId,
+        recipe_id: recipeId,
+        label: 'For the imported recipe',
+        position: 0,
       },
     ],
     recipe_steps: [
@@ -218,6 +228,31 @@ test('database import commit is privileged, versioned, history-aware, and atomic
       await selectRows(
         request,
         config,
+        'recipe_ingredient_sets',
+        `select=id,recipe_id,label,position&id=eq.${ingredientSetId}`,
+        ownerHeaders(config, owner),
+      ),
+    ).toEqual([
+      {
+        id: ingredientSetId,
+        recipe_id: recipeId,
+        label: 'For the imported recipe',
+        position: 0,
+      },
+    ]);
+    expect(
+      await selectRows(
+        request,
+        config,
+        'recipe_ingredients',
+        `select=id,ingredient_set_id&id=eq.${recipeIngredientId}`,
+        ownerHeaders(config, owner),
+      ),
+    ).toEqual([{ id: recipeIngredientId, ingredient_set_id: ingredientSetId }]);
+    expect(
+      await selectRows(
+        request,
+        config,
         'media_assets',
         `select=id,status,full_path,thumbnail_path&id=eq.${mediaAssetId}`,
         ownerHeaders(config, owner),
@@ -238,6 +273,9 @@ test('database import commit is privileged, versioned, history-aware, and atomic
     const replacementRecords = {
       ...records,
       ingredients: [],
+      recipe_ingredient_sets: [
+        { ...records.recipe_ingredient_sets[0], label: 'Renamed imported section' },
+      ],
       publications: [{ ...records.publications[0], name: 'Replaced import publication' }],
       recipes: [{ ...records.recipes[0], name: 'Replaced import recipe' }],
     };
@@ -260,6 +298,15 @@ test('database import commit is privileged, versioned, history-aware, and atomic
     expect(recipeRows).toEqual([
       { id: recipeId, name: 'Replaced import recipe', version: 2, is_private: true },
     ]);
+    expect(
+      await selectRows(
+        request,
+        config,
+        'recipe_ingredient_sets',
+        `select=id,label,position&id=eq.${ingredientSetId}`,
+        ownerHeaders(config, owner),
+      ),
+    ).toEqual([{ id: ingredientSetId, label: 'Renamed imported section', position: 0 }]);
     const recipeHistory = await selectRows(
       request,
       config,
@@ -352,6 +399,14 @@ test('database import commit is privileged, versioned, history-aware, and atomic
             name: 'Imported trashed recipe',
             publication_id: trashedPublicationId,
             trashed_at: createdAt,
+          },
+        ],
+        recipe_ingredient_sets: [
+          {
+            id: randomUUID(),
+            recipe_id: trashedRecipeId,
+            label: 'Main',
+            position: 0,
           },
         ],
       },

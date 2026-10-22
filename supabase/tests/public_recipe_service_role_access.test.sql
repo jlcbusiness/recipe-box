@@ -13,6 +13,7 @@ select ok(
     from (values
       ('recipes'),
       ('publications'),
+      ('recipe_ingredient_sets'),
       ('recipe_picklist_assignments'),
       ('recipe_steps'),
       ('recipe_ingredients'),

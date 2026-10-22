@@ -17,7 +17,7 @@
 
 ## Outcome
 
-A signed-in owner can import publication- and recipe-scoped v1 ZIPs through
+A signed-in owner can import publication- and recipe-scoped v1 and v2 ZIPs through
 Library and recipe workflows. Selecting a ZIP starts upload and comparison
 automatically. Recipe matches are found by normalized name across the
 destination account, independent of the source publication. Replace retains the
@@ -28,8 +28,9 @@ publication record.
 
 ## Scope
 
-- Accept valid v1 `publication` and `recipe` bundles in addition to the
-  existing `database` bundles. Preserve the v1 archive and data format.
+- Accept valid v1 and v2 `publication` and `recipe` bundles in addition to the
+  existing `database` bundles. V1 recipes receive a synthesized `Main`
+  ingredient set; v2 preserves included set records and row membership.
 - Add `Import publication` beside `Add publication` in Library.
 - Add `Import recipe` beside `Add Recipe` in publication detail, including the
   Recipe Tin view. Keep separate actions on desktop and expose both `Import
@@ -167,7 +168,7 @@ publication record.
 
 ## Completion criteria
 
-- Publication and recipe v1 bundles validate, preview, and commit complete
+- Publication and recipe v1/v2 bundles validate, preview, and commit complete
   supported graphs without silent loss or partial account writes.
 - External recipe links reconnect only to one unique active destination match;
   otherwise their display text remains with no link.

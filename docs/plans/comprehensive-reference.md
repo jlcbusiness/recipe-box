@@ -369,6 +369,22 @@ trailing empty row.
   use US customary units and keep scaling and unit overrides transient.
 - **System naming:** The app uses "US customary", not "imperial", because UK imperial pints and gallons differ.
 
+### 3.6 Ingredient Sets
+
+Every recipe has at least one ordered ingredient set. Existing recipes migrate
+into a set named `Main`; new recipes start with the same default. Each set has a
+stable identity, a required trimmed label of at most 80 characters, and a
+position within its recipe. Labels are unique within a recipe after
+case-folding. Empty sets persist. A populated set must be emptied by explicitly
+moving its rows before it can be removed, and the last set cannot be removed.
+
+Each ingredient row belongs to exactly one set. Moving a row preserves its
+stable row ID, measurements, and structured instruction mentions. Set order is
+independent of row order; reader sorting applies within each set. Empty sets do
+not appear in readers. A one-set recipe retains its existing ingredient-list
+appearance; multiple non-empty sets use a thin divider with the set label, not a
+card. Private, public, print, and offline readers use the same grouping.
+
 ---
 
 ## 4. Ingredient Presentation and Sorting
@@ -385,10 +401,12 @@ Inspired by work items and classical cookbooks:
   Preparation, following conventional recipe-book notation such as
   `1 cup all-purpose flour, sifted`.
 - **Desktop layout:** The structured ingredient area sits alongside the
-  instruction column. Size the Ingredients column to its widest row, capped at
-  half the available reader width, and let Instructions use the remaining
-  space. This preserves the amount-first reading order without wasting a full
-  equal-width track on a compact ingredient list.
+  instruction column. Give Ingredients a stable 46% reader-grid track and let
+  Instructions use the remaining space; the track does not resize based on
+  which ingredient fields are populated. In Ingredient-First view, the table
+  fills the full Ingredients track even when measurement, specifics, or
+  preparation cells are empty. At 760px and below, stack Ingredients before
+  Instructions and keep the table full width within its section.
 
 #### B. Ingredient-First View ("Mine")
 
@@ -1143,13 +1161,14 @@ summary below the photos.
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 1 archives
+user-facing backup mechanism; Supabase backups are not used. Version 2 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
   version, and each payload file's uncompressed byte count and SHA-256 digest.
 - `data.json`: Normalized relational JSON using fixed record-table and
-  per-table field allow-lists. Owner account IDs, Auth user IDs, admin and
+  per-table field allow-lists, including ingredient sets and each row's set
+  membership. Owner account IDs, Auth user IDs, admin and
   sign-in-method fields, signed URLs, private Storage paths, and export
   timestamps are omitted. Product preferences and recipe privacy are retained.
 - `images/<asset-id>/full.webp` and `images/<asset-id>/thumbnail.webp`: Both
@@ -1179,10 +1198,13 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Imports accept supported v1 bundles only after validating archive integrity,
-scope, and required graph data. They are source-independent: the authenticated
-destination account determines ownership, and the import does not require the
-source account or source Auth identity to exist locally.
+Imports accept supported v1 and v2 bundles only after validating archive
+integrity, scope, and required graph data. Version 1 recipes receive a
+synthesized `Main` set and their ingredient rows are assigned to it. Version 2
+preserves the included set records and row membership. Imports are
+source-independent: the authenticated destination account determines
+ownership, and the import does not require the source account or source Auth
+identity to exist locally.
 
 Publication roots match by normalized publication type and name. Database and
 publication imports match recipe roots by normalized name within the resolved

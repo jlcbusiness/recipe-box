@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   type BundleManifest,
   EXPORT_DATA_BYTES_LIMIT,
@@ -12,6 +12,7 @@ import {
   parseExportScope,
   portableRecordFields,
 } from '../exports/rules';
+import { validateIngredientSetLabels } from '../recipes/ingredient-set-rules';
 
 const imagePathPattern =
   /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail)\.webp$/i;
@@ -79,10 +80,18 @@ function sameScope(left: ExportScope, right: ExportScope) {
   );
 }
 
-function validateData(value: unknown, manifestScope: ExportScope): PortableData {
+function validateData(
+  value: unknown,
+  manifestScope: ExportScope,
+  schemaVersion: number,
+): PortableData {
   const data = asRecord(value, 'The bundle data');
   assertExactKeys(data, requiredDataKeys, 'The bundle data');
-  if (data.format !== 'recipe-box-data' || data.schema_version !== EXPORT_SCHEMA_VERSION) {
+  if (
+    data.format !== 'recipe-box-data' ||
+    data.schema_version !== schemaVersion ||
+    (schemaVersion !== 1 && schemaVersion !== EXPORT_SCHEMA_VERSION)
+  ) {
     throw new Error('The bundle data format or schema version is not supported.');
   }
 
@@ -100,17 +109,64 @@ function validateData(value: unknown, manifestScope: ExportScope): PortableData 
   }
 
   const records = asRecord(data.records, 'The bundle records');
-  assertExactKeys(records, [...exportTableNames], 'The bundle records');
-  for (const table of exportTableNames) {
+  const inputTables =
+    schemaVersion === 1
+      ? exportTableNames.filter((table) => table !== 'recipe_ingredient_sets')
+      : exportTableNames;
+  assertExactKeys(records, [...inputTables], 'The bundle records');
+  for (const table of inputTables) {
     if (!Array.isArray(records[table])) {
       throw new Error(`The ${table} records must be an array.`);
     }
-    const allowedFields = new Set(portableRecordFields[table]);
+    const allowedFields = new Set(
+      table === 'recipe_ingredients' && schemaVersion === 1
+        ? portableRecordFields[table].filter((field) => field !== 'ingredient_set_id')
+        : portableRecordFields[table],
+    );
     for (const [index, item] of (records[table] as unknown[]).entries()) {
       const record = asRecord(item, `The ${table} record at index ${index}`);
       if (Object.keys(record).some((field) => !allowedFields.has(field))) {
         throw new Error(`The ${table} record contains an unsupported field.`);
       }
+    }
+  }
+
+  if (schemaVersion === 1) {
+    const setsByRecipe = new Map<string, ExportRecord>();
+    records.recipe_ingredient_sets = (records.recipes as ExportRecord[]).map((recipe) => {
+      const set = {
+        id: randomUUID(),
+        recipe_id: recipe.id,
+        label: 'Main',
+        position: 0,
+      };
+      setsByRecipe.set(String(recipe.id), set);
+      return set;
+    });
+    records.recipe_ingredients = (records.recipe_ingredients as ExportRecord[]).map((row) => ({
+      ...row,
+      ingredient_set_id: setsByRecipe.get(String(row.recipe_id))?.id,
+    }));
+  }
+
+  const setsByRecipe = new Map<string, ExportRecord[]>();
+  for (const set of records.recipe_ingredient_sets as ExportRecord[]) {
+    const recipeId = String(set.recipe_id);
+    const recipeSets = setsByRecipe.get(recipeId) ?? [];
+    recipeSets.push(set);
+    setsByRecipe.set(recipeId, recipeSets);
+  }
+  for (const recipeSets of setsByRecipe.values()) {
+    if (
+      validateIngredientSetLabels(
+        recipeSets.map((set) => ({
+          id: String(set.id),
+          label: String(set.label ?? ''),
+          position: Number(set.position),
+        })),
+      )
+    ) {
+      throw new Error('The bundle contains invalid ingredient set labels.');
     }
   }
 
@@ -257,9 +313,23 @@ function validateDatabaseReferences(records: PortableData['records']) {
     requireReference('recipes', assignment.recipe_id, 'recipe');
     requireReference('recipe_picklist_values', assignment.picklist_value_id, 'picklist value');
   }
+  const ingredientSetOwners = new Map<string, string>();
+  for (const set of records.recipe_ingredient_sets) {
+    requireReference('recipes', set.recipe_id, 'ingredient set recipe');
+    if (typeof set.id === 'string' && typeof set.recipe_id === 'string') {
+      ingredientSetOwners.set(set.id, set.recipe_id);
+    }
+  }
   for (const ingredient of records.recipe_ingredients) {
     requireReference('recipes', ingredient.recipe_id, 'recipe');
     requireReference('ingredients', ingredient.ingredient_id, 'ingredient');
+    requireReference('recipe_ingredient_sets', ingredient.ingredient_set_id, 'ingredient set');
+    if (
+      typeof ingredient.recipe_id !== 'string' ||
+      ingredientSetOwners.get(String(ingredient.ingredient_set_id)) !== ingredient.recipe_id
+    ) {
+      throw new Error('The bundle contains an ingredient set owned by a different recipe.');
+    }
   }
   for (const measurement of records.recipe_ingredient_measurements) {
     requireReference('recipe_ingredients', measurement.recipe_ingredient_id, 'recipe ingredient');
@@ -325,7 +395,7 @@ export function validateImportBundleFiles(
   assertExactKeys(manifest, requiredManifestKeys, 'The bundle manifest');
   if (
     manifest.format !== 'recipe-box-bundle' ||
-    manifest.schema_version !== EXPORT_SCHEMA_VERSION ||
+    (manifest.schema_version !== 1 && manifest.schema_version !== EXPORT_SCHEMA_VERSION) ||
     typeof manifest.created_at !== 'string' ||
     !Number.isFinite(Date.parse(manifest.created_at)) ||
     typeof manifest.app_version !== 'string' ||
@@ -391,7 +461,11 @@ export function validateImportBundleFiles(
     throw new Error('The archive contains duplicate or unlisted files.');
   }
 
-  const data = validateData(parseJson(dataBytes, 'The bundle data'), scope);
+  const data = validateData(
+    parseJson(dataBytes, 'The bundle data'),
+    scope,
+    manifest.schema_version as number,
+  );
 
   const expectedImages = new Set<string>();
   const assetIds = new Set<string>();

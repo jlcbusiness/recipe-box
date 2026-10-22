@@ -266,16 +266,27 @@ test('database export includes more than 1,000 rows, verified private images, an
       records: {
         ingredients: Array<{ name: string }>;
         recipes: Array<{ id: string; is_private: boolean }>;
+        recipe_ingredient_sets: Array<{
+          id: string;
+          recipe_id: string;
+          label: string;
+          position: number;
+        }>;
       };
     };
 
-    expect(manifest.schema_version).toBe(1);
+    expect(manifest.schema_version).toBe(2);
     expect(manifest.scope).toEqual({ type: 'database' });
     expect(portableData.records.ingredients).toHaveLength(1005);
     expect(portableData.records.recipes).toContainEqual(expect.objectContaining({ id: recipeId }));
     expect(portableData.records.recipes.find((recipe) => recipe.id === recipeId)?.is_private).toBe(
       true,
     );
+    const exportedSets = portableData.records.recipe_ingredient_sets.filter(
+      (set) => set.recipe_id === recipeId,
+    );
+    expect(exportedSets).toHaveLength(1);
+    expect(exportedSets[0]).toMatchObject({ label: 'Main', position: 0 });
     expect(files[`images/${assetId}/full.webp`]).toEqual(files['data.json'] ? imageBytes : null);
     expect(files[`images/${assetId}/thumbnail.webp`]).toEqual(imageBytes);
     expect(manifest.files).toHaveLength(3);
@@ -310,6 +321,12 @@ test('database export includes more than 1,000 rows, verified private images, an
           recipes: Array<{ id: string; is_private: boolean }>;
           publications: Array<{ id: string }>;
           ingredients: Array<{ id: string }>;
+          recipe_ingredient_sets: Array<{
+            id: string;
+            recipe_id: string;
+            label: string;
+            position: number;
+          }>;
         };
       };
 
@@ -320,6 +337,7 @@ test('database export includes more than 1,000 rows, verified private images, an
         publicationId,
       ]);
       expect(scopedData.records.ingredients).toEqual([]);
+      expect(scopedData.records.recipe_ingredient_sets).toEqual(exportedSets);
     }
 
     const exportQueueResponse = await request.get(

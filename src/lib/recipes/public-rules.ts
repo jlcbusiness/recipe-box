@@ -1,4 +1,4 @@
-import type { RecipeRecord } from './data';
+import type { RecipeIngredientSet, RecipeRecord } from './data';
 
 export type PublicRecipeSource = {
   name: string;
@@ -15,6 +15,7 @@ export type PublicRecipeSource = {
   total_time_minutes: number | null;
   publication_page: string | null;
   publication: { name: string } | null;
+  ingredient_sets: RecipeIngredientSet[];
   ingredients: RecipeRecord['ingredients'];
   steps: RecipeRecord['steps'];
   pairings: Array<Pick<RecipeRecord['pairings'][number], 'display_text'>>;
@@ -44,6 +45,7 @@ export type PublicRecipePayload = {
     total: number | null;
   };
   equipment: string[];
+  ingredient_sets: RecipeIngredientSet[];
   ingredients: RecipeRecord['ingredients'];
   steps: Array<Pick<RecipeRecord['steps'][number], 'position' | 'content_markdown'>>;
   attribution: { publication_name: string; page: string | null } | null;
@@ -99,6 +101,12 @@ export function buildPublicRecipePayload(
 ): PublicRecipePayload {
   let displayIdIndex = 0;
   const createDisplayId = () => createPublicDisplayId(displayIdIndex++);
+  const setIds = new Map<string, string>();
+  const ingredientSets = recipe.ingredient_sets.map((set) => {
+    const id = createDisplayId();
+    setIds.set(set.id.toLocaleLowerCase(), id);
+    return { id, label: set.label, position: set.position };
+  });
   const ingredientIds = new Map<string, string>();
   const ingredients = recipe.ingredients.map((ingredient) => {
     const id = createDisplayId();
@@ -106,6 +114,7 @@ export function buildPublicRecipePayload(
     return {
       id,
       ingredient_id: id,
+      ingredient_set_id: setIds.get(ingredient.ingredient_set_id.toLocaleLowerCase()) ?? '',
       ingredient_name: ingredient.ingredient_name,
       position: ingredient.position,
       is_main: ingredient.is_main,
@@ -141,6 +150,7 @@ export function buildPublicRecipePayload(
       total: recipe.total_time_minutes,
     },
     equipment: [...equipment],
+    ingredient_sets: ingredientSets,
     ingredients,
     steps: recipe.steps.map(({ position, content_markdown }) => ({
       position,

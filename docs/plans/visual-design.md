@@ -531,17 +531,24 @@ interruption tolerance, legibility, and one-handed operation.
 Recipe detail offers Standard and Ingredient-first presentations. Standard
 keeps ingredient rows in saved order and renders Amount, lowercase Specifics
 and ingredient name, then Preparation. Both presentations keep Ingredients
-beside Instructions on desktop. The Ingredients column follows its widest row
-and is capped at half the available reader width; Instructions uses the
-remaining space. Mobile keeps the sections in a vertical flow. The desktop
-reader initializes from the saved account default, while mobile starts
-Ingredient-first. A reader's explicit change is transient. Ingredient-first
-uses a semantic table with Ingredient, Volume, Weight, and Preparation
-columns. Count, informal, and unmeasured values span the Volume and Weight
-columns; Volume and Weight remain separate when present. Specifics display
-indented and fully lowercase beneath the ingredient name. Cells are
-left-aligned with no more than 3mm between columns on desktop and 1mm on
-mobile. Mobile headers shorten to Vol, Wt, and Prep.
+beside Instructions on desktop. Ingredients uses a stable 46% reader-grid
+track, independent of populated row content; Instructions uses the remaining
+space. Ingredient-first uses a semantic table with Ingredient, Volume, Weight,
+and Preparation columns, and the table fills the full Ingredients track even
+when row fields are empty. Count, informal, and unmeasured values span the
+Volume and Weight columns; Volume and Weight remain separate when present.
+Specifics display indented and fully lowercase beneath the ingredient name.
+Cells are left-aligned with no more than 3mm between columns on desktop and 1mm
+on mobile. Mobile headers shorten to Vol, Wt, and Prep. At 760px and below,
+Ingredients and Instructions stack vertically and the table fills the
+Ingredients section. The desktop reader initializes from the saved account
+default, while mobile starts Ingredient-first. A reader's explicit change is
+transient.
+
+Ingredient sets are visually quiet: a one-set recipe retains its current list
+without a set label. Multiple non-empty sets stay in set order and use a thin
+horizontal rule interrupted by the set label. The label is a level-three
+heading; empty sets do not render, and no set is presented as a card or panel.
 
 Compact Presentation, Sort, Scale, and device wake-lock icon buttons match the
 Add reference and Add pairing controls: 36px high, with their existing widths

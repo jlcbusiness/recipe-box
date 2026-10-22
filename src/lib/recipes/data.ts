@@ -62,12 +62,19 @@ function sortTagOptions(tags: TagOption[]): TagOption[] {
 export type RecipeIngredient = {
   id: string;
   ingredient_id: string;
+  ingredient_set_id: string;
   ingredient_name: string;
   position: number;
   is_main: boolean;
   detail: string;
   preparation: string;
   measurements: RecipeMeasurement[];
+};
+
+export type RecipeIngredientSet = {
+  id: string;
+  label: string;
+  position: number;
 };
 
 export type RecipeMeasurement = {
@@ -151,6 +158,7 @@ export type RecipeRecord = {
   cuisine_ids: string[];
   equipment_ids: string[];
   tags: TagOption[];
+  ingredient_sets: RecipeIngredientSet[];
   ingredients: RecipeIngredient[];
   steps: RecipeInstructionStep[];
   pairings: RecipePairing[];
@@ -347,9 +355,19 @@ export async function getRecipe(
     throw new Error('Unable to load this recipe.');
   }
 
+  const { data: ingredientSets, error: ingredientSetsError } = await supabase
+    .from('recipe_ingredient_sets')
+    .select('id, label, position')
+    .eq('recipe_id', recipeId)
+    .order('position');
+
+  if (ingredientSetsError) {
+    throw new Error('Unable to load this recipe.');
+  }
+
   const { data: recipeIngredients, error: recipeIngredientsError } = await supabase
     .from('recipe_ingredients')
-    .select('id, ingredient_id, position, is_main, detail, preparation')
+    .select('id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation')
     .eq('recipe_id', recipeId)
     .order('position');
 
@@ -479,6 +497,7 @@ export async function getRecipe(
     cuisine_ids: idsFor('cuisine'),
     equipment_ids: idsFor('equipment'),
     tags: sortTagOptions((assignedTags ?? []) as TagOption[]),
+    ingredient_sets: ingredientSets ?? [],
     ingredients: (recipeIngredients ?? []).map((row) => ({
       ...row,
       ingredient_name: ingredientNames.get(row.ingredient_id) ?? '',

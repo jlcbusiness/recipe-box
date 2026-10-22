@@ -72,6 +72,7 @@ function ingredientRow(
   return {
     id,
     ingredient_id: `${id}-catalog`,
+    ingredient_set_id: 'set-main',
     ingredient_name: name,
     position,
     is_main: false,
@@ -360,6 +361,7 @@ describe('recipe reader measurement rules', () => {
             {
               id: 'flour-row',
               ingredient_id: 'flour',
+              ingredient_set_id: 'set-main',
               ingredient_name: 'Flour',
               position: 0,
               is_main: true,
@@ -409,6 +411,7 @@ describe('recipe reader measurement rules', () => {
             {
               id: 'flour-row',
               ingredient_id: 'flour',
+              ingredient_set_id: 'set-main',
               ingredient_name: 'Flour',
               position: 0,
               is_main: true,
@@ -459,6 +462,7 @@ describe('recipe reader measurement rules', () => {
             {
               id: 'flour-row',
               ingredient_id: 'flour',
+              ingredient_set_id: 'set-main',
               ingredient_name: 'Flour',
               position: 0,
               is_main: true,
@@ -522,6 +526,7 @@ describe('recipe reader measurement rules', () => {
             {
               id: 'flour-row',
               ingredient_id: 'flour',
+              ingredient_set_id: 'set-main',
               ingredient_name: 'Flour',
               position: 0,
               is_main: true,
@@ -667,6 +672,48 @@ describe('recipe ingredient sorting', () => {
 });
 
 describe('recipe reader views', () => {
+  it('renders non-empty ingredient sets as accessible dividers in both presentations', () => {
+    const rows = [
+      { ...ingredientRow('sauce-row', 'Tomato', 0), ingredient_set_id: 'set-sauce' },
+      { ...ingredientRow('filling-row', 'Onion', 1), ingredient_set_id: 'set-filling' },
+    ];
+    const ingredientSets = [
+      { id: 'set-sauce', label: 'For the sauce', position: 0 },
+      { id: 'set-filling', label: 'For the filling', position: 1 },
+      { id: 'set-unused', label: 'Unused section', position: 2 },
+    ];
+
+    render(
+      <RecipeReaderProvider serves={null}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={rows}
+          ingredientSets={ingredientSets}
+          recipeId="recipe-id"
+          serves={null}
+          steps={[]}
+          volumeSystem="us_customary"
+          weightSystem="us_customary"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'For the sauce' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'For the filling' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Unused section' })).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+      }),
+    );
+
+    expect(screen.getByRole('table', { name: 'Recipe ingredients' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'For the sauce' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'For the filling' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Unused section' })).toBeNull();
+  });
+
   it('switches presentations and sorts rows without changing their entered order', () => {
     const flourId = '00000000-0000-4000-8000-000000000011';
     const saltId = '00000000-0000-4000-8000-000000000012';

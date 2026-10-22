@@ -277,6 +277,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
           <RecipeReader
             defaultPresentation="ingredient_first"
             ingredients={recipe.ingredients}
+            ingredientSets={recipe.ingredient_sets}
             instructions={instructions || undefined}
             preserveStoredUnits={preserveStoredUnits}
             recipeId="public-recipe"

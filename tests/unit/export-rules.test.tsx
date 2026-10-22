@@ -18,6 +18,8 @@ const firstIngredientId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const secondIngredientId = '11111111-1111-4111-8111-111111111111';
 const firstRowId = '22222222-2222-4222-8222-222222222222';
 const secondRowId = '33333333-3333-4333-8333-333333333333';
+const firstSetId = '99999999-9999-4999-8999-999999999999';
+const secondSetId = 'aaaaaaaa-bbbb-4aaa-8aaa-aaaaaaaaaaaa';
 const firstStepId = '44444444-4444-4444-8444-444444444444';
 const firstAssetId = '55555555-5555-4555-8555-555555555555';
 const secondAssetId = '66666666-6666-4666-8666-666666666666';
@@ -83,8 +85,17 @@ function createSnapshot() {
         { id: secondIngredientId, account_id: ownerId, name: 'Tomato' },
       ],
       recipe_ingredients: [
-        { id: firstRowId, recipe_id: firstRecipeId, ingredient_id: firstIngredientId },
+        {
+          id: firstRowId,
+          recipe_id: firstRecipeId,
+          ingredient_id: firstIngredientId,
+          ingredient_set_id: firstSetId,
+        },
         { id: secondRowId, recipe_id: secondRecipeId, ingredient_id: secondIngredientId },
+      ],
+      recipe_ingredient_sets: [
+        { id: firstSetId, recipe_id: firstRecipeId, label: 'Main', position: 0 },
+        { id: secondSetId, recipe_id: secondRecipeId, label: 'Main', position: 0 },
       ],
       recipe_ingredient_measurements: [
         { id: 'measurement-cake', recipe_ingredient_id: firstRowId },
@@ -163,6 +174,9 @@ describe('export rules', () => {
     expect(output.records.recipes.map((record) => record.id)).toEqual([firstRecipeId]);
     expect(output.records.ingredients.map((record) => record.id)).toEqual([firstIngredientId]);
     expect(output.records.recipe_ingredients.map((record) => record.id)).toEqual([firstRowId]);
+    expect(output.records.recipe_ingredient_sets).toEqual([
+      { id: firstSetId, recipe_id: firstRecipeId, label: 'Main', position: 0 },
+    ]);
     expect(output.records.recipe_ingredient_measurements.map((record) => record.id)).toEqual([
       'measurement-cake',
     ]);
@@ -246,7 +260,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(1);
+    expect(manifest.schema_version).toBe(2);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

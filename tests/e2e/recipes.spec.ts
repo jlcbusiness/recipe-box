@@ -3706,6 +3706,17 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     }
     await presentation.click();
     await expect(page.locator('.recipe-reading-standard')).toHaveCSS('display', 'grid');
+    const standardLayoutBounds = await page.locator('.recipe-reading-standard').boundingBox();
+    const standardColumns = await page.locator('.recipe-reading-standard').evaluate((element) =>
+      getComputedStyle(element)
+        .gridTemplateColumns.split(' ')
+        .map((track) => Number.parseFloat(track)),
+    );
+    expect(standardLayoutBounds).not.toBeNull();
+    expect(standardColumns).toHaveLength(2);
+    if (standardLayoutBounds) {
+      expect(standardColumns[0] / standardLayoutBounds.width).toBeCloseTo(0.46, 2);
+    }
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('.recipe-reading-standard')).toHaveCSS('display', 'grid');
     await page.emulateMedia({ media: 'screen' });
@@ -3723,19 +3734,51 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     await page.setViewportSize({ width: 390, height: 844 });
     await presentation.click();
     await expect(page.locator('.recipe-reading-layout')).toHaveCSS('display', 'block');
+    await expect(page.locator('.recipe-reading-standard')).toHaveCSS('display', 'block');
+    const mobileStandardIngredients = await page
+      .getByRole('region', { name: 'Ingredients' })
+      .boundingBox();
+    const mobileStandardInstructions = await page
+      .getByRole('region', { name: 'Instructions' })
+      .boundingBox();
+    expect(mobileStandardIngredients).not.toBeNull();
+    expect(mobileStandardInstructions).not.toBeNull();
+    if (mobileStandardIngredients && mobileStandardInstructions) {
+      expect(mobileStandardInstructions.y).toBeGreaterThanOrEqual(
+        mobileStandardIngredients.y + mobileStandardIngredients.height,
+      );
+    }
     await page.screenshot({
       path: testInfo.outputPath('reader-standard-mobile.png'),
       fullPage: true,
     });
     await presentation.click();
+    await expect(page.locator('.recipe-reading-ingredient_first')).toHaveCSS('display', 'block');
+    const mobileFirstIngredients = await page
+      .getByRole('region', { name: 'Ingredients' })
+      .boundingBox();
+    const mobileFirstInstructions = await page
+      .getByRole('region', { name: 'Instructions' })
+      .boundingBox();
+    expect(mobileFirstIngredients).not.toBeNull();
+    expect(mobileFirstInstructions).not.toBeNull();
+    if (mobileFirstIngredients && mobileFirstInstructions) {
+      expect(mobileFirstInstructions.y).toBeGreaterThanOrEqual(
+        mobileFirstIngredients.y + mobileFirstIngredients.height,
+      );
+    }
     const table = page.getByRole('table', { name: 'Recipe ingredients' });
     await expect(table.locator('.recipe-reader-label-mobile')).toHaveText(['Vol', 'Wt', 'Prep']);
     const mobileTableBounds = await table.boundingBox();
+    const mobileIngredientColumnBounds = await page
+      .getByRole('region', { name: 'Ingredients' })
+      .boundingBox();
     expect(mobileTableBounds).not.toBeNull();
-    if (mobileTableBounds) {
-      const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(mobileIngredientColumnBounds).not.toBeNull();
+    if (mobileTableBounds && mobileIngredientColumnBounds) {
+      expect(Math.abs(mobileTableBounds.x - mobileIngredientColumnBounds.x)).toBeLessThanOrEqual(1);
       expect(
-        Math.abs(mobileTableBounds.x + mobileTableBounds.width / 2 - viewportWidth / 2),
+        Math.abs(mobileTableBounds.width - mobileIngredientColumnBounds.width),
       ).toBeLessThanOrEqual(1);
     }
     const mobileIngredientsHeading = await page

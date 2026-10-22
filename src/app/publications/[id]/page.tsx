@@ -132,11 +132,13 @@ export default async function PublicationPage({
             />
           )}
           <Link
+            aria-label="Add Recipe"
             className="recipe-primary-link collection-add-action publication-new-recipe"
             href={`/recipes/new?publication=${publication.id}`}
+            title="Add Recipe"
           >
             <Plus aria-hidden="true" size={18} />
-            Add Recipe
+            <span className="publication-new-recipe-label">Add Recipe</span>
           </Link>
           <ImportAction
             compact

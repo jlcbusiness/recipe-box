@@ -39,7 +39,8 @@ security without prematurely creating recipe or other domain tables.
 | Recipe | The recipe's metadata, state, optional integer Serves count, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient and optional trusted density. |
-| Recipe ingredient | An ordered ingredient row with persistent manual order, Main flag, specifics, preparation, and measurements. |
+| Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
+| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, and measurements. |
 | Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to a recipe ingredient. |
@@ -74,6 +75,10 @@ columns.
   recipe relationships.
 - A recipe has many ordered ingredient rows and many ordered instruction steps.
   Ingredient manual order is persistent and separate from temporary view sorts.
+- Every recipe has at least one ordered ingredient set. Existing recipes use a
+  `Main` set; each ingredient row belongs to exactly one set. Set identity,
+  order, and labels are included in save history, Trash/restore, and version 2
+  portable bundles. Version 1 imports synthesize a `Main` set for each recipe.
 - A recipe ingredient can have one displayed category: Unit, Count, Things, or
   Feel. Unit maps to the stored volume and/or weight records; Things maps to an
   informal record and Feel maps to an unmeasured record. A Unit row can contain

@@ -6,6 +6,10 @@ import { normalizeHttpUrl } from '../../lib/publications/validation';
 import type { RecipeState } from '../../lib/recipes/data';
 import type { IngredientRowPayload } from '../../lib/recipes/ingredient-rules';
 import {
+  type IngredientSetDraft,
+  normalizeIngredientSets,
+} from '../../lib/recipes/ingredient-set-rules';
+import {
   type InstructionStepDraft,
   type InstructionStepPayload,
   instructionPlainText,
@@ -162,6 +166,7 @@ function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null 
         row !== null &&
         typeof row === 'object' &&
         typeof row.recipe_ingredient_id === 'string' &&
+        typeof row.ingredient_set_id === 'string' &&
         (row.ingredient_id === null || typeof row.ingredient_id === 'string') &&
         (row.ingredient_name === null || typeof row.ingredient_name === 'string') &&
         typeof row.is_main === 'boolean' &&
@@ -170,6 +175,41 @@ function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null 
     )
       ? (rows as IngredientRowPayload[])
       : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseIngredientSets(formData: FormData): IngredientSetDraft[] | null {
+  const raw = formData.get('ingredient_sets');
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  try {
+    const sets: unknown = JSON.parse(raw);
+    if (!Array.isArray(sets)) {
+      return null;
+    }
+    const drafts = sets.map((value) => {
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        return null;
+      }
+      const set = value as Record<string, unknown>;
+      if (
+        Object.keys(set).some((key) => !['id', 'label', 'position'].includes(key)) ||
+        typeof set.id !== 'string' ||
+        typeof set.label !== 'string' ||
+        !Number.isSafeInteger(set.position)
+      ) {
+        return null;
+      }
+      return { id: set.id, label: set.label, position: Number(set.position) };
+    });
+    if (drafts.some((set) => set === null)) {
+      return null;
+    }
+    return normalizeIngredientSets(drafts as IngredientSetDraft[]);
   } catch {
     return null;
   }
@@ -243,8 +283,13 @@ export async function saveRecipe(
     return { error: 'Choose a State before saving.' };
   }
   const ingredientRows = parseIngredientRows(formData);
-  if (!ingredientRows) {
+  const ingredientSets = parseIngredientSets(formData);
+  if (!ingredientRows || !ingredientSets) {
     return { error: 'Check the ingredient rows before saving.' };
+  }
+  const ingredientSetIds = new Set(ingredientSets.map((set) => set.id));
+  if (ingredientRows.some((row) => !ingredientSetIds.has(row.ingredient_set_id))) {
+    return { error: 'Choose a valid section for each ingredient row.' };
   }
   const instructionSteps = parseInstructionSteps(formData, ingredientRows);
   if (!instructionSteps) {
@@ -296,7 +341,7 @@ export async function saveRecipe(
     return { error: 'Enter a valid HTTP(S) URL.' };
   }
 
-  const { data, error } = await supabase.rpc('save_recipe_with_relationships', {
+  const { data, error } = await supabase.rpc('save_recipe_with_ingredient_sets', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_name: name,
@@ -328,6 +373,7 @@ export async function saveRecipe(
     p_recipe_url: recipeUrl,
     p_recipe_relationships: relationships,
     p_tag_ids: selectedIds(formData, 'tag_ids'),
+    p_ingredient_sets: ingredientSets,
   });
 
   if (error) {

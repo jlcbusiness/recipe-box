@@ -60,8 +60,10 @@ async function dragByPointer(page: Page, source: Locator, target: Locator) {
   const sourceIndex = rowIds.indexOf(sourceRowId);
   const targetIndex = rowIds.indexOf(targetRowId);
   const sourceRow = page.locator(`.recipe-ingredient-table tbody tr[data-row-id="${sourceRowId}"]`);
+  const targetRow = page.locator(`.recipe-ingredient-table tbody tr[data-row-id="${targetRowId}"]`);
   const sourceRowBounds = await sourceRow.boundingBox();
-  if (sourceIndex < 0 || targetIndex < 0 || !sourceRowBounds) {
+  const targetRowBounds = await targetRow.boundingBox();
+  if (sourceIndex < 0 || targetIndex < 0 || !sourceRowBounds || !targetRowBounds) {
     throw new Error('Both pointer drag targets must belong to visible ingredient rows.');
   }
   const displacedIds =
@@ -109,6 +111,14 @@ async function dragByPointer(page: Page, source: Locator, target: Locator) {
       return Math.max(...differences);
     })
     .toBeLessThanOrEqual(2);
+  const sourceGrabOffset = sourceBounds.y + sourceBounds.height / 2 - sourceRowBounds.y;
+  const expectedSourceTop = targetBounds.y + targetBounds.height / 2 - sourceGrabOffset;
+  await expect
+    .poll(async () => {
+      const bounds = await sourceRow.boundingBox();
+      return bounds ? Math.abs(bounds.y - expectedSourceTop) : Number.POSITIVE_INFINITY;
+    })
+    .toBeLessThanOrEqual(2);
   const previewTops = new Map(
     await Promise.all(
       displacedIds.map(async (rowId) => {
@@ -125,17 +135,21 @@ async function dragByPointer(page: Page, source: Locator, target: Locator) {
   const sourcePreviewTop = (await sourceRow.boundingBox())?.y;
   expect(sourcePreviewTop).toBeDefined();
   await page.mouse.up();
-  await expect(sourceRow).toHaveCSS('transform', 'none');
+  const releasedSourceTop = (await sourceRow.boundingBox())?.y;
+  expect(releasedSourceTop).toBeDefined();
+  expect(Math.abs((releasedSourceTop ?? 0) - (sourcePreviewTop ?? 0))).toBeLessThanOrEqual(2);
   for (const [rowId, previewTop] of previewTops) {
     const displacedRow = page.locator(`.recipe-ingredient-table tbody tr[data-row-id="${rowId}"]`);
-    await expect(displacedRow).toHaveCSS('transform', 'none');
-    const finalTop = (await displacedRow.boundingBox())?.y;
-    expect(finalTop).toBeDefined();
-    expect(Math.abs((finalTop ?? 0) - previewTop)).toBeLessThanOrEqual(2);
+    const releasedTop = (await displacedRow.boundingBox())?.y;
+    expect(releasedTop).toBeDefined();
+    expect(Math.abs((releasedTop ?? 0) - previewTop)).toBeLessThanOrEqual(2);
   }
-  const finalSourceTop = (await sourceRow.boundingBox())?.y;
-  expect(finalSourceTop).toBeDefined();
-  expect(Math.abs((finalSourceTop ?? 0) - (sourcePreviewTop ?? 0))).toBeLessThanOrEqual(2);
+  await expect(sourceRow).toHaveCSS('transform', 'none');
+  for (const rowId of displacedIds) {
+    await expect(
+      page.locator(`.recipe-ingredient-table tbody tr[data-row-id="${rowId}"]`),
+    ).toHaveCSS('transform', 'none');
+  }
 }
 
 test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows', async ({
@@ -842,16 +856,39 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await signIn(page, user.email, user.password);
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('Keyboard ingredient rows');
+    const topSaveButton = page.locator('.recipe-form-save-row button');
+    await expect(topSaveButton).toBeVisible();
+    await expect(page.locator('.recipe-form-actions .recipe-primary-button')).toHaveCount(0);
+    const saveButtonBounds = await topSaveButton.boundingBox();
+    const ingredientSectionBounds = await page
+      .locator('fieldset.recipe-ingredient-section > legend')
+      .boundingBox();
+    expect(saveButtonBounds).not.toBeNull();
+    expect(ingredientSectionBounds).not.toBeNull();
+    expect(saveButtonBounds?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(
+      ingredientSectionBounds?.y ?? 0,
+    );
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+    const ingredientRows = grid.locator('tbody tr[data-row-id]');
     await expect(grid).toBeVisible();
-    await expect(grid.getByRole('row')).toHaveCount(2);
+    await expect(ingredientRows).toHaveCount(1);
+    const specificsHeader = await grid
+      .getByRole('columnheader', { name: 'Specifics' })
+      .boundingBox();
+    const amountHeader = await grid.getByRole('columnheader', { name: 'Amount' }).boundingBox();
+    expect(specificsHeader).not.toBeNull();
+    expect(amountHeader).not.toBeNull();
+    expect(specificsHeader?.width ?? 0).toBeGreaterThan(90);
+    expect((specificsHeader?.x ?? 0) + (specificsHeader?.width ?? 0)).toBeLessThanOrEqual(
+      (amountHeader?.x ?? 0) + 1,
+    );
     const emptyPlaceholder = grid.getByRole('cell', { name: 'Add ingredient row' });
     await expect(emptyPlaceholder).toHaveAttribute('colspan', '6');
-    await expect(grid.getByRole('row').nth(1).getByRole('cell')).toHaveCount(1);
+    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Add ingredient row' })).toHaveCount(0);
     await expect(
-      page.locator(
-        '.recipe-ingredient-desktop button:not(.recipe-ingredient-drag-handle):not(.recipe-measurement-picklist-trigger)',
+      grid.locator(
+        'tbody tr[data-row-id] button:not(.recipe-ingredient-drag-handle):not(.recipe-measurement-picklist-trigger)',
       ),
     ).toHaveCount(0);
     await expect(page.getByRole('checkbox', { name: 'Main, row 1' })).toBeDisabled();
@@ -866,7 +903,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(grid.getByRole('combobox', { name: 'Ingredient, row 1' })).toHaveCount(0);
 
     await emptyPlaceholder.click();
-    await expect(grid.getByRole('row').nth(1).getByRole('cell')).toHaveCount(6);
+    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(6);
     const firstIngredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
     await expect(firstIngredient).toHaveAttribute('type', 'text');
     await expect(firstIngredient).not.toHaveAttribute('list', /.+/);
@@ -882,8 +919,8 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     expect(Math.abs((menuBounds?.x ?? 0) - (ingredientBounds?.x ?? 0))).toBeLessThanOrEqual(1);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Tab');
-    await expect(grid.getByRole('row')).toHaveCount(3);
-    await expect(grid.getByRole('row').nth(1)).toContainText('Basil');
+    await expect(ingredientRows).toHaveCount(2);
+    await expect(ingredientRows.nth(0)).toContainText('Basil');
     const ingredientRemove = grid.getByRole('button', { name: 'Delete ingredient row 1' });
     await ingredientRemove.hover();
     await expect(ingredientRemove).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
@@ -956,9 +993,9 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     await expect(secondIngredient).toHaveValue('Tomato');
-    await expect(grid.getByRole('row')).toHaveCount(3);
+    await expect(ingredientRows).toHaveCount(2);
     await page.keyboard.press('Enter');
-    await expect(grid.getByRole('row')).toHaveCount(4);
+    await expect(ingredientRows).toHaveCount(3);
     await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
     const thirdIngredient = page.getByRole('combobox', { name: 'Ingredient, row 3' });
     await thirdIngredient.fill('Onion');
@@ -966,7 +1003,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.keyboard.press('Enter');
     await expect(thirdIngredient).toHaveValue('Onion');
     await page.keyboard.press('Enter');
-    await expect(grid.getByRole('row')).toHaveCount(5);
+    await expect(ingredientRows).toHaveCount(4);
     await grid.locator('[aria-label="Specifics, row 2"]').click();
     const secondDetail = page.getByRole('textbox', { name: 'Specifics, row 2' });
     await secondDetail.fill('ripe');
@@ -976,28 +1013,28 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(page.locator('.recipe-ingredient-editor [aria-live="polite"]')).toHaveText(
       'Tomato moved to row 1.',
     );
-    await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
+    await expect(ingredientRows.nth(0)).toContainText('Tomato');
     await page.keyboard.press('Control+ArrowDown');
     await expect(page.locator('.recipe-ingredient-editor [aria-live="polite"]')).toHaveText(
       'Tomato moved to row 2.',
     );
-    await expect(grid.getByRole('row').nth(2)).toContainText('Tomato');
+    await expect(ingredientRows.nth(1)).toContainText('Tomato');
     const dragHandle = page.getByRole('button', { name: 'Reorder ingredient row 1' });
-    await dragByPointer(page, dragHandle, grid.getByRole('row').nth(2).getByRole('cell').first());
-    await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
-    await expect(grid.getByRole('row').nth(2)).toContainText('Basil');
+    await dragByPointer(page, dragHandle, ingredientRows.nth(1).getByRole('cell').first());
+    await expect(ingredientRows.nth(0)).toContainText('Tomato');
+    await expect(ingredientRows.nth(1)).toContainText('Basil');
     await dragByPointer(
       page,
       page.getByRole('button', { name: 'Reorder ingredient row 2' }),
       page.getByRole('button', { name: 'Reorder ingredient row 1' }),
     );
-    await expect(grid.getByRole('row').nth(1)).toContainText('Basil');
+    await expect(ingredientRows.nth(0)).toContainText('Basil');
     await dragByPointer(
       page,
       page.getByRole('button', { name: 'Reorder ingredient row 1' }),
       page.getByRole('button', { name: 'Reorder ingredient row 2' }),
     );
-    await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
+    await expect(ingredientRows.nth(0)).toContainText('Tomato');
     const idleA11y = await new AxeBuilder({ page })
       .include('.recipe-ingredient-editor')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -1133,7 +1170,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
       .toBe('0s');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.mouse.up();
-    await expect(grid.getByRole('row').nth(1)).toContainText('Basil');
+    await expect(ingredientRows.nth(0)).toContainText('Basil');
     const droppedA11y = await new AxeBuilder({ page })
       .include('.recipe-ingredient-editor')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -1144,7 +1181,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
       page.getByRole('button', { name: 'Reorder ingredient row 1' }),
       page.getByRole('button', { name: 'Reorder ingredient row 2' }),
     );
-    await expect(grid.getByRole('row').nth(1)).toContainText('Tomato');
+    await expect(ingredientRows.nth(0)).toContainText('Tomato');
 
     const firstRowIdBeforeCancel = await grid
       .locator('tbody tr[data-row-id]')
@@ -1195,9 +1232,10 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(page.locator('.recipe-ingredient-list')).toContainText('onion');
     await page.getByRole('link', { name: 'Edit' }).click();
     const reloadedGrid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
-    await expect(reloadedGrid.getByRole('row').nth(1)).toContainText('Tomato');
-    await expect(reloadedGrid.getByRole('row').nth(2)).toContainText('Basil');
-    await expect(reloadedGrid.getByRole('row').nth(3)).toContainText('Onion');
+    const reloadedRows = reloadedGrid.locator('tbody tr[data-row-id]');
+    await expect(reloadedRows.nth(0)).toContainText('Tomato');
+    await expect(reloadedRows.nth(1)).toContainText('Basil');
+    await expect(reloadedRows.nth(2)).toContainText('Onion');
     await expect(reloadedGrid.locator('[aria-label="Specifics, row 1"]')).toHaveText('ripe');
     await expect(reloadedGrid.locator('[aria-label="Preparation, row 1"]')).toHaveText('');
     await expect(reloadedGrid.locator('[aria-label="Specifics, row 2"]')).toHaveText('fresh');
@@ -1206,7 +1244,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(page.getByRole('checkbox', { name: 'Main, row 2' })).toBeChecked();
     const deleteBasil = page.getByRole('button', { name: 'Delete ingredient row 2' });
     await expect(deleteBasil).toHaveCSS('opacity', '0');
-    await reloadedGrid.getByRole('row').nth(2).hover();
+    await reloadedRows.nth(1).hover();
     await expect(deleteBasil).toHaveCSS('opacity', '1');
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(deleteBasil).toHaveCSS('color', 'rgb(108, 103, 95)');
@@ -1217,7 +1255,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(deleteBasil).toHaveCSS('color', 'rgb(108, 103, 95)');
     await deleteBasil.click();
-    await expect(reloadedGrid.getByRole('row')).toHaveCount(4);
+    await expect(reloadedRows).toHaveCount(3);
     await expect(reloadedGrid).not.toContainText('Basil');
     await expect(reloadedGrid).toContainText('Tomato');
     await page.getByRole('button', { name: 'Save recipe' }).click();
@@ -1245,6 +1283,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
       name: 'Recipe ingredients on mobile',
       exact: true,
     });
+    const mobileRows = mobileList.locator('.recipe-ingredient-mobile-row');
     await expect(mobileList).toBeVisible();
     const idleMobileA11y = await new AxeBuilder({ page })
       .include('.recipe-ingredient-mobile')
@@ -1359,7 +1398,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     );
     const sourceRowBounds = await sourceRow.boundingBox();
     const sourceHandleBounds = await sourceHandle.boundingBox();
-    const destination = await mobileList.getByRole('row').nth(1).boundingBox();
+    const destination = await mobileRows.nth(1).boundingBox();
     if (!sourceRowBounds || !sourceHandleBounds || !destination) {
       throw new Error('The mobile drag targets must be visible.');
     }
@@ -1450,15 +1489,15 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
       2,
     );
     await expect(sourceRow).not.toHaveAttribute('data-reorder-state', 'settling');
-    await expect(mobileList.getByRole('row').first()).toContainText(
+    await expect(mobileRows.first()).toContainText(
       'white flour, stone-ground and finely milled for pastry baking flour, sifted',
     );
-    await expect(mobileList.getByRole('row').nth(1)).toContainText('yellow cheese, diced');
+    await expect(mobileRows.nth(1)).toContainText('yellow cheese, diced');
     await expect(sourceRow).toHaveCSS('transform', 'none');
     await expect(stableDisplacedRow).toHaveCSS('transform', 'none');
     const finalSourceBounds = await sourceRow.boundingBox();
     const finalDisplacedBounds = await stableDisplacedRow.boundingBox();
-    const finalFirstBounds = await mobileList.getByRole('row').first().boundingBox();
+    const finalFirstBounds = await mobileRows.first().boundingBox();
     expect(finalSourceBounds).not.toBeNull();
     expect(finalDisplacedBounds).not.toBeNull();
     expect(finalFirstBounds).not.toBeNull();
@@ -1471,7 +1510,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
           ((finalFirstBounds?.y ?? 0) + (finalFirstBounds?.height ?? 0)),
       ),
     ).toBeLessThanOrEqual(2);
-    await expect(mobileList.getByRole('row').first()).toHaveCSS('transform', 'none');
+    await expect(mobileRows.first()).toHaveCSS('transform', 'none');
     await expect(
       mobileList
         .locator('.recipe-ingredient-mobile-row')
@@ -1484,7 +1523,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
       .analyze();
     expect(droppedMobileA11y.violations).toEqual([]);
     const cancelSourceBounds = await sourceHandle.boundingBox();
-    const cancelTargetBounds = await mobileList.getByRole('row').nth(1).boundingBox();
+    const cancelTargetBounds = await mobileRows.nth(1).boundingBox();
     if (!cancelSourceBounds || !cancelTargetBounds) {
       throw new Error('The mobile rows must be visible for touch cancellation.');
     }
@@ -1518,7 +1557,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     );
     await touchSession.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
     await expect(mobileList.locator('[data-reorder-state]')).toHaveCount(0);
-    await expect(mobileList.getByRole('row').first()).toContainText(
+    await expect(mobileRows.first()).toContainText(
       'white flour, stone-ground and finely milled for pastry baking flour, sifted',
     );
 
@@ -1575,6 +1614,9 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
         '.recipe-ingredient-mobile-row[data-reorder-state="displaced"]',
       );
       const expectedDisplacedCount = Math.abs(targetIndex - sourceIndex);
+      const addIngredientRow = mobileList
+        .locator('.recipe-ingredient-mobile-row')
+        .filter({ has: page.getByRole('button', { name: 'Enter ingredient' }) });
       await touchSession.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
         touchPoints: [
@@ -1595,7 +1637,10 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
           ),
         ],
       });
+      await expect(stableSource).toHaveAttribute('data-reorder-state', 'dragging');
       await expect(displacedRows).toHaveCount(expectedDisplacedCount);
+      await expect(addIngredientRow).not.toHaveAttribute('data-reorder-state', 'displaced');
+      await expect(addIngredientRow).toHaveCSS('transform', 'none');
       const displacedIds = await displacedRows.evaluateAll((elements) =>
         elements
           .map((element) => element.getAttribute('data-row-id'))
@@ -1651,7 +1696,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
 
     await verifyTouchReorder(0, 3, 3);
     await verifyTouchReorder(3, 0, 4);
-    await expect(mobileList.getByRole('row').first()).toContainText(
+    await expect(mobileRows.first()).toContainText(
       'white flour, stone-ground and finely milled for pastry baking flour, sifted',
     );
     await touchSession.detach();

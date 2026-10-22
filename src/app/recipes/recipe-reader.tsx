@@ -29,7 +29,11 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import type { RecipeIngredient, RecipeInstructionStep } from '../../lib/recipes/data';
+import type {
+  RecipeIngredient,
+  RecipeIngredientSet,
+  RecipeInstructionStep,
+} from '../../lib/recipes/data';
 import {
   getIngredientDisplayParts,
   type IngredientDisplayInput,
@@ -622,6 +626,7 @@ function ReaderUnitPicklist({
 export function RecipeReader({
   defaultPresentation,
   ingredients,
+  ingredientSets: suppliedIngredientSets,
   instructions,
   preserveStoredUnits = false,
   recipeId,
@@ -632,6 +637,7 @@ export function RecipeReader({
 }: {
   defaultPresentation: IngredientPresentation;
   ingredients: RecipeIngredient[];
+  ingredientSets?: RecipeIngredientSet[];
   instructions?: ReactNode;
   preserveStoredUnits?: boolean;
   recipeId: string;
@@ -641,6 +647,11 @@ export function RecipeReader({
   weightSystem: MeasurementSystem;
 }) {
   const { multiplier, unitOverrides, setUnitOverrides } = useRecipeScale();
+  const ingredientSets =
+    suppliedIngredientSets ??
+    (ingredients.length
+      ? [{ id: ingredients[0].ingredient_set_id, label: 'Main', position: 0 }]
+      : []);
   const unitSystems = { volume: volumeSystem, weight: weightSystem };
   const [presentation, setPresentation] = useState(defaultPresentation);
   const [sortMode, setSortMode] = useState<IngredientSortMode>('entered');
@@ -750,7 +761,26 @@ export function RecipeReader({
     });
   }
 
-  const sortedIngredients = sortRecipeIngredients(ingredients, steps, sortMode, sortDirection);
+  const visibleSets = ingredientSets.filter((set) =>
+    ingredients.some((ingredient) => ingredient.ingredient_set_id === set.id),
+  );
+  const ingredientGroups = visibleSets.map((set) => ({
+    set,
+    ingredients: sortRecipeIngredients(
+      ingredients.filter((ingredient) => ingredient.ingredient_set_id === set.id),
+      steps,
+      sortMode,
+      sortDirection,
+    ),
+  }));
+  const sortedIngredients = ingredientGroups.flatMap((group) => group.ingredients);
+  const ingredientStripes = new Map(
+    ingredientGroups.flatMap(({ ingredients: groupIngredients }) =>
+      groupIngredients.map(
+        (ingredient, index) => [ingredient.id, index % 2 === 0 ? 'odd' : 'even'] as const,
+      ),
+    ),
+  );
   const presentationOptions: {
     value: IngredientPresentation;
     label: string;
@@ -837,8 +867,8 @@ export function RecipeReader({
     );
   }
 
-  function renderIngredientRows() {
-    return sortedIngredients.map((ingredient) => {
+  function renderIngredientRows(groupIngredients: RecipeIngredient[] = sortedIngredients) {
+    return groupIngredients.map((ingredient) => {
       const displayOptions = { multiplier, preserveStoredUnits, unitSystems };
       const displayIngredient = transformIngredientForDisplay(ingredient, {
         ...displayOptions,
@@ -868,7 +898,11 @@ export function RecipeReader({
         );
 
         return (
-          <tr data-checked={cookMode && checked ? 'true' : undefined} key={ingredient.id}>
+          <tr
+            data-checked={cookMode && checked ? 'true' : undefined}
+            data-ingredient-stripe={ingredientStripes.get(ingredient.id)}
+            key={ingredient.id}
+          >
             {cookMode && (
               <td className="recipe-cook-checkbox-cell" style={{ paddingTop: 0, paddingBottom: 0 }}>
                 {renderIngredientCheck(ingredient, true)}
@@ -933,6 +967,26 @@ export function RecipeReader({
         </li>
       );
     });
+  }
+
+  function renderIngredientGroups() {
+    if (ingredientGroups.length <= 1) {
+      return renderIngredientRows();
+    }
+    return ingredientGroups.flatMap(({ set, ingredients: groupIngredients }) => [
+      presentation === 'ingredient_first' ? (
+        <tr className="recipe-ingredient-set-divider" key={`set-${set.id}`}>
+          <th colSpan={cookMode ? 5 : 4} scope="rowgroup">
+            <h3>{set.label}</h3>
+          </th>
+        </tr>
+      ) : (
+        <li className="recipe-ingredient-set-divider" key={`set-${set.id}`}>
+          <h3>{set.label}</h3>
+        </li>
+      ),
+      ...renderIngredientRows(groupIngredients),
+    ]);
   }
 
   const wakeStatusMessage =
@@ -1053,7 +1107,7 @@ export function RecipeReader({
             aria-label="Recipe ingredients"
             className={`recipe-ingredient-table recipe-ingredient-first-table${cookMode ? ' recipe-ingredient-first-table-cook-mode' : ''}`}
           >
-            <thead>
+            <thead className="visually-hidden">
               <tr>
                 {cookMode && <td aria-hidden="true" className="recipe-cook-checkbox-heading" />}
                 <th scope="col">Ingredient</th>
@@ -1071,10 +1125,10 @@ export function RecipeReader({
                 </th>
               </tr>
             </thead>
-            <tbody>{renderIngredientRows()}</tbody>
+            <tbody>{renderIngredientGroups()}</tbody>
           </table>
         ) : (
-          <ol className="recipe-ingredient-list">{renderIngredientRows()}</ol>
+          <ol className="recipe-ingredient-list">{renderIngredientGroups()}</ol>
         )}
       </section>
       {instructions}

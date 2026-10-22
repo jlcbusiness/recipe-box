@@ -11,6 +11,7 @@ import {
 const rows = [
   {
     id: 'row-onion',
+    ingredientSetId: 'set-main',
     ingredientId: 'ingredient-onion',
     ingredientName: 'Onion',
     isMain: true,
@@ -20,6 +21,7 @@ const rows = [
   },
   {
     id: 'row-salt',
+    ingredientSetId: 'set-main',
     ingredientId: null,
     ingredientName: '  Sea salt  ',
     isMain: false,
@@ -29,6 +31,7 @@ const rows = [
   },
   {
     id: 'row-empty',
+    ingredientSetId: 'set-main',
     ingredientId: null,
     ingredientName: '',
     isMain: false,
@@ -253,11 +256,35 @@ describe('ingredient row rules', () => {
     expect(moveIngredientRow(rows, 'missing-row', 'down')).toBe(rows);
   });
 
+  it('moves across a section boundary by adopting the adjacent section', () => {
+    const groupedRows = [
+      { ...rows[0], ingredientSetId: 'set-main' },
+      { ...rows[1], ingredientSetId: 'set-sauce' },
+      { ...rows[2], ingredientSetId: 'set-sauce' },
+    ];
+
+    expect(moveIngredientRow(groupedRows, 'row-onion', 'down')).toEqual([
+      groupedRows[1],
+      { ...groupedRows[0], ingredientSetId: 'set-sauce' },
+      groupedRows[2],
+    ]);
+    expect(moveIngredientRowTo(groupedRows, 'row-onion', 'row-salt')).toEqual([
+      groupedRows[1],
+      { ...groupedRows[0], ingredientSetId: 'set-sauce' },
+      groupedRows[2],
+    ]);
+  });
+
   it('moves a dragged row to the target row position', () => {
     expect(moveIngredientRowTo(rows, 'row-empty', 'row-onion')).toEqual([
       rows[2],
       rows[0],
       rows[1],
+    ]);
+    expect(moveIngredientRowTo(rows, 'row-onion', 'row-empty')).toEqual([
+      rows[1],
+      rows[0],
+      rows[2],
     ]);
     expect(moveIngredientRowTo(rows, 'row-onion', 'row-onion')).toBe(rows);
   });
@@ -267,6 +294,7 @@ describe('ingredient row rules', () => {
     expect(serializeIngredientRows(rows)).toEqual([
       {
         recipe_ingredient_id: 'row-onion',
+        ingredient_set_id: 'set-main',
         ingredient_id: 'ingredient-onion',
         ingredient_name: null,
         is_main: true,
@@ -276,6 +304,7 @@ describe('ingredient row rules', () => {
       },
       {
         recipe_ingredient_id: 'row-salt',
+        ingredient_set_id: 'set-main',
         ingredient_id: null,
         ingredient_name: 'Sea salt',
         is_main: false,
@@ -305,6 +334,7 @@ describe('ingredient row rules', () => {
     ).toEqual([
       {
         recipe_ingredient_id: 'row-onion',
+        ingredient_set_id: 'set-main',
         ingredient_id: 'ingredient-onion',
         ingredient_name: null,
         is_main: true,

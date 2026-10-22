@@ -32,6 +32,6 @@
 🗸 use of hour in times (maybe auto-translate times over 60?) #2
   🗸 change "Times" to "Time Breakdown" #2
 🗸 swap view buttons and text, left-align buttons #2
-- oof. Okay, if the user hits screen lock, remove the app margin on ingredients to make space for the checkbox #2
+🗸 oof. Okay, if the user hits screen lock, remove the app margin on ingredients to make space for the checkbox #2
 🗸 add "pinch" as an automatic conversion for 1/16 tsp #2
 🗸 have app default to library, not recipe tin #1

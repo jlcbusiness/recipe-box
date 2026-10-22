@@ -45,10 +45,15 @@ const privateRecipe = {
   cuisine_ids: ['private-cuisine'],
   equipment_ids: ['equipment-id'],
   tags: [{ id: 'private-tag-id', name: 'Personal', color_key: 'sage' }],
+  ingredient_sets: [
+    { id: 'private-set-main', label: 'Main', position: 0 },
+    { id: 'private-set-sauce', label: 'For the sauce', position: 1 },
+  ],
   ingredients: [
     {
       id: '11111111-1111-4111-8111-111111111111',
       ingredient_id: '22222222-2222-4222-8222-222222222222',
+      ingredient_set_id: 'private-set-main',
       ingredient_name: 'Lemon',
       position: 0,
       is_main: true,
@@ -157,10 +162,15 @@ describe('public recipe projection', () => {
         total: 70,
       },
       equipment: ['Oven'],
+      ingredient_sets: [
+        { id: '00000000-0000-4000-8000-000000000000', label: 'Main', position: 0 },
+        { id: '00000000-0000-4000-8000-000000000001', label: 'For the sauce', position: 1 },
+      ],
       ingredients: [
         {
-          id: '00000000-0000-4000-8000-000000000000',
-          ingredient_id: '00000000-0000-4000-8000-000000000000',
+          id: '00000000-0000-4000-8000-000000000002',
+          ingredient_id: '00000000-0000-4000-8000-000000000002',
+          ingredient_set_id: '00000000-0000-4000-8000-000000000000',
           ingredient_name: 'Lemon',
           position: 0,
           is_main: true,
@@ -168,7 +178,7 @@ describe('public recipe projection', () => {
           preparation: '',
           measurements: [
             {
-              id: '00000000-0000-4000-8000-000000000001',
+              id: '00000000-0000-4000-8000-000000000003',
               position: 0,
               measurement_type: 'count',
               amount_min: 2,
@@ -184,7 +194,7 @@ describe('public recipe projection', () => {
         {
           position: 0,
           content_markdown:
-            'Add [[ingredient:00000000-0000-4000-8000-000000000000|lemon]] and [[ingredient:00000000-0000-4000-8000-000000000002|pepper]].',
+            'Add [[ingredient:00000000-0000-4000-8000-000000000002|lemon]] and [[ingredient:00000000-0000-4000-8000-000000000004|pepper]].',
         },
       ],
       attribution: { publication_name: 'Baking Quarterly', page: '75' },
@@ -211,6 +221,8 @@ describe('public recipe projection', () => {
       'Too much effort',
       'Private notes',
       'private-tag-id',
+      'private-set-main',
+      'private-set-sauce',
       'private-target-recipe-id',
       'private-reference-recipe-id',
       'incoming-private-recipe-id',
