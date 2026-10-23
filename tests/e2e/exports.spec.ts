@@ -275,7 +275,7 @@ test('database export includes more than 1,000 rows, verified private images, an
       };
     };
 
-    expect(manifest.schema_version).toBe(2);
+    expect(manifest.schema_version).toBe(3);
     expect(manifest.scope).toEqual({ type: 'database' });
     expect(portableData.records.ingredients).toHaveLength(1005);
     expect(portableData.records.recipes).toContainEqual(expect.objectContaining({ id: recipeId }));

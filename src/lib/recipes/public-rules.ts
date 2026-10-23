@@ -64,15 +64,15 @@ function remapPublicInstructionMentions(
   createDisplayId: () => string,
 ): string {
   return markdown.replace(
-    /\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\|([^\]\r\n]+)\]\]/giu,
-    (_mention, sourceId: string, slug: string) => {
+    /\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::([12]))?\|([^\]\r\n]+)\]\]/giu,
+    (_mention, sourceId: string, ordinal: string | undefined, slug: string) => {
       const normalizedId = sourceId.toLocaleLowerCase();
       const displayId =
         ingredientIds.get(normalizedId) ?? missingMentionIds.get(normalizedId) ?? createDisplayId();
       if (!ingredientIds.has(normalizedId)) {
         missingMentionIds.set(normalizedId, displayId);
       }
-      return `[[ingredient:${displayId}|${slug}]]`;
+      return `[[ingredient:${displayId}${ordinal ? `:${ordinal}` : ''}|${slug}]]`;
     },
   );
 }
@@ -120,6 +120,9 @@ export function buildPublicRecipePayload(
       is_main: ingredient.is_main,
       detail: ingredient.detail,
       preparation: ingredient.preparation,
+      portion_one_ratio: ingredient.portion_one_ratio,
+      size_value: ingredient.size_value,
+      size_unit: ingredient.size_unit,
       measurements: ingredient.measurements.map((measurement) => ({
         id: createDisplayId(),
         position: measurement.position,

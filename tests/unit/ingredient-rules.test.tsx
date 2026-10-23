@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  allocatePortions,
   ensureTrailingIngredientRow,
   formatIngredientDisplay,
+  getIngredientDisplayInputForPortion,
   getIngredientDisplayParts,
+  getPortionDisplayAmounts,
+  getPortionRatio,
   moveIngredientRow,
   moveIngredientRowTo,
   serializeIngredientRows,
+  validateIngredientRowUniqueness,
+  validateIngredientSize,
+  validatePortionMeasurements,
 } from '../../src/lib/recipes/ingredient-rules';
 
 const rows = [
@@ -42,6 +49,95 @@ const rows = [
 ];
 
 describe('ingredient row rules', () => {
+  it('allocates exactly two portions from a positive first-use amount without changing the total', () => {
+    const ratio = 1 / 3;
+
+    expect(getPortionRatio(1, 3)).toBeCloseTo(ratio);
+    expect(allocatePortions(3, ratio)).toEqual([1, 2]);
+    expect(allocatePortions(120, ratio)).toEqual([40, 80]);
+    expect(getPortionRatio(0, 3)).toBeNull();
+    expect(getPortionRatio(3, 3)).toBeNull();
+    expect(getPortionRatio(4, 3)).toBeNull();
+    expect(allocatePortions(3, 0)).toBeNull();
+    expect(allocatePortions(3, 1)).toBeNull();
+  });
+
+  it('formats the selected portion amount for ingredient mentions', () => {
+    const ingredient = {
+      ingredient_name: 'Lamb',
+      detail: '',
+      preparation: 'divided',
+      measurements: [
+        {
+          measurement_type: 'volume' as const,
+          amount_min: 2,
+          amount_max: null,
+          unit_code: 'cup',
+          picklist_value: null,
+        },
+      ],
+    };
+
+    expect(
+      getIngredientDisplayParts(getIngredientDisplayInputForPortion(ingredient, 1 / 3, 1)).amount,
+    ).toBe('⅔ cup');
+    expect(
+      getIngredientDisplayParts(getIngredientDisplayInputForPortion(ingredient, 1 / 3, 2)).amount,
+    ).toBe('1 ⅓ cups');
+  });
+
+  it('allows scalar Unit, Count, and Things measurements but rejects ranges and Feel', () => {
+    const scalar = (
+      measurement_type: 'volume' | 'weight' | 'count' | 'informal' | 'unmeasured',
+    ) => ({
+      measurement_type,
+      amount_min: measurement_type === 'unmeasured' ? null : 2,
+      amount_max: null,
+    });
+
+    expect(validatePortionMeasurements([scalar('volume'), scalar('weight')], 0.25)).toBeNull();
+    expect(validatePortionMeasurements([scalar('count')], 0.25)).toBeNull();
+    expect(validatePortionMeasurements([scalar('informal')], 0.25)).toBeNull();
+    expect(
+      validatePortionMeasurements([{ ...scalar('volume'), amount_max: 3 }], 0.25),
+    ).not.toBeNull();
+    expect(validatePortionMeasurements([scalar('unmeasured')], 0.25)).not.toBeNull();
+    expect(validatePortionMeasurements([], 0.25)).not.toBeNull();
+  });
+
+  it('rejects canonical duplicates within a set but allows the same ingredient in another set', () => {
+    const duplicateRows = [
+      { ingredientSetId: 'main', ingredientId: 'onion-id', ingredientName: 'Onion' },
+      { ingredientSetId: 'main', ingredientId: 'onion-id', ingredientName: 'Onion' },
+    ];
+
+    expect(validateIngredientRowUniqueness(duplicateRows)).not.toBeNull();
+    expect(
+      validateIngredientRowUniqueness([
+        duplicateRows[0],
+        { ...duplicateRows[1], ingredientSetId: 'sauce' },
+      ]),
+    ).toBeNull();
+    expect(
+      validateIngredientRowUniqueness([
+        { ingredientSetId: 'main', ingredientId: null, ingredientName: 'Carrot' },
+        { ingredientSetId: 'main', ingredientId: null, ingredientName: ' carrot ' },
+      ]),
+    ).not.toBeNull();
+  });
+
+  it('requires positive Size in inches or centimeters only for cubed preparation', () => {
+    expect(validateIngredientSize('cubed', '1.25', 'in')).toBeNull();
+    expect(validateIngredientSize('Cubed', '.5', 'cm')).toBeNull();
+    expect(validateIngredientSize('cubed', '', '')).toBeNull();
+    expect(validateIngredientSize('cubed', '0', 'in')).not.toBeNull();
+    expect(validateIngredientSize('cubed', '-1', 'in')).not.toBeNull();
+    expect(validateIngredientSize('cubed', '1/2', 'in')).not.toBeNull();
+    expect(validateIngredientSize('cubed', '1', '')).not.toBeNull();
+    expect(validateIngredientSize('cubed', '', 'cm')).toBeNull();
+    expect(validateIngredientSize('sliced', '1', 'cm')).not.toBeNull();
+  });
+
   it('keeps exactly one empty row after populated rows', () => {
     const emptyRow = { ...rows[2], id: 'trailing-empty' };
     const createEmpty = () => emptyRow;
@@ -80,6 +176,45 @@ describe('ingredient row rules', () => {
         preparation: 'Sifted',
       }),
     ).toBe('white flour, sifted');
+  });
+
+  it('formats structured cubed Size in its saved unit', () => {
+    expect(
+      formatIngredientDisplay({
+        ingredient_name: 'Carrot',
+        detail: '',
+        preparation: 'cubed',
+        size_value: 1.25,
+        size_unit: 'in',
+      }),
+    ).toBe('carrot, cubed 1 ¼ in');
+    expect(
+      formatIngredientDisplay({
+        ingredient_name: 'Carrot',
+        detail: '',
+        preparation: 'cubed',
+        size_value: 1.5,
+        size_unit: 'cm',
+      }),
+    ).toBe('carrot, cubed 1.5 cm');
+  });
+
+  it('formats divided amounts using their existing unit and quantity rules', () => {
+    expect(
+      getPortionDisplayAmounts(
+        [
+          {
+            measurement_type: 'volume',
+            amount_min: 2,
+            amount_max: null,
+            unit_code: 'cup',
+            picklist_value: null,
+          },
+        ],
+        0.25,
+        'volume',
+      ),
+    ).toEqual(['½ cup', '1 ½ cups']);
   });
 
   it('formats dual measurements before ingredient text and phrases after it', () => {
@@ -300,6 +435,9 @@ describe('ingredient row rules', () => {
         is_main: true,
         detail: 'yellow',
         preparation: 'diced',
+        portion_one_ratio: null,
+        size_value: null,
+        size_unit: null,
         measurements: [],
       },
       {
@@ -310,9 +448,85 @@ describe('ingredient row rules', () => {
         is_main: false,
         detail: '',
         preparation: 'to taste',
+        portion_one_ratio: null,
+        size_value: null,
+        size_unit: null,
         measurements: [],
       },
     ]);
+  });
+
+  it('serializes division ratio and cubed Size without replacing canonical measurements', () => {
+    expect(
+      serializeIngredientRows([
+        {
+          ...rows[0],
+          preparation: 'cubed',
+          portionOneRatio: 0.25,
+          sizeValue: '1.25',
+          sizeUnit: 'cm',
+          measurements: [
+            {
+              id: 'measurement-volume',
+              type: 'volume',
+              quantity: '2',
+              unitCode: 'cup',
+              picklistValueId: '',
+            },
+          ],
+        },
+      ]),
+    ).toEqual([
+      {
+        recipe_ingredient_id: 'row-onion',
+        ingredient_set_id: 'set-main',
+        ingredient_id: 'ingredient-onion',
+        ingredient_name: null,
+        is_main: true,
+        detail: 'yellow',
+        preparation: 'cubed',
+        portion_one_ratio: 0.25,
+        size_value: 1.25,
+        size_unit: 'cm',
+        measurements: [
+          {
+            measurement_type: 'volume',
+            amount_min: 2,
+            amount_max: null,
+            unit_code: 'cup',
+            picklist_value_id: null,
+          },
+        ],
+      },
+    ]);
+    expect(() => serializeIngredientRows([{ ...rows[0], portionOneRatio: 0.25 }])).toThrow(
+      'Only scalar Unit, Count, and Things amounts can be divided.',
+    );
+    expect(() =>
+      serializeIngredientRows([
+        {
+          ...rows[0],
+          preparation: 'divided',
+          measurements: [
+            {
+              id: 'measurement-volume',
+              type: 'volume',
+              quantity: '2',
+              unitCode: 'cup',
+              picklistValueId: '',
+            },
+          ],
+        },
+      ]),
+    ).toThrow('Enter a first portion greater than zero and less than the total.');
+    expect(
+      serializeIngredientRows([{ ...rows[0], preparation: 'cubed', sizeUnit: 'cm' }])[0],
+    ).toMatchObject({ size_value: null, size_unit: null });
+    expect(() =>
+      serializeIngredientRows([
+        { ...rows[0], sizeValue: '1', sizeUnit: 'cm', preparation: 'sliced' },
+      ]),
+    ).toThrow('Size is available only when Preparation is cubed.');
   });
 
   it('serializes measurements inside their ingredient row', () => {
@@ -340,6 +554,9 @@ describe('ingredient row rules', () => {
         is_main: true,
         detail: 'yellow',
         preparation: 'diced',
+        portion_one_ratio: null,
+        size_value: null,
+        size_unit: null,
         measurements: [
           {
             measurement_type: 'volume',
@@ -351,6 +568,48 @@ describe('ingredient row rules', () => {
         ],
       },
     ]);
+  });
+
+  it('derives the stored division ratio from the staged first portion and canonical total', () => {
+    const serialized = serializeIngredientRows([
+      {
+        ...rows[0],
+        portionOneRatio: 0.5,
+        portionOneAmount: '1/2',
+        portionMeasurementType: 'volume',
+        measurements: [
+          {
+            id: 'measurement-volume',
+            type: 'volume',
+            quantity: '2',
+            unitCode: 'cup',
+            picklistValueId: '',
+          },
+        ],
+      },
+    ]);
+
+    expect(serialized[0]?.portion_one_ratio).toBe(0.25);
+    expect(serialized[0]?.measurements[0]?.amount_min).toBe(2);
+    expect(() =>
+      serializeIngredientRows([
+        {
+          ...rows[0],
+          portionOneRatio: 0.5,
+          portionOneAmount: '2',
+          portionMeasurementType: 'volume',
+          measurements: [
+            {
+              id: 'measurement-volume',
+              type: 'volume',
+              quantity: '2',
+              unitCode: 'cup',
+              picklistValueId: '',
+            },
+          ],
+        },
+      ]),
+    ).toThrow('Enter a first portion greater than zero and less than the total.');
   });
 
   it('rejects row details that have no ingredient', () => {

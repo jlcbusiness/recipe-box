@@ -80,6 +80,58 @@ function sameScope(left: ExportScope, right: ExportScope) {
   );
 }
 
+function validateIngredientPortionFields(records: PortableData['records']) {
+  const ingredientByRowId = new Map<string, ExportRecord>();
+  const uniqueIngredientRows = new Set<string>();
+  for (const ingredient of records.recipe_ingredients) {
+    const rowId = String(ingredient.id);
+    ingredientByRowId.set(rowId, ingredient);
+    const ratio = ingredient.portion_one_ratio;
+    if (
+      ratio !== null &&
+      ratio !== undefined &&
+      (typeof ratio !== 'number' || !Number.isFinite(ratio) || ratio <= 0 || ratio >= 1)
+    ) {
+      throw new Error('The bundle contains an invalid ingredient portion ratio.');
+    }
+
+    const sizeValue = ingredient.size_value;
+    const sizeUnit = ingredient.size_unit;
+    if (
+      (sizeValue == null) !== (sizeUnit == null) ||
+      (sizeValue != null &&
+        (typeof sizeValue !== 'number' ||
+          !Number.isFinite(sizeValue) ||
+          sizeValue <= 0 ||
+          !['in', 'cm'].includes(String(sizeUnit)) ||
+          String(ingredient.preparation ?? '')
+            .trim()
+            .toLocaleLowerCase() !== 'cubed'))
+    ) {
+      throw new Error('The bundle contains an invalid ingredient Size value.');
+    }
+
+    const uniqueKey = `${String(ingredient.ingredient_set_id)}\u0000${String(ingredient.ingredient_id)}`;
+    if (uniqueIngredientRows.has(uniqueKey)) {
+      throw new Error('The bundle repeats an ingredient within the same section.');
+    }
+    uniqueIngredientRows.add(uniqueKey);
+  }
+
+  for (const mention of records.recipe_step_mentions) {
+    const ordinal = mention.portion_ordinal;
+    if (ordinal != null && ordinal !== 1 && ordinal !== 2) {
+      throw new Error('The bundle contains an invalid ingredient portion reference.');
+    }
+    if (ordinal != null) {
+      const ingredient = ingredientByRowId.get(String(mention.recipe_ingredient_id));
+      if (ingredient?.portion_one_ratio == null) {
+        throw new Error('The bundle portion reference targets an ingredient that is not divided.');
+      }
+    }
+  }
+}
+
 function validateData(
   value: unknown,
   manifestScope: ExportScope,
@@ -90,7 +142,7 @@ function validateData(
   if (
     data.format !== 'recipe-box-data' ||
     data.schema_version !== schemaVersion ||
-    (schemaVersion !== 1 && schemaVersion !== EXPORT_SCHEMA_VERSION)
+    ![1, 2, EXPORT_SCHEMA_VERSION].includes(schemaVersion)
   ) {
     throw new Error('The bundle data format or schema version is not supported.');
   }
@@ -119,9 +171,14 @@ function validateData(
       throw new Error(`The ${table} records must be an array.`);
     }
     const allowedFields = new Set(
-      table === 'recipe_ingredients' && schemaVersion === 1
-        ? portableRecordFields[table].filter((field) => field !== 'ingredient_set_id')
-        : portableRecordFields[table],
+      table === 'recipe_ingredients' && schemaVersion < 3
+        ? portableRecordFields[table].filter(
+            (field) =>
+              field !== 'portion_one_ratio' && field !== 'size_value' && field !== 'size_unit',
+          )
+        : table === 'recipe_step_mentions' && schemaVersion < 3
+          ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
+          : portableRecordFields[table],
     );
     for (const [index, item] of (records[table] as unknown[]).entries()) {
       const record = asRecord(item, `The ${table} record at index ${index}`);
@@ -130,6 +187,8 @@ function validateData(
       }
     }
   }
+
+  validateIngredientPortionFields(records as unknown as PortableData['records']);
 
   if (schemaVersion === 1) {
     const setsByRecipe = new Map<string, ExportRecord>();
@@ -147,6 +206,18 @@ function validateData(
       ...row,
       ingredient_set_id: setsByRecipe.get(String(row.recipe_id))?.id,
     }));
+  }
+
+  if (schemaVersion < 3) {
+    records.recipe_ingredients = (records.recipe_ingredients as ExportRecord[]).map((row) => ({
+      ...row,
+      portion_one_ratio: null,
+      size_value: null,
+      size_unit: null,
+    }));
+    records.recipe_step_mentions = (records.recipe_step_mentions as ExportRecord[]).map(
+      (mention) => ({ ...mention, portion_ordinal: null }),
+    );
   }
 
   const setsByRecipe = new Map<string, ExportRecord[]>();
@@ -395,7 +466,9 @@ export function validateImportBundleFiles(
   assertExactKeys(manifest, requiredManifestKeys, 'The bundle manifest');
   if (
     manifest.format !== 'recipe-box-bundle' ||
-    (manifest.schema_version !== 1 && manifest.schema_version !== EXPORT_SCHEMA_VERSION) ||
+    (manifest.schema_version !== 1 &&
+      manifest.schema_version !== 2 &&
+      manifest.schema_version !== EXPORT_SCHEMA_VERSION) ||
     typeof manifest.created_at !== 'string' ||
     !Number.isFinite(Date.parse(manifest.created_at)) ||
     typeof manifest.app_version !== 'string' ||

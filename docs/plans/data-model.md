@@ -40,10 +40,10 @@ security without prematurely creating recipe or other domain tables.
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient and optional trusted density. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
-| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, and measurements. |
+| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, measurements, optional two-portion ratio, and optional cubed Size. |
 | Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
 | Recipe step | An ordered instruction block. |
-| Ingredient mention | A structured link from an instruction location to a recipe ingredient. |
+| Ingredient mention | A structured link from an instruction location to one recipe ingredient row and optionally one of its two portions. |
 | Recipe pairing | A Pairs with entry with required display text and an optional linked target recipe. |
 | Recipe reference | A same-account recipe link, external URL, or printed citation linked to a recipe; legacy Publication references remain static text, and purged recipe targets retain their display text. |
 | Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
@@ -77,8 +77,11 @@ columns.
   Ingredient manual order is persistent and separate from temporary view sorts.
 - Every recipe has at least one ordered ingredient set. Existing recipes use a
   `Main` set; each ingredient row belongs to exactly one set. Set identity,
-  order, and labels are included in save history, Trash/restore, and version 2
-  portable bundles. Version 1 imports synthesize a `Main` set for each recipe.
+  order, and labels are included in save history, Trash/restore, and portable
+  bundles. A canonical ingredient appears at most once within a set; duplicate
+  rows across sets remain independent. Version 1 imports synthesize a `Main`
+  set; version 3 bundles preserve portion and Size fields while versions 1 and
+  2 default them to null.
 - A recipe ingredient can have one displayed category: Unit, Count, Things, or
   Feel. Unit maps to the stored volume and/or weight records; Things maps to an
   informal record and Feel maps to an unmeasured record. A Unit row can contain
@@ -86,8 +89,14 @@ columns.
   value.
 - Main ingredients are derived from recipe-ingredient flags, not duplicated
   recipe metadata.
-- Ingredient mentions reference a particular recipe ingredient, never an
-  unstructured word in instruction text.
+- A divided row stores its first-portion ratio; the second portion uses the
+  complement, and existing measurements remain the canonical total. Only
+  scalar Unit, Count, and Things measurements divide.
+- Size is a positive value with unit `in` or `cm`, allowed only for `cubed`
+  Preparation. An absent Size has both value and unit null.
+- Ingredient mentions reference a particular recipe ingredient row, never an
+  unstructured word in instruction text. A divided-row mention may store
+  ordinal 1 or 2; a null ordinal refers to the whole row.
 - A recipe pairing may be plain text or link another recipe. Linked pairings are
   directional and expose both outgoing and incoming recipe relationships.
 - A Magazine publication represents its title. Each Magazine recipe stores its

@@ -21,6 +21,7 @@
     "test:migration:magazine": "node scripts/test-magazine-migration.mjs",
     "test:migration:recipe-tin": "node scripts/test-recipe-tin-migration.mjs",
     "test:migration:public-links": "node scripts/test-public-links-migration.mjs",
+    "test:migration:ingredient-portions": "node scripts/test-ingredient-portions-migration.mjs",
     "test:bootstrap-admin": "node --test scripts/bootstrap-first-admin.test.mjs",
     "bootstrap:admin": "node scripts/bootstrap-first-admin.mjs",
     "supabase:start": "supabase start",

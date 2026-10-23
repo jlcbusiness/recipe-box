@@ -65,7 +65,16 @@ type PublicRecipeRow = {
 
 type IngredientRow = Pick<
   RecipeIngredient,
-  'id' | 'ingredient_id' | 'ingredient_set_id' | 'position' | 'is_main' | 'detail' | 'preparation'
+  | 'id'
+  | 'ingredient_id'
+  | 'ingredient_set_id'
+  | 'position'
+  | 'is_main'
+  | 'detail'
+  | 'preparation'
+  | 'portion_one_ratio'
+  | 'size_value'
+  | 'size_unit'
 >;
 
 type MeasurementRow = RecipeMeasurement & { recipe_ingredient_id: string };
@@ -184,7 +193,9 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
       .order('position'),
     supabase
       .from('recipe_ingredients')
-      .select('id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation')
+      .select(
+        'id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation, portion_one_ratio, size_value, size_unit',
+      )
       .eq('account_id', recipeRow.account_id)
       .eq('recipe_id', recipeRow.id)
       .order('position'),
@@ -290,6 +301,9 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   const ingredients: RecipeIngredient[] = ingredientRows.map((ingredient) => ({
     ...ingredient,
     ingredient_name: ingredientNames.get(ingredient.ingredient_id) ?? '',
+    portion_one_ratio: ingredient.portion_one_ratio,
+    size_value: ingredient.size_value,
+    size_unit: ingredient.size_unit,
     measurements: measurementsByIngredient.get(ingredient.id) ?? [],
   }));
   const source: PublicRecipeSource = {

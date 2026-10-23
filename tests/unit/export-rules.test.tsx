@@ -90,6 +90,9 @@ function createSnapshot() {
           recipe_id: firstRecipeId,
           ingredient_id: firstIngredientId,
           ingredient_set_id: firstSetId,
+          portion_one_ratio: 0.25,
+          size_value: 1.5,
+          size_unit: 'in',
         },
         { id: secondRowId, recipe_id: secondRecipeId, ingredient_id: secondIngredientId },
       ],
@@ -102,7 +105,14 @@ function createSnapshot() {
         { id: 'measurement-soup', recipe_ingredient_id: secondRowId },
       ],
       recipe_steps: [{ id: firstStepId, recipe_id: firstRecipeId }],
-      recipe_step_mentions: [{ id: 'mention-cake', recipe_step_id: firstStepId }],
+      recipe_step_mentions: [
+        {
+          id: 'mention-cake',
+          recipe_step_id: firstStepId,
+          recipe_ingredient_id: firstRowId,
+          portion_ordinal: 2,
+        },
+      ],
       recipe_site_listings: [{ id: 'listing-cake', recipe_id: firstRecipeId }],
       recipe_pairings: [{ id: 'pairing-cake', source_recipe_id: firstRecipeId }],
       recipe_references: [{ id: 'reference-cake', recipe_id: firstRecipeId }],
@@ -177,6 +187,12 @@ describe('export rules', () => {
     expect(output.records.recipe_ingredient_sets).toEqual([
       { id: firstSetId, recipe_id: firstRecipeId, label: 'Main', position: 0 },
     ]);
+    expect(output.records.recipe_ingredients[0]).toMatchObject({
+      portion_one_ratio: 0.25,
+      size_value: 1.5,
+      size_unit: 'in',
+    });
+    expect(output.records.recipe_step_mentions[0].portion_ordinal).toBe(2);
     expect(output.records.recipe_ingredient_measurements.map((record) => record.id)).toEqual([
       'measurement-cake',
     ]);
@@ -260,7 +276,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(2);
+    expect(manifest.schema_version).toBe(3);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

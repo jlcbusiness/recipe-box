@@ -1,3 +1,33 @@
+## UI Pattern Reuse
+
+Before implementing or changing UI:
+
+- Find the closest working screen or component in this app that serves the
+  same purpose. Inspect its implementation, styles, relevant tests, and its
+  rendered behavior at the applicable viewport when the app is available.
+- Read the relevant contract in `docs/plans/visual-design.md` and the owning
+  slice brief. The comprehensive reference and slice contract define required
+  behavior; the working app is a useful precedent, not an unquestionable design
+  standard.
+- Before editing, briefly identify the closest reference, the requested delta,
+  and whether the reference serves this workflow well. Preserve established
+  behavior and visual patterns that remain appropriate, but do not copy a weak
+  layout, hierarchy, spacing, or interaction just for consistency.
+- Reuse existing components, classes, and design tokens where they fit. If the
+  existing pattern is a poor fit, choose the smallest design change that better
+  serves the workflow while honoring the product contract. Avoid unrelated
+  visual redesign.
+- If the product contract conflicts with the current implementation, follow
+  the contract. Ask only when the docs leave a material product or design choice
+  unresolved; otherwise state the rationale and proceed without asking the user
+  to re-specify clear requirements.
+- Validate the changed screen with representative content at the relevant
+  viewports. Use browser screenshots and behavior/geometry assertions to check
+  that the design fulfills the contract, including desktop and mobile when
+  responsive behavior is affected. Compare with the reference where useful, but
+  do not treat resemblance as success by itself. If the app cannot be run, say
+  which visual checks could not be performed.
+  
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

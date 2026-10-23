@@ -29,6 +29,7 @@ async function createRecipe(
   config: LocalSupabaseConfig,
   user: TestUser,
   name: string,
+  ingredientRows: unknown[] = [],
 ) {
   const response = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
     headers: ownerHeaders(config, user),
@@ -57,7 +58,7 @@ async function createRecipe(
       p_meal_type_ids: [],
       p_cuisine_ids: [],
       p_equipment_ids: [],
-      p_ingredient_rows: [],
+      p_ingredient_rows: ingredientRows,
       p_instruction_steps: [],
     },
   });
@@ -165,7 +166,34 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
   const recipeId = randomUUID();
-  const recipe = await createRecipe(request, config, user, `Offline recipe ${recipeId}`);
+  const ingredientRowId = randomUUID();
+  const recipe = await createRecipe(request, config, user, `Offline recipe ${recipeId}`, [
+    {
+      recipe_ingredient_id: ingredientRowId,
+      ingredient_id: null,
+      ingredient_name: 'Carrot',
+      is_main: false,
+      detail: '',
+      preparation: 'cubed',
+      measurements: [
+        {
+          measurement_type: 'count',
+          amount_min: 4,
+          amount_max: null,
+          unit_code: null,
+          picklist_value_id: null,
+        },
+      ],
+    },
+  ]);
+  const ingredientUpdate = await request.patch(
+    `${config.apiUrl}/rest/v1/recipe_ingredients?id=eq.${ingredientRowId}`,
+    {
+      headers: serviceHeaders(config),
+      data: { portion_one_ratio: 0.25, size_value: 1.25, size_unit: 'in' },
+    },
+  );
+  expect(ingredientUpdate.ok(), await ingredientUpdate.text()).toBeTruthy();
 
   try {
     await signIn(page, user);
@@ -174,6 +202,8 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
       .toBe(true);
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('cubed 1 ¼ in');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('1 : 3');
     await waitForCachedRecipe(page, `Offline recipe ${recipeId}`);
 
     await page.context().setOffline(true);
@@ -188,6 +218,8 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
 
     await recipeLink.click();
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('cubed 1 ¼ in');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('1 : 3');
     await expect(page.getByRole('status')).toContainText('Offline copy');
     await expect(page.locator('.recipe-detail-heading-actions')).toHaveCount(0);
     await expect(page.locator('.recipe-history-link')).toHaveCount(0);

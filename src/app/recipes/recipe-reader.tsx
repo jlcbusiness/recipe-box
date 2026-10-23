@@ -35,6 +35,8 @@ import type {
   RecipeInstructionStep,
 } from '../../lib/recipes/data';
 import {
+  allocatePortions,
+  getIngredientDisplayInputForPortion,
   getIngredientDisplayParts,
   type IngredientDisplayInput,
 } from '../../lib/recipes/ingredient-rules';
@@ -123,11 +125,13 @@ function useRecipeScale(): RecipeScaleContextValue {
 export function RecipeInstructionMention({
   displayName,
   ingredient,
+  portionOrdinal,
   preserveStoredUnits = false,
   unitSystems,
 }: {
   displayName: string;
   ingredient: RecipeIngredient;
+  portionOrdinal?: 1 | 2;
   preserveStoredUnits?: boolean;
   unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem };
 }) {
@@ -150,7 +154,15 @@ export function RecipeInstructionMention({
     preserveStoredUnits,
     unitOverrides: unitOverrides[ingredient.id],
   });
-  const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
+  const portionedDisplayIngredient =
+    portionOrdinal === undefined
+      ? displayIngredient
+      : getIngredientDisplayInputForPortion(
+          displayIngredient,
+          ingredient.portion_one_ratio,
+          portionOrdinal,
+        );
+  const parts = getIngredientDisplayParts(portionedDisplayIngredient, { aliasPinch: true });
   const amount =
     [parts.amount, parts.unmeasuredPhrase].filter(Boolean).join(' ') || 'No amount listed';
   const isOpen = isPinned || ((isHovered || isFocused) && !escapeDismissed);
@@ -801,8 +813,17 @@ export function RecipeReader({
     displayIngredient: IngredientDisplayInput,
     defaultIngredient: IngredientDisplayInput,
     measurementTypes?: MeasurementType[],
+    portionOrdinal?: 1 | 2,
   ) {
-    const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
+    const portionedIngredient =
+      portionOrdinal === undefined
+        ? displayIngredient
+        : getIngredientDisplayInputForPortion(
+            displayIngredient,
+            ingredient.portion_one_ratio,
+            portionOrdinal,
+          );
+    const parts = getIngredientDisplayParts(portionedIngredient, { aliasPinch: true });
     return parts.measurements
       .filter(
         (measurement) =>
@@ -846,6 +867,67 @@ export function RecipeReader({
       });
   }
 
+  function renderPortions(
+    ingredient: RecipeIngredient,
+    displayIngredient: IngredientDisplayInput,
+    defaultIngredient: IngredientDisplayInput,
+    measurementTypes?: MeasurementType[],
+  ) {
+    return renderMeasurements(ingredient, displayIngredient, defaultIngredient, measurementTypes);
+  }
+
+  function renderPortionBreakdown(
+    ingredient: RecipeIngredient,
+    displayIngredient: IngredientDisplayInput,
+  ) {
+    const firstRatio = ingredient.portion_one_ratio;
+    if (firstRatio == null) {
+      return null;
+    }
+
+    const portionMeasurements = (displayIngredient.measurements ?? []).flatMap((measurement) => {
+      if (measurement.amount_min === null || measurement.amount_max !== null) {
+        return [];
+      }
+      const portions = allocatePortions(measurement.amount_min, firstRatio);
+      if (!portions) {
+        return [];
+      }
+      const getParts = (amount: number) =>
+        getIngredientDisplayParts(
+          {
+            ...displayIngredient,
+            measurements: [{ ...measurement, amount_min: amount, amount_max: null }],
+          },
+          { aliasPinch: true },
+        ).measurements[0];
+      const first = getParts(portions[0]);
+      const second = getParts(portions[1]);
+      return first && second
+        ? [{ measurementType: measurement.measurement_type, first, second }]
+        : [];
+    });
+    if (portionMeasurements.length === 0) {
+      return null;
+    }
+
+    const showUnits = portionMeasurements.length > 1;
+    return (
+      <span className="recipe-ingredient-portion-breakdown">
+        {portionMeasurements.map(({ measurementType, first, second }, index) => (
+          <Fragment key={measurementType}>
+            {index > 0 && ' / '}
+            {renderFractionGlyphs(first.quantity)}
+            {showUnits && first.unitLabel && ` ${first.unitLabel}`}
+            {' : '}
+            {renderFractionGlyphs(second.quantity)}
+            {showUnits && second.unitLabel && ` ${second.unitLabel}`}
+          </Fragment>
+        ))}
+      </span>
+    );
+  }
+
   function renderIngredientCheck(ingredient: RecipeIngredient, inSeparateColumn = false) {
     const checked = Boolean(checkedIngredients[ingredient.id]);
     return (
@@ -877,6 +959,7 @@ export function RecipeReader({
       const defaultIngredient = transformIngredientForDisplay(ingredient, displayOptions);
       const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
       const checked = Boolean(checkedIngredients[ingredient.id]);
+      const portionBreakdown = renderPortionBreakdown(ingredient, displayIngredient);
 
       if (presentation === 'ingredient_first') {
         const hasDimensionalMeasurement = parts.measurements.some(
@@ -890,12 +973,10 @@ export function RecipeReader({
           (measurement) =>
             measurement.measurementType === 'count' || measurement.measurementType === 'informal',
         );
-        const otherMeasurements = renderMeasurements(
-          ingredient,
-          displayIngredient,
-          defaultIngredient,
-          ['count', 'informal'],
-        );
+        const otherMeasurements = renderPortions(ingredient, displayIngredient, defaultIngredient, [
+          'count',
+          'informal',
+        ]);
 
         return (
           <tr
@@ -925,7 +1006,7 @@ export function RecipeReader({
                       {hasVolumeMeasurement && ' / '}
                     </>
                   )}
-                  {renderMeasurements(ingredient, displayIngredient, defaultIngredient, ['volume'])}
+                  {renderPortions(ingredient, displayIngredient, defaultIngredient, ['volume'])}
                   {parts.unmeasuredPhrase && (
                     <>
                       {(hasOtherMeasurement || hasVolumeMeasurement) && ' / '}
@@ -934,7 +1015,7 @@ export function RecipeReader({
                   )}
                 </td>
                 <td>
-                  {renderMeasurements(ingredient, displayIngredient, defaultIngredient, ['weight'])}
+                  {renderPortions(ingredient, displayIngredient, defaultIngredient, ['weight'])}
                 </td>
               </>
             ) : (
@@ -948,7 +1029,15 @@ export function RecipeReader({
                 )}
               </td>
             )}
-            <td>{parts.preparation}</td>
+            <td>
+              {[parts.preparation, parts.size].filter(Boolean).join(' ')}
+              {portionBreakdown && (
+                <span className="recipe-ingredient-portion-note">
+                  {parts.preparation ? ' ' : 'divided '}
+                  {portionBreakdown}
+                </span>
+              )}
+            </td>
           </tr>
         );
       }
@@ -958,11 +1047,18 @@ export function RecipeReader({
           {cookMode && renderIngredientCheck(ingredient)}
           <span className="recipe-ingredient-name">
             {parts.measurements.length > 0 && (
-              <>{renderMeasurements(ingredient, displayIngredient, defaultIngredient)} </>
+              <>{renderPortions(ingredient, displayIngredient, defaultIngredient)} </>
             )}
             {[parts.specifics, parts.name].filter(Boolean).join(' ')}
             {parts.unmeasuredPhrase && ` ${parts.unmeasuredPhrase}`}
-            {parts.preparation && `, ${parts.preparation}`}
+            {(parts.size || parts.preparation) &&
+              `, ${[parts.preparation, parts.size].filter(Boolean).join(' ')}`}
+            {portionBreakdown && (
+              <span className="recipe-ingredient-portion-note">
+                {parts.preparation ? ' ' : ', divided '}
+                {portionBreakdown}
+              </span>
+            )}
           </span>
         </li>
       );
@@ -1021,7 +1117,13 @@ export function RecipeReader({
       <section aria-labelledby="ingredients-title" className="recipe-detail-section">
         <div className="recipe-reader-heading">
           <div className="recipe-reader-heading-main">
-            <h2 id="ingredients-title">Ingredients</h2>
+            <div className="recipe-reader-title">
+              <h2 id="ingredients-title">Ingredients</h2>
+              <p className="recipe-reader-subtitle">
+                {presentationSummary}, {currentSort.label.toLocaleLowerCase()}
+                {wakeStatus === 'active' ? ', screen lock on' : ''}
+              </p>
+            </div>
             <div className="recipe-reader-controls recipe-screen-only">
               <button
                 aria-hidden={!hasSortDirection}
@@ -1097,10 +1199,6 @@ export function RecipeReader({
               )}
             </div>
           </div>
-          <p className="recipe-reader-subtitle">
-            {presentationSummary}, {currentSort.label.toLocaleLowerCase()}
-            {wakeStatus === 'active' ? ', screen lock on' : ''}
-          </p>
         </div>
         {presentation === 'ingredient_first' ? (
           <table

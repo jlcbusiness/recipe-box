@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-export const EXPORT_SCHEMA_VERSION = 2;
+export const EXPORT_SCHEMA_VERSION = 3;
 export const EXPORT_DATA_BYTES_LIMIT = 64 * 1024 * 1024;
 export const EXPORT_MEDIA_BYTES_LIMIT = 1024 * 1024 * 1024;
 export const DATABASE_EXPORT_REMINDER_DAYS = 30;
@@ -260,6 +260,9 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'is_main',
     'detail',
     'preparation',
+    'portion_one_ratio',
+    'size_value',
+    'size_unit',
   ],
   recipe_ingredient_measurements: [
     'id',
@@ -272,7 +275,14 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'picklist_value_id',
   ],
   recipe_steps: ['id', 'recipe_id', 'position', 'content_markdown', 'plain_text'],
-  recipe_step_mentions: ['id', 'recipe_id', 'recipe_step_id', 'recipe_ingredient_id', 'position'],
+  recipe_step_mentions: [
+    'id',
+    'recipe_id',
+    'recipe_step_id',
+    'recipe_ingredient_id',
+    'position',
+    'portion_ordinal',
+  ],
   recipe_site_listings: ['id', 'recipe_id', 'site_publication_id', 'recipe_url'],
   recipe_pairings: ['id', 'source_recipe_id', 'linked_recipe_id', 'display_text', 'position'],
   recipe_references: [

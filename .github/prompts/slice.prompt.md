@@ -70,6 +70,13 @@ Keep each slice to one demonstrable outcome; propose a split if the brief needs
 more than one. Record accepted decisions and material deferrals in
 `decision-log.md`.
 
+## Pause for Review
+
+- Before implementing changes, review the brief, visual guide, and relevant documentation.
+- Ensure all assumptions, dependencies, and unresolved decisions are clearly noted.
+- Confirm that the proposed changes align with the product requirements and design principles.
+- Seek feedback from the user to verify the plan is correct.
+
 ## Implement and verify
 
 - Consult the visual guide before each set of UI changes. Write failing

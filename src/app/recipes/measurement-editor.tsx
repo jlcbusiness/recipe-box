@@ -1,6 +1,7 @@
 'use client';
 
 import { Calculator } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Fragment, useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { RecipePicklistValue } from '../../lib/recipes/data';
@@ -123,6 +124,7 @@ function MeasurementPicklist({
   onSelect,
   onCommitEnter,
   onTabSelect,
+  onFocus,
 }: {
   label: string;
   prompt: string;
@@ -134,6 +136,7 @@ function MeasurementPicklist({
   onSelect: (valueId: string) => void;
   onCommitEnter?: () => void;
   onTabSelect?: (valueId: string) => boolean | undefined;
+  onFocus?: () => void;
 }) {
   const selectedValue = options.find((option) => option.id === selectedId);
   const menu = usePicklistMenu({
@@ -165,6 +168,7 @@ function MeasurementPicklist({
         ref={menu.triggerRef}
         role="combobox"
         type="button"
+        onFocus={onFocus}
         onBlur={menu.clearPendingSelection}
         onClick={menu.toggle}
         onKeyDown={menu.handleKeyDown}
@@ -222,6 +226,8 @@ export function MeasurementEditor({
   density,
   validate,
   layout = 'mobile',
+  afterFields,
+  onUnitFocus,
   onChange,
   onCommitRow,
 }: {
@@ -231,6 +237,8 @@ export function MeasurementEditor({
   density?: IngredientDensity | null;
   validate: boolean;
   layout?: 'desktop' | 'mobile';
+  afterFields?: ReactNode;
+  onUnitFocus?: (type: 'volume' | 'weight') => void;
   onChange: (measurements: MeasurementDraft[]) => void;
   onCommitRow?: () => void;
 }) {
@@ -439,6 +447,7 @@ export function MeasurementEditor({
           }`}
           describedBy={describedBy}
           invalid={Boolean(validationError)}
+          onFocus={() => onUnitFocus?.(type)}
           onCommitEnter={onCommitRow}
           onSelect={(unitCode) => updateMeasurement(type, { unitCode })}
         />
@@ -551,6 +560,7 @@ export function MeasurementEditor({
           }}
         >
           {desktopFields}
+          {afterFields}
         </td>
       </>
     );
@@ -567,6 +577,7 @@ export function MeasurementEditor({
       <legend className="visually-hidden">Measurements for ingredient row {rowNumber}</legend>
       {renderCategoryPicker()}
       {renderMobileFields()}
+      {afterFields}
       {validationError && (
         <p className="recipe-measurement-error" id={errorId} role="alert">
           {validationError}

@@ -488,9 +488,9 @@ export function planImport(
       id: mappedId('recipe_steps', record.id, 'recipe step'),
       recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
       content_markdown: record.content_markdown.replace(
-        /\[\[ingredient:([0-9a-f-]{36})(\|[^\]\r\n]+\]\])/gi,
-        (_marker: string, sourceId: string, suffix: string) =>
-          `[[ingredient:${mappedId('recipe_ingredients', sourceId, 'recipe ingredient')}${suffix}`,
+        /\[\[ingredient:([0-9a-f-]{36})(?::([12]))?(\|[^\]\r\n]+\]\])/gi,
+        (_marker: string, sourceId: string, portionOrdinal: string | undefined, suffix: string) =>
+          `[[ingredient:${mappedId('recipe_ingredients', sourceId, 'recipe ingredient')}${portionOrdinal ? `:${portionOrdinal}` : ''}${suffix}`,
       ),
     };
   });

@@ -68,6 +68,9 @@ export type RecipeIngredient = {
   is_main: boolean;
   detail: string;
   preparation: string;
+  portion_one_ratio: number | null;
+  size_value: number | null;
+  size_unit: 'in' | 'cm' | null;
   measurements: RecipeMeasurement[];
 };
 
@@ -367,7 +370,9 @@ export async function getRecipe(
 
   const { data: recipeIngredients, error: recipeIngredientsError } = await supabase
     .from('recipe_ingredients')
-    .select('id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation')
+    .select(
+      'id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation, portion_one_ratio, size_value, size_unit',
+    )
     .eq('recipe_id', recipeId)
     .order('position');
 

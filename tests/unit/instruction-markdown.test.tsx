@@ -60,6 +60,25 @@ describe('instruction Markdown', () => {
     ]);
   });
 
+  it('parses portion-qualified and legacy ingredient markers as readable mentions', () => {
+    expect(
+      parseInstructionMarkdown(
+        `Add [[ingredient:${ingredientId}:1|cake-flour-1]] and [[ingredient:${ingredientId}|2|cake-flour-2]].`,
+      ),
+    ).toEqual([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', value: 'Add ' },
+          { type: 'mention', id: ingredientId, slug: 'cake-flour-1', portionOrdinal: 1 },
+          { type: 'text', value: ' and ' },
+          { type: 'mention', id: ingredientId, slug: 'cake-flour-2', portionOrdinal: 2 },
+          { type: 'text', value: '.' },
+        ],
+      },
+    ]);
+  });
+
   it('parses unordered and ordered lists separated from preceding text by a single newline', () => {
     expect(
       parseInstructionMarkdown(
@@ -164,6 +183,22 @@ describe('instruction Markdown', () => {
     try {
       expect(editor.getHTML()).toContain('Cake flour');
       expect(editor.getHTML()).not.toContain('#cake-flour');
+      expect(editor.getHTML()).not.toContain('[[ingredient:');
+    } finally {
+      editor.destroy();
+    }
+  });
+
+  it('preserves portion ordinals when round-tripping structured mentions', () => {
+    const editor = new Editor({
+      extensions: createInstructionExtensions({ displayMode: 'reader', ingredients }),
+      content: `Add [[ingredient:${ingredientId}:2|old-flour-name]].`,
+      contentType: 'markdown',
+    });
+
+    try {
+      expect(editor.getMarkdown()).toContain(`[[ingredient:${ingredientId}:2|cake-flour]]`);
+      expect(editor.getHTML()).toContain('Cake flour');
       expect(editor.getHTML()).not.toContain('[[ingredient:');
     } finally {
       editor.destroy();

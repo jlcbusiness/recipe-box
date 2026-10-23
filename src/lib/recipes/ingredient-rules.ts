@@ -1,8 +1,10 @@
 import {
+  formatQuantity,
   formatQuantityRange,
   type MeasurementDraft,
   type MeasurementPayload,
   type MeasurementType,
+  parseQuantityInput,
   serializeMeasurements,
   volumeUnits,
   weightUnits,
@@ -17,6 +19,11 @@ export type IngredientRowDraft = {
   detail: string;
   preparation: string;
   measurements: MeasurementDraft[];
+  portionOneRatio?: number | null;
+  portionOneAmount?: string;
+  portionMeasurementType?: MeasurementType;
+  sizeValue?: string;
+  sizeUnit?: string;
 };
 
 export type IngredientRowPayload = {
@@ -27,6 +34,9 @@ export type IngredientRowPayload = {
   is_main: boolean;
   detail: string;
   preparation: string;
+  portion_one_ratio: number | null;
+  size_value: number | null;
+  size_unit: 'in' | 'cm' | null;
   measurements: MeasurementPayload[];
 };
 
@@ -34,6 +44,9 @@ export type IngredientDisplayInput = {
   ingredient_name: string;
   detail: string;
   preparation: string;
+  portion_one_ratio?: number | null;
+  size_value?: number | null;
+  size_unit?: 'in' | 'cm' | null;
   measurements?: {
     measurement_type: MeasurementType;
     amount_min: number | null;
@@ -55,11 +68,131 @@ export type IngredientDisplayParts = {
   }[];
   unmeasuredPhrase: string | null;
   preparation: string | null;
+  size: string | null;
 };
 
 export type IngredientDisplayOptions = {
   aliasPinch?: boolean;
 };
+
+export function getPortionRatio(firstAmount: number, total: number): number | null {
+  if (
+    !Number.isFinite(firstAmount) ||
+    !Number.isFinite(total) ||
+    firstAmount <= 0 ||
+    total <= 0 ||
+    firstAmount >= total
+  ) {
+    return null;
+  }
+  return firstAmount / total;
+}
+
+export function allocatePortions(total: number, firstRatio: number): [number, number] | null {
+  if (
+    !Number.isFinite(total) ||
+    !Number.isFinite(firstRatio) ||
+    total <= 0 ||
+    firstRatio <= 0 ||
+    firstRatio >= 1
+  ) {
+    return null;
+  }
+  const firstAmount = total * firstRatio;
+  const secondAmount = total - firstAmount;
+  return firstAmount > 0 && secondAmount > 0 ? [firstAmount, secondAmount] : null;
+}
+
+export function getIngredientDisplayInputForPortion(
+  ingredient: IngredientDisplayInput,
+  portionRatio: number | null | undefined,
+  portionOrdinal: 1 | 2,
+): IngredientDisplayInput {
+  if (portionRatio == null) {
+    return ingredient;
+  }
+
+  return {
+    ...ingredient,
+    measurements: ingredient.measurements?.map((measurement) => {
+      if (measurement.amount_min === null || measurement.amount_max !== null) {
+        return measurement;
+      }
+      const portions = allocatePortions(measurement.amount_min, portionRatio);
+      return portions ? { ...measurement, amount_min: portions[portionOrdinal - 1] } : measurement;
+    }),
+  };
+}
+
+export function validatePortionMeasurements(
+  measurements: readonly Pick<
+    MeasurementPayload,
+    'measurement_type' | 'amount_min' | 'amount_max'
+  >[],
+  firstRatio: number,
+): string | null {
+  if (!Number.isFinite(firstRatio) || firstRatio <= 0 || firstRatio >= 1) {
+    return 'Enter a first portion greater than zero and less than the total.';
+  }
+  if (
+    measurements.length === 0 ||
+    measurements.some(
+      (measurement) =>
+        !['volume', 'weight', 'count', 'informal'].includes(measurement.measurement_type) ||
+        measurement.amount_min === null ||
+        measurement.amount_max !== null,
+    )
+  ) {
+    return 'Only scalar Unit, Count, and Things amounts can be divided.';
+  }
+  return null;
+}
+
+export function validateIngredientRowUniqueness(
+  rows: readonly {
+    ingredientSetId: string;
+    ingredientId: string | null;
+    ingredientName: string;
+  }[],
+): string | null {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const identity = row.ingredientId
+      ? `id:${row.ingredientId.toLocaleLowerCase()}`
+      : `name:${row.ingredientName.trim().normalize('NFKC').toLocaleLowerCase()}`;
+    if (identity === 'name:') {
+      continue;
+    }
+    const key = `${row.ingredientSetId.toLocaleLowerCase()}|${identity}`;
+    if (seen.has(key)) {
+      return 'An ingredient can appear only once in each section.';
+    }
+    seen.add(key);
+  }
+  return null;
+}
+
+export function validateIngredientSize(
+  preparation: string,
+  sizeValue: string,
+  sizeUnit: string,
+): string | null {
+  const value = sizeValue.trim();
+  const unit = sizeUnit.trim();
+  if (!value) {
+    return null;
+  }
+  if (preparation.trim().toLocaleLowerCase() !== 'cubed') {
+    return 'Size is available only when Preparation is cubed.';
+  }
+  if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/u.test(value) || !Number.isFinite(Number(value))) {
+    return 'Enter a positive decimal Size.';
+  }
+  if (Number(value) <= 0 || !['in', 'cm'].includes(unit)) {
+    return 'Enter a positive Size in inches or centimeters.';
+  }
+  return null;
+}
 
 export function isEmptyIngredientRow(row: IngredientRowDraft): boolean {
   return (
@@ -68,6 +201,9 @@ export function isEmptyIngredientRow(row: IngredientRowDraft): boolean {
     !row.isMain &&
     !row.detail.trim() &&
     !row.preparation.trim() &&
+    row.portionOneRatio == null &&
+    !row.sizeValue?.trim() &&
+    !row.sizeUnit?.trim() &&
     row.measurements.length === 0
   );
 }
@@ -116,6 +252,10 @@ export function getIngredientDisplayParts(
   const name = ingredient.ingredient_name.trim();
   const detail = ingredient.detail.trim();
   const preparation = ingredient.preparation.trim();
+  const size =
+    ingredient.size_value != null && ingredient.size_unit
+      ? `${formatQuantity(ingredient.size_value, ingredient.size_unit === 'cm' ? 'metric' : 'us_customary')} ${ingredient.size_unit}`
+      : null;
   const displayName = /^[\p{Lu}][\p{Ll}]+$/u.test(name) ? lowercaseFirst(name) : name;
   const displayedMeasurements = [...(ingredient.measurements ?? [])]
     .filter((measurement) => measurement.measurement_type !== 'unmeasured')
@@ -187,7 +327,32 @@ export function getIngredientDisplayParts(
     measurements: displayedMeasurements,
     unmeasuredPhrase: unmeasuredPhrase ? lowercaseFirst(unmeasuredPhrase.trim()) : null,
     preparation: preparation ? lowercaseFirst(preparation) : null,
+    size,
   };
+}
+
+export function getPortionDisplayAmounts(
+  measurements: IngredientDisplayInput['measurements'],
+  firstRatio: number,
+  measurementType: MeasurementType,
+): [string, string] | null {
+  const measurement = measurements?.find((item) => item.measurement_type === measurementType);
+  if (!measurement || measurement.amount_min === null || measurement.amount_max !== null) {
+    return null;
+  }
+  const portions = allocatePortions(measurement.amount_min, firstRatio);
+  if (!portions) {
+    return null;
+  }
+  return portions.map(
+    (amount) =>
+      getIngredientDisplayParts({
+        ingredient_name: '',
+        detail: '',
+        preparation: '',
+        measurements: [{ ...measurement, amount_min: amount, amount_max: null }],
+      }).amount,
+  ) as [string, string];
 }
 
 export function formatIngredientDisplay(ingredient: IngredientDisplayInput): string {
@@ -197,7 +362,8 @@ export function formatIngredientDisplay(ingredient: IngredientDisplayInput): str
   const displayText = parts.unmeasuredPhrase
     ? `${measuredText} ${parts.unmeasuredPhrase}`
     : measuredText;
-  return parts.preparation ? `${displayText}, ${parts.preparation}` : displayText;
+  const preparationText = [parts.preparation, parts.size].filter(Boolean).join(' ');
+  return preparationText ? `${displayText}, ${preparationText}` : displayText;
 }
 
 export function moveIngredientRow(
@@ -271,6 +437,11 @@ export function moveIngredientRowTo(
 }
 
 export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientRowPayload[] {
+  const uniquenessError = validateIngredientRowUniqueness(rows);
+  if (uniquenessError) {
+    throw new Error(uniquenessError);
+  }
+
   const payload: IngredientRowPayload[] = [];
 
   for (const row of rows) {
@@ -278,9 +449,51 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
     const detail = row.detail.trim();
     const preparation = row.preparation.trim();
     const measurements = serializeMeasurements(row.measurements);
+    let portionOneRatio = row.portionOneRatio ?? null;
+    const sizeValue = row.sizeValue?.trim() ?? '';
+    const sizeUnit = sizeValue ? (row.sizeUnit?.trim() ?? '') : '';
+
+    if (portionOneRatio !== null && row.portionOneAmount !== undefined) {
+      const firstAmount = parseQuantityInput(row.portionOneAmount);
+      const measurement = measurements.find(
+        (item) => item.measurement_type === row.portionMeasurementType,
+      );
+      portionOneRatio =
+        firstAmount && firstAmount.maximum === null && measurement?.amount_min !== null
+          ? getPortionRatio(firstAmount.minimum, measurement?.amount_min ?? 0)
+          : null;
+      if (portionOneRatio === null) {
+        throw new Error('Enter a first portion greater than zero and less than the total.');
+      }
+    }
+
+    if (portionOneRatio !== null) {
+      const divisionError = validatePortionMeasurements(measurements, portionOneRatio);
+      if (divisionError) {
+        throw new Error(divisionError);
+      }
+    }
+    if (preparation.toLocaleLowerCase() === 'divided' && portionOneRatio === null) {
+      const divisionError = validatePortionMeasurements(measurements, 0.5);
+      throw new Error(
+        divisionError ?? 'Enter a first portion greater than zero and less than the total.',
+      );
+    }
+    const sizeError = validateIngredientSize(preparation, sizeValue, sizeUnit);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
 
     if (!row.ingredientId && !ingredientName) {
-      if (row.isMain || detail || preparation || measurements.length > 0) {
+      if (
+        row.isMain ||
+        detail ||
+        preparation ||
+        portionOneRatio !== null ||
+        sizeValue ||
+        sizeUnit ||
+        measurements.length > 0
+      ) {
         throw new Error('Choose an ingredient for each edited row.');
       }
       continue;
@@ -294,6 +507,9 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
       is_main: row.isMain,
       detail,
       preparation,
+      portion_one_ratio: portionOneRatio,
+      size_value: sizeValue ? Number(sizeValue) : null,
+      size_unit: sizeUnit ? (sizeUnit as 'in' | 'cm') : null,
       measurements,
     });
   }

@@ -400,6 +400,335 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
   }
 });
 
+test('preparation choices reveal inline divided portions and cubed Size @e2e @a11y @measurements', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 902, height: 900 });
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Preparation controls recipe');
+
+    const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+    const clickPreparationWhitespace = async (rowNumber: number) => {
+      const cell = grid.locator(`[aria-label="Preparation, row ${rowNumber}"]`);
+      const point = await cell.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const x = bounds.right - 4;
+        const y = bounds.top + bounds.height / 2;
+        return { x, y, hitsCell: document.elementFromPoint(x, y) === element };
+      });
+      expect(point.hitsCell).toBe(true);
+      await page.mouse.click(point.x, point.y);
+      await expect(
+        page.getByRole('combobox', { name: `Preparation, row ${rowNumber}` }),
+      ).toHaveCount(0);
+      await expect(page.getByRole('listbox')).toHaveCount(0);
+    };
+
+    await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+    const salt = page.getByRole('combobox', { name: 'Ingredient, row 1' });
+    await salt.fill('Salt');
+    await salt.press('Enter');
+    await salt.press('Enter');
+    await page.getByRole('textbox', { name: 'Volume amount, row 1' }).fill('1');
+    await page.getByRole('combobox', { name: 'Volume unit, row 1' }).click();
+    await page.getByRole('listbox').getByRole('option', { name: 'cup', exact: true }).click();
+    const weightUnit = grid.locator('.recipe-measurement-weight-trigger');
+    await expect(weightUnit).toBeVisible();
+    const weightUnitRightEdge = await weightUnit.evaluate((unit) => {
+      const preparationCell = unit.closest('tr')?.querySelector('td:nth-last-child(2)');
+      if (!preparationCell) return null;
+      const unitBounds = unit.getBoundingClientRect();
+      const preparationBounds = preparationCell.getBoundingClientRect();
+      const preparationContentLeft =
+        preparationBounds.left + Number.parseFloat(getComputedStyle(preparationCell).paddingLeft);
+      return {
+        clearsPreparation: unitBounds.right <= preparationContentLeft,
+        edgeIsTopmost:
+          document.elementFromPoint(
+            unitBounds.right - 1,
+            unitBounds.top + unitBounds.height / 2,
+          ) === unit,
+        unitRight: unitBounds.right,
+        preparationContentLeft,
+      };
+    });
+    expect(weightUnitRightEdge).toEqual({
+      clearsPreparation: true,
+      edgeIsTopmost: true,
+      unitRight: expect.any(Number),
+      preparationContentLeft: expect.any(Number),
+    });
+
+    const saltPreparationCell = grid.getByRole('cell', { name: 'Preparation, row 1' });
+    await saltPreparationCell.click();
+    const saltPreparation = page.getByRole('combobox', { name: 'Preparation, row 1' });
+    await saltPreparation.fill('divided');
+    const dividedInputBounds = await saltPreparation.evaluate((input) => {
+      const preparationInput = input as HTMLInputElement;
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const controls = preparationInput
+        .closest('.recipe-preparation-editor')
+        ?.querySelector('.recipe-preparation-controls');
+      if (!context || !controls) return null;
+      const inputBounds = preparationInput.getBoundingClientRect();
+      const controlsBounds = controls.getBoundingClientRect();
+      const style = getComputedStyle(preparationInput);
+      context.font = style.font;
+      const textWidth = context.measureText(preparationInput.value).width;
+      return {
+        extraWidth: inputBounds.width - textWidth,
+        clickX: inputBounds.left + Number.parseFloat(style.paddingLeft) + textWidth + 8,
+        clickY: inputBounds.top + inputBounds.height / 2,
+        beforeControls:
+          inputBounds.left + Number.parseFloat(style.paddingLeft) + textWidth + 8 <
+          controlsBounds.left,
+      };
+    });
+    expect(dividedInputBounds).not.toBeNull();
+    expect(dividedInputBounds?.extraWidth).toBeLessThanOrEqual(10);
+    expect(dividedInputBounds?.beforeControls).toBe(true);
+    if (!dividedInputBounds) throw new Error('Preparation controls were not rendered.');
+    await page.mouse.click(dividedInputBounds.clickX, dividedInputBounds.clickY);
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+    await saltPreparation.focus();
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await page.getByRole('option', { name: 'divided', exact: true }).click();
+    await saltPreparation.press('Enter');
+    await clickPreparationWhitespace(1);
+
+    const firstPortion = page.getByRole('textbox', { name: 'First portion, row 1' });
+    await expect(firstPortion).toBeVisible();
+    await expect(firstPortion).toHaveValue('');
+    await expect(firstPortion).not.toHaveAttribute('placeholder', /.+/);
+    await expect(firstPortion).toHaveCSS('width', '48px');
+    await expect(firstPortion).toHaveCSS('height', '30px');
+    await expect(firstPortion).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(page.getByRole('group', { name: 'Portion controls, row 1' })).toHaveCSS(
+      'border-top-width',
+      '0px',
+    );
+    await expect(page.getByRole('group', { name: 'Portion controls, row 1' })).toHaveCSS(
+      'padding-top',
+      '0px',
+    );
+    await expect(firstPortion).toHaveCSS('text-align', 'center');
+    await expect(saltPreparationCell).toContainText('cup');
+    await expect(page.getByRole('checkbox', { name: 'Divide ingredient row 1' })).toHaveCount(0);
+    await expect(page.getByRole('status', { name: 'Second portion, row 1' })).toBeEmpty();
+    await expect(saltPreparationCell.locator('.recipe-portion-separator')).toHaveText(':');
+    await expect(saltPreparationCell.locator('.recipe-portion-separator')).toHaveCSS(
+      'font-size',
+      '12px',
+    );
+    await expect(saltPreparationCell.locator('.recipe-portion-separator')).toHaveCSS(
+      'font-weight',
+      '700',
+    );
+    const portionUnitAndSeparatorCenters = await saltPreparationCell
+      .locator('.recipe-portion-editor')
+      .evaluate((editor) =>
+        ['.recipe-preparation-unit', '.recipe-portion-separator'].map((selector) => {
+          const bounds = editor.querySelector(selector)?.getBoundingClientRect();
+          return bounds ? bounds.top + bounds.height / 2 : Number.NaN;
+        }),
+      );
+    expect(portionUnitAndSeparatorCenters[0]).toBeDefined();
+    expect(portionUnitAndSeparatorCenters[1]).toBeDefined();
+    expect(
+      Math.abs(portionUnitAndSeparatorCenters[0] - portionUnitAndSeparatorCenters[1]),
+    ).toBeLessThanOrEqual(1);
+    const portionUnitAndRemainderStyles = await saltPreparationCell
+      .locator('.recipe-portion-editor')
+      .evaluate((editor) =>
+        ['.recipe-preparation-unit', '.recipe-portion-remainder'].map((selector) => {
+          const element = editor.querySelector(selector);
+          if (!element) return null;
+          const style = getComputedStyle(element);
+          return {
+            color: style.color,
+            fontFamily: style.fontFamily,
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+            lineHeight: style.lineHeight,
+          };
+        }),
+      );
+    expect(portionUnitAndRemainderStyles[0]).not.toBeNull();
+    expect(portionUnitAndRemainderStyles[0]).toEqual(portionUnitAndRemainderStyles[1]);
+    const dividedSpacing = await saltPreparationCell
+      .locator('.recipe-preparation-editor')
+      .evaluate((editor) => {
+        const preparation = editor.querySelector('.recipe-ingredient-cell-value');
+        const controls = editor.querySelector('.recipe-preparation-controls');
+        const amount = editor.querySelector('.recipe-portion-input');
+        const unit = editor.querySelector('.recipe-preparation-unit');
+        if (!preparation || !controls || !amount || !unit) {
+          return { preparationGap: Number.NaN, amountUnitGap: Number.NaN };
+        }
+        return {
+          preparationGap:
+            controls.getBoundingClientRect().left - preparation.getBoundingClientRect().right,
+          amountUnitGap: unit.getBoundingClientRect().left - amount.getBoundingClientRect().right,
+        };
+      });
+    const cssPixelsPerMillimeter = 96 / 25.4;
+    expect(dividedSpacing.preparationGap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
+    expect(dividedSpacing.amountUnitGap).toBeCloseTo(2 * cssPixelsPerMillimeter, 1);
+    const portionPreparationTops = await saltPreparationCell
+      .locator('.recipe-preparation-editor')
+      .evaluate((editor) =>
+        Array.from(editor.children).map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top + bounds.height / 2;
+        }),
+      );
+    expect(portionPreparationTops).toHaveLength(2);
+    await expect(
+      saltPreparationCell.locator('.recipe-preparation-editor > .recipe-ingredient-cell-value'),
+    ).toBeVisible();
+    expect(
+      await saltPreparationCell
+        .locator('.recipe-preparation-editor > .recipe-ingredient-cell-value')
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    expect(
+      Math.max(...portionPreparationTops) - Math.min(...portionPreparationTops),
+    ).toBeLessThanOrEqual(1);
+    await firstPortion.fill('1/3');
+    await expect(page.getByRole('status', { name: 'Second portion, row 1' })).toHaveText('⅔ cup');
+    await firstPortion.fill('2/3');
+    await expect(page.getByRole('status', { name: 'Second portion, row 1' })).toHaveText('⅓ cup');
+    await page.getByRole('textbox', { name: 'Volume amount, row 1' }).fill('2');
+    await firstPortion.fill('1/3');
+    const remainder = page.getByRole('status', { name: 'Second portion, row 1' });
+    await expect(remainder).toHaveText('1 ⅔ cup');
+    const remainderFontSizes = await remainder.evaluate((element) => {
+      const fraction = element.querySelector('.recipe-portion-fraction');
+      if (!fraction) return null;
+      return {
+        base: getComputedStyle(element).fontSize,
+        fraction: getComputedStyle(fraction).fontSize,
+      };
+    });
+    expect(remainderFontSizes).not.toBeNull();
+    expect(Number.parseFloat(remainderFontSizes?.fraction ?? '')).toBeCloseTo(
+      Number.parseFloat(remainderFontSizes?.base ?? '') + (2 * 96) / 72,
+      1,
+    );
+    await page.getByRole('textbox', { name: 'Volume amount, row 1' }).fill('1');
+    await firstPortion.fill('2/3');
+
+    await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+    const carrot = page.getByRole('combobox', { name: 'Ingredient, row 2' });
+    await carrot.fill('Carrot');
+    await carrot.press('Enter');
+    await carrot.press('Enter');
+    await page.getByRole('combobox', { name: 'Ingredient type, row 2' }).click();
+    await page.getByRole('listbox').getByRole('option', { name: 'Count', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Count amount, row 2' }).fill('2');
+    const carrotPreparationCell = grid.locator('[aria-label="Preparation, row 2"]');
+    await carrotPreparationCell.click();
+    const carrotPreparation = page.getByRole('combobox', { name: 'Preparation, row 2' });
+    await carrotPreparation.fill('cubed');
+    const cubedInputExtraWidth = await carrotPreparation.evaluate((input) => {
+      const preparationInput = input as HTMLInputElement;
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) return Number.NaN;
+      context.font = getComputedStyle(preparationInput).font;
+      return (
+        preparationInput.getBoundingClientRect().width -
+        context.measureText(preparationInput.value).width
+      );
+    });
+    expect(cubedInputExtraWidth).toBeLessThanOrEqual(10);
+    await page.getByRole('option', { name: 'cubed', exact: true }).click();
+    await carrotPreparation.press('Enter');
+    await clickPreparationWhitespace(2);
+
+    const size = page.getByRole('textbox', { name: 'Size, row 2' });
+    const sizeUnitIn = page.getByRole('button', {
+      name: 'Size unit, row 2: in. Activate to switch to cm',
+    });
+    await expect(size).toBeVisible();
+    await expect(size).not.toHaveAttribute('placeholder', /.+/);
+    await expect(size).toHaveCSS('width', '48px');
+    await expect(size).toHaveCSS('height', '30px');
+    await expect(size).toHaveCSS('text-align', 'center');
+    await expect(sizeUnitIn).toHaveText('in');
+    await expect(sizeUnitIn).toHaveCSS('height', '30px');
+    const sizeUnitFontDifference = await carrotPreparationCell
+      .locator('.recipe-preparation-editor')
+      .evaluate((editor) => {
+        const unit = editor.querySelector('.recipe-inline-size-unit');
+        const preparation = editor.querySelector('.recipe-ingredient-cell-value');
+        if (!unit || !preparation) return Number.NaN;
+        return (
+          Number.parseFloat(getComputedStyle(preparation).fontSize) -
+          Number.parseFloat(getComputedStyle(unit).fontSize)
+        );
+      });
+    expect(sizeUnitFontDifference).toBeCloseTo((2 * 96) / 72, 1);
+    await expect(sizeUnitIn).toHaveCSS('text-decoration-line', 'underline');
+    const sizePreparationTops = await carrotPreparationCell
+      .locator('.recipe-preparation-editor')
+      .evaluate((editor) =>
+        Array.from(editor.children).map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top + bounds.height / 2;
+        }),
+      );
+    expect(sizePreparationTops).toHaveLength(2);
+    expect(Math.max(...sizePreparationTops) - Math.min(...sizePreparationTops)).toBeLessThanOrEqual(
+      1,
+    );
+    const cubedSpacing = await carrotPreparationCell
+      .locator('.recipe-preparation-editor')
+      .evaluate((editor) => {
+        const preparation = editor.querySelector('.recipe-ingredient-cell-value');
+        const controls = editor.querySelector('.recipe-preparation-controls');
+        const size = editor.querySelector('.recipe-inline-size-input');
+        const unit = editor.querySelector('.recipe-inline-size-unit');
+        if (!preparation || !controls || !size || !unit) {
+          return { preparationGap: Number.NaN, sizeUnitGap: Number.NaN };
+        }
+        return {
+          preparationGap:
+            controls.getBoundingClientRect().left - preparation.getBoundingClientRect().right,
+          sizeUnitGap: unit.getBoundingClientRect().left - size.getBoundingClientRect().right,
+        };
+      });
+    expect(cubedSpacing.preparationGap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
+    expect(cubedSpacing.sizeUnitGap).toBeCloseTo(2 * cssPixelsPerMillimeter, 1);
+    await sizeUnitIn.click();
+    const sizeUnitCm = page.getByRole('button', {
+      name: 'Size unit, row 2: cm. Activate to switch to in',
+    });
+    await expect(sizeUnitCm).toHaveText('cm');
+    await size.fill('0.5');
+    await expect(size).toHaveValue('0.5');
+    await expect(sizeUnitCm).toBeVisible();
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Preparation controls recipe' })).toBeVisible();
+    const ingredientList = page.locator('.recipe-ingredient-list');
+    await expect(ingredientList).toContainText('1 cup salt, divided ⅔ : ⅓');
+    await expect(ingredientList).not.toContainText('1st');
+    await expect(ingredientList).not.toContainText('2nd');
+    await expect(ingredientList).toContainText('cubed 0.5 cm');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('owners enter, view, edit, and reload measurements on desktop and mobile @e2e @a11y @measurements', async ({
   page,
   request,
@@ -408,7 +737,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
 
   try {
     await signIn(page, user.email, user.password);
-    await page.setViewportSize({ width: 800, height: 900 });
+    await page.setViewportSize({ width: 1024, height: 900 });
     await page.goto('/settings');
     await page.getByRole('combobox', { name: 'Weight' }).click();
     await page.getByRole('listbox').getByRole('option', { name: 'US customary' }).click();
@@ -471,7 +800,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
         await expect
           .poll(() =>
             grid
-              .locator('tbody tr')
+              .locator('tbody tr[data-row-id]')
               .nth(row - 1)
               .locator('.recipe-measurement-slash')
               .textContent(),
@@ -502,8 +831,11 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     }
 
     await addIngredientRow(1, 'Flour', 'units', '1 1/2', 'cup');
-    await expect(grid.locator('tbody tr').first().locator('td')).toHaveCount(6);
-    await expect(grid.locator('tbody tr').first().locator('td').nth(0)).toHaveCSS('height', '48px');
+    await expect(grid.locator('tbody tr[data-row-id]').first().locator('td')).toHaveCount(6);
+    await expect(grid.locator('tbody tr[data-row-id]').first().locator('td').nth(0)).toHaveCSS(
+      'height',
+      '48px',
+    );
     await page.getByRole('textbox', { name: 'Weight amount, row 1' }).fill('120');
     await chooseMeasurementOption('Weight unit, row 1', 'g');
     const volumeUnitWidth = await page
@@ -548,7 +880,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     );
     await expect(page.getByRole('textbox', { name: 'Count amount, row 6' })).toHaveCount(0);
 
-    const firstDesktopRow = grid.locator('tbody tr').first();
+    const firstDesktopRow = grid.locator('tbody tr[data-row-id]').first();
     const initialTypeBounds = await firstDesktopRow
       .getByRole('combobox', { name: 'Ingredient type, row 1' })
       .boundingBox();
@@ -562,7 +894,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
         ((initialTypeBounds?.x ?? 0) + (initialTypeBounds?.width ?? 0)),
     ).toBeLessThanOrEqual(9);
 
-    await page.setViewportSize({ width: 800, height: 900 });
+    await page.setViewportSize({ width: 901, height: 900 });
     const desktopEditor = page.locator('.recipe-ingredient-desktop');
     await expect
       .poll(() => desktopEditor.evaluate((element) => element.scrollWidth - element.clientWidth))
@@ -601,7 +933,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       (firstAmountBounds?.x ?? 0) - ((typeFieldBounds?.x ?? 0) + (typeFieldBounds?.width ?? 0)),
     ).toBeLessThanOrEqual(9);
     await expect(
-      grid.locator('tbody tr').first().locator('.recipe-measurement-desktop-fields'),
+      grid.locator('tbody tr[data-row-id]').first().locator('.recipe-measurement-desktop-fields'),
     ).toHaveCSS('flex-wrap', 'nowrap');
 
     const volumeAmount = page.getByRole('textbox', { name: 'Volume amount, row 1' });

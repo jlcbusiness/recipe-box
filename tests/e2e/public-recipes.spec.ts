@@ -38,6 +38,7 @@ async function createRecipe(
   name = 'Guest citrus cake',
   publicationId?: string,
   includeCookingData = false,
+  extraIngredientRows: unknown[] = [],
 ) {
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
@@ -105,6 +106,7 @@ async function createRecipe(
                 },
               ],
             },
+            ...extraIngredientRows,
           ]
         : [],
       p_instruction_steps: ingredientRowId
@@ -546,6 +548,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
 }) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
+  const carrotRowId = randomUUID();
   let publicId: string | null = null;
 
   try {
@@ -556,8 +559,38 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       'Public cooking view',
       undefined,
       true,
+      [
+        {
+          recipe_ingredient_id: carrotRowId,
+          ingredient_id: null,
+          ingredient_name: 'Carrot',
+          is_main: false,
+          detail: '',
+          preparation: 'cubed',
+          portion_one_ratio: 0.25,
+          size_value: 1.25,
+          size_unit: 'in',
+          measurements: [
+            {
+              measurement_type: 'count',
+              amount_min: 4,
+              amount_max: null,
+              unit_code: null,
+              picklist_value_id: null,
+            },
+          ],
+        },
+      ],
     );
     publicId = await getPublicId(request, config, recipe.id);
+    const carrotUpdate = await request.patch(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?id=eq.${carrotRowId}`,
+      {
+        headers: serviceHeaders(config),
+        data: { portion_one_ratio: 0.25, size_value: 1.25, size_unit: 'in' },
+      },
+    );
+    expect(carrotUpdate.ok(), await carrotUpdate.text()).toBeTruthy();
 
     await page.goto('/');
     await page.getByLabel('Email').fill(user.email);
@@ -633,6 +666,12 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
       'salt',
     );
+    await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
+      'cubed 1 ¼ in',
+    );
+    await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
+      '1 : 3',
+    );
     expect(photoBox.width).toBeLessThanOrEqual(420);
     expect(photoBox.height).toBeLessThanOrEqual(281);
     if ((page.viewportSize()?.width ?? 0) > 760) {
@@ -666,6 +705,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
     await expect(page.getByRole('button', { name: 'Print recipe' })).toBeHidden();
+    await expect(ingredientContent).toContainText('cubed 1 ¼ in');
+    await expect(ingredientContent).toContainText('2 : 6');
   } finally {
     await deleteTestUser(request, user);
     if (publicId) {

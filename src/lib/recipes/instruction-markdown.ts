@@ -10,7 +10,7 @@ export type InstructionInlineToken =
   | { type: 'strike'; value: string }
   | { type: 'code'; value: string }
   | { type: 'link'; label: string; url: string }
-  | { type: 'mention'; id: string; slug: string };
+  | { type: 'mention'; id: string; slug: string; portionOrdinal?: 1 | 2 };
 
 export type InstructionMarkdownBlock =
   | { type: 'paragraph'; content: InstructionInlineToken[] }
@@ -18,7 +18,7 @@ export type InstructionMarkdownBlock =
   | { type: 'list'; ordered: boolean; items: InstructionInlineToken[][] };
 
 const inlineTokenPattern =
-  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)/giu;
+  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)/giu;
 
 function parseInstructionInline(value: string): InstructionInlineToken[] {
   const tokens: InstructionInlineToken[] = [];
@@ -32,7 +32,22 @@ function parseInstructionInline(value: string): InstructionInlineToken[] {
     }
 
     if (match[2] && match[3]) {
-      tokens.push({ type: 'mention', id: match[2].toLocaleLowerCase(), slug: match[3] });
+      const legacyPortion = /^([12])\|(.+)$/u.exec(match[3]);
+      const explicitPortionOrdinal =
+        /^\[\[ingredient:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}:([12])\|/iu.exec(
+          fullMatch,
+        )?.[1];
+      const portionOrdinal = explicitPortionOrdinal
+        ? (Number(explicitPortionOrdinal) as 1 | 2)
+        : legacyPortion
+          ? (Number(legacyPortion[1]) as 1 | 2)
+          : undefined;
+      tokens.push({
+        type: 'mention',
+        id: match[2].toLocaleLowerCase(),
+        slug: legacyPortion?.[2] ?? match[3],
+        ...(portionOrdinal === undefined ? {} : { portionOrdinal }),
+      });
     } else if (match[5] && match[6]) {
       tokens.push({ type: 'link', label: match[5], url: match[6] });
     } else if (match[8]) {
@@ -217,6 +232,7 @@ export function createInstructionExtensions({
       return {
         id: { default: null },
         label: { default: '' },
+        portionOrdinal: { default: null },
       };
     },
     markdownTokenizer: {
@@ -225,18 +241,21 @@ export function createInstructionExtensions({
       start: (source) => source.indexOf('[[ingredient:'),
       tokenize(source) {
         const match =
-          /^\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\|([^\]\r\n]+)\]\]/iu.exec(
+          /^\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::([12]))?\|([^\]\r\n]+)\]\]/iu.exec(
             source,
           );
         if (!match) {
           return undefined;
         }
 
+        const legacyPortion = /^([12])\|(.+)$/u.exec(match[3] ?? '');
+
         return {
           type: 'ingredientMention',
           raw: match[0],
           id: match[1]?.toLocaleLowerCase(),
-          label: match[2],
+          label: legacyPortion?.[2] ?? match[3],
+          portionOrdinal: match[2] ?? legacyPortion?.[1] ?? null,
         };
       },
     },
@@ -244,18 +263,21 @@ export function createInstructionExtensions({
       return helpers.createNode(this.name, {
         id: token.id,
         label: token.label,
+        portionOrdinal: token.portionOrdinal,
       });
     },
     renderMarkdown(node) {
       const id = node.attrs?.id as string | null | undefined;
       const fallbackLabel = node.attrs?.label as string | undefined;
+      const portionOrdinal = node.attrs?.portionOrdinal as '1' | '2' | null | undefined;
       if (!id) {
         return fallbackLabel ? `#${fallbackLabel}` : '';
       }
 
       const ingredient = ingredientsById.get(id);
       const label = ingredient ? ingredientSlug(ingredient.name) : (fallbackLabel ?? '');
-      return `[[ingredient:${id}|${label}]]`;
+      const portion = portionOrdinal ? `:${portionOrdinal}` : '';
+      return `[[ingredient:${id}${portion}|${label}]]`;
     },
     renderHTML({ node }) {
       const ingredient = ingredientsById.get(node.attrs.id);

@@ -385,8 +385,8 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       ]) {
         const { data, manifest } = await exportData(page, request, scope);
         expect(manifest.scope).toEqual(scope);
-        expect(manifest.schema_version).toBe(2);
-        expect(data.schema_version).toBe(2);
+        expect(manifest.schema_version).toBe(3);
+        expect(data.schema_version).toBe(3);
         expect(
           data.records.recipe_ingredient_sets.filter((set) => set.recipe_id === recipe.id),
         ).toEqual(expectedSets);

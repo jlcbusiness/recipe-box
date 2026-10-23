@@ -59,6 +59,9 @@ const privateRecipe = {
       is_main: true,
       detail: 'zest and juice',
       preparation: '',
+      portion_one_ratio: null,
+      size_value: null,
+      size_unit: null,
       measurements: [
         {
           id: '33333333-3333-4333-8333-333333333333',
@@ -176,6 +179,9 @@ describe('public recipe projection', () => {
           is_main: true,
           detail: 'zest and juice',
           preparation: '',
+          portion_one_ratio: null,
+          size_value: null,
+          size_unit: null,
           measurements: [
             {
               id: '00000000-0000-4000-8000-000000000003',

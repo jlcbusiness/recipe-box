@@ -13,13 +13,20 @@ import type {
   TagOption,
 } from '../../lib/recipes/data';
 import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
-import { isEmptyIngredientRow, serializeIngredientRows } from '../../lib/recipes/ingredient-rules';
+import {
+  getPortionDisplayAmounts,
+  getPortionRatio,
+  isEmptyIngredientRow,
+  serializeIngredientRows,
+} from '../../lib/recipes/ingredient-rules';
 import {
   type IngredientSetDraft,
   normalizeIngredientSets,
 } from '../../lib/recipes/ingredient-set-rules';
 import {
+  buildIngredientMentionOptions,
   type InstructionStepDraft,
+  ingredientSlug,
   instructionPlainText,
   parseIngredientMentions,
   serializeInstructionSteps,
@@ -30,6 +37,8 @@ import {
   formatGroupedIntegerInput,
   formatQuantityInput,
   parseGroupedInteger,
+  parseQuantityInput,
+  serializeMeasurements,
 } from '../../lib/recipes/measurement-rules';
 import {
   calculateTotalMinutes,
@@ -199,6 +208,9 @@ export function RecipeForm({
         isMain: row.is_main,
         detail: row.detail,
         preparation: row.preparation,
+        portionOneRatio: row.portion_one_ratio,
+        sizeValue: row.size_value == null ? '' : String(row.size_value),
+        sizeUnit: row.size_unit ?? '',
         measurements: row.measurements.map((measurement) => ({
           id: measurement.id,
           type: measurement.measurement_type,
@@ -257,6 +269,57 @@ export function RecipeForm({
   const selectedResponse = state === 'want_to_try' ? enthusiasmId : verdictId;
   const showOccasion = shouldShowOccasionDetails(
     picklistValue(selectedResponse)?.toLowerCase().replaceAll(' ', '_') ?? null,
+  );
+  const ingredientMentionOptions = buildIngredientMentionOptions(
+    ingredientRows.flatMap((row) => {
+      const set = ingredientSets.find((item) => item.id === row.ingredientSetId);
+      if (isEmptyIngredientRow(row) || !set) {
+        return [];
+      }
+      let portionAmounts: [string, string] | undefined;
+      if (row.portionOneRatio != null) {
+        try {
+          const serialized = serializeMeasurements(row.measurements).map((measurement) => ({
+            ...measurement,
+            picklist_value: measurement.picklist_value_id
+              ? (availablePicklists.find((option) => option.id === measurement.picklist_value_id)
+                  ?.display_value ?? null)
+              : null,
+          }));
+          const measurementType =
+            row.portionMeasurementType ??
+            serialized.find((measurement) =>
+              ['volume', 'weight', 'count', 'informal'].includes(measurement.measurement_type),
+            )?.measurement_type;
+          let ratio = row.portionOneRatio;
+          const firstAmount = row.portionOneAmount
+            ? parseQuantityInput(row.portionOneAmount)
+            : null;
+          const total = serialized.find(
+            (measurement) => measurement.measurement_type === measurementType,
+          )?.amount_min;
+          if (firstAmount?.maximum === null && total != null) {
+            ratio = getPortionRatio(firstAmount.minimum, total) ?? ratio;
+          }
+          if (measurementType) {
+            portionAmounts =
+              getPortionDisplayAmounts(serialized, ratio, measurementType) ?? undefined;
+          }
+        } catch {
+          portionAmounts = undefined;
+        }
+      }
+      return [
+        {
+          id: row.id,
+          ingredientId: row.ingredientId ?? ingredientSlug(row.ingredientName),
+          name: row.ingredientName,
+          setId: row.ingredientSetId,
+          setLabel: set.label,
+          portionAmounts,
+        },
+      ];
+    }),
   );
 
   async function addPicklistOption(category: EditorPicklistCategory, rawValue: string) {
@@ -364,6 +427,9 @@ export function RecipeForm({
       detail: '',
       preparation: '',
       measurements: [],
+      portionOneRatio: null,
+      sizeValue: '',
+      sizeUnit: '',
     };
     setIngredientRows((currentRows) => [
       ...currentRows.filter((row) => !isEmptyIngredientRow(row)),
@@ -794,6 +860,7 @@ export function RecipeForm({
           ingredients={ingredientRows
             .filter((row) => row.ingredientName.trim())
             .map((row) => ({ id: row.id, name: row.ingredientName }))}
+          mentionOptions={ingredientMentionOptions}
           availableIngredients={ingredients}
           steps={instructionSteps}
           onChange={setInstructionSteps}

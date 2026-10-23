@@ -102,6 +102,7 @@ function renderInstructionMarkdown(
               displayName={displayName}
               ingredient={ingredient}
               key={key}
+              portionOrdinal={token.portionOrdinal}
               unitSystems={unitSystems}
             />
           );

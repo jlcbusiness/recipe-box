@@ -20,7 +20,7 @@ const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2;
+  schemaVersion?: 1 | 2 | 3;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   records?: Partial<PortableData['records']>;
@@ -189,6 +189,9 @@ describe('import bundle validation', () => {
     });
     expect(bundle.data.records.recipe_ingredients[0]).toMatchObject({
       ingredient_set_id: bundle.data.records.recipe_ingredient_sets[0].id,
+      portion_one_ratio: null,
+      size_value: null,
+      size_unit: null,
     });
     expect([...bundle.images.keys()]).toEqual([
       `images/${assetId}/full.webp`,
@@ -196,7 +199,7 @@ describe('import bundle validation', () => {
     ]);
   });
 
-  it('accepts v2 set membership and rejects an unresolved ingredient-set ID', () => {
+  it('accepts v2 defaults and v3 portions while rejecting unresolved ingredient-set IDs', () => {
     const setId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
     const rowId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
     const valid = createBundleEntries({
@@ -216,7 +219,51 @@ describe('import bundle validation', () => {
         ingredients: [{ id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Lemon' }],
       },
     });
-    expect(() => validateImportBundleFiles(valid)).not.toThrow();
+    const validated = validateImportBundleFiles(valid);
+    expect(validated.data.records.recipe_ingredients[0]).toMatchObject({
+      portion_one_ratio: null,
+      size_value: null,
+      size_unit: null,
+    });
+
+    const v3 = createBundleEntries({
+      schemaVersion: 3,
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, name: 'Lemon cake', publication_id: null },
+      records: {
+        recipe_ingredient_sets: [{ id: setId, recipe_id: recipeId, label: 'Main', position: 0 }],
+        ingredients: [{ id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Lemon' }],
+        recipe_ingredients: [
+          {
+            id: rowId,
+            recipe_id: recipeId,
+            ingredient_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            ingredient_set_id: setId,
+            position: 0,
+            preparation: 'cubed',
+            portion_one_ratio: 0.25,
+            size_value: 2,
+            size_unit: 'cm',
+          },
+        ],
+        recipe_steps: [{ id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', recipe_id: recipeId }],
+        recipe_step_mentions: [
+          {
+            id: '99999999-9999-4999-8999-999999999999',
+            recipe_id: recipeId,
+            recipe_step_id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+            recipe_ingredient_id: rowId,
+            position: 0,
+            portion_ordinal: 2,
+          },
+        ],
+      },
+    });
+    expect(validateImportBundleFiles(v3).data.records.recipe_ingredients[0]).toMatchObject({
+      portion_one_ratio: 0.25,
+      size_value: 2,
+      size_unit: 'cm',
+    });
 
     const invalid = createBundleEntries({
       scope: { type: 'recipe', id: recipeId },
@@ -347,7 +394,7 @@ describe('import bundle validation', () => {
 
     const unsupported = createBundleEntries({});
     const manifest = JSON.parse(new TextDecoder().decode(unsupported.get('manifest.json')));
-    manifest.schema_version = 3;
+    manifest.schema_version = 4;
     unsupported.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
     expect(() => validateImportBundleFiles(unsupported)).toThrow(/version/i);
 
@@ -358,6 +405,7 @@ describe('import bundle validation', () => {
   it('rejects ready media assets without both matching image variants', () => {
     const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
     const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.schema_version = 3;
     data.records.media_assets = [
       {
         id: assetId,
@@ -401,6 +449,7 @@ describe('import bundle validation', () => {
   it('accepts nullable linked recipe references in a database bundle', () => {
     const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
     const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.schema_version = 3;
     data.records.recipe_pairings = [
       {
         id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
@@ -426,6 +475,7 @@ describe('import bundle validation', () => {
   it('accepts publication references retained as static text without a target ID', () => {
     const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
     const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.schema_version = 3;
     data.records.recipe_references = [
       {
         id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
@@ -454,6 +504,7 @@ describe('import bundle validation', () => {
   it('accepts references whose publication ID is optional by type', () => {
     const entries = createBundleEntries({ recipe: { id: recipeId, name: 'Lemon cake' } });
     const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.schema_version = 3;
     data.records.recipe_references = [
       {
         id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',

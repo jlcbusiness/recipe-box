@@ -26,6 +26,7 @@ test('recipe time controls do not overlap the Pairings or Notes sections @e2e', 
   request,
 }) => {
   const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
 
   try {
     await signIn(page, user.email, user.password);
@@ -1867,7 +1868,7 @@ test('owners can create an ingredient mention from an instruction # query @e2e',
     await expect(suggestions.getByRole('option')).toHaveText('Create ingredient “iron”');
     const focusedInstruction = page.locator('.recipe-instruction-textarea:focus');
     await page.keyboard.press('Enter');
-    await expect(focusedInstruction).toHaveValue(/\[\[ingredient:[^|]+\|iron\]\]/);
+    await expect(focusedInstruction).toHaveValue('Add #iron');
     await focusedInstruction.fill(
       `${await focusedInstruction.inputValue()} with **care**.\n\n- Stir gently`,
     );
@@ -1896,6 +1897,83 @@ test('owners can create an ingredient mention from an instruction # query @e2e',
     await page.keyboard.press('Escape');
     await expect(page.getByRole('tooltip')).toBeHidden();
     await expect(ironMention).toBeFocused();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('divided ingredient suggestions insert stable references to each portion @e2e @instructions', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Divided ingredient references');
+
+    const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+    await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+    const carrot = page.getByRole('combobox', { name: 'Ingredient, row 1' });
+    await carrot.fill('Carrot');
+    await carrot.press('Enter');
+    await carrot.press('Enter');
+    await page.getByRole('combobox', { name: 'Ingredient type, row 1' }).click();
+    await page.getByRole('option', { name: 'Count', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Count amount, row 1' }).fill('4');
+
+    await grid.getByRole('cell', { name: 'Preparation, row 1' }).click();
+    const preparation = page.getByRole('combobox', { name: 'Preparation, row 1' });
+    await preparation.fill('divided');
+    await page.getByRole('option', { name: 'divided', exact: true }).click();
+    await preparation.press('Enter');
+    await page.getByRole('textbox', { name: 'First portion, row 1' }).fill('1');
+
+    const rowId = await grid
+      .locator('tbody tr[data-row-id]')
+      .filter({ hasText: 'Carrot' })
+      .getAttribute('data-row-id');
+    expect(rowId).toBeTruthy();
+
+    const instructionInput = page.getByPlaceholder('Add instruction…');
+    await instructionInput.pressSequentially('Use #');
+    const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
+    const suggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    const options = suggestions.getByRole('option');
+    await expect(options).toHaveCount(2);
+    const optionLabels = await options.allTextContents();
+    expect(optionLabels[0]).not.toBe(optionLabels[1]);
+    expect(optionLabels.every((label) => !label.includes('Main'))).toBe(true);
+    await options.nth(0).click();
+    await expect(instruction).toHaveValue('Use #carrot-main-1');
+
+    await instruction.pressSequentially(' and #');
+    await expect(options).toHaveCount(2);
+    await options.nth(1).click();
+    await expect(instruction).toHaveValue('Use #carrot-main-1 and #carrot-main-2');
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    const renderedInstruction = page.locator('.recipe-instruction-list > li').first();
+    await expect(renderedInstruction).toHaveText('Use carrot and carrot');
+    await expect(renderedInstruction.getByRole('button', { name: 'carrot' })).toHaveCount(2);
+    const recipeId = new URL(page.url()).pathname.match(/^\/recipes\/([^/]+)$/)?.[1];
+    expect(recipeId).toBeTruthy();
+    const mentionsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_step_mentions?select=recipe_ingredient_id,portion_ordinal&recipe_id=eq.${recipeId}&order=position.asc`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    expect(mentionsResponse.ok(), await mentionsResponse.text()).toBe(true);
+    expect(await mentionsResponse.json()).toEqual([
+      { recipe_ingredient_id: rowId, portion_ordinal: 1 },
+      { recipe_ingredient_id: rowId, portion_ordinal: 2 },
+    ]);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -2162,7 +2240,7 @@ test('owners confirm before removing an ingredient referenced by instructions @e
     await expect(confirmation).toHaveCount(0);
     await expect(deleteIngredient).toBeFocused();
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
-      /\[\[ingredient:[^|]+\|iron\]\]/,
+      'Heat #iron',
     );
     await expect(ingredientGrid).toContainText(/iron/i);
 
@@ -3659,28 +3737,24 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     await expect(page.locator('.recipe-reader-subtitle')).toHaveText(
       `${isMobileProject ? 'standard' : 'first'}, order entered`,
     );
+    const readerSummary = page.locator('.recipe-reader-title > h2 + .recipe-reader-subtitle');
+    await expect(readerSummary).toHaveText(
+      `${isMobileProject ? 'standard' : 'first'}, order entered`,
+    );
 
     await page.setViewportSize({ width: 1280, height: 900 });
-    const ingredientsHeadingBounds = await page
-      .getByRole('heading', { name: 'Ingredients', exact: true })
-      .boundingBox();
+    const readerTitleBounds = await page.locator('.recipe-reader-title').boundingBox();
     const readerControlsBounds = await page.locator('.recipe-reader-controls').boundingBox();
-    expect(ingredientsHeadingBounds).not.toBeNull();
+    expect(readerTitleBounds).not.toBeNull();
     expect(readerControlsBounds).not.toBeNull();
-    if (ingredientsHeadingBounds && readerControlsBounds) {
+    if (readerTitleBounds && readerControlsBounds) {
       expect(
-        readerControlsBounds.x - (ingredientsHeadingBounds.x + ingredientsHeadingBounds.width),
+        readerControlsBounds.x - (readerTitleBounds.x + readerTitleBounds.width),
       ).toBeLessThanOrEqual(12);
-      expect(
-        Math.abs(
-          readerControlsBounds.y +
-            readerControlsBounds.height / 2 -
-            (ingredientsHeadingBounds.y + ingredientsHeadingBounds.height / 2),
-        ),
-      ).toBeLessThanOrEqual(1);
+      expect(Math.abs(readerControlsBounds.y - readerTitleBounds.y)).toBeLessThanOrEqual(1);
     }
-    await expect(page.locator('.recipe-reader-subtitle')).toHaveCSS('margin-top', '0px');
-    await expect(page.locator('.recipe-reader-subtitle')).toHaveCSS('margin-bottom', '16px');
+    await expect(readerSummary).toHaveCSS('margin-top', '0px');
+    await expect(readerSummary).toHaveCSS('margin-bottom', '0px');
     if (isMobileProject) await presentation.click();
     await expect(page.locator('.recipe-reading-ingredient_first')).toHaveCSS('display', 'grid');
     const ingredientColumnBounds = await page
@@ -3784,7 +3858,7 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     const mobileIngredientsHeading = await page
       .getByRole('heading', { name: 'Ingredients', exact: true })
       .boundingBox();
-    const mobileSubtitle = await page.locator('.recipe-reader-subtitle').boundingBox();
+    const mobileSubtitle = await readerSummary.boundingBox();
     const mobileControls = await page.locator('.recipe-reader-controls').boundingBox();
     expect(mobileIngredientsHeading).not.toBeNull();
     expect(mobileSubtitle).not.toBeNull();
@@ -3793,13 +3867,7 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
       expect(mobileSubtitle.y).toBeGreaterThanOrEqual(
         mobileIngredientsHeading.y + mobileIngredientsHeading.height,
       );
-      expect(
-        Math.abs(
-          mobileControls.y +
-            mobileControls.height / 2 -
-            (mobileIngredientsHeading.y + mobileIngredientsHeading.height / 2),
-        ),
-      ).toBeLessThanOrEqual(1);
+      expect(mobileControls.y).toBeGreaterThanOrEqual(mobileSubtitle.y + mobileSubtitle.height);
     }
     const mobileCellSpacing = await table
       .locator('tbody td')

@@ -78,6 +78,9 @@ function ingredientRow(
     is_main: false,
     detail: '',
     preparation: '',
+    portion_one_ratio: null,
+    size_value: null,
+    size_unit: null,
     measurements,
   };
 }
@@ -110,6 +113,62 @@ function instructionStep(position: number, contentMarkdown: string): RecipeInstr
 }
 
 describe('recipe reader measurement rules', () => {
+  it('renders divided portions and Size in Standard and Ingredient-first views', () => {
+    render(
+      <RecipeReaderProvider serves={4}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[
+            {
+              id: 'carrot-row',
+              ingredient_id: 'carrot',
+              ingredient_set_id: 'set-main',
+              ingredient_name: 'Carrot',
+              position: 0,
+              is_main: false,
+              detail: '',
+              preparation: 'cubed',
+              portion_one_ratio: 0.25,
+              size_value: 1.25,
+              size_unit: 'in',
+              measurements: [
+                {
+                  id: 'carrot-count',
+                  position: 0,
+                  measurement_type: 'count',
+                  amount_min: 4,
+                  amount_max: null,
+                  unit_code: null,
+                  picklist_value_id: null,
+                  picklist_value: null,
+                },
+              ],
+            },
+          ]}
+          recipeId="recipe-id"
+          serves={4}
+          steps={[]}
+          volumeSystem="us_customary"
+          weightSystem="us_customary"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('listitem').textContent).toContain('4 carrot, cubed 1 ¼ in');
+    expect(screen.getByRole('listitem').textContent).toContain('1 : 3');
+    expect(screen.getByRole('listitem').textContent).toContain('cubed 1 ¼ in');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+      }),
+    );
+    const ingredientRow = screen.getByRole('row', { name: /carrot/u });
+    expect(ingredientRow.textContent).toContain('4');
+    expect(ingredientRow.textContent).toContain('1 : 3');
+    expect(ingredientRow.textContent).toContain('cubed 1 ¼ in');
+  });
+
   it.each(canonicalUnitCases)(
     'converts supported unit %s/%s to its canonical unit and back',
     (dimension, unitCode, canonicalUnit, canonicalAmount) => {
@@ -367,6 +426,9 @@ describe('recipe reader measurement rules', () => {
               is_main: true,
               detail: '',
               preparation: '',
+              portion_one_ratio: null,
+              size_value: null,
+              size_unit: null,
               measurements: [
                 {
                   id: 'flour-volume',
@@ -417,6 +479,9 @@ describe('recipe reader measurement rules', () => {
               is_main: true,
               detail: '',
               preparation: '',
+              portion_one_ratio: null,
+              size_value: null,
+              size_unit: null,
               measurements: [
                 {
                   id: 'flour-volume',
@@ -468,6 +533,9 @@ describe('recipe reader measurement rules', () => {
               is_main: true,
               detail: '',
               preparation: '',
+              portion_one_ratio: null,
+              size_value: null,
+              size_unit: null,
               measurements: [
                 {
                   id: 'flour-volume',
@@ -532,6 +600,9 @@ describe('recipe reader measurement rules', () => {
               is_main: true,
               detail: '',
               preparation: '',
+              portion_one_ratio: null,
+              size_value: null,
+              size_unit: null,
               measurements: [
                 {
                   id: 'flour-volume',

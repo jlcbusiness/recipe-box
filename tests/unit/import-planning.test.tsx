@@ -19,7 +19,7 @@ const newReferenceId = '66666666-6666-4666-8666-666666666666';
 function emptyData(): PortableData {
   return {
     format: 'recipe-box-data',
-    schema_version: 2,
+    schema_version: 3,
     scope: { type: 'database' },
     account_preferences: {},
     records: Object.fromEntries(
@@ -276,7 +276,18 @@ describe('database import planning', () => {
         preparation: '',
       },
     ];
-    data.records.recipe_steps[0].content_markdown = `Add [[ingredient:${sourceRecipeIngredientId}|Lemon]].`;
+    data.records.recipe_ingredients[0].portion_one_ratio = 0.5;
+    data.records.recipe_steps[0].content_markdown = `Add [[ingredient:${sourceRecipeIngredientId}:2|Lemon]].`;
+    data.records.recipe_step_mentions = [
+      {
+        id: 'aaaaaaaa-bbbb-4aaa-8aaa-aaaaaaaaaaaa',
+        recipe_id: sourceRecipeId,
+        recipe_step_id: data.records.recipe_steps[0].id,
+        recipe_ingredient_id: sourceRecipeIngredientId,
+        position: 0,
+        portion_ordinal: 2,
+      },
+    ];
     const plan = planDatabaseImport(
       data,
       existing,
@@ -291,9 +302,13 @@ describe('database import planning', () => {
     );
 
     expect(plan.records.recipe_steps[0].content_markdown).toBe(
-      `Add [[ingredient:${plan.idMappings.recipe_ingredients.get(sourceRecipeIngredientId)}|Lemon]].`,
+      `Add [[ingredient:${plan.idMappings.recipe_ingredients.get(sourceRecipeIngredientId)}:2|Lemon]].`,
     );
     expect(plan.records.recipe_steps[0].content_markdown).not.toContain(sourceRecipeIngredientId);
+    expect(plan.records.recipe_step_mentions[0]).toMatchObject({
+      recipe_ingredient_id: plan.idMappings.recipe_ingredients.get(sourceRecipeIngredientId),
+      portion_ordinal: 2,
+    });
   });
 
   it('remaps ingredient sets and row membership with the destination recipe graph', () => {

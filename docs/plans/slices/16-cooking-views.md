@@ -100,12 +100,16 @@ Excluded:
 
 ## Reader interaction and visual contract
 
-- Place compact, icon-only Presentation and Sort buttons on the Ingredients
-  heading line. Each cycles to the next mode and changes its icon to show the
-  active mode; its accessible name and tooltip identify the current and next
-  mode. Keep a reserved sort-direction toggle slot to the left of Sort so the
-  toolbar does not shift when direction is available. Keep all controls
-  operable by keyboard and touch.
+- Place compact, icon-only Presentation and Sort buttons beside the Ingredients
+  title when the title, summary, and toolbar fit. Put the lowercase italic
+  presentation/sort summary directly below Ingredients. At narrower widths,
+  preserve the title and summary at natural width and wrap the toolbar below the
+  summary rather than compressing the summary; at 760px and below, always place
+  the toolbar on its own row below the summary. Each control cycles to the next
+  mode and changes its icon to show the active mode; its accessible name and
+  tooltip identify the current and next mode. Keep a reserved sort-direction
+  toggle slot to the left of Sort so the toolbar does not shift when direction
+  is available. Keep all controls operable by keyboard and touch.
 - Standard keeps the existing natural amount-first row format. On desktop,
   place Ingredients beside Instructions in the recipe reading area; size the
   Ingredients column to its widest row, cap it at half the available reader
@@ -148,8 +152,9 @@ Write focused automated tests before production code:
 - Browser tests cover changing each presentation and sort, presentation
   default save and failure recovery, the responsive initial presentation,
   content-sized Ingredients beside the flexible Instructions column on desktop,
-  stacked reading flow on mobile, print matching the active presentation, and
-  unchanged saved ingredient order.
+  stacked reading flow on mobile, the title-summary-toolbar order when the
+  toolbar wraps, print matching the active presentation, and unchanged saved
+  ingredient order.
 - Cook-mode tests cover entering and leaving mode, check and uncheck, reset on
   exit and recipe change, unavailable API, rejected request, active status,
   release on exit/unmount, system release, and reacquisition after visibility

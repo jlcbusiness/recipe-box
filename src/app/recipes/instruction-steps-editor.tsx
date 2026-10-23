@@ -2,7 +2,15 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
-import { type InstructionStepDraft, ingredientSlug } from '../../lib/recipes/instruction-rules';
+import {
+  getInstructionEditorValue,
+  type IngredientMentionOption,
+  type InstructionStepDraft,
+  ingredientMentionMarker,
+  ingredientSlug,
+  replaceInstructionEditorRange,
+  updateInstructionMarkdownFromEditor,
+} from '../../lib/recipes/instruction-rules';
 import { useReorderDrag } from './use-reorder-drag';
 
 type InstructionIngredient = {
@@ -12,11 +20,13 @@ type InstructionIngredient = {
 
 type IngredientSuggestion = InstructionIngredient & {
   kind: 'recipe' | 'catalog';
+  mention?: IngredientMentionOption;
 };
 
 type InstructionStepsEditorProps = {
   steps: InstructionStepDraft[];
   ingredients: readonly InstructionIngredient[];
+  mentionOptions: readonly IngredientMentionOption[];
   availableIngredients: readonly InstructionIngredient[];
   onChange: (steps: InstructionStepDraft[]) => void;
   onAddIngredient: (name: string, ingredientId: string | null) => InstructionIngredient;
@@ -25,6 +35,7 @@ type InstructionStepsEditorProps = {
 export function InstructionStepsEditor({
   steps,
   ingredients,
+  mentionOptions,
   availableIngredients,
   onChange,
   onAddIngredient,
@@ -103,8 +114,10 @@ export function InstructionStepsEditor({
   }
 
   function updateMarkdown(stepId: string, markdown: string, textarea: HTMLTextAreaElement): string {
-    if (stepId === placeholder.id && markdown.trim()) {
-      const promotedStep = { id: crypto.randomUUID(), markdown, plainText: '' };
+    const currentMarkdown = stepsRef.current.find((step) => step.id === stepId)?.markdown ?? '';
+    const nextMarkdown = updateInstructionMarkdownFromEditor(currentMarkdown, markdown);
+    if (stepId === placeholder.id && nextMarkdown.trim()) {
+      const promotedStep = { id: crypto.randomUUID(), markdown: nextMarkdown, plainText: '' };
       newStepIds.current.add(promotedStep.id);
       pendingFocus.current = {
         stepId: promotedStep.id,
@@ -119,7 +132,9 @@ export function InstructionStepsEditor({
       return stepId;
     }
 
-    onChange(steps.map((step) => (step.id === stepId ? { ...step, markdown } : step)));
+    onChange(
+      steps.map((step) => (step.id === stepId ? { ...step, markdown: nextMarkdown } : step)),
+    );
     return stepId;
   }
 
@@ -150,19 +165,22 @@ export function InstructionStepsEditor({
   ) {
     const ingredient =
       candidate.kind === 'catalog' ? onAddIngredient(candidate.name, candidate.id) : candidate;
-    const marker = `[[ingredient:${ingredient.id}|${ingredientSlug(ingredient.name)}]]`;
+    const marker = candidate.mention
+      ? ingredientMentionMarker(candidate.mention)
+      : `[[ingredient:${ingredient.id}|${ingredientSlug(ingredient.name)}]]`;
     const currentSteps = stepsRef.current;
     const selectedStep = currentSteps.find((step) => step.id === currentSuggestion.stepId);
     if (!selectedStep) {
       return;
     }
 
+    const editorValue = getInstructionEditorValue(selectedStep.markdown);
     let replacementEnd = currentSuggestion.end;
-    const candidateSlug = ingredientSlug(candidate.name);
-    let matchedName = selectedStep.markdown.slice(currentSuggestion.start + 1, replacementEnd);
+    const candidateSlug = candidate.mention?.slug ?? ingredientSlug(candidate.name);
+    let matchedName = editorValue.slice(currentSuggestion.start + 1, replacementEnd);
     let matchedSlug = ingredientSlug(matchedName);
     while (matchedSlug && candidateSlug.startsWith(`${matchedSlug}-`)) {
-      const nextWord = /^(\s+[\p{L}\p{N}-]+)/u.exec(selectedStep.markdown.slice(replacementEnd));
+      const nextWord = /^(\s+[\p{L}\p{N}-]+)/u.exec(editorValue.slice(replacementEnd));
       if (!nextWord) {
         break;
       }
@@ -174,8 +192,13 @@ export function InstructionStepsEditor({
       }
     }
 
-    const markdown = `${selectedStep.markdown.slice(0, currentSuggestion.start)}${marker}${selectedStep.markdown.slice(replacementEnd)}`;
-    const selectionStart = currentSuggestion.start + marker.length;
+    const markdown = replaceInstructionEditorRange(
+      selectedStep.markdown,
+      currentSuggestion.start,
+      replacementEnd,
+      marker,
+    );
+    const selectionStart = currentSuggestion.start + `#${candidateSlug}`.length;
     pendingFocus.current = {
       stepId: currentSuggestion.stepId,
       selectionStart,
@@ -208,11 +231,14 @@ export function InstructionStepsEditor({
 
   const matchingIngredients: IngredientSuggestion[] = suggestion
     ? [
-        ...ingredients
-          .filter((ingredient) =>
-            ingredientSlug(ingredient.name).includes(suggestion.query.toLocaleLowerCase()),
-          )
-          .map((ingredient) => ({ ...ingredient, kind: 'recipe' as const })),
+        ...mentionOptions
+          .filter((option) => option.slug.includes(suggestion.query.toLocaleLowerCase()))
+          .map((option) => ({
+            id: `${option.recipeIngredientId}:${option.portionOrdinal ?? 'whole'}`,
+            name: option.label,
+            kind: 'recipe' as const,
+            mention: option,
+          })),
         ...(suggestion.query
           ? availableIngredients
               .filter(
@@ -431,7 +457,7 @@ export function InstructionStepsEditor({
                     isNew,
                   };
                 }}
-                value={step.markdown}
+                value={getInstructionEditorValue(step.markdown)}
                 onChange={(event) => {
                   const updatedStepId = updateMarkdown(
                     step.id,

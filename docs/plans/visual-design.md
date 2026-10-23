@@ -463,6 +463,15 @@ does not submit the recipe form; only Save recipe saves the recipe. Committing
 focuses the trailing Add ingredient row cell on desktop and submits the row
 popover on mobile. Escape closes a listbox or cancels the active edit/popover.
 
+Selecting `divided` in the Preparation cell reveals a compact first-portion
+input, its current measurement unit, and the computed remainder as read-only
+inline controls. There is no standalone Divide checkbox. For dual
+volume/weight rows, activating the existing underlined unit control selects
+which dimension supplies the first amount. Selecting `cubed` reveals a
+separate Size input and underlined `in`/`cm` toggle in the Preparation cell.
+Desktop keeps both control groups on the same line as Preparation; mobile
+wraps them below the picker in the existing row editor.
+
 The desktop Amount interaction has one fixed category picker—**Unit**, **Count**,
 **Things**, or **Feel**—and a single adjacent Amount area. The picker is only
 as wide as its longest visible label plus a small breathing margin; its column
@@ -508,6 +517,13 @@ wide enough for fractional paired values at the supported mobile width, with
 short quantity padding and deliberate amount-to-unit spacing. Picklists,
 overlay placement, and the 48px Submit hit area adapt to the viewport; the page
 does not scroll horizontally.
+The Amount section keeps its category, quantity, and unit controls. Selecting
+`divided` in Preparation reveals the first-portion input, current unit, and
+read-only remainder directly below the Preparation picker. Selecting `cubed`
+reveals Size and its underlined `in`/`cm` toggle in that same section. Both
+groups stay below the picker in the existing row pane and remain usable without
+page-level horizontal overflow. In recipe readers and print, display `cubed`
+before its formatted Size value.
 Food Type, Equipment, Meal Type, and Cuisine menus place the labeled Add input
 and compact Add button at the bottom of the open menu. Keep both menu and input
 within the viewport; confirmation updates the selected draft value without
@@ -558,12 +574,14 @@ control group starts directly after the heading rather than being pushed to the
 far edge. The sort-direction button keeps its slot when hidden and disabled on
 wider layouts; the slot collapses on mobile so visible controls align with the
 heading. The Screen Lock control follows Scale at the standard mobile toolbar
-gap. The
-lowercase, normal-size italic summary sits below the heading with its vertical
-spacing below the subtitle, and reflects the current presentation and sort,
-for example `first, alphabetical`. When the screen wake lock is active, the
-summary adds `screen lock on`. Wake-lock failure and release warnings appear in
-a popup anchored to the Screen Lock control, without adding a line to the page.
+gap. The lowercase, normal-size italic summary sits directly below Ingredients
+and reflects the current presentation and sort, for example
+`first, alphabetical`. When the title, summary, and toolbar do not fit together,
+keep the title and summary at their natural width and wrap the toolbar below the
+summary. At 760px and below, always place the toolbar on its own row below the
+summary. When the screen wake lock is active, the summary adds `screen lock on`.
+Wake-lock failure and release warnings appear in a popup anchored to the Screen
+Lock control, without adding a line to the page.
 Each click cycles to the next presentation or
 sort mode and updates the icon; accessible names and tooltips announce the
 current and next modes. The ascending/descending button has a reserved slot to

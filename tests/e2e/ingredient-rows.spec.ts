@@ -1283,6 +1283,21 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
       name: 'Recipe ingredients on mobile',
       exact: true,
     });
+    const desktopList = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+    for (const width of [901, 900, 899, 760, 640, 390]) {
+      await page.setViewportSize({ width, height: 520 });
+      if (width > 900) {
+        await expect(desktopList).toBeVisible();
+        await expect(mobileList).toBeHidden();
+      } else {
+        await expect(desktopList).toBeHidden();
+        await expect(mobileList).toBeVisible();
+      }
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
+    await page.setViewportSize({ width: 390, height: 520 });
     const mobileRows = mobileList.locator('.recipe-ingredient-mobile-row');
     await expect(mobileList).toBeVisible();
     const idleMobileA11y = await new AxeBuilder({ page })
@@ -1317,7 +1332,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     const triggerBounds = await enterIngredient.boundingBox();
     expect(editorBounds).not.toBeNull();
     expect(triggerBounds).not.toBeNull();
-    expect(editorBounds?.width).toBe(334);
+    expect(editorBounds?.width).toBe(350);
     expect(editorBounds?.y).toBeLessThan(triggerBounds?.y ?? 0);
     expect(editorBounds?.y).toBeGreaterThanOrEqual(0);
     expect((editorBounds?.y ?? 0) + (editorBounds?.height ?? 0)).toBeLessThanOrEqual(520);
@@ -1352,6 +1367,8 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await ingredientInput.fill('Cheese');
     await expect(page.getByRole('listbox')).toBeVisible();
     await page.getByRole('option', { name: 'Add "Cheese"' }).click();
+    await editor.getByRole('textbox', { name: 'Volume amount, row 1' }).fill('1 1/2');
+    await editor.getByRole('textbox', { name: 'Weight amount, row 1' }).fill('1 1/2');
     await editor.getByRole('textbox', { name: 'Specifics' }).fill('Yellow');
     const preparation = editor.getByRole('combobox', { name: 'Preparation' });
     await expect(preparation).not.toHaveAttribute('list', /.+/);
@@ -1369,6 +1386,112 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     expect((optionBounds?.y ?? 0) + (optionBounds?.height ?? 0)).toBeLessThanOrEqual(520);
     await preparationOption.click();
     await expect(preparation).toHaveValue('diced');
+    await preparation.fill('divided');
+    await page.getByRole('option', { name: 'divided', exact: true }).click();
+    const firstPortion = editor.getByRole('textbox', { name: 'First portion, row 1' });
+    await expect(firstPortion).toBeVisible();
+    await expect(firstPortion).toHaveCSS('width', '48px');
+    await expect(firstPortion).toHaveCSS('height', '34px');
+    await expect(firstPortion).toHaveCSS('text-align', 'center');
+    await expect(editor.locator('.recipe-preparation-unit')).toHaveText('cup');
+    await expect(editor.getByRole('status', { name: 'Second portion, row 1' })).toBeEmpty();
+    const preparationControlCenters = await Promise.all(
+      [preparation, editor.locator('.recipe-preparation-controls')].map((element) =>
+        element.evaluate((node) => {
+          const bounds = node.getBoundingClientRect();
+          return bounds.top + bounds.height / 2;
+        }),
+      ),
+    );
+    expect(
+      Math.max(...preparationControlCenters) - Math.min(...preparationControlCenters),
+    ).toBeLessThanOrEqual(1);
+    await firstPortion.fill('0.5');
+    await expect(editor.getByRole('status', { name: 'Second portion, row 1' })).toHaveText('1 cup');
+    const portionControlTops = await editor
+      .locator('.recipe-portion-editor > *')
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top + bounds.height / 2;
+        }),
+      );
+    expect(Math.max(...portionControlTops) - Math.min(...portionControlTops)).toBeLessThanOrEqual(
+      1,
+    );
+    await expect(page.getByRole('checkbox', { name: 'Divide ingredient row 1' })).toHaveCount(0);
+    const dividedPopoverA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-mobile-popover')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(dividedPopoverA11y.violations).toEqual([]);
+
+    await preparation.fill('cubed');
+    await page.getByRole('option', { name: 'cubed', exact: true }).click();
+    const size = editor.getByRole('textbox', { name: 'Size, row 1' });
+    await expect(size).toBeVisible();
+    await expect(size).toHaveCSS('width', '48px');
+    await expect(size).toHaveCSS('height', '34px');
+    await expect(size).toHaveCSS('text-align', 'center');
+    const sizeUnitIn = editor.getByRole('button', {
+      name: 'Size unit, row 1: in. Activate to switch to cm',
+    });
+    await sizeUnitIn.click();
+    const sizeUnitCm = editor.getByRole('button', {
+      name: 'Size unit, row 1: cm. Activate to switch to in',
+    });
+    await expect(sizeUnitCm).toHaveText('cm');
+    await expect(sizeUnitCm).toHaveCSS('height', '34px');
+    await size.fill('0.5');
+    const preparationControlsBounds = await editor
+      .locator('.recipe-preparation-controls')
+      .boundingBox();
+    const currentEditorBounds = await editor.boundingBox();
+    expect(preparationControlsBounds).not.toBeNull();
+    expect(currentEditorBounds).not.toBeNull();
+    expect(preparationControlsBounds?.x).toBeGreaterThanOrEqual(currentEditorBounds?.x ?? 0);
+    expect(
+      (preparationControlsBounds?.x ?? 0) + (preparationControlsBounds?.width ?? 0),
+    ).toBeLessThanOrEqual((currentEditorBounds?.x ?? 0) + (currentEditorBounds?.width ?? 0));
+    for (const width of [900, 899, 760, 640]) {
+      await page.setViewportSize({ width, height: 520 });
+      await expect
+        .poll(async () => {
+          const bounds = await editor.boundingBox();
+          return bounds !== null && bounds.x >= 0 && bounds.x + bounds.width <= width;
+        })
+        .toBe(true);
+      const resizedEditorBounds = await editor.boundingBox();
+      const resizedControlsBounds = await editor
+        .locator('.recipe-preparation-controls')
+        .boundingBox();
+      expect(resizedEditorBounds).not.toBeNull();
+      expect(resizedControlsBounds).not.toBeNull();
+      expect(resizedEditorBounds?.x).toBeGreaterThanOrEqual(0);
+      expect((resizedEditorBounds?.x ?? 0) + (resizedEditorBounds?.width ?? 0)).toBeLessThanOrEqual(
+        width,
+      );
+      expect(resizedControlsBounds?.x).toBeGreaterThanOrEqual(resizedEditorBounds?.x ?? 0);
+      expect(
+        (resizedControlsBounds?.x ?? 0) + (resizedControlsBounds?.width ?? 0),
+      ).toBeLessThanOrEqual((resizedEditorBounds?.x ?? 0) + (resizedEditorBounds?.width ?? 0));
+      await expect(size).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
+    await page.setViewportSize({ width: 390, height: 520 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    const cubedPopoverA11y = await new AxeBuilder({ page })
+      .include('.recipe-ingredient-mobile-popover')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(cubedPopoverA11y.violations).toEqual([]);
+
+    await preparation.fill('diced');
+    await page.getByRole('option', { name: 'diced', exact: true }).click();
     await editor.getByRole('button', { name: 'Submit' }).click();
 
     await expect(mobileList).toContainText('yellow cheese, diced');

@@ -10,7 +10,7 @@
 🗸 color library icon to automatically draw you to it #1
 🗸 the ability to jump to a picklist item by typing the first letter when selected #1
 - the ability to enter an ingredient (second enter) #25
-- the ability to add a second set of ingredients and label both sets #3
+🗸 the ability to add a second set of ingredients and label both sets #3
 - a ratio field for "divided" and a size field for "cubed" #4
   - might need to wrap this for mobile #4
   - if divided is used, ability to chooce which division in ingred reference #4

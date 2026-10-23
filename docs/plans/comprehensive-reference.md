@@ -280,12 +280,16 @@ trailing empty row.
      picker uses compact horizontal padding. On mobile, the editor field order is Ingredient, Specifics, Amount,
      Preparation; Type, quantity, and unit controls share a compact wrapping line, and paired Unit dimensions may wrap
      as needed without page-level horizontal scrolling.
-5. **Specifics (Text):** Qualitative specification or size qualification. Displayed in lowercase after the amount in
+5. **Specifics (Text):** Qualitative ingredient specification. Displayed in lowercase after the amount in
    recipe view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for
    butter), `Brummel & Brown` (for margarine).
 6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or
    during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , `sliced` ,
-   `divided` . Users can add a preparation while editing; saved values appear in future suggestions.
+  `divided` . Users can add a preparation while editing; saved values appear in future suggestions. Selecting `divided`
+  reveals compact first-portion, current-unit, and read-only remainder controls in Preparation; there is no standalone
+  Divide checkbox. Selecting `cubed` reveals the separate Size field and an
+  underlined `in`/`cm` unit toggle there. Desktop keeps either control group
+  beside its Preparation value; mobile wraps them below the picker.
 
 ### 3.2 Dual Measurement (Volume + Weight)
 
@@ -385,6 +389,33 @@ not appear in readers. A one-set recipe retains its existing ingredient-list
 appearance; multiple non-empty sets use a thin divider with the set label, not a
 card. Private, public, print, and offline readers use the same grouping.
 
+Each canonical ingredient can appear at most once within a set. The database
+and recipe-save boundary enforce this rule; the migration checks all recipes,
+including trashed recipes, and aborts before schema changes if a legacy
+duplicate exists. Repeated use in one set is represented by two portions on
+that row. The same canonical ingredient may have an independent row, total, and
+division in another set.
+
+### 3.7 Divided portions and Size
+
+A divided ingredient keeps its saved measurements as the canonical total and
+stores a nullable `portion_one_ratio` strictly between zero and one. Portion 2
+uses the complementary ratio. The editor accepts the first portion amount and
+shows the computed remainder read-only; scaling and unit conversion apply to
+the total before the two displayed amounts are derived. Only scalar Unit,
+Count, and Things values divide. Ranges and Feel phrases do not. For rows with
+both volume and weight, the focused existing unit control selects the input
+dimension and the resulting ratio applies to both. In the editor, selecting
+`divided` in Preparation reveals the compact portion controls with the active
+measurement unit; no separate Divide checkbox is used.
+
+Cubed ingredients may have a separate positive numeric Size with unit `in` or
+`cm`. Both Size fields are null when absent; Size is valid only when
+Preparation is `cubed`. Readers and print format the value using the recipe
+quantity formatter and display `cubed` before the Size value. Selecting
+`cubed` in the editor reveals the Size field and underlined unit toggle in the
+Preparation section.
+
 ---
 
 ## 4. Ingredient Presentation and Sorting
@@ -445,14 +476,19 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
   `1/16 tsp` than to `0` or `1/8 tsp`; midpoint ties, ranges, other units, and
   values shown outside teaspoons remain numeric. This alias never changes the
   saved measurement.
-- Reader controls share the Ingredients heading line and start immediately
-  after its label. The sort-direction control keeps its slot when unavailable
-  on wider layouts, but collapses on mobile so visible controls align with the
-  heading. The Screen Lock control follows Scale at the standard mobile toolbar
-  gap. Cook-mode check-off keeps its 48px target and may reclaim only the
-  ingredient-side spacing needed for its checkbox rail at narrow widths. In
-  mobile Ingredient-first cook mode, the table remains aligned to the section's
-  left edge instead of shifting right to center the added checkbox column.
+- Reader controls share the Ingredients heading line when the heading, summary,
+  and toolbar fit together, and start immediately after the title group. The
+  lowercase italic summary sits directly below Ingredients. When the title,
+  summary, and toolbar do not fit, keep the title and summary at their natural
+  width and wrap the toolbar below the summary. At 760px and below, always place
+  the toolbar on its own row below the summary. The sort-direction control keeps
+  its slot when unavailable on wider layouts, but collapses on mobile so visible
+  controls align with the heading. The Screen Lock control follows Scale at the
+  standard mobile toolbar gap. Cook-mode check-off keeps its 48px target and may
+  reclaim only the ingredient-side spacing needed for its checkbox rail at
+  narrow widths. In mobile Ingredient-first cook mode, the table remains aligned
+  to the section's left edge instead of shifting right to center the added
+  checkbox column.
 
 ### 4.2 Ingredient Sorting Options
 
@@ -508,8 +544,10 @@ preserved.
 ### 5.1 Instructions Editor and `#` Mentions
 
 - Instructions are stored as ordered step blocks written in Markdown. Confirmed
-  ingredient mentions serialize as
-  `[[ingredient:<stable-id>|<slug>]]` and render in the editor as `#<slug>`.
+  whole-row mentions serialize as `[[ingredient:<stable-id>|<slug>]]`; divided
+  portions add a stable ordinal as
+  `[[ingredient:<stable-id>:<1-or-2>|<slug>]]`. Both render in the editor as
+  `#<slug>`.
   Literal unconfirmed `#` text remains plain text and is not indexed as a
   structured mention. The editor's plain-text projection uses the readable
   `#<slug>` form and omits the stored marker.
@@ -555,6 +593,11 @@ preserved.
     - Public and printed recipes use the default bold dark-red treatment.
   - **Structured Tracking:** Only confirmed selections create a structured foreign-key link to the ingredient row. Plain
     text does not trigger instruction-appearance sorting.
+  - Divided rows offer one autocomplete option for each portion and no whole-row
+    option. Each option shows its amount; equal amounts also show `1st` or
+    `2nd`. The set label appears only when that canonical ingredient occurs in
+    multiple sets. Readable slugs always include set identity even when the
+    visible label omits it.
 
 ### 5.2 Recipe-to-Recipe Links ("Pairs With")
 
@@ -1162,13 +1205,15 @@ summary below the photos.
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
 user-facing backup mechanism; Supabase backups are not used. Version 2 archives
+A user-facing backup mechanism; Supabase backups are not used. Version 3 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
   version, and each payload file's uncompressed byte count and SHA-256 digest.
 - `data.json`: Normalized relational JSON using fixed record-table and
   per-table field allow-lists, including ingredient sets and each row's set
-  membership. Owner account IDs, Auth user IDs, admin and
+  membership, portion ratio, Size value/unit, and mention ordinal. Owner
+  account IDs, Auth user IDs, admin and
   sign-in-method fields, signed URLs, private Storage paths, and export
   timestamps are omitted. Product preferences and recipe privacy are retained.
 - `images/<asset-id>/full.webp` and `images/<asset-id>/thumbnail.webp`: Both
@@ -1198,10 +1243,12 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Imports accept supported v1 and v2 bundles only after validating archive
+Imports accept supported v1, v2, and v3 bundles only after validating archive
 integrity, scope, and required graph data. Version 1 recipes receive a
 synthesized `Main` set and their ingredient rows are assigned to it. Version 2
-preserves the included set records and row membership. Imports are
+preserves the included set records and row membership. Versions 1 and 2 default
+portion ratio, Size, and mention ordinal fields to null; version 3 preserves
+them and remaps portion markers with their row IDs. Imports are
 source-independent: the authenticated destination account determines
 ownership, and the import does not require the source account or source Auth
 identity to exist locally.
@@ -1302,6 +1349,8 @@ History events are recorded on save (never on individual keystrokes):
 - Tag recoloring, including affected recipe/publication IDs and before/after
   catalog snapshots with color keys
 - Ingredient additions, removals, and quantity modifications
+- Before/after ingredient snapshots include portion ratios and Size value/units;
+  instruction mention snapshots include nullable portion ordinals.
 - Step reordering and edits
 - Publication assignment and unparenting
 - Trashed / restored states
