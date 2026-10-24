@@ -30,6 +30,7 @@ function createPublicDataAdminClient() {
 }
 
 export type PublicRecipePhoto = {
+  id: string;
   description: string;
   width: number;
   height: number;
@@ -80,6 +81,7 @@ type IngredientRow = Pick<
 type MeasurementRow = RecipeMeasurement & { recipe_ingredient_id: string };
 
 type PublicPhotoRow = {
+  id: string;
   description: string;
   width: number;
   height: number;
@@ -87,17 +89,19 @@ type PublicPhotoRow = {
   thumbnail_path: string;
 };
 
+type SignedPublicPhoto = Omit<PublicRecipePhoto, 'id'> & { assetId: string };
+
 function ensureNoError(error: { message: string } | null): void {
   if (error) {
     throw new Error('Unable to load this public recipe.');
   }
 }
 
-async function getPublicPhotos(recipeId: string): Promise<PublicRecipePhoto[]> {
+async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
   const supabase = createPublicDataAdminClient();
   const { data, error } = await supabase
     .from('media_assets')
-    .select('description, width, height, full_path, thumbnail_path')
+    .select('id, description, width, height, full_path, thumbnail_path')
     .eq('recipe_id', recipeId)
     .eq('asset_type', 'recipe_photo')
     .eq('status', 'ready')
@@ -107,7 +111,7 @@ async function getPublicPhotos(recipeId: string): Promise<PublicRecipePhoto[]> {
 
   const rows = (data ?? []) as PublicPhotoRow[];
   return Promise.all(
-    rows.map(async ({ full_path, thumbnail_path, ...metadata }) => {
+    rows.map(async ({ id, full_path, thumbnail_path, ...metadata }) => {
       const [full, thumbnail] = await Promise.all([
         supabase.storage.from('recipe-media').createSignedUrl(full_path, signedUrlLifetimeSeconds),
         supabase.storage
@@ -119,6 +123,7 @@ async function getPublicPhotos(recipeId: string): Promise<PublicRecipePhoto[]> {
       }
       return {
         ...metadata,
+        assetId: id,
         full_url: full.data.signedUrl,
         thumbnail_url: thumbnail.data.signedUrl,
       };
@@ -315,10 +320,21 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
     pairings: pairingResult.data ?? [],
     references: referenceResult.data ?? [],
   };
+  const signedPhotos = await getPublicPhotos(recipeRow.id);
+  const publicPhotoIds = new Map(
+    signedPhotos.map(({ assetId }, index) => [
+      assetId.toLocaleLowerCase(),
+      `00000000-0000-4000-8000-${(1_000_000 + index).toString(16).padStart(12, '0')}`,
+    ]),
+  );
   const recipe = buildPublicRecipePayload(
     source,
     (equipmentRows ?? []).map((equipment) => equipment.display_value),
+    publicPhotoIds,
   );
-  const photos = await getPublicPhotos(recipeRow.id);
+  const photos = signedPhotos.map(({ assetId, ...photo }) => ({
+    ...photo,
+    id: publicPhotoIds.get(assetId.toLocaleLowerCase()) ?? '',
+  }));
   return { status: 'active', recipe, photos };
 }

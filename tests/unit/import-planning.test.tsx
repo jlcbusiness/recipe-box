@@ -217,6 +217,7 @@ describe('database import planning', () => {
   it('maps media assets to fresh destination IDs while keeping parent links', () => {
     const { data, existing } = createInput();
     const sourceAssetId = '33333333-3333-4333-8333-333333333333';
+    data.records.recipe_steps[0].content_markdown = `Turn it. [[photo:${sourceAssetId}]]-200`;
     data.records.media_assets = [
       {
         id: sourceAssetId,
@@ -258,6 +259,9 @@ describe('database import planning', () => {
       id: '55555555-5555-4555-8555-555555555555',
       recipe_id: destinationRecipeId,
     });
+    expect(plan.records.recipe_steps[0].content_markdown).toBe(
+      'Turn it. [[photo:55555555-5555-4555-8555-555555555555]]-200',
+    );
   });
 
   it('rewrites ingredient mention IDs embedded in step markdown', () => {

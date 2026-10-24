@@ -404,7 +404,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data, error } = await admin.rpc('commit_database_import', {
+    const { data, error } = await admin.rpc('commit_database_import_with_preferences', {
       p_account_id: authData.user.id,
       p_account_preferences:
         scope.type === 'database' && accountPreferencesAction === 'archive'

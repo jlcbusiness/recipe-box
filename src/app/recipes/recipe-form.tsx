@@ -29,8 +29,10 @@ import {
   ingredientSlug,
   instructionPlainText,
   parseIngredientMentions,
+  parseInstructionPhotoReferences,
   serializeInstructionSteps,
   unlinkIngredientMentions,
+  unlinkInstructionPhoto,
 } from '../../lib/recipes/instruction-rules';
 import {
   formatGroupedInteger,
@@ -236,6 +238,21 @@ export function RecipeForm({
       })) ?? [{ id: 'instruction-draft', markdown: '', plainText: '' }],
   );
   const [instructionStepsError, setInstructionStepsError] = useState('');
+  const photoReferenceStepNumbers: Record<string, number[]> = {};
+  const addPhotoReferenceSteps = (steps: readonly { markdown: string }[]) => {
+    for (const [index, step] of steps.entries()) {
+      try {
+        for (const assetId of parseInstructionPhotoReferences(step.markdown)) {
+          const numbers = photoReferenceStepNumbers[assetId] ?? [];
+          if (!numbers.includes(index + 1)) {
+            photoReferenceStepNumbers[assetId] = [...numbers, index + 1];
+          }
+        }
+      } catch {}
+    }
+  };
+  addPhotoReferenceSteps(recipe?.steps.map((step) => ({ markdown: step.content_markdown })) ?? []);
+  addPhotoReferenceSteps(instructionSteps);
   const [pendingIngredientDeletion, setPendingIngredientDeletion] =
     useState<IngredientRowDraft | null>(null);
   const ingredientDeletionDialogRef = useRef<HTMLDialogElement>(null);
@@ -666,9 +683,26 @@ export function RecipeForm({
             <RecipeNameField initialName={recipe.name} />
             <MediaManager
               assets={mediaAssets}
+              expectedVersion={recipe.version}
+              onPhotoDeleted={(assetId) =>
+                setInstructionSteps((currentSteps) =>
+                  currentSteps.map((step) => {
+                    let markdown = step.markdown;
+                    try {
+                      markdown = unlinkInstructionPhoto(markdown, assetId);
+                    } catch {
+                      return step;
+                    }
+                    return markdown === step.markdown
+                      ? step
+                      : { ...step, markdown, plainText: instructionPlainText(markdown) };
+                  }),
+                )
+              }
               parentId={recipe.id}
               parentName={recipe.name}
               parentType="recipe"
+              referencedPhotoSteps={photoReferenceStepNumbers}
             />
           </div>
         ) : (
@@ -819,11 +853,12 @@ export function RecipeForm({
           />
           <div className="recipe-form-save-row">
             <button
+              aria-label="Save recipe"
               className="recipe-primary-button"
               disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
               type="submit"
             >
-              {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save recipe'}
+              {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save'}
             </button>
           </div>
         </div>
@@ -862,6 +897,7 @@ export function RecipeForm({
             .map((row) => ({ id: row.id, name: row.ingredientName }))}
           mentionOptions={ingredientMentionOptions}
           availableIngredients={ingredients}
+          photos={mediaAssets ?? []}
           steps={instructionSteps}
           onChange={setInstructionSteps}
           onAddIngredient={addInstructionIngredient}
@@ -1039,6 +1075,18 @@ export function RecipeForm({
             <span aria-hidden="true" className="recipe-calculate-icon">
               Σ
             </span>
+          </button>
+          <button
+            aria-label={
+              recipe
+                ? 'Save changes from the Total Time row'
+                : 'Save new recipe from the Total Time row'
+            }
+            className="recipe-primary-button recipe-time-submit-button"
+            disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
+            type="submit"
+          >
+            {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save'}
           </button>
         </div>
       </fieldset>

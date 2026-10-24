@@ -23,6 +23,7 @@ function createBundleEntries(options: {
   schemaVersion?: 1 | 2 | 3;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
+  accountPreferences?: Record<string, unknown>;
   records?: Partial<PortableData['records']>;
   includeImages?: boolean;
 }) {
@@ -36,7 +37,7 @@ function createBundleEntries(options: {
     format: 'recipe-box-data',
     schema_version: schemaVersion,
     scope,
-    account_preferences: {},
+    account_preferences: options.accountPreferences ?? {},
     records: Object.fromEntries(
       tables.map((table) => [
         table,
@@ -99,6 +100,38 @@ function createBundleEntries(options: {
 }
 
 describe('import bundle validation', () => {
+  it('accepts and validates instruction emphasis preferences in database bundles', () => {
+    const preferences = {
+      ingredient_color: 'dark_blue',
+      temperature_color: 'red',
+      duration_color: 'orange',
+      temperature_system: 'celsius',
+      private_print_uses_colors: false,
+    };
+
+    expect(() =>
+      validateImportBundleFiles(
+        createBundleEntries({ schemaVersion: 3, accountPreferences: preferences }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateImportBundleFiles(
+        createBundleEntries({
+          schemaVersion: 3,
+          accountPreferences: { ...preferences, ingredient_color: 'ultraviolet' },
+        }),
+      ),
+    ).toThrow(/preference/i);
+    expect(() =>
+      validateImportBundleFiles(
+        createBundleEntries({
+          schemaVersion: 3,
+          accountPreferences: { ...preferences, temperature_system: 'kelvin' },
+        }),
+      ),
+    ).toThrow(/preference/i);
+  });
+
   it('streams a ZIP archive and rejects duplicate or unsupported paths', async () => {
     const data = Buffer.from('portable data');
     const archive = zipSync({ 'data.json': data, 'manifest.json': Buffer.from('{}') });

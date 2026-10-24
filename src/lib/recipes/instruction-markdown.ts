@@ -9,8 +9,13 @@ export type InstructionInlineToken =
   | { type: 'emphasis'; value: string }
   | { type: 'strike'; value: string }
   | { type: 'code'; value: string }
+  | { type: 'duration'; value: string }
+  | { type: 'temperature'; value: string }
+  | { type: 'photo'; id: string; width?: number }
   | { type: 'link'; label: string; url: string }
   | { type: 'mention'; id: string; slug: string; portionOrdinal?: 1 | 2 };
+
+export type TemperatureSystem = 'fahrenheit' | 'celsius';
 
 export type InstructionMarkdownBlock =
   | { type: 'paragraph'; content: InstructionInlineToken[] }
@@ -18,9 +23,34 @@ export type InstructionMarkdownBlock =
   | { type: 'list'; ordered: boolean; items: InstructionInlineToken[][] };
 
 const inlineTokenPattern =
-  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)/giu;
+  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|(\[\[duration:([^\]\r\n]+)\]\])|(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b|(?<![\p{L}\p{N}_])!(?:[\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])|(\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-[1-9]\d{0,3})?)|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
 
-function parseInstructionInline(value: string): InstructionInlineToken[] {
+function formatTemperature(
+  value: string,
+  sourceUnit: string,
+  temperatureSystem?: TemperatureSystem,
+) {
+  const normalizedSourceUnit = sourceUnit.toLocaleUpperCase();
+  const authoredValue = Number(value);
+  const targetUnit =
+    temperatureSystem === undefined
+      ? normalizedSourceUnit
+      : temperatureSystem === 'fahrenheit'
+        ? 'F'
+        : 'C';
+  const displayValue =
+    normalizedSourceUnit === targetUnit
+      ? authoredValue
+      : targetUnit === 'C'
+        ? ((authoredValue - 32) * 5) / 9
+        : (authoredValue * 9) / 5 + 32;
+  return `${Math.round(displayValue / 5) * 5}°${targetUnit}`;
+}
+
+function parseInstructionInline(
+  value: string,
+  temperatureSystem?: TemperatureSystem,
+): InstructionInlineToken[] {
   const tokens: InstructionInlineToken[] = [];
   let previousIndex = 0;
 
@@ -48,6 +78,24 @@ function parseInstructionInline(value: string): InstructionInlineToken[] {
         slug: legacyPortion?.[2] ?? match[3],
         ...(portionOrdinal === undefined ? {} : { portionOrdinal }),
       });
+    } else if (match[12] && match[13]) {
+      tokens.push({ type: 'duration', value: match[13] });
+    } else if (match[14] && match[15]) {
+      tokens.push({
+        type: 'temperature',
+        value: formatTemperature(match[15], match[14], temperatureSystem),
+      });
+    } else if (fullMatch.startsWith('!')) {
+      tokens.push({ type: 'temperature', value: fullMatch.slice(1, -1) });
+    } else if (match[16] && match[17]) {
+      const width = /-([1-9]\d{0,3})$/u.exec(match[16])?.[1];
+      tokens.push({
+        type: 'photo',
+        id: match[17].toLocaleLowerCase(),
+        ...(width === undefined ? {} : { width: Number(width) }),
+      });
+    } else if (match[18] && match[19]) {
+      tokens.push({ type: 'duration', value: match[19] });
     } else if (match[5] && match[6]) {
       tokens.push({ type: 'link', label: match[5], url: match[6] });
     } else if (match[8]) {
@@ -69,7 +117,10 @@ function parseInstructionInline(value: string): InstructionInlineToken[] {
   return tokens;
 }
 
-export function parseInstructionMarkdown(markdown: string): InstructionMarkdownBlock[] {
+export function parseInstructionMarkdown(
+  markdown: string,
+  temperatureSystem?: TemperatureSystem,
+): InstructionMarkdownBlock[] {
   const blocks: InstructionMarkdownBlock[] = [];
   const source = markdown.replace(/\r\n?/gu, '\n').trim();
   if (!source) {
@@ -85,7 +136,7 @@ export function parseInstructionMarkdown(markdown: string): InstructionMarkdownB
       if (paragraphLines.length > 0) {
         blocks.push({
           type: 'paragraph',
-          content: parseInstructionInline(paragraphLines.join(' ')),
+          content: parseInstructionInline(paragraphLines.join(' '), temperatureSystem),
         });
         paragraphLines = [];
       }
@@ -110,7 +161,7 @@ export function parseInstructionMarkdown(markdown: string): InstructionMarkdownB
         blocks.push({
           type: 'heading',
           level: heading[1]?.length ?? 1,
-          content: parseInstructionInline(heading[2] ?? ''),
+          content: parseInstructionInline(heading[2] ?? '', temperatureSystem),
         });
         continue;
       }
@@ -125,7 +176,7 @@ export function parseInstructionMarkdown(markdown: string): InstructionMarkdownB
         if (!pendingList) {
           pendingList = { ordered, items: [] };
         }
-        pendingList.items.push(parseInstructionInline(listItem[3] ?? ''));
+        pendingList.items.push(parseInstructionInline(listItem[3] ?? '', temperatureSystem));
         continue;
       }
 

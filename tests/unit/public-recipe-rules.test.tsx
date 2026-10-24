@@ -136,6 +136,25 @@ const privateRecipe = {
 } satisfies RecipeRecord;
 
 describe('public recipe projection', () => {
+  it('remaps referenced photo IDs without exposing private asset identifiers', () => {
+    const assetId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const displayId = '00000000-0000-4000-8000-000000000010';
+    const recipe = {
+      ...privateRecipe,
+      steps: [
+        {
+          ...privateRecipe.steps[0],
+          content_markdown: `Turn the cake. [[photo:${assetId}]]-200`,
+        },
+      ],
+    };
+
+    const payload = buildPublicRecipePayload(recipe, [], new Map([[assetId, displayId]]));
+
+    expect(payload.steps[0]?.content_markdown).toBe(`Turn the cake. [[photo:${displayId}]]-200`);
+    expect(payload.steps[0]?.content_markdown).not.toContain(assetId);
+  });
+
   it('keeps cooking content and approved attribution while excluding private recipe data', () => {
     const sourceWithMeasurementLink = {
       ...privateRecipe,

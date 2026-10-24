@@ -1,5 +1,7 @@
 'use server';
 
+import { isInstructionEmphasisColor } from '../../lib/recipes/instruction-emphasis';
+import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
 import { createClient } from '../../lib/supabase/server';
@@ -25,6 +27,10 @@ function isHandPreference(value: FormDataEntryValue | null): value is HandPrefer
   return value === 'left' || value === 'right';
 }
 
+function isTemperatureSystem(value: FormDataEntryValue | null): value is TemperatureSystem {
+  return value === 'fahrenheit' || value === 'celsius';
+}
+
 export async function saveUnitPreferences(
   _previousState: UnitPreferenceActionState,
   formData: FormData,
@@ -34,6 +40,51 @@ export async function saveUnitPreferences(
   const weightSystem = formData.get('weight_system');
   const ingredientPresentation = formData.get('ingredient_presentation');
   const handPreference = formData.get('hand_preference');
+  const temperatureSystem = formData.get('temperature_system');
+  if (
+    changedDimension === 'ingredient_color' ||
+    changedDimension === 'temperature_color' ||
+    changedDimension === 'duration_color'
+  ) {
+    const color = formData.get(changedDimension);
+    if (!isInstructionEmphasisColor(color)) {
+      return { status: 'error', message: 'Choose a valid emphasis color.' };
+    }
+
+    const supabase = await createClient();
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) {
+      return { status: 'error', message: 'Sign in to save preferences.' };
+    }
+
+    const { error } = await supabase.rpc('update_account_unit_preferences', {
+      [`p_${changedDimension}`]: color,
+    });
+    return error
+      ? { status: 'error', message: 'Instruction color could not be saved.' }
+      : { status: 'saved', message: 'Saved.' };
+  }
+
+  if (changedDimension === 'print_colors') {
+    const privatePrintUsesColors = formData.get('private_print_uses_colors');
+    if (privatePrintUsesColors !== 'true' && privatePrintUsesColors !== 'false') {
+      return { status: 'error', message: 'Choose a valid print preference.' };
+    }
+
+    const supabase = await createClient();
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) {
+      return { status: 'error', message: 'Sign in to save preferences.' };
+    }
+
+    const { error } = await supabase.rpc('update_account_unit_preferences', {
+      p_private_print_uses_colors: privatePrintUsesColors === 'true',
+    });
+    return error
+      ? { status: 'error', message: 'Print preference could not be saved.' }
+      : { status: 'saved', message: 'Saved.' };
+  }
+
   if (changedDimension === 'hand') {
     if (!isHandPreference(handPreference)) {
       return { status: 'error', message: 'Choose a valid hand preference.' };
@@ -50,6 +101,25 @@ export async function saveUnitPreferences(
     });
     return error
       ? { status: 'error', message: 'Hand preference could not be saved.' }
+      : { status: 'saved', message: 'Saved.' };
+  }
+
+  if (changedDimension === 'temperature') {
+    if (!isTemperatureSystem(temperatureSystem)) {
+      return { status: 'error', message: 'Choose Fahrenheit or Celsius.' };
+    }
+
+    const supabase = await createClient();
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) {
+      return { status: 'error', message: 'Sign in to save temperature preferences.' };
+    }
+
+    const { error } = await supabase.rpc('update_account_unit_preferences', {
+      p_temperature_system: temperatureSystem,
+    });
+    return error
+      ? { status: 'error', message: 'Temperature preference could not be saved.' }
       : { status: 'saved', message: 'Saved.' };
   }
 

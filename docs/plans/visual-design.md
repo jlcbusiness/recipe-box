@@ -33,7 +33,7 @@
     - [Planned direction](#planned-direction)
   - [Ingredient Presentation](#ingredient-presentation)
     - [Current implementation](#current-implementation-5)
-    - [Planned direction](#planned-direction-1)
+    - [Current implementation (DLC 05)](#current-implementation-dlc-05)
     - [Trash and baseline print (Slice 8 current implementation)](#trash-and-baseline-print-slice-8-current-implementation)
   - [Public Recipe View (Slice 22 current implementation)](#public-recipe-view-slice-22-current-implementation)
   - [History (Slice 23 current implementation)](#history-slice-23-current-implementation)
@@ -183,13 +183,15 @@ recipe picklist triggers.
 Times are grouped under “Times (min)” and wrap naturally. Each numeric input is
 sized to five characters or its visible label, whichever needs more room, with
 8px gaps. Total occupies its own final row, with a square icon-only `Σ` button
-beside it and an accessible name and tooltip of “Calculate total time.” On
-mobile, keep a 48px hit target around the visibly compact 30px square, aligned
-with the Total Time input and without extra visible horizontal spacing beyond
-the neighboring field gap. Serves and time values use comma grouping for
-thousands; time inputs accept valid grouped integers and normalize their display
-on blur. Hide numeric spinner controls; values are entered by typing. The
-single-line Reason input remains 36px high, matching adjacent recipe fields.
+beside it and an accessible name and tooltip of “Calculate total time.” Place a
+second submit button at the right edge of this row: `Add Recipe` on new forms
+and `Save changes` on edit forms. On mobile, keep a 48px hit target around the visibly compact
+30px square, aligned with the Total Time input and without extra visible
+horizontal spacing beyond the neighboring field gap. Serves and time values use
+comma grouping for thousands; time inputs accept valid grouped integers and
+normalize their display on blur. Hide numeric spinner controls; values are
+entered by typing. The single-line Reason input remains 36px high, matching
+adjacent recipe fields.
 
 ### Recipe list, detail, and headings
 
@@ -218,7 +220,7 @@ about 1012px wide.
 Account preferences are managed from Settings, not from a persistent navigation
 shortcut. Settings uses a wide, unframed section layout rather than a compact
 menu panel or card. The Personal preferences section contains labeled Volume,
-Weight, and View controls using the shared portal `Picklist`, with stable,
+Weight, Temperature, and View controls using the shared portal `Picklist`, with stable,
 content-sized triggers and the existing save action and status. A mobile-only
 Hand control reverses compact navigation order for Right. Do not add a second
 preference form. Future settings domains become sections as their features are
@@ -313,6 +315,22 @@ more room.
 ## Settings (Slice 14D)
 
 ### Design contract
+
+Instruction emphasis has three independent Settings rows for ingredient,
+temperature, and duration colors. The labels share a column; the 44px color
+squares share a column at the end of the longest label. Activating any square
+opens one shared 4-by-4 swatch palette in-page, vertically centered beside the
+three rows on desktop and below them on narrow screens. Its position does not
+change with the selected category. Match the tag color pane's single left rule,
+inset spacing, visible legend, and unframed treatment. Keep it hidden until a
+square is activated. Show **None** as a black square with Navy immediately
+after it. Then pair each standard color directly with its darker counterpart,
+including Pink and Dark Pink. All colored swatches maintain at
+least 4.5:1 text contrast on the light green, light yellow, and
+white print backgrounds, following
+[WCAG 2.2 SC 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
+The palette stays within the Settings content width, supports keyboard
+selection and Escape dismissal, and saves each choice independently.
 
 Tags use a separate full-width, unframed Settings section after Ingredient
 catalog. It is collapsed by default, uses the same left-side disclosure chevron
@@ -647,17 +665,55 @@ follows the active presentation and hides reader controls and check-off state.
 The saved presentation is an account preference, not recipe data.
 Ingredient-first remains the required default for public share in Slice 22.
 
-### Planned direction
+### Current implementation (DLC 05)
 
-Instruction ingredient mentions default to bold dark red so linked ingredients
-are easy to scan. User Settings offers a dedicated styling configuration:
+Settings provides Volume, Weight, and Temperature unit choices, with
+Fahrenheit as the temperature default. Private instruction display converts
+marked numeric temperatures to the selected unit and rounds them to the nearest
+5 degrees. Public display retains authored units and rounds to the nearest
+5 degrees in that unit. Unitless stove labels marked like `!medium low!` display
+without delimiters; punctuation after the closing delimiter remains visible, so
+`!medium high!!` displays as `medium high!`. Settings also provides independent,
+named swatches for ingredient mentions, temperatures, and durations. Defaults
+are blue, red, and orange respectively; **None** restores ordinary body text.
+Presets use dark colors selected for contrast against the paper surface.
+Ingredient mentions retain their separate bold, italic, and underline
+controls.
 
-- A palette of accessible preset colors (dark red, forest green, navy blue,
-  amber/brown, charcoal/default text).
-- Independent toggle checkboxes for bold, italic, and underline (any combination).
-- Color presets are tested to ensure $\ge 4.5:1$ contrast against the app background.
+Authors mark durations by wrapping their text in equals signs, such as
+`=10 minutes=`. The delimiters remain visible while editing and are omitted
+from reader text; ordinary unmarked times stay unclassified. `F!400` and
+`C!200` convert to the account's selected unit in private reader and print
+output, rounded to the nearest 5 degrees. Fahrenheit is the default. The
+authored token remains unchanged; public pages and print retain its authored
+unit and round to the nearest 5 degrees in that unit. `!medium low!` displays
+as `medium low` in private and public output without unit conversion. Reader
+text keeps its authored meaning without clock or thermometer icons. Private
+print follows the account colors unless the opt-out checkbox is checked; it is
+unchecked by default.
 
-Public and printed recipes will use the default bold dark-red styling.
+Typing `+p` opens a four-column thumbnail pane for the recipe's ready gallery
+photos, anchored at the caret. It overlays the editor and opens above or below
+the step according to available viewport space; there is no separate picker
+button. Each thumbnail has a small, lower-right two-digit identifier that
+remains stable when the gallery is reordered. Selecting one replaces `+p` at
+the caret with `+photoNN`; typing a valid `+photoNN` directly also references
+that photo. Appending `-<width>` sets its display width in pixels, with a
+200px default. In reader and print content, the image floats right at the exact
+inline reference, aligned with that line. Text before the reference uses the
+full line where it fits; text after it and later photo-free instructions wrap
+beside the float. A later instruction containing another photo clears below
+the existing float before placing its own image. Floats end with the
+instruction list. The reference is supplemental, uses empty alternative text,
+and has no caption or description. Removal confirms once and atomically
+removes the photo and all references. Private and public readers resolve the
+image only after their respective recipe authorization checks.
+
+Clicking an instruction photo opens that image in the shared modal viewer at
+intrinsic size, constrained to the available viewport without enlarging a
+smaller image. The top-right close action, Escape, and clicking outside the
+image dismiss it. The viewer displays one image; it does not provide gallery
+navigation.
 
 ### Trash and baseline print (Slice 8 current implementation)
 
@@ -701,15 +757,22 @@ remain part of Slice 25.
 ## Public Recipe View (Slice 22 current implementation)
 
 The guest recipe page has 24px horizontal gutters and a centered content width.
-Keep Print right-aligned on the title row. When the recipe has a serving count,
-append `- serves n` to its title, separated by a space, in regular 16px text.
-Do not repeat Serves in the separate metadata summary.
+Keep Print and an icon-only, accessible **Print without instruction colors**
+toggle together at the right of the title row. The toggle applies only to the
+current public view and its print output; it does not change account
+preferences. When the recipe has a serving count, append `- serves n` to its
+title, separated by a space, in regular 16px text. Do not repeat Serves in the
+separate metadata summary.
 
 Public photos are limited to 420px wide and `min(280px, 60vh)` high. At widths
 above 760px, position the photo gallery beside the Times and Equipment summary;
 at 760px and below, stack the summary after the photos. Keep Ingredients below
-this overview. See [Slice 22](slices/22-public-links-and-privacy.md) for the
-public data and interaction contract.
+this overview. Clicking a non-thumbnail public recipe photo opens that image in
+the modal viewer at intrinsic size, constrained to the viewport without
+enlarging a smaller image. The top-right close action, Escape, and clicking
+outside the image dismiss it. The viewer does not provide gallery navigation.
+See [Slice 22](slices/22-public-links-and-privacy.md) for the public data and
+interaction contract.
 
 ## Publication Editing
 

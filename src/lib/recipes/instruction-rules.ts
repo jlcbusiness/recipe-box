@@ -37,6 +37,14 @@ export type InstructionStepPayload = {
 const mentionPattern =
   /\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::([12]))?\|([^\]\r\n]+)\]\]/giu;
 const mentionPrefixPattern = /\[\[ingredient:/giu;
+const durationPattern = /\[\[duration:([^\]\r\n]+)\]\]/giu;
+const durationDelimiterPattern = /(?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=])/gu;
+const temperaturePattern = /(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b/giu;
+const stoveHeatLabelPattern =
+  /(?<![\p{L}\p{N}_])!([\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])/giu;
+const photoPattern =
+  /\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-([1-9]\d{0,3}))?/giu;
+const photoPrefixPattern = /\[\[photo:/giu;
 
 export function ingredientSlug(name: string): string {
   return name
@@ -56,7 +64,8 @@ export function ingredientMentionMarker(mention: {
   return `[[ingredient:${mention.recipeIngredientId}${portion}|${mention.slug}]]`;
 }
 
-type InstructionEditorMention = {
+type InstructionEditorMarker = {
+  kind: 'mention' | 'duration' | 'temperature' | 'photo';
   sourceStart: number;
   sourceEnd: number;
   displayStart: number;
@@ -65,13 +74,14 @@ type InstructionEditorMention = {
   marker: string;
 };
 
-function getInstructionEditorMentions(markdown: string): InstructionEditorMention[] {
-  const mentions: InstructionEditorMention[] = [];
-  let sourceCursor = 0;
-  let displayCursor = 0;
+export type InstructionPhotoOption = { id: string; reference_code: number | null };
 
+function getInstructionEditorMarkers(
+  markdown: string,
+  photos: readonly InstructionPhotoOption[] = [],
+): InstructionEditorMarker[] {
+  const markers: Array<Omit<InstructionEditorMarker, 'displayStart' | 'displayEnd'>> = [];
   for (const match of markdown.matchAll(new RegExp(mentionPattern))) {
-    const sourceStart = match.index ?? 0;
     const rawSlug = match[3] ?? '';
     const legacyPortion = /^([12])\|(.+)$/u.exec(rawSlug);
     const slug = legacyPortion?.[2] ?? rawSlug;
@@ -80,39 +90,81 @@ function getInstructionEditorMentions(markdown: string): InstructionEditorMentio
       : legacyPortion
         ? (Number(legacyPortion[1]) as 1 | 2)
         : null;
-    const recipeIngredientId = (match[1] ?? '').toLocaleLowerCase();
-    const displayText = `#${slug}`;
-    displayCursor += sourceStart - sourceCursor;
-    mentions.push({
-      sourceStart,
-      sourceEnd: sourceStart + match[0].length,
-      displayStart: displayCursor,
-      displayEnd: displayCursor + displayText.length,
-      displayText,
-      marker: ingredientMentionMarker({ recipeIngredientId, portionOrdinal, slug }),
+    markers.push({
+      kind: 'mention',
+      sourceStart: match.index ?? 0,
+      sourceEnd: (match.index ?? 0) + match[0].length,
+      displayText: `#${slug}`,
+      marker: ingredientMentionMarker({
+        recipeIngredientId: (match[1] ?? '').toLocaleLowerCase(),
+        portionOrdinal,
+        slug,
+      }),
     });
-    sourceCursor = sourceStart + match[0].length;
-    displayCursor += displayText.length;
+  }
+  for (const match of markdown.matchAll(new RegExp(durationPattern))) {
+    markers.push({
+      kind: 'duration',
+      sourceStart: match.index ?? 0,
+      sourceEnd: (match.index ?? 0) + match[0].length,
+      displayText: match[1] ?? '',
+      marker: match[0],
+    });
+  }
+  for (const match of markdown.matchAll(new RegExp(temperaturePattern))) {
+    markers.push({
+      kind: 'temperature',
+      sourceStart: match.index ?? 0,
+      sourceEnd: (match.index ?? 0) + match[0].length,
+      displayText: match[0],
+      marker: match[0],
+    });
+  }
+  for (const match of markdown.matchAll(new RegExp(photoPattern))) {
+    const photo = photos.find(
+      (candidate) => candidate.id.toLocaleLowerCase() === (match[1] ?? '').toLocaleLowerCase(),
+    );
+    const width = match[2];
+    markers.push({
+      kind: 'photo',
+      sourceStart: match.index ?? 0,
+      sourceEnd: (match.index ?? 0) + match[0].length,
+      displayText: photo
+        ? `+photo${String(photo.reference_code ?? 0).padStart(2, '0')}${width ? `-${width}` : ''}`
+        : '[Photo]',
+      marker: match[0],
+    });
   }
 
-  return mentions;
+  markers.sort((left, right) => left.sourceStart - right.sourceStart);
+  let offsetChange = 0;
+  return markers.map((marker) => {
+    const displayStart = marker.sourceStart + offsetChange;
+    const displayEnd = displayStart + marker.displayText.length;
+    offsetChange += marker.displayText.length - (marker.sourceEnd - marker.sourceStart);
+    return { ...marker, displayStart, displayEnd };
+  });
 }
 
-export function getInstructionEditorValue(markdown: string): string {
-  return markdown.replace(
-    new RegExp(mentionPattern),
-    (_marker, _id: string, _portion: string | undefined, rawSlug: string) => {
-      const legacyPortion = /^([12])\|(.+)$/u.exec(rawSlug);
-      return `#${legacyPortion?.[2] ?? rawSlug}`;
-    },
-  );
+export function getInstructionEditorValue(
+  markdown: string,
+  photos: readonly InstructionPhotoOption[] = [],
+): string {
+  return getInstructionEditorMarkers(markdown, photos)
+    .sort((left, right) => right.sourceStart - left.sourceStart)
+    .reduce(
+      (value, marker) =>
+        `${value.slice(0, marker.sourceStart)}${marker.displayText}${value.slice(marker.sourceEnd)}`,
+      markdown,
+    );
 }
 
 export function updateInstructionMarkdownFromEditor(
   previousMarkdown: string,
   editorValue: string,
+  photos: readonly InstructionPhotoOption[] = [],
 ): string {
-  const previousValue = getInstructionEditorValue(previousMarkdown);
+  const previousValue = getInstructionEditorValue(previousMarkdown, photos);
   if (previousValue === editorValue) {
     return previousMarkdown;
   }
@@ -138,32 +190,67 @@ export function updateInstructionMarkdownFromEditor(
 
   const changedEnd = previousValue.length - unchangedSuffix;
   const offsetChange = editorValue.length - previousValue.length;
-  const replacements = getInstructionEditorMentions(previousMarkdown).flatMap((mention) => {
-    const isBeforeChange = mention.displayEnd <= changedStart;
-    const isAfterChange = mention.displayStart >= changedEnd;
+  const replacements = getInstructionEditorMarkers(previousMarkdown, photos).flatMap((marker) => {
+    const isBeforeChange = marker.displayEnd <= changedStart;
+    const isAfterChange = marker.displayStart >= changedEnd;
     if (!isBeforeChange && !isAfterChange) {
-      return [];
+      if (marker.kind !== 'photo') {
+        return [];
+      }
+
+      const expectedCode = /^\+photo(\d{2})/u.exec(marker.displayText)?.[1];
+      const editedPhoto = /^\+photo(\d{2})(?:-(\d{1,4}))?(?![\p{L}\p{N}_-])/u.exec(
+        editorValue.slice(marker.displayStart),
+      );
+      const sourceId = new RegExp(photoPattern).exec(marker.marker)?.[1];
+      if (!expectedCode || !editedPhoto || editedPhoto[1] !== expectedCode || !sourceId) {
+        return [];
+      }
+
+      const width = editedPhoto[2];
+      return [
+        {
+          ...marker,
+          displayText: editedPhoto[0],
+          marker: `[[photo:${sourceId}]]${width ? `-${width}` : ''}`,
+        },
+      ];
     }
 
-    const displayStart = mention.displayStart + (isAfterChange ? offsetChange : 0);
+    const displayStart = marker.displayStart + (isAfterChange ? offsetChange : 0);
     if (
-      editorValue.slice(displayStart, displayStart + mention.displayText.length) !==
-      mention.displayText
+      editorValue.slice(displayStart, displayStart + marker.displayText.length) !==
+      marker.displayText
     ) {
       return [];
     }
-    return [{ ...mention, displayStart }];
+    return [{ ...marker, displayStart }];
   });
 
-  return replacements
+  const updatedMarkdown = replacements
     .sort((left, right) => right.displayStart - left.displayStart)
     .reduce(
-      (value, mention) =>
-        `${value.slice(0, mention.displayStart)}${mention.marker}${value.slice(
-          mention.displayStart + mention.displayText.length,
+      (value, marker) =>
+        `${value.slice(0, marker.displayStart)}${marker.marker}${value.slice(
+          marker.displayStart + marker.displayText.length,
         )}`,
       editorValue,
     );
+  const photoIdsByCode = new Map(
+    photos.flatMap((photo) =>
+      photo.reference_code === null
+        ? []
+        : [[String(photo.reference_code).padStart(2, '0'), photo.id] as const],
+    ),
+  );
+
+  return updatedMarkdown.replace(
+    /(?<![\p{L}\p{N}_])\+photo(\d{2})(?:-([1-9]\d{0,3}))?(?![\p{L}\p{N}_-])/gu,
+    (match, code: string, width: string | undefined) => {
+      const photoId = photoIdsByCode.get(code);
+      return photoId ? `[[photo:${photoId}]]${width ? `-${width}` : ''}` : match;
+    },
+  );
 }
 
 export function replaceInstructionEditorRange(
@@ -171,8 +258,9 @@ export function replaceInstructionEditorRange(
   displayStart: number,
   displayEnd: number,
   replacement: string,
+  photos: readonly InstructionPhotoOption[] = [],
 ): string {
-  const mentions = getInstructionEditorMentions(markdown);
+  const mentions = getInstructionEditorMarkers(markdown, photos);
   const toSourceOffset = (displayOffset: number, isEnd: boolean) => {
     let sourceCursor = 0;
     let editorCursor = 0;
@@ -252,6 +340,14 @@ export function instructionPlainText(markdown: string): string {
       const legacyPortion = /^([12])\|(.+)$/u.exec(rawSlug);
       return `#${legacyPortion?.[2] ?? rawSlug}`;
     })
+    .replace(new RegExp(durationPattern), '$1')
+    .replace(new RegExp(durationDelimiterPattern), '$1')
+    .replace(new RegExp(stoveHeatLabelPattern), '$1')
+    .replace(
+      new RegExp(temperaturePattern),
+      (_marker, unit: string, value: string) => `${value}°${unit.toLocaleUpperCase()}`,
+    )
+    .replace(new RegExp(photoPattern), '')
     .replace(/!?\[([^\]]+)\]\([^)]*\)/gu, '$1')
     .replace(/(`{1,3})([\s\S]*?)\1/gu, '$2')
     .replace(/(\*\*|__|~~|\*|_)([\s\S]*?)\1/gu, '$2')
@@ -260,6 +356,27 @@ export function instructionPlainText(markdown: string): string {
     .replace(/^\s*>\s?/gmu, '')
     .replace(/\s+/gu, ' ')
     .trim();
+}
+
+export function parseInstructionPhotoReferences(markdown: string): string[] {
+  const matches = [...markdown.matchAll(new RegExp(photoPattern))];
+  const prefixes = markdown.match(photoPrefixPattern) ?? [];
+  if (matches.length !== prefixes.length) {
+    throw new Error('Instruction contains an invalid photo reference.');
+  }
+  return matches.map((match) => (match[1] ?? '').toLocaleLowerCase());
+}
+
+export function unlinkInstructionPhoto(markdown: string, assetId: string): string {
+  const references = parseInstructionPhotoReferences(markdown);
+  if (!references.includes(assetId.toLocaleLowerCase())) {
+    return markdown;
+  }
+  const escapedId = assetId.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+  return markdown.replace(
+    new RegExp(`\\[\\[photo:${escapedId}\\]\\](?:-[1-9]\\d{0,3})?`, 'giu'),
+    '',
+  );
 }
 
 export function parseIngredientMentions(markdown: string): InstructionMention[] {

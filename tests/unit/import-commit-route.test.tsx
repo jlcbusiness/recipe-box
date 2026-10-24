@@ -152,7 +152,7 @@ describe('import commit route', () => {
     expect(body).toMatchObject({ imported: true, result: { recipes: 1 } });
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenLastCalledWith(
-      'commit_database_import',
+      'commit_database_import_with_preferences',
       expect.objectContaining({
         p_account_id: accountId,
         p_account_preferences: {},
@@ -204,7 +204,9 @@ describe('import commit route', () => {
     );
     expect(keepCurrent.status).toBe(200);
 
-    const commitCalls = rpc.mock.calls.filter(([name]) => name === 'commit_database_import');
+    const commitCalls = rpc.mock.calls.filter(
+      ([name]) => name === 'commit_database_import_with_preferences',
+    );
     expect(commitCalls.map(([, args]) => args.p_account_preferences)).toEqual([
       { volume_system: 'metric' },
       {},

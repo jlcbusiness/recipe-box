@@ -1,13 +1,20 @@
 import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { MediaAssetDisplay } from '../../../lib/media/data';
 import { getRecipePhotos } from '../../../lib/media/data';
 import type { RecipeIngredient } from '../../../lib/recipes/data';
 import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
 import {
+  defaultInstructionEmphasis,
+  getInstructionEmphasisColor,
+  isInstructionEmphasisColor,
+} from '../../../lib/recipes/instruction-emphasis';
+import {
   getSafeInstructionHref,
   type InstructionInlineToken,
   parseInstructionMarkdown,
+  type TemperatureSystem,
 } from '../../../lib/recipes/instruction-markdown';
 import {
   formatGroupedInteger,
@@ -16,6 +23,7 @@ import {
 import { formatRecipeDuration } from '../../../lib/recipes/recipe-rules';
 import { createClient } from '../../../lib/supabase/server';
 import { ExportAction } from '../../export-action';
+import { ImageViewer } from '../../media/image-viewer';
 import { RecipePhotoGallery } from '../../media/media-display';
 import { OfflineSnapshotCapture } from '../../offline-snapshot-capture';
 import { TagChips } from '../../tags/tag-controls';
@@ -50,14 +58,40 @@ function renderInstructionMarkdown(
   value: string,
   ingredients: readonly RecipeIngredient[],
   unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem },
+  temperatureSystem: TemperatureSystem,
+  emphasisColors: {
+    ingredient: string | undefined;
+    temperature: string | undefined;
+    duration: string | undefined;
+  },
+  photos: readonly MediaAssetDisplay[],
 ) {
   const ingredientsById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient]));
+  const photosById = new Map(photos.map((photo) => [photo.id, photo]));
   const headingTags = [null, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
   const renderInline = (tokens: InstructionInlineToken[], prefix: string) => {
     let precedingText = '';
+    const photoOccurrences = new Map<string, number>();
     return tokens.map((token, index) => {
       const key = `${prefix}-${index}`;
       switch (token.type) {
+        case 'photo': {
+          const photo = photosById.get(token.id);
+          const occurrence = photoOccurrences.get(token.id) ?? 0;
+          photoOccurrences.set(token.id, occurrence + 1);
+          return photo ? (
+            <ImageViewer
+              alt=""
+              buttonLabel="View instruction photo full size"
+              key={`${prefix}-photo-${token.id}-${occurrence}`}
+              height={photo.height}
+              src={photo.full_url}
+              triggerClassName="recipe-instruction-photo"
+              triggerStyle={{ width: token.width ?? 200 }}
+              width={photo.width}
+            />
+          ) : null;
+        }
         case 'text': {
           precedingText += token.value;
           return token.value;
@@ -74,6 +108,20 @@ function renderInstructionMarkdown(
         case 'code':
           precedingText += token.value;
           return <code key={key}>{token.value}</code>;
+        case 'duration':
+          precedingText += token.value;
+          return (
+            <span className="recipe-instruction-duration" key={key}>
+              <span style={{ color: emphasisColors.duration ?? 'inherit' }}>{token.value}</span>
+            </span>
+          );
+        case 'temperature':
+          precedingText += token.value;
+          return (
+            <span className="recipe-instruction-temperature" key={key}>
+              <span style={{ color: emphasisColors.temperature ?? 'inherit' }}>{token.value}</span>
+            </span>
+          );
         case 'link': {
           precedingText += token.label;
           const href = getSafeInstructionHref(token.url);
@@ -104,6 +152,7 @@ function renderInstructionMarkdown(
               key={key}
               portionOrdinal={token.portionOrdinal}
               unitSystems={unitSystems}
+              emphasisColor={emphasisColors.ingredient ?? 'inherit'}
             />
           );
         }
@@ -115,11 +164,22 @@ function renderInstructionMarkdown(
     });
   };
 
-  return parseInstructionMarkdown(value).map((block, index) => {
+  return parseInstructionMarkdown(value, temperatureSystem).map((block, index) => {
     const key = `block-${index}`;
     if (block.type === 'heading') {
       const Heading = headingTags[block.level] ?? 'p';
-      return <Heading key={key}>{renderInline(block.content, key)}</Heading>;
+      return (
+        <Heading
+          className={
+            block.content.some((token) => token.type === 'photo')
+              ? 'recipe-instruction-with-photo'
+              : undefined
+          }
+          key={key}
+        >
+          {renderInline(block.content, key)}
+        </Heading>
+      );
     }
     if (block.type === 'list') {
       const List = block.ordered ? 'ol' : 'ul';
@@ -131,20 +191,44 @@ function renderInstructionMarkdown(
               .map((token) =>
                 token.type === 'mention'
                   ? `${token.type}:${token.id}`
-                  : token.type === 'link'
-                    ? `${token.type}:${token.url}:${token.label}`
-                    : `${token.type}:${token.value}`,
+                  : token.type === 'photo'
+                    ? `${token.type}:${token.id}:${token.width ?? ''}`
+                    : token.type === 'link'
+                      ? `${token.type}:${token.url}:${token.label}`
+                      : `${token.type}:${token.value}`,
               )
               .join('|');
             const occurrence = occurrences.get(signature) ?? 0;
             occurrences.set(signature, occurrence + 1);
             const itemKey = `${key}-${signature}-${occurrence}`;
-            return <li key={itemKey}>{renderInline(item, itemKey)}</li>;
+            return (
+              <li
+                className={
+                  item.some((token) => token.type === 'photo')
+                    ? 'recipe-instruction-with-photo'
+                    : undefined
+                }
+                key={itemKey}
+              >
+                {renderInline(item, itemKey)}
+              </li>
+            );
           })}
         </List>
       );
     }
-    return <p key={key}>{renderInline(block.content, key)}</p>;
+    return (
+      <p
+        className={
+          block.content.some((token) => token.type === 'photo')
+            ? 'recipe-instruction-with-photo'
+            : undefined
+        }
+        key={key}
+      >
+        {renderInline(block.content, key)}
+      </p>
+    );
   });
 }
 
@@ -159,17 +243,45 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   ]);
   let volumeSystem: MeasurementSystem = 'us_customary';
   let weightSystem: MeasurementSystem = 'us_customary';
+  let temperatureSystem: TemperatureSystem = 'fahrenheit';
   let ingredientPresentation: 'standard' | 'ingredient_first' = 'standard';
+  let privatePrintUsesColors = true;
+  let emphasisColors = {
+    ingredient: getInstructionEmphasisColor(defaultInstructionEmphasis.ingredient),
+    temperature: getInstructionEmphasisColor(defaultInstructionEmphasis.temperature),
+    duration: getInstructionEmphasisColor(defaultInstructionEmphasis.duration),
+  };
   if (authData.user) {
     const { data: account } = await supabase
       .from('accounts')
-      .select('volume_system, weight_system, ingredient_presentation')
+      .select(
+        'volume_system, weight_system, temperature_system, ingredient_presentation, ingredient_color, temperature_color, duration_color, private_print_uses_colors',
+      )
       .eq('id', authData.user.id)
       .maybeSingle();
     volumeSystem = account?.volume_system === 'metric' ? 'metric' : 'us_customary';
     weightSystem = account?.weight_system === 'metric' ? 'metric' : 'us_customary';
+    temperatureSystem = account?.temperature_system === 'celsius' ? 'celsius' : 'fahrenheit';
     ingredientPresentation =
       account?.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard';
+    emphasisColors = {
+      ingredient: getInstructionEmphasisColor(
+        isInstructionEmphasisColor(account?.ingredient_color)
+          ? account.ingredient_color
+          : defaultInstructionEmphasis.ingredient,
+      ),
+      temperature: getInstructionEmphasisColor(
+        isInstructionEmphasisColor(account?.temperature_color)
+          ? account.temperature_color
+          : defaultInstructionEmphasis.temperature,
+      ),
+      duration: getInstructionEmphasisColor(
+        isInstructionEmphasisColor(account?.duration_color)
+          ? account.duration_color
+          : defaultInstructionEmphasis.duration,
+      ),
+    };
+    privatePrintUsesColors = account?.private_print_uses_colors !== false;
   }
   if (!recipe) {
     notFound();
@@ -228,7 +340,14 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       <ol className="recipe-instruction-list">
         {recipe.steps.map((step) => (
           <li key={step.id}>
-            {renderInstructionMarkdown(step.content_markdown, recipe.ingredients, unitSystems)}
+            {renderInstructionMarkdown(
+              step.content_markdown,
+              recipe.ingredients,
+              unitSystems,
+              temperatureSystem,
+              emphasisColors,
+              photos,
+            )}
           </li>
         ))}
       </ol>
@@ -237,7 +356,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 
   return (
     <main
-      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}`}
+      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}${privatePrintUsesColors ? '' : ' no-print-emphasis-colors'}`}
       aria-labelledby="page-title"
     >
       <OfflineSnapshotCapture recipeId={recipe.id} />

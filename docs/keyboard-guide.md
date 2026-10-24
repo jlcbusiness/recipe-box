@@ -29,6 +29,9 @@ Control key.
 - Type `#` to show ingredients already on the recipe. Typing a query searches the account-wide ingredient catalog,
   including when `#` is inserted directly before an existing word. Use `ArrowUp` and `ArrowDown` to select an option,
   then press `Enter` to link it or create an unmatched ingredient.
+- Mark a duration by typing one `=` on either side, such as `=10 minutes=` or `=an hour=`. The delimiters stay visible
+  while editing and are omitted from the recipe view. Delete them to remove the emphasis; unmarked times stay ordinary
+  text.
 - Press `Ctrl+.` in an instruction to insert `°` at the caret, replacing any selected text.
 - Press `Enter` in an instruction to insert a new step after it and focus the new step.
 - Press `Shift+Enter` to insert a line break within the current instruction.

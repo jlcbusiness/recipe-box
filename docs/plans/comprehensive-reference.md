@@ -153,6 +153,11 @@ time is broken down into specific categories:
   photo without changing primary status or stored order. The buttons have
   accessible names, selected state, and native keyboard activation; the images
   remain decorative with empty alternative text.
+- Clicking a non-thumbnail recipe photo opens that image in a modal viewer at
+  its intrinsic size, constrained to fit within the viewport without enlarging
+  smaller images. A top-right close action, Escape, and clicking outside the
+  image dismiss the viewer. Thumbnail buttons continue to select the featured
+  photo and do not open the viewer.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
   for retry. Public recipe photos are signed only after the public-link,
@@ -582,15 +587,65 @@ preserved.
   - **Trigger Symbol:** `#` on every platform. Phone keyboards have no convenient non-alphanumeric key, and `#` is a
     familiar mention convention.
   - **Degree Symbol Shortcut:** `Ctrl+.` inserts `°` at the caret and replaces any selected text.
-  - **Ingredient Mention Style:** In-app instruction mentions default to bold
-    dark red to make referenced ingredients easy to scan. User Settings offers
-    a dedicated styling control:
-    - **Color palette:** A curated set of accessible preset colors (dark red,
-      forest green, navy blue, amber/brown, charcoal/default body).
-    - **Font decoration toggles:** Independent checkboxes to add **bold**,
-      **italic**, and/or **underline**.
-    - All combinations must maintain $\ge 4.5:1$ contrast against the app background.
-    - Public and printed recipes use the default bold dark-red treatment.
+  - **Temperature shorthand:** Authors use explicit `F!400` and `C!200` tokens;
+    ordinary prose is not automatically classified. Editing retains the
+    authored token; searchable plain text uses its readable, authored-unit
+    form. Private readers and print convert numeric temperatures to the
+    account's preferred Fahrenheit or Celsius unit, rounding to the nearest
+    5°. Fahrenheit is the default. Public readers and print retain the authored
+    unit and round numeric temperatures to the nearest 5° in that unit. Authors
+    mark unitless stove heat such as `!medium low!`; readers show the label
+    without delimiters and do not convert it. Punctuation immediately after the
+    closing delimiter remains ordinary text, so `!medium high!!` displays as
+    `medium high!`.
+    Authors mark durations by wrapping their text in equals signs, for example
+    `=10 minutes=`; unmarked times remain ordinary prose.
+  - **Instruction photos:** Typing `+p` opens a four-column thumbnail pane
+    anchored to the instruction caret. It overlays the editor and opens above
+    or below the step according to available viewport space; there is no
+    separate picker button. Each photo has a unique, persisted two-digit code
+    for that recipe, displayed at the thumbnail's lower-right corner; the code
+    does not change when photos are reordered. Selecting a thumbnail replaces
+    `+p` at the caret with `+photoNN`, where `NN` is the photo's code. Typing a
+    valid `+photoNN` directly also references that photo. Appending `-<width>`
+    sets its display width in pixels, such as `+photo37-200`; without a suffix,
+    use 200px. Store the stable asset UUID and optional width in instruction
+    content, never a URL, storage path, or image bytes. In readers, the photo
+    floats right at the exact inline reference, aligned with that line. Text
+    before the reference uses the full line where it fits; text after it and
+    later photo-free instruction steps wrap beside the float. A later
+    instruction step containing another photo clears below the existing float
+    before placing its own image. Floats end with the instruction list. The
+    photo is supplemental and decorative, with empty alternative text and no
+    caption or description. Removing a referenced photo requires one
+    confirmation and atomically removes every reference to it; cancellation
+    leaves the recipe unchanged. Print treatment remains governed by the
+    print-layout slice.
+  - **Instruction emphasis:** Private reader text uses separate account
+    preferences for ingredient mentions, temperatures, and durations. Initial
+    colors are blue, red, and orange respectively. Settings aligns the three
+    color controls in rows, with their 44px squares sharing a column after the
+    longest label. Any square opens the same in-page 4-by-4 palette, centered
+    beside the rows on desktop and below them on narrow screens. The palette
+    order pairs each standard color beside its dark counterpart, beginning
+    with **None** represented by a black swatch, followed by Navy. Each
+    standard color sits beside its dark counterpart, including Pink and Dark
+    Pink.
+    Every colored swatch maintains
+    at least 4.5:1 text contrast against
+    the light green, light yellow, and white print backgrounds, following
+    [WCAG 2.2 SC 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
+    Each category can use any preset or **None**, which displays ordinary body
+    text and never hides the content.
+    Ingredient mentions retain independent bold, italic, and underline
+    controls. Color is optional emphasis; the readable text and units carry the
+    meaning.
+  - Private print follows the account's emphasis colors by default. Settings
+    has a checkbox to omit these colors from private print; it is unchecked by
+    default.
+    Public readers and public print use fixed application defaults rather than
+    account preferences. A local, icon-only toggle beside Print can remove
+    instruction colors from the current public view and its print output.
   - **Structured Tracking:** Only confirmed selections create a structured foreign-key link to the ingredient row. Plain
     text does not trigger instruction-appearance sorting.
   - Divided rows offer one autocomplete option for each portion and no whole-row

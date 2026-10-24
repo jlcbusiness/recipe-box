@@ -125,12 +125,14 @@ function useRecipeScale(): RecipeScaleContextValue {
 export function RecipeInstructionMention({
   displayName,
   ingredient,
+  emphasisColor,
   portionOrdinal,
   preserveStoredUnits = false,
   unitSystems,
 }: {
   displayName: string;
   ingredient: RecipeIngredient;
+  emphasisColor?: string;
   portionOrdinal?: 1 | 2;
   preserveStoredUnits?: boolean;
   unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem };
@@ -246,6 +248,7 @@ export function RecipeInstructionMention({
         aria-expanded={isOpen}
         className="recipe-instruction-mention"
         ref={buttonRef}
+        style={emphasisColor ? { color: emphasisColor } : undefined}
         type="button"
         onBlur={() => setIsFocused(false)}
         onClick={() => {

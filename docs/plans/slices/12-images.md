@@ -93,10 +93,11 @@ publication covers and private or trashed recipe photos are never public.
 - Add local test fixtures and focused unit, database/RLS, end-to-end, and
   accessibility coverage before the production implementation.
 
-Public recipe routes, public allow-list expansion, a full-screen gallery or
-lightbox, cropping, video, and animated images remain out of scope for this
-slice. Image export is delivered in Slice 20; image import remains deferred to
-Slice 21.
+Public recipe routes and public allow-list expansion remain out of scope for
+this slice. A single-image modal viewer is in scope for already-authorized
+recipe photos; a navigable full-screen gallery or lightbox remains out of
+scope. Cropping, video, and animated images are also out of scope. Image export
+is delivered in Slice 20; image import remains deferred to Slice 21.
 
 ## UI and interaction
 
@@ -129,6 +130,11 @@ Slice 21.
   appears right-aligned on the desktop heading row and opposite the photo count
   on mobile; Done remains in the bottom toolbar. On desktop, the camera action
   aligns to the right edge of the Name row.
+- Clicking a non-thumbnail recipe or instruction photo opens that image in a
+  modal viewer at intrinsic size, constrained to the viewport without enlarging
+  smaller images. A top-right close action, Escape, and clicking outside the
+  image dismiss it. Recipe thumbnail buttons remain selection controls and do
+  not open the viewer; the viewer does not navigate between images.
 - The recipe device picker uses the platform's ordinary `image/*` picker,
   without forcing camera capture, so mobile platforms can offer their native
   camera and library choices. Publication cover management exposes an explicit
@@ -194,6 +200,10 @@ Write failing automated coverage before implementation:
   horizontal overflow, image dimensions remain stable, the recipe detail photo
   caps are 280px on desktop, 240px on tablet, and 144px on narrow mobile, and
   loading/error states are perceivable.
+- Browser coverage proves non-thumbnail gallery and instruction photos open
+  in the single-image viewer, small images are not enlarged, oversized images
+  fit the viewport, thumbnail selection does not open the viewer, and each
+  dismissal action works.
 - Axe coverage proves the upload controls, gallery, primary selection, ordering,
   and removal controls are keyboard- and screen-reader-operable. Recipe photos
   are decorative; no description input is collected.

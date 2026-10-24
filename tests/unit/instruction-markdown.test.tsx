@@ -8,6 +8,7 @@ import {
 } from '../../src/lib/recipes/instruction-markdown';
 
 const ingredientId = '11111111-1111-4111-8111-111111111111';
+const photoId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const ingredients = [{ id: ingredientId, name: 'Cake flour' }];
 
 describe('instruction Markdown', () => {
@@ -58,6 +59,152 @@ describe('instruction Markdown', () => {
         items: [[{ type: 'text', value: 'Mix' }], [{ type: 'text', value: 'Bake' }]],
       },
     ]);
+  });
+
+  it('parses explicit temperature tokens and marked durations without guessing prose', () => {
+    expect(
+      parseInstructionMarkdown(
+        'Set the oven to F!400 and cool for =10 minutes=. Leave for 10 minutes.',
+      ),
+    ).toEqual([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', value: 'Set the oven to ' },
+          { type: 'temperature', value: '400°F' },
+          { type: 'text', value: ' and cool for ' },
+          { type: 'duration', value: '10 minutes' },
+          { type: 'text', value: '. Leave for 10 minutes.' },
+        ],
+      },
+    ]);
+  });
+
+  it('converts marked temperatures to the requested display system', () => {
+    expect(parseInstructionMarkdown('Preheat to F!400.', 'celsius')[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Preheat to ' },
+        { type: 'temperature', value: '205°C' },
+        { type: 'text', value: '.' },
+      ],
+    });
+    expect(parseInstructionMarkdown('Preheat to C!200.', 'fahrenheit')[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Preheat to ' },
+        { type: 'temperature', value: '390°F' },
+        { type: 'text', value: '.' },
+      ],
+    });
+    expect(parseInstructionMarkdown('Preheat to F!400.')).toEqual(
+      parseInstructionMarkdown('Preheat to F!400.', 'fahrenheit'),
+    );
+  });
+
+  it('rounds displayed numeric temperatures to the nearest five degrees', () => {
+    expect(parseInstructionMarkdown('Set to F!402 or C!201.')[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Set to ' },
+        { type: 'temperature', value: '400°F' },
+        { type: 'text', value: ' or ' },
+        { type: 'temperature', value: '200°C' },
+        { type: 'text', value: '.' },
+      ],
+    });
+    expect(parseInstructionMarkdown('Set to F!402 or C!201.', 'celsius')[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Set to ' },
+        { type: 'temperature', value: '205°C' },
+        { type: 'text', value: ' or ' },
+        { type: 'temperature', value: '200°C' },
+        { type: 'text', value: '.' },
+      ],
+    });
+  });
+
+  it('converts and rounds temperatures in instruction lists', () => {
+    expect(parseInstructionMarkdown('- Heat to F!402.', 'celsius')).toEqual([
+      {
+        type: 'list',
+        ordered: false,
+        items: [
+          [
+            { type: 'text', value: 'Heat to ' },
+            { type: 'temperature', value: '205°C' },
+            { type: 'text', value: '.' },
+          ],
+        ],
+      },
+    ]);
+  });
+
+  it('parses explicit unitless stove heat labels without matching ordinary exclamations', () => {
+    expect(
+      parseInstructionMarkdown('Reduce to !medium low! and stir. Stop! Be careful!')[0],
+    ).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Reduce to ' },
+        { type: 'temperature', value: 'medium low' },
+        { type: 'text', value: ' and stir. Stop! Be careful!' },
+      ],
+    });
+    expect(parseInstructionMarkdown("until it's !medium high!!")[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: "until it's " },
+        { type: 'temperature', value: 'medium high' },
+        { type: 'text', value: '!' },
+      ],
+    });
+  });
+
+  it('converts marked temperatures in headings to the requested display system', () => {
+    expect(parseInstructionMarkdown('# Bake at F!400', 'celsius')).toEqual([
+      {
+        type: 'heading',
+        level: 1,
+        content: [
+          { type: 'text', value: 'Bake at ' },
+          { type: 'temperature', value: '205°C' },
+        ],
+      },
+    ]);
+  });
+
+  it('keeps escaped duration delimiters literal and supports stored legacy markers', () => {
+    expect(parseInstructionMarkdown('Rest for \\=5 minutes= or [[duration:10 minutes]].')).toEqual([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', value: 'Rest for \\=5 minutes= or ' },
+          { type: 'duration', value: '10 minutes' },
+          { type: 'text', value: '.' },
+        ],
+      },
+    ]);
+  });
+
+  it('parses stable photo references as separate readable instruction tokens', () => {
+    expect(parseInstructionMarkdown(`Turn the dough. [[photo:${photoId}]]`)).toEqual([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', value: 'Turn the dough. ' },
+          { type: 'photo', id: photoId },
+        ],
+      },
+    ]);
+    expect(parseInstructionMarkdown(`Turn the dough. [[photo:${photoId}]]-200`)[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Turn the dough. ' },
+        { type: 'photo', id: photoId, width: 200 },
+      ],
+    });
   });
 
   it('parses portion-qualified and legacy ingredient markers as readable mentions', () => {

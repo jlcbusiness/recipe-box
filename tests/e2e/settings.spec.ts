@@ -99,12 +99,14 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
 
     const volumeSelect = page.getByRole('combobox', { name: 'Volume', exact: true });
     const weightSelect = page.getByRole('combobox', { name: 'Weight', exact: true });
+    const temperatureSelect = page.getByRole('combobox', { name: 'Temperature', exact: true });
     const leftHand = page.getByRole('button', { name: 'Left', exact: true });
     const rightHand = page.getByRole('button', { name: 'Right', exact: true });
     await expect(page.getByRole('heading', { name: 'Recipe presentation' })).toHaveCount(0);
     const presentationSelect = page.getByRole('combobox', { name: 'View', exact: true });
     await expect(volumeSelect).toContainText('US customary');
     await expect(weightSelect).toContainText('US customary');
+    await expect(temperatureSelect).toContainText('Fahrenheit');
     await expect(presentationSelect).toContainText('Standard');
     if (testInfo.project.name === 'Fold 6') {
       await expect(rightHand).toHaveAttribute('aria-pressed', 'true');
@@ -140,8 +142,123 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     expect(accessibility.violations).toEqual([]);
     expect((await volumeSelect.boundingBox())?.height).toBe(36);
     expect((await weightSelect.boundingBox())?.height).toBe(36);
+    expect((await temperatureSelect.boundingBox())?.height).toBe(36);
     expect((await presentationSelect.boundingBox())?.height).toBe(36);
 
+    const colorSelections = [
+      { label: 'Ingredient color', color: 'Dark Pink' },
+      { label: 'Temperature color', color: 'None' },
+      { label: 'Duration color', color: 'Pink' },
+    ];
+    const colorRowTops: number[] = [];
+    const colorTriggerXs: number[] = [];
+    const colorLabelRights: number[] = [];
+    const palettePositions: Array<{ x: number; y: number }> = [];
+    await expect(page.locator('.settings-emphasis-palette')).toBeHidden();
+    for (const { label, color } of colorSelections) {
+      const group = page.getByRole('group', { name: label, exact: true });
+      const trigger = group.locator('.settings-emphasis-trigger');
+      const labelBounds = await group.locator('.settings-emphasis-label').boundingBox();
+      await expect(trigger).toHaveCSS('width', '44px');
+      const [groupBounds, triggerBounds] = await Promise.all([
+        group.boundingBox(),
+        trigger.boundingBox(),
+      ]);
+      expect(groupBounds).not.toBeNull();
+      expect(triggerBounds).not.toBeNull();
+      expect(labelBounds).not.toBeNull();
+      if (!groupBounds || !triggerBounds || !labelBounds) {
+        throw new Error('Expected the selected-color row and square to be visible.');
+      }
+      colorRowTops.push(groupBounds.y);
+      colorTriggerXs.push(triggerBounds.x);
+      colorLabelRights.push(labelBounds.x + labelBounds.width);
+      const groupDocumentY = await page.evaluate(
+        (element) => element.getBoundingClientRect().top + window.scrollY,
+        await group.elementHandle(),
+      );
+      expect(triggerBounds.x + triggerBounds.width).toBeCloseTo(
+        groupBounds.x + groupBounds.width,
+        1,
+      );
+
+      await trigger.click();
+      const palette = page.getByRole('group', { name: `${label} choices` });
+      await expect(palette.getByRole('button')).toHaveCount(16);
+      const [paletteBounds, fieldsBounds, openedGroupBounds] = await Promise.all([
+        palette.boundingBox(),
+        page.locator('.settings-emphasis-fields').boundingBox(),
+        group.boundingBox(),
+      ]);
+      expect(paletteBounds).not.toBeNull();
+      expect(fieldsBounds).not.toBeNull();
+      expect(openedGroupBounds).not.toBeNull();
+      if (!paletteBounds || !fieldsBounds || !openedGroupBounds) {
+        throw new Error('Expected the shared palette and color controls to be visible.');
+      }
+      const openedGroupDocumentY = await page.evaluate(
+        (element) => element.getBoundingClientRect().top + window.scrollY,
+        await group.elementHandle(),
+      );
+      expect(openedGroupDocumentY).toBeCloseTo(groupDocumentY, 1);
+      const documentY = await page.evaluate(
+        (element) => element.getBoundingClientRect().top + window.scrollY,
+        await palette.elementHandle(),
+      );
+      palettePositions.push({ x: paletteBounds.x, y: documentY });
+      const paletteColumns = await palette
+        .locator('.settings-emphasis-palette-grid')
+        .evaluate(
+          (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length,
+        );
+      expect(paletteColumns).toBe(4);
+      await expect(
+        palette.getByRole('button', { name: `Set ${label.toLowerCase()} to None` }),
+      ).toHaveCSS('background-color', 'rgb(32, 33, 36)');
+      if ((page.viewportSize()?.width ?? 0) > 640) {
+        expect(paletteBounds.x).toBeGreaterThanOrEqual(fieldsBounds.x + fieldsBounds.width);
+        expect(
+          Math.abs(
+            paletteBounds.y + paletteBounds.height / 2 - (fieldsBounds.y + fieldsBounds.height / 2),
+          ),
+        ).toBeLessThanOrEqual(10);
+      } else {
+        expect(paletteBounds.y).toBeGreaterThanOrEqual(fieldsBounds.y + fieldsBounds.height);
+      }
+      expect(paletteBounds.x).toBeGreaterThanOrEqual(0);
+      expect(paletteBounds.x + paletteBounds.width).toBeLessThanOrEqual(
+        page.viewportSize()?.width ?? 0,
+      );
+
+      const option = palette.getByRole('button', {
+        name: `Set ${label.toLowerCase()} to ${color}`,
+      });
+      if (testInfo.project.name === 'Fold 6') {
+        await option.tap();
+      } else {
+        await option.click();
+      }
+      await expect(page.getByRole('status')).toHaveText('Saved.');
+      await expect(trigger).toHaveAttribute('aria-label', `${label}: ${color}`);
+      await expect(palette).toBeHidden();
+    }
+    expect(new Set(colorRowTops).size).toBe(3);
+    expect(new Set(colorTriggerXs.map((x) => Math.round(x))).size).toBe(1);
+    expect(colorTriggerXs[0]).toBeCloseTo(Math.max(...colorLabelRights) + 8, 1);
+    const firstPalettePosition = palettePositions[0];
+    if (!firstPalettePosition) throw new Error('Expected the shared palette to open.');
+    for (const position of palettePositions.slice(1)) {
+      expect(position.x).toBeCloseTo(firstPalettePosition.x, 1);
+      expect(position.y).toBeCloseTo(firstPalettePosition.y, 1);
+    }
+
+    const emphasisSaved = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=ingredient_color,temperature_color,duration_color&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await emphasisSaved.json()).toEqual([
+      { ingredient_color: 'black', temperature_color: 'none', duration_color: 'pink' },
+    ]);
     await presentationSelect.click();
     await page.getByRole('listbox').getByRole('option', { name: 'Ingredient-first' }).click();
     await expect(page.getByRole('status')).toHaveText('Saved.');
@@ -179,11 +296,15 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       const weightHitHeight = await weightSelect.evaluate((trigger) =>
         Number.parseFloat(getComputedStyle(trigger, '::before').height),
       );
+      const temperatureHitHeight = await temperatureSelect.evaluate((trigger) =>
+        Number.parseFloat(getComputedStyle(trigger, '::before').height),
+      );
       const presentationHitHeight = await presentationSelect.evaluate((trigger) =>
         Number.parseFloat(getComputedStyle(trigger, '::before').height),
       );
       expect(volumeHitHeight).toBeGreaterThanOrEqual(48);
       expect(weightHitHeight).toBeGreaterThanOrEqual(48);
+      expect(temperatureHitHeight).toBeGreaterThanOrEqual(48);
       expect(presentationHitHeight).toBeGreaterThanOrEqual(48);
 
       const handPreference = page.locator('.settings-hand-preference');
@@ -254,6 +375,15 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
 
     await expect(volumeSelect).toContainText('Metric');
     await expect(weightSelect).toContainText('Metric');
+    await temperatureSelect.click();
+    await page.getByRole('listbox').getByRole('option', { name: 'Celsius', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect(temperatureSelect).toContainText('Celsius');
+    const temperatureSaved = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=temperature_system&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await temperatureSaved.json()).toEqual([{ temperature_system: 'celsius' }]);
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);

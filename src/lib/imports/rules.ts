@@ -13,6 +13,7 @@ import {
   portableRecordFields,
 } from '../exports/rules';
 import { validateIngredientSetLabels } from '../recipes/ingredient-set-rules';
+import { instructionEmphasisOptions } from '../recipes/instruction-emphasis';
 
 const imagePathPattern =
   /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail)\.webp$/i;
@@ -28,8 +29,13 @@ const requiredDataKeys = ['format', 'schema_version', 'scope', 'account_preferen
 const preferenceFields = new Set([
   'volume_system',
   'weight_system',
+  'temperature_system',
   'ingredient_presentation',
   'hand_preference',
+  'ingredient_color',
+  'temperature_color',
+  'duration_color',
+  'private_print_uses_colors',
   'recipe_column_order',
   'recipe_hidden_columns',
 ]);
@@ -153,9 +159,20 @@ function validateData(
   }
 
   const preferences = asRecord(data.account_preferences, 'Account preferences');
+  const instructionColors = new Set<string>(
+    instructionEmphasisOptions.map((option) => option.value),
+  );
   if (
     Object.keys(preferences).some((field) => !preferenceFields.has(field)) ||
-    (scope.type !== 'database' && Object.keys(preferences).length > 0)
+    (scope.type !== 'database' && Object.keys(preferences).length > 0) ||
+    ['ingredient_color', 'temperature_color', 'duration_color'].some(
+      (field) =>
+        preferences[field] !== undefined && !instructionColors.has(String(preferences[field])),
+    ) ||
+    (preferences.temperature_system !== undefined &&
+      !['fahrenheit', 'celsius'].includes(String(preferences.temperature_system))) ||
+    (preferences.private_print_uses_colors !== undefined &&
+      typeof preferences.private_print_uses_colors !== 'boolean')
   ) {
     throw new Error('The bundle contains unsupported account preference fields.');
   }

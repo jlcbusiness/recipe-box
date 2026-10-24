@@ -77,6 +77,19 @@ function remapPublicInstructionMentions(
   );
 }
 
+function remapPublicInstructionPhotos(
+  markdown: string,
+  photoIds: ReadonlyMap<string, string>,
+): string {
+  return markdown.replace(
+    /\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\]/giu,
+    (_marker, sourceId: string) => {
+      const displayId = photoIds.get(sourceId.toLocaleLowerCase());
+      return displayId ? `[[photo:${displayId}]]` : '';
+    },
+  );
+}
+
 export function getSafePublicReferenceHref(value: string | null): string | null {
   if (!value) return null;
 
@@ -98,6 +111,7 @@ export function getSafePublicReferenceHref(value: string | null): string | null 
 export function buildPublicRecipePayload(
   recipe: PublicRecipeSource,
   equipment: string[],
+  photoIds: ReadonlyMap<string, string> = new Map(),
 ): PublicRecipePayload {
   let displayIdIndex = 0;
   const createDisplayId = () => createPublicDisplayId(displayIdIndex++);
@@ -157,11 +171,14 @@ export function buildPublicRecipePayload(
     ingredients,
     steps: recipe.steps.map(({ position, content_markdown }) => ({
       position,
-      content_markdown: remapPublicInstructionMentions(
-        content_markdown,
-        ingredientIds,
-        missingMentionIds,
-        createDisplayId,
+      content_markdown: remapPublicInstructionPhotos(
+        remapPublicInstructionMentions(
+          content_markdown,
+          ingredientIds,
+          missingMentionIds,
+          createDisplayId,
+        ),
+        photoIds,
       ),
     })),
     attribution: recipe.publication

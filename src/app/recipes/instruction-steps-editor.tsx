@@ -1,6 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { useLayoutEffect, useRef, useState } from 'react';
+import type { MediaAssetDisplay } from '../../lib/media/data';
 import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
 import {
   getInstructionEditorValue,
@@ -28,6 +30,7 @@ type InstructionStepsEditorProps = {
   ingredients: readonly InstructionIngredient[];
   mentionOptions: readonly IngredientMentionOption[];
   availableIngredients: readonly InstructionIngredient[];
+  photos: readonly MediaAssetDisplay[];
   onChange: (steps: InstructionStepDraft[]) => void;
   onAddIngredient: (name: string, ingredientId: string | null) => InstructionIngredient;
 };
@@ -37,6 +40,7 @@ export function InstructionStepsEditor({
   ingredients,
   mentionOptions,
   availableIngredients,
+  photos,
   onChange,
   onAddIngredient,
 }: InstructionStepsEditorProps) {
@@ -54,6 +58,11 @@ export function InstructionStepsEditor({
     selectionEnd: number;
   } | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [photoPickerStepId, setPhotoPickerStepId] = useState<string | null>(null);
+  const [photoPickerRange, setPhotoPickerRange] = useState<{ start: number; end: number } | null>(
+    null,
+  );
+  const [photoPickerPlacement, setPhotoPickerPlacement] = useState<'above' | 'below'>('below');
   const [dropOffsets, setDropOffsets] = useState<Map<string, number>>(() => new Map());
   const [dropCommitPending, setDropCommitPending] = useState(false);
   const [settlingSourceId, setSettlingSourceId] = useState<string | null>(null);
@@ -108,6 +117,40 @@ export function InstructionStepsEditor({
     window.requestAnimationFrame(() => setDropOffsets(new Map()));
   }, [dragPreview]);
 
+  useLayoutEffect(() => {
+    if (!photoPickerStepId) {
+      return;
+    }
+
+    const updatePlacement = () => {
+      const step = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.recipe-instruction-edit-step[data-instruction-step-id]',
+        ),
+      ).find((element) => element.dataset.instructionStepId === photoPickerStepId);
+      const picker = step?.querySelector<HTMLElement>('.recipe-instruction-photo-picker');
+      if (!step || !picker) {
+        return;
+      }
+
+      const bounds = step.getBoundingClientRect();
+      const requiredHeight = Math.min(picker.scrollHeight, window.innerHeight * 0.65);
+      const spaceBelow = window.innerHeight - bounds.bottom - 12;
+      const spaceAbove = bounds.top - 12;
+      setPhotoPickerPlacement(
+        spaceBelow < requiredHeight && spaceAbove > spaceBelow ? 'above' : 'below',
+      );
+    };
+
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [photoPickerStepId]);
+
   function resizeTextarea(textarea: HTMLTextAreaElement) {
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
@@ -115,7 +158,7 @@ export function InstructionStepsEditor({
 
   function updateMarkdown(stepId: string, markdown: string, textarea: HTMLTextAreaElement): string {
     const currentMarkdown = stepsRef.current.find((step) => step.id === stepId)?.markdown ?? '';
-    const nextMarkdown = updateInstructionMarkdownFromEditor(currentMarkdown, markdown);
+    const nextMarkdown = updateInstructionMarkdownFromEditor(currentMarkdown, markdown, photos);
     if (stepId === placeholder.id && nextMarkdown.trim()) {
       const promotedStep = { id: crypto.randomUUID(), markdown: nextMarkdown, plainText: '' };
       newStepIds.current.add(promotedStep.id);
@@ -136,6 +179,92 @@ export function InstructionStepsEditor({
       steps.map((step) => (step.id === stepId ? { ...step, markdown: nextMarkdown } : step)),
     );
     return stepId;
+  }
+
+  function insertPhotoReference(stepId: string, assetId: string) {
+    const currentSteps = stepsRef.current;
+    const step = currentSteps.find((item) => item.id === stepId);
+    const photo = photos.find((item) => item.id === assetId);
+    if (!step || !photo || photo.reference_code === null) {
+      return;
+    }
+
+    const editorValue = getInstructionEditorValue(step.markdown, photos);
+    const range = photoPickerStepId === stepId ? photoPickerRange : null;
+    const start = range?.start ?? editorValue.length;
+    const end = range?.end ?? editorValue.length;
+    const markdown = replaceInstructionEditorRange(
+      step.markdown,
+      start,
+      end,
+      `[[photo:${assetId}]]`,
+      photos,
+    );
+    const selectionEnd = start + `+photo${String(photo.reference_code).padStart(2, '0')}`.length;
+    pendingFocus.current = { stepId, selectionStart: selectionEnd, selectionEnd };
+    onChange(currentSteps.map((item) => (item.id === stepId ? { ...item, markdown } : item)));
+    setPhotoPickerStepId(null);
+    setPhotoPickerRange(null);
+    setAnnouncement('Photo reference added to instruction step.');
+  }
+
+  function updatePhotoPicker(stepId: string, textarea: HTMLTextAreaElement) {
+    const beforeCaret = textarea.value.slice(0, textarea.selectionStart);
+    const match = /(?<![\p{L}\p{N}_])\+p$/u.exec(beforeCaret);
+    if (!match || match.index === undefined) {
+      if (photoPickerStepId === stepId) {
+        setPhotoPickerStepId(null);
+        setPhotoPickerRange(null);
+      }
+      return;
+    }
+
+    setPhotoPickerStepId(stepId);
+    setPhotoPickerRange({ start: match.index, end: textarea.selectionStart });
+  }
+
+  function cancelPhotoPicker(stepId: string) {
+    const range = photoPickerStepId === stepId ? photoPickerRange : null;
+    const step = stepsRef.current.find((item) => item.id === stepId);
+    if (range && step) {
+      const editorValue = getInstructionEditorValue(step.markdown, photos);
+      if (editorValue.slice(range.start, range.end) === '+p') {
+        const markdown = replaceInstructionEditorRange(
+          step.markdown,
+          range.start,
+          range.end,
+          '',
+          photos,
+        );
+        if (newStepIds.current.has(stepId) && !markdown.trim()) {
+          newStepIds.current.delete(stepId);
+          editingSnapshot.current = null;
+          pendingFocus.current = {
+            stepId: placeholder.id,
+            selectionStart: 0,
+            selectionEnd: 0,
+          };
+          onChange(stepsRef.current.filter((item) => item.id !== stepId));
+        } else {
+          onChange(
+            stepsRef.current.map((item) => (item.id === stepId ? { ...item, markdown } : item)),
+          );
+          pendingFocus.current = {
+            stepId,
+            selectionStart: range.start,
+            selectionEnd: range.start,
+          };
+        }
+      } else {
+        pendingFocus.current = {
+          stepId,
+          selectionStart: range.start,
+          selectionEnd: range.end,
+        };
+      }
+    }
+    setPhotoPickerStepId(null);
+    setPhotoPickerRange(null);
   }
 
   function updateSuggestion(stepId: string, textarea: HTMLTextAreaElement) {
@@ -174,7 +303,7 @@ export function InstructionStepsEditor({
       return;
     }
 
-    const editorValue = getInstructionEditorValue(selectedStep.markdown);
+    const editorValue = getInstructionEditorValue(selectedStep.markdown, photos);
     let replacementEnd = currentSuggestion.end;
     const candidateSlug = candidate.mention?.slug ?? ingredientSlug(candidate.name);
     let matchedName = editorValue.slice(currentSuggestion.start + 1, replacementEnd);
@@ -197,6 +326,7 @@ export function InstructionStepsEditor({
       currentSuggestion.start,
       replacementEnd,
       marker,
+      photos,
     );
     const selectionStart = currentSuggestion.start + `#${candidateSlug}`.length;
     pendingFocus.current = {
@@ -457,7 +587,7 @@ export function InstructionStepsEditor({
                     isNew,
                   };
                 }}
-                value={getInstructionEditorValue(step.markdown)}
+                value={getInstructionEditorValue(step.markdown, photos)}
                 onChange={(event) => {
                   const updatedStepId = updateMarkdown(
                     step.id,
@@ -466,6 +596,7 @@ export function InstructionStepsEditor({
                   );
                   resizeTextarea(event.currentTarget);
                   updateSuggestion(updatedStepId, event.currentTarget);
+                  updatePhotoPicker(updatedStepId, event.currentTarget);
                 }}
                 onKeyDown={(event) => {
                   const isSuggestionOpen = suggestion?.stepId === step.id && suggestionCount > 0;
@@ -517,6 +648,9 @@ export function InstructionStepsEditor({
                   } else if (isSuggestionOpen && event.key === 'Escape') {
                     event.preventDefault();
                     setSuggestion(null);
+                  } else if (photoPickerStepId === step.id && event.key === 'Escape') {
+                    event.preventDefault();
+                    cancelPhotoPicker(step.id);
                   } else if (event.ctrlKey && event.key === 'ArrowUp') {
                     event.preventDefault();
                     moveStep(step.id, -1);
@@ -591,6 +725,46 @@ export function InstructionStepsEditor({
                   }
                 }}
               />
+              {photoPickerStepId === step.id && (
+                <fieldset
+                  className="recipe-instruction-photo-picker"
+                  data-placement={photoPickerPlacement}
+                >
+                  <legend className="visually-hidden">
+                    Choose a photo for instruction step {index + 1}
+                  </legend>
+                  {photos.map((photo) => (
+                    <button
+                      aria-label={`Insert photo ${String(photo.reference_code ?? 0).padStart(2, '0')}`}
+                      className="recipe-instruction-photo-choice"
+                      key={photo.id}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          cancelPhotoPicker(step.id);
+                        }
+                      }}
+                      onClick={() => insertPhotoReference(step.id, photo.id)}
+                      type="button"
+                    >
+                      <span className="recipe-instruction-photo-choice-image">
+                        <Image
+                          alt=""
+                          height={photo.height}
+                          src={photo.thumbnail_url}
+                          unoptimized
+                          width={photo.width}
+                        />
+                        <span aria-hidden="true" className="recipe-instruction-photo-code">
+                          {String(photo.reference_code ?? 0).padStart(2, '0')}
+                        </span>
+                      </span>
+                      <span>Photo {String(photo.reference_code ?? 0).padStart(2, '0')}</span>
+                    </button>
+                  ))}
+                </fieldset>
+              )}
               {suggestion?.stepId === step.id && suggestionCount > 0 && (
                 <div
                   aria-label="Ingredient suggestions"

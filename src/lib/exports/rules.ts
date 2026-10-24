@@ -11,8 +11,13 @@ const imagePathPattern =
 const preferenceFields = [
   'volume_system',
   'weight_system',
+  'temperature_system',
   'ingredient_presentation',
   'hand_preference',
+  'ingredient_color',
+  'temperature_color',
+  'duration_color',
+  'private_print_uses_colors',
   'recipe_column_order',
   'recipe_hidden_columns',
 ] as const;

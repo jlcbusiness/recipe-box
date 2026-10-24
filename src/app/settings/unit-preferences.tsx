@@ -1,7 +1,13 @@
 'use client';
 
+import { Ban, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useId, useRef, useState } from 'react';
+import {
+  type InstructionEmphasisColor,
+  instructionEmphasisOptions,
+} from '../../lib/recipes/instruction-emphasis';
+import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
 import { saveUnitPreferences } from '../actions/unit-preferences';
@@ -12,19 +18,52 @@ const unitSystemOptions: PicklistOption[] = [
   { value: 'metric', label: 'Metric' },
 ];
 
+const temperatureSystemOptions: PicklistOption[] = [
+  { value: 'fahrenheit', label: 'Fahrenheit' },
+  { value: 'celsius', label: 'Celsius' },
+];
+
 const presentationOptions: PicklistOption[] = [
   { value: 'standard', label: 'Standard' },
   { value: 'ingredient_first', label: 'Ingredient-first' },
 ];
 
+const instructionColorDimensions = [
+  {
+    dimension: 'ingredient_color',
+    label: 'Ingredient color',
+    preferenceKey: 'ingredientColor',
+  },
+  {
+    dimension: 'temperature_color',
+    label: 'Temperature color',
+    preferenceKey: 'temperatureColor',
+  },
+  {
+    dimension: 'duration_color',
+    label: 'Duration color',
+    preferenceKey: 'durationColor',
+  },
+] as const;
+
 export function UnitPreferences({
+  durationColor,
   ingredientPresentation,
+  ingredientColor,
   handPreference,
+  privatePrintUsesColors,
+  temperatureColor,
+  temperatureSystem,
   volumeSystem,
   weightSystem,
 }: {
+  durationColor: InstructionEmphasisColor;
   ingredientPresentation: IngredientPresentation;
+  ingredientColor: InstructionEmphasisColor;
   handPreference: 'left' | 'right';
+  privatePrintUsesColors: boolean;
+  temperatureColor: InstructionEmphasisColor;
+  temperatureSystem: TemperatureSystem;
   volumeSystem: MeasurementSystem;
   weightSystem: MeasurementSystem;
 }) {
@@ -32,14 +71,31 @@ export function UnitPreferences({
   const changedDimensionRef = useRef<HTMLInputElement>(null);
   const volumeSystemRef = useRef<HTMLInputElement>(null);
   const weightSystemRef = useRef<HTMLInputElement>(null);
+  const temperatureSystemRef = useRef<HTMLInputElement>(null);
   const ingredientPresentationRef = useRef<HTMLInputElement>(null);
   const handPreferenceRef = useRef<HTMLInputElement>(null);
+  const ingredientColorRef = useRef<HTMLInputElement>(null);
+  const temperatureColorRef = useRef<HTMLInputElement>(null);
+  const durationColorRef = useRef<HTMLInputElement>(null);
+  const privatePrintUsesColorsRef = useRef<HTMLInputElement>(null);
+  const emphasisPickerRef = useRef<HTMLDivElement>(null);
+  const activeEmphasisTriggerRef = useRef<HTMLButtonElement>(null);
+  const emphasisPaletteId = useId();
   const router = useRouter();
+  const resolvedTemperatureSystem = temperatureSystem === 'celsius' ? 'celsius' : 'fahrenheit';
+  const [openColorDimension, setOpenColorDimension] = useState<
+    (typeof instructionColorDimensions)[number]['dimension'] | null
+  >(null);
   const [preferences, setPreferences] = useState({
     volume: volumeSystem,
     weight: weightSystem,
+    temperature: resolvedTemperatureSystem,
     presentation: ingredientPresentation,
     hand: handPreference,
+    ingredientColor,
+    temperatureColor,
+    durationColor,
+    privatePrintUsesColors,
   });
   const [state, formAction, isPending] = useActionState(saveUnitPreferences, {});
 
@@ -47,10 +103,25 @@ export function UnitPreferences({
     setPreferences({
       volume: volumeSystem,
       weight: weightSystem,
+      temperature: resolvedTemperatureSystem,
       presentation: ingredientPresentation,
       hand: handPreference,
+      ingredientColor,
+      temperatureColor,
+      durationColor,
+      privatePrintUsesColors,
     });
-  }, [handPreference, ingredientPresentation, volumeSystem, weightSystem]);
+  }, [
+    durationColor,
+    handPreference,
+    ingredientColor,
+    ingredientPresentation,
+    privatePrintUsesColors,
+    temperatureColor,
+    resolvedTemperatureSystem,
+    volumeSystem,
+    weightSystem,
+  ]);
 
   useEffect(() => {
     if (state.status === 'saved') {
@@ -59,11 +130,51 @@ export function UnitPreferences({
       setPreferences({
         volume: volumeSystem,
         weight: weightSystem,
+        temperature: resolvedTemperatureSystem,
         presentation: ingredientPresentation,
         hand: handPreference,
+        ingredientColor,
+        temperatureColor,
+        durationColor,
+        privatePrintUsesColors,
       });
     }
-  }, [handPreference, ingredientPresentation, router, state, volumeSystem, weightSystem]);
+  }, [
+    durationColor,
+    handPreference,
+    ingredientColor,
+    ingredientPresentation,
+    privatePrintUsesColors,
+    router,
+    state,
+    temperatureColor,
+    resolvedTemperatureSystem,
+    volumeSystem,
+    weightSystem,
+  ]);
+
+  useEffect(() => {
+    if (!openColorDimension) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (!emphasisPickerRef.current?.contains(event.target as Node)) {
+        setOpenColorDimension(null);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      setOpenColorDimension(null);
+      activeEmphasisTriggerRef.current?.focus();
+    }
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [openColorDimension]);
 
   function updateSystem(dimension: 'volume' | 'weight', value: string) {
     const system = value as MeasurementSystem;
@@ -74,6 +185,18 @@ export function UnitPreferences({
     const systemRef = dimension === 'volume' ? volumeSystemRef : weightSystemRef;
     if (systemRef.current) {
       systemRef.current.value = system;
+    }
+    formRef.current?.requestSubmit();
+  }
+
+  function updateTemperatureSystem(value: string) {
+    const system = value as TemperatureSystem;
+    setPreferences((current) => ({ ...current, temperature: system }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'temperature';
+    }
+    if (temperatureSystemRef.current) {
+      temperatureSystemRef.current.value = system;
     }
     formRef.current?.requestSubmit();
   }
@@ -101,6 +224,45 @@ export function UnitPreferences({
     formRef.current?.requestSubmit();
   }
 
+  function updateColor(
+    dimension: 'ingredient_color' | 'temperature_color' | 'duration_color',
+    value: InstructionEmphasisColor,
+  ) {
+    const stateKey = `${dimension.replace('_color', '')}Color` as
+      | 'ingredientColor'
+      | 'temperatureColor'
+      | 'durationColor';
+    const inputRef =
+      dimension === 'ingredient_color'
+        ? ingredientColorRef
+        : dimension === 'temperature_color'
+          ? temperatureColorRef
+          : durationColorRef;
+    setPreferences((current) => ({ ...current, [stateKey]: value }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = dimension;
+    }
+    if (inputRef.current) {
+      inputRef.current.value = value;
+    }
+    formRef.current?.requestSubmit();
+  }
+
+  function updatePrivatePrintUsesColors(value: boolean) {
+    setPreferences((current) => ({ ...current, privatePrintUsesColors: value }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'print_colors';
+    }
+    if (privatePrintUsesColorsRef.current) {
+      privatePrintUsesColorsRef.current.value = String(value);
+    }
+    formRef.current?.requestSubmit();
+  }
+
+  const activeColorPreference = instructionColorDimensions.find(
+    ({ dimension }) => dimension === openColorDimension,
+  );
+
   return (
     <div className="settings-unit-preferences">
       <form
@@ -109,7 +271,12 @@ export function UnitPreferences({
         className="settings-unit-preferences-form"
         ref={formRef}
       >
-        <input name="changed_dimension" ref={changedDimensionRef} type="hidden" value="volume" />
+        <input
+          defaultValue="volume"
+          name="changed_dimension"
+          ref={changedDimensionRef}
+          type="hidden"
+        />
         <input
           name="volume_system"
           ref={volumeSystemRef}
@@ -123,6 +290,12 @@ export function UnitPreferences({
           value={preferences.weight}
         />
         <input
+          name="temperature_system"
+          ref={temperatureSystemRef}
+          type="hidden"
+          value={preferences.temperature}
+        />
+        <input
           name="ingredient_presentation"
           ref={ingredientPresentationRef}
           type="hidden"
@@ -133,6 +306,30 @@ export function UnitPreferences({
           ref={handPreferenceRef}
           type="hidden"
           value={preferences.hand}
+        />
+        <input
+          name="ingredient_color"
+          ref={ingredientColorRef}
+          type="hidden"
+          value={preferences.ingredientColor}
+        />
+        <input
+          name="temperature_color"
+          ref={temperatureColorRef}
+          type="hidden"
+          value={preferences.temperatureColor}
+        />
+        <input
+          name="duration_color"
+          ref={durationColorRef}
+          type="hidden"
+          value={preferences.durationColor}
+        />
+        <input
+          name="private_print_uses_colors"
+          ref={privatePrintUsesColorsRef}
+          type="hidden"
+          value={String(preferences.privatePrintUsesColors)}
         />
         <div className="settings-preference-group">
           <div className="settings-unit-preference-fields">
@@ -160,6 +357,19 @@ export function UnitPreferences({
                 onSelect={(value) => updateSystem('weight', value)}
                 options={unitSystemOptions}
                 value={preferences.weight}
+              />
+            </div>
+            <div className="settings-unit-field">
+              <span className="settings-unit-label">Temperature</span>
+              <Picklist
+                className="settings-unit-picklist"
+                disabled={isPending}
+                label="Temperature"
+                measureLabel="Fahrenheit"
+                menuClassName="settings-unit-picklist-menu"
+                onSelect={updateTemperatureSystem}
+                options={temperatureSystemOptions}
+                value={preferences.temperature}
               />
             </div>
           </div>
@@ -205,6 +415,114 @@ export function UnitPreferences({
               </div>
             </fieldset>
           </div>
+        </div>
+        <div className="settings-preference-group settings-instruction-emphasis">
+          <h3>Instruction emphasis</h3>
+          <div className="settings-emphasis-preferences" ref={emphasisPickerRef}>
+            <div className="settings-emphasis-fields">
+              {instructionColorDimensions.map(({ dimension, label, preferenceKey }) => {
+                const value = preferences[preferenceKey];
+                const selectedOption = instructionEmphasisOptions.find(
+                  (option) => option.value === value,
+                );
+                const isOpen = openColorDimension === dimension;
+
+                return (
+                  <fieldset
+                    aria-labelledby={`${emphasisPaletteId}-${dimension}-label`}
+                    className="settings-emphasis-row"
+                    key={dimension}
+                  >
+                    <span
+                      className="settings-emphasis-label"
+                      id={`${emphasisPaletteId}-${dimension}-label`}
+                    >
+                      {label}
+                    </span>
+                    <div className="settings-emphasis-picker">
+                      <button
+                        aria-controls={emphasisPaletteId}
+                        aria-expanded={isOpen}
+                        aria-label={`${label}: ${selectedOption?.label ?? 'None'}`}
+                        className={`settings-emphasis-swatch settings-emphasis-trigger${value === 'none' ? ' is-none' : ''}`}
+                        disabled={isPending}
+                        ref={isOpen ? activeEmphasisTriggerRef : null}
+                        style={
+                          selectedOption?.color
+                            ? { backgroundColor: selectedOption.color }
+                            : undefined
+                        }
+                        title={`Change ${label.toLowerCase()}`}
+                        type="button"
+                        onClick={() =>
+                          setOpenColorDimension((current) =>
+                            current === dimension ? null : dimension,
+                          )
+                        }
+                      >
+                        {value === 'none' ? (
+                          <Ban aria-hidden="true" size={17} strokeWidth={1.8} />
+                        ) : (
+                          <Check aria-hidden="true" size={16} strokeWidth={2.5} />
+                        )}
+                      </button>
+                    </div>
+                  </fieldset>
+                );
+              })}
+            </div>
+            <fieldset
+              aria-label={`${activeColorPreference?.label ?? 'Instruction color'} choices`}
+              className="settings-emphasis-palette"
+              hidden={!activeColorPreference}
+              id={emphasisPaletteId}
+            >
+              <legend className="settings-emphasis-palette-legend">
+                {activeColorPreference?.label ?? 'Instruction color'}
+              </legend>
+              <div className="settings-emphasis-palette-grid">
+                {instructionEmphasisOptions.map((option) => (
+                  <button
+                    aria-label={`Set ${activeColorPreference?.label.toLowerCase() ?? 'instruction color'} to ${option.label}`}
+                    aria-pressed={
+                      activeColorPreference !== undefined &&
+                      preferences[activeColorPreference.preferenceKey] === option.value
+                    }
+                    className={`settings-emphasis-swatch${option.value === 'none' ? ' is-none' : ''}`}
+                    disabled={isPending || !activeColorPreference}
+                    key={option.value}
+                    onClick={() => {
+                      if (!activeColorPreference) return;
+                      updateColor(activeColorPreference.dimension, option.value);
+                      setOpenColorDimension(null);
+                      activeEmphasisTriggerRef.current?.focus();
+                    }}
+                    style={option.color ? { backgroundColor: option.color } : undefined}
+                    title={option.label}
+                    type="button"
+                  >
+                    {activeColorPreference &&
+                      preferences[activeColorPreference.preferenceKey] === option.value &&
+                      option.value !== 'none' && (
+                        <Check aria-hidden="true" size={16} strokeWidth={2.5} />
+                      )}
+                    {option.value === 'none' ? (
+                      <Ban aria-hidden="true" size={17} strokeWidth={1.8} />
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+          <label className="settings-print-emphasis-toggle">
+            <input
+              checked={!preferences.privatePrintUsesColors}
+              disabled={isPending}
+              onChange={(event) => updatePrivatePrintUsesColors(!event.currentTarget.checked)}
+              type="checkbox"
+            />
+            Omit emphasis colors when printing
+          </label>
         </div>
       </form>
       <p aria-live="polite" className="settings-unit-status" role="status">

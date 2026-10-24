@@ -19,6 +19,9 @@ type MediaManagerProps = {
   parentName: string;
   assets: MediaAssetDisplay[];
   publication?: PublicationOption;
+  expectedVersion?: number;
+  referencedPhotoSteps?: Record<string, number[]>;
+  onPhotoDeleted?: (assetId: string) => void;
 };
 
 type ApiError = {
@@ -53,6 +56,9 @@ export function MediaManager({
   parentName,
   assets,
   publication,
+  expectedVersion,
+  referencedPhotoSteps = {},
+  onPhotoDeleted,
 }: MediaManagerProps) {
   const [working, setWorking] = useState(false);
   const [status, setStatus] = useState('');
@@ -65,6 +71,10 @@ export function MediaManager({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const [optimisticPhotoOrder, setOptimisticPhotoOrder] = useState<string[] | null>(null);
+  const [pendingPhotoRemoval, setPendingPhotoRemoval] = useState<{
+    asset: MediaAssetDisplay;
+    stepNumbers: number[];
+  } | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const deviceInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -237,7 +247,10 @@ export function MediaManager({
       const response = await fetch(`/api/media/assets/${asset.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({
+          action,
+          ...(recipePhotos ? { expected_version: expectedVersion } : {}),
+        }),
       });
       if (!response.ok) {
         throw new Error(await responseError(response, 'Unable to remove this image.'));
@@ -250,6 +263,9 @@ export function MediaManager({
             ? 'Photo removed.'
             : 'Publication cover removed.',
       );
+      if (recipePhotos) {
+        onPhotoDeleted?.(asset.id);
+      }
       router.refresh();
       return true;
     } catch (changeError) {
@@ -258,6 +274,15 @@ export function MediaManager({
     } finally {
       setWorking(false);
     }
+  }
+
+  function requestPhotoRemoval(asset: MediaAssetDisplay) {
+    const stepNumbers = referencedPhotoSteps[asset.id] ?? [];
+    if (stepNumbers.length > 0) {
+      setPendingPhotoRemoval({ asset, stepNumbers });
+      return;
+    }
+    void changeAsset(asset, 'delete');
   }
 
   async function reorderPhotos(nextPhotos: MediaAssetDisplay[]) {
@@ -739,7 +764,7 @@ export function MediaManager({
                       aria-label={`Remove photo ${index + 1}`}
                       className="recipe-photo-remove-icon"
                       disabled={working}
-                      onClick={() => void changeAsset(asset, 'delete')}
+                      onClick={() => requestPhotoRemoval(asset)}
                       title={`Remove photo ${index + 1}`}
                       type="button"
                     >
@@ -786,6 +811,47 @@ export function MediaManager({
                   </li>
                 )}
               </ul>
+            )}
+            {pendingPhotoRemoval && (
+              <section
+                aria-describedby="referenced-photo-removal-description"
+                aria-labelledby="referenced-photo-removal-title"
+                className="media-manager-reference-confirmation"
+                role="alertdialog"
+              >
+                <h3 id="referenced-photo-removal-title">Remove referenced photo?</h3>
+                <p id="referenced-photo-removal-description">
+                  This photo is referenced in instruction step
+                  {pendingPhotoRemoval.stepNumbers.length === 1 ? ' ' : 's '}
+                  {pendingPhotoRemoval.stepNumbers.join(', ')}. Removing it also removes those
+                  references.
+                </p>
+                {error && <p role="alert">{error}</p>}
+                <div className="media-manager-reference-confirmation-actions">
+                  <button
+                    className="recipe-secondary-button"
+                    disabled={working}
+                    onClick={() => setPendingPhotoRemoval(null)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="recipe-primary-button"
+                    disabled={working}
+                    onClick={() => {
+                      const pending = pendingPhotoRemoval;
+                      setPendingPhotoRemoval(null);
+                      if (pending) {
+                        void changeAsset(pending.asset, 'delete');
+                      }
+                    }}
+                    type="button"
+                  >
+                    {working ? 'Removing…' : 'Remove photo and references'}
+                  </button>
+                </div>
+              </section>
             )}
             <div className="media-manager-dialog-footer">
               <button

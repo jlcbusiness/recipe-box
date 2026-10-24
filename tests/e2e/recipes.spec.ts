@@ -34,29 +34,86 @@ test('recipe time controls do not overlap the Pairings or Notes sections @e2e', 
     await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
     await page.getByRole('link', { name: 'Add Recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
-    await page.setViewportSize({ width: 384, height: 915 });
+    const calculateButton = page.getByRole('button', { name: 'Calculate total time' });
+    const topSaveButton = page
+      .locator('.recipe-form-save-row')
+      .getByRole('button', { name: 'Save recipe', exact: true });
+    const addRecipeButton = page
+      .locator('.recipe-time-total-row')
+      .getByRole('button', { name: 'Save new recipe from the Total Time row', exact: true });
+    await expect(topSaveButton).toHaveText('Save');
+    await expect(addRecipeButton).toHaveText('Save');
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 384, height: 915 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const calculateBounds = await calculateButton.boundingBox();
+      const addRecipeBounds = await addRecipeButton.boundingBox();
+      const totalRowBounds = await page.locator('.recipe-time-total-row').boundingBox();
+      const pairingBounds = await page
+        .locator('#recipe-form > fieldset')
+        .filter({ has: page.getByText('Pairs With', { exact: true }) })
+        .boundingBox();
+      const notesBounds = await page
+        .locator('#recipe-form > fieldset')
+        .filter({ has: page.getByText('Notes', { exact: true }) })
+        .boundingBox();
 
-    const calculateBounds = await page
-      .getByRole('button', { name: 'Calculate total time' })
-      .boundingBox();
-    const pairingBounds = await page
-      .locator('#recipe-form > fieldset')
-      .filter({ has: page.getByText('Pairs With', { exact: true }) })
-      .boundingBox();
-    const notesBounds = await page
-      .locator('#recipe-form > fieldset')
-      .filter({ has: page.getByText('Notes', { exact: true }) })
-      .boundingBox();
+      expect(calculateBounds).not.toBeNull();
+      expect(addRecipeBounds).not.toBeNull();
+      expect(totalRowBounds).not.toBeNull();
+      expect(pairingBounds).not.toBeNull();
+      expect(notesBounds).not.toBeNull();
+      expect(addRecipeBounds?.x).toBeGreaterThan(
+        (calculateBounds?.x ?? 0) + (calculateBounds?.width ?? 0),
+      );
+      expect((addRecipeBounds?.x ?? 0) + (addRecipeBounds?.width ?? 0)).toBeCloseTo(
+        (totalRowBounds?.x ?? 0) + (totalRowBounds?.width ?? 0),
+        0,
+      );
+      expect(addRecipeBounds?.y).toBeLessThan(
+        (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
+      );
+      if (viewport.width === 384) {
+        expect(pairingBounds?.y).toBeGreaterThanOrEqual(
+          (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
+        );
+        expect(notesBounds?.y).toBeGreaterThanOrEqual(
+          (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
+        );
+      }
+    }
 
-    expect(calculateBounds).not.toBeNull();
-    expect(pairingBounds).not.toBeNull();
-    expect(notesBounds).not.toBeNull();
-    expect(pairingBounds?.y).toBeGreaterThanOrEqual(
-      (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
-    );
-    expect(notesBounds?.y).toBeGreaterThanOrEqual(
-      (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
-    );
+    await page.getByLabel('Name').fill('Quick add recipe test');
+    await addRecipeButton.click();
+    await expect(page.getByRole('heading', { name: 'Quick add recipe test' })).toBeVisible();
+
+    await page.goto(`${page.url()}/edit`);
+    const editTopSaveButton = page
+      .locator('.recipe-form-save-row')
+      .getByRole('button', { name: 'Save recipe', exact: true });
+    const saveChangesButton = page
+      .locator('.recipe-time-total-row')
+      .getByRole('button', { name: 'Save changes from the Total Time row', exact: true });
+    await expect(editTopSaveButton).toHaveText('Save');
+    await expect(saveChangesButton).toHaveText('Save');
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 384, height: 915 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const [saveBounds, totalRowBounds] = await Promise.all([
+        saveChangesButton.boundingBox(),
+        page.locator('.recipe-time-total-row').boundingBox(),
+      ]);
+      expect(saveBounds).not.toBeNull();
+      expect(totalRowBounds).not.toBeNull();
+      expect((saveBounds?.x ?? 0) + (saveBounds?.width ?? 0)).toBeCloseTo(
+        (totalRowBounds?.x ?? 0) + (totalRowBounds?.width ?? 0),
+        0,
+      );
+    }
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1478,6 +1535,78 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
       (desktopClassificationBounds?.x ?? 0) + (desktopClassificationBounds?.width ?? 0),
       1,
     );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('owners can mark instruction durations with typed delimiters @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${user.accessToken}`,
+  };
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Lemon lentils');
+    await expect(page.getByRole('button', { name: 'Mark duration' })).toHaveCount(0);
+    const instruction = page.getByPlaceholder('Add instruction…');
+    await instruction.fill("Simmer for =10 minutes= at F!400 until it's !medium high!!");
+    const step = page.getByRole('textbox', { name: 'Instruction step 1' });
+    await expect(step).toHaveValue("Simmer for =10 minutes= at F!400 until it's !medium high!!");
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Lemon lentils' })).toBeVisible();
+    await expect(page.locator('.recipe-instruction-duration > span')).toHaveText('10 minutes');
+    const temperatureText = page.locator('.recipe-instruction-temperature > span').first();
+    const stoveHeatText = page.locator('.recipe-instruction-temperature > span').nth(1);
+    await expect(temperatureText).toHaveText('400°F');
+    await expect(stoveHeatText).toHaveText('medium high');
+    await expect(page.locator('.recipe-instruction-list')).toContainText("until it's medium high!");
+    const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+    if (!recipeId) {
+      throw new Error('The saved recipe URL must include its ID.');
+    }
+
+    await page.emulateMedia({ media: 'print' });
+    const durationText = page.locator('.recipe-instruction-duration > span');
+    await expect(durationText).toHaveCSS('color', 'rgb(159, 82, 0)');
+
+    await page.emulateMedia({ media: 'screen' });
+    await page.goto('/settings');
+    await selectSinglePicklist(page, 'Temperature', 'Celsius');
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    const omitPrintColors = page.getByLabel('Omit emphasis colors when printing');
+    await omitPrintColors.check();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    const savedTemperatureAfterPrintPreference = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=temperature_system&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await savedTemperatureAfterPrintPreference.json()).toEqual([
+      { temperature_system: 'celsius' },
+    ]);
+    await page.goto(`/recipes/${recipeId}/edit`);
+    await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
+      "Simmer for =10 minutes= at F!400 until it's !medium high!!",
+    );
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(temperatureText).toHaveText('205°C');
+    await expect(stoveHeatText).toHaveText('medium high');
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('.recipes-main')).toHaveClass(/no-print-emphasis-colors/);
+    await expect(temperatureText).toHaveText('205°C');
+    await expect(stoveHeatText).toHaveText('medium low');
+    const colors = await durationText.evaluate((element) => ({
+      text: getComputedStyle(element).color,
+      parent: getComputedStyle(element.parentElement!).color,
+    }));
+    expect(colors.text).toBe(colors.parent);
   } finally {
     await deleteTestUser(request, user);
   }

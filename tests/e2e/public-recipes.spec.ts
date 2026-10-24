@@ -39,6 +39,8 @@ async function createRecipe(
   publicationId?: string,
   includeCookingData = false,
   extraIngredientRows: unknown[] = [],
+  instructionSuffix = '',
+  plainTextSuffix = instructionSuffix,
 ) {
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
@@ -114,8 +116,8 @@ async function createRecipe(
             {
               id: randomUUID(),
               position: 0,
-              content_markdown: `Fold [[ingredient:${ingredientRowId}|flour]] into batter.`,
-              plain_text: 'Fold flour into batter.',
+              content_markdown: `Fold [[ingredient:${ingredientRowId}|flour]] into batter.${instructionSuffix}`,
+              plain_text: `Fold flour into batter.${plainTextSuffix}`,
             },
           ]
         : [],
@@ -581,6 +583,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
           ],
         },
       ],
+      ' Bake at F!350 for =45m=.',
+      ' Bake at 350°F for 45m.',
     );
     publicId = await getPublicId(request, config, recipe.id);
     const carrotUpdate = await request.patch(
@@ -617,6 +621,31 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     });
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
     await photoDialog.getByRole('button', { name: 'Done' }).click();
+    const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
+    await instruction.focus();
+    await instruction.evaluate((element) => {
+      if (!(element instanceof HTMLTextAreaElement)) {
+        throw new Error('Expected the instruction editor to be a textarea.');
+      }
+      const position = element.value.indexOf(' into batter');
+      if (position < 0) throw new Error('Expected the instruction to contain batter text.');
+      element.setSelectionRange(position, position);
+    });
+    await instruction.pressSequentially(' +p');
+    await page
+      .getByRole('button', { name: /^Insert photo \d{2}$/u })
+      .first()
+      .click();
+    await expect(instruction).toHaveValue(/\+photo\d{2}/u);
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page).toHaveURL(`/recipes/${recipe.id}`);
+    const savedStepsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_steps?select=content_markdown&recipe_id=eq.${recipe.id}`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(savedStepsResponse.ok(), await savedStepsResponse.text()).toBeTruthy();
+    const savedSteps = (await savedStepsResponse.json()) as { content_markdown: string }[];
+    expect(savedSteps.some((step) => step.content_markdown.includes('[[photo:'))).toBe(true);
 
     await page.goto(`/r/${publicId}`);
     await expect(
@@ -625,22 +654,115 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page).toHaveTitle('Public cooking view | Recipe Box');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-size', '16px');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-weight', '400');
+    await expect(page.locator('.recipe-instruction-temperature')).toHaveText('350°F');
     await expect(page.getByText('Fold flour into batter.')).toBeVisible();
+    const instructionPhoto = page.locator('.recipe-instruction-photo img');
+    await expect(instructionPhoto).toBeVisible();
+    await expect(instructionPhoto).toHaveAttribute('alt', '');
+    const instructionViewer = page.locator('.image-viewer-dialog').nth(1);
+    await instructionPhoto.click();
+    await expect(instructionViewer).toHaveJSProperty('open', true);
+    await expect(instructionViewer.locator('.image-viewer-full-image')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(instructionViewer).toHaveJSProperty('open', false);
+    const embeddedPhotoBounds = await page.locator('.recipe-instruction-photo').boundingBox();
+    const instructionBlockBounds = await page
+      .locator('.recipe-instruction-with-photo')
+      .boundingBox();
+    const leadingInstructionBounds = await page
+      .locator('.recipe-instruction-with-photo')
+      .evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let textNode = walker.nextNode();
+        while (textNode) {
+          const text = textNode.textContent ?? '';
+          const start = text.indexOf('Fold');
+          if (start >= 0) {
+            const range = document.createRange();
+            range.setStart(textNode, start);
+            range.setEnd(textNode, start + 'Fold'.length);
+            const bounds = range.getBoundingClientRect();
+            return { y: bounds.y, right: bounds.right };
+          }
+          textNode = walker.nextNode();
+        }
+        throw new Error('Expected leading public instruction text.');
+      });
+    const followingInstructionBounds = await page
+      .locator('.recipe-instruction-with-photo')
+      .evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let textNode = walker.nextNode();
+        while (textNode) {
+          const text = textNode.textContent ?? '';
+          const start = text.indexOf('into batter.');
+          if (start >= 0) {
+            const range = document.createRange();
+            range.setStart(textNode, start);
+            range.setEnd(textNode, start + 'into batter.'.length);
+            const bounds = range.getBoundingClientRect();
+            return { y: bounds.y, right: bounds.right };
+          }
+          textNode = walker.nextNode();
+        }
+        throw new Error('Expected trailing public instruction text.');
+      });
+    if (!embeddedPhotoBounds || !instructionBlockBounds) {
+      throw new Error('Expected the public instruction image and block to have layout boxes.');
+    }
+    expect(embeddedPhotoBounds.width).toBeLessThanOrEqual(
+      Math.min(200, instructionBlockBounds.width * 0.55) + 1,
+    );
+    expect(Math.abs(leadingInstructionBounds.y - embeddedPhotoBounds.y)).toBeLessThan(8);
+    expect(leadingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
+    expect(followingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
     await expect(page.getByRole('navigation')).toHaveCount(0);
     await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-left', '24px');
     await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-right', '24px');
-    const [titleRowBox, titleBox, printBox] = await Promise.all([
+    const noColorToggle = page.getByRole('button', { name: 'Print without instruction colors' });
+    const [titleRowBox, titleBox, actionsBox, printBox, toggleBox] = await Promise.all([
       page.locator('.recipe-detail-title-row').boundingBox(),
       page.getByRole('heading', { name: 'Public cooking view - serves 4' }).boundingBox(),
+      page.locator('.recipe-public-title-actions').boundingBox(),
       page.getByRole('button', { name: 'Print recipe' }).boundingBox(),
+      noColorToggle.boundingBox(),
     ]);
-    expect(titleRowBox).not.toBeNull();
-    expect(titleBox).not.toBeNull();
-    expect(printBox).not.toBeNull();
-    expect(printBox!.x + printBox!.width).toBeCloseTo(titleRowBox!.x + titleRowBox!.width, 1);
-    expect(Math.max(titleBox!.y, printBox!.y)).toBeLessThan(
-      Math.min(titleBox!.y + titleBox!.height, printBox!.y + printBox!.height),
+    if (!titleRowBox || !titleBox || !actionsBox || !printBox || !toggleBox) {
+      throw new Error('Expected the public title and actions to be visible.');
+    }
+    expect(actionsBox.x + actionsBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
+    expect(printBox.x + printBox.width).toBeLessThan(toggleBox.x);
+    expect(Math.max(titleBox.y, actionsBox.y)).toBeLessThan(
+      Math.min(titleBox.y + titleBox.height, actionsBox.y + actionsBox.height),
     );
+    const emphasisTokens = [
+      page.locator('.recipe-instruction-mention').first(),
+      page.locator('.recipe-instruction-temperature').first(),
+      page.locator('.recipe-instruction-duration').first(),
+    ];
+    await expect(noColorToggle).toHaveAttribute('aria-pressed', 'false');
+    for (const token of emphasisTokens) await expect(token).toBeVisible();
+    const getEmphasisColors = () =>
+      Promise.all(
+        emphasisTokens.map((token) => token.evaluate((element) => getComputedStyle(element).color)),
+      );
+    const coloredTokenColors = await getEmphasisColors();
+    expect(new Set(coloredTokenColors).size).toBe(3);
+    await noColorToggle.click();
+    await expect(noColorToggle).toHaveAttribute('aria-pressed', 'true');
+    const neutralTokenColors = await Promise.all(
+      emphasisTokens.map((token) =>
+        token.evaluate((element) => ({
+          color: getComputedStyle(element).color,
+          parentColor: element.parentElement ? getComputedStyle(element.parentElement).color : null,
+        })),
+      ),
+    );
+    expect(neutralTokenColors.every(({ color, parentColor }) => color === parentColor)).toBe(true);
+    await noColorToggle.click();
+    await expect(noColorToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(await getEmphasisColors()).toEqual(coloredTokenColors);
+    await noColorToggle.click();
     const summary = page.locator('.recipe-public-summary');
     await expect(summary).not.toContainText('serves 4');
     await expect(summary.getByRole('heading', { name: 'Time Breakdown' })).toBeVisible();
@@ -680,6 +802,20 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     } else {
       expect(summaryBox.y).toBeGreaterThanOrEqual(photoBox.y + photoBox.height);
     }
+    const publicGalleryViewer = page.locator('.image-viewer-dialog').first();
+    await publicPhoto.click();
+    await expect(publicGalleryViewer).toHaveJSProperty('open', true);
+    const publicFullSizeImage = publicGalleryViewer.locator('.image-viewer-full-image');
+    await expect(publicFullSizeImage).toBeVisible();
+    const publicImageBounds = await publicFullSizeImage.boundingBox();
+    expect(publicImageBounds).not.toBeNull();
+    if (!publicImageBounds) {
+      throw new Error('Expected the public full-size photo to be visible.');
+    }
+    expect(publicImageBounds.width).toBeLessThanOrEqual(page.viewportSize()?.width ?? Infinity);
+    expect(publicImageBounds.height).toBeLessThanOrEqual(page.viewportSize()?.height ?? Infinity);
+    await publicGalleryViewer.getByRole('button', { name: 'Close image viewer' }).click();
+    await expect(publicGalleryViewer).toHaveJSProperty('open', false);
 
     await page.getByRole('button', { name: 'Scale recipe' }).focus();
     await page.keyboard.press('Enter');
@@ -705,6 +841,16 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
     await expect(page.getByRole('button', { name: 'Print recipe' })).toBeHidden();
+    await expect(noColorToggle).toBeHidden();
+    const printedTokenColors = await Promise.all(
+      emphasisTokens.map((token) =>
+        token.evaluate((element) => ({
+          color: getComputedStyle(element).color,
+          parentColor: element.parentElement ? getComputedStyle(element.parentElement).color : null,
+        })),
+      ),
+    );
+    expect(printedTokenColors.every(({ color, parentColor }) => color === parentColor)).toBe(true);
     await expect(ingredientContent).toContainText('cubed 1 ¼ in');
     await expect(ingredientContent).toContainText('2 : 6');
   } finally {

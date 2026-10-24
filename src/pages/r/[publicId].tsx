@@ -1,7 +1,8 @@
-import { Printer } from 'lucide-react';
+import { Palette, Printer } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { Fragment, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
+import { ImageViewer } from '../../app/media/image-viewer';
 import {
   RecipeInstructionMention,
   RecipeReader,
@@ -53,13 +54,32 @@ function renderInstructionBlocks(
   ingredients: RecipeIngredient[],
   unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem },
   preserveStoredUnits: boolean,
+  photos: PublicRecipePhoto[],
 ): ReactNode {
   const ingredientsById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient]));
   const headingTags = [null, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
-  const renderInline = (tokens: InstructionInlineToken[], prefix: string) =>
-    tokens.map((token, index) => {
+  const renderInline = (tokens: InstructionInlineToken[], prefix: string) => {
+    const photoOccurrences = new Map<string, number>();
+    return tokens.map((token, index) => {
       const key = `${prefix}-${index}`;
       switch (token.type) {
+        case 'photo': {
+          const photo = photos.find((candidate) => candidate.id === token.id);
+          const occurrence = photoOccurrences.get(token.id) ?? 0;
+          photoOccurrences.set(token.id, occurrence + 1);
+          return photo ? (
+            <ImageViewer
+              alt=""
+              buttonLabel="View instruction photo full size"
+              height={photo.height}
+              key={`${prefix}-photo-${token.id}-${occurrence}`}
+              src={photo.full_url}
+              triggerClassName="recipe-instruction-photo"
+              triggerStyle={{ width: token.width ?? 200 }}
+              width={photo.width}
+            />
+          ) : null;
+        }
         case 'text':
           return token.value;
         case 'strong':
@@ -70,6 +90,18 @@ function renderInstructionBlocks(
           return <del key={key}>{token.value}</del>;
         case 'code':
           return <code key={key}>{token.value}</code>;
+        case 'duration':
+          return (
+            <span className="recipe-instruction-duration" key={key}>
+              {token.value}
+            </span>
+          );
+        case 'temperature':
+          return (
+            <span className="recipe-instruction-temperature" key={key}>
+              {token.value}
+            </span>
+          );
         case 'link': {
           const href = getSafePublicReferenceHref(token.url);
           return href ? (
@@ -100,12 +132,24 @@ function renderInstructionBlocks(
         }
       }
     });
+  };
 
   return parseInstructionMarkdown(markdown).map((block, index) => {
     const key = `instruction-${index}`;
     if (block.type === 'heading') {
       const Heading = headingTags[block.level] ?? 'p';
-      return <Heading key={key}>{renderInline(block.content, key)}</Heading>;
+      return (
+        <Heading
+          className={
+            block.content.some((token) => token.type === 'photo')
+              ? 'recipe-instruction-with-photo'
+              : undefined
+          }
+          key={key}
+        >
+          {renderInline(block.content, key)}
+        </Heading>
+      );
     }
     if (block.type === 'list') {
       const List = block.ordered ? 'ol' : 'ul';
@@ -113,13 +157,33 @@ function renderInstructionBlocks(
         <List key={key}>
           {withOccurrenceKeys(block.items, (item) => JSON.stringify(item) ?? '').map(
             ({ item, key: itemKey }) => (
-              <li key={`${key}-${itemKey}`}>{renderInline(item, `${key}-${itemKey}`)}</li>
+              <li
+                className={
+                  item.some((token) => token.type === 'photo')
+                    ? 'recipe-instruction-with-photo'
+                    : undefined
+                }
+                key={`${key}-${itemKey}`}
+              >
+                {renderInline(item, `${key}-${itemKey}`)}
+              </li>
             ),
           )}
         </List>
       );
     }
-    return <p key={key}>{renderInline(block.content, key)}</p>;
+    return (
+      <p
+        className={
+          block.content.some((token) => token.type === 'photo')
+            ? 'recipe-instruction-with-photo'
+            : undefined
+        }
+        key={key}
+      >
+        {renderInline(block.content, key)}
+      </p>
+    );
   });
 }
 
@@ -130,25 +194,26 @@ function RecipePhotos({ photos, name }: { photos: PublicRecipePhoto[]; name: str
       {withOccurrenceKeys(
         photos,
         (photo) => `${photo.description}-${photo.width}-${photo.height}`,
-      ).map(({ item: photo, key }, index) => {
-        return (
-          <Fragment key={key}>
-            {/* biome-ignore lint/performance/noImgElement: Signed private media URLs must bypass optimizer caches. */}
-            <img
-              alt={photo.description || `${name}, photo ${index + 1}`}
-              className="recipe-public-photo"
-              height={photo.height}
-              src={photo.full_url}
-              width={photo.width}
-            />
-          </Fragment>
-        );
-      })}
+      ).map(({ item: photo, key }, index) => (
+        <ImageViewer
+          alt={photo.description || `${name}, photo ${index + 1}`}
+          buttonLabel={`View ${photo.description || `${name}, photo ${index + 1}`} full size`}
+          height={photo.height}
+          imageClassName="recipe-public-photo"
+          key={key}
+          src={photo.full_url}
+          triggerClassName="recipe-public-photo-trigger"
+          triggerLoading="eager"
+          width={photo.width}
+        />
+      ))}
     </section>
   );
 }
 
 export default function PublicRecipePage(props: PublicRecipePageProps) {
+  const [disableEmphasisColors, setDisableEmphasisColors] = useState(false);
+
   if (props.state !== 'active') {
     return (
       <main className="recipes-main recipe-public-main">
@@ -193,6 +258,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
               recipe.ingredients,
               unitSystems,
               preserveStoredUnits,
+              photos,
             )}
           </li>
         ))}
@@ -201,7 +267,10 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
   );
 
   return (
-    <main className="recipes-main recipe-public-main" aria-labelledby="page-title">
+    <main
+      className={`recipes-main recipe-public-main${disableEmphasisColors ? ' no-print-emphasis-colors' : ''}`}
+      aria-labelledby="page-title"
+    >
       <Head>
         <title>{`${recipe.name} | Recipe Box`}</title>
         <meta name="robots" content="noindex, nofollow" />
@@ -218,15 +287,27 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                 </span>
               )}
             </h1>
-            <button
-              aria-label="Print recipe"
-              className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-screen-only"
-              title="Print recipe"
-              type="button"
-              onClick={() => window.print()}
-            >
-              <Printer aria-hidden="true" size={16} strokeWidth={2} />
-            </button>
+            <div className="recipe-public-title-actions">
+              <button
+                aria-label="Print recipe"
+                className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-screen-only"
+                title="Print recipe"
+                type="button"
+                onClick={() => window.print()}
+              >
+                <Printer aria-hidden="true" size={16} strokeWidth={2} />
+              </button>
+              <button
+                aria-label="Print without instruction colors"
+                aria-pressed={disableEmphasisColors}
+                className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-screen-only"
+                title="Print without instruction colors"
+                type="button"
+                onClick={() => setDisableEmphasisColors((current) => !current)}
+              >
+                <Palette aria-hidden="true" size={16} strokeWidth={2} />
+              </button>
+            </div>
           </div>
           {recipe.attribution && (
             <p className="recipe-attribution">

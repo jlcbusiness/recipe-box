@@ -10,11 +10,13 @@ import {
   resolveInstructionMentions,
   serializeInstructionSteps,
   unlinkIngredientMentions,
+  unlinkInstructionPhoto,
   updateInstructionMarkdownFromEditor,
 } from '../../src/lib/recipes/instruction-rules';
 
 const flourId = '11111111-1111-4111-8111-111111111111';
 const eggId = '22222222-2222-4222-8222-222222222222';
+const photoId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 describe('instruction mention rules', () => {
   it('creates stable hyphenated slugs from ingredient names', () => {
@@ -36,6 +38,51 @@ describe('instruction mention rules', () => {
     );
     expect(updateInstructionMarkdownFromEditor('', 'A literal #flour stays plain.')).toBe(
       'A literal #flour stays plain.',
+    );
+  });
+
+  it('shows durations as readable text and keeps temperature shorthand in the editor', () => {
+    const source = 'Bake [[duration:10 minutes]] at F!400.';
+    expect(getInstructionEditorValue(source)).toBe('Bake 10 minutes at F!400.');
+    expect(
+      updateInstructionMarkdownFromEditor(source, 'Bake gently for 10 minutes at F!400.'),
+    ).toBe('Bake gently for [[duration:10 minutes]] at F!400.');
+  });
+
+  it('removes stove heat delimiters from searchable plain text', () => {
+    expect(instructionPlainText('Reduce to !medium low! and bake at F!402.')).toBe(
+      'Reduce to medium low and bake at 402°F.',
+    );
+    expect(instructionPlainText("until it's !medium high!!")).toBe("until it's medium high!");
+  });
+
+  it('keeps photo references stable in the editor while omitting them from plain text', () => {
+    const source = `Turn the dough. [[photo:${photoId}]]-200`;
+    const photos = [
+      { id: eggId, reference_code: 12 },
+      { id: photoId, reference_code: 37 },
+    ];
+    expect(getInstructionEditorValue(source, photos)).toBe('Turn the dough. +photo37-200');
+    expect(instructionPlainText(source)).toBe('Turn the dough.');
+    expect(
+      updateInstructionMarkdownFromEditor(source, 'Carefully turn the dough. +photo37-200', photos),
+    ).toBe(`Carefully turn the dough. [[photo:${photoId}]]-200`);
+    expect(
+      updateInstructionMarkdownFromEditor(source, 'Turn the dough. +photo37-240', photos),
+    ).toBe(`Turn the dough. [[photo:${photoId}]]-240`);
+    expect(unlinkInstructionPhoto(source, photoId)).toBe('Turn the dough. ');
+  });
+
+  it('resolves typed photo codes to UUID markers and leaves unknown codes literal', () => {
+    const photos = [{ id: photoId, reference_code: 37 }];
+    expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo37.', photos)).toBe(
+      `Stir in [[photo:${photoId}]].`,
+    );
+    expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo37-240.', photos)).toBe(
+      `Stir in [[photo:${photoId}]]-240.`,
+    );
+    expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo99.', photos)).toBe(
+      'Stir in +photo99.',
     );
   });
 
@@ -156,6 +203,30 @@ describe('instruction mention rules', () => {
         `## Prepare\n\n- Stir **gently** with [[ingredient:${flourId}|old-flour]].`,
       ),
     ).toBe('Prepare Stir gently with #old-flour.');
+  });
+
+  it('projects explicit temperature and duration annotations as readable text', () => {
+    expect(
+      instructionPlainText(
+        'Preheat to F!400 and C!200; bake [[duration:10 minutes]] and rest =one hour=.',
+      ),
+    ).toBe('Preheat to 400°F and 200°C; bake 10 minutes and rest one hour.');
+  });
+
+  it('keeps typed duration delimiters editable and does not infer unmarked times', () => {
+    const source = 'Bake gently for =10 minutes=.';
+
+    expect(updateInstructionMarkdownFromEditor('', source)).toBe(source);
+    expect(getInstructionEditorValue(source)).toBe(source);
+    expect(updateInstructionMarkdownFromEditor(source, 'Bake gently for 10 minutes.')).toBe(
+      'Bake gently for 10 minutes.',
+    );
+    expect(instructionPlainText(`${source} Leave for 5 minutes.`)).toBe(
+      'Bake gently for 10 minutes. Leave for 5 minutes.',
+    );
+    expect(instructionPlainText('Rest =one hour=, then chill for 20 minutes.')).toBe(
+      'Rest one hour, then chill for 20 minutes.',
+    );
   });
 
   it('extracts only confirmed markers in their occurrence order', () => {

@@ -44,15 +44,16 @@ security without prematurely creating recipe or other domain tables.
 | Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to one recipe ingredient row and optionally one of its two portions. |
+| Instruction photo reference | A stable media-asset identity embedded in a recipe step; it can reference only a ready photo owned by that same recipe. |
 | Recipe pairing | A Pairs with entry with required display text and an optional linked target recipe. |
 | Recipe reference | A same-account recipe link, external URL, or printed citation linked to a recipe; legacy Publication references remain static text, and purged recipe targets retain their display text. |
 | Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Explorer state | A per-account last-used recipe or publication explorer configuration: filters, sort, direction, view, List-column visibility, desktop widths, and fixed publication scope when applicable. |
-| Preference | Account-level defaults: ingredient presentation, volume and weight unit systems, mobile hand preference, and ingredient-mention style. |
-| Account | The account record linked to the sign-in identity; it owns private data, volume and weight display-system defaults, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
+| Preference | Account-level defaults: ingredient presentation, volume, weight, and temperature display systems, mobile hand preference, independent ingredient/temperature/duration emphasis colors, and whether private print uses those colors. |
+| Account | The account record linked to the sign-in identity; it owns private data, volume, weight, and temperature display-system defaults, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
-| Media asset | Metadata and private storage path for a cover or recipe image. |
+| Media asset | Metadata and private storage path for a cover or recipe image. A recipe photo has a unique, persisted two-digit reference code within its recipe; covers have no code. |
 | History event | An append-only forensic record of a saved change. |
 
 Publications retain `created_at` and `updated_at` timestamps. `updated_at`
@@ -97,6 +98,13 @@ columns.
 - Ingredient mentions reference a particular recipe ingredient row, never an
   unstructured word in instruction text. A divided-row mention may store
   ordinal 1 or 2; a null ordinal refers to the whole row.
+- An instruction photo reference resolves only to a ready `recipe_photo` asset
+  belonging to the same recipe and account. It stores no signed URL, storage
+  path, or image bytes. The photo is decorative and supplemental, with empty
+  alternative text and no caption or description; written instructions remain
+  complete without it. Removing a referenced photo removes all its step
+  references in the same confirmed, version-checked operation. Cancellation or
+  a version conflict leaves both recipe content and media unchanged.
 - A recipe pairing may be plain text or link another recipe. Linked pairings are
   directional and expose both outgoing and incoming recipe relationships.
 - A Magazine publication represents its title. Each Magazine recipe stores its
@@ -126,6 +134,9 @@ columns.
 - A media asset belongs to exactly one active or trashed recipe or publication
   and is stored in the private media bucket. Each publication has at most one
   cover; each recipe has at most 12 ordered photos and one primary photo.
+  Recipe photos also have a unique, persisted two-digit reference code within
+  their recipe, independent of gallery order. Instruction shorthand resolves
+  through the stable asset UUID; the visible code is only an authoring label.
   Account quota counts the processed full and thumbnail derivatives, not the
   staged original.
 - Trashing a parent hides its media without breaking the association.

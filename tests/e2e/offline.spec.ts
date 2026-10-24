@@ -247,6 +247,77 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
   }
 });
 
+test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const recipeName = `Offline photo ${randomUUID()}`;
+
+  try {
+    await signIn(page, user);
+    await waitForServiceWorker(page);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill(recipeName);
+    await page.getByPlaceholder('Add instruction…').fill('Stir until glossy.');
+    await page.getByLabel('Choose recipe photos').setInputFiles({
+      name: 'offline-instruction-photo.png',
+      mimeType: 'image/png',
+      buffer: await sharp({
+        create: {
+          width: 32,
+          height: 24,
+          channels: 3,
+          background: { r: 126, g: 154, b: 116 },
+        },
+      })
+        .png()
+        .toBuffer(),
+    });
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+    if (!recipeId) {
+      throw new Error('The saved recipe URL must include its ID.');
+    }
+
+    await page.goto(`/recipes/${recipeId}/edit`);
+    await page.getByRole('button', { name: 'Add photo reference to step 1' }).click();
+    await page
+      .getByRole('button', { name: /^Insert photo \d{2}$/u })
+      .first()
+      .click();
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+
+    const readCachedSnapshot = () =>
+      page.evaluate(async (id) => {
+        for (const cacheName of await caches.keys()) {
+          if (!cacheName.startsWith('recipe-box-private-')) continue;
+          const cache = await caches.open(cacheName);
+          const response = await cache.match(new URL(`/recipes/${id}`, location.origin));
+          if (response) {
+            const html = await response.text();
+            if (html.includes('recipe-instruction-photo')) return html;
+          }
+        }
+        return '';
+      }, recipeId);
+    await expect
+      .poll(readCachedSnapshot, { timeout: 10_000 })
+      .toContain('recipe-instruction-photo');
+    const cachedSnapshot = await readCachedSnapshot();
+    expect(cachedSnapshot).not.toContain('/storage/v1/object/sign/');
+    expect(cachedSnapshot).not.toMatch(/<img\b/i);
+
+    await page.context().setOffline(true);
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(page.getByRole('status')).toContainText('Offline copy');
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(page.locator('img')).toHaveCount(0);
+  } finally {
+    await page.context().setOffline(false);
+    await deleteTestUser(request, user);
+  }
+});
+
 test('failed offline-cache deletion blocks sign-out and can be retried @e2e', async ({
   page,
   request,

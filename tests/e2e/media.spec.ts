@@ -114,6 +114,12 @@ async function createRecipe(
   apiUrl: string,
   headers: Record<string, string>,
   name: string,
+  instructionSteps: {
+    id: string;
+    position: number;
+    content_markdown: string;
+    plain_text: string;
+  }[] = [],
 ) {
   const response = await request.post(`${apiUrl}/rest/v1/rpc/save_recipe`, {
     headers,
@@ -143,7 +149,7 @@ async function createRecipe(
       p_cuisine_ids: [],
       p_equipment_ids: [],
       p_ingredient_rows: [],
-      p_instruction_steps: [],
+      p_instruction_steps: instructionSteps,
     },
   });
   expect(response.ok(), await response.text()).toBeTruthy();
@@ -162,6 +168,33 @@ async function createImageBuffer() {
   })
     .png()
     .toBuffer();
+}
+
+async function createReadyRecipePhoto(
+  request: import('@playwright/test').APIRequestContext,
+  apiUrl: string,
+  ownerAuth: Record<string, string>,
+  service: Record<string, string>,
+  recipeId: string,
+) {
+  const reservation = await request.post(`${apiUrl}/rest/v1/rpc/reserve_media_upload`, {
+    headers: ownerAuth,
+    data: { p_parent_type: 'recipe', p_parent_id: recipeId },
+  });
+  expect(reservation.ok(), await reservation.text()).toBeTruthy();
+  const assetId = (await reservation.json()) as string;
+  const completion = await request.post(`${apiUrl}/rest/v1/rpc/complete_media_upload`, {
+    headers: service,
+    data: {
+      p_asset_id: assetId,
+      p_width: 32,
+      p_height: 24,
+      p_byte_size: 100,
+      p_description: '',
+    },
+  });
+  expect(completion.ok(), await completion.text()).toBeTruthy();
+  return assetId;
 }
 
 test('a new recipe can upload photos selected before saving @e2e @a11y', async ({
@@ -198,6 +231,353 @@ test('a new recipe can upload photos selected before saving @e2e @a11y', async (
     await expect(page.locator('.recipe-photo-feature-image')).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
+  }
+});
+
+test('owners can insert an existing recipe photo into an instruction step @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
+  const ownerAuth = ownerHeaders(anonKey, user.accessToken);
+  const recipeName = `Recipe with an instruction photo ${randomUUID()}`;
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill(recipeName);
+    await page
+      .getByPlaceholder('Add instruction…')
+      .fill('Finish the sauce. then simmer uncovered.');
+    await page.getByLabel('Choose recipe photos').setInputFiles({
+      name: 'instruction-reference.png',
+      mimeType: 'image/png',
+      buffer: await createImageBuffer(),
+    });
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+
+    const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+    if (!recipeId) {
+      throw new Error('The saved recipe URL must include its ID.');
+    }
+    await page.goto(`/recipes/${recipeId}/edit`);
+    const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
+    const triggerPosition = 'Finish the sauce. '.length;
+    await instruction.focus();
+    await instruction.evaluate((element, position) => {
+      if (!(element instanceof HTMLTextAreaElement)) {
+        throw new Error('Expected the instruction editor to be a textarea.');
+      }
+      element.setSelectionRange(position, position);
+    }, triggerPosition);
+    await instruction.pressSequentially('+p');
+    await expect(page.getByRole('button', { name: /Add photo reference to step/u })).toHaveCount(0);
+    const pickerPane = page.locator('.recipe-instruction-photo-picker');
+    await expect(pickerPane).toBeVisible();
+    const instructionRow = page.locator(
+      '.recipe-instruction-edit-step:has(.recipe-instruction-photo-picker)',
+    );
+    await expect(pickerPane).toHaveAttribute('data-placement', 'below');
+    const paneBounds = await pickerPane.boundingBox();
+    const rowBounds = await instructionRow.boundingBox();
+    if (!paneBounds || !rowBounds) throw new Error('Expected picker and row geometry.');
+    expect(paneBounds.y).toBeGreaterThanOrEqual(rowBounds.y + rowBounds.height);
+    await instructionRow.evaluate((element) => element.scrollIntoView({ block: 'end' }));
+    await expect(pickerPane).toHaveAttribute('data-placement', 'above');
+    const elevatedPaneBounds = await pickerPane.boundingBox();
+    const elevatedRowBounds = await instructionRow.boundingBox();
+    if (!elevatedPaneBounds || !elevatedRowBounds) {
+      throw new Error('Expected elevated picker and row geometry.');
+    }
+    expect(elevatedPaneBounds.y + elevatedPaneBounds.height).toBeLessThanOrEqual(
+      elevatedRowBounds.y,
+    );
+    const cancelChoice = page.getByRole('button', { name: /^Insert photo \d{2}$/u }).first();
+    await expect(cancelChoice).toBeVisible();
+    await cancelChoice.focus();
+    await cancelChoice.press('Escape');
+    await expect(instruction).toHaveValue('Finish the sauce. then simmer uncovered.');
+    await instruction.pressSequentially('+p');
+    const photoChoice = page.getByRole('button', { name: /^Insert photo \d{2}$/u }).first();
+    await expect(photoChoice).toBeVisible();
+    const photoCode = (await photoChoice.getAttribute('aria-label'))?.match(/\d{2}$/u)?.[0];
+    if (!photoCode) throw new Error('Expected the photo picker to expose its stable code.');
+    await expect(photoChoice.locator('.recipe-instruction-photo-code')).toHaveText(photoCode);
+    await photoChoice.click();
+    await expect(instruction).toHaveValue(
+      `Finish the sauce. +photo${photoCode}then simmer uncovered.`,
+    );
+    await instruction.fill('Finish the sauce. then simmer uncovered.');
+    await instruction.evaluate((element, position) => {
+      if (!(element instanceof HTMLTextAreaElement)) {
+        throw new Error('Expected the instruction editor to be a textarea.');
+      }
+      element.setSelectionRange(position, position);
+    }, triggerPosition);
+    await instruction.pressSequentially(`+photo${photoCode}-200 `);
+    await expect(instruction).toHaveValue(
+      `Finish the sauce. +photo${photoCode}-200 then simmer uncovered.`,
+    );
+    await instruction.press('Enter');
+    const followingInstruction = page.getByRole('textbox', { name: 'Instruction step 2' });
+    await followingInstruction.fill(
+      'Keep stirring gently and check the seasoning while the sauce remains warm enough to coat every strand.',
+    );
+    await followingInstruction.press('Enter');
+    await page
+      .getByRole('textbox', { name: 'Instruction step 3' })
+      .fill(`After resting, +photo${photoCode} taste the sauce again.`);
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(page.locator('.recipe-instruction-photo img')).toHaveCount(2);
+    const instructionPhoto = page.locator('.recipe-instruction-photo img').first();
+    await instructionPhoto.click();
+    const instructionViewer = page.locator('.image-viewer-dialog').nth(1);
+    await expect(instructionViewer).toHaveJSProperty('open', true);
+    await instructionViewer.getByRole('button', { name: 'Close image viewer' }).click();
+    await expect(instructionViewer).toHaveJSProperty('open', false);
+    await expect(page.locator('.recipe-instruction-photo').first()).toHaveCSS('float', 'right');
+    const photoElements = page.locator('.recipe-instruction-photo');
+    const photoBounds = await photoElements.first().boundingBox();
+    const instructionBounds = await page.locator('.recipe-instruction-list').boundingBox();
+    const leadingTextBounds = await page
+      .locator('.recipe-instruction-with-photo')
+      .first()
+      .evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let textNode = walker.nextNode();
+        while (textNode) {
+          const text = textNode.textContent ?? '';
+          const start = text.indexOf('Finish the sauce.');
+          if (start >= 0) {
+            const range = document.createRange();
+            range.setStart(textNode, start);
+            range.setEnd(textNode, start + 'Finish the sauce.'.length);
+            const fragments = range.getClientRects();
+            const bounds = fragments[fragments.length - 1];
+            if (!bounds) throw new Error('Expected the leading text line to render.');
+            return { x: bounds.x, y: bounds.y, right: bounds.right };
+          }
+          textNode = walker.nextNode();
+        }
+        throw new Error('Expected the leading instruction text to render.');
+      });
+    const followingTextBounds = await page
+      .locator('.recipe-instruction-with-photo')
+      .first()
+      .evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let textNode = walker.nextNode();
+        while (textNode) {
+          const text = textNode.textContent ?? '';
+          const start = text.indexOf('then simmer uncovered.');
+          if (start >= 0) {
+            const range = document.createRange();
+            range.setStart(textNode, start);
+            range.setEnd(textNode, start + 'then simmer uncovered.'.length);
+            const bounds = range.getBoundingClientRect();
+            return { x: bounds.x, y: bounds.y, right: bounds.right };
+          }
+          textNode = walker.nextNode();
+        }
+        throw new Error('Expected the post-photo instruction text to render.');
+      });
+    const followingStepFirstLine = await page
+      .locator('.recipe-instruction-list > li')
+      .nth(1)
+      .evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const textNode = walker.nextNode();
+        if (!textNode) throw new Error('Expected the following instruction text to render.');
+        const range = document.createRange();
+        range.selectNodeContents(textNode);
+        const bounds = range.getClientRects()[0];
+        if (!bounds) throw new Error('Expected the following instruction line to render.');
+        return { y: bounds.y, right: bounds.right };
+      });
+    const secondPhotoStepBounds = await page
+      .locator('.recipe-instruction-list > li')
+      .nth(2)
+      .boundingBox();
+    if (!photoBounds || !instructionBounds) {
+      throw new Error('Expected the embedded photo and instruction to have layout boxes.');
+    }
+    expect(photoBounds.width).toBeGreaterThan(0);
+    expect(photoBounds.width).toBeLessThanOrEqual(
+      Math.min(200, instructionBounds.width * 0.55) + 1,
+    );
+    expect(Math.abs(leadingTextBounds.y - photoBounds.y)).toBeLessThan(8);
+    expect(leadingTextBounds.right).toBeLessThanOrEqual(photoBounds.x);
+    expect(followingTextBounds.right).toBeLessThanOrEqual(photoBounds.x);
+    if (followingStepFirstLine.y < photoBounds.y + photoBounds.height) {
+      expect(followingStepFirstLine.right).toBeLessThanOrEqual(photoBounds.x);
+    } else if (testInfo.project.name !== 'Fold 6') {
+      throw new Error('The following instruction should wrap beside the remaining photo float.');
+    }
+    expect(secondPhotoStepBounds?.y).toBeGreaterThanOrEqual(photoBounds.y + photoBounds.height);
+    await page.goto(`/recipes/${recipeId}/edit`);
+    await page.getByRole('button', { name: 'Manage recipe photos' }).click();
+    const photoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
+    await photoDialog.getByRole('button', { name: 'Remove photo 1' }).click();
+    const confirmation = photoDialog.getByRole('alertdialog', {
+      name: 'Remove referenced photo?',
+    });
+    await expect(confirmation).toContainText('instruction steps 1, 3');
+    await confirmation.getByRole('button', { name: 'Cancel' }).click();
+    await expect(photoDialog.getByRole('button', { name: 'Remove photo 1' })).toBeVisible();
+
+    await photoDialog.getByRole('button', { name: 'Remove photo 1' }).click();
+    await photoDialog
+      .getByRole('alertdialog')
+      .getByRole('button', {
+        name: 'Remove photo and references',
+      })
+      .click();
+    await expect(photoDialog.getByRole('button', { name: /Remove photo/ })).toHaveCount(0);
+    await photoDialog.getByRole('button', { name: 'Done' }).click();
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(page.getByText('Finish the sauce.')).toBeVisible();
+    await expect(page.locator('.recipe-instruction-photo img')).toHaveCount(0);
+    await expect(page.locator('.recipe-photo-feature-image')).toHaveCount(0);
+
+    const historyResponse = await request.get(
+      `${apiUrl}/rest/v1/recipe_history?select=event_type,before_data,after_data&record_id=eq.${recipeId}&order=created_at.desc,id.desc`,
+      { headers: ownerAuth },
+    );
+    expect(historyResponse.ok(), await historyResponse.text()).toBeTruthy();
+    const history = (await historyResponse.json()) as {
+      event_type: string;
+      before_data: { steps?: { content_markdown: string }[] } | null;
+      after_data: { steps?: { content_markdown: string }[] };
+    }[];
+    const photoRemoval = history.find(
+      (event) =>
+        event.event_type === 'recipe.updated' &&
+        event.before_data?.steps?.some((step) => step.content_markdown.includes('[[photo:')) &&
+        event.after_data.steps?.every((step) => !step.content_markdown.includes('[[photo:')),
+    );
+    expect(photoRemoval).toBeDefined();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('instruction photo references reject invalid assets and stale removal versions @e2e', async ({
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const { apiUrl, anonKey, serviceRoleKey } = await getLocalSupabaseConfig();
+  const ownerAuth = ownerHeaders(anonKey, owner.accessToken);
+  const service = serviceHeaders(serviceRoleKey);
+  const stepId = randomUUID();
+  const recipeId = await createRecipe(request, apiUrl, ownerAuth, `Photo guard ${randomUUID()}`, [
+    { id: stepId, position: 0, content_markdown: 'Stir the sauce.', plain_text: 'Stir the sauce.' },
+  ]);
+  const otherRecipeId = await createRecipe(
+    request,
+    apiUrl,
+    ownerAuth,
+    `Other photo recipe ${randomUUID()}`,
+  );
+
+  try {
+    const localPhotoId = await createReadyRecipePhoto(
+      request,
+      apiUrl,
+      ownerAuth,
+      service,
+      recipeId,
+    );
+    const secondLocalPhotoId = await createReadyRecipePhoto(
+      request,
+      apiUrl,
+      ownerAuth,
+      service,
+      recipeId,
+    );
+    const localPhotoIds = [localPhotoId, secondLocalPhotoId];
+    const photoCodesResponse = await request.get(
+      `${apiUrl}/rest/v1/media_assets?select=id,reference_code&id=in.(${localPhotoIds.join(',')})`,
+      { headers: ownerAuth },
+    );
+    expect(photoCodesResponse.ok(), await photoCodesResponse.text()).toBeTruthy();
+    const photoCodes = (await photoCodesResponse.json()) as {
+      id: string;
+      reference_code: number;
+    }[];
+    expect(photoCodes).toHaveLength(2);
+    expect(new Set(photoCodes.map((photo) => photo.reference_code)).size).toBe(2);
+    expect(
+      photoCodes.every((photo) => photo.reference_code >= 0 && photo.reference_code <= 99),
+    ).toBe(true);
+    const codesByAssetId = new Map(photoCodes.map((photo) => [photo.id, photo.reference_code]));
+    const reorderResponse = await request.post(`${apiUrl}/rest/v1/rpc/reorder_recipe_photos`, {
+      headers: ownerAuth,
+      data: {
+        p_recipe_id: recipeId,
+        p_asset_ids: [secondLocalPhotoId, localPhotoId],
+      },
+    });
+    expect(reorderResponse.ok(), await reorderResponse.text()).toBeTruthy();
+    const reorderedCodesResponse = await request.get(
+      `${apiUrl}/rest/v1/media_assets?select=id,reference_code&id=in.(${localPhotoIds.join(',')})`,
+      { headers: ownerAuth },
+    );
+    expect(reorderedCodesResponse.ok(), await reorderedCodesResponse.text()).toBeTruthy();
+    const reorderedCodes = (await reorderedCodesResponse.json()) as typeof photoCodes;
+    expect(new Map(reorderedCodes.map((photo) => [photo.id, photo.reference_code]))).toEqual(
+      codesByAssetId,
+    );
+
+    const foreignPhotoId = await createReadyRecipePhoto(
+      request,
+      apiUrl,
+      ownerAuth,
+      service,
+      otherRecipeId,
+    );
+    const pendingPhotoResponse = await request.post(`${apiUrl}/rest/v1/rpc/reserve_media_upload`, {
+      headers: ownerAuth,
+      data: { p_parent_type: 'recipe', p_parent_id: recipeId },
+    });
+    expect(pendingPhotoResponse.ok(), await pendingPhotoResponse.text()).toBeTruthy();
+    const pendingPhotoId = (await pendingPhotoResponse.json()) as string;
+
+    for (const invalidAssetId of [foreignPhotoId, pendingPhotoId]) {
+      expect(() =>
+        runLocalSql(`
+          update public.recipe_steps
+          set content_markdown = 'Stir the sauce. [[photo:${invalidAssetId}]]'
+          where id = '${stepId}'::uuid and recipe_id = '${recipeId}'::uuid;
+        `),
+      ).toThrow();
+    }
+
+    const stepResponse = await request.get(
+      `${apiUrl}/rest/v1/recipe_steps?select=content_markdown&id=eq.${stepId}`,
+      { headers: ownerAuth },
+    );
+    expect(await stepResponse.json()).toEqual([{ content_markdown: 'Stir the sauce.' }]);
+
+    const staleDelete = await request.post(
+      `${apiUrl}/rest/v1/rpc/delete_recipe_photo_with_references`,
+      {
+        headers: ownerAuth,
+        data: { p_asset_id: localPhotoId, p_expected_version: 0 },
+      },
+    );
+    expect(staleDelete.ok()).toBeFalsy();
+    expect((await staleDelete.json()).code).toBe('PT409');
+
+    const retainedPhoto = await request.get(
+      `${apiUrl}/rest/v1/media_assets?select=id&id=eq.${localPhotoId}`,
+      { headers: ownerAuth },
+    );
+    expect(await retainedPhoto.json()).toEqual([{ id: localPhotoId }]);
+  } finally {
+    await deleteTestUser(request, owner);
   }
 });
 
@@ -978,10 +1358,40 @@ test('image management panes stage covers and immediately manage decorative reci
     const selectedThumbnail = page.getByRole('button', { name: 'Show photo 2' });
     const selectedPhotoId = await selectedThumbnail.getAttribute('data-photo-id');
     expect(selectedPhotoId).not.toBe(initialFeaturedPhotoId);
+    const imageViewer = page.locator('.image-viewer-dialog');
+    await expect(imageViewer).toHaveJSProperty('open', false);
     await selectedThumbnail.click();
+    await expect(imageViewer).toHaveJSProperty('open', false);
     await expect(featureImage).toHaveAttribute('data-photo-id', selectedPhotoId ?? '');
     await expect(selectedThumbnail).toHaveAttribute('aria-pressed', 'true');
     await expect(thumbnailButtons).toHaveCount(7);
+    await featureImage.click();
+    await expect(imageViewer).toHaveJSProperty('open', true);
+    const fullSizeImage = imageViewer.locator('.image-viewer-full-image');
+    await expect(fullSizeImage).toBeVisible();
+    await fullSizeImage.click();
+    await expect(imageViewer).toHaveJSProperty('open', true);
+    const fullSizeBounds = await fullSizeImage.evaluate((image: HTMLImageElement) => ({
+      naturalHeight: image.naturalHeight,
+      naturalWidth: image.naturalWidth,
+      rect: image.getBoundingClientRect().toJSON(),
+    }));
+    expect(fullSizeBounds.rect.width).toBeLessThanOrEqual(fullSizeBounds.naturalWidth);
+    expect(fullSizeBounds.rect.height).toBeLessThanOrEqual(fullSizeBounds.naturalHeight);
+    expect(fullSizeBounds.rect.right).toBeLessThanOrEqual(viewportWidth + 1);
+    expect(fullSizeBounds.rect.bottom).toBeLessThanOrEqual(
+      (page.viewportSize()?.height ?? Infinity) + 1,
+    );
+    await imageViewer.getByRole('button', { name: 'Close image viewer' }).click();
+    await expect(imageViewer).toHaveJSProperty('open', false);
+    await featureImage.click();
+    await expect(imageViewer).toHaveJSProperty('open', true);
+    await page.keyboard.press('Escape');
+    await expect(imageViewer).toHaveJSProperty('open', false);
+    await featureImage.click();
+    await expect(imageViewer).toHaveJSProperty('open', true);
+    await imageViewer.locator('.image-viewer-stage').click({ position: { x: 1, y: 120 } });
+    await expect(imageViewer).toHaveJSProperty('open', false);
     expect(
       await thumbnailButtons.evaluateAll((buttons) =>
         buttons.map((button) => button.getAttribute('data-photo-id')),

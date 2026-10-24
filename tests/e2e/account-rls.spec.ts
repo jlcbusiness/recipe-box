@@ -139,7 +139,7 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
   const otherUser = await createTestUser(request);
 
   try {
-    const preferencesUrl = `${supabase.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method,volume_system,weight_system,ingredient_presentation,hand_preference&id=eq.${owner.id}`;
+    const preferencesUrl = `${supabase.apiUrl}/rest/v1/accounts?select=id,is_admin,sign_in_method,volume_system,weight_system,temperature_system,ingredient_presentation,hand_preference,ingredient_color,temperature_color,duration_color,private_print_uses_colors&id=eq.${owner.id}`;
     const initialRead = await request.get(preferencesUrl, { headers: userHeaders(owner) });
     expect(initialRead.status()).toBe(200);
     expect(await initialRead.json()).toEqual([
@@ -149,8 +149,13 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
         sign_in_method: 'email_password',
         volume_system: 'us_customary',
         weight_system: 'us_customary',
+        temperature_system: 'fahrenheit',
         ingredient_presentation: 'standard',
         hand_preference: 'right',
+        ingredient_color: 'blue',
+        temperature_color: 'red',
+        duration_color: 'orange',
+        private_print_uses_colors: true,
       },
     ]);
 
@@ -187,6 +192,15 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
       },
     );
     expect(directHandUpdate.ok()).toBeFalsy();
+
+    const directInstructionPreferenceUpdate = await request.patch(
+      `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+      {
+        headers: { ...userHeaders(owner), Prefer: 'return=representation' },
+        data: { temperature_color: 'teal', private_print_uses_colors: false },
+      },
+    );
+    expect(directInstructionPreferenceUpdate.ok()).toBeFalsy();
 
     const directProtectedUpdate = await request.patch(
       `${supabase.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
@@ -228,6 +242,24 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
     );
     expect(updateHand.status()).toBe(204);
 
+    const updateTemperatureColor = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: { p_temperature_color: 'teal' },
+      },
+    );
+    expect(updateTemperatureColor.status()).toBe(204);
+
+    const updatePrivatePrint = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: { p_private_print_uses_colors: false },
+      },
+    );
+    expect(updatePrivatePrint.status()).toBe(204);
+
     const afterVolumeUpdate = await request.get(preferencesUrl, { headers: userHeaders(owner) });
     expect(await afterVolumeUpdate.json()).toEqual([
       {
@@ -236,8 +268,13 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
         sign_in_method: 'email_password',
         volume_system: 'metric',
         weight_system: 'us_customary',
+        temperature_system: 'fahrenheit',
         ingredient_presentation: 'ingredient_first',
         hand_preference: 'left',
+        ingredient_color: 'blue',
+        temperature_color: 'teal',
+        duration_color: 'orange',
+        private_print_uses_colors: false,
       },
     ]);
 
@@ -271,6 +308,15 @@ test('Account unit preferences are owner-scoped and cannot update protected acco
       },
     );
     expect(invalidHandUpdate.ok()).toBeFalsy();
+
+    const invalidColorUpdate = await request.post(
+      `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...userHeaders(owner), 'Content-Type': 'application/json' },
+        data: { p_temperature_color: 'ultraviolet' },
+      },
+    );
+    expect(invalidColorUpdate.ok()).toBeFalsy();
 
     const anonymousUpdate = await request.post(
       `${supabase.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,

@@ -14,14 +14,17 @@ function createDatabaseArchive(
   accountPreferences: PortableData['account_preferences'] = {},
   recipes: PortableData['records']['recipes'] = [],
   picklistValues: PortableData['records']['recipe_picklist_values'] = [],
+  schemaVersion: 1 | 2 | 3 = 1,
 ) {
   const data: PortableData = {
     format: 'recipe-box-data',
-    schema_version: 1,
+    schema_version: schemaVersion,
     scope: { type: 'database' },
     account_preferences: accountPreferences,
     records: Object.fromEntries(
-      exportTableNames.map((table) => [table, []]),
+      exportTableNames
+        .filter((table) => schemaVersion !== 1 || table !== 'recipe_ingredient_sets')
+        .map((table) => [table, []]),
     ) as unknown as PortableData['records'],
   };
   data.records.publications = publications;
@@ -34,6 +37,7 @@ function createDatabaseArchive(
     '0.1.0',
     new Date(),
   );
+  manifest.schema_version = schemaVersion;
   return Buffer.from(
     zipSync({
       'data.json': dataBytes,
@@ -116,6 +120,7 @@ function createRecipeWithPicklistArchive(
       },
     ],
     picklistValues,
+    3,
   );
 }
 
@@ -199,7 +204,14 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
     await page.getByLabel('Database archive').setInputFiles({
       name: 'database-export.zip',
       mimeType: 'application/zip',
-      buffer: createRecipeWithPicklistArchive({ volume_system: 'metric' }),
+      buffer: createRecipeWithPicklistArchive({
+        volume_system: 'metric',
+        temperature_system: 'celsius',
+        ingredient_color: 'teal',
+        temperature_color: 'red',
+        duration_color: 'orange',
+        private_print_uses_colors: false,
+      }),
     });
     const preview = importDialog.getByRole('region', { name: 'Import details' });
     await expect(preview).toBeVisible();
@@ -232,6 +244,20 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
     }
     await expect(importDialog).not.toBeVisible();
     await expect(dataManagement.getByRole('status')).toHaveText('Import complete.');
+    await page.goto('/settings');
+    await expect(page.getByRole('combobox', { name: 'Temperature', exact: true })).toContainText(
+      'Celsius',
+    );
+    const ingredientColorGroup = page.getByRole('group', { name: 'Ingredient color' });
+    await ingredientColorGroup
+      .getByRole('button', { name: 'Ingredient color: Dark Yellow' })
+      .click();
+    await expect(
+      page
+        .getByRole('group', { name: 'Ingredient color choices' })
+        .getByRole('button', { name: 'Set ingredient color to Dark Yellow' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByLabel('Omit emphasis colors when printing')).toBeChecked();
   } finally {
     await deleteTestUser(request, user);
   }

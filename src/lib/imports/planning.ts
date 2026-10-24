@@ -591,6 +591,25 @@ export function planImport(
       },
     ];
   });
+  records.recipe_steps = records.recipe_steps.map((record) => {
+    if (typeof record.content_markdown !== 'string') {
+      throw new Error('The import plan cannot resolve recipe step content.');
+    }
+    const markerCount = [...record.content_markdown.matchAll(/\[\[photo:/giu)].length;
+    const photoPattern = /\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\]/giu;
+    const references = [...record.content_markdown.matchAll(photoPattern)];
+    if (markerCount !== references.length) {
+      throw new Error('The import plan contains an invalid photo reference.');
+    }
+    return {
+      ...record,
+      content_markdown: record.content_markdown.replace(
+        photoPattern,
+        (_marker: string, sourceId: string) =>
+          `[[photo:${mappedId('media_assets', sourceId, 'photo asset')}]]`,
+      ),
+    };
+  });
 
   return {
     records,

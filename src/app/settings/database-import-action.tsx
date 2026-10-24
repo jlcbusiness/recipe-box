@@ -55,6 +55,7 @@ type MissingPublicationAction = 'create' | 'destinations';
 const accountPreferenceLabels: Record<string, string> = {
   volume_system: 'Volume units',
   weight_system: 'Weight units',
+  temperature_system: 'Temperature units',
   ingredient_presentation: 'Ingredient presentation',
   hand_preference: 'Preferred hand',
   recipe_column_order: 'Recipe column order',

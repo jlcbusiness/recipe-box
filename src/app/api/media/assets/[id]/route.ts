@@ -33,7 +33,11 @@ export async function PATCH(request: Request, context: MediaAssetRouteContext) {
   }
 
   const payload = body as Record<string, unknown>;
-  let rpc: 'set_recipe_photo_primary' | 'update_media_description' | 'delete_media_asset';
+  let rpc:
+    | 'set_recipe_photo_primary'
+    | 'update_media_description'
+    | 'delete_media_asset'
+    | 'delete_recipe_photo_with_references';
   let parameters: Record<string, unknown>;
 
   if (payload.action === 'primary') {
@@ -43,8 +47,25 @@ export async function PATCH(request: Request, context: MediaAssetRouteContext) {
     rpc = 'update_media_description';
     parameters = { p_asset_id: id, p_description: payload.description.trim() };
   } else if (payload.action === 'delete') {
-    rpc = 'delete_media_asset';
-    parameters = { p_asset_id: id };
+    if (payload.expected_version === undefined) {
+      rpc = 'delete_media_asset';
+      parameters = { p_asset_id: id };
+    } else if (
+      typeof payload.expected_version === 'number' &&
+      Number.isSafeInteger(payload.expected_version) &&
+      payload.expected_version > 0
+    ) {
+      rpc = 'delete_recipe_photo_with_references';
+      parameters = {
+        p_asset_id: id,
+        p_expected_version: payload.expected_version,
+      };
+    } else {
+      return Response.json(
+        { error: 'Reload the recipe before removing this photo.' },
+        { status: 400 },
+      );
+    }
   } else {
     return Response.json({ error: 'Choose a valid image change.' }, { status: 400 });
   }

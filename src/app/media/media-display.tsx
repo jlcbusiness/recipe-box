@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
+import { ImageViewer } from './image-viewer';
 
 export function RecipePhotoGallery({ photos }: { photos: MediaAssetDisplay[] }) {
   const [selectedPhotoId, setSelectedPhotoId] = useState('');
@@ -17,13 +18,15 @@ export function RecipePhotoGallery({ photos }: { photos: MediaAssetDisplay[] }) 
   return (
     <section aria-label="Recipe photos" className="recipe-photo-gallery">
       <figure aria-live="polite" className="recipe-photo-feature">
-        <Image
+        <ImageViewer
           alt=""
-          className="recipe-photo-feature-image"
-          data-photo-id={selectedPhoto.id}
+          buttonLabel="View full-size recipe photo"
+          dataPhotoId={selectedPhoto.id}
           height={selectedPhoto.height}
+          imageClassName="recipe-photo-feature-image"
           src={selectedPhoto.full_url}
-          unoptimized
+          triggerClassName="recipe-photo-feature-image-trigger"
+          triggerLoading="eager"
           width={selectedPhoto.width}
         />
       </figure>

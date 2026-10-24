@@ -84,7 +84,12 @@ lowercase `- serves n`, separated from the title by a space, in regular 16px
 text. Cap public photos at 420px wide
 and `min(280px, 60vh)` high. On wide screens, place the photo gallery beside a
 summary containing Times and Equipment; on narrow screens, stack the summary
-below the photos. Do not repeat Serves in that summary.
+below the photos. Do not repeat Serves in that summary. Clicking a non-thumbnail
+photo opens that image in a modal viewer at intrinsic size, constrained to the
+viewport without enlarging smaller images. The top-right close action, Escape,
+and clicking outside the image dismiss it; clicking the image itself leaves the
+viewer open. The viewer displays one image and does not provide gallery
+navigation.
 
 The owner can copy the stable link and toggle Private/Linkable from the recipe
 workflow. Make sharing discoverable with a recognizable copy/share icon button,
@@ -110,7 +115,8 @@ page and photos on the next request.
   controls, serving scaling, unit switching, print content, safe references,
   title/Print alignment, inline serving-label typography, page gutters, capped
   photo sizing, responsive photo/summary placement, no private navigation or
-  actions, privacy changes taking effect on reload, unavailable/gone states,
+  actions, opening and dismissing the single-image viewer, image and viewport
+  bounds, privacy changes taking effect on reload, unavailable/gone states,
   and Axe checks.
 - Do not reset or stop the active local Supabase stack. Use a uniquely named,
   isolated temporary Supabase project for destructive migration and purge

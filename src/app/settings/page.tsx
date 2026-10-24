@@ -2,6 +2,11 @@ import { redirect } from 'next/navigation';
 import { normalizeHiddenRecipeColumns, normalizeRecipeColumnOrder } from '../../lib/explorer-state';
 import { isDatabaseExportReminderDue } from '../../lib/exports/rules';
 import type { PicklistCategory, TagOption } from '../../lib/recipes/data';
+import {
+  defaultInstructionEmphasis,
+  isInstructionEmphasisColor,
+} from '../../lib/recipes/instruction-emphasis';
+import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
 import { ExportAction } from '../export-action';
@@ -30,7 +35,7 @@ export default async function SettingsPage() {
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select(
-      'volume_system, weight_system, ingredient_presentation, hand_preference, recipe_column_order, recipe_hidden_columns, last_database_export_at',
+      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, recipe_column_order, recipe_hidden_columns, last_database_export_at',
     )
     .eq('id', data.user.id)
     .maybeSingle();
@@ -186,9 +191,30 @@ export default async function SettingsPage() {
       <section aria-labelledby="personal-preferences-title" className="settings-section">
         <h2 id="personal-preferences-title">Personal preferences</h2>
         <UnitPreferences
+          durationColor={
+            isInstructionEmphasisColor(account.duration_color)
+              ? account.duration_color
+              : defaultInstructionEmphasis.duration
+          }
           handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
+          ingredientColor={
+            isInstructionEmphasisColor(account.ingredient_color)
+              ? account.ingredient_color
+              : defaultInstructionEmphasis.ingredient
+          }
           ingredientPresentation={
             account.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard'
+          }
+          privatePrintUsesColors={account.private_print_uses_colors !== false}
+          temperatureColor={
+            isInstructionEmphasisColor(account.temperature_color)
+              ? account.temperature_color
+              : defaultInstructionEmphasis.temperature
+          }
+          temperatureSystem={
+            (account.temperature_system === 'celsius'
+              ? 'celsius'
+              : 'fahrenheit') as TemperatureSystem
           }
           volumeSystem={account.volume_system as MeasurementSystem}
           weightSystem={account.weight_system as MeasurementSystem}
