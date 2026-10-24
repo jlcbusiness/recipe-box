@@ -89,6 +89,32 @@ export function getIngredientMentionReplacementEnd(
   return replacementEnd;
 }
 
+function resolveTypedIngredientMention(
+  slug: string,
+  mentionOptions: readonly IngredientMentionOption[],
+): IngredientMentionOption | undefined {
+  const normalizedSlug = slug.toLocaleLowerCase();
+  const exactMatch = mentionOptions.find(
+    (mention) => mention.slug.toLocaleLowerCase() === normalizedSlug,
+  );
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const portionMatch = /^(.*)-([12])$/u.exec(normalizedSlug);
+  if (!portionMatch) {
+    return undefined;
+  }
+  const ingredientPrefix = `${portionMatch[1]}-`;
+  const portionOrdinal = Number(portionMatch[2]);
+  const candidates = mentionOptions.filter(
+    (mention) =>
+      mention.portionOrdinal === portionOrdinal &&
+      mention.slug.toLocaleLowerCase().startsWith(ingredientPrefix),
+  );
+  return candidates.length === 1 ? candidates[0] : undefined;
+}
+
 type InstructionEditorMarker = {
   kind: 'mention' | 'duration' | 'temperature' | 'photo';
   sourceStart: number;
@@ -277,13 +303,10 @@ export function updateInstructionMarkdownFromEditor(
       return photoId ? `[[photo:${photoId}]]${width ? `-${width}` : ''}` : match;
     },
   );
-  const mentionsBySlug = new Map(
-    mentionOptions.map((mention) => [mention.slug.toLocaleLowerCase(), mention]),
-  );
   return markdownWithPhotos.replace(
     /(?<![\p{L}\p{N}_#])#([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)(?![\p{L}\p{N}_-])/gu,
     (match, slug: string) => {
-      const mention = mentionsBySlug.get(slug.toLocaleLowerCase());
+      const mention = resolveTypedIngredientMention(slug, mentionOptions);
       return mention ? ingredientMentionMarker(mention) : match;
     },
   );

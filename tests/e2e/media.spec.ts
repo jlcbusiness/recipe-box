@@ -349,6 +349,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
       await page.setViewportSize({ ...originalViewport, width: 680 });
     }
     const photoElements = page.locator('.recipe-instruction-photo');
+    await expect(photoElements.first()).toHaveCSS('margin-bottom', '0px');
     const photoBounds = await photoElements.first().boundingBox();
     const instructionBounds = await page.locator('.recipe-instruction-list').boundingBox();
     const leadingTextBounds = await page
@@ -1016,6 +1017,46 @@ test('image management panes stage covers and immediately manage decorative reci
         false,
       );
     }
+    await page.getByRole('option', { name: '4:3' }).click();
+    await expect(ratioPicklist).toContainText('3:4');
+    await page.getByRole('button', { name: 'Reset' }).click();
+    await expect(ratioPicklist).toContainText('Free');
+    await expect
+      .poll(async () => {
+        const bounds = await cropperStage.boundingBox();
+        return Boolean(
+          bounds &&
+            canvasBeforeRotation &&
+            Math.abs(bounds.width - canvasBeforeRotation.width) < 2 &&
+            Math.abs(bounds.height - canvasBeforeRotation.height) < 2,
+        );
+      })
+      .toBe(true);
+    await expect
+      .poll(async () => {
+        const [stageBounds, frameBounds] = await Promise.all([
+          cropperStage.boundingBox(),
+          cropFrame.boundingBox(),
+        ]);
+        return Boolean(
+          stageBounds &&
+            frameBounds &&
+            Math.abs(stageBounds.x - frameBounds.x) < 2 &&
+            Math.abs(stageBounds.y - frameBounds.y) < 2 &&
+            Math.abs(stageBounds.width - frameBounds.width) < 2 &&
+            Math.abs(stageBounds.height - frameBounds.height) < 2,
+        );
+      })
+      .toBe(true);
+    await expect(rotateButton).toBeEnabled();
+    await rotateButton.click();
+    await expect
+      .poll(async () => {
+        const bounds = await cropperStage.boundingBox();
+        return Boolean(bounds && bounds.height > bounds.width);
+      })
+      .toBe(true);
+    await ratioPicklist.click();
     await page.getByRole('option', { name: '4:3' }).click();
     await expect(ratioPicklist).toContainText('3:4');
     const cropPatchRequest = page.waitForRequest(

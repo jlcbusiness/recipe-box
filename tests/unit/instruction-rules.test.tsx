@@ -81,6 +81,48 @@ describe('instruction mention rules', () => {
     ).toBe(`Use [[ingredient:${butterId}:2|butter-sauce-2]] until needed; leave #until in a bowl.`);
   });
 
+  it('links a typed ingredient portion slug when only the set-qualified slug is available', () => {
+    const mentionOptions = buildIngredientMentionOptions([
+      {
+        id: butterId,
+        ingredientId: butterId,
+        name: 'Butter Sauce',
+        setId: 'main',
+        setLabel: 'Main',
+        portionAmounts: ['1 tbsp', '2 tbsp'],
+      },
+    ]);
+
+    expect(
+      updateInstructionMarkdownFromEditor('', 'Add #butter-sauce-2.', [], mentionOptions),
+    ).toBe(`Add [[ingredient:${butterId}:2|butter-sauce-main-2]].`);
+  });
+
+  it('leaves an ambiguous short portion slug literal', () => {
+    const mentionOptions = buildIngredientMentionOptions([
+      {
+        id: butterId,
+        ingredientId: butterId,
+        name: 'Butter Sauce',
+        setId: 'main',
+        setLabel: 'Main',
+        portionAmounts: ['1 tbsp', '2 tbsp'],
+      },
+      {
+        id: photoId,
+        ingredientId: photoId,
+        name: 'Butter Sauce',
+        setId: 'finish',
+        setLabel: 'Finish',
+        portionAmounts: ['1 tsp', '2 tsp'],
+      },
+    ]);
+
+    expect(
+      updateInstructionMarkdownFromEditor('', 'Add #butter-sauce-2.', [], mentionOptions),
+    ).toBe('Add #butter-sauce-2.');
+  });
+
   it('shows durations as readable text and keeps temperature shorthand in the editor', () => {
     const source = 'Bake [[duration:10 minutes]] at F!400.';
     expect(getInstructionEditorValue(source)).toBe('Bake 10 minutes at F!400.');

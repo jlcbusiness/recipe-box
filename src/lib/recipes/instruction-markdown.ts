@@ -114,7 +114,12 @@ function parseInstructionInline(
   if (previousIndex < value.length) {
     tokens.push({ type: 'text', value: value.slice(previousIndex) });
   }
-  return tokens;
+  return tokens.map((token, index) => {
+    if (token.type === 'text' && tokens[index - 1]?.type === 'photo') {
+      return { ...token, value: token.value.replace(/^[ \t]+/u, '') };
+    }
+    return token;
+  });
 }
 
 export function parseInstructionMarkdown(

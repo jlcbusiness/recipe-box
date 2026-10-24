@@ -105,6 +105,7 @@ export function ImageCropEditor({
   const stageRef = useRef<HTMLDivElement>(null);
   const stageViewportRef = useRef<HTMLDivElement>(null);
   const resetToFullRef = useRef(false);
+  const resetRotationRef = useRef<CropRotation>(0);
   const [resetRequest, setResetRequest] = useState(0);
   const zoomRef = useRef(1);
   const pendingRotationRef = useRef(false);
@@ -174,6 +175,14 @@ export function ImageCropEditor({
     }
 
     const activeCropper = cropper;
+    const rotationToUndo = resetRotationRef.current;
+    if (rotationToUndo !== 0) {
+      activeCropper.rotateImage((360 - rotationToUndo) % 360, {
+        immediately: true,
+        transitions: false,
+      });
+      resetRotationRef.current = 0;
+    }
     let cancelled = false;
     async function resetToFullImage() {
       await activeCropper.reset();
@@ -366,6 +375,7 @@ export function ImageCropEditor({
   function resetCrop() {
     pendingRotationRef.current = false;
     setIsRotating(false);
+    resetRotationRef.current = rotationRef.current;
     rotationRef.current = 0;
     setRotation(0);
     setIsPortraitCrop(height > width);

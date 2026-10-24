@@ -207,6 +207,19 @@ describe('instruction Markdown', () => {
     });
   });
 
+  it('treats whitespace after a photo reference as a delimiter before following prose', () => {
+    expect(parseInstructionMarkdown(`Sizzles. [[photo:${photoId}]] For two minutes.`)).toEqual([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', value: 'Sizzles. ' },
+          { type: 'photo', id: photoId },
+          { type: 'text', value: 'For two minutes.' },
+        ],
+      },
+    ]);
+  });
+
   it('parses portion-qualified and legacy ingredient markers as readable mentions', () => {
     expect(
       parseInstructionMarkdown(

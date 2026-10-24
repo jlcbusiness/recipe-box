@@ -7088,7 +7088,7 @@ section.recipe-detail-section .recipe-relationship-list a {
   display: block;
   float: right;
   max-width: min(55%, 20rem);
-  margin: 0 0 8px 12px;
+  margin: 0 0 0 12px;
 }
 
 .recipe-instruction-photo.image-viewer-trigger {
@@ -7130,7 +7130,7 @@ section.recipe-detail-section .recipe-relationship-list a {
     clear: both;
     float: none;
     max-width: min(100%, 20rem);
-    margin: 8px 0;
+    margin: 8px 0 0;
   }
 }
 
