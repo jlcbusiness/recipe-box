@@ -1,10 +1,10 @@
 'use client';
 
-import { FramedMediaImage } from '../media/framed-media-image';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
 import {
+  getIngredientMentionReplacementEnd,
   getInstructionEditorValue,
   type IngredientMentionOption,
   type InstructionStepDraft,
@@ -13,6 +13,7 @@ import {
   replaceInstructionEditorRange,
   updateInstructionMarkdownFromEditor,
 } from '../../lib/recipes/instruction-rules';
+import { FramedMediaImage } from '../media/framed-media-image';
 import { useReorderDrag } from './use-reorder-drag';
 
 type InstructionIngredient = {
@@ -158,7 +159,12 @@ export function InstructionStepsEditor({
 
   function updateMarkdown(stepId: string, markdown: string, textarea: HTMLTextAreaElement): string {
     const currentMarkdown = stepsRef.current.find((step) => step.id === stepId)?.markdown ?? '';
-    const nextMarkdown = updateInstructionMarkdownFromEditor(currentMarkdown, markdown, photos);
+    const nextMarkdown = updateInstructionMarkdownFromEditor(
+      currentMarkdown,
+      markdown,
+      photos,
+      mentionOptions,
+    );
     if (stepId === placeholder.id && nextMarkdown.trim()) {
       const promotedStep = { id: crypto.randomUUID(), markdown: nextMarkdown, plainText: '' };
       newStepIds.current.add(promotedStep.id);
@@ -198,7 +204,6 @@ export function InstructionStepsEditor({
       start,
       end,
       `[[photo:${assetId}]]`,
-      photos,
     );
     const selectionEnd = start + `+photo${String(photo.reference_code).padStart(2, '0')}`.length;
     pendingFocus.current = { stepId, selectionStart: selectionEnd, selectionEnd };
@@ -304,22 +309,13 @@ export function InstructionStepsEditor({
     }
 
     const editorValue = getInstructionEditorValue(selectedStep.markdown, photos);
-    let replacementEnd = currentSuggestion.end;
     const candidateSlug = candidate.mention?.slug ?? ingredientSlug(candidate.name);
-    let matchedName = editorValue.slice(currentSuggestion.start + 1, replacementEnd);
-    let matchedSlug = ingredientSlug(matchedName);
-    while (matchedSlug && candidateSlug.startsWith(`${matchedSlug}-`)) {
-      const nextWord = /^(\s+[\p{L}\p{N}-]+)/u.exec(editorValue.slice(replacementEnd));
-      if (!nextWord) {
-        break;
-      }
-      matchedName += nextWord[0];
-      replacementEnd += nextWord[0].length;
-      matchedSlug = ingredientSlug(matchedName);
-      if (matchedSlug === candidateSlug) {
-        break;
-      }
-    }
+    const replacementEnd = getIngredientMentionReplacementEnd(
+      editorValue,
+      currentSuggestion.start,
+      currentSuggestion.end,
+      candidateSlug,
+    );
 
     const markdown = replaceInstructionEditorRange(
       selectedStep.markdown,

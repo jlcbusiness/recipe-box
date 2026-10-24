@@ -7127,7 +7127,10 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .recipe-instruction-photo {
-    max-width: min(40%, 20rem);
+    clear: both;
+    float: none;
+    max-width: min(100%, 20rem);
+    margin: 8px 0;
   }
 }
 

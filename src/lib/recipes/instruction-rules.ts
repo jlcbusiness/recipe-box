@@ -64,6 +64,31 @@ export function ingredientMentionMarker(mention: {
   return `[[ingredient:${mention.recipeIngredientId}${portion}|${mention.slug}]]`;
 }
 
+export function getIngredientMentionReplacementEnd(
+  editorValue: string,
+  start: number,
+  end: number,
+  candidateSlug: string,
+): number {
+  let replacementEnd = end;
+  let matchedSlug = ingredientSlug(editorValue.slice(start + 1, replacementEnd));
+  while (matchedSlug && candidateSlug.startsWith(`${matchedSlug}-`)) {
+    const nextWord = /^(\s+[\p{L}\p{N}-]+)/u.exec(editorValue.slice(replacementEnd));
+    if (!nextWord) {
+      break;
+    }
+    const nextSlug = ingredientSlug(
+      `${editorValue.slice(start + 1, replacementEnd)}${nextWord[0]}`,
+    );
+    if (nextSlug !== candidateSlug && !candidateSlug.startsWith(`${nextSlug}-`)) {
+      break;
+    }
+    replacementEnd += nextWord[0].length;
+    matchedSlug = nextSlug;
+  }
+  return replacementEnd;
+}
+
 type InstructionEditorMarker = {
   kind: 'mention' | 'duration' | 'temperature' | 'photo';
   sourceStart: number;
@@ -163,6 +188,7 @@ export function updateInstructionMarkdownFromEditor(
   previousMarkdown: string,
   editorValue: string,
   photos: readonly InstructionPhotoOption[] = [],
+  mentionOptions: readonly IngredientMentionOption[] = [],
 ): string {
   const previousValue = getInstructionEditorValue(previousMarkdown, photos);
   if (previousValue === editorValue) {
@@ -244,11 +270,21 @@ export function updateInstructionMarkdownFromEditor(
     ),
   );
 
-  return updatedMarkdown.replace(
-    /(?<![\p{L}\p{N}_])\+photo(\d{2})(?:-([1-9]\d{0,3}))?(?![\p{L}\p{N}_-])/gu,
+  const markdownWithPhotos = updatedMarkdown.replace(
+    /(?<![\p{L}\p{N}_])\+photo(\d{2})(?:-([1-9]\d{0,3}))?(?![\p{N}_-])/gu,
     (match, code: string, width: string | undefined) => {
       const photoId = photoIdsByCode.get(code);
       return photoId ? `[[photo:${photoId}]]${width ? `-${width}` : ''}` : match;
+    },
+  );
+  const mentionsBySlug = new Map(
+    mentionOptions.map((mention) => [mention.slug.toLocaleLowerCase(), mention]),
+  );
+  return markdownWithPhotos.replace(
+    /(?<![\p{L}\p{N}_#])#([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)(?![\p{L}\p{N}_-])/gu,
+    (match, slug: string) => {
+      const mention = mentionsBySlug.get(slug.toLocaleLowerCase());
+      return mention ? ingredientMentionMarker(mention) : match;
     },
   );
 }

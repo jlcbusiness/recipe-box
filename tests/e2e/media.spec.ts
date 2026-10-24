@@ -338,8 +338,12 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
     await expect(instructionViewer).toHaveJSProperty('open', true);
     await instructionViewer.getByRole('button', { name: 'Close image viewer' }).click();
     await expect(instructionViewer).toHaveJSProperty('open', false);
-    await expect(page.locator('.recipe-instruction-photo').first()).toHaveCSS('float', 'right');
     const originalViewport = page.viewportSize();
+    const viewportWidth = originalViewport?.width ?? 0;
+    await expect(page.locator('.recipe-instruction-photo').first()).toHaveCSS(
+      'float',
+      viewportWidth <= 640 ? 'none' : 'right',
+    );
     const intermediateViewport = originalViewport !== null && originalViewport.width > 760;
     if (intermediateViewport && originalViewport) {
       await page.setViewportSize({ ...originalViewport, width: 680 });
@@ -412,9 +416,14 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
     expect(photoBounds.width).toBeLessThanOrEqual(
       Math.min(200, instructionBounds.width * 0.55) + 1,
     );
-    expect(Math.abs(leadingTextBounds.y - photoBounds.y)).toBeLessThan(8);
-    expect(leadingTextBounds.right).toBeLessThanOrEqual(photoBounds.x);
-    expect(followingTextBounds.right).toBeLessThanOrEqual(photoBounds.x);
+    if (viewportWidth <= 640) {
+      expect(leadingTextBounds.y).toBeLessThan(photoBounds.y);
+      expect(followingTextBounds.y).toBeGreaterThanOrEqual(photoBounds.y + photoBounds.height - 1);
+    } else {
+      expect(Math.abs(leadingTextBounds.y - photoBounds.y)).toBeLessThan(8);
+      expect(leadingTextBounds.right).toBeLessThanOrEqual(photoBounds.x);
+      expect(followingTextBounds.right).toBeLessThanOrEqual(photoBounds.x);
+    }
     if (followingStepFirstLine.y < photoBounds.y + photoBounds.height) {
       expect(followingStepFirstLine.right).toBeLessThanOrEqual(photoBounds.x);
     } else if (testInfo.project.name !== 'Fold 6') {

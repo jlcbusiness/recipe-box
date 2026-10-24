@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildIngredientMentionOptions,
+  getIngredientMentionReplacementEnd,
   getInstructionEditorValue,
   ingredientMentionMarker,
   ingredientSlug,
@@ -17,6 +18,7 @@ import {
 const flourId = '11111111-1111-4111-8111-111111111111';
 const eggId = '22222222-2222-4222-8222-222222222222';
 const photoId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const butterId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 describe('instruction mention rules', () => {
   it('creates stable hyphenated slugs from ingredient names', () => {
@@ -39,6 +41,44 @@ describe('instruction mention rules', () => {
     expect(updateInstructionMarkdownFromEditor('', 'A literal #flour stays plain.')).toBe(
       'A literal #flour stays plain.',
     );
+  });
+
+  it('extends autocomplete matches only across words present in the candidate slug', () => {
+    expect(
+      getIngredientMentionReplacementEnd(
+        '#butter until and in a sauce',
+        0,
+        '#butter'.length,
+        'butter-sauce-1',
+      ),
+    ).toBe('#butter'.length);
+    expect(
+      getIngredientMentionReplacementEnd(
+        '#butter sauce until and in a sauce',
+        0,
+        '#butter'.length,
+        'butter-sauce-1',
+      ),
+    ).toBe('#butter sauce'.length);
+  });
+
+  it('links exact typed ingredient portion slugs and leaves unrelated hashtags literal', () => {
+    const mentionOptions = [1, 2].map((portionOrdinal) => ({
+      recipeIngredientId: butterId,
+      ingredientSetId: 'sauce',
+      portionOrdinal: portionOrdinal as 1 | 2,
+      label: `Butter portion ${portionOrdinal}`,
+      slug: `butter-sauce-${portionOrdinal}`,
+    }));
+
+    expect(
+      updateInstructionMarkdownFromEditor(
+        '',
+        'Use #butter-sauce-2 until needed; leave #until in a bowl.',
+        [],
+        mentionOptions,
+      ),
+    ).toBe(`Use [[ingredient:${butterId}:2|butter-sauce-2]] until needed; leave #until in a bowl.`);
   });
 
   it('shows durations as readable text and keeps temperature shorthand in the editor', () => {
@@ -84,6 +124,14 @@ describe('instruction mention rules', () => {
     expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo99.', photos)).toBe(
       'Stir in +photo99.',
     );
+  });
+
+  it('resolves a typed photo code when prose immediately follows it', () => {
+    expect(
+      updateInstructionMarkdownFromEditor('', 'Sizzles. +photo18Then', [
+        { id: photoId, reference_code: 18 },
+      ]),
+    ).toBe(`Sizzles. [[photo:${photoId}]]Then`);
   });
 
   it('normalizes legacy portion markers when editing readable mention text', () => {
