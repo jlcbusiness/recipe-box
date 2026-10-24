@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -11,6 +10,7 @@ import {
 } from '../../../lib/explorer-state';
 import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
+import { FramedMediaImage } from '../../media/framed-media-image';
 import { getRecipeExplorerColumnValues, recipeStateLabels } from '../../../lib/recipes/data';
 import {
   getRecipeSearchFacetValues,
@@ -412,12 +412,12 @@ export async function PublicationRecipeExplorer({
                 <li key={recipe.recipe_id}>
                   <Link href={`/recipes/${recipe.recipe_id}`}>
                     {photo && (
-                      <Image
+                      <FramedMediaImage
                         alt={photo.description || `Photo of ${recipe.recipe_name}`}
                         className="find-recipes-card-image"
+                        crop={photo.crop}
                         height={photo.height}
                         src={photo.thumbnail_url}
-                        unoptimized
                         width={photo.width}
                       />
                     )}

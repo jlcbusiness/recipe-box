@@ -23,7 +23,7 @@ This inventory consolidates work explicitly deferred by the 36 slice briefs (Sli
 - Introduce a dedicated Yield/Servings model beyond the numeric `serves` value used for scaling. ([Slice 4](../slices/4-recipe-card-basics.md), [Slice 13](../slices/13-scaling-and-unit-conversion.md))
 - Extend density support with multiple or context-dependent profiles per ingredient, temperature/pressure/packing corrections, derivation for Count/Things/Feel, automatic updates to saved recipe quantities when density changes, and density-derived conversion on public or printed recipes. ([Slice 15](../slices/15-trusted-density.md))
 - Build a full-screen or navigation-replacing cooking experience beyond the current temporary reader mode. ([Slice 16](../slices/16-cooking-views.md))
-- Add a full-screen image gallery/lightbox, image cropping, video, and animated-image support. ([Slice 12](../slices/12-images.md))
+- Add a full-screen image gallery/lightbox, video, and animated-image support. Reversible image framing is delivered separately in [DLC 06](../slices/dlc/dlc-06-image-framing-and-gallery.md); navigable gallery behavior remains deferred. ([Slice 12](../slices/12-images.md))
 - Add instruction-step sorting controls beyond manual reordering. ([Slices 7](../slices/7-instructions-and-mentions.md), [7.5](../slices/7.5-reorder-interaction-polish.md))
 - Add configurable Trash retention periods. ([Slices 8](../slices/8-trash-restore-and-print.md), [10B](../slices/10b-publication-deletion-and-restore.md))
 - Implement application-generated PDF export beyond browser-native Print-to-PDF. ([Slices 8](../slices/8-trash-restore-and-print.md), [20](../slices/20-export.md))

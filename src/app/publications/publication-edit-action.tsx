@@ -177,6 +177,7 @@ function PublicationEditDialog({
             parentId={publication.id}
             parentName={publication.name}
             parentType="publication"
+                        expectedVersion={publication.version}
             publication={publication}
           />
         </div>

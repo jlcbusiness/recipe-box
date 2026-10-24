@@ -1,14 +1,21 @@
 'use client';
 
-import { Camera, ClipboardPaste, ImagePlus, Pencil, X } from 'lucide-react';
-import Image from 'next/image';
+import { Camera, ClipboardPaste, Crop, ImagePlus, Pencil, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ClipboardEvent, PointerEvent } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
-import { MAX_IMAGE_UPLOAD_BYTES, MAX_RECIPE_PHOTOS } from '../../lib/media/rules';
+import {
+  type CropRect,
+  type CropRotation,
+  MAX_IMAGE_UPLOAD_BYTES,
+  MAX_RECIPE_PHOTOS,
+  normalizeCropRect,
+} from '../../lib/media/rules';
 import type { PublicationOption } from '../../lib/recipes/data';
 import { PublicationCover } from '../publications/publication-cover';
+import { FramedMediaImage } from './framed-media-image';
+import { ImageCropEditor } from './image-crop-editor';
 import { uploadMediaFiles } from './upload-files';
 
 type MediaParent = 'recipe' | 'publication';
@@ -40,6 +47,21 @@ type ActivePointerDrag = {
   targetIndex: number;
 };
 
+type CropEditingTarget = {
+  asset: MediaAssetDisplay | null;
+  crop: CropRect | null;
+  height: number;
+  src: string;
+  width: number;
+};
+
+type PendingCoverFraming = {
+  assetId: string | null;
+  crop: CropRect | null;
+  height: number;
+  width: number;
+};
+
 async function responseError(response: Response, fallback: string) {
   let payload: ApiError = {};
   try {
@@ -61,12 +83,15 @@ export function MediaManager({
   onPhotoDeleted,
 }: MediaManagerProps) {
   const [working, setWorking] = useState(false);
+  const [currentExpectedVersion, setCurrentExpectedVersion] = useState(expectedVersion);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
   const [coverUploadRecoveryAvailable, setCoverUploadRecoveryAvailable] = useState(false);
   const [removeCoverOnSubmit, setRemoveCoverOnSubmit] = useState(false);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
+  const [cropEditing, setCropEditing] = useState<CropEditingTarget | null>(null);
+  const [pendingCoverFraming, setPendingCoverFraming] = useState<PendingCoverFraming | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
@@ -99,6 +124,10 @@ export function MediaManager({
       : assets;
   const primaryRecipePhoto =
     recipePhotoAssets.find((asset) => asset.is_primary) ?? recipePhotoAssets[0] ?? null;
+
+  useEffect(() => {
+    setCurrentExpectedVersion(expectedVersion);
+  }, [expectedVersion]);
 
   useLayoutEffect(() => {
     const photoId = keyboardFocusPhotoIdRef.current;
@@ -166,6 +195,7 @@ export function MediaManager({
   function cancelPane() {
     if (!recipePhotos) {
       setPendingCoverFile(null);
+      setPendingCoverFraming(null);
       setCoverUploadRecoveryAvailable(false);
       setRemoveCoverOnSubmit(false);
     }
@@ -182,14 +212,15 @@ export function MediaManager({
       return;
     }
     setPendingCoverFile(file);
+    setPendingCoverFraming(null);
     setCoverUploadRecoveryAvailable(false);
     setRemoveCoverOnSubmit(false);
     setError('');
   }
 
-  async function uploadFiles(files: File[]) {
+  async function uploadFiles(files: File[]): Promise<string[] | null> {
     if (files.length === 0) {
-      return true;
+      return [];
     }
     setWorking(true);
     setError('');
@@ -218,7 +249,7 @@ export function MediaManager({
       );
       setCoverUploadRecoveryAvailable(false);
       router.refresh();
-      return true;
+      return result.assetIds;
     } catch (uploadError) {
       if (
         !recipePhotos &&
@@ -233,10 +264,122 @@ export function MediaManager({
       if (uploaded > 0) {
         router.refresh();
       }
-      return false;
+      return null;
     } finally {
       setWorking(false);
     }
+  }
+
+  async function saveAssetCrop(assetId: string, crop: CropRect | null) {
+    if (!currentExpectedVersion) {
+      setError('Reload the record before saving image framing.');
+      return false;
+    }
+
+    const response = await fetch(`/api/media/assets/${assetId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'crop',
+        crop,
+        expected_version: currentExpectedVersion,
+      }),
+    });
+    if (!response.ok) {
+      setError(await responseError(response, 'Unable to save image framing.'));
+      return false;
+    }
+    const result = (await response.json()) as { version?: unknown };
+    if (typeof result.version === 'number') {
+      setCurrentExpectedVersion(result.version);
+    }
+    return true;
+  }
+
+  function openRecipeCropEditor(asset: MediaAssetDisplay) {
+    setError('');
+    setCropEditing({
+      asset,
+      crop: asset.crop,
+      height: asset.height,
+      src: asset.full_url,
+      width: asset.width,
+    });
+  }
+
+  async function openCoverCropEditor() {
+    setError('');
+    if (pendingCoverFile && coverPreviewUrl) {
+      try {
+        const image = await createImageBitmap(pendingCoverFile);
+        const width = image.width;
+        const height = image.height;
+        image.close();
+        setCropEditing({
+          asset: null,
+          crop: pendingCoverFraming?.assetId === null ? pendingCoverFraming.crop : null,
+          height,
+          src: coverPreviewUrl,
+          width,
+        });
+      } catch {
+        setError('This image cannot be opened in the framing editor.');
+      }
+      return;
+    }
+    if (cover) {
+      setCropEditing({
+        asset: cover,
+        crop: pendingCoverFraming?.assetId === cover.id ? pendingCoverFraming.crop : cover.crop,
+        height: cover.height,
+        src: cover.full_url,
+        width: cover.width,
+      });
+    }
+  }
+
+  async function applyCropEditing(
+    coordinates: { left: number; top: number; width: number; height: number },
+    rotation: CropRotation,
+  ) {
+    if (!cropEditing) {
+      return;
+    }
+    let crop: CropRect | null;
+    try {
+      crop = normalizeCropRect(coordinates, cropEditing.width, cropEditing.height, rotation);
+    } catch {
+      setError('Crop coordinates are invalid.');
+      return;
+    }
+
+    if (recipePhotos && cropEditing.asset) {
+      setWorking(true);
+      setError('');
+      setStatus('');
+      try {
+        if (await saveAssetCrop(cropEditing.asset.id, crop)) {
+          setCropEditing(null);
+          setStatus('Photo framing saved.');
+          router.refresh();
+        }
+      } catch {
+        setError('Unable to save photo framing. Try again.');
+      } finally {
+        setWorking(false);
+      }
+      return;
+    }
+
+    setPendingCoverFraming({
+      assetId: cropEditing.asset?.id ?? null,
+      crop,
+      height: cropEditing.height,
+      width: cropEditing.width,
+    });
+    setCropEditing(null);
+    setStatus('Framing ready to submit.');
+    setError('');
   }
 
   async function changeAsset(asset: MediaAssetDisplay, action: 'delete') {
@@ -510,9 +653,43 @@ export function MediaManager({
 
   async function submitCoverChanges() {
     if (pendingCoverFile) {
-      if (await uploadFiles([pendingCoverFile])) {
-        setPendingCoverFile(null);
+      const [assetId] = (await uploadFiles([pendingCoverFile])) ?? [];
+      if (!assetId) {
+        return;
+      }
+      setPendingCoverFile(null);
+      if (pendingCoverFraming) {
+        setPendingCoverFraming({ ...pendingCoverFraming, assetId });
+        if (!(await saveAssetCrop(assetId, pendingCoverFraming.crop))) {
+          setStatus('Cover saved. Framing still needs to be saved.');
+          router.refresh();
+          return;
+        }
+      }
+      setPendingCoverFraming(null);
+      dialogRef.current?.close();
+      return;
+    }
+    if (pendingCoverFraming) {
+      const assetId = pendingCoverFraming.assetId ?? cover?.id;
+      if (!assetId) {
+        setError('Choose a cover image before saving framing.');
+        return;
+      }
+      setWorking(true);
+      setError('');
+      try {
+        if (!(await saveAssetCrop(assetId, pendingCoverFraming.crop))) {
+          return;
+        }
+        setPendingCoverFraming(null);
+        setStatus('Cover framing saved.');
+        router.refresh();
         dialogRef.current?.close();
+      } catch {
+        setError('Unable to save cover framing. Try again.');
+      } finally {
+        setWorking(false);
       }
       return;
     }
@@ -538,8 +715,18 @@ export function MediaManager({
       if (!response.ok) {
         throw new Error(await responseError(response, 'Unable to cancel the incomplete upload.'));
       }
-      if (await uploadFiles([pendingCoverFile])) {
+      const [assetId] = (await uploadFiles([pendingCoverFile])) ?? [];
+      if (assetId) {
         setPendingCoverFile(null);
+        if (pendingCoverFraming) {
+          setPendingCoverFraming({ ...pendingCoverFraming, assetId });
+          if (!(await saveAssetCrop(assetId, pendingCoverFraming.crop))) {
+            setStatus('Cover saved. Framing still needs to be saved.');
+            router.refresh();
+            return;
+          }
+        }
+        setPendingCoverFraming(null);
         dialogRef.current?.close();
       }
     } catch (cancelError) {
@@ -564,6 +751,7 @@ export function MediaManager({
       setRemoveCoverOnSubmit(true);
     }
     setPendingCoverFile(null);
+    setPendingCoverFraming(null);
     setCoverUploadRecoveryAvailable(false);
     setError('');
   }
@@ -571,6 +759,10 @@ export function MediaManager({
   const currentCoverUrl = removeCoverOnSubmit
     ? null
     : coverPreviewUrl || cover?.thumbnail_url || null;
+  const currentCoverCrop =
+    pendingCoverFraming && pendingCoverFraming.assetId === cover?.id
+      ? pendingCoverFraming.crop
+      : (cover?.crop ?? null);
 
   return (
     <div
@@ -586,12 +778,12 @@ export function MediaManager({
           type="button"
         >
           {primaryRecipePhoto ? (
-            <Image
+            <FramedMediaImage
               alt=""
               className="recipe-photo-manager-image"
+              crop={primaryRecipePhoto.crop}
               height={primaryRecipePhoto.height}
               src={primaryRecipePhoto.thumbnail_url}
-              unoptimized
               width={primaryRecipePhoto.width}
             />
           ) : (
@@ -612,13 +804,30 @@ export function MediaManager({
           title="Manage publication cover"
           type="button"
         >
-          {currentCoverUrl ? (
-            <Image
+          {currentCoverUrl && pendingCoverFile && pendingCoverFraming?.assetId === null ? (
+            <FramedMediaImage
+              alt=""
+              className="publication-cover-manager-image"
+              crop={pendingCoverFraming.crop}
+              height={pendingCoverFraming.height}
+              src={currentCoverUrl}
+              width={pendingCoverFraming.width}
+            />
+          ) : currentCoverUrl && cover ? (
+            <FramedMediaImage
+              alt=""
+              className="publication-cover-manager-image"
+              crop={currentCoverCrop ?? null}
+              height={cover.height}
+              src={currentCoverUrl}
+              width={cover.width}
+            />
+          ) : currentCoverUrl ? (
+            <img
               alt=""
               className="publication-cover-manager-image"
               height={96}
               src={currentCoverUrl}
-              unoptimized
               width={72}
             />
           ) : (
@@ -631,7 +840,8 @@ export function MediaManager({
       )}
 
       <dialog
-        aria-labelledby="media-manager-title"
+        aria-label={cropEditing ? 'Adjust image framing' : undefined}
+        aria-labelledby={cropEditing ? undefined : 'media-manager-title'}
         className="media-manager-dialog"
         onCancel={(event) => {
           event.preventDefault();
@@ -646,284 +856,348 @@ export function MediaManager({
         onPaste={(event) => void handlePaste(event)}
         ref={dialogRef}
       >
-        <div className="media-manager-heading">
-          <h2 id="media-manager-title" tabIndex={-1}>
-            {recipePhotos ? 'Manage recipe photos' : 'Manage publication cover'}
-          </h2>
-          {recipePhotos && (working || status) && (
-            <p className="media-manager-status media-manager-photo-status-desktop" role="status">
-              {working ? status || 'Saving image changes…' : status}
-            </p>
-          )}
-        </div>
-        {recipePhotos ? (
-          <button
-            aria-label="Paste image from clipboard"
-            className="media-manager-paste-hint-mobile media-manager-paste-action-mobile"
-            disabled={working || remainingPhotos === 0}
-            onClick={() => void pasteFromClipboard()}
-            type="button"
-          >
-            <ClipboardPaste aria-hidden="true" size={18} />
-            <span>Paste image from clipboard</span>
-          </button>
-        ) : (
-          <textarea
-            aria-label="Paste an image here"
-            className="media-manager-paste-hint"
-            onChange={(event) => {
-              event.currentTarget.value = '';
-            }}
-            spellCheck={false}
-            tabIndex={-1}
-            placeholder="Paste an image: press Ctrl+V or Command+V, or tap and hold here and choose Paste."
-            rows={2}
-          />
-        )}
-
-        {recipePhotos ? (
-          <>
-            <div className="media-manager-actions media-manager-photo-meta">
-              <span className="media-manager-count">
-                {assets.length} of {MAX_RECIPE_PHOTOS} photos
-              </span>
-              <p className="media-manager-paste-instruction-desktop">
-                Paste an image with Ctrl+V or Command+V.
+        {!cropEditing && (
+          <div className="media-manager-heading">
+            <h2 id="media-manager-title" tabIndex={-1}>
+              {recipePhotos ? 'Manage recipe photos' : 'Manage publication cover'}
+            </h2>
+            {recipePhotos && (working || status) && (
+              <p className="media-manager-status media-manager-photo-status-desktop" role="status">
+                {working ? status || 'Saving image changes…' : status}
               </p>
-              {recipePhotos && (working || status) && (
-                <p className="media-manager-status media-manager-photo-status-mobile" role="status">
-                  {working ? status || 'Saving image changes…' : status}
-                </p>
-              )}
-              {error && (
-                <p className="media-manager-error" role="alert">
-                  {error}
-                </p>
-              )}
-            </div>
-            {(recipePhotoAssets.length > 0 || remainingPhotos > 0) && (
-              <ul
-                aria-label="Recipe photos"
-                className="recipe-photo-grid"
-                onPointerCancel={() => {
-                  pointerDragRef.current = null;
-                  setDraggingId(null);
-                  setDragOffset({ x: 0, y: 0 });
-                  setDropTargetIndex(null);
-                }}
-                ref={gridRef}
-              >
-                {recipePhotoAssets.map((asset, index) => (
-                  <li
-                    className={`recipe-photo-grid-item${asset.is_primary ? ' is-default' : ''}${draggingId === asset.id ? ' is-dragging' : ''}${dropTargetIndex === index && draggingId !== asset.id ? ' is-drop-target' : ''}`}
-                    data-photo-id={asset.id}
-                    data-photo-index={index}
-                    key={asset.id}
-                    style={
-                      draggingId === asset.id
-                        ? {
-                            transform: `translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) scale(1.04)`,
-                          }
-                        : undefined
-                    }
-                  >
-                    <button
-                      aria-label={`Photo ${index + 1} of ${assets.length}${asset.is_primary ? ', default' : ''}. Click to make default; use Control and arrow keys to reorder.`}
-                      className="recipe-photo-grid-select"
-                      data-select-photo
-                      disabled={working}
-                      onClick={() => {
-                        if (suppressClickRef.current) {
-                          suppressClickRef.current = false;
-                          return;
-                        }
-                        if (index > 0) {
-                          void movePhotoTo(index, 0);
-                        }
-                      }}
-                      onKeyDown={(event) => handlePhotoKeyDown(event, index)}
-                      onPointerDown={(event) => handlePointerDown(event, asset, index)}
-                      onPointerMove={handlePointerMove}
-                      onPointerUp={finishPointerDrag}
-                      type="button"
-                    >
-                      <Image
-                        alt=""
-                        className="recipe-photo-grid-image"
-                        draggable={false}
-                        height={asset.height}
-                        src={asset.thumbnail_url}
-                        unoptimized
-                        width={asset.width}
-                      />
-                      {asset.is_primary && (
-                        <span className="recipe-photo-default-label">Default</span>
-                      )}
-                    </button>
-                    <button
-                      aria-label={`Remove photo ${index + 1}`}
-                      className="recipe-photo-remove-icon"
-                      disabled={working}
-                      onClick={() => requestPhotoRemoval(asset)}
-                      title={`Remove photo ${index + 1}`}
-                      type="button"
-                    >
-                      <X aria-hidden="true" size={12} />
-                    </button>
-                  </li>
-                ))}
-                {remainingPhotos > 0 && (
-                  <li className="recipe-photo-add-tile">
-                    <label className="recipe-photo-add-action" title="Add photo">
-                      <ImagePlus aria-hidden="true" size={30} />
-                      <span>Add photo</span>
-                      <input
-                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                        aria-label="Upload from device"
-                        disabled={working}
-                        multiple
-                        onChange={(event) =>
-                          handleRecipeFiles(event.currentTarget.files, event.currentTarget)
-                        }
-                        ref={deviceInputRef}
-                        type="file"
-                      />
-                    </label>
-                  </li>
-                )}
-                {remainingPhotos > 0 && (
-                  <li className="recipe-photo-add-tile recipe-photo-camera-tile">
-                    <label className="recipe-photo-add-action" title="Take photo">
-                      <Camera aria-hidden="true" size={30} />
-                      <span>Take photo</span>
-                      <input
-                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                        aria-label="Take photo with camera"
-                        capture="environment"
-                        disabled={working}
-                        onChange={(event) =>
-                          handleRecipeFiles(event.currentTarget.files, event.currentTarget)
-                        }
-                        ref={cameraInputRef}
-                        type="file"
-                      />
-                    </label>
-                  </li>
-                )}
-              </ul>
             )}
-            {pendingPhotoRemoval && (
-              <section
-                aria-describedby="referenced-photo-removal-description"
-                aria-labelledby="referenced-photo-removal-title"
-                className="media-manager-reference-confirmation"
-                role="alertdialog"
-              >
-                <h3 id="referenced-photo-removal-title">Remove referenced photo?</h3>
-                <p id="referenced-photo-removal-description">
-                  This photo is referenced in instruction step
-                  {pendingPhotoRemoval.stepNumbers.length === 1 ? ' ' : 's '}
-                  {pendingPhotoRemoval.stepNumbers.join(', ')}. Removing it also removes those
-                  references.
-                </p>
-                {error && <p role="alert">{error}</p>}
-                <div className="media-manager-reference-confirmation-actions">
-                  <button
-                    className="recipe-secondary-button"
-                    disabled={working}
-                    onClick={() => setPendingPhotoRemoval(null)}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="recipe-primary-button"
-                    disabled={working}
-                    onClick={() => {
-                      const pending = pendingPhotoRemoval;
-                      setPendingPhotoRemoval(null);
-                      if (pending) {
-                        void changeAsset(pending.asset, 'delete');
-                      }
-                    }}
-                    type="button"
-                  >
-                    {working ? 'Removing…' : 'Remove photo and references'}
-                  </button>
-                </div>
-              </section>
+          </div>
+        )}
+        {cropEditing ? (
+          <>
+            <ImageCropEditor
+              crop={cropEditing.crop}
+              height={cropEditing.height}
+              onApply={(coordinates, rotation) => void applyCropEditing(coordinates, rotation)}
+              onCancel={() => setCropEditing(null)}
+              src={cropEditing.src}
+              width={cropEditing.width}
+            />
+            {error && (
+              <p className="media-manager-error" role="alert">
+                {error}
+              </p>
             )}
-            <div className="media-manager-dialog-footer">
-              <button
-                className="recipe-secondary-button"
-                onClick={() => dialogRef.current?.close()}
-                type="button"
-              >
-                Done
-              </button>
-            </div>
           </>
         ) : (
           <>
-            <div className="publication-cover-editor-preview">
-              {currentCoverUrl ? (
-                <Image
-                  alt=""
-                  className="publication-cover-editor-image"
-                  height={240}
-                  src={currentCoverUrl}
-                  unoptimized
-                  width={180}
-                />
-              ) : (
-                publication && <PublicationCover publication={publication} />
-              )}
-              {(cover || pendingCoverFile) && !removeCoverOnSubmit && (
-                <button
-                  aria-label="Remove cover image"
-                  className="publication-cover-editor-remove"
-                  onClick={clearPendingCover}
-                  title="Remove cover image"
-                  type="button"
-                >
-                  <X aria-hidden="true" size={17} />
-                </button>
-              )}
-            </div>
-            <div className="media-manager-actions publication-cover-editor-actions">
-              <label className="media-icon-action" title="Choose cover image">
-                <ImagePlus aria-hidden="true" size={20} />
-                <input
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                  aria-label="Choose cover image"
-                  disabled={working}
-                  onChange={(event) => {
-                    chooseCoverFile(event.currentTarget.files?.[0] ?? null);
-                    event.currentTarget.value = '';
-                  }}
-                  ref={deviceInputRef}
-                  type="file"
-                />
-              </label>
-              <div className="publication-cover-editor-buttons">
-                <button
-                  className="recipe-secondary-button"
-                  disabled={working}
-                  onClick={cancelPane}
-                  type="button"
-                >
-                  Cancel
-                </button>
-                <button
-                  className="recipe-primary-button"
-                  disabled={working || (!pendingCoverFile && !removeCoverOnSubmit)}
-                  onClick={() => void submitCoverChanges()}
-                  type="button"
-                >
-                  {working ? 'Saving…' : 'Submit'}
-                </button>
-              </div>
-            </div>
+            {recipePhotos ? (
+              <button
+                aria-label="Paste image from clipboard"
+                className="media-manager-paste-hint-mobile media-manager-paste-action-mobile"
+                disabled={working || remainingPhotos === 0}
+                onClick={() => void pasteFromClipboard()}
+                type="button"
+              >
+                <ClipboardPaste aria-hidden="true" size={18} />
+                <span>Paste image from clipboard</span>
+              </button>
+            ) : (
+              <textarea
+                aria-label="Paste an image here"
+                className="media-manager-paste-hint"
+                onChange={(event) => {
+                  event.currentTarget.value = '';
+                }}
+                spellCheck={false}
+                tabIndex={-1}
+                placeholder="Paste an image: press Ctrl+V or Command+V, or tap and hold here and choose Paste."
+                rows={2}
+              />
+            )}
+            {recipePhotos ? (
+              <>
+                <div className="media-manager-actions media-manager-photo-meta">
+                  <span className="media-manager-count">
+                    {assets.length} of {MAX_RECIPE_PHOTOS} photos
+                  </span>
+                  <p className="media-manager-paste-instruction-desktop">
+                    Paste an image with Ctrl+V or Command+V.
+                  </p>
+                  {recipePhotos && (working || status) && (
+                    <p
+                      className="media-manager-status media-manager-photo-status-mobile"
+                      role="status"
+                    >
+                      {working ? status || 'Saving image changes…' : status}
+                    </p>
+                  )}
+                  {error && (
+                    <p className="media-manager-error" role="alert">
+                      {error}
+                    </p>
+                  )}
+                </div>
+                {(recipePhotoAssets.length > 0 || remainingPhotos > 0) && (
+                  <ul
+                    aria-label="Recipe photos"
+                    className="recipe-photo-grid"
+                    onPointerCancel={() => {
+                      pointerDragRef.current = null;
+                      setDraggingId(null);
+                      setDragOffset({ x: 0, y: 0 });
+                      setDropTargetIndex(null);
+                    }}
+                    ref={gridRef}
+                  >
+                    {recipePhotoAssets.map((asset, index) => (
+                      <li
+                        className={`recipe-photo-grid-item${asset.is_primary ? ' is-default' : ''}${draggingId === asset.id ? ' is-dragging' : ''}${dropTargetIndex === index && draggingId !== asset.id ? ' is-drop-target' : ''}`}
+                        data-photo-id={asset.id}
+                        data-photo-index={index}
+                        key={asset.id}
+                        style={
+                          draggingId === asset.id
+                            ? {
+                                transform: `translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) scale(1.04)`,
+                              }
+                            : undefined
+                        }
+                      >
+                        <button
+                          aria-label={`Photo ${index + 1} of ${assets.length}${asset.is_primary ? ', default' : ''}. Click to make default; use Control and arrow keys to reorder.`}
+                          className="recipe-photo-grid-select"
+                          data-select-photo
+                          disabled={working}
+                          onClick={() => {
+                            if (suppressClickRef.current) {
+                              suppressClickRef.current = false;
+                              return;
+                            }
+                            if (index > 0) {
+                              void movePhotoTo(index, 0);
+                            }
+                          }}
+                          onKeyDown={(event) => handlePhotoKeyDown(event, index)}
+                          onPointerDown={(event) => handlePointerDown(event, asset, index)}
+                          onPointerMove={handlePointerMove}
+                          onPointerUp={finishPointerDrag}
+                          type="button"
+                        >
+                          <FramedMediaImage
+                            alt=""
+                            className="recipe-photo-grid-image"
+                            crop={asset.crop}
+                            height={asset.height}
+                            src={asset.thumbnail_url}
+                            width={asset.width}
+                          />
+                          {asset.is_primary && (
+                            <span className="recipe-photo-default-label">Default</span>
+                          )}
+                        </button>
+                        <button
+                          aria-label={`Adjust framing for photo ${index + 1}`}
+                          className="recipe-photo-frame-icon"
+                          disabled={working}
+                          onClick={() => openRecipeCropEditor(asset)}
+                          title="Adjust photo framing"
+                          type="button"
+                        >
+                          <Crop aria-hidden="true" size={15} />
+                        </button>
+                        <button
+                          aria-label={`Remove photo ${index + 1}`}
+                          className="recipe-photo-remove-icon"
+                          disabled={working}
+                          onClick={() => requestPhotoRemoval(asset)}
+                          title={`Remove photo ${index + 1}`}
+                          type="button"
+                        >
+                          <X aria-hidden="true" size={12} />
+                        </button>
+                      </li>
+                    ))}
+                    {remainingPhotos > 0 && (
+                      <li className="recipe-photo-add-tile">
+                        <label className="recipe-photo-add-action" title="Add photo">
+                          <ImagePlus aria-hidden="true" size={30} />
+                          <span>Add photo</span>
+                          <input
+                            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                            aria-label="Upload from device"
+                            disabled={working}
+                            multiple
+                            onChange={(event) =>
+                              handleRecipeFiles(event.currentTarget.files, event.currentTarget)
+                            }
+                            ref={deviceInputRef}
+                            type="file"
+                          />
+                        </label>
+                      </li>
+                    )}
+                    {remainingPhotos > 0 && (
+                      <li className="recipe-photo-add-tile recipe-photo-camera-tile">
+                        <label className="recipe-photo-add-action" title="Take photo">
+                          <Camera aria-hidden="true" size={30} />
+                          <span>Take photo</span>
+                          <input
+                            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                            aria-label="Take photo with camera"
+                            capture="environment"
+                            disabled={working}
+                            onChange={(event) =>
+                              handleRecipeFiles(event.currentTarget.files, event.currentTarget)
+                            }
+                            ref={cameraInputRef}
+                            type="file"
+                          />
+                        </label>
+                      </li>
+                    )}
+                  </ul>
+                )}
+                {pendingPhotoRemoval && (
+                  <section
+                    aria-describedby="referenced-photo-removal-description"
+                    aria-labelledby="referenced-photo-removal-title"
+                    className="media-manager-reference-confirmation"
+                    role="alertdialog"
+                  >
+                    <h3 id="referenced-photo-removal-title">Remove referenced photo?</h3>
+                    <p id="referenced-photo-removal-description">
+                      This photo is referenced in instruction step
+                      {pendingPhotoRemoval.stepNumbers.length === 1 ? ' ' : 's '}
+                      {pendingPhotoRemoval.stepNumbers.join(', ')}. Removing it also removes those
+                      references.
+                    </p>
+                    {error && <p role="alert">{error}</p>}
+                    <div className="media-manager-reference-confirmation-actions">
+                      <button
+                        className="recipe-secondary-button"
+                        disabled={working}
+                        onClick={() => setPendingPhotoRemoval(null)}
+                        type="button"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="recipe-primary-button"
+                        disabled={working}
+                        onClick={() => {
+                          const pending = pendingPhotoRemoval;
+                          setPendingPhotoRemoval(null);
+                          if (pending) {
+                            void changeAsset(pending.asset, 'delete');
+                          }
+                        }}
+                        type="button"
+                      >
+                        {working ? 'Removing…' : 'Remove photo and references'}
+                      </button>
+                    </div>
+                  </section>
+                )}
+                <div className="media-manager-dialog-footer">
+                  <button
+                    className="recipe-secondary-button"
+                    onClick={() => dialogRef.current?.close()}
+                    type="button"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="publication-cover-editor-preview">
+                  {currentCoverUrl && pendingCoverFile && pendingCoverFraming?.assetId === null ? (
+                    <FramedMediaImage
+                      alt=""
+                      className="publication-cover-editor-image"
+                      crop={pendingCoverFraming.crop}
+                      height={pendingCoverFraming.height}
+                      src={currentCoverUrl}
+                      width={pendingCoverFraming.width}
+                    />
+                  ) : currentCoverUrl && cover ? (
+                    <FramedMediaImage
+                      alt=""
+                      className="publication-cover-editor-image"
+                      crop={currentCoverCrop ?? null}
+                      height={cover.height}
+                      src={currentCoverUrl}
+                      width={cover.width}
+                    />
+                  ) : currentCoverUrl ? (
+                    <img
+                      alt=""
+                      className="publication-cover-editor-image"
+                      height={240}
+                      src={currentCoverUrl}
+                      width={180}
+                    />
+                  ) : (
+                    publication && <PublicationCover publication={publication} />
+                  )}
+                  {(cover || pendingCoverFile) && !removeCoverOnSubmit && (
+                    <>
+                      <button
+                        aria-label="Adjust cover framing"
+                        className="publication-cover-editor-frame"
+                        onClick={() => void openCoverCropEditor()}
+                        type="button"
+                      >
+                        <Crop aria-hidden="true" size={15} />
+                        <span>Adjust framing</span>
+                      </button>
+                      <button
+                        aria-label="Remove cover image"
+                        className="publication-cover-editor-remove"
+                        onClick={clearPendingCover}
+                        title="Remove cover image"
+                        type="button"
+                      >
+                        <X aria-hidden="true" size={17} />
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="media-manager-actions publication-cover-editor-actions">
+                  <label className="media-icon-action" title="Choose cover image">
+                    <ImagePlus aria-hidden="true" size={20} />
+                    <input
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                      aria-label="Choose cover image"
+                      disabled={working}
+                      onChange={(event) => {
+                        chooseCoverFile(event.currentTarget.files?.[0] ?? null);
+                        event.currentTarget.value = '';
+                      }}
+                      ref={deviceInputRef}
+                      type="file"
+                    />
+                  </label>
+                  <div className="publication-cover-editor-buttons">
+                    <button
+                      className="recipe-secondary-button"
+                      disabled={working}
+                      onClick={cancelPane}
+                      type="button"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="recipe-primary-button"
+                      disabled={
+                        working ||
+                        (!pendingCoverFile && !removeCoverOnSubmit && !pendingCoverFraming)
+                      }
+                      onClick={() => void submitCoverChanges()}
+                      type="button"
+                    >
+                      {working ? 'Saving…' : 'Submit'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 

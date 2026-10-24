@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { FramedMediaImage } from '../media/framed-media-image';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
@@ -749,11 +749,12 @@ export function InstructionStepsEditor({
                       type="button"
                     >
                       <span className="recipe-instruction-photo-choice-image">
-                        <Image
+                        <FramedMediaImage
                           alt=""
+                          className="recipe-instruction-photo-choice-img"
+                          crop={photo.crop}
                           height={photo.height}
                           src={photo.thumbnail_url}
-                          unoptimized
                           width={photo.width}
                         />
                         <span aria-hidden="true" className="recipe-instruction-photo-code">

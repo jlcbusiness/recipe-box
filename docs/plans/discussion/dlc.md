@@ -14,14 +14,15 @@
 🗸 a ratio field for "divided" and a size field for "cubed" #4
   🗸 might need to wrap this for mobile #4
   🗸 if divided is used, ability to chooce which division in ingred reference #4
-- wrap the instructions arount the ingredients (and possible, start from the recipe details?) #5
-- include recipe images in instructions #5
-  - as references! Like the ingredient sizes! #5
+🗸 wrap the instructions arount the ingredients #5
+  - (and possible, start from the recipe details?) #5
+🗸 include recipe images in instructions #5
+  🗸 as references! Like the ingredient sizes! #5
 - add nutrition information (calc per serving) #12
   - add known nutrition values per ingredient...? #12
 🗸 if ingredient used more then once, use [ingred][n] in ref names #4
   🗸 if ingredient sets are involved, tag per set...? #4
-- the ability to color temperatures and times #5
+🗸 the ability to color temperatures and times #5
 - remove recipe width limit #8
 - don't show images in printed recipe, spread recipe details across a line #8
   - oof, haha, also fix public recipes! #8

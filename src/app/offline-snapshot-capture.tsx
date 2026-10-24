@@ -45,7 +45,7 @@ function createOfflineSnapshot(recipeId: string) {
   const main = offlineDocument.importNode(sourceMain, true);
   main
     .querySelectorAll(
-      'script,style,form,button,input,select,textarea,img,picture,source,video,audio,iframe,object,embed,nav,.recipe-detail-heading-actions,.recipe-history-link',
+      'script,style,form,button,input,select,textarea,img,image,picture,source,video,audio,iframe,object,embed,nav,.recipe-detail-heading-actions,.recipe-history-link',
     )
     .forEach((element) => {
       element.remove();

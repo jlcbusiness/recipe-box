@@ -133,6 +133,7 @@ function createSnapshot() {
           recipe_id: firstRecipeId,
           publication_id: null,
           status: 'ready',
+          crop: { left: 0.25, top: 0.125, width: 0.5, height: 0.75, rotation: 90 },
           full_path: `${ownerId}/assets/${firstAssetId}/full.webp`,
           thumbnail_path: `${ownerId}/assets/${firstAssetId}/thumb.webp`,
           created_by_user_id: ownerId,
@@ -143,6 +144,7 @@ function createSnapshot() {
           recipe_id: null,
           publication_id: firstPublicationId,
           status: 'ready',
+          crop: null,
           full_path: `${ownerId}/assets/${secondAssetId}/full.webp`,
           thumbnail_path: `${ownerId}/assets/${secondAssetId}/thumb.webp`,
         },
@@ -261,6 +263,7 @@ describe('export rules', () => {
     expect(output.records.media_assets[0]).toMatchObject({
       full_path: `images/${firstAssetId}/full.webp`,
       thumbnail_path: `images/${firstAssetId}/thumbnail.webp`,
+      crop: { left: 0.25, top: 0.125, width: 0.5, height: 0.75, rotation: 90 },
     });
     expect(output.records.media_assets[0]).not.toHaveProperty('created_by_user_id');
     expect(output.records.media_assets[0]).not.toHaveProperty('account_id');
@@ -286,7 +289,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(3);
+    expect(manifest.schema_version).toBe(5);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

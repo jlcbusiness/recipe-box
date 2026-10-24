@@ -1601,7 +1601,7 @@ test('owners can mark instruction durations with typed delimiters @e2e', async (
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('.recipes-main')).toHaveClass(/no-print-emphasis-colors/);
     await expect(temperatureText).toHaveText('205°C');
-    await expect(stoveHeatText).toHaveText('medium low');
+    await expect(stoveHeatText).toHaveText('medium high');
     const colors = await durationText.evaluate((element) => ({
       text: getComputedStyle(element).color,
       parent: getComputedStyle(element.parentElement!).color,

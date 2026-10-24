@@ -805,9 +805,10 @@ cover image, show a white magazine-shaped rectangle with a black border and
 normal title text sized to fit. A saved cover replaces the fallback in the
 publication detail and Explorer.
 
-Uploaded covers are informative source imagery: show the whole image within its
-reserved frame, preserve its aspect ratio, and do not crop it to fill, including
-in the compact mobile Grid.
+Uploaded covers show the whole image within their reserved frame by default,
+preserving its aspect ratio without automatic cropping, including in the compact
+mobile Grid. When an owner saves framing, use that reversible crop consistently
+in every cover display.
 
 Publication covers are managed from the cover itself: in edit mode, the image
 is a quiet clickable target with a lower-right pencil affordance and a
@@ -820,9 +821,11 @@ management pane open.
 
 Recipe detail presents the primary photo centered before recipe content,
 preserving its aspect ratio and capped at 280px high on desktop, 240px on tablet,
-and 144px on narrow mobile. Square thumbnail buttons for all photos, including
-the featured photo, sit below it. Selecting one temporarily changes the featured
-photo without changing primary status or stored order. The numbered controls
+and 144px on narrow mobile. Apply saved framing to the featured photo and its
+viewer; with no saved crop, preserve the complete image. Square thumbnail
+buttons for all photos, including the featured photo, sit below it. Selecting
+one temporarily changes the featured photo without changing primary status or
+stored order. The numbered controls
 expose selected state and work with keyboard activation; images remain
 decorative with empty alternative text. In edit mode, the action beside the
 recipe name shows the primary photo contained in a compact thumbnail with a
@@ -834,7 +837,7 @@ dragging, and Ctrl+Arrow keyboard reordering. Images are decorative and have
 empty alternative text; do not add descriptions or captions. A dashed Add photo
 tile shares the image-slot dimensions. At a 352px viewport, the management pane
 is 328px wide. Each image slot is about 84px; the 19px column and 21px row gaps
-make room for the overlaid 21px remove controls without horizontal or vertical
+make room for the overlaid 21px remove and framing controls without horizontal or vertical
 scrolling. The sizing is `(328 - 2 × 12 - 2 - 11 - 2 × 19) ÷ 3 ≈ 84px`,
 accounting for the pane border, padding, and remove-control overhang.
 
@@ -845,9 +848,29 @@ Paste guidance is non-interactive text on desktop; on mobile it is a touchable
 paste target explaining tap-and-hold. It is excluded from Tab navigation but
 remains touch-focusable. The camera action shares the Name row and aligns right
 on desktop; on mobile, it matches the Name field's height. The Add photo tile
-and overlaid remove controls are the photo-management actions; there are no
-extra per-image action buttons. On mobile, Add photo and Done share the bottom
+and overlaid remove controls are the photo-management actions. Each photo also
+has an explicit framing action that opens the crop editor; it does not change
+primary status or photo order. On mobile, Add photo and Done share the bottom
 row, with Add photo left and Done right.
+
+The crop editor shows the uncropped source inside a bounded viewport, with its
+canvas fitted to and rotated with the source image. It offers Free, Original,
+Square, 4:3, 3:2, and 16:9 choices in the shared mobile-safe Picklist. Common
+ratio labels follow the active crop frame, so portrait crops show 3:4, 2:3, and
+9:16; Original follows the rotated source image.
+Desktop wheel zoom, touch pinch zoom, image dragging within the frame, one
+counterclockwise 90-degree rotation action, Reset, Cancel, and Apply remain
+available at mobile widths. Keep the pane free of visible control headings
+while preserving accessible control names. The compact ratio picker omits its
+selection checkmark; rotation is icon-only with no numeric degree readout. At
+narrow mobile widths, keep the ratio, rotation, Reset, Cancel, and Apply
+controls on one row when space permits. The photo framing action is a compact
+corner icon opposite Remove, with a larger invisible touch target.
+Recipe Apply saves immediately; publication-cover Apply stages the framing
+until Submit. Cancel discards the current framing draft. Outside the editor,
+the complete source is shown with Fit/contain unless framing was explicitly
+saved. The existing image viewer shows saved framing and retains its
+single-image close behavior without gallery navigation.
 
 ## Find Recipes (Slice 17)
 
@@ -869,8 +892,8 @@ when the grid has at least 1,148px of usable width. Desktop cards are 234px
 high, while mobile cards size to their content. Use a true checkerboard:
 alternate card colors across each visual row and flip the starting color on
 the next row. Keep this pattern correct as responsive columns reflow, with a
-shared restrained shadow. Show the actual default recipe photo without
-cropping it; keep its 144px image area transparent and the recipe title visible
+shared restrained shadow. Show the actual default recipe photo with Fit/contain
+unless it has saved framing; keep its 144px image area transparent and the recipe title visible
 directly below. In publication Grid, state and total time share one compact
 metadata row so the image, title, and metadata each retain their own layout
 space. Preserve the same result data between List and Grid. On desktop, card

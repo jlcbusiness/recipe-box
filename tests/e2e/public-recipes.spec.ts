@@ -620,6 +620,26 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       buffer: photoBuffer,
     });
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
+    await photoDialog.getByRole('button', { name: 'Adjust framing for photo 1' }).click();
+    await page.getByRole('combobox', { name: 'Aspect ratio' }).click();
+    await page.getByRole('option', { name: 'Square' }).click();
+    await page.getByRole('button', { name: 'Apply' }).click();
+    await expect(photoDialog.locator('.media-manager-status:visible')).toHaveText(
+      'Photo framing saved.',
+    );
+    const framedPhotoResponse = await request.get(
+      `${config.apiUrl}/rest/v1/media_assets?select=crop,width,height&recipe_id=eq.${recipe.id}&status=eq.ready`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(framedPhotoResponse.ok(), await framedPhotoResponse.text()).toBeTruthy();
+    const [framedPhoto] = (await framedPhotoResponse.json()) as {
+      crop: { left: number; top: number; width: number; height: number } | null;
+      width: number;
+      height: number;
+    }[];
+    const savedCrop = framedPhoto.crop;
+    expect(savedCrop).not.toBeNull();
+    if (!savedCrop) throw new Error('Expected saved public recipe framing.');
     await photoDialog.getByRole('button', { name: 'Done' }).click();
     const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
     await instruction.focus();
@@ -656,9 +676,13 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-weight', '400');
     await expect(page.locator('.recipe-instruction-temperature')).toHaveText('350°F');
     await expect(page.getByText('Fold flour into batter.')).toBeVisible();
-    const instructionPhoto = page.locator('.recipe-instruction-photo img');
+    const instructionPhoto = page.locator('.recipe-instruction-photo .framed-media-image');
     await expect(instructionPhoto).toBeVisible();
-    await expect(instructionPhoto).toHaveAttribute('alt', '');
+    await expect(instructionPhoto).toHaveAttribute('aria-hidden', 'true');
+    const publicPhotoViewBox = await instructionPhoto.getAttribute('viewBox');
+    expect(publicPhotoViewBox).toBe(
+      `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,
+    );
     const instructionViewer = page.locator('.image-viewer-dialog').nth(1);
     await instructionPhoto.click();
     await expect(instructionViewer).toHaveJSProperty('open', true);

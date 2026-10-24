@@ -1,4 +1,5 @@
 import '@fontsource-variable/dm-sans';
+import 'react-advanced-cropper/dist/style.css';
 import './globals.css';
 import type { Metadata } from 'next';
 import { PwaRegistration } from './pwa-registration';

@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import { useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
+import { FramedMediaImage } from './framed-media-image';
 import { ImageViewer } from './image-viewer';
 
 export function RecipePhotoGallery({ photos }: { photos: MediaAssetDisplay[] }) {
@@ -21,6 +21,7 @@ export function RecipePhotoGallery({ photos }: { photos: MediaAssetDisplay[] }) 
         <ImageViewer
           alt=""
           buttonLabel="View full-size recipe photo"
+          crop={selectedPhoto.crop}
           dataPhotoId={selectedPhoto.id}
           height={selectedPhoto.height}
           imageClassName="recipe-photo-feature-image"
@@ -42,11 +43,12 @@ export function RecipePhotoGallery({ photos }: { photos: MediaAssetDisplay[] }) 
                 onClick={() => setSelectedPhotoId(photo.id)}
                 type="button"
               >
-                <Image
+                <FramedMediaImage
                   alt=""
+                  className="recipe-photo-thumbnail-image"
+                  crop={photo.crop}
                   height={photo.height}
                   src={photo.thumbnail_url}
-                  unoptimized
                   width={photo.width}
                 />
               </button>

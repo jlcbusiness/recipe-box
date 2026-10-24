@@ -12,6 +12,7 @@ import {
   parseExportScope,
   portableRecordFields,
 } from '../exports/rules';
+import { isValidNormalizedCrop } from '../media/rules';
 import { validateIngredientSetLabels } from '../recipes/ingredient-set-rules';
 import { instructionEmphasisOptions } from '../recipes/instruction-emphasis';
 
@@ -148,7 +149,9 @@ function validateData(
   if (
     data.format !== 'recipe-box-data' ||
     data.schema_version !== schemaVersion ||
-    ![1, 2, EXPORT_SCHEMA_VERSION].includes(schemaVersion)
+    !Number.isInteger(schemaVersion) ||
+    schemaVersion < 1 ||
+    schemaVersion > EXPORT_SCHEMA_VERSION
   ) {
     throw new Error('The bundle data format or schema version is not supported.');
   }
@@ -195,7 +198,9 @@ function validateData(
           )
         : table === 'recipe_step_mentions' && schemaVersion < 3
           ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
-          : portableRecordFields[table],
+          : table === 'media_assets' && schemaVersion < 4
+            ? portableRecordFields[table].filter((field) => field !== 'crop')
+            : portableRecordFields[table],
     );
     for (const [index, item] of (records[table] as unknown[]).entries()) {
       const record = asRecord(item, `The ${table} record at index ${index}`);
@@ -236,6 +241,27 @@ function validateData(
       (mention) => ({ ...mention, portion_ordinal: null }),
     );
   }
+
+  records.media_assets = (records.media_assets as ExportRecord[]).map((asset) => {
+    if (schemaVersion < 4) return { ...asset, crop: null };
+    if (!Object.hasOwn(asset, 'crop')) {
+      throw new Error('A media asset is missing its crop framing.');
+    }
+    if (asset.crop === null) return asset;
+    const crop = asRecord(asset.crop, 'A media asset crop');
+    assertExactKeys(
+      crop,
+      schemaVersion >= 5
+        ? ['left', 'top', 'width', 'height', 'rotation']
+        : ['left', 'top', 'width', 'height'],
+      'A media asset crop',
+    );
+    const normalizedCrop = schemaVersion >= 5 ? crop : { ...crop, rotation: 0 };
+    if (!isValidNormalizedCrop(normalizedCrop)) {
+      throw new Error('The bundle contains invalid media crop framing.');
+    }
+    return { ...asset, crop: normalizedCrop };
+  });
 
   const setsByRecipe = new Map<string, ExportRecord[]>();
   for (const set of records.recipe_ingredient_sets as ExportRecord[]) {
@@ -483,9 +509,9 @@ export function validateImportBundleFiles(
   assertExactKeys(manifest, requiredManifestKeys, 'The bundle manifest');
   if (
     manifest.format !== 'recipe-box-bundle' ||
-    (manifest.schema_version !== 1 &&
-      manifest.schema_version !== 2 &&
-      manifest.schema_version !== EXPORT_SCHEMA_VERSION) ||
+    !Number.isInteger(manifest.schema_version) ||
+    (manifest.schema_version as number) < 1 ||
+    (manifest.schema_version as number) > EXPORT_SCHEMA_VERSION ||
     typeof manifest.created_at !== 'string' ||
     !Number.isFinite(Date.parse(manifest.created_at)) ||
     typeof manifest.app_version !== 'string' ||

@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
@@ -10,6 +9,7 @@ import {
 } from '../../../lib/explorer-state';
 import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
+import { FramedMediaImage } from '../../media/framed-media-image';
 import {
   getIngredients,
   getPublications,
@@ -565,15 +565,15 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                 <li key={recipe.recipe_id}>
                   <Link href={`/recipes/${recipe.recipe_id}`}>
                     {recipePhotos.get(recipe.recipe_id) && (
-                      <Image
+                      <FramedMediaImage
                         alt={
                           recipePhotos.get(recipe.recipe_id)?.description ||
                           `Photo of ${recipe.recipe_name}`
                         }
                         className="find-recipes-card-image"
+                        crop={recipePhotos.get(recipe.recipe_id)?.crop ?? null}
                         height={recipePhotos.get(recipe.recipe_id)?.height ?? 1}
                         src={recipePhotos.get(recipe.recipe_id)?.thumbnail_url ?? ''}
-                        unoptimized
                         width={recipePhotos.get(recipe.recipe_id)?.width ?? 1}
                       />
                     )}

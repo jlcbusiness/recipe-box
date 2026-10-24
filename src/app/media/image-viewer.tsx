@@ -1,13 +1,15 @@
 'use client';
 
 import { X } from 'lucide-react';
-import Image from 'next/image';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { CropRect } from '../../lib/media/rules';
+import { FramedMediaImage } from './framed-media-image';
 
 type ImageViewerProps = {
   alt: string;
   buttonLabel: string;
+  crop?: CropRect | null;
   dataPhotoId?: string;
   height: number;
   imageClassName?: string;
@@ -21,6 +23,7 @@ type ImageViewerProps = {
 export function ImageViewer({
   alt,
   buttonLabel,
+  crop = null,
   dataPhotoId,
   height,
   imageClassName,
@@ -63,14 +66,14 @@ export function ImageViewer({
         style={triggerStyle}
         type="button"
       >
-        <Image
+        <FramedMediaImage
           alt={alt}
           className={imageClassName}
-          data-photo-id={dataPhotoId}
+          crop={crop}
+          dataPhotoId={dataPhotoId}
           height={height}
           loading={triggerLoading}
           src={src}
-          unoptimized
           width={width}
         />
       </button>
@@ -106,14 +109,13 @@ export function ImageViewer({
                 >
                   <X aria-hidden="true" size={24} />
                 </button>
-                <Image
+                <FramedMediaImage
                   alt={alt}
                   className="image-viewer-full-image"
+                  crop={crop}
                   height={height}
                   loading="eager"
-                  sizes="100vw"
                   src={src}
-                  unoptimized
                   width={width}
                 />
               </div>

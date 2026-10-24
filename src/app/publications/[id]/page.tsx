@@ -104,7 +104,13 @@ export default async function PublicationPage({
       aria-labelledby="page-title"
     >
       <div className="publication-detail-heading">
-        <PublicationCover imageUrl={publicationCover?.thumbnail_url} publication={publication} />
+        <PublicationCover
+          crop={publicationCover?.crop}
+          imageHeight={publicationCover?.height}
+          imageUrl={publicationCover?.thumbnail_url}
+          imageWidth={publicationCover?.width}
+          publication={publication}
+        />
         <div>
           <p className="eyebrow">{publicationTypeLabels[publication.publication_type]}</p>
           <h1 id="page-title">{publication.name}</h1>

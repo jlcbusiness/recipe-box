@@ -317,6 +317,8 @@ export function Picklist({
   title,
   showArrow = true,
   sizeToContent = true,
+  compact = false,
+  showSelectionCheckmark = true,
   scope,
   autoFocus = false,
   disabled = false,
@@ -340,6 +342,8 @@ export function Picklist({
   title?: string;
   showArrow?: boolean;
   sizeToContent?: boolean;
+  compact?: boolean;
+  showSelectionCheckmark?: boolean;
   scope?: string;
   autoFocus?: boolean;
   disabled?: boolean;
@@ -419,9 +423,9 @@ export function Picklist({
     }
     const measuredWidth = measureRef.current?.getBoundingClientRect().width;
     if (measuredWidth) {
-      setTriggerWidth(Math.ceil(measuredWidth + 40));
+      setTriggerWidth(Math.ceil(measuredWidth + (compact ? 16 : 40)));
     }
-  }, [showArrow, sizeToContent]);
+  }, [compact, showArrow, sizeToContent]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -444,7 +448,7 @@ export function Picklist({
         aria-haspopup="listbox"
         aria-invalid={invalid || undefined}
         aria-label={label}
-        className={`single-picklist-trigger ${className}`}
+        className={`single-picklist-trigger${compact ? ' is-compact' : ''} ${className}`}
         disabled={disabled}
         id={id}
         ref={triggerRef}
@@ -517,9 +521,11 @@ export function Picklist({
                       onClick={() => select(option.value)}
                       onPointerMove={() => setActiveIndex(index)}
                     >
-                      <span aria-hidden="true" className="single-picklist-check">
-                        {option.value === value ? '✓' : ''}
-                      </span>
+                      {showSelectionCheckmark && (
+                        <span aria-hidden="true" className="single-picklist-check">
+                          {option.value === value ? '✓' : ''}
+                        </span>
+                      )}
                       <span>{option.label}</span>
                     </button>
                   </Fragment>
@@ -601,9 +607,11 @@ export function Picklist({
                     onClick={() => select(option.value)}
                     onPointerMove={() => setActiveIndex(index)}
                   >
-                    <span aria-hidden="true" className="single-picklist-check">
-                      {option.value === value ? '✓' : ''}
-                    </span>
+                    {showSelectionCheckmark && (
+                      <span aria-hidden="true" className="single-picklist-check">
+                        {option.value === value ? '✓' : ''}
+                      </span>
+                    )}
                     <span>{option.label}</span>
                   </button>
                 </Fragment>

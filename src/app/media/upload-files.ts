@@ -4,7 +4,7 @@ import { MAX_IMAGE_UPLOAD_BYTES } from '../../lib/media/rules';
 import { createClient } from '../../lib/supabase/browser';
 
 type MediaParent = 'recipe' | 'publication';
-type ApiError = { error?: string; cleanupPending?: boolean };
+type ApiError = { assetId?: string; error?: string; cleanupPending?: boolean };
 
 async function responseError(response: Response, fallback: string) {
   try {
@@ -25,6 +25,7 @@ export async function uploadMediaFiles(
   const storage = createClient();
   let uploaded = 0;
   let cleanupPending = false;
+  const assetIds: string[] = [];
 
   for (const [index, file] of files.entries()) {
     if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
@@ -76,10 +77,14 @@ export async function uploadMediaFiles(
     }
 
     const completion = (await completionResponse.json()) as ApiError;
+    if (!completion.assetId) {
+      throw new Error('The image was saved but its identifier could not be confirmed.');
+    }
+    assetIds.push(completion.assetId);
     uploaded += 1;
     cleanupPending ||= Boolean(completion.cleanupPending);
     onUploaded?.();
   }
 
-  return { uploaded, cleanupPending };
+  return { uploaded, cleanupPending, assetIds };
 }

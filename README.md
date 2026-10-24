@@ -19,6 +19,9 @@ delivered in the order described by the
   numbers, or ranges. Recipe detail uses conventional US-customary fractions,
   decimal metric quantities, natural Things plurals, and plural `cups` above
   one.
+- Manage publication covers and up to 12 recipe photos with private uploads,
+  signed display, and reversible per-image framing. Images show the full source
+  by default; saved framing is reused across their display surfaces.
 
 See the [comprehensive reference](docs/plans/comprehensive-reference.md) for
 implemented behavior and later-slice direction, and the

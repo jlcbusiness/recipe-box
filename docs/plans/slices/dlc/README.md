@@ -18,8 +18,9 @@ recipes can select existing values. DLC 25 delivered inline creation of
 Equipment, Food Type, Meal Type, and Cuisine values from the recipe editor,
 repaired the two-Enter commit and Tab/Arrow keyboard flow for ingredient rows
 and measurements, and restored unordered and ordered Markdown list authoring
-and rendering in instruction steps. Still-image upload and display exist, but
-crop/framing and full-screen viewing remain open in DLC 06.
+and rendering in instruction steps. Still-image upload and display exist; DLC
+06 implements reversible framing for recipe photos and publication covers,
+while retaining the existing single-image viewer without gallery navigation.
 
 ## Roadmap order
 

@@ -331,14 +331,19 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
       .fill(`After resting, +photo${photoCode} taste the sauce again.`);
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
-    await expect(page.locator('.recipe-instruction-photo img')).toHaveCount(2);
-    const instructionPhoto = page.locator('.recipe-instruction-photo img').first();
+    await expect(page.locator('.recipe-instruction-photo .framed-media-image')).toHaveCount(2);
+    const instructionPhoto = page.locator('.recipe-instruction-photo .framed-media-image').first();
     await instructionPhoto.click();
     const instructionViewer = page.locator('.image-viewer-dialog').nth(1);
     await expect(instructionViewer).toHaveJSProperty('open', true);
     await instructionViewer.getByRole('button', { name: 'Close image viewer' }).click();
     await expect(instructionViewer).toHaveJSProperty('open', false);
     await expect(page.locator('.recipe-instruction-photo').first()).toHaveCSS('float', 'right');
+    const originalViewport = page.viewportSize();
+    const intermediateViewport = originalViewport !== null && originalViewport.width > 760;
+    if (intermediateViewport && originalViewport) {
+      await page.setViewportSize({ ...originalViewport, width: 680 });
+    }
     const photoElements = page.locator('.recipe-instruction-photo');
     const photoBounds = await photoElements.first().boundingBox();
     const instructionBounds = await page.locator('.recipe-instruction-list').boundingBox();
@@ -384,7 +389,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
         }
         throw new Error('Expected the post-photo instruction text to render.');
       });
-    const followingStepFirstLine = await page
+    const followingStepTextRects = await page
       .locator('.recipe-instruction-list > li')
       .nth(1)
       .evaluate((element) => {
@@ -393,10 +398,9 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
         if (!textNode) throw new Error('Expected the following instruction text to render.');
         const range = document.createRange();
         range.selectNodeContents(textNode);
-        const bounds = range.getClientRects()[0];
-        if (!bounds) throw new Error('Expected the following instruction line to render.');
-        return { y: bounds.y, right: bounds.right };
+        return Array.from(range.getClientRects(), ({ bottom, right, y }) => ({ bottom, right, y }));
       });
+    const followingStepFirstLine = followingStepTextRects[0];
     const secondPhotoStepBounds = await page
       .locator('.recipe-instruction-list > li')
       .nth(2)
@@ -416,7 +420,21 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
     } else if (testInfo.project.name !== 'Fold 6') {
       throw new Error('The following instruction should wrap beside the remaining photo float.');
     }
+    if (intermediateViewport) {
+      expect(followingStepTextRects.length).toBeGreaterThan(1);
+      for (const textRect of followingStepTextRects) {
+        const overlapsPhoto =
+          textRect.y < photoBounds.y + photoBounds.height && textRect.bottom > photoBounds.y;
+        if (overlapsPhoto) expect(textRect.right).toBeLessThanOrEqual(photoBounds.x + 1);
+      }
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
     expect(secondPhotoStepBounds?.y).toBeGreaterThanOrEqual(photoBounds.y + photoBounds.height);
+    if (intermediateViewport && originalViewport) {
+      await page.setViewportSize(originalViewport);
+    }
     await page.goto(`/recipes/${recipeId}/edit`);
     await page.getByRole('button', { name: 'Manage recipe photos' }).click();
     const photoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
@@ -439,7 +457,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
     await photoDialog.getByRole('button', { name: 'Done' }).click();
     await page.goto(`/recipes/${recipeId}`);
     await expect(page.getByText('Finish the sauce.')).toBeVisible();
-    await expect(page.locator('.recipe-instruction-photo img')).toHaveCount(0);
+    await expect(page.locator('.recipe-instruction-photo .framed-media-image')).toHaveCount(0);
     await expect(page.locator('.recipe-photo-feature-image')).toHaveCount(0);
 
     const historyResponse = await request.get(
@@ -585,6 +603,7 @@ test('image management panes stage covers and immediately manage decorative reci
   page,
   request,
 }) => {
+  test.setTimeout(60_000);
   const owner = await createTestUser(request);
   const otherOwner = await createTestUser(request);
   const { apiUrl, anonKey, serviceRoleKey } = await getLocalSupabaseConfig();
@@ -600,7 +619,8 @@ test('image management panes stage covers and immediately manage decorative reci
 
     await page.goto(`/publications/${publicationId}`);
     await expect(page.getByRole('heading', { name: publicationName })).toBeVisible();
-    const viewportWidth = page.viewportSize()?.width ?? 1280;
+    const viewportSize = page.viewportSize() ?? { width: 1280, height: 800 };
+    const viewportWidth = viewportSize.width;
     if (viewportWidth <= 340) {
       const viewControls = await page.locator('.recipe-explorer-view-controls').boundingBox();
       const columnsButton = page.getByRole('button', { name: 'Choose List columns' }).first();
@@ -737,6 +757,39 @@ test('image management panes stage covers and immediately manage decorative reci
     expect(foreignStorageRead.ok()).toBe(false);
 
     await page.getByRole('button', { name: `Manage ${publicationName} cover` }).click();
+    await coverDialog.getByRole('button', { name: 'Adjust cover framing' }).click();
+    await page.getByRole('combobox', { name: 'Aspect ratio' }).click();
+    await page.getByRole('option', { name: 'Square' }).click();
+    await page.getByRole('button', { name: 'Apply' }).click();
+    await expect(coverDialog.getByRole('button', { name: 'Submit' })).toBeEnabled();
+    const stagedCoverCropResponse = await request.get(
+      `${apiUrl}/rest/v1/media_assets?select=crop&publication_id=eq.${publicationId}&status=eq.ready`,
+      { headers },
+    );
+    expect(stagedCoverCropResponse.ok(), await stagedCoverCropResponse.text()).toBeTruthy();
+    expect(await stagedCoverCropResponse.json()).toEqual([{ crop: null }]);
+    await coverDialog.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('button', { name: `Manage ${publicationName} cover` }).click();
+    const coverCropCancelResponse = await request.get(
+      `${apiUrl}/rest/v1/media_assets?select=crop&publication_id=eq.${publicationId}&status=eq.ready`,
+      { headers },
+    );
+    expect(coverCropCancelResponse.ok(), await coverCropCancelResponse.text()).toBeTruthy();
+    expect(await coverCropCancelResponse.json()).toEqual([{ crop: null }]);
+    await coverDialog.getByRole('button', { name: 'Adjust cover framing' }).click();
+    await page.getByRole('combobox', { name: 'Aspect ratio' }).click();
+    await page.getByRole('option', { name: 'Square' }).click();
+    await page.getByRole('button', { name: 'Apply' }).click();
+    await coverDialog.getByRole('button', { name: 'Submit' }).click();
+    await expect(coverDialog).not.toBeVisible();
+    const savedCoverCropResponse = await request.get(
+      `${apiUrl}/rest/v1/media_assets?select=crop&publication_id=eq.${publicationId}&status=eq.ready`,
+      { headers },
+    );
+    expect(savedCoverCropResponse.ok(), await savedCoverCropResponse.text()).toBeTruthy();
+    expect((await savedCoverCropResponse.json())[0].crop).not.toBeNull();
+
+    await page.getByRole('button', { name: `Manage ${publicationName} cover` }).click();
     const coverRemove = coverDialog.getByRole('button', { name: 'Remove cover image' });
     const removeStyles = await coverRemove.evaluate((button) => ({
       background: getComputedStyle(button).backgroundColor,
@@ -770,7 +823,7 @@ test('image management panes stage covers and immediately manage decorative reci
 
     await page.goto(`/recipes/${recipeId}/edit`);
     await expect(page.locator('.recipe-photo-manager-trigger svg')).toBeVisible();
-    await expect(page.locator('.recipe-photo-manager-trigger img')).toHaveCount(0);
+    await expect(page.locator('.recipe-photo-manager-trigger .framed-media-image')).toHaveCount(0);
     await expect(page.locator('.recipe-photo-manager-pencil')).toHaveCount(0);
     if (viewportWidth <= 640) {
       const nameBox = await page.locator('.recipe-name-field').boundingBox();
@@ -841,19 +894,173 @@ test('image management panes stage covers and immediately manage decorative reci
       },
     ]);
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(6);
+    const framingAction = photoDialog.getByRole('button', { name: 'Adjust framing for photo 1' });
+    await expect(framingAction).toHaveCSS('width', '28px');
+    await expect(framingAction).toHaveCSS('height', '28px');
+    if (viewportWidth <= 640) {
+      await page.setViewportSize({ ...viewportSize, width: 300 });
+    }
+    await framingAction.click();
+    await expect(page.getByRole('dialog', { name: 'Adjust image framing' })).toBeVisible();
+    await expect(page.locator('.media-manager-heading')).toHaveCount(0);
+    const ratioPicklist = page.getByRole('combobox', { name: 'Aspect ratio' });
+    const ratioPickerSizing = await ratioPicklist.evaluate((element) => {
+      const { width } = element.getBoundingClientRect();
+      const measurement = element.previousElementSibling;
+      const longestLabelWidth =
+        measurement?.classList.contains('single-picklist-measure') === true
+          ? measurement.getBoundingClientRect().width
+          : undefined;
+      return {
+        expectedWidth: longestLabelWidth ? Math.ceil(longestLabelWidth + 16) + 96 / 25.4 : 0,
+        width,
+      };
+    });
+    expect(Math.abs(ratioPickerSizing.width - ratioPickerSizing.expectedWidth)).toBeLessThan(1);
+    expect(ratioPickerSizing.width).toBeLessThan(160);
+    await ratioPicklist.click();
+    await page.getByRole('option', { name: '16:9' }).click();
+    await expect(page.locator('.image-crop-editor-rotation-value')).toHaveCount(0);
+    await expect(page.getByLabel('Current image rotation')).toHaveCount(0);
+    await expect(page.getByLabel('Zoom image')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Move image/ })).toHaveCount(0);
+    await expect(page.getByText('Aspect ratio', { exact: true })).toHaveCount(0);
+    const cropperStage = page.locator('.image-crop-editor-stage');
+    const canvasBeforeRotation = await cropperStage.boundingBox();
+    expect(canvasBeforeRotation).not.toBeNull();
+    expect(canvasBeforeRotation?.width).toBeGreaterThan(canvasBeforeRotation?.height ?? 0);
+    const cropImage = page.locator('.react-advanced-cropper__image');
+    const transformBeforePan = await cropImage.evaluate(
+      (image) => getComputedStyle(image).transform,
+    );
+    const stageBounds = await cropperStage.boundingBox();
+    expect(stageBounds).not.toBeNull();
+    await page.mouse.move(
+      (stageBounds?.x ?? 0) + (stageBounds?.width ?? 0) / 2,
+      (stageBounds?.y ?? 0) + (stageBounds?.height ?? 0) / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      (stageBounds?.x ?? 0) + (stageBounds?.width ?? 0) / 2 + 18,
+      (stageBounds?.y ?? 0) + (stageBounds?.height ?? 0) / 2 + 12,
+    );
+    await page.mouse.up();
+    await expect
+      .poll(async () => cropImage.evaluate((image) => getComputedStyle(image).transform))
+      .not.toBe(transformBeforePan);
+    const transformBeforeWheel = await cropImage.evaluate(
+      (image) => getComputedStyle(image).transform,
+    );
+    await ratioPicklist.hover();
+    await page.mouse.wheel(0, -120);
+    await expect
+      .poll(async () => cropImage.evaluate((image) => getComputedStyle(image).transform))
+      .toBe(transformBeforeWheel);
+    await cropperStage.hover();
+    await page.mouse.wheel(0, -120);
+    await expect
+      .poll(async () => cropImage.evaluate((image) => getComputedStyle(image).transform))
+      .not.toBe(transformBeforeWheel);
+    const canvasDimensionsBeforeRotation = await cropperStage.boundingBox();
+    expect(canvasDimensionsBeforeRotation).not.toBeNull();
+    const cropFrame = page.locator('.advanced-cropper-stencil-wrapper');
+    const frameBeforeRotation = await cropFrame.boundingBox();
+    expect(frameBeforeRotation).not.toBeNull();
+    expect(frameBeforeRotation?.width).toBeGreaterThan(frameBeforeRotation?.height ?? 0);
+    const rotateButton = page.getByRole('button', {
+      name: 'Rotate image counterclockwise 90 degrees',
+    });
+    for (let rotationAction = 0; rotationAction < 5; rotationAction += 1) {
+      await rotateButton.click();
+      await expect(rotateButton).toBeEnabled();
+    }
+    await ratioPicklist.click();
+    await expect(page.getByRole('option', { name: '9:16' })).toBeVisible();
+    const frameAfterRotation = await cropFrame.boundingBox();
+    expect(frameAfterRotation).not.toBeNull();
+    expect(frameAfterRotation?.height).toBeGreaterThan(frameAfterRotation?.width ?? 0);
+    const canvasAfterRotation = await cropperStage.boundingBox();
+    expect(canvasAfterRotation).not.toBeNull();
+    expect(canvasAfterRotation?.height).toBeGreaterThan(canvasAfterRotation?.width ?? 0);
+    if (viewportWidth <= 640) {
+      const [ratioBounds, rotateBounds, actionsBounds, toolbarBounds] = await Promise.all([
+        ratioPicklist.boundingBox(),
+        rotateButton.boundingBox(),
+        page.locator('.image-crop-editor-actions').boundingBox(),
+        page.locator('.image-crop-editor-controls').boundingBox(),
+      ]);
+      expect([ratioBounds, rotateBounds, actionsBounds, toolbarBounds].every(Boolean)).toBe(true);
+      if (!ratioBounds || !rotateBounds || !actionsBounds || !toolbarBounds) {
+        throw new Error('Expected the compact crop controls to have layout bounds.');
+      }
+      const controlTops = [ratioBounds.y, rotateBounds.y, actionsBounds.y];
+      expect(Math.max(...controlTops) - Math.min(...controlTops)).toBeLessThanOrEqual(2);
+      expect(
+        Math.max(
+          ratioBounds.x + ratioBounds.width,
+          rotateBounds.x + rotateBounds.width,
+          actionsBounds.x + actionsBounds.width,
+        ),
+      ).toBeLessThanOrEqual(toolbarBounds.x + toolbarBounds.width + 1);
+      const cropDialog = page.getByRole('dialog', { name: 'Adjust image framing' });
+      expect(await cropDialog.evaluate((dialog) => dialog.scrollWidth > dialog.clientWidth)).toBe(
+        false,
+      );
+    }
+    await page.getByRole('option', { name: '4:3' }).click();
+    await expect(ratioPicklist).toContainText('3:4');
+    const cropPatchRequest = page.waitForRequest(
+      (candidate) =>
+        candidate.method() === 'PATCH' &&
+        new URL(candidate.url()).pathname.startsWith('/api/media/assets/'),
+    );
+    const cropPatchResponse = page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === 'PATCH' &&
+        new URL(candidate.url()).pathname.startsWith('/api/media/assets/'),
+    );
+    await page.getByRole('button', { name: 'Apply' }).click();
+    const cropPatchBody = (await cropPatchRequest).postDataJSON() as {
+      action: string;
+      crop: unknown;
+    };
+    const cropPatchResult = await (await cropPatchResponse).json();
+    expect(cropPatchBody.action).toBe('crop');
+    expect(cropPatchBody.crop).not.toBeNull();
+    expect(cropPatchBody.crop).toMatchObject({ rotation: 270 });
+    expect(cropPatchResult, JSON.stringify(cropPatchBody)).toHaveProperty('version');
+    const savedPhotoCropResponse = await request.get(
+      `${apiUrl}/rest/v1/media_assets?select=id,crop&recipe_id=eq.${recipeId}&status=eq.ready`,
+      { headers },
+    );
+    expect(savedPhotoCropResponse.ok(), await savedPhotoCropResponse.text()).toBeTruthy();
+    const savedPhotoCrops = (await savedPhotoCropResponse.json()) as {
+      id: string;
+      crop: { rotation?: number } | null;
+    }[];
+    expect(savedPhotoCrops.some((asset) => asset.crop?.rotation === 270)).toBe(true);
+    await expect(
+      photoDialog.locator('.recipe-photo-grid-item.is-default .recipe-photo-grid-image image'),
+    ).toHaveAttribute('transform', /rotate\(270\)/);
+    await photoDialog.getByRole('button', { name: 'Adjust framing for photo 1' }).click();
+    await expect(page.locator('.image-crop-editor-rotation-value')).toHaveCount(0);
+    if (viewportWidth <= 640) {
+      await page.setViewportSize(viewportSize);
+    }
+    await page.getByRole('button', { name: 'Cancel' }).click();
     await expect(
       photoDialog.locator(
         '.recipe-photo-add-tile:not(.recipe-photo-camera-tile) .recipe-photo-add-action span',
       ),
     ).toHaveCSS('text-align', 'center');
-    await expect(page.locator('.recipe-photo-manager-trigger img')).toBeVisible();
-    await expect(page.locator('.recipe-photo-manager-trigger img')).toHaveCSS(
+    await expect(page.locator('.recipe-photo-manager-trigger .framed-media-image')).toBeVisible();
+    await expect(page.locator('.recipe-photo-manager-trigger .framed-media-image')).toHaveCSS(
       'object-fit',
       'contain',
     );
     const [nameInputBounds, photoBounds] = await Promise.all([
       page.locator('.recipe-name-field input').boundingBox(),
-      page.locator('.recipe-photo-manager-trigger img').boundingBox(),
+      page.locator('.recipe-photo-manager-trigger .framed-media-image').boundingBox(),
     ]);
     expect(nameInputBounds).not.toBeNull();
     expect(photoBounds).not.toBeNull();
@@ -866,11 +1073,11 @@ test('image management panes stage covers and immediately manage decorative reci
     ).toBeLessThanOrEqual(1);
     await expect(page.locator('.recipe-photo-manager-pencil')).toBeVisible();
     const triggerPhotoSource = await page
-      .locator('.recipe-photo-manager-trigger img')
-      .getAttribute('src');
+      .locator('.recipe-photo-manager-trigger .framed-media-image image')
+      .getAttribute('href');
     const primaryGridPhotoSource = await photoDialog
-      .locator('.recipe-photo-grid-item.is-default .recipe-photo-grid-image')
-      .getAttribute('src');
+      .locator('.recipe-photo-grid-item.is-default .recipe-photo-grid-image image')
+      .getAttribute('href');
     expect(triggerPhotoSource).toBe(primaryGridPhotoSource);
     const heicAssetResponse = await request.get(
       `${apiUrl}/rest/v1/media_assets?select=width,height,full_path,thumbnail_path&recipe_id=eq.${recipeId}&status=eq.ready&width=eq.320&height=eq.427`,
@@ -1322,7 +1529,7 @@ test('image management panes stage covers and immediately manage decorative reci
     expect(thumbnailsBounds.y).toBeGreaterThanOrEqual(featureBounds.y + featureBounds.height);
     const thumbnailRows = await page.locator('.recipe-photo-thumbnails').evaluate((list) => {
       const rows = new Map<number, { left: number; right: number; count: number }>();
-      for (const image of Array.from(list.querySelectorAll('img'))) {
+      for (const image of Array.from(list.querySelectorAll('.framed-media-image'))) {
         const bounds = image.getBoundingClientRect();
         const rowTop = Math.round(bounds.top);
         const row = rows.get(rowTop) ?? { left: bounds.left, right: bounds.right, count: 0 };
@@ -1371,13 +1578,11 @@ test('image management panes stage covers and immediately manage decorative reci
     await expect(fullSizeImage).toBeVisible();
     await fullSizeImage.click();
     await expect(imageViewer).toHaveJSProperty('open', true);
-    const fullSizeBounds = await fullSizeImage.evaluate((image: HTMLImageElement) => ({
-      naturalHeight: image.naturalHeight,
-      naturalWidth: image.naturalWidth,
+    const fullSizeBounds = await fullSizeImage.evaluate((image: SVGSVGElement) => ({
       rect: image.getBoundingClientRect().toJSON(),
     }));
-    expect(fullSizeBounds.rect.width).toBeLessThanOrEqual(fullSizeBounds.naturalWidth);
-    expect(fullSizeBounds.rect.height).toBeLessThanOrEqual(fullSizeBounds.naturalHeight);
+    expect(fullSizeBounds.rect.width).toBeLessThanOrEqual(viewportWidth);
+    expect(fullSizeBounds.rect.height).toBeLessThanOrEqual(page.viewportSize()?.height ?? Infinity);
     expect(fullSizeBounds.rect.right).toBeLessThanOrEqual(viewportWidth + 1);
     expect(fullSizeBounds.rect.bottom).toBeLessThanOrEqual(
       (page.viewportSize()?.height ?? Infinity) + 1,
@@ -1478,7 +1683,7 @@ test('image management panes stage covers and immediately manage decorative reci
     const compactGallery = page.locator('.recipe-photo-gallery');
     const compactImage = page.locator('.recipe-photo-feature-image');
     const compactThumbnails = page.locator('.recipe-photo-thumbnails');
-    await expect(compactThumbnails.locator('img')).toHaveCount(2);
+    await expect(compactThumbnails.locator('.framed-media-image')).toHaveCount(2);
     const [compactGalleryBounds, compactImageBounds, compactThumbnailBounds] = await Promise.all([
       compactGallery.boundingBox(),
       compactImage.boundingBox(),

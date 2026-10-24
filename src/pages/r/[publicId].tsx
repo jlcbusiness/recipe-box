@@ -71,6 +71,7 @@ function renderInstructionBlocks(
             <ImageViewer
               alt=""
               buttonLabel="View instruction photo full size"
+              crop={photo.crop}
               height={photo.height}
               key={`${prefix}-photo-${token.id}-${occurrence}`}
               src={photo.full_url}
@@ -198,6 +199,7 @@ function RecipePhotos({ photos, name }: { photos: PublicRecipePhoto[]; name: str
         <ImageViewer
           alt={photo.description || `${name}, photo ${index + 1}`}
           buttonLabel={`View ${photo.description || `${name}, photo ${index + 1}`} full size`}
+          crop={photo.crop}
           height={photo.height}
           imageClassName="recipe-public-photo"
           key={key}

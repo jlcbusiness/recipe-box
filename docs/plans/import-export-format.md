@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 3 archive contains:
+A version 5 archive contains:
 
 ```text
 manifest.json
@@ -27,7 +27,7 @@ namespace permits only `data.json` and UUID-scoped `full.webp` or
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 3,
+  "schema_version": 5,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "0.1.0",
   "scope": {
@@ -66,7 +66,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 3,
+  "schema_version": 5,
   "scope": {
     "type": "database"
   },
@@ -96,14 +96,18 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v3; future
+array contains only the normalized product fields selected for v5; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
 `portion_one_ratio`, `size_value`, and `size_unit` on ingredient rows, plus a
-nullable `portion_ordinal` on ingredient mentions. The nullable ratio stores
-portion 1's share of the canonical total; ordinal 1 or 2 identifies the
-referenced portion.
+nullable `portion_ordinal` on ingredient mentions. Media asset rows include a
+`crop` field that is either null or a normalized rectangle with `left`, `top`,
+`width`, and `height` numbers in the range 0–1, plus `rotation` set to 0, 90,
+180, or 270 degrees clockwise. The rectangle must have positive dimensions and
+remain within the oriented image. Null means Fit/contain and preserves the
+complete source. The nullable ratio stores portion 1's share of
+the canonical total; ordinal 1 or 2 identifies the referenced portion.
 `account_preferences` contains only product preferences. Domain record IDs and
 relationship IDs are preserved. Owner `account_id`, Auth user IDs, admin and
 sign-in-method values, signed URLs, private Storage paths, and export timestamps
@@ -130,21 +134,27 @@ rows, and temporary export objects are never part of `records`.
 
 ## Version compatibility
 
-Version 3 is the current export format. It includes ingredient-set records and
-row membership, divided-portion ratios, Size values and units, and mention
-ordinals. It preserves the current recipe `is_private` value and excludes the
-public-link identifier. Imports accept versions 1 and 2 as well as version 3.
+and nullable media crop framing. It preserves the current recipe `is_private`
+and 3 as well as version 4.
+Version 5 is the current export format. It includes ingredient-set records and
+row membership, divided-portion ratios, Size values and units, mention ordinals,
+and nullable media crop framing with quarter-turn rotation. It preserves the
+current recipe `is_private` value and excludes the public-link identifier.
+Version 4 crop rectangles import with 0-degree rotation. Imports accept
+versions 1 through 5, including versions 1, 2, and 3 with their documented
+backfills.
 A v1 import synthesizes one `Main` set per recipe and assigns that recipe's
 ingredient rows to it. Versions 1 and 2 default the v3 fields to null, retaining
-unsplit rows, no Size, and whole-row mentions. ID remapping preserves the
-portion ordinal in both marker text and mention records. Every version lets the
+unsplit rows, no Size, and whole-row mentions. Versions 1 through 3 default
+media crop framing to null. ID remapping preserves the portion ordinal in both
+marker text and mention records. Every version lets the
 destination database generate a new public-link identity rather than reusing a
 source ID. The import planner does not include `public_id` in recipe records.
 Version upgrades never reinterpret a missing field as permission to expose
 private content.
 
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1, 2, and 3, verify all file sizes and checksums before
+accept only versions 1 through 5, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

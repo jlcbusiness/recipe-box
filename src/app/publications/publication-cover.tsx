@@ -1,13 +1,21 @@
 import { Globe } from 'lucide-react';
 import Image from 'next/image';
+import type { CropRect } from '../../lib/media/rules';
 import type { PublicationOption } from '../../lib/recipes/data';
+import { FramedMediaImage } from '../media/framed-media-image';
 
 export function PublicationCover({
   publication,
   imageUrl,
+  crop = null,
+  imageWidth = 72,
+  imageHeight = 96,
 }: {
   publication: PublicationOption;
   imageUrl?: string | null;
+  crop?: CropRect | null;
+  imageWidth?: number;
+  imageHeight?: number;
 }) {
   if (publication.publication_type === 'collection') {
     return (
@@ -29,14 +37,25 @@ export function PublicationCover({
       <span
         className={`publication-cover publication-cover-image ${publication.publication_type === 'site' ? 'publication-cover-site' : ''}`}
       >
-        <Image
-          alt={publication.name}
-          className="publication-cover-image-content"
-          height={96}
-          src={imageUrl}
-          unoptimized
-          width={72}
-        />
+        {crop ? (
+          <FramedMediaImage
+            alt={publication.name}
+            className="publication-cover-image-content"
+            crop={crop}
+            height={imageHeight}
+            src={imageUrl}
+            width={imageWidth}
+          />
+        ) : (
+          <Image
+            alt={publication.name}
+            className="publication-cover-image-content"
+            height={96}
+            src={imageUrl}
+            unoptimized
+            width={72}
+          />
+        )}
       </span>
     );
   }

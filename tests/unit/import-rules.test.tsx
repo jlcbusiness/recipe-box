@@ -20,7 +20,7 @@ const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -81,6 +81,17 @@ function createBundleEntries(options: {
       byte_size: Buffer.byteLength('full-image') + Buffer.byteLength('thumbnail-image'),
       width: 32,
       height: 24,
+      ...(schemaVersion >= 4
+        ? {
+            crop: {
+              left: 0.25,
+              top: 0.125,
+              width: 0.5,
+              height: 0.75,
+              ...(schemaVersion >= 5 ? { rotation: 90 } : {}),
+            },
+          }
+        : {}),
     });
     const updatedDataBytes = Buffer.from(JSON.stringify(data), 'utf8');
     files[0] = { path: 'data.json', bytes: updatedDataBytes };
@@ -226,10 +237,77 @@ describe('import bundle validation', () => {
       size_value: null,
       size_unit: null,
     });
+    expect(bundle.data.records.media_assets[0].crop).toBeNull();
     expect([...bundle.images.keys()]).toEqual([
       `images/${assetId}/full.webp`,
       `images/${assetId}/thumbnail.webp`,
     ]);
+  });
+
+  it.each([1, 2, 3] as const)('backfills v%d media framing to Fit', (schemaVersion) => {
+    const entries = createBundleEntries({
+      schemaVersion,
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, name: 'Lemon cake', publication_id: null },
+      includeImages: true,
+    });
+
+    expect(validateImportBundleFiles(entries).data.records.media_assets[0].crop).toBeNull();
+  });
+
+  it('imports v4 framing at zero degrees and preserves v5 quarter-turn framing', () => {
+    const legacyEntries = createBundleEntries({
+      schemaVersion: 4,
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, name: 'Lemon cake', publication_id: null },
+      includeImages: true,
+    });
+    expect(validateImportBundleFiles(legacyEntries).data.records.media_assets[0].crop).toEqual({
+      left: 0.25,
+      top: 0.125,
+      width: 0.5,
+      height: 0.75,
+      rotation: 0,
+    });
+
+    const entries = createBundleEntries({
+      schemaVersion: 5,
+      scope: { type: 'recipe', id: recipeId },
+      recipe: { id: recipeId, name: 'Lemon cake', publication_id: null },
+      includeImages: true,
+    });
+    const validBundle = validateImportBundleFiles(entries);
+    expect(validBundle.data.records.media_assets[0].crop).toEqual({
+      left: 0.25,
+      top: 0.125,
+      width: 0.5,
+      height: 0.75,
+      rotation: 90,
+    });
+
+    const data = JSON.parse(new TextDecoder().decode(entries.get('data.json')));
+    data.records.media_assets[0].crop = {
+      left: 0.5,
+      top: 0.5,
+      width: 0.75,
+      height: 0.25,
+      rotation: 90,
+    };
+    const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
+    const manifest = buildBundleManifest(
+      { type: 'recipe', id: recipeId },
+      [
+        { path: 'data.json', bytes: dataBytes },
+        { path: `images/${assetId}/full.webp`, bytes: Buffer.from('full-image') },
+        { path: `images/${assetId}/thumbnail.webp`, bytes: Buffer.from('thumbnail-image') },
+      ],
+      '0.1.0',
+      new Date('2026-10-15T12:00:00.000Z'),
+    );
+    entries.set('data.json', dataBytes);
+    entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/crop|framing/i);
   });
 
   it('accepts v2 defaults and v3 portions while rejecting unresolved ingredient-set IDs', () => {
@@ -427,7 +505,7 @@ describe('import bundle validation', () => {
 
     const unsupported = createBundleEntries({});
     const manifest = JSON.parse(new TextDecoder().decode(unsupported.get('manifest.json')));
-    manifest.schema_version = 4;
+    manifest.schema_version = 6;
     unsupported.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
     expect(() => validateImportBundleFiles(unsupported)).toThrow(/version/i);
 
@@ -461,6 +539,7 @@ describe('import bundle validation', () => {
       '0.1.0',
       new Date('2026-10-15T12:00:00.000Z'),
     );
+    manifest.schema_version = 3;
     entries.set('data.json', dataBytes);
     entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
 
@@ -499,6 +578,7 @@ describe('import bundle validation', () => {
       '0.1.0',
       new Date('2026-10-15T12:00:00.000Z'),
     );
+    manifest.schema_version = 3;
     entries.set('data.json', dataBytes);
     entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
 
@@ -528,6 +608,7 @@ describe('import bundle validation', () => {
       '0.1.0',
       new Date('2026-10-15T12:00:00.000Z'),
     );
+    manifest.schema_version = 3;
     entries.set('data.json', dataBytes);
     entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
 
@@ -557,6 +638,7 @@ describe('import bundle validation', () => {
       '0.1.0',
       new Date('2026-10-15T12:00:00.000Z'),
     );
+    manifest.schema_version = 3;
     entries.set('data.json', dataBytes);
     entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
 

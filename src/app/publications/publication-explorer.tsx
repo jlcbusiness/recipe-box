@@ -25,6 +25,7 @@ import type {
 import type { PublicationType } from '../../lib/recipes/data';
 import { ExplorerColumnResizeHandle, ExplorerListPreferences } from '../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../explorer-state-persistence';
+import type { CropRect } from '../../lib/media/rules';
 import { PublicationColumnFilter } from './publication-column-filter';
 import { PublicationCommaList } from './publication-comma-list';
 import { PublicationCover } from './publication-cover';
@@ -32,6 +33,9 @@ import { PublicationCover } from './publication-cover';
 type ExplorerPublication = PublicationSearchResult & {
   id: string;
   cover_image_url: string | null;
+  cover_crop: CropRect | null;
+  cover_image_width: number;
+  cover_image_height: number;
 };
 type PublicationFilter = 'all' | PublicationType;
 type ViewMode = 'list' | 'grid';
@@ -640,7 +644,10 @@ export function PublicationExplorer({
                     title={tooltipText(publication)}
                   >
                     <PublicationCover
+                      crop={publication.cover_crop}
+                      imageHeight={publication.cover_image_height}
                       imageUrl={publication.cover_image_url}
+                      imageWidth={publication.cover_image_width}
                       publication={publication}
                     />
                     <span className="publication-list-copy">

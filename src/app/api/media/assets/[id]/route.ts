@@ -1,4 +1,5 @@
 import { processMediaCleanup } from '../../../../../lib/media/server';
+import { isValidNormalizedCrop } from '../../../../../lib/media/rules';
 import { createAdminClient } from '../../../../../lib/supabase/admin';
 import { createClient } from '../../../../../lib/supabase/server';
 
@@ -36,6 +37,7 @@ export async function PATCH(request: Request, context: MediaAssetRouteContext) {
   let rpc:
     | 'set_recipe_photo_primary'
     | 'update_media_description'
+    | 'update_media_crop'
     | 'delete_media_asset'
     | 'delete_recipe_photo_with_references';
   let parameters: Record<string, unknown>;
@@ -46,6 +48,19 @@ export async function PATCH(request: Request, context: MediaAssetRouteContext) {
   } else if (payload.action === 'description' && typeof payload.description === 'string') {
     rpc = 'update_media_description';
     parameters = { p_asset_id: id, p_description: payload.description.trim() };
+  } else if (
+    payload.action === 'crop' &&
+    typeof payload.expected_version === 'number' &&
+    Number.isSafeInteger(payload.expected_version) &&
+    payload.expected_version > 0 &&
+    (payload.crop === null || isValidNormalizedCrop(payload.crop))
+  ) {
+    rpc = 'update_media_crop';
+    parameters = {
+      p_asset_id: id,
+      p_expected_version: payload.expected_version,
+      p_crop: payload.crop,
+    };
   } else if (payload.action === 'delete') {
     if (payload.expected_version === undefined) {
       rpc = 'delete_media_asset';
@@ -70,7 +85,7 @@ export async function PATCH(request: Request, context: MediaAssetRouteContext) {
     return Response.json({ error: 'Choose a valid image change.' }, { status: 400 });
   }
 
-  const { error } = await supabase.rpc(rpc, parameters);
+  const { data, error } = await supabase.rpc(rpc, parameters);
   if (error) {
     const status =
       error.code === 'P0002'
@@ -92,6 +107,17 @@ export async function PATCH(request: Request, context: MediaAssetRouteContext) {
         cleanup.failed.length > 0
           ? 'Image removed. Storage cleanup is queued for retry.'
           : 'Image removed.',
+    });
+  }
+
+  if (payload.action === 'crop') {
+    const updated = Array.isArray(data) ? data[0] : null;
+    return Response.json({
+      changed: true,
+      version:
+        updated && typeof updated === 'object' && 'version' in updated
+          ? updated.version
+          : undefined,
     });
   }
 

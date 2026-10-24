@@ -23,6 +23,9 @@ sections of this reference that the current work needs.
 1. [Product Vision and Paradigm](#1-product-vision-and-paradigm)
 2. [Recipe Card and Metadata](#2-recipe-card-and-metadata)
 3. [Ingredient Rows, Measurements, and Density](#3-ingredient-rows-measurements-and-density)
+Grid shows the default recipe photo when available with Fit/contain unless
+the owner has saved framing. Filter and sort
+
 4. [Ingredient Presentation and Sorting](#4-ingredient-presentation-and-sorting)
 5. [Instructions, Autocomplete, and Recipe Linking](#5-instructions-autocomplete-and-recipe-linking)
 6. [Publications, Magazine Handling, and The Recipe Tin](#6-publications-magazine-handling-and-the-recipe-tin)
@@ -153,11 +156,31 @@ time is broken down into specific categories:
   photo without changing primary status or stored order. The buttons have
   accessible names, selected state, and native keyboard activation; the images
   remain decorative with empty alternative text.
-- Clicking a non-thumbnail recipe photo opens that image in a modal viewer at
-  its intrinsic size, constrained to fit within the viewport without enlarging
+- Owners can save reversible framing independently for each recipe photo and
+  publication cover. Without saved framing, show the complete source using
+  Fit/contain; never crop automatically. A saved frame is used consistently in
+  thumbnails, detail views, instruction references, public recipe views, and
+  the existing single-image viewer. Only the framing editor shows the complete
+  uncropped source while the owner adjusts the frame. Framing changes metadata
+  only; stored WebP variants remain unchanged.
+- The framing editor offers responsive Free, Original, Square, 4:3, 3:2, and
+  16:9 choices in the shared mobile-safe Picklist. Common ratio orientation
+  follows the active crop frame, so portrait framing shows 3:4, 2:3, and 9:16;
+  Original follows the rotated source image. The fitted crop canvas rotates
+  with the source. It supports desktop wheel zoom, touch pinch zoom, image drag
+  within the frame, one counterclockwise 90-degree rotation action, and Reset,
+  Cancel, and Apply, without visible control headings. Recipe photo Apply saves
+  immediately; cover Apply stages
+  framing until the publication cover manager is submitted. Cancel discards the
+  current draft. The ratio picker omits its selection checkmark, and rotation
+  has no numeric degree readout. At narrow mobile widths, the ratio picker,
+  icon-only rotation control, and Reset/Cancel/Apply actions share one compact
+  row when space permits.
+- Clicking a non-thumbnail recipe photo opens that image in a modal viewer with
+  its saved framing, constrained to fit within the viewport without enlarging
   smaller images. A top-right close action, Escape, and clicking outside the
   image dismiss the viewer. Thumbnail buttons continue to select the featured
-  photo and do not open the viewer.
+  photo and do not open the viewer; the viewer has no gallery navigation.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
   for retry. Public recipe photos are signed only after the public-link,
@@ -898,9 +921,10 @@ and a single-line mobile list:
   - **Grid:** Shows the existing cover, publication name, author when present,
     and active recipe count. Authors appear on separate lines on desktop, with
     no publication-type prefix. Uploaded covers preserve the complete image
-    and its aspect ratio inside the cover frame; do not crop to fill. Desktop
-    covers are 72px wide; mobile cards use 48px covers and truncate long titles
-    and authors to one line.
+    and its aspect ratio inside the cover frame by default. An explicitly saved
+    crop uses the owner's framing; do not crop automatically. Desktop covers are
+    72px wide; mobile cards use 48px covers and truncate long titles and authors
+    to one line.
 - **Compact Controls:** Type, View, Sort by, and Sort direction use separate
   icon buttons. The Type button keeps a stable width sized for the Magazines
   label and uses the active filter's icon. View toggles directly between List
@@ -921,8 +945,9 @@ and a single-line mobile list:
   prevents an old free-text query from making the collection appear incomplete.
 - **Publication Recipe Explorer:** Publication detail uses the shared recipe
   explorer controls and List/Grid views scoped to that publication. Grid shows
-  the default recipe photo when available without cropping it. Filter and sort
-  fields follow the recipe field catalog; Slice 18 restores its last-used
+  the default recipe photo when available with Fit/contain unless the owner has
+  saved framing. Filter and sort fields follow the recipe field catalog; Slice
+  18 restores its last-used
   state without losing the publication scope. On mobile, Sort, direction, and
   View form a connected 40px group. List columns is a separate outlined 40px
   button matching Edit's leaf border and paper background. Disconnected
@@ -1259,8 +1284,7 @@ summary below the photos.
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 2 archives
-A user-facing backup mechanism; Supabase backups are not used. Version 3 archives
+user-facing backup mechanism; Supabase backups are not used. Version 5 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
@@ -1270,7 +1294,8 @@ contain:
   membership, portion ratio, Size value/unit, and mention ordinal. Owner
   account IDs, Auth user IDs, admin and
   sign-in-method fields, signed URLs, private Storage paths, and export
-  timestamps are omitted. Product preferences and recipe privacy are retained.
+  timestamps are omitted. Media rows include nullable normalized crop framing;
+  product preferences and recipe privacy are retained.
 - `images/<asset-id>/full.webp` and `images/<asset-id>/thumbnail.webp`: Both
   ready WebP variants for every included media asset, addressed by stable asset
   UUID. Pending uploads and history are excluded.
@@ -1298,9 +1323,13 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Imports accept supported v1, v2, and v3 bundles only after validating archive
-integrity, scope, and required graph data. Version 1 recipes receive a
-synthesized `Main` set and their ingredient rows are assigned to it. Version 2
+Imports accept supported v1 through v5 bundles only after validating archive
+integrity, scope, and required graph data. Versions 1 through 3 default media
+framing to null (Fit/contain); version 4 preserves each media asset's nullable
+normalized crop rectangle at 0-degree rotation, and version 5 preserves its
+quarter-turn rotation. Invalid framing is rejected before applying records.
+Version 1 recipes receive a synthesized `Main` set and their ingredient rows
+are assigned to it. Version 2
 preserves the included set records and row membership. Versions 1 and 2 default
 portion ratio, Size, and mention ordinal fields to null; version 3 preserves
 them and remaps portion markers with their row IDs. Imports are

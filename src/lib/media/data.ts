@@ -1,4 +1,5 @@
 import type { RecipeSupabaseClient } from '../recipes/data';
+import type { CropRect } from './rules';
 
 export type MediaAssetDisplay = {
   id: string;
@@ -10,6 +11,7 @@ export type MediaAssetDisplay = {
   byte_size: number;
   width: number;
   height: number;
+  crop: CropRect | null;
   full_url: string;
   thumbnail_url: string;
 };
@@ -56,7 +58,7 @@ export async function getRecipePhotos(
   const { data, error } = await supabase
     .from('media_assets')
     .select(
-      'id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, full_path, thumbnail_path',
+      'id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, crop, full_path, thumbnail_path',
     )
     .eq('recipe_id', recipeId)
     .eq('asset_type', 'recipe_photo')
@@ -82,7 +84,7 @@ export async function getPrimaryRecipePhotos(
   const { data, error } = await supabase
     .from('media_assets')
     .select(
-      'id, recipe_id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, full_path, thumbnail_path',
+      'id, recipe_id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, crop, full_path, thumbnail_path',
     )
     .in('recipe_id', recipeIds)
     .eq('asset_type', 'recipe_photo')
@@ -105,7 +107,7 @@ export async function getPublicationCover(
   const { data, error } = await supabase
     .from('media_assets')
     .select(
-      'id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, full_path, thumbnail_path',
+      'id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, crop, full_path, thumbnail_path',
     )
     .eq('publication_id', publicationId)
     .eq('asset_type', 'publication_cover')
@@ -135,7 +137,7 @@ export async function getPublicationCovers(
   const { data, error } = await supabase
     .from('media_assets')
     .select(
-      'id, publication_id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, full_path, thumbnail_path',
+      'id, publication_id, asset_type, reference_code, description, position, is_primary, byte_size, width, height, crop, full_path, thumbnail_path',
     )
     .in('publication_id', publicationIds)
     .eq('asset_type', 'publication_cover')

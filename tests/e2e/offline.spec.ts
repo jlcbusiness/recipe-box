@@ -306,6 +306,7 @@ test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ p
     const cachedSnapshot = await readCachedSnapshot();
     expect(cachedSnapshot).not.toContain('/storage/v1/object/sign/');
     expect(cachedSnapshot).not.toMatch(/<img\b/i);
+    expect(cachedSnapshot).not.toMatch(/<image\b/i);
 
     await page.context().setOffline(true);
     await page.goto(`/recipes/${recipeId}`);

@@ -231,6 +231,7 @@ describe('database import planning', () => {
         byte_size: 12,
         width: 10,
         height: 10,
+        crop: { left: 0.1, top: 0.2, width: 0.7, height: 0.6 },
       },
     ];
     const generatedIds = [
@@ -258,6 +259,7 @@ describe('database import planning', () => {
     expect(plan.records.media_assets[0]).toMatchObject({
       id: '55555555-5555-4555-8555-555555555555',
       recipe_id: destinationRecipeId,
+      crop: { left: 0.1, top: 0.2, width: 0.7, height: 0.6 },
     });
     expect(plan.records.recipe_steps[0].content_markdown).toBe(
       'Turn it. [[photo:55555555-5555-4555-8555-555555555555]]-200',

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { CropRect } from '../media/rules';
 import type {
   RecipeIngredient,
   RecipeIngredientSet,
@@ -34,6 +35,7 @@ export type PublicRecipePhoto = {
   description: string;
   width: number;
   height: number;
+  crop: CropRect | null;
   full_url: string;
   thumbnail_url: string;
 };
@@ -85,6 +87,7 @@ type PublicPhotoRow = {
   description: string;
   width: number;
   height: number;
+  crop: CropRect | null;
   full_path: string;
   thumbnail_path: string;
 };
@@ -101,7 +104,7 @@ async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
   const supabase = createPublicDataAdminClient();
   const { data, error } = await supabase
     .from('media_assets')
-    .select('id, description, width, height, full_path, thumbnail_path')
+    .select('id, description, width, height, crop, full_path, thumbnail_path')
     .eq('recipe_id', recipeId)
     .eq('asset_type', 'recipe_photo')
     .eq('status', 'ready')

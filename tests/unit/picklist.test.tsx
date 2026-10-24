@@ -85,6 +85,31 @@ describe('shared picklist portal target', () => {
   });
 });
 
+describe('compact picklist presentation', () => {
+  it('can omit the selected checkmark while retaining option selection semantics', () => {
+    const onSelect = vi.fn();
+    render(
+      <Picklist
+        className="test-picklist"
+        compact
+        label="Aspect ratio"
+        onSelect={onSelect}
+        options={options}
+        showSelectionCheckmark={false}
+        value="starter"
+      />,
+    );
+    const trigger = screen.getByRole('combobox', { name: 'Aspect ratio' });
+
+    expect(trigger.classList.contains('is-compact')).toBe(true);
+    fireEvent.click(trigger);
+
+    const selectedOption = screen.getByRole('option', { name: 'Starter' });
+    expect(selectedOption.getAttribute('aria-selected')).toBe('true');
+    expect(selectedOption.querySelector('.single-picklist-check')).toBeNull();
+  });
+});
+
 describe('shared picklist type-ahead', () => {
   it('refines a short prefix without selecting the active option', () => {
     const { onSelect, trigger } = renderPicklist();

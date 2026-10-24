@@ -96,8 +96,9 @@ publication covers and private or trashed recipe photos are never public.
 Public recipe routes and public allow-list expansion remain out of scope for
 this slice. A single-image modal viewer is in scope for already-authorized
 recipe photos; a navigable full-screen gallery or lightbox remains out of
-scope. Cropping, video, and animated images are also out of scope. Image export
-is delivered in Slice 20; image import remains deferred to Slice 21.
+scope. Optional reversible image framing is delivered separately in DLC 06;
+video and animated images remain out of scope. Image export is delivered in
+Slice 20; image import remains deferred to Slice 21.
 
 ## UI and interaction
 

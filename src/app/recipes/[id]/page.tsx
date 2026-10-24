@@ -83,6 +83,7 @@ function renderInstructionMarkdown(
             <ImageViewer
               alt=""
               buttonLabel="View instruction photo full size"
+              crop={photo.crop}
               key={`${prefix}-photo-${token.id}-${occurrence}`}
               height={photo.height}
               src={photo.full_url}

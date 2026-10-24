@@ -134,6 +134,13 @@ columns.
 - A media asset belongs to exactly one active or trashed recipe or publication
   and is stored in the private media bucket. Each publication has at most one
   cover; each recipe has at most 12 ordered photos and one primary photo.
+  Each ready asset has nullable normalized crop framing; null displays the
+  complete image with Fit/contain, while a saved rectangle and quarter-turn
+  rotation are reversible presentation metadata and never replace the stored
+  WebP variants. Crop updates use the active parent's version and append the
+  corresponding history event. Portable bundle v5 preserves framing and
+  rotation; v4 imports default rotation to 0 degrees, and versions 1 through 3
+  default framing to null.
   Recipe photos also have a unique, persisted two-digit reference code within
   their recipe, independent of gallery order. Instruction shorthand resolves
   through the stable asset UUID; the visible code is only an authoring label.

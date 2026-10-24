@@ -123,6 +123,9 @@ export default async function LibraryPage({
     ...publication,
     id: publication.publication_id,
     cover_image_url: coverImages.get(publication.publication_id)?.thumbnail_url ?? null,
+    cover_crop: coverImages.get(publication.publication_id)?.crop ?? null,
+    cover_image_width: coverImages.get(publication.publication_id)?.width ?? 72,
+    cover_image_height: coverImages.get(publication.publication_id)?.height ?? 96,
   }));
 
   return (
