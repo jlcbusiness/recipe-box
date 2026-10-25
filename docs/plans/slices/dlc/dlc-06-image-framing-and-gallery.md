@@ -53,9 +53,11 @@ the uncropped source is shown only in the framing editor.
   framing is staged with the existing cover manager and commits on Submit;
   Cancel discards it. Failures retain the draft and announce an error.
 - Apply framing to every display of recipe photos and covers, including
-  instruction references, public recipe views, and Explorer thumbnails. Public
-  authorization and publication-cover privacy remain unchanged. Print behavior
-  remains governed by DLC 08; any printed image uses its saved framing.
+  instruction references, public recipe views, and Explorer thumbnails.
+  Preserve the saved crop's aspect ratio within each display's bounds; fixed-size
+  square thumbnail viewports may letterbox the crop but must not stretch it.
+  Public authorization and publication-cover privacy remain unchanged. Print
+  behavior remains governed by DLC 08; any printed image uses its saved framing.
 - The current single-image viewer retains its existing open/close behavior. It
   shows the saved framing, never the uncropped source, and gains no gallery
   navigation. Fine-grained rotation, straightening, filters, and destructive
@@ -109,9 +111,11 @@ the API as beta and recommend pinning the package version.
   verify saved framing at private/public detail, instruction images, Explorer
   thumbnails, and publication views, while the source appears only in the
   framing editor.
-Touch browser tests verify pinch zoom and drag-to-reposition without page
-scrolling or horizontal overflow. Keyboard tests verify ratio selection,
-rotation, visible focus, dialog dismissal, and focus return.
+The user reports pinch, spread, and pan passed on mobile devices. A Fold 6
+Playwright test dispatches touch input and verifies that one-finger panning
+changes image position and two-finger pinch increases image scale. Keyboard
+tests verify ratio selection, rotation, visible focus, dialog dismissal, and
+focus return.
  Accessibility checks cover labels, keyboard operation, status/error
   announcements, dialog dismissal, and control contrast. Existing viewer tests
   verify saved framing without gallery navigation.
@@ -119,9 +123,10 @@ rotation, visible focus, dialog dismissal, and focus return.
   TypeScript, targeted Biome, Markdown lint for changed files, and
   `git diff --check`.
 
-Manual checks cover framing on physical iPhone and Android devices with wide,
-tall, and square images. Geometry, state, privacy, and accessibility remain
 automated.
+Other manual checks cover framing on physical iPhone and Android devices with
+wide, tall, and square images. Geometry, state, privacy, and accessibility
+remain automated.
 
 ## Dependencies and patterns to preserve
 

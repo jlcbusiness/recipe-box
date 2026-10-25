@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseInstructionMarkdown } from '../../src/lib/recipes/instruction-markdown';
 import {
   buildIngredientMentionOptions,
   getIngredientMentionReplacementEnd,
@@ -188,6 +189,49 @@ describe('instruction mention rules', () => {
     expect(updateInstructionMarkdownFromEditor('', '+photo37-w240-left', photos)).toBe(
       `[[photo:${photoId}]]-left-w240`,
     );
+  });
+
+  it('round-trips step-only, no-wrap, and centered photo modifiers', () => {
+    const photos = [{ id: photoId, reference_code: 37 }];
+
+    expect(parseInstructionPhotoModifiers('-center-w240-steponly')).toEqual({
+      alignment: 'center',
+      width: 240,
+      stepOnly: true,
+    });
+    expect(parseInstructionPhotoModifiers('-left-nowrap')).toEqual({
+      alignment: 'left',
+      noWrap: true,
+    });
+    expect(parseInstructionPhotoModifiers('-left-center')).toBeNull();
+    expect(parseInstructionPhotoModifiers('-nowrap-steponly')).toBeNull();
+    expect(parseInstructionMarkdown(`Before [[photo:${photoId}]]-left-w240-steponly`)[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Before ' },
+        {
+          type: 'photo',
+          id: photoId,
+          alignment: 'left',
+          width: 240,
+          stepOnly: true,
+        },
+      ],
+    });
+    expect(parseInstructionMarkdown(`[[photo:${photoId}]]-center-nowrap`)[0]).toEqual({
+      type: 'paragraph',
+      content: [{ type: 'photo', id: photoId, alignment: 'center', noWrap: true }],
+    });
+    expect(getInstructionEditorValue(`[[photo:${photoId}]]-center-w240-steponly`, photos)).toBe(
+      '+photo37-center-w240-steponly',
+    );
+    expect(updateInstructionMarkdownFromEditor('', '+photo37-w240-center-steponly', photos)).toBe(
+      `[[photo:${photoId}]]-center-w240-steponly`,
+    );
+    expect(updateInstructionMarkdownFromEditor('', '+photo37-left-nowrap', photos)).toBe(
+      `[[photo:${photoId}]]-left-nowrap`,
+    );
+    expect(unlinkInstructionPhoto(`[[photo:${photoId}]]-center-w240-steponly`, photoId)).toBe('');
   });
 
   it('resolves a typed photo code when prose immediately follows it', () => {

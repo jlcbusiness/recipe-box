@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import sharp from 'sharp';
 import {
   createTestUser,
@@ -29,6 +29,20 @@ function expectNoStoreOrRevalidation(headers: Record<string, string>) {
   const cacheControl = headers['cache-control'] ?? '';
   expect(cacheControl).toMatch(/no-store|no-cache/);
   expect(cacheControl).toContain('must-revalidate');
+}
+
+async function expectRenderedCenterCrop(image: Locator) {
+  const screenshot = await image.screenshot();
+  const { data, info } = await sharp(screenshot)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  for (const x of [10, info.width - 10]) {
+    const pixelOffset = (Math.floor(info.height / 2) * info.width + x) * info.channels;
+    expect(data[pixelOffset + 1]).toBeGreaterThan(120);
+    expect(data[pixelOffset]).toBeLessThan(140);
+    expect(data[pixelOffset + 2]).toBeLessThan(180);
+  }
 }
 
 async function createRecipe(
@@ -601,19 +615,16 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
-    await page.goto(`/recipes/${recipe.id}/edit`);
+    await page.goto(`/recipes/${recipe.id}`);
+    await expect(page.getByRole('heading', { name: 'Public cooking view' })).toBeVisible();
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page).toHaveURL(`/recipes/${recipe.id}/edit`);
     await page.getByRole('button', { name: 'Manage recipe photos' }).click();
     const photoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
-    const photoBuffer = await sharp({
-      create: {
-        width: 1600,
-        height: 900,
-        channels: 3,
-        background: { r: 126, g: 154, b: 116 },
-      },
-    })
-      .png()
-      .toBuffer();
+    const photoPattern = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="900"><rect width="2400" height="900" fill="#68a07f"/><rect width="300" height="900" fill="#df321d"/><rect x="2100" width="300" height="900" fill="#2668dc"/></svg>',
+    );
+    const photoBuffer = await sharp(photoPattern).png().toBuffer();
     await photoDialog.getByLabel('Upload from device').setInputFiles({
       name: 'public-recipe-photo.png',
       mimeType: 'image/png',
@@ -622,7 +633,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(photoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
     await photoDialog.getByRole('button', { name: 'Adjust framing for photo 1' }).click();
     await page.getByRole('combobox', { name: 'Aspect ratio' }).click();
-    await page.getByRole('option', { name: 'Square' }).click();
+    await page.getByRole('option', { name: '4:3' }).click();
     await page.getByRole('button', { name: 'Apply' }).click();
     await expect(photoDialog.locator('.media-manager-status:visible')).toHaveText(
       'Photo framing saved.',
@@ -640,7 +651,24 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     const savedCrop = framedPhoto.crop;
     expect(savedCrop).not.toBeNull();
     if (!savedCrop) throw new Error('Expected saved public recipe framing.');
+    const savedCropAspectRatio =
+      (savedCrop.width * framedPhoto.width) / (savedCrop.height * framedPhoto.height);
+    expect(savedCrop.left).toBeGreaterThan(300 / 2400);
+    expect(savedCrop.left + savedCrop.width).toBeLessThan(2100 / 2400);
     await photoDialog.getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('link', { name: 'Back to view' }).click();
+    await expect(page).toHaveURL(`/recipes/${recipe.id}`);
+    const cachedGalleryImage = page.locator('.recipe-photo-feature-image');
+    await expect(cachedGalleryImage).toBeVisible();
+    expect(await cachedGalleryImage.getAttribute('viewBox')).toBe(
+      `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,
+    );
+    const galleryBounds = await cachedGalleryImage.boundingBox();
+    expect(galleryBounds).not.toBeNull();
+    if (!galleryBounds) throw new Error('Expected the cropped gallery image to have bounds.');
+    expect(galleryBounds.width / galleryBounds.height).toBeCloseTo(savedCropAspectRatio, 2);
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page).toHaveURL(`/recipes/${recipe.id}/edit`);
     const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
     await instruction.focus();
     await instruction.evaluate((element) => {
@@ -667,6 +695,12 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(savedStepsResponse.ok(), await savedStepsResponse.text()).toBeTruthy();
     const savedSteps = (await savedStepsResponse.json()) as { content_markdown: string }[];
     expect(savedSteps.some((step) => step.content_markdown.includes('[[photo:'))).toBe(true);
+    const privateGalleryImage = page.locator('.recipe-photo-feature-image');
+    await expect(privateGalleryImage).toBeVisible();
+    expect(await privateGalleryImage.getAttribute('viewBox')).toBe(
+      `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,
+    );
+    await expectRenderedCenterCrop(privateGalleryImage);
 
     await page.goto(`/r/${publicId}`);
     await expect(
@@ -680,6 +714,16 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     const instructionPhoto = page.locator('.recipe-instruction-photo .framed-media-image');
     await expect(instructionPhoto).toBeVisible();
     await expect(instructionPhoto).toHaveAttribute('aria-hidden', 'true');
+    const instructionPhotoBounds = await instructionPhoto.boundingBox();
+    expect(instructionPhotoBounds).not.toBeNull();
+    if (!instructionPhotoBounds) {
+      throw new Error('Expected the cropped instruction photo to have bounds.');
+    }
+    expect(instructionPhotoBounds.width / instructionPhotoBounds.height).toBeCloseTo(
+      savedCropAspectRatio,
+      2,
+    );
+    await expectRenderedCenterCrop(instructionPhoto);
     const publicPhotoViewBox = await instructionPhoto.getAttribute('viewBox');
     expect(publicPhotoViewBox).toBe(
       `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,

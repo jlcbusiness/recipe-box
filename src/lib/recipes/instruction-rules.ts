@@ -43,14 +43,16 @@ const temperaturePattern = /(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b/giu;
 const stoveHeatLabelPattern =
   /(?<![\p{L}\p{N}_])!([\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])/giu;
 const photoPattern =
-  /\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\]((?:-(?:left|w?[1-9]\d{0,3})){0,2})/giu;
+  /\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\]((?:-(?:left|center|steponly|nowrap|w?[1-9]\d{0,3})){0,5})/giu;
 const photoPrefixPattern = /\[\[photo:/giu;
 const readablePhotoPattern =
-  /(?<![\p{L}\p{N}_])\+photo(\d{2})((?:-(?:left|w[1-9]\d{0,3})){0,2})(?![\p{N}_-])/u;
+  /(?<![\p{L}\p{N}_])\+photo(\d{2})((?:-(?:left|center|steponly|nowrap|w[1-9]\d{0,3})){0,5})(?![\p{N}_-])/u;
 
 export type InstructionPhotoModifiers = {
-  alignment: 'left' | 'right';
+  alignment: 'left' | 'right' | 'center';
   width?: number;
+  stepOnly?: boolean;
+  noWrap?: boolean;
 };
 
 export function parseInstructionPhotoModifiers(suffix: string): InstructionPhotoModifiers | null {
@@ -62,10 +64,23 @@ export function parseInstructionPhotoModifiers(suffix: string): InstructionPhoto
   let alignment: InstructionPhotoModifiers['alignment'] = 'right';
   let hasAlignment = false;
   let width: number | undefined;
+  let stepOnly = false;
+  let noWrap = false;
   for (const part of parts) {
-    if (part === 'left' && !hasAlignment) {
-      alignment = 'left';
+    if (part === 'left' || part === 'center') {
+      if (hasAlignment) return null;
+      alignment = part;
       hasAlignment = true;
+      continue;
+    }
+
+    if (part === 'steponly' && !stepOnly) {
+      stepOnly = true;
+      continue;
+    }
+
+    if (part === 'nowrap' && !noWrap) {
+      noWrap = true;
       continue;
     }
 
@@ -76,11 +91,20 @@ export function parseInstructionPhotoModifiers(suffix: string): InstructionPhoto
     width = Number(widthText);
   }
 
-  return { alignment, ...(width === undefined ? {} : { width }) };
+  if (stepOnly && noWrap) {
+    return null;
+  }
+
+  return {
+    alignment,
+    ...(width === undefined ? {} : { width }),
+    ...(stepOnly ? { stepOnly } : {}),
+    ...(noWrap ? { noWrap } : {}),
+  };
 }
 
 function instructionPhotoModifierSuffix(modifiers: InstructionPhotoModifiers): string {
-  return `${modifiers.alignment === 'left' ? '-left' : ''}${modifiers.width ? `-w${modifiers.width}` : ''}`;
+  return `${modifiers.alignment === 'right' ? '' : `-${modifiers.alignment}`}${modifiers.width ? `-w${modifiers.width}` : ''}${modifiers.stepOnly ? '-steponly' : ''}${modifiers.noWrap ? '-nowrap' : ''}`;
 }
 
 function instructionPhotoMarker(id: string, modifiers: InstructionPhotoModifiers): string {
@@ -344,7 +368,7 @@ export function updateInstructionMarkdownFromEditor(
   );
 
   const markdownWithPhotos = updatedMarkdown.replace(
-    /(?<![\p{L}\p{N}_])\+photo(\d{2})((?:-(?:left|w[1-9]\d{0,3})){0,2})(?![\p{N}_-])/gu,
+    /(?<![\p{L}\p{N}_])\+photo(\d{2})((?:-(?:left|center|steponly|nowrap|w[1-9]\d{0,3})){0,5})(?![\p{N}_-])/gu,
     (match, code: string, suffix: string) => {
       const photoId = photoIdsByCode.get(code);
       const modifiers = parseInstructionPhotoModifiers(suffix);
@@ -481,7 +505,10 @@ export function unlinkInstructionPhoto(markdown: string, assetId: string): strin
   }
   const escapedId = assetId.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   return markdown.replace(
-    new RegExp(`\\[\\[photo:${escapedId}\\]\\](?:-[1-9]\\d{0,3})?`, 'giu'),
+    new RegExp(
+      `\\[\\[photo:${escapedId}\\]\\](?:-(?:left|center|steponly|nowrap|w?[1-9]\\d{0,3})){0,5}`,
+      'giu',
+    ),
     '',
   );
 }

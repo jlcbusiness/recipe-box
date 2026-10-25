@@ -127,8 +127,11 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
 
-    await expect(page.getByRole('link', { name: 'Administration' })).toBeVisible();
-    await page.getByRole('link', { name: 'Administration' }).click();
+    await page.locator('.account-menu-trigger').click();
+    await expect(
+      page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
+    ).toBeVisible();
+    await page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }).click();
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
     await page.getByLabel('Invite email').fill(recipient);
     await page.getByRole('button', { name: 'Send invitation' }).click();
@@ -361,8 +364,11 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
-    await expect(page.getByRole('link', { name: 'Administration' })).toBeVisible();
-    await page.getByRole('link', { name: 'Administration' }).click();
+    await page.locator('.account-menu-trigger').click();
+    await expect(
+      page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
+    ).toBeVisible();
+    await page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }).click();
 
     const memberRow = page.getByRole('row', { name: new RegExp(member.email) });
     await expect(memberRow).toContainText('Member');
@@ -384,8 +390,11 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await page.getByLabel('Password').fill(member.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
-    await expect(page.getByRole('link', { name: 'Administration' })).toBeVisible();
-    await page.getByRole('link', { name: 'Administration' }).click();
+    await page.locator('.account-menu-trigger').click();
+    await expect(
+      page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
+    ).toBeVisible();
+    await page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }).click();
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
   } finally {
     await deleteTestUser(request, member);

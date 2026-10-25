@@ -89,7 +89,15 @@ function renderInstructionMarkdown(
                   key={`${prefix}-photo-${token.id}-${occurrence}`}
                   height={photo.height}
                   src={photo.full_url}
-                  triggerClassName={`recipe-instruction-photo${token.alignment === 'left' ? ' is-left' : ''}`}
+                  triggerClassName={[
+                    'recipe-instruction-photo',
+                    token.alignment === 'left' ? 'is-left' : '',
+                    token.alignment === 'center' ? 'is-center' : '',
+                    token.stepOnly ? 'is-step-only' : '',
+                    token.noWrap ? 'is-nowrap' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   triggerStyle={{ width: token.width ?? 200 }}
                   width={photo.width}
                 />,
@@ -203,7 +211,7 @@ function renderInstructionMarkdown(
                 token.type === 'mention'
                   ? `${token.type}:${token.id}`
                   : token.type === 'photo'
-                    ? `${token.type}:${token.id}:${token.width ?? ''}:${token.alignment ?? ''}`
+                    ? `${token.type}:${token.id}:${token.width ?? ''}:${token.alignment ?? ''}:${token.stepOnly ?? false}:${token.noWrap ?? false}`
                     : token.type === 'link'
                       ? `${token.type}:${token.url}:${token.label}`
                       : `${token.type}:${token.value}`,

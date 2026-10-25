@@ -160,7 +160,9 @@ time is broken down into specific categories:
   publication cover. Without saved framing, show the complete source using
   Fit/contain; never crop automatically. A saved frame is used consistently in
   thumbnails, detail views, instruction references, public recipe views, and
-  the existing single-image viewer. Only the framing editor shows the complete
+  the existing single-image viewer, preserving the saved crop's aspect ratio
+  within each display's bounds. Fixed square thumbnail viewports may letterbox a
+  crop but must not stretch it. Only the framing editor shows the complete
   uncropped source while the owner adjusts the frame. Framing changes metadata
   only; stored WebP variants remain unchanged.
 - The framing editor offers responsive Free, Original, Square, 4:3, 3:2, and
@@ -630,20 +632,27 @@ preserved.
     for that recipe, displayed at the thumbnail's lower-right corner; the code
     does not change when photos are reordered. Selecting a thumbnail replaces
     `+p` at the caret with `+photoNN`, where `NN` is the photo's code. Typing a
-    valid `+photoNN` directly also references that photo. Appending `-w<width>`
-    sets its display width in pixels, such as `+photo37-w200`; `-left` aligns
-    it left instead of the default right. The modifiers can appear in either
-    order. Without a width suffix, use 200px. Existing saved numeric width
-    suffixes remain readable; new editor input uses the `-w<width>` form. Store
-    the stable asset UUID and optional width and alignment in instruction
-    content, never a URL, storage path, or image bytes. In readers, the photo
-    is aligned with its exact inline reference. Text before the reference uses
-    the full line where it fits. A photo marker at the beginning of a new
-    authored line starts on the following rendered line; inline markers retain
-    the existing wrapping behavior. Text after an inline photo and later
-    photo-free instruction steps wrap beside the float. On narrow screens
-    photos are left-aligned blocks. Keep at least 1mm vertical separation below
-    every instruction photo. A later instruction step containing another photo clears below the
+    valid `+photoNN` directly also references that photo. `-w<width>` sets its
+    display width in pixels, such as `+photo37-w200`; `-left` aligns it left,
+    `-center` centers it, `-steponly` limits text wrapping to that instruction
+    step, and `-nowrap` places it on its own line so prose does not flow beside
+    it. `-left` and `-center` are mutually exclusive; `-steponly` and `-nowrap`
+    cannot be combined. Authors may enter modifiers in any order. The editor
+    serializes them in alignment, width, step-only, no-wrap order. Without a
+    width suffix, use 200px. Existing saved numeric width suffixes remain
+    readable; new editor input uses the `-w<width>` form. Store the stable asset
+    UUID and optional layout modifiers in instruction content, never a URL,
+    storage path, or image bytes. In readers, the photo is aligned with its exact
+    inline reference. Text before the reference uses the full line where it
+    fits. A photo marker at the beginning of a new authored line starts on the
+    following rendered line; inline markers retain the existing wrapping
+    behavior. By default, text after an inline photo and later photo-free
+    instruction steps wrap beside the float. `-steponly` contains the float
+    within its own step, so following steps begin below it. `-center` and
+    `-nowrap` render standalone images. On narrow screens, floated photos become
+    left-aligned blocks while explicit centered and no-wrap alignment remains
+    respected. Keep at least 1mm vertical separation below every instruction
+    photo. A later instruction step containing another photo clears below the
     existing float before placing its own image. Floats end with the instruction
     list. The photo is supplemental and decorative, with empty alternative text
     and no caption or description. Removing a referenced photo requires one

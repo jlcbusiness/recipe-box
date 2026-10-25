@@ -15,7 +15,9 @@ export type InstructionInlineToken =
       type: 'photo';
       id: string;
       width?: number;
-      alignment?: 'left';
+      alignment?: 'left' | 'center';
+      stepOnly?: boolean;
+      noWrap?: boolean;
       lineBreakBefore?: boolean;
     }
   | { type: 'link'; label: string; url: string }
@@ -29,7 +31,7 @@ export type InstructionMarkdownBlock =
   | { type: 'list'; ordered: boolean; items: InstructionInlineToken[][] };
 
 const inlineTokenPattern =
-  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|(\[\[duration:([^\]\r\n]+)\]\])|(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b|(?<![\p{L}\p{N}_])!(?:[\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])|(\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-(?:left|w?[1-9]\d{0,3})){0,2})|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
+  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|(\[\[duration:([^\]\r\n]+)\]\])|(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b|(?<![\p{L}\p{N}_])!(?:[\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])|(\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-(?:left|center|steponly|nowrap|w?[1-9]\d{0,3})){0,5})|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
 
 function formatTemperature(
   value: string,
@@ -104,7 +106,9 @@ function parseInstructionInline(
         type: 'photo',
         id: match[17].toLocaleLowerCase(),
         ...(modifiers?.width === undefined ? {} : { width: modifiers.width }),
-        ...(modifiers?.alignment === 'left' ? { alignment: 'left' } : {}),
+        ...(modifiers?.alignment === 'right' ? {} : { alignment: modifiers?.alignment }),
+        ...(modifiers?.stepOnly ? { stepOnly: true } : {}),
+        ...(modifiers?.noWrap ? { noWrap: true } : {}),
         ...(value.lastIndexOf('\n', index - 1) >= previousIndex &&
         value.slice(value.lastIndexOf('\n', index - 1) + 1, index).trim() === ''
           ? { lineBreakBefore: true }

@@ -15,6 +15,7 @@ import {
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
+import { createUuid } from '../../lib/uuid';
 import { usePicklistMenu } from '../picklist';
 
 type MeasurementCategory = 'units' | 'count' | 'informal' | 'judgment';
@@ -64,7 +65,7 @@ const weightPicklistOptions = unitOptions('weight');
 
 function createMeasurement(type: MeasurementType): MeasurementDraft {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     type,
     quantity: '',
     unitCode: type === 'volume' ? 'cup' : type === 'weight' ? 'g' : '',

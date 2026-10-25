@@ -1,3 +1,4 @@
+import { createUuid } from '../uuid';
 import {
   formatQuantityRange,
   type MeasurementDraft,
@@ -21,7 +22,7 @@ function measurementFor(
 ): MeasurementDraft {
   return (
     measurements.find((measurement) => measurement.type === type) ?? {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       type,
       quantity: '',
       unitCode: type === 'volume' ? 'cup' : 'g',

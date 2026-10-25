@@ -13,6 +13,7 @@ import {
   replaceInstructionEditorRange,
   updateInstructionMarkdownFromEditor,
 } from '../../lib/recipes/instruction-rules';
+import { createUuid } from '../../lib/uuid';
 import { FramedMediaImage } from '../media/framed-media-image';
 import { useReorderDrag } from './use-reorder-drag';
 
@@ -166,7 +167,7 @@ export function InstructionStepsEditor({
       mentionOptions,
     );
     if (stepId === placeholder.id && nextMarkdown.trim()) {
-      const promotedStep = { id: crypto.randomUUID(), markdown: nextMarkdown, plainText: '' };
+      const promotedStep = { id: createUuid(), markdown: nextMarkdown, plainText: '' };
       newStepIds.current.add(promotedStep.id);
       pendingFocus.current = {
         stepId: promotedStep.id,
@@ -393,7 +394,7 @@ export function InstructionStepsEditor({
       return;
     }
 
-    const newStep = { id: crypto.randomUUID(), markdown: '', plainText: '' };
+    const newStep = { id: createUuid(), markdown: '', plainText: '' };
     newStepIds.current.add(newStep.id);
     const nextSteps = [...editableSteps];
     nextSteps.splice(sourceIndex + 1, 0, newStep);

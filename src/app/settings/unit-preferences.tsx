@@ -251,7 +251,8 @@ export function UnitPreferences({
   }
 
   function updateAllEmphasis(turnedOff: boolean) {
-    const colors = turnedOff
+    const colors: Record<'ingredient' | 'temperature' | 'duration', InstructionEmphasisColor> =
+      turnedOff
       ? { ingredient: 'none', temperature: 'none', duration: 'none' }
       : defaultInstructionEmphasis;
     setPreferences((current) => ({

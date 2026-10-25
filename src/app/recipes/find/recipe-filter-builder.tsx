@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RecipeSearchFilter, RecipeSearchFilterField } from '../../../lib/recipes/search';
+import { createUuid } from '../../../lib/uuid';
 import { Picklist } from '../../picklist';
 import { MultiPicklist } from '../multi-picklist';
 import { useRecipeSearchMode } from './recipe-search-tabs';
@@ -271,7 +272,7 @@ export function RecipeFilterBuilder({
 
   function addRule() {
     if (draftsRef.current.length >= maxFilters) return;
-    const id = crypto.randomUUID();
+    const id = createUuid();
     draftsRef.current = [
       ...draftsRef.current,
       { id, field: '', operator: 'contains', value: '', valueTo: '' },

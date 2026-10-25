@@ -40,6 +40,21 @@ Control key.
   a new step or restores an existing step to its text when editing began.
 - Instruction numbers reflect their current order and update after reordering.
 
+## Instruction encoding
+
+- Type `+p` to open the recipe photo picker, or type a photo code such as `+photo37`.
+- Add `-w<width>` for a pixel width, such as `+photo37-w240`. The default is 200px; existing numeric suffixes
+  such as `-240` remain readable.
+- Add `-left` or `-center` to choose alignment. Add `-steponly` to keep text from later instruction steps below
+  the photo.
+- Add `-nowrap` to put the photo on its own line so prose does not flow beside it. `-steponly` and `-nowrap` cannot be combined.
+- Photo modifiers can be entered in any order. `-left` and `-center` cannot be combined.
+- Use `F!400` or `C!200` for temperatures, `!medium low!` for stove heat, and `=10 minutes=` for a duration.
+- In instruction text, type `#` and choose a suggestion to link an ingredient. In Pairs With, choose a recipe
+  suggestion to create a recipe link; ordinary text remains unlinked.
+- Markdown supports `**bold**`, `*italic*`, `~~strikethrough~~`, `` `code` ``,
+  `[label](https://example.com)`, headings, and ordered or unordered lists.
+
 ## Recipe picklists
 
 - Press `Escape` while a recipe picklist is open to close it and return focus to its trigger.

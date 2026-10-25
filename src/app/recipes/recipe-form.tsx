@@ -47,6 +47,7 @@ import {
   clearConditionalValuesForStateChange,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
+import { createUuid } from '../../lib/uuid';
 import {
   createOrGetRecipePicklistValue,
   type EditorPicklistCategory,
@@ -432,7 +433,7 @@ export function RecipeForm({
 
   function addInstructionIngredient(name: string, ingredientId: string | null) {
     const ingredient = {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       name: name.trim(),
     };
     const ingredientRow: IngredientRowDraft = {
@@ -590,7 +591,7 @@ export function RecipeForm({
     const setIdMap = new Map(
       normalizedSets.map((set) => [
         set.id,
-        /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(set.id) ? set.id : crypto.randomUUID(),
+        /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(set.id) ? set.id : createUuid(),
       ]),
     );
     const submittedSets = normalizedSets.map((set) => ({
@@ -620,7 +621,7 @@ export function RecipeForm({
       instructionPayload = serializeInstructionSteps(
         instructionSteps.map((step) => ({
           ...step,
-          id: step.id === 'instruction-draft' ? crypto.randomUUID() : step.id,
+          id: step.id === 'instruction-draft' ? createUuid() : step.id,
           plainText: instructionPlainText(step.markdown),
         })),
         ingredientRows.map((row) => row.id),
@@ -658,7 +659,7 @@ export function RecipeForm({
       onKeyDown={(event) => {
         if (
           event.key === 'Enter' &&
-          !(event.target instanceof HTMLButtonElement && event.target.type === 'submit') &&
+          !(event.target instanceof HTMLButtonElement) &&
           !(event.target instanceof HTMLTextAreaElement)
         ) {
           event.preventDefault();

@@ -159,7 +159,44 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Workspace' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Trash', exact: true })).toBeVisible();
+    const desktopTrashLink = page.getByRole('link', { name: 'Trash', exact: true });
+    await expect(desktopTrashLink).toBeVisible();
+    await expect(desktopTrashLink.locator('.private-nav-mobile-icon')).toBeHidden();
+    await expect(desktopTrashLink).toHaveAttribute('href', '/recipes/trash');
+    const helpLink = page.getByRole('link', { name: 'Help' });
+    await expect(helpLink).toHaveAttribute('href', '/help');
+    await expect(helpLink).toHaveClass(/private-nav-utility-link/u);
+    const [searchBounds, trashBounds] = await Promise.all([
+      page.getByRole('link', { name: 'Search' }).boundingBox(),
+      desktopTrashLink.boundingBox(),
+    ]);
+    expect(searchBounds).not.toBeNull();
+    expect(trashBounds).not.toBeNull();
+    if (!searchBounds || !trashBounds) {
+      throw new Error('Expected desktop Search and Trash navigation links.');
+    }
+    expect(trashBounds.y).toBeGreaterThan(searchBounds.y);
+    await helpLink.click();
+    await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Instruction encoding' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Keyboard shortcuts' })).toBeVisible();
+    await expect(page.getByText('+photo37-w240-left-steponly')).toBeVisible();
+    await expect(page.getByText('#sugar-sauce-1', { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Editing ingredients', level: 3 }),
+    ).toBeVisible();
+    await expect(page.locator('.help-shortcut-groups ul').first()).toHaveCSS(
+      'list-style-type',
+      'disc',
+    );
+    await expect(
+      page.locator('.help-shortcut-groups li code').filter({ hasText: 'Ctrl+ArrowUp' }).first(),
+    ).toBeVisible();
+    const helpA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(helpA11y.violations).toEqual([]);
+    await page.getByRole('link', { name: 'Library' }).click();
     const accountTrigger = page.locator('.account-menu-trigger');
     await expect(accountTrigger).toHaveAttribute('aria-label', `Account options for ${user.email}`);
     await expect(accountTrigger.locator('.account-menu-email')).toHaveText(
@@ -179,6 +216,9 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await accountTrigger.click();
     await expect(page.locator('.account-menu-panel').getByText(user.email)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(
+      page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
+    ).toHaveCount(0);
     await accountTrigger.click();
     await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
 
@@ -197,12 +237,27 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(mobileLibraryLink).toHaveCSS('background-color', 'rgb(237, 244, 233)');
     await expect(mobileLibraryLink).toHaveCSS('color', 'rgb(56, 96, 68)');
     const mobileSearchLink = page.getByRole('link', { name: 'Search' });
+    const mobileHelpLink = page.getByRole('link', { name: 'Help' });
     const mobileSettingsLink = page.getByRole('link', { name: 'Settings' });
     await expect(mobileLibraryLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileSearchLink.locator('.private-nav-mobile-icon')).toBeVisible();
+    await expect(mobileHelpLink.locator('svg')).toBeVisible();
+    await expect(mobileHelpLink).toHaveCSS('order', '5');
     await expect(mobileSettingsLink.locator('svg')).toBeVisible();
     const mobileTrashLink = page.getByRole('link', { name: 'Trash', exact: true });
     await expect(mobileTrashLink).toBeVisible();
+    await expect(mobileTrashLink.locator('.private-nav-mobile-icon')).toBeVisible();
+    await expect(mobileTrashLink).toHaveCSS('order', '1');
+    await mobileHelpLink.click();
+    await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      390,
+    );
+    const mobileHelpA11y = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(mobileHelpA11y.violations).toEqual([]);
+    await page.getByRole('link', { name: 'Library' }).click();
     const mobileNavBounds = await page
       .getByRole('navigation', { name: 'Main navigation' })
       .boundingBox();

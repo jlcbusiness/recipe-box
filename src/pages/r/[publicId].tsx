@@ -77,7 +77,15 @@ function renderInstructionBlocks(
                   height={photo.height}
                   key={`${prefix}-photo-${token.id}-${occurrence}`}
                   src={photo.full_url}
-                  triggerClassName={`recipe-instruction-photo${token.alignment === 'left' ? ' is-left' : ''}`}
+                  triggerClassName={[
+                    'recipe-instruction-photo',
+                    token.alignment === 'left' ? 'is-left' : '',
+                    token.alignment === 'center' ? 'is-center' : '',
+                    token.stepOnly ? 'is-step-only' : '',
+                    token.noWrap ? 'is-nowrap' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   triggerStyle={{ width: token.width ?? 200 }}
                   width={photo.width}
                 />,

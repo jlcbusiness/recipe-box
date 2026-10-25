@@ -225,11 +225,11 @@ content-sized triggers and the existing save action and status. A mobile-only
 Hand control reverses compact navigation order for Right. Do not add a second
 preference form. Future settings domains become sections as their features are
 implemented; do not display empty placeholder sections or links.
-The private navigation keeps Settings, Trash, and Account. On desktop, place
-Settings after Trash and before Account in the pinned sidebar. On mobile, show
-icon-only links for Library, Find Recipes, Trash, and Settings, with Settings
-after Trash and before the Account control. Give each icon link a descriptive
-accessible name and tooltip.
+The private navigation keeps Settings, Trash, Help, and Account. On desktop,
+place Settings after Trash and before Account in the pinned sidebar; Help
+follows Search in the main navigation. On mobile, show icon-only links for
+Library, Find Recipes, Trash, Settings, and Help, with Help after Search and
+before Account. Give each icon link a descriptive accessible name and tooltip.
 
 The Library icon on mobile and label on desktop stay leaf green as a distinct
 destination. When Library is current, add a pale green surface, a desktop
@@ -241,7 +241,9 @@ The account menu uses the same options everywhere. On desktop, show the account
 email at the bottom of the pinned left navigation, after the Trash and Settings
 utility links. On mobile, show a 48px circular initials button at the right of
 the navigation. Both controls open the same account menu with the email and
-Sign out action.
+Sign out action. Admin accounts also find Administration in this menu;
+non-admin accounts do not see the link. The `/admin` page and its server actions
+continue to enforce admin authorization independently.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
 compact, while labeled rows, picklist triggers, popup options, standalone
@@ -830,9 +832,10 @@ with Cancel and Submit right-aligned. Canceling the system picker leaves the
 management pane open.
 
 Recipe detail presents the primary photo centered before recipe content,
-preserving its aspect ratio and capped at 280px high on desktop, 240px on tablet,
-and 144px on narrow mobile. Apply saved framing to the featured photo and its
-viewer; with no saved crop, preserve the complete image. Square thumbnail
+preserving the source or saved-crop aspect ratio and capped at 280px high on
+desktop, 240px on tablet, and 144px on narrow mobile. Apply saved framing to the
+featured photo and its viewer without stretching the crop; with no saved crop,
+preserve the complete image. Square thumbnail
 buttons for all photos, including the featured photo, sit below it. Selecting
 one temporarily changes the featured photo without changing primary status or
 stored order. The numbered controls

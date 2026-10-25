@@ -4,6 +4,7 @@ import {
   defaultInstructionEmphasis,
   isInstructionEmphasisColor,
 } from '../../lib/recipes/instruction-emphasis';
+import type { InstructionEmphasisColor } from '../../lib/recipes/instruction-emphasis';
 import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
@@ -49,9 +50,10 @@ export async function saveUnitPreferences(
     if (allEmphasisDisabled !== 'true' && allEmphasisDisabled !== 'false') {
       return { status: 'error', message: 'Choose a valid instruction emphasis setting.' };
     }
-    const colors = allEmphasisDisabled === 'true'
-      ? { ingredient: 'none', temperature: 'none', duration: 'none' }
-      : defaultInstructionEmphasis;
+    const colors: Record<'ingredient' | 'temperature' | 'duration', InstructionEmphasisColor> =
+      allEmphasisDisabled === 'true'
+        ? { ingredient: 'none', temperature: 'none', duration: 'none' }
+        : defaultInstructionEmphasis;
 
     const supabase = await createClient();
     const { data, error: authError } = await supabase.auth.getUser();

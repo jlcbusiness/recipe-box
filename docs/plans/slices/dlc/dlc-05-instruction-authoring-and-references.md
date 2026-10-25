@@ -78,12 +78,15 @@ retain readable text and see the image in its recipe context.
   right and keep it stable when gallery order changes. Selecting a photo
   replaces `+p` at the caret with `+photoNN`; typing a valid code directly
   also references that photo. An optional `-w<width>` suffix sets display width
-  in pixels, such as `+photo37-w200`; `-left` aligns it to the left instead of
-  the default right. The modifiers can appear in either order, such as
-  `+photo37-left-w200` or `+photo37-w200-left`. The default width is 200px.
-  Existing saved numeric suffixes such as `-200` remain readable; new editor
-  input uses and stores the `-w<width>` form. This inserts a reference to the
-  existing asset; it does not upload, duplicate, or crop an image.
+  in pixels, such as `+photo37-w200`; `-left` aligns it left, `-center` centers
+  it, `-steponly` limits text wrapping to the current step, and `-nowrap`
+  places the photo on its own line. `-left` and `-center` are mutually
+  exclusive; `-steponly` and `-nowrap` cannot be combined. Modifiers may be
+  entered in any order and serialize as alignment, width, step-only, no-wrap.
+  The default width is 200px. Existing saved numeric suffixes such as `-200`
+  remain readable; new editor input uses and stores the `-w<width>` form. This
+  inserts a reference to the existing asset; it does not upload, duplicate, or
+  crop an image.
 - Store structured annotation and media references in the instruction content
   using stable identities and readable source text. Never store signed URLs,
   Storage paths, or binary data in recipe content. The plain-text projection
@@ -206,16 +209,19 @@ retain readable text and see the image in its recipe context.
   control, and None styling in the private reader.
 - **Editor workflow:** Desktop and mobile tests cover typing and removing
   duration delimiters, opening the gallery picker with `+p`, selecting and
-  canceling a photo, insertion at the caret, `-w<width>` and `-left` modifiers
-  in either order, legacy numeric-width compatibility, repeated
+  canceling a photo, insertion at the caret, `-w<width>`, `-left`, `-center`,
+  `-steponly`, and `-nowrap` modifiers in any order, legacy numeric-width
+  compatibility, repeated
   use, removal of a reference, save/reload, validation
   and version-conflict draft retention, keyboard focus, visible focus, labels,
   pointer/touch, and axe checks.
 - **Responsive geometry:** Assert that each image aligns with its inline marker,
-  later photo-free steps wrap beside an existing float when space remains, and
-  left-aligned images stay on the left, every photo has at least 1mm of bottom
-  spacing, and a later photo-bearing step clears below it. Also assert no overflow or
-  overlap around the existing reader reflow boundary and at an intermediate
+  later photo-free steps wrap beside an existing float by default or start
+  below it with `-steponly`, `-nowrap` prose begins below its standalone image,
+  centered images align with the step, and left-aligned images stay on the left;
+  every photo has at least 1mm of bottom spacing, and a later photo-bearing step
+  clears below it. Also assert no overflow or overlap around the existing reader
+  reflow boundary and at an intermediate
   width where the step content wraps. Screenshots supplement these geometry
   and behavior assertions.
 

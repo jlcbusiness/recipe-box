@@ -58,7 +58,7 @@ export function ratioValue(
 
 export function ratioLabel(choice: AspectRatioChoice, isPortrait: boolean) {
   if (!isPortrait || choice === 'free' || choice === 'original' || choice === 'square') {
-    return choice;
+    return ratioOptions.find((option) => option.value === choice)?.label ?? choice;
   }
   if (choice === '4:3') return '3:4';
   if (choice === '3:2') return '2:3';
@@ -105,7 +105,6 @@ export function ImageCropEditor({
   const stageRef = useRef<HTMLDivElement>(null);
   const stageViewportRef = useRef<HTMLDivElement>(null);
   const resetToFullRef = useRef(false);
-  const resetRotationRef = useRef<CropRotation>(0);
   const [resetRequest, setResetRequest] = useState(0);
   const zoomRef = useRef(1);
   const pendingRotationRef = useRef(false);
@@ -154,64 +153,6 @@ export function ImageCropEditor({
   }, []);
 
   useEffect(() => {
-    const cropper = cropperRef.current;
-    if (
-      resetRequest === 0 ||
-      !resetToFullRef.current ||
-      ratioChoice !== 'free' ||
-      rotation !== 0 ||
-      !ready ||
-      !cropper
-    ) {
-      return;
-    }
-    const boundary = cropper.getState()?.boundary;
-    if (
-      !boundary ||
-      Math.abs(boundary.width - stageSize.width) >= 1 ||
-      Math.abs(boundary.height - stageSize.height) >= 1
-    ) {
-      return;
-    }
-
-    const activeCropper = cropper;
-    const rotationToUndo = resetRotationRef.current;
-    if (rotationToUndo !== 0) {
-      activeCropper.rotateImage((360 - rotationToUndo) % 360, {
-        immediately: true,
-        transitions: false,
-      });
-      resetRotationRef.current = 0;
-    }
-    let cancelled = false;
-    async function resetToFullImage() {
-      await activeCropper.reset();
-      if (cancelled || cropperRef.current !== activeCropper) {
-        return;
-      }
-      activeCropper.setCoordinates(
-        { left: 0, top: 0, width, height },
-        { immediately: true, transitions: false },
-      );
-      resetToFullRef.current = false;
-      zoomRef.current = 1;
-    }
-    void resetToFullImage();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    height,
-    ratioChoice,
-    ready,
-    resetRequest,
-    rotation,
-    stageSize.height,
-    stageSize.width,
-    width,
-  ]);
-
-  useEffect(() => {
     const stage = stageRef.current;
     if (!stage) {
       return;
@@ -243,10 +184,32 @@ export function ImageCropEditor({
     return () => document.removeEventListener('wheel', handleWheel, true);
   }, []);
 
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const activeStage = stage;
+
+    function markBackgroundImageDecorative() {
+      const backgroundImage = activeStage.querySelector<HTMLImageElement>(
+        'img.advanced-cropper-background-image',
+      );
+      if (backgroundImage) {
+        backgroundImage.alt = '';
+      }
+    }
+
+    markBackgroundImageDecorative();
+    const observer = new MutationObserver(markBackgroundImageDecorative);
+    observer.observe(activeStage, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   function updateZoom(cropper: CropperRef) {
     const state = cropper.getState();
     const coordinates = cropper.getCoordinates();
-    if (coordinates) {
+    if (coordinates && rotationRef.current === 0) {
       const nextIsPortrait = isPortraitCoordinates(coordinates);
       setIsPortraitCrop((current) => (current === nextIsPortrait ? current : nextIsPortrait));
     }
@@ -258,6 +221,16 @@ export function ImageCropEditor({
   }
 
   function onReady(cropper: CropperRef) {
+    if (resetToFullRef.current) {
+      cropper.setCoordinates(
+        { left: 0, top: 0, width, height },
+        { immediately: true, transitions: false },
+      );
+      resetToFullRef.current = false;
+      updateZoom(cropper);
+      setReady(true);
+      return;
+    }
     if (initialRotation !== 0) {
       cropper.rotateImage(initialRotation, { immediately: true, transitions: false });
     }
@@ -375,11 +348,11 @@ export function ImageCropEditor({
   function resetCrop() {
     pendingRotationRef.current = false;
     setIsRotating(false);
-    resetRotationRef.current = rotationRef.current;
     rotationRef.current = 0;
     setRotation(0);
     setIsPortraitCrop(height > width);
     resetToFullRef.current = true;
+    setReady(false);
     setRatioChoice('free');
     setResetRequest((current) => current + 1);
   }
@@ -406,6 +379,7 @@ export function ImageCropEditor({
             }}
             className="image-crop-editor-cropper"
             imageRestriction={ImageRestriction.stencil}
+            key={resetRequest}
             onReady={onReady}
             onUpdate={updateZoom}
             ref={cropperRef}

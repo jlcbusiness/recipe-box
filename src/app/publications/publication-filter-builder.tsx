@@ -9,6 +9,7 @@ import type {
   PublicationSearchSortKey,
 } from '../../lib/publications/search';
 import type { PublicationType } from '../../lib/recipes/data';
+import { createUuid } from '../../lib/uuid';
 
 type FilterKind = 'text' | 'enum' | 'multi' | 'number' | 'date';
 type FilterDefinition = {
@@ -360,7 +361,7 @@ export function PublicationFilterBuilder({
             setDrafts((current) => [
               ...current,
               {
-                id: crypto.randomUUID(),
+                id: createUuid(),
                 field: '',
                 operator: 'contains',
                 value: '',

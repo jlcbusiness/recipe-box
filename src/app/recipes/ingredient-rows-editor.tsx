@@ -28,6 +28,7 @@ import {
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
+import { createUuid } from '../../lib/uuid';
 import { MeasurementEditor } from './measurement-editor';
 import { type ReorderDragBound, useReorderDrag } from './use-reorder-drag';
 
@@ -50,10 +51,7 @@ type IngredientEditorEntry =
   | { kind: 'ingredient'; key: string; row: IngredientRowDraft; rowIndex: number }
   | { kind: 'add-ingredient'; key: string; row: IngredientRowDraft; rowIndex: number };
 
-function createEmptyIngredientRow(
-  id = crypto.randomUUID(),
-  ingredientSetId = '',
-): IngredientRowDraft {
+function createEmptyIngredientRow(id = createUuid(), ingredientSetId = ''): IngredientRowDraft {
   return {
     id,
     ingredientSetId,
@@ -1306,7 +1304,7 @@ export function IngredientRowsEditor({
 
   const commitRows = (nextRows: IngredientRowDraft[]) => {
     const normalized = ensureTrailingIngredientRowPerSet(nextRows, ingredientSets, (setId) =>
-      createEmptyIngredientRow(crypto.randomUUID(), setId),
+      createEmptyIngredientRow(createUuid(), setId),
     );
     rowsRef.current = normalized;
     setDraftRows(normalized);
@@ -1374,7 +1372,7 @@ export function IngredientRowsEditor({
 
     const persistedRowId =
       field === 'ingredientName' && value.trim() && isIngredientPlaceholderId(rowId)
-        ? crypto.randomUUID()
+        ? createUuid()
         : rowId;
     if (pendingFocusCell.current?.rowId === rowId && persistedRowId !== rowId) {
       pendingFocusCell.current = { ...pendingFocusCell.current, rowId: persistedRowId };
@@ -1818,7 +1816,7 @@ export function IngredientRowsEditor({
 
   function addIngredientSet() {
     const newSet = {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       label: '',
       position: ingredientSets.length,
     };
@@ -2061,7 +2059,7 @@ export function IngredientRowsEditor({
   function submitMobileRow(row: IngredientRowDraft) {
     const submittedRow =
       isIngredientPlaceholderId(row.id) && row.ingredientName.trim()
-        ? { ...row, id: crypto.randomUUID() }
+        ? { ...row, id: createUuid() }
         : row;
     const rowExists = rowsRef.current.some((current) => current.id === row.id);
     const nextRows = submittedRow.ingredientName.trim()

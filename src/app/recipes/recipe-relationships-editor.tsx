@@ -12,6 +12,7 @@ import {
 } from 'react';
 import type { RecipePairing, RecipeReference } from '../../lib/recipes/data';
 import { ingredientSlug as slugify } from '../../lib/recipes/instruction-rules';
+import { createUuid } from '../../lib/uuid';
 
 type RecipeLinkOption = { id: string; name: string };
 type ReferenceType = RecipeReference['reference_type'];
@@ -220,12 +221,12 @@ function ReferenceTypePicker({
 }
 
 function createPairing(): PairingDraft {
-  return { id: crypto.randomUUID(), display_text: '', linked_recipe_id: null };
+  return { id: createUuid(), display_text: '', linked_recipe_id: null };
 }
 
 function createReference(): ReferenceDraft {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     reference_type: 'recipe',
     display_text: '',
     linked_recipe_id: null,

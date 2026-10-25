@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, LibraryBig, Search, Settings, ShieldCheck, Trash2 } from 'lucide-react';
+import { Archive, CircleHelp, LibraryBig, Search, Settings, Trash2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AccountMenu } from './account-menu';
@@ -59,14 +59,17 @@ export function PrivateShell({
       : (nameParts[0]?.slice(0, 2).toUpperCase() ?? '?');
   const profileImageUrl = getGoogleAvatarUrl(avatarUrl);
   const mainNavigation = navigation.filter(
-    ({ href }) => href !== '/settings' && href !== '/recipes/find',
+    ({ href }) => href !== '/settings' && href !== '/recipes/find' && href !== '/admin',
   );
   const libraryIndex = mainNavigation.findIndex(({ href }) => href === '/publications');
   mainNavigation.splice(libraryIndex < 0 ? mainNavigation.length : libraryIndex + 1, 0, {
     href: '/recipes/find',
     label: 'Search',
   });
+  mainNavigation.push({ href: '/recipes/trash', label: 'Trash' });
   const settingsNavigation = navigation.find(({ href }) => href === '/settings');
+  const helpNavigation = { href: '/help', label: 'Help' };
+  const adminNavigation = navigation.find(({ href }) => href === '/admin');
   const isCurrent = (href: string) => {
     if (href === '/recipes') {
       return (
@@ -90,6 +93,7 @@ export function PrivateShell({
               aria-current={isCurrent(href) ? 'page' : undefined}
               href={href}
               key={href}
+              title={label}
             >
               {href === '/recipes' && (
                 <Archive aria-hidden="true" className="private-nav-mobile-icon" size={20} />
@@ -100,8 +104,8 @@ export function PrivateShell({
               {href === '/recipes/find' && (
                 <Search aria-hidden="true" className="private-nav-mobile-icon" size={20} />
               )}
-              {href === '/admin' && (
-                <ShieldCheck aria-hidden="true" className="private-nav-mobile-icon" size={20} />
+              {href === '/recipes/trash' && (
+                <Trash2 aria-hidden="true" className="private-nav-mobile-icon" size={20} />
               )}
               <span className="private-nav-link-label">{label}</span>
             </a>
@@ -109,13 +113,14 @@ export function PrivateShell({
         </div>
         <div className="private-nav-bottom">
           <a
-            aria-label="Trash"
+            aria-current={isCurrent(helpNavigation.href) ? 'page' : undefined}
+            aria-label={helpNavigation.label}
             className="private-nav-utility-link"
-            href="/recipes/trash"
-            title="Trash"
+            href={helpNavigation.href}
+            title={helpNavigation.label}
           >
-            <Trash2 aria-hidden="true" size={17} strokeWidth={1.8} />
-            <span className="private-nav-utility-label">Trash</span>
+            <CircleHelp aria-hidden="true" size={17} strokeWidth={1.8} />
+            <span className="private-nav-utility-label">{helpNavigation.label}</span>
           </a>
           {settingsNavigation && (
             <a
@@ -129,7 +134,13 @@ export function PrivateShell({
               <span className="private-nav-utility-label">{settingsNavigation.label}</span>
             </a>
           )}
-          <AccountMenu avatarUrl={profileImageUrl} email={email} initials={initials} />
+          <AccountMenu
+            adminCurrent={Boolean(adminNavigation && isCurrent(adminNavigation.href))}
+            avatarUrl={profileImageUrl}
+            email={email}
+            initials={initials}
+            isAdmin={Boolean(adminNavigation)}
+          />
         </div>
       </nav>
       <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>
