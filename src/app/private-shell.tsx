@@ -119,7 +119,12 @@ export function PrivateShell({
             href={helpNavigation.href}
             title={helpNavigation.label}
           >
-            <CircleHelp aria-hidden="true" size={17} strokeWidth={1.8} />
+            <CircleHelp
+              aria-hidden="true"
+              className="private-nav-help-icon"
+              size={17}
+              strokeWidth={1.8}
+            />
             <span className="private-nav-utility-label">{helpNavigation.label}</span>
           </a>
           {settingsNavigation && (

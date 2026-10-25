@@ -1692,7 +1692,11 @@ h1 {
   }
 
   .private-nav-utility-link[href="/help"] {
-    order: 5;
+    order: -1;
+  }
+
+  .private-shell[data-hand="left"] .private-nav-utility-link[href="/help"] {
+    order: 7;
   }
 
   .private-nav-bottom .account-menu {
@@ -1709,6 +1713,15 @@ h1 {
     border: 1px solid var(--line);
     border-radius: 50%;
     background: white;
+  }
+
+  .private-nav-help-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .private-nav-help-icon circle {
+    display: none;
   }
 
   .private-nav-utility-label {

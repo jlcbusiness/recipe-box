@@ -227,9 +227,11 @@ preference form. Future settings domains become sections as their features are
 implemented; do not display empty placeholder sections or links.
 The private navigation keeps Settings, Trash, Help, and Account. On desktop,
 place Settings after Trash and before Account in the pinned sidebar; Help
-follows Search in the main navigation. On mobile, show icon-only links for
-Library, Find Recipes, Trash, Settings, and Help, with Help after Search and
-before Account. Give each icon link a descriptive accessible name and tooltip.
+follows Search in the main navigation. On mobile, show icon-only navigation
+controls. Keep Help at the far left regardless of hand preference, using a
+question-mark glyph inside its existing circular hit target. The remaining
+controls follow the selected hand preference. Give each icon control a
+descriptive accessible name and tooltip.
 
 The Library icon on mobile and label on desktop stay leaf green as a distinct
 destination. When Library is current, add a pale green surface, a desktop

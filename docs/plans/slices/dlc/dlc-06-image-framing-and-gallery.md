@@ -116,17 +116,15 @@ Playwright test dispatches touch input and verifies that one-finger panning
 changes image position and two-finger pinch increases image scale. Keyboard
 tests verify ratio selection, rotation, visible focus, dialog dismissal, and
 focus return.
- Accessibility checks cover labels, keyboard operation, status/error
-  announcements, dialog dismissal, and control contrast. Existing viewer tests
-  verify saved framing without gallery navigation.
- Run focused media unit/API tests, media browser tests on Chromium and Fold 6,
-  TypeScript, targeted Biome, Markdown lint for changed files, and
-  `git diff --check`.
-
-automated.
-Other manual checks cover framing on physical iPhone and Android devices with
-wide, tall, and square images. Geometry, state, privacy, and accessibility
-remain automated.
+Accessibility checks cover labels, keyboard operation, status/error
+announcements, dialog dismissal, and control contrast. Existing viewer tests
+verify saved framing without gallery navigation.
+Run focused media unit/API tests, media browser tests on Chromium and Fold 6,
+TypeScript, targeted Biome, Markdown lint for changed files, and
+`git diff --check`. Geometry, state, privacy, accessibility, and saved display
+behavior are covered by automated tests. The user reports completing the
+physical iPhone and Android checks with wide, tall, and square images
+successfully.
 
 ## Dependencies and patterns to preserve
 

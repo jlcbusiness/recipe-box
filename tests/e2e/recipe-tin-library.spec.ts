@@ -137,18 +137,20 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       );
     };
     await assertMobileOrder('right', [
-      '.private-nav-utility-link[href="/recipes/trash"]',
+      '.private-nav-utility-link[href="/help"]',
+      '.private-nav-links a[href="/recipes/trash"]',
       '.private-nav-utility-link[href="/settings"]',
       '.private-nav-links a[href="/publications"]',
       '.private-nav-links a[href="/recipes/find"]',
       '.account-menu-trigger',
     ]);
     await assertMobileOrder('left', [
+      '.private-nav-utility-link[href="/help"]',
       '.account-menu-trigger',
       '.private-nav-links a[href="/recipes/find"]',
       '.private-nav-links a[href="/publications"]',
       '.private-nav-utility-link[href="/settings"]',
-      '.private-nav-utility-link[href="/recipes/trash"]',
+      '.private-nav-links a[href="/recipes/trash"]',
     ]);
     await privateShell.evaluate((element, hand) => {
       element.setAttribute('data-hand', hand ?? 'right');

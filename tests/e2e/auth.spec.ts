@@ -242,12 +242,24 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(mobileLibraryLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileSearchLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileHelpLink.locator('svg')).toBeVisible();
-    await expect(mobileHelpLink).toHaveCSS('order', '5');
+    await expect(mobileHelpLink.locator('svg')).toHaveCSS('width', '22px');
+    await expect(mobileHelpLink.locator('svg circle')).toBeHidden();
+    const helpBounds = await mobileHelpLink.boundingBox();
+    const libraryBounds = await mobileLibraryLink.boundingBox();
+    expect(helpBounds?.x).toBeLessThan(libraryBounds?.x ?? Number.POSITIVE_INFINITY);
     await expect(mobileSettingsLink.locator('svg')).toBeVisible();
     const mobileTrashLink = page.getByRole('link', { name: 'Trash', exact: true });
     await expect(mobileTrashLink).toBeVisible();
     await expect(mobileTrashLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileTrashLink).toHaveCSS('order', '1');
+    await page.setViewportSize({ width: 307, height: 629 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      307,
+    );
+    const narrowHelpBounds = await mobileHelpLink.boundingBox();
+    const narrowLibraryBounds = await mobileLibraryLink.boundingBox();
+    expect(narrowHelpBounds?.x).toBeLessThan(narrowLibraryBounds?.x ?? Number.POSITIVE_INFINITY);
+    await page.setViewportSize({ width: 390, height: 844 });
     await mobileHelpLink.click();
     await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
