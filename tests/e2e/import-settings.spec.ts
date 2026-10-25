@@ -257,7 +257,7 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
         .getByRole('group', { name: 'Ingredient color choices' })
         .getByRole('button', { name: 'Set ingredient color to Dark Yellow' }),
     ).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByLabel('Omit emphasis colors when printing')).toBeChecked();
+    await expect(page.getByLabel('Omit instruction emphasis when printing')).toBeChecked();
   } finally {
     await deleteTestUser(request, user);
   }

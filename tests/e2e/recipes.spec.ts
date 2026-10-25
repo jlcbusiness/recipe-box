@@ -1581,7 +1581,7 @@ test('owners can mark instruction durations with typed delimiters @e2e', async (
     await page.goto('/settings');
     await selectSinglePicklist(page, 'Temperature', 'Celsius');
     await expect(page.getByRole('status')).toHaveText('Saved.');
-    const omitPrintColors = page.getByLabel('Omit emphasis colors when printing');
+    const omitPrintColors = page.getByLabel('Omit instruction emphasis when printing');
     await omitPrintColors.check();
     await expect(page.getByRole('status')).toHaveText('Saved.');
     const savedTemperatureAfterPrintPreference = await request.get(
@@ -1607,6 +1607,34 @@ test('owners can mark instruction durations with typed delimiters @e2e', async (
       parent: getComputedStyle(element.parentElement!).color,
     }));
     expect(colors.text).toBe(colors.parent);
+
+    await page.emulateMedia({ media: 'screen' });
+    await page.goto('/settings');
+    await page.getByRole('button', { name: 'No emphasis' }).click();
+    await expect(page.getByRole('status')).toHaveText('No emphasis.');
+    await page.goto(`/recipes/${recipeId}`);
+    const uncoloredEmphasis = page.locator(
+      '.recipe-instruction-temperature, .recipe-instruction-duration',
+    );
+    await expect(uncoloredEmphasis).toHaveCount(3);
+    const neutralStyles = await uncoloredEmphasis.evaluateAll((elements) =>
+      elements.map((element) => {
+        const parent = element.parentElement;
+        return {
+        color: getComputedStyle(element).color,
+        fontWeight: getComputedStyle(element).fontWeight,
+        parentColor: parent ? getComputedStyle(parent).color : null,
+        parentFontWeight: parent ? getComputedStyle(parent).fontWeight : null,
+        hasNoEmphasisClass: element.classList.contains('is-unemphasized'),
+        };
+      }),
+    );
+    expect(
+      neutralStyles.every(
+        ({ color, fontWeight, parentColor, parentFontWeight, hasNoEmphasisClass }) =>
+          hasNoEmphasisClass && color === parentColor && fontWeight === parentFontWeight,
+      ),
+    ).toBe(true);
   } finally {
     await deleteTestUser(request, user);
   }

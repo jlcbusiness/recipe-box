@@ -7,6 +7,7 @@ import {
   ingredientSlug,
   instructionPlainText,
   parseIngredientMentions,
+  parseInstructionPhotoModifiers,
   replaceInstructionEditorRange,
   resolveInstructionMentions,
   serializeInstructionSteps,
@@ -144,14 +145,18 @@ describe('instruction mention rules', () => {
       { id: eggId, reference_code: 12 },
       { id: photoId, reference_code: 37 },
     ];
-    expect(getInstructionEditorValue(source, photos)).toBe('Turn the dough. +photo37-200');
+    expect(getInstructionEditorValue(source, photos)).toBe('Turn the dough. +photo37-w200');
     expect(instructionPlainText(source)).toBe('Turn the dough.');
     expect(
-      updateInstructionMarkdownFromEditor(source, 'Carefully turn the dough. +photo37-200', photos),
+      updateInstructionMarkdownFromEditor(
+        source,
+        'Carefully turn the dough. +photo37-w200',
+        photos,
+      ),
     ).toBe(`Carefully turn the dough. [[photo:${photoId}]]-200`);
     expect(
-      updateInstructionMarkdownFromEditor(source, 'Turn the dough. +photo37-240', photos),
-    ).toBe(`Turn the dough. [[photo:${photoId}]]-240`);
+      updateInstructionMarkdownFromEditor(source, 'Turn the dough. +photo37-w240', photos),
+    ).toBe(`Turn the dough. [[photo:${photoId}]]-w240`);
     expect(unlinkInstructionPhoto(source, photoId)).toBe('Turn the dough. ');
   });
 
@@ -160,11 +165,28 @@ describe('instruction mention rules', () => {
     expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo37.', photos)).toBe(
       `Stir in [[photo:${photoId}]].`,
     );
+    expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo37-w240.', photos)).toBe(
+      `Stir in [[photo:${photoId}]]-w240.`,
+    );
     expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo37-240.', photos)).toBe(
-      `Stir in [[photo:${photoId}]]-240.`,
+      'Stir in +photo37-240.',
     );
     expect(updateInstructionMarkdownFromEditor('', 'Stir in +photo99.', photos)).toBe(
       'Stir in +photo99.',
+    );
+  });
+
+  it('accepts photo alignment and width modifiers in either order', () => {
+    expect(parseInstructionPhotoModifiers('-left-w240')).toEqual({ alignment: 'left', width: 240 });
+    expect(parseInstructionPhotoModifiers('-w240-left')).toEqual({ alignment: 'left', width: 240 });
+    expect(parseInstructionPhotoModifiers('-240')).toEqual({ alignment: 'right', width: 240 });
+    expect(parseInstructionPhotoModifiers('-left-w240-left')).toBeNull();
+    expect(parseInstructionPhotoModifiers('-w0')).toBeNull();
+
+    const photos = [{ id: photoId, reference_code: 37 }];
+    expect(getInstructionEditorValue(`[[photo:${photoId}]]-240`, photos)).toBe('+photo37-w240');
+    expect(updateInstructionMarkdownFromEditor('', '+photo37-w240-left', photos)).toBe(
+      `[[photo:${photoId}]]-left-w240`,
     );
   });
 

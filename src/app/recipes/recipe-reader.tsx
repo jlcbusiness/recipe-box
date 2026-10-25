@@ -126,6 +126,7 @@ export function RecipeInstructionMention({
   displayName,
   ingredient,
   emphasisColor,
+  emphasisEnabled = true,
   portionOrdinal,
   preserveStoredUnits = false,
   unitSystems,
@@ -133,6 +134,7 @@ export function RecipeInstructionMention({
   displayName: string;
   ingredient: RecipeIngredient;
   emphasisColor?: string;
+  emphasisEnabled?: boolean;
   portionOrdinal?: 1 | 2;
   preserveStoredUnits?: boolean;
   unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem };
@@ -246,9 +248,9 @@ export function RecipeInstructionMention({
         aria-controls={isOpen ? popupId : undefined}
         aria-describedby={isOpen ? popupId : undefined}
         aria-expanded={isOpen}
-        className="recipe-instruction-mention"
+        className={`recipe-instruction-mention${emphasisEnabled ? '' : ' is-unemphasized'}`}
         ref={buttonRef}
-        style={emphasisColor ? { color: emphasisColor } : undefined}
+        style={emphasisEnabled && emphasisColor ? { color: emphasisColor } : undefined}
         type="button"
         onBlur={() => setIsFocused(false)}
         onClick={() => {

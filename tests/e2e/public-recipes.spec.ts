@@ -734,22 +734,34 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     if (!embeddedPhotoBounds || !instructionBlockBounds) {
       throw new Error('Expected the public instruction image and block to have layout boxes.');
     }
+    const viewportWidth = page.viewportSize()?.width ?? 0;
     expect(embeddedPhotoBounds.width).toBeLessThanOrEqual(
-      Math.min(200, instructionBlockBounds.width * 0.55) + 1,
+      Math.min(200, instructionBlockBounds.width * (viewportWidth <= 640 ? 1 : 0.55)) + 1,
     );
-    expect(Math.abs(leadingInstructionBounds.y - embeddedPhotoBounds.y)).toBeLessThan(8);
-    expect(leadingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
-    expect(followingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
+    const photoMarginBottom = await page
+      .locator('.recipe-instruction-photo')
+      .evaluate((element) => Number.parseFloat(getComputedStyle(element).marginBottom));
+    expect(photoMarginBottom).toBeGreaterThanOrEqual(96 / 25.4);
+    if (viewportWidth <= 640) {
+      expect(leadingInstructionBounds.y).toBeLessThan(embeddedPhotoBounds.y);
+      expect(followingInstructionBounds.y).toBeGreaterThanOrEqual(
+        embeddedPhotoBounds.y + embeddedPhotoBounds.height - 1,
+      );
+    } else {
+      expect(Math.abs(leadingInstructionBounds.y - embeddedPhotoBounds.y)).toBeLessThan(8);
+      expect(leadingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
+      expect(followingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
+    }
     await expect(page.getByRole('navigation')).toHaveCount(0);
     await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-left', '24px');
     await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-right', '24px');
-    const noColorToggle = page.getByRole('button', { name: 'Print without instruction colors' });
+    const noEmphasisToggle = page.getByRole('button', { name: 'No emphasis' });
     const [titleRowBox, titleBox, actionsBox, printBox, toggleBox] = await Promise.all([
       page.locator('.recipe-detail-title-row').boundingBox(),
       page.getByRole('heading', { name: 'Public cooking view - serves 4' }).boundingBox(),
       page.locator('.recipe-public-title-actions').boundingBox(),
       page.getByRole('button', { name: 'Print recipe' }).boundingBox(),
-      noColorToggle.boundingBox(),
+      noEmphasisToggle.boundingBox(),
     ]);
     if (!titleRowBox || !titleBox || !actionsBox || !printBox || !toggleBox) {
       throw new Error('Expected the public title and actions to be visible.');
@@ -764,7 +776,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       page.locator('.recipe-instruction-temperature').first(),
       page.locator('.recipe-instruction-duration').first(),
     ];
-    await expect(noColorToggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(noEmphasisToggle).toHaveAttribute('aria-pressed', 'false');
     for (const token of emphasisTokens) await expect(token).toBeVisible();
     const getEmphasisColors = () =>
       Promise.all(
@@ -772,21 +784,36 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       );
     const coloredTokenColors = await getEmphasisColors();
     expect(new Set(coloredTokenColors).size).toBe(3);
-    await noColorToggle.click();
-    await expect(noColorToggle).toHaveAttribute('aria-pressed', 'true');
-    const neutralTokenColors = await Promise.all(
+    const coloredTokenWeights = await Promise.all(
+      emphasisTokens.map((token) =>
+        token.evaluate((element) => getComputedStyle(element).fontWeight),
+      ),
+    );
+    expect(coloredTokenWeights).toEqual(['700', '700', '700']);
+    await noEmphasisToggle.click();
+    await expect(noEmphasisToggle).toHaveAttribute('aria-pressed', 'true');
+    const neutralTokenStyles = await Promise.all(
       emphasisTokens.map((token) =>
         token.evaluate((element) => ({
           color: getComputedStyle(element).color,
+          fontWeight: getComputedStyle(element).fontWeight,
           parentColor: element.parentElement ? getComputedStyle(element.parentElement).color : null,
+          parentFontWeight: element.parentElement
+            ? getComputedStyle(element.parentElement).fontWeight
+            : null,
         })),
       ),
     );
-    expect(neutralTokenColors.every(({ color, parentColor }) => color === parentColor)).toBe(true);
-    await noColorToggle.click();
-    await expect(noColorToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(
+      neutralTokenStyles.every(
+        ({ color, fontWeight, parentColor, parentFontWeight }) =>
+          color === parentColor && fontWeight === parentFontWeight,
+      ),
+    ).toBe(true);
+    await noEmphasisToggle.click();
+    await expect(noEmphasisToggle).toHaveAttribute('aria-pressed', 'false');
     expect(await getEmphasisColors()).toEqual(coloredTokenColors);
-    await noColorToggle.click();
+    await noEmphasisToggle.click();
     const summary = page.locator('.recipe-public-summary');
     await expect(summary).not.toContainText('serves 4');
     await expect(summary.getByRole('heading', { name: 'Time Breakdown' })).toBeVisible();
@@ -865,7 +892,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
     await expect(page.getByRole('button', { name: 'Print recipe' })).toBeHidden();
-    await expect(noColorToggle).toBeHidden();
+    await expect(noEmphasisToggle).toBeHidden();
     const printedTokenColors = await Promise.all(
       emphasisTokens.map((token) =>
         token.evaluate((element) => ({

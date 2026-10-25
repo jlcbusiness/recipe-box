@@ -1,4 +1,4 @@
-import { Palette, Printer } from 'lucide-react';
+import { Ban, Printer } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import { type ReactNode, useState } from 'react';
@@ -75,7 +75,7 @@ function renderInstructionBlocks(
               height={photo.height}
               key={`${prefix}-photo-${token.id}-${occurrence}`}
               src={photo.full_url}
-              triggerClassName="recipe-instruction-photo"
+              triggerClassName={`recipe-instruction-photo${token.alignment === 'left' ? ' is-left' : ''}`}
               triggerStyle={{ width: token.width ?? 200 }}
               width={photo.width}
             />
@@ -214,7 +214,7 @@ function RecipePhotos({ photos, name }: { photos: PublicRecipePhoto[]; name: str
 }
 
 export default function PublicRecipePage(props: PublicRecipePageProps) {
-  const [disableEmphasisColors, setDisableEmphasisColors] = useState(false);
+  const [disableInstructionEmphasis, setDisableInstructionEmphasis] = useState(false);
 
   if (props.state !== 'active') {
     return (
@@ -270,7 +270,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
 
   return (
     <main
-      className={`recipes-main recipe-public-main${disableEmphasisColors ? ' no-print-emphasis-colors' : ''}`}
+      className={`recipes-main recipe-public-main${disableInstructionEmphasis ? ' no-instruction-emphasis' : ''}`}
       aria-labelledby="page-title"
     >
       <Head>
@@ -300,14 +300,14 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                 <Printer aria-hidden="true" size={16} strokeWidth={2} />
               </button>
               <button
-                aria-label="Print without instruction colors"
-                aria-pressed={disableEmphasisColors}
+                aria-label="No emphasis"
+                aria-pressed={disableInstructionEmphasis}
                 className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-screen-only"
-                title="Print without instruction colors"
+                title="No emphasis"
                 type="button"
-                onClick={() => setDisableEmphasisColors((current) => !current)}
+                onClick={() => setDisableInstructionEmphasis((current) => !current)}
               >
-                <Palette aria-hidden="true" size={16} strokeWidth={2} />
+                <Ban aria-hidden="true" size={16} strokeWidth={2} />
               </button>
             </div>
           </div>

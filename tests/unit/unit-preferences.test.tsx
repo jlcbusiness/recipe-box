@@ -295,7 +295,7 @@ describe('unit preference action', () => {
     ).toBe('false');
     expect(
       screen
-        .getByRole('checkbox', { name: 'Omit emphasis colors when printing' })
+        .getByRole('checkbox', { name: 'Omit instruction emphasis when printing' })
         .getAttribute('checked'),
     ).toBeNull();
   });

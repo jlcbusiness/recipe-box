@@ -248,6 +248,25 @@ export function UnitPreferences({
     formRef.current?.requestSubmit();
   }
 
+  function updateNoEmphasis() {
+    setPreferences((current) => ({
+      ...current,
+      ingredientColor: 'none',
+      temperatureColor: 'none',
+      durationColor: 'none',
+    }));
+    setOpenColorDimension(null);
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'no_emphasis';
+    }
+    for (const inputRef of [ingredientColorRef, temperatureColorRef, durationColorRef]) {
+      if (inputRef.current) {
+        inputRef.current.value = 'none';
+      }
+    }
+    formRef.current?.requestSubmit();
+  }
+
   function updatePrivatePrintUsesColors(value: boolean) {
     setPreferences((current) => ({ ...current, privatePrintUsesColors: value }));
     if (changedDimensionRef.current) {
@@ -417,7 +436,18 @@ export function UnitPreferences({
           </div>
         </div>
         <div className="settings-preference-group settings-instruction-emphasis">
-          <h3>Instruction emphasis</h3>
+          <div className="settings-instruction-emphasis-heading">
+            <h3>Instruction emphasis</h3>
+            <button
+              className="settings-no-emphasis-button"
+              disabled={isPending}
+              onClick={updateNoEmphasis}
+              type="button"
+            >
+              <Ban aria-hidden="true" size={16} strokeWidth={1.8} />
+              No emphasis
+            </button>
+          </div>
           <div className="settings-emphasis-preferences" ref={emphasisPickerRef}>
             <div className="settings-emphasis-fields">
               {instructionColorDimensions.map(({ dimension, label, preferenceKey }) => {
@@ -521,7 +551,7 @@ export function UnitPreferences({
               onChange={(event) => updatePrivatePrintUsesColors(!event.currentTarget.checked)}
               type="checkbox"
             />
-            Omit emphasis colors when printing
+            Omit instruction emphasis when printing
           </label>
         </div>
       </form>

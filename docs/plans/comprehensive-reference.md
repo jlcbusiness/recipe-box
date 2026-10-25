@@ -630,17 +630,21 @@ preserved.
     for that recipe, displayed at the thumbnail's lower-right corner; the code
     does not change when photos are reordered. Selecting a thumbnail replaces
     `+p` at the caret with `+photoNN`, where `NN` is the photo's code. Typing a
-    valid `+photoNN` directly also references that photo. Appending `-<width>`
-    sets its display width in pixels, such as `+photo37-200`; without a suffix,
-    use 200px. Store the stable asset UUID and optional width in instruction
+    valid `+photoNN` directly also references that photo. Appending `-w<width>`
+    sets its display width in pixels, such as `+photo37-w200`; `-left` aligns
+    it left instead of the default right. The modifiers can appear in either
+    order. Without a width suffix, use 200px. Existing saved numeric width
+    suffixes remain readable; new editor input uses the `-w<width>` form. Store
+    the stable asset UUID and optional width and alignment in instruction
     content, never a URL, storage path, or image bytes. In readers, the photo
-    floats right at the exact inline reference, aligned with that line. Text
-    before the reference uses the full line where it fits; text after it and
-    later photo-free instruction steps wrap beside the float. A later
-    instruction step containing another photo clears below the existing float
-    before placing its own image. Floats end with the instruction list. The
-    photo is supplemental and decorative, with empty alternative text and no
-    caption or description. Removing a referenced photo requires one
+    is aligned with its exact inline reference. Text before the reference uses
+    the full line where it fits; text after it and later photo-free instruction
+    steps wrap beside the float. On narrow screens photos are left-aligned
+    blocks. Keep at least 1mm vertical separation below every instruction
+    photo. A later instruction step containing another photo clears below the
+    existing float before placing its own image. Floats end with the instruction
+    list. The photo is supplemental and decorative, with empty alternative text
+    and no caption or description. Removing a referenced photo requires one
     confirmation and atomically removes every reference to it; cancellation
     leaves the recipe unchanged. Print treatment remains governed by the
     print-layout slice.
@@ -658,17 +662,19 @@ preserved.
     at least 4.5:1 text contrast against
     the light green, light yellow, and white print backgrounds, following
     [WCAG 2.2 SC 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
-    Each category can use any preset or **None**, which displays ordinary body
-    text and never hides the content.
+    Each category can use any preset or **None**, which removes app-applied
+    color and emphasis styling while keeping readable body text. Settings has
+    one **No emphasis** action that sets all three categories to None.
     Ingredient mentions retain independent bold, italic, and underline
     controls. Color is optional emphasis; the readable text and units carry the
     meaning.
-  - Private print follows the account's emphasis colors by default. Settings
-    has a checkbox to omit these colors from private print; it is unchecked by
-    default.
+  - Private print follows the account's emphasis by default. Settings has a
+    checkbox to omit instruction emphasis from private print; it is unchecked
+    by default.
     Public readers and public print use fixed application defaults rather than
-    account preferences. A local, icon-only toggle beside Print can remove
-    instruction colors from the current public view and its print output.
+    account preferences. A local, icon-only **No emphasis** toggle beside Print
+    removes app-applied color and emphasis styling from the current public view
+    and its print output; authored Markdown formatting remains intact.
   - **Structured Tracking:** Only confirmed selections create a structured foreign-key link to the ingredient row. Plain
     text does not trigger instruction-appearance sorting.
   - Divided rows offer one autocomplete option for each portion and no whole-row

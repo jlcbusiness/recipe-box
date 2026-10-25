@@ -41,6 +41,23 @@ export async function saveUnitPreferences(
   const ingredientPresentation = formData.get('ingredient_presentation');
   const handPreference = formData.get('hand_preference');
   const temperatureSystem = formData.get('temperature_system');
+  if (changedDimension === 'no_emphasis') {
+    const supabase = await createClient();
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) {
+      return { status: 'error', message: 'Sign in to save preferences.' };
+    }
+
+    const { error } = await supabase.rpc('update_account_unit_preferences', {
+      p_ingredient_color: 'none',
+      p_temperature_color: 'none',
+      p_duration_color: 'none',
+    });
+    return error
+      ? { status: 'error', message: 'Instruction emphasis could not be disabled.' }
+      : { status: 'saved', message: 'No emphasis.' };
+  }
+
   if (
     changedDimension === 'ingredient_color' ||
     changedDimension === 'temperature_color' ||

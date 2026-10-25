@@ -43,8 +43,49 @@ const temperaturePattern = /(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b/giu;
 const stoveHeatLabelPattern =
   /(?<![\p{L}\p{N}_])!([\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])/giu;
 const photoPattern =
-  /\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-([1-9]\d{0,3}))?/giu;
+  /\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\]((?:-(?:left|w?[1-9]\d{0,3})){0,2})/giu;
 const photoPrefixPattern = /\[\[photo:/giu;
+const readablePhotoPattern =
+  /(?<![\p{L}\p{N}_])\+photo(\d{2})((?:-(?:left|w[1-9]\d{0,3})){0,2})(?![\p{N}_-])/u;
+
+export type InstructionPhotoModifiers = {
+  alignment: 'left' | 'right';
+  width?: number;
+};
+
+export function parseInstructionPhotoModifiers(suffix: string): InstructionPhotoModifiers | null {
+  const parts = suffix ? suffix.slice(1).split('-') : [];
+  if (parts.some((part) => !part)) {
+    return null;
+  }
+
+  let alignment: InstructionPhotoModifiers['alignment'] = 'right';
+  let hasAlignment = false;
+  let width: number | undefined;
+  for (const part of parts) {
+    if (part === 'left' && !hasAlignment) {
+      alignment = 'left';
+      hasAlignment = true;
+      continue;
+    }
+
+    const widthText = part.startsWith('w') ? part.slice(1) : part;
+    if (!/^[1-9]\d{0,3}$/u.test(widthText) || width !== undefined) {
+      return null;
+    }
+    width = Number(widthText);
+  }
+
+  return { alignment, ...(width === undefined ? {} : { width }) };
+}
+
+function instructionPhotoModifierSuffix(modifiers: InstructionPhotoModifiers): string {
+  return `${modifiers.alignment === 'left' ? '-left' : ''}${modifiers.width ? `-w${modifiers.width}` : ''}`;
+}
+
+function instructionPhotoMarker(id: string, modifiers: InstructionPhotoModifiers): string {
+  return `[[photo:${id}]]${instructionPhotoModifierSuffix(modifiers)}`;
+}
 
 export function ingredientSlug(name: string): string {
   return name
@@ -175,13 +216,15 @@ function getInstructionEditorMarkers(
     const photo = photos.find(
       (candidate) => candidate.id.toLocaleLowerCase() === (match[1] ?? '').toLocaleLowerCase(),
     );
-    const width = match[2];
+    const modifiers = parseInstructionPhotoModifiers(match[2] ?? '') ?? {
+      alignment: 'right' as const,
+    };
     markers.push({
       kind: 'photo',
       sourceStart: match.index ?? 0,
       sourceEnd: (match.index ?? 0) + match[0].length,
       displayText: photo
-        ? `+photo${String(photo.reference_code ?? 0).padStart(2, '0')}${width ? `-${width}` : ''}`
+        ? `+photo${String(photo.reference_code ?? 0).padStart(2, '0')}${instructionPhotoModifierSuffix(modifiers)}`
         : '[Photo]',
       marker: match[0],
     });
@@ -251,20 +294,24 @@ export function updateInstructionMarkdownFromEditor(
       }
 
       const expectedCode = /^\+photo(\d{2})/u.exec(marker.displayText)?.[1];
-      const editedPhoto = /^\+photo(\d{2})(?:-(\d{1,4}))?(?![\p{L}\p{N}_-])/u.exec(
-        editorValue.slice(marker.displayStart),
-      );
+      const editedPhoto = readablePhotoPattern.exec(editorValue.slice(marker.displayStart));
+      const modifiers = editedPhoto ? parseInstructionPhotoModifiers(editedPhoto[2] ?? '') : null;
       const sourceId = new RegExp(photoPattern).exec(marker.marker)?.[1];
-      if (!expectedCode || !editedPhoto || editedPhoto[1] !== expectedCode || !sourceId) {
+      if (
+        !expectedCode ||
+        !editedPhoto ||
+        editedPhoto[1] !== expectedCode ||
+        !modifiers ||
+        !sourceId
+      ) {
         return [];
       }
 
-      const width = editedPhoto[2];
       return [
         {
           ...marker,
           displayText: editedPhoto[0],
-          marker: `[[photo:${sourceId}]]${width ? `-${width}` : ''}`,
+          marker: instructionPhotoMarker(sourceId, modifiers),
         },
       ];
     }
@@ -297,10 +344,11 @@ export function updateInstructionMarkdownFromEditor(
   );
 
   const markdownWithPhotos = updatedMarkdown.replace(
-    /(?<![\p{L}\p{N}_])\+photo(\d{2})(?:-([1-9]\d{0,3}))?(?![\p{N}_-])/gu,
-    (match, code: string, width: string | undefined) => {
+    /(?<![\p{L}\p{N}_])\+photo(\d{2})((?:-(?:left|w[1-9]\d{0,3})){0,2})(?![\p{N}_-])/gu,
+    (match, code: string, suffix: string) => {
       const photoId = photoIdsByCode.get(code);
-      return photoId ? `[[photo:${photoId}]]${width ? `-${width}` : ''}` : match;
+      const modifiers = parseInstructionPhotoModifiers(suffix);
+      return photoId && modifiers ? instructionPhotoMarker(photoId, modifiers) : match;
     },
   );
   return markdownWithPhotos.replace(

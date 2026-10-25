@@ -63,9 +63,11 @@ retain readable text and see the image in its recipe context.
 - Add separate Settings color controls for ingredient mentions, durations, and
   temperatures, initially blue, red, and orange respectively. Each offers
   named accessible swatches and **None**, where None means ordinary readable
-  body text, not hidden content. Use similarly muted color strength across
+  body text, not hidden content; it removes app-applied color and emphasis
+  styling for that category. Use similarly muted color strength across
   distinct hues, with contrast checked against the app surface. Keep existing
-  ingredient-mention weight/decoration behavior.
+  ingredient-mention weight/decoration behavior for colored mentions.
+  **No emphasis** sets all three categories to None in one Settings action.
 - Let an author type `+p` to open a four-column thumbnail pane for ready photos
   from that recipe's gallery. The pane is anchored at the caret, overlays the
   editor, and opens above or below the step based on available viewport space;
@@ -73,10 +75,13 @@ retain readable text and see the image in its recipe context.
   two-digit code within its recipe; show the code at the thumbnail's lower
   right and keep it stable when gallery order changes. Selecting a photo
   replaces `+p` at the caret with `+photoNN`; typing a valid code directly
-  also references that photo. An optional `-<width>` suffix sets display width
-  in pixels, such as `+photo37-200`; the default width is
-  200px. This inserts a reference to the existing asset; it does not upload,
-  duplicate, or crop an image.
+  also references that photo. An optional `-w<width>` suffix sets display width
+  in pixels, such as `+photo37-w200`; `-left` aligns it to the left instead of
+  the default right. The modifiers can appear in either order, such as
+  `+photo37-left-w200` or `+photo37-w200-left`. The default width is 200px.
+  Existing saved numeric suffixes such as `-200` remain readable; new editor
+  input uses and stores the `-w<width>` form. This inserts a reference to the
+  existing asset; it does not upload, duplicate, or crop an image.
 - Store structured annotation and media references in the instruction content
   using stable identities and readable source text. Never store signed URLs,
   Storage paths, or binary data in recipe content. The plain-text projection
@@ -110,12 +115,13 @@ retain readable text and see the image in its recipe context.
   or below the step to fit the available viewport. No separate picker button is
   shown. Selecting an image replaces the trigger with its stable `+photoNN`
   code at that exact location. Typing a valid `+photoNN` code directly also
-  resolves to the same UUID-backed reference. A `-<width>` suffix sets its
-  width in pixels. Cancel leaves the step and recipe
-  draft unchanged. Without a suffix, use 200px as the preferred width. The
-  UUID-backed reference is staged with the recipe and commits only on explicit
-  Save. A failed save preserves the draft; reload shows only committed
-  references.
+  resolves to the same UUID-backed reference. Use `-w<width>` for its width
+  and `-left` for left alignment; the modifiers work in either order. Saved
+  numeric width suffixes remain readable for compatibility. Cancel leaves the
+  step and recipe draft unchanged. Without a width suffix, use 200px as the
+  preferred width. The UUID-backed reference is staged with the recipe and
+  commits only on explicit Save. A failed save preserves the draft; reload
+  shows only committed references.
 - Embedded photos are decorative and strictly supplemental: use empty
   alternative text, collect no caption or description, and ensure adjacent
   written instructions remain complete without the image.
@@ -125,16 +131,24 @@ retain readable text and see the image in its recipe context.
 - Settings changes save immediately, independently per category, and announce
   saving, success, or failure. A failed save restores the last saved color.
   Settings remain account-scoped and do not change recipe versions or history.
-- Private print uses the account's selected colors by default. A Settings
-  checkbox opts out of color styling for private print and is disabled by
-  default.
+  **No emphasis** sets all three categories to None in one action. None removes
+  app-applied color and emphasis for its category while preserving readable
+  content.
+- Private print uses the account's selected emphasis by default. A Settings
+  checkbox opts out of instruction emphasis for private print and is unchecked
+  by default. Public recipes have an icon-only **No emphasis** control that
+  removes app-applied colors and emphasis styling from the current view and its
+  print output; authored Markdown formatting remains intact.
   Public pages and public print use fixed application defaults, never account
   preferences.
-- Referenced images float right at the exact inline reference, aligned with
-  that line. Text before the reference uses the full line where it fits; text
-  after it and later photo-free instruction steps wrap beside the float. A
-  later instruction step containing another photo clears below the existing
-  float before placing its own image. Floats end with the instruction list.
+- Referenced images float right by default or left with `-left`, at the exact
+  inline reference and aligned with that line. On narrow screens, images are
+  left-aligned blocks. Keep at least 1mm vertical separation below every
+  instruction photo. Text before the reference uses the full line where it
+  fits; text after it and later photo-free instruction steps wrap beside the
+  float. A later instruction step containing another photo clears below the
+  existing float before placing its own image. Floats end with the instruction
+  list.
   Image dimensions remain responsive, preserve aspect ratio, and never crop
   meaningful content; the default width is 200px, and custom pixel widths are
   capped by the available text area.
@@ -172,8 +186,9 @@ retain readable text and see the image in its recipe context.
 - **Settings:** Browser and server tests cover temperature unit selection,
   conversion, default and persistence, plus each color independently,
   swatch names and selected state, the visible None state, reload persistence,
-  print-color opt-out persistence, save failure rollback, keyboard operation,
-  account isolation, contrast against supported app surfaces, and axe checks.
+  the all-None action and persistence, no-emphasis styling, print opt-out
+  persistence, save failure rollback, keyboard operation, account isolation,
+  contrast against supported app surfaces, and axe checks.
 - **Media references:** Unit/database tests cover stable asset references and
   per-recipe photo codes, code stability after reordering, same-recipe
   ownership, rejection of invalid asset kinds/states, ID remapping,
@@ -182,16 +197,19 @@ retain readable text and see the image in its recipe context.
 - **Readers:** Browser tests cover private and authorized public rendering,
   signed URL refresh/expiry behavior, print policy, offline fallback, and the
   single-image modal viewer and its dismissal behavior, the absence of private
-  media URLs in saved content or public payloads.
+  media URLs in saved content or public payloads, the public No emphasis
+  control, and None styling in the private reader.
 - **Editor workflow:** Desktop and mobile tests cover typing and removing
   duration delimiters, opening the gallery picker with `+p`, selecting and
-  canceling a photo, insertion at the caret, optional width editing, repeated
+  canceling a photo, insertion at the caret, `-w<width>` and `-left` modifiers
+  in either order, legacy numeric-width compatibility, repeated
   use, removal of a reference, save/reload, validation
   and version-conflict draft retention, keyboard focus, visible focus, labels,
   pointer/touch, and axe checks.
 - **Responsive geometry:** Assert that each image aligns with its inline marker,
   later photo-free steps wrap beside an existing float when space remains, and
-  a later photo-bearing step clears below it. Also assert no overflow or
+  left-aligned images stay on the left, every photo has at least 1mm of bottom
+  spacing, and a later photo-bearing step clears below it. Also assert no overflow or
   overlap around the existing reader reflow boundary and at an intermediate
   width where the step content wraps. Screenshots supplement these geometry
   and behavior assertions.
@@ -201,14 +219,16 @@ retain readable text and see the image in its recipe context.
 - Recipe photos receive unique random codes from `00` to `99` within their
   recipe. Codes are persisted and independent of display order; the asset UUID
   remains the stored reference. `+photoNN` is the readable editor projection,
-  optionally followed by `-<width>` in pixels.
+  optionally followed by `-w<width>` in pixels and `-left` in either order.
+  Existing numeric width suffixes remain readable for compatibility.
 - Use explicit `F!400` and `C!200` authoring tokens, converted and rounded to
   the preferred unit in private display and rounded in authored units in public
   display. Use `!medium low!` for unitless stove heat labels. Type durations as
   `=10 minutes=`. No thermometer or clock icons are added; readable units and
   wording remain the cue, with color as optional emphasis.
-- The private-print checkbox means “omit emphasis colors”; it is unchecked by
-  default so private print follows Settings unless the reader opts out.
+- The private-print checkbox means “omit instruction emphasis”; it is
+  unchecked by default so private print follows Settings unless the reader
+  opts out.
 - Keep the existing Ingredients/Instructions reader layout. Wrapping
   instructions around ingredients and changing the details-first layout remain
   separate DLC brainstorm items.

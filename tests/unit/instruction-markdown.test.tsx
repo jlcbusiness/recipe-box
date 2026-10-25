@@ -205,6 +205,20 @@ describe('instruction Markdown', () => {
         { type: 'photo', id: photoId, width: 200 },
       ],
     });
+    expect(parseInstructionMarkdown(`Turn the dough. [[photo:${photoId}]]-left-w240`)[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Turn the dough. ' },
+        { type: 'photo', id: photoId, width: 240, alignment: 'left' },
+      ],
+    });
+    expect(parseInstructionMarkdown(`Turn the dough. [[photo:${photoId}]]-w240-left`)[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Turn the dough. ' },
+        { type: 'photo', id: photoId, width: 240, alignment: 'left' },
+      ],
+    });
   });
 
   it('treats whitespace after a photo reference as a delimiter before following prose', () => {

@@ -1,7 +1,7 @@
 import { type Extensions, Node } from '@tiptap/core';
 import { Markdown } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
-import { ingredientSlug } from './instruction-rules';
+import { ingredientSlug, parseInstructionPhotoModifiers } from './instruction-rules';
 
 export type InstructionInlineToken =
   | { type: 'text'; value: string }
@@ -11,7 +11,7 @@ export type InstructionInlineToken =
   | { type: 'code'; value: string }
   | { type: 'duration'; value: string }
   | { type: 'temperature'; value: string }
-  | { type: 'photo'; id: string; width?: number }
+  | { type: 'photo'; id: string; width?: number; alignment?: 'left' }
   | { type: 'link'; label: string; url: string }
   | { type: 'mention'; id: string; slug: string; portionOrdinal?: 1 | 2 };
 
@@ -23,7 +23,7 @@ export type InstructionMarkdownBlock =
   | { type: 'list'; ordered: boolean; items: InstructionInlineToken[][] };
 
 const inlineTokenPattern =
-  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|(\[\[duration:([^\]\r\n]+)\]\])|(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b|(?<![\p{L}\p{N}_])!(?:[\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])|(\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-[1-9]\d{0,3})?)|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
+  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|(\[\[duration:([^\]\r\n]+)\]\])|(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b|(?<![\p{L}\p{N}_])!(?:[\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])|(\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-(?:left|w?[1-9]\d{0,3})){0,2})|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
 
 function formatTemperature(
   value: string,
@@ -88,11 +88,14 @@ function parseInstructionInline(
     } else if (fullMatch.startsWith('!')) {
       tokens.push({ type: 'temperature', value: fullMatch.slice(1, -1) });
     } else if (match[16] && match[17]) {
-      const width = /-([1-9]\d{0,3})$/u.exec(match[16])?.[1];
+      const modifiers = parseInstructionPhotoModifiers(
+        match[16].slice(`[[photo:${match[17]}]]`.length),
+      );
       tokens.push({
         type: 'photo',
         id: match[17].toLocaleLowerCase(),
-        ...(width === undefined ? {} : { width: Number(width) }),
+        ...(modifiers?.width === undefined ? {} : { width: modifiers.width }),
+        ...(modifiers?.alignment === 'left' ? { alignment: 'left' } : {}),
       });
     } else if (match[18] && match[19]) {
       tokens.push({ type: 'duration', value: match[19] });

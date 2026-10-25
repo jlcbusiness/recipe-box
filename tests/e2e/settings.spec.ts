@@ -392,6 +392,44 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
   }
 });
 
+test('Settings can disable all instruction emphasis @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${user.accessToken}`,
+  };
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    const noEmphasisButton = page.getByRole('button', { name: 'No emphasis' });
+    await expect(noEmphasisButton).toBeVisible();
+    const [buttonBounds, settingsBounds] = await Promise.all([
+      noEmphasisButton.boundingBox(),
+      page.locator('.settings-main').boundingBox(),
+    ]);
+    if (!buttonBounds || !settingsBounds) {
+      throw new Error('Expected the No emphasis action to fit within Settings.');
+    }
+    expect(buttonBounds.x).toBeGreaterThanOrEqual(settingsBounds.x);
+    expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(
+      settingsBounds.x + settingsBounds.width,
+    );
+    await noEmphasisButton.click();
+    await expect(page.getByRole('status')).toHaveText('No emphasis.');
+    const saved = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=ingredient_color,temperature_color,duration_color&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await saved.json()).toEqual([
+      { ingredient_color: 'none', temperature_color: 'none', duration_color: 'none' },
+    ]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Settings manages the ingredient catalog with accessible inline controls @e2e @a11y', async ({
   page,
   request,

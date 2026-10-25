@@ -316,9 +316,9 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
       }
       element.setSelectionRange(position, position);
     }, triggerPosition);
-    await instruction.pressSequentially(`+photo${photoCode}-200 `);
+    await instruction.pressSequentially(`+photo${photoCode}-w200 `);
     await expect(instruction).toHaveValue(
-      `Finish the sauce. +photo${photoCode}-200 then simmer uncovered.`,
+      `Finish the sauce. +photo${photoCode}-w200 then simmer uncovered.`,
     );
     await instruction.press('Enter');
     const followingInstruction = page.getByRole('textbox', { name: 'Instruction step 2' });
@@ -328,7 +328,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
     await followingInstruction.press('Enter');
     await page
       .getByRole('textbox', { name: 'Instruction step 3' })
-      .fill(`After resting, +photo${photoCode} taste the sauce again.`);
+      .fill(`After resting, +photo${photoCode}-left taste the sauce again.`);
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
     await expect(page.locator('.recipe-instruction-photo .framed-media-image')).toHaveCount(2);
@@ -349,7 +349,15 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
       await page.setViewportSize({ ...originalViewport, width: 680 });
     }
     const photoElements = page.locator('.recipe-instruction-photo');
-    await expect(photoElements.first()).toHaveCSS('margin-bottom', '0px');
+    const photoMargins = await photoElements.evaluateAll((elements) =>
+      elements.map((element) => Number.parseFloat(getComputedStyle(element).marginBottom)),
+    );
+    expect(photoMargins.length).toBe(2);
+    expect(photoMargins.every((margin) => margin >= 96 / 25.4)).toBe(true);
+    await expect(photoElements.nth(1)).toHaveCSS(
+      'float',
+      (page.viewportSize()?.width ?? 0) <= 640 ? 'none' : 'left',
+    );
     const photoBounds = await photoElements.first().boundingBox();
     const instructionBounds = await page.locator('.recipe-instruction-list').boundingBox();
     const leadingTextBounds = await page
@@ -415,7 +423,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
     }
     expect(photoBounds.width).toBeGreaterThan(0);
     expect(photoBounds.width).toBeLessThanOrEqual(
-      Math.min(200, instructionBounds.width * 0.55) + 1,
+      Math.min(200, instructionBounds.width * (viewportWidth <= 640 ? 1 : 0.55)) + 1,
     );
     if (viewportWidth <= 640) {
       expect(leadingTextBounds.y).toBeLessThan(photoBounds.y);

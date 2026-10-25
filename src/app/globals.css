@@ -1273,6 +1273,43 @@ h1 {
   font-weight: 700;
 }
 
+.settings-instruction-emphasis-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-instruction-emphasis-heading h3 {
+  margin-bottom: 0;
+}
+
+.settings-no-emphasis-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 4px 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+
+.settings-no-emphasis-button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.settings-no-emphasis-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .settings-emphasis-preferences {
   position: relative;
   display: grid;
@@ -1846,12 +1883,28 @@ h1 {
   background: #e9efad;
 }
 
-.recipe-public-main.no-print-emphasis-colors .recipe-instruction-mention,
-.recipe-public-main.no-print-emphasis-colors .recipe-instruction-temperature,
-.recipe-public-main.no-print-emphasis-colors .recipe-instruction-duration,
-.recipe-public-main.no-print-emphasis-colors .recipe-instruction-temperature > span,
-.recipe-public-main.no-print-emphasis-colors .recipe-instruction-duration > span {
+.recipe-instruction-mention.is-unemphasized,
+.recipe-instruction-temperature.is-unemphasized,
+.recipe-instruction-duration.is-unemphasized {
   color: inherit;
+  font-style: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+.recipe-instruction-mention.is-unemphasized {
+  text-decoration: none;
+}
+
+.recipe-public-main.no-instruction-emphasis .recipe-instruction-mention,
+.recipe-public-main.no-instruction-emphasis .recipe-instruction-temperature,
+.recipe-public-main.no-instruction-emphasis .recipe-instruction-duration,
+.recipe-public-main.no-instruction-emphasis .recipe-instruction-temperature > span,
+.recipe-public-main.no-instruction-emphasis .recipe-instruction-duration > span {
+  color: inherit;
+  font-style: inherit;
+  font-weight: inherit;
+  text-decoration: none;
 }
 
 .recipe-edit-heading {
@@ -6964,7 +7017,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 }
 
 .recipe-instruction-list > li:has(.recipe-instruction-photo) {
-  clear: right;
+  clear: both;
 }
 
 .recipe-instruction-list p {
@@ -7088,7 +7141,12 @@ section.recipe-detail-section .recipe-relationship-list a {
   display: block;
   float: right;
   max-width: min(55%, 20rem);
-  margin: 0 0 0 12px;
+  margin: 0 0 1mm 12px;
+}
+
+.recipe-instruction-photo.is-left {
+  float: left;
+  margin: 0 12px 1mm 0;
 }
 
 .recipe-instruction-photo.image-viewer-trigger {
@@ -7130,7 +7188,12 @@ section.recipe-detail-section .recipe-relationship-list a {
     clear: both;
     float: none;
     max-width: min(100%, 20rem);
-    margin: 8px 0 0;
+    margin: 8px 0 1mm;
+  }
+
+  .recipe-instruction-photo.is-left {
+    float: none;
+    margin: 8px 0 1mm;
   }
 }
 
@@ -7160,6 +7223,10 @@ section.recipe-detail-section .recipe-relationship-list a {
 .recipe-instruction-mention:hover {
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.recipe-instruction-mention.is-unemphasized:hover {
+  text-decoration: none;
 }
 
 .recipe-instruction-mention:focus-visible {
@@ -7697,6 +7764,9 @@ section.recipe-detail-section .recipe-relationship-list a {
   .no-print-emphasis-colors .recipe-instruction-temperature > span,
   .no-print-emphasis-colors .recipe-instruction-duration > span {
     color: inherit !important;
+    font-style: inherit;
+    font-weight: inherit;
+    text-decoration: none;
   }
 
   .private-content

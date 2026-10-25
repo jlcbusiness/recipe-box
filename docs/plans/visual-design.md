@@ -330,7 +330,9 @@ least 4.5:1 text contrast on the light green, light yellow, and
 white print backgrounds, following
 [WCAG 2.2 SC 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
 The palette stays within the Settings content width, supports keyboard
-selection and Escape dismissal, and saves each choice independently.
+selection and Escape dismissal, and saves each choice independently. **None**
+removes app-applied color and emphasis styling for that category while keeping
+the text readable. A **No emphasis** action sets all three categories to None.
 
 Tags use a separate full-width, unframed Settings section after Ingredient
 catalog. It is collapsed by default, uses the same left-side disclosure chevron
@@ -675,10 +677,10 @@ marked numeric temperatures to the selected unit and rounds them to the nearest
 without delimiters; punctuation after the closing delimiter remains visible, so
 `!medium high!!` displays as `medium high!`. Settings also provides independent,
 named swatches for ingredient mentions, temperatures, and durations. Defaults
-are blue, red, and orange respectively; **None** restores ordinary body text.
-Presets use dark colors selected for contrast against the paper surface.
-Ingredient mentions retain their separate bold, italic, and underline
-controls.
+are blue, red, and orange respectively. **None** removes app-applied color and
+emphasis while preserving readable content. Presets use dark colors selected
+for contrast against the paper surface. Ingredient mentions use bold weight
+and hover/focus underline when emphasis is enabled.
 
 Authors mark durations by wrapping their text in equals signs, such as
 `=10 minutes=`. The delimiters remain visible while editing and are omitted
@@ -689,8 +691,8 @@ authored token remains unchanged; public pages and print retain its authored
 unit and round to the nearest 5 degrees in that unit. `!medium low!` displays
 as `medium low` in private and public output without unit conversion. Reader
 text keeps its authored meaning without clock or thermometer icons. Private
-print follows the account colors unless the opt-out checkbox is checked; it is
-unchecked by default.
+print follows the account emphasis unless the opt-out checkbox is checked; it
+is unchecked by default and suppresses all app-applied instruction formatting.
 
 Typing `+p` opens a four-column thumbnail pane for the recipe's ready gallery
 photos, anchored at the caret. It overlays the editor and opens above or below
@@ -698,16 +700,19 @@ the step according to available viewport space; there is no separate picker
 button. Each thumbnail has a small, lower-right two-digit identifier that
 remains stable when the gallery is reordered. Selecting one replaces `+p` at
 the caret with `+photoNN`; typing a valid `+photoNN` directly also references
-that photo. Appending `-<width>` sets its display width in pixels, with a
-200px default. In reader and print content, the image floats right at the exact
-inline reference, aligned with that line. Text before the reference uses the
-full line where it fits; text after it and later photo-free instructions wrap
-beside the float. A later instruction containing another photo clears below
-the existing float before placing its own image. Floats end with the
-instruction list. The reference is supplemental, uses empty alternative text,
-and has no caption or description. Removal confirms once and atomically
-removes the photo and all references. Private and public readers resolve the
-image only after their respective recipe authorization checks.
+that photo. Appending `-w<width>` sets its display width in pixels, with a
+200px default; `-left` aligns it left instead of the default right. Modifiers
+can appear in either order. Existing saved numeric widths remain readable,
+but new input uses `-w<width>`. In reader and print content, the image is
+aligned at the exact inline reference. Text before the reference uses the full
+line where it fits; text after it and later photo-free instructions wrap beside
+the float. Narrow screens use left-aligned blocks. Maintain at least 1mm
+vertical separation below every photo. A later instruction containing another
+photo clears below the existing float before placing its own image. Floats end
+with the instruction list. The reference is supplemental, uses empty
+alternative text, and has no caption or description. Removal confirms once and
+atomically removes the photo and all references. Private and public readers
+resolve the image only after their respective recipe authorization checks.
 
 Clicking an instruction photo opens that image in the shared modal viewer at
 intrinsic size, constrained to the available viewport without enlarging a
@@ -757,10 +762,11 @@ remain part of Slice 25.
 ## Public Recipe View (Slice 22 current implementation)
 
 The guest recipe page has 24px horizontal gutters and a centered content width.
-Keep Print and an icon-only, accessible **Print without instruction colors**
-toggle together at the right of the title row. The toggle applies only to the
-current public view and its print output; it does not change account
-preferences. When the recipe has a serving count, append `- serves n` to its
+Keep Print and an icon-only, accessible **No emphasis** toggle together at the
+right of the title row. The toggle removes app-applied colors and emphasis from
+the current public view and its print output, preserves authored Markdown
+formatting, and does not change account preferences. When the recipe has a
+serving count, append `- serves n` to its
 title, separated by a space, in regular 16px text. Do not repeat Serves in the
 separate metadata summary.
 

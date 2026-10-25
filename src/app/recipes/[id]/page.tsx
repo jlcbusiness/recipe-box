@@ -87,7 +87,7 @@ function renderInstructionMarkdown(
               key={`${prefix}-photo-${token.id}-${occurrence}`}
               height={photo.height}
               src={photo.full_url}
-              triggerClassName="recipe-instruction-photo"
+              triggerClassName={`recipe-instruction-photo${token.alignment === 'left' ? ' is-left' : ''}`}
               triggerStyle={{ width: token.width ?? 200 }}
               width={photo.width}
             />
@@ -112,14 +112,20 @@ function renderInstructionMarkdown(
         case 'duration':
           precedingText += token.value;
           return (
-            <span className="recipe-instruction-duration" key={key}>
+            <span
+              className={`recipe-instruction-duration${emphasisColors.duration ? '' : ' is-unemphasized'}`}
+              key={key}
+            >
               <span style={{ color: emphasisColors.duration ?? 'inherit' }}>{token.value}</span>
             </span>
           );
         case 'temperature':
           precedingText += token.value;
           return (
-            <span className="recipe-instruction-temperature" key={key}>
+            <span
+              className={`recipe-instruction-temperature${emphasisColors.temperature ? '' : ' is-unemphasized'}`}
+              key={key}
+            >
               <span style={{ color: emphasisColors.temperature ?? 'inherit' }}>{token.value}</span>
             </span>
           );
@@ -153,7 +159,8 @@ function renderInstructionMarkdown(
               key={key}
               portionOrdinal={token.portionOrdinal}
               unitSystems={unitSystems}
-              emphasisColor={emphasisColors.ingredient ?? 'inherit'}
+              emphasisColor={emphasisColors.ingredient}
+              emphasisEnabled={emphasisColors.ingredient !== undefined}
             />
           );
         }
@@ -193,7 +200,7 @@ function renderInstructionMarkdown(
                 token.type === 'mention'
                   ? `${token.type}:${token.id}`
                   : token.type === 'photo'
-                    ? `${token.type}:${token.id}:${token.width ?? ''}`
+                    ? `${token.type}:${token.id}:${token.width ?? ''}:${token.alignment ?? ''}`
                     : token.type === 'link'
                       ? `${token.type}:${token.url}:${token.label}`
                       : `${token.type}:${token.value}`,
