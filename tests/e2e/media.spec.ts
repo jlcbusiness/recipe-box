@@ -328,7 +328,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
     await followingInstruction.press('Enter');
     await page
       .getByRole('textbox', { name: 'Instruction step 3' })
-      .fill(`After resting, +photo${photoCode}-left taste the sauce again.`);
+      .fill(`After resting,\n+photo${photoCode}-left`);
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
     await expect(page.locator('.recipe-instruction-photo .framed-media-image')).toHaveCount(2);
@@ -418,7 +418,27 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
       .locator('.recipe-instruction-list > li')
       .nth(2)
       .boundingBox();
-    if (!photoBounds || !instructionBounds) {
+    const secondPhotoBounds = await photoElements.nth(1).boundingBox();
+    const standalonePhotoTextBounds = await page
+      .locator('.recipe-instruction-list > li')
+      .nth(2)
+      .evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let textNode = walker.nextNode();
+        while (textNode) {
+          const text = textNode.textContent ?? '';
+          const start = text.indexOf('After resting,');
+          if (start >= 0) {
+            const range = document.createRange();
+            range.setStart(textNode, start);
+            range.setEnd(textNode, start + 'After resting,'.length);
+            return range.getBoundingClientRect().bottom;
+          }
+          textNode = walker.nextNode();
+        }
+        throw new Error('Expected the standalone photo instruction text to render.');
+      });
+    if (!photoBounds || !instructionBounds || !secondPhotoBounds) {
       throw new Error('Expected the embedded photo and instruction to have layout boxes.');
     }
     expect(photoBounds.width).toBeGreaterThan(0);
@@ -450,6 +470,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
       ).toBe(true);
     }
     expect(secondPhotoStepBounds?.y).toBeGreaterThanOrEqual(photoBounds.y + photoBounds.height);
+    expect(standalonePhotoTextBounds).toBeLessThan(secondPhotoBounds.y);
     if (intermediateViewport && originalViewport) {
       await page.setViewportSize(originalViewport);
     }

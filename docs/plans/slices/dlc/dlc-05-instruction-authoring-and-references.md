@@ -67,7 +67,9 @@ retain readable text and see the image in its recipe context.
   styling for that category. Use similarly muted color strength across
   distinct hues, with contrast checked against the app surface. Keep existing
   ingredient-mention weight/decoration behavior for colored mentions.
-  **No emphasis** sets all three categories to None in one Settings action.
+  A **Turn off all emphasis** checkbox below the private-print checkbox sets
+  all three categories to None when checked and restores the default blue, red,
+  and orange colors when unchecked.
 - Let an author type `+p` to open a four-column thumbnail pane for ready photos
   from that recipe's gallery. The pane is anchored at the caret, overlays the
   editor, and opens above or below the step based on available viewport space;
@@ -131,9 +133,10 @@ retain readable text and see the image in its recipe context.
 - Settings changes save immediately, independently per category, and announce
   saving, success, or failure. A failed save restores the last saved color.
   Settings remain account-scoped and do not change recipe versions or history.
-  **No emphasis** sets all three categories to None in one action. None removes
-  app-applied color and emphasis for its category while preserving readable
-  content.
+  The **Turn off all emphasis** checkbox below the private-print checkbox sets
+  all three categories to None when checked and restores the default blue, red,
+  and orange colors when unchecked. None removes app-applied color and emphasis
+  for its category while preserving readable content.
 - Private print uses the account's selected emphasis by default. A Settings
   checkbox opts out of instruction emphasis for private print and is unchecked
   by default. Public recipes have an icon-only **No emphasis** control that
@@ -145,9 +148,11 @@ retain readable text and see the image in its recipe context.
   inline reference and aligned with that line. On narrow screens, images are
   left-aligned blocks. Keep at least 1mm vertical separation below every
   instruction photo. Text before the reference uses the full line where it
-  fits; text after it and later photo-free instruction steps wrap beside the
-  float. A later instruction step containing another photo clears below the
-  existing float before placing its own image. Floats end with the instruction
+  fits. A photo marker at the beginning of a new authored line starts on the
+  following rendered line; inline markers retain the existing wrapping
+  behavior. Text after an inline photo and later photo-free instruction steps
+  wrap beside the float. A later instruction step containing another photo
+  clears below the existing float before placing its own image. Floats end with the instruction
   list.
   Image dimensions remain responsive, preserve aspect ratio, and never crop
   meaningful content; the default width is 200px, and custom pixel widths are

@@ -118,30 +118,35 @@
   cursor: pointer;
 }
 
-.checkNone {
-  display: inline-grid;
-  flex: 0 0 40px;
-  width: 40px;
-  min-width: 40px;
+.showAll {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 44px;
   height: 44px;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   border: 0;
   border-radius: 2px;
+  padding: 0 6px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
-.checkNone:hover:not(:disabled) {
+.showAll:hover:not(:disabled) {
   color: var(--leaf);
 }
 
-.checkNone:focus-visible {
+.showAll:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
-.checkNone:disabled {
+.showAll:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }

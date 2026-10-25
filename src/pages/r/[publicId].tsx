@@ -60,26 +60,29 @@ function renderInstructionBlocks(
   const headingTags = [null, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
   const renderInline = (tokens: InstructionInlineToken[], prefix: string) => {
     const photoOccurrences = new Map<string, number>();
-    return tokens.map((token, index) => {
+    return tokens.flatMap((token, index) => {
       const key = `${prefix}-${index}`;
       switch (token.type) {
         case 'photo': {
           const photo = photos.find((candidate) => candidate.id === token.id);
           const occurrence = photoOccurrences.get(token.id) ?? 0;
           photoOccurrences.set(token.id, occurrence + 1);
-          return photo ? (
-            <ImageViewer
-              alt=""
-              buttonLabel="View instruction photo full size"
-              crop={photo.crop}
-              height={photo.height}
-              key={`${prefix}-photo-${token.id}-${occurrence}`}
-              src={photo.full_url}
-              triggerClassName={`recipe-instruction-photo${token.alignment === 'left' ? ' is-left' : ''}`}
-              triggerStyle={{ width: token.width ?? 200 }}
-              width={photo.width}
-            />
-          ) : null;
+          return photo
+            ? [
+                ...(token.lineBreakBefore ? [<br key={`${key}-photo-break`} />] : []),
+                <ImageViewer
+                  alt=""
+                  buttonLabel="View instruction photo full size"
+                  crop={photo.crop}
+                  height={photo.height}
+                  key={`${prefix}-photo-${token.id}-${occurrence}`}
+                  src={photo.full_url}
+                  triggerClassName={`recipe-instruction-photo${token.alignment === 'left' ? ' is-left' : ''}`}
+                  triggerStyle={{ width: token.width ?? 200 }}
+                  width={photo.width}
+                />,
+              ]
+            : [];
         }
         case 'text':
           return token.value;

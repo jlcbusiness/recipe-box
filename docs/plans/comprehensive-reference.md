@@ -638,10 +638,12 @@ preserved.
     the stable asset UUID and optional width and alignment in instruction
     content, never a URL, storage path, or image bytes. In readers, the photo
     is aligned with its exact inline reference. Text before the reference uses
-    the full line where it fits; text after it and later photo-free instruction
-    steps wrap beside the float. On narrow screens photos are left-aligned
-    blocks. Keep at least 1mm vertical separation below every instruction
-    photo. A later instruction step containing another photo clears below the
+    the full line where it fits. A photo marker at the beginning of a new
+    authored line starts on the following rendered line; inline markers retain
+    the existing wrapping behavior. Text after an inline photo and later
+    photo-free instruction steps wrap beside the float. On narrow screens
+    photos are left-aligned blocks. Keep at least 1mm vertical separation below
+    every instruction photo. A later instruction step containing another photo clears below the
     existing float before placing its own image. Floats end with the instruction
     list. The photo is supplemental and decorative, with empty alternative text
     and no caption or description. Removing a referenced photo requires one
@@ -664,7 +666,9 @@ preserved.
     [WCAG 2.2 SC 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
     Each category can use any preset or **None**, which removes app-applied
     color and emphasis styling while keeping readable body text. Settings has
-    one **No emphasis** action that sets all three categories to None.
+    a **Turn off all emphasis** checkbox below the private-print checkbox.
+    Checking it sets all three categories to None; unchecking it restores the
+    default blue, red, and orange emphasis colors.
     Ingredient mentions retain independent bold, italic, and underline
     controls. Color is optional emphasis; the readable text and units carry the
     meaning.

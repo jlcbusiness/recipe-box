@@ -332,7 +332,9 @@ white print backgrounds, following
 The palette stays within the Settings content width, supports keyboard
 selection and Escape dismissal, and saves each choice independently. **None**
 removes app-applied color and emphasis styling for that category while keeping
-the text readable. A **No emphasis** action sets all three categories to None.
+the text readable. A **Turn off all emphasis** checkbox sits below the
+private-print checkbox; checking it sets all three categories to None, and
+unchecking it restores their default blue, red, and orange colors.
 
 Tags use a separate full-width, unframed Settings section after Ingredient
 catalog. It is collapsed by default, uses the same left-side disclosure chevron
@@ -705,9 +707,11 @@ that photo. Appending `-w<width>` sets its display width in pixels, with a
 can appear in either order. Existing saved numeric widths remain readable,
 but new input uses `-w<width>`. In reader and print content, the image is
 aligned at the exact inline reference. Text before the reference uses the full
-line where it fits; text after it and later photo-free instructions wrap beside
-the float. Narrow screens use left-aligned blocks. Maintain at least 1mm
-vertical separation below every photo. A later instruction containing another
+line where it fits. A photo marker at the beginning of a new authored line
+starts on the following rendered line; inline markers retain the existing
+wrapping behavior. Text after an inline photo and later photo-free instructions
+wrap beside the float. Narrow screens use left-aligned blocks. Maintain at least
+1mm vertical separation below every photo. A later instruction containing another
 photo clears below the existing float before placing its own image. Floats end
 with the instruction list. The reference is supplemental, uses empty
 alternative text, and has no caption or description. Removal confirms once and

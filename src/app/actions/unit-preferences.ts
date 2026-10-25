@@ -1,6 +1,9 @@
 'use server';
 
-import { isInstructionEmphasisColor } from '../../lib/recipes/instruction-emphasis';
+import {
+  defaultInstructionEmphasis,
+  isInstructionEmphasisColor,
+} from '../../lib/recipes/instruction-emphasis';
 import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
@@ -41,7 +44,15 @@ export async function saveUnitPreferences(
   const ingredientPresentation = formData.get('ingredient_presentation');
   const handPreference = formData.get('hand_preference');
   const temperatureSystem = formData.get('temperature_system');
-  if (changedDimension === 'no_emphasis') {
+  if (changedDimension === 'instruction_emphasis') {
+    const allEmphasisDisabled = formData.get('all_emphasis_disabled');
+    if (allEmphasisDisabled !== 'true' && allEmphasisDisabled !== 'false') {
+      return { status: 'error', message: 'Choose a valid instruction emphasis setting.' };
+    }
+    const colors = allEmphasisDisabled === 'true'
+      ? { ingredient: 'none', temperature: 'none', duration: 'none' }
+      : defaultInstructionEmphasis;
+
     const supabase = await createClient();
     const { data, error: authError } = await supabase.auth.getUser();
     if (authError || !data.user) {
@@ -49,13 +60,20 @@ export async function saveUnitPreferences(
     }
 
     const { error } = await supabase.rpc('update_account_unit_preferences', {
-      p_ingredient_color: 'none',
-      p_temperature_color: 'none',
-      p_duration_color: 'none',
+      p_ingredient_color: colors.ingredient,
+      p_temperature_color: colors.temperature,
+      p_duration_color: colors.duration,
     });
-    return error
-      ? { status: 'error', message: 'Instruction emphasis could not be disabled.' }
-      : { status: 'saved', message: 'No emphasis.' };
+    if (error) {
+      return { status: 'error', message: 'Instruction emphasis could not be saved.' };
+    }
+    return {
+      status: 'saved',
+      message:
+        allEmphasisDisabled === 'true'
+          ? 'All instruction emphasis turned off.'
+          : 'Instruction emphasis restored.',
+    };
   }
 
   if (

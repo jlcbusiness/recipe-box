@@ -4,6 +4,7 @@ import { Ban, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import {
+  defaultInstructionEmphasis,
   type InstructionEmphasisColor,
   instructionEmphasisOptions,
 } from '../../lib/recipes/instruction-emphasis';
@@ -77,6 +78,7 @@ export function UnitPreferences({
   const ingredientColorRef = useRef<HTMLInputElement>(null);
   const temperatureColorRef = useRef<HTMLInputElement>(null);
   const durationColorRef = useRef<HTMLInputElement>(null);
+  const allEmphasisDisabledRef = useRef<HTMLInputElement>(null);
   const privatePrintUsesColorsRef = useRef<HTMLInputElement>(null);
   const emphasisPickerRef = useRef<HTMLDivElement>(null);
   const activeEmphasisTriggerRef = useRef<HTMLButtonElement>(null);
@@ -248,20 +250,30 @@ export function UnitPreferences({
     formRef.current?.requestSubmit();
   }
 
-  function updateNoEmphasis() {
+  function updateAllEmphasis(turnedOff: boolean) {
+    const colors = turnedOff
+      ? { ingredient: 'none', temperature: 'none', duration: 'none' }
+      : defaultInstructionEmphasis;
     setPreferences((current) => ({
       ...current,
-      ingredientColor: 'none',
-      temperatureColor: 'none',
-      durationColor: 'none',
+      ingredientColor: colors.ingredient,
+      temperatureColor: colors.temperature,
+      durationColor: colors.duration,
     }));
     setOpenColorDimension(null);
     if (changedDimensionRef.current) {
-      changedDimensionRef.current.value = 'no_emphasis';
+      changedDimensionRef.current.value = 'instruction_emphasis';
     }
-    for (const inputRef of [ingredientColorRef, temperatureColorRef, durationColorRef]) {
+    if (allEmphasisDisabledRef.current) {
+      allEmphasisDisabledRef.current.value = String(turnedOff);
+    }
+    for (const [inputRef, value] of [
+      [ingredientColorRef, colors.ingredient],
+      [temperatureColorRef, colors.temperature],
+      [durationColorRef, colors.duration],
+    ] as const) {
       if (inputRef.current) {
-        inputRef.current.value = 'none';
+        inputRef.current.value = value;
       }
     }
     formRef.current?.requestSubmit();
@@ -294,6 +306,12 @@ export function UnitPreferences({
           defaultValue="volume"
           name="changed_dimension"
           ref={changedDimensionRef}
+          type="hidden"
+        />
+        <input
+          defaultValue="false"
+          name="all_emphasis_disabled"
+          ref={allEmphasisDisabledRef}
           type="hidden"
         />
         <input
@@ -436,18 +454,7 @@ export function UnitPreferences({
           </div>
         </div>
         <div className="settings-preference-group settings-instruction-emphasis">
-          <div className="settings-instruction-emphasis-heading">
-            <h3>Instruction emphasis</h3>
-            <button
-              className="settings-no-emphasis-button"
-              disabled={isPending}
-              onClick={updateNoEmphasis}
-              type="button"
-            >
-              <Ban aria-hidden="true" size={16} strokeWidth={1.8} />
-              No emphasis
-            </button>
-          </div>
+          <h3>Instruction emphasis</h3>
           <div className="settings-emphasis-preferences" ref={emphasisPickerRef}>
             <div className="settings-emphasis-fields">
               {instructionColorDimensions.map(({ dimension, label, preferenceKey }) => {
@@ -552,6 +559,19 @@ export function UnitPreferences({
               type="checkbox"
             />
             Omit instruction emphasis when printing
+          </label>
+          <label className="settings-print-emphasis-toggle">
+            <input
+              checked={
+                preferences.ingredientColor === 'none' &&
+                preferences.temperatureColor === 'none' &&
+                preferences.durationColor === 'none'
+              }
+              disabled={isPending}
+              onChange={(event) => updateAllEmphasis(event.currentTarget.checked)}
+              type="checkbox"
+            />
+            Turn off all emphasis
           </label>
         </div>
       </form>

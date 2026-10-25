@@ -651,7 +651,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       if (position < 0) throw new Error('Expected the instruction to contain batter text.');
       element.setSelectionRange(position, position);
     });
-    await instruction.pressSequentially(' +p');
+    await instruction.press('Shift+Enter');
+    await instruction.pressSequentially('+p');
     await page
       .getByRole('button', { name: /^Insert photo \d{2}$/u })
       .first()
@@ -748,7 +749,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
         embeddedPhotoBounds.y + embeddedPhotoBounds.height - 1,
       );
     } else {
-      expect(Math.abs(leadingInstructionBounds.y - embeddedPhotoBounds.y)).toBeLessThan(8);
+      expect(leadingInstructionBounds.y).toBeLessThan(embeddedPhotoBounds.y);
       expect(leadingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
       expect(followingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
     }

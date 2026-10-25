@@ -1610,8 +1610,8 @@ test('owners can mark instruction durations with typed delimiters @e2e', async (
 
     await page.emulateMedia({ media: 'screen' });
     await page.goto('/settings');
-    await page.getByRole('button', { name: 'No emphasis' }).click();
-    await expect(page.getByRole('status')).toHaveText('No emphasis.');
+    await page.getByRole('checkbox', { name: 'Turn off all emphasis' }).check();
+    await expect(page.getByRole('status')).toHaveText('All instruction emphasis turned off.');
     await page.goto(`/recipes/${recipeId}`);
     const uncoloredEmphasis = page.locator(
       '.recipe-instruction-temperature, .recipe-instruction-duration',

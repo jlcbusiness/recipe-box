@@ -11,7 +11,13 @@ export type InstructionInlineToken =
   | { type: 'code'; value: string }
   | { type: 'duration'; value: string }
   | { type: 'temperature'; value: string }
-  | { type: 'photo'; id: string; width?: number; alignment?: 'left' }
+  | {
+      type: 'photo';
+      id: string;
+      width?: number;
+      alignment?: 'left';
+      lineBreakBefore?: boolean;
+    }
   | { type: 'link'; label: string; url: string }
   | { type: 'mention'; id: string; slug: string; portionOrdinal?: 1 | 2 };
 
@@ -58,7 +64,10 @@ function parseInstructionInline(
     const fullMatch = match[0];
     const index = match.index ?? 0;
     if (index > previousIndex) {
-      tokens.push({ type: 'text', value: value.slice(previousIndex, index) });
+      tokens.push({
+        type: 'text',
+        value: value.slice(previousIndex, index).replace(/\n/gu, ' '),
+      });
     }
 
     if (match[2] && match[3]) {
@@ -96,6 +105,10 @@ function parseInstructionInline(
         id: match[17].toLocaleLowerCase(),
         ...(modifiers?.width === undefined ? {} : { width: modifiers.width }),
         ...(modifiers?.alignment === 'left' ? { alignment: 'left' } : {}),
+        ...(value.lastIndexOf('\n', index - 1) >= previousIndex &&
+        value.slice(value.lastIndexOf('\n', index - 1) + 1, index).trim() === ''
+          ? { lineBreakBefore: true }
+          : {}),
       });
     } else if (match[18] && match[19]) {
       tokens.push({ type: 'duration', value: match[19] });
@@ -115,7 +128,10 @@ function parseInstructionInline(
   }
 
   if (previousIndex < value.length) {
-    tokens.push({ type: 'text', value: value.slice(previousIndex) });
+    tokens.push({
+      type: 'text',
+      value: value.slice(previousIndex).replace(/\n/gu, ' '),
+    });
   }
   return tokens.map((token, index) => {
     if (token.type === 'text' && tokens[index - 1]?.type === 'photo') {
@@ -144,7 +160,7 @@ export function parseInstructionMarkdown(
       if (paragraphLines.length > 0) {
         blocks.push({
           type: 'paragraph',
-          content: parseInstructionInline(paragraphLines.join(' '), temperatureSystem),
+          content: parseInstructionInline(paragraphLines.join('\n'), temperatureSystem),
         });
         paragraphLines = [];
       }

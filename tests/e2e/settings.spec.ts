@@ -392,7 +392,7 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
   }
 });
 
-test('Settings can disable all instruction emphasis @e2e', async ({ page, request }) => {
+test('Settings can turn off and restore all instruction emphasis @e2e', async ({ page, request }) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
   const headers = {
@@ -403,27 +403,46 @@ test('Settings can disable all instruction emphasis @e2e', async ({ page, reques
   try {
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
-    const noEmphasisButton = page.getByRole('button', { name: 'No emphasis' });
-    await expect(noEmphasisButton).toBeVisible();
-    const [buttonBounds, settingsBounds] = await Promise.all([
-      noEmphasisButton.boundingBox(),
-      page.locator('.settings-main').boundingBox(),
+    const allEmphasisToggle = page.getByRole('checkbox', { name: 'Turn off all emphasis' });
+    await expect(allEmphasisToggle).toBeVisible();
+    const [printBounds, emphasisBounds] = await Promise.all([
+      page.locator('.settings-print-emphasis-toggle').nth(0).boundingBox(),
+      page.locator('.settings-print-emphasis-toggle').nth(1).boundingBox(),
     ]);
-    if (!buttonBounds || !settingsBounds) {
-      throw new Error('Expected the No emphasis action to fit within Settings.');
+    if (!printBounds || !emphasisBounds) {
+      throw new Error('Expected both instruction emphasis checkboxes to be visible.');
     }
-    expect(buttonBounds.x).toBeGreaterThanOrEqual(settingsBounds.x);
-    expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(
-      settingsBounds.x + settingsBounds.width,
-    );
-    await noEmphasisButton.click();
-    await expect(page.getByRole('status')).toHaveText('No emphasis.');
+    expect(emphasisBounds.y).toBeGreaterThanOrEqual(printBounds.y + printBounds.height);
+    await allEmphasisToggle.check();
+    await expect(page.getByRole('status')).toHaveText('All instruction emphasis turned off.');
     const saved = await request.get(
       `${config.apiUrl}/rest/v1/accounts?select=ingredient_color,temperature_color,duration_color&id=eq.${user.id}`,
       { headers },
     );
     expect(await saved.json()).toEqual([
       { ingredient_color: 'none', temperature_color: 'none', duration_color: 'none' },
+    ]);
+    await page.reload();
+    await expect(allEmphasisToggle).toBeChecked();
+    await allEmphasisToggle.uncheck();
+    await expect(allEmphasisToggle).not.toBeChecked();
+    await expect(page.locator('input[name="all_emphasis_disabled"]')).toHaveValue('false');
+    await expect
+      .poll(async () => {
+        const response = await request.get(
+          `${config.apiUrl}/rest/v1/accounts?select=ingredient_color,temperature_color,duration_color&id=eq.${user.id}`,
+          { headers },
+        );
+        return response.json();
+      })
+      .toEqual([{ ingredient_color: 'blue', temperature_color: 'red', duration_color: 'orange' }]);
+    await expect(page.getByRole('status')).toHaveText('Instruction emphasis restored.');
+    const restored = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=ingredient_color,temperature_color,duration_color&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await restored.json()).toEqual([
+      { ingredient_color: 'blue', temperature_color: 'red', duration_color: 'orange' },
     ]);
   } finally {
     await deleteTestUser(request, user);
@@ -477,10 +496,12 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
     for (const spacing of accordionSpacing) {
       expect(spacing.above).toBeCloseTo(spacing.below, 0);
     }
-    await expect(recipeColumnsSection.getByRole('button', { name: 'Check None' })).toHaveCSS(
-      'transform',
-      'none',
-    );
+    await expect(
+      recipeColumnsSection.getByRole('button', { name: 'Show all recipe columns' }),
+    ).toContainText('All');
+    await expect(
+      recipeColumnsSection.getByRole('button', { name: 'Show all recipe columns' }).locator('svg'),
+    ).toHaveCount(1);
     await expect(page.getByRole('region', { name: 'Data management' })).toHaveCSS(
       'margin-top',
       '0px',
@@ -778,7 +799,7 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.waitForLoadState('networkidle');
 
-    const sectionToggle = page.getByRole('button', { name: 'Recipe columns' });
+    const sectionToggle = page.getByRole('button', { name: 'Recipe columns', exact: true });
     await expect(sectionToggle).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByRole('list', { name: 'Recipe column order' })).toBeHidden();
     await sectionToggle.click();
@@ -811,13 +832,13 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     const headingBox = await sectionToggle.boundingBox();
     const listBox = await columnList.boundingBox();
     if (!headingBox || !listBox) throw new Error('Expected the expanded recipe column list.');
-    const checkNoneBox = await columnSection
-      .getByRole('button', { name: 'Check None' })
+    const showAllBox = await columnSection
+      .getByRole('button', { name: 'Show all recipe columns' })
       .boundingBox();
-    if (!checkNoneBox) throw new Error('Expected the Check None control beside the header.');
-    expect(checkNoneBox.x).toBeGreaterThanOrEqual(headingBox.x + headingBox.width - 1);
+    if (!showAllBox) throw new Error('Expected the Show all recipe columns control beside the header.');
+    expect(showAllBox.x).toBeGreaterThanOrEqual(headingBox.x + headingBox.width - 1);
     expect(
-      Math.abs(checkNoneBox.y + checkNoneBox.height / 2 - (headingBox.y + headingBox.height / 2)),
+      Math.abs(showAllBox.y + showAllBox.height / 2 - (headingBox.y + headingBox.height / 2)),
     ).toBeLessThan(1);
     const listDimensions = await columnList.evaluate((list) => ({
       clientHeight: list.clientHeight,
@@ -873,7 +894,7 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     await expect(columnOrderStatus).toHaveText('Name moved to position 2.');
     await page.reload();
     await expect(page.getByRole('list', { name: 'Recipe column order' })).toBeHidden();
-    await page.getByRole('button', { name: 'Recipe columns' }).click();
+    await page.getByRole('button', { name: 'Recipe columns', exact: true }).click();
     await expect(page.locator('[data-recipe-column-row="publication_page"]')).toHaveCount(1);
     await expect(page.locator('[data-recipe-column-row="publication_page"]')).toHaveAttribute(
       'data-recipe-column-row',
@@ -911,7 +932,7 @@ test('Settings recipe column order is saved and used by the Find column chooser 
 
     await page.setViewportSize({ width: 900, height: 520 });
     await page.goto('/settings');
-    await page.getByRole('button', { name: 'Recipe columns' }).click();
+    await page.getByRole('button', { name: 'Recipe columns', exact: true }).click();
     const firstHandle = page.getByRole('button', { name: 'Reorder Name' });
     const orderList = page.getByRole('list', { name: 'Recipe column order' });
     await orderList.scrollIntoViewIfNeeded();
@@ -952,7 +973,7 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     );
     await expect(columnOrderStatus).toHaveText('Publication hidden from recipe tables.');
     await page.reload();
-    await page.getByRole('button', { name: 'Recipe columns' }).click();
+    await page.getByRole('button', { name: 'Recipe columns', exact: true }).click();
     await expect(
       page.getByRole('button', { name: 'Show Publication in recipe tables' }),
     ).toHaveAttribute('aria-pressed', 'false');
@@ -998,17 +1019,21 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     expect(chooserOrder.slice(0, 3)).toEqual(['URL', 'Page', 'NameAlways shown']);
 
     await page.goto('/settings');
-    await page.getByRole('button', { name: 'Recipe columns' }).click();
-    await page.getByRole('button', { name: 'Check None' }).click();
-    await expect(page.locator('[data-recipe-column-row="total_time_minutes"]')).toHaveAttribute(
-      'data-hidden',
-      'true',
-    );
+    await page.getByRole('button', { name: 'Recipe columns', exact: true }).click();
+    const totalTimeRow = page.locator('[data-recipe-column-row="total_time_minutes"]');
+    if ((await totalTimeRow.getAttribute('data-hidden')) !== 'true') {
+      await totalTimeRow
+        .getByRole('button', { name: 'Hide Total Time in recipe tables' })
+        .click();
+    }
+    await expect(totalTimeRow).toHaveAttribute('data-hidden', 'true');
+    await page.getByRole('button', { name: 'Show all recipe columns' }).click();
+    await expect(totalTimeRow).not.toHaveAttribute('data-hidden', 'true');
     await expect(page.locator('[data-recipe-column-row="name"]')).not.toHaveAttribute(
       'data-hidden',
       'true',
     );
-    await expect(columnOrderStatus).toHaveText('All optional recipe columns hidden.');
+    await expect(columnOrderStatus).toHaveText('All recipe columns shown.');
   } finally {
     await deleteTestUser(request, user);
   }

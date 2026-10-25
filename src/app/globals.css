@@ -1273,43 +1273,6 @@ h1 {
   font-weight: 700;
 }
 
-.settings-instruction-emphasis-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.settings-instruction-emphasis-heading h3 {
-  margin-bottom: 0;
-}
-
-.settings-no-emphasis-button {
-  display: inline-flex;
-  min-height: 36px;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  padding: 4px 8px;
-  background: var(--surface);
-  color: var(--ink);
-  cursor: pointer;
-  font: inherit;
-  font-size: 14px;
-}
-
-.settings-no-emphasis-button:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
-
-.settings-no-emphasis-button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
 .settings-emphasis-preferences {
   position: relative;
   display: grid;

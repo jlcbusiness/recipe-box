@@ -172,17 +172,12 @@ export function RecipeColumnOrderManager({
     });
   }
 
-  function hideOptionalColumns() {
+  function showAllColumns() {
     if (isPending) return;
     const previousHiddenColumns = hiddenColumnsRef.current;
-    const nextHiddenColumns = columns.filter(({ required }) => !required).map(({ key }) => key);
-    if (
-      previousHiddenColumns.length === nextHiddenColumns.length &&
-      nextHiddenColumns.every((key) => previousHiddenColumns.includes(key))
-    ) {
-      return;
-    }
+    if (previousHiddenColumns.length === 0) return;
 
+    const nextHiddenColumns: string[] = [];
     hiddenColumnsRef.current = nextHiddenColumns;
     setHiddenColumns(nextHiddenColumns);
     setStatus('');
@@ -194,7 +189,7 @@ export function RecipeColumnOrderManager({
         setStatus(result.error);
         return;
       }
-      setStatus('All optional recipe columns hidden.');
+      setStatus('All recipe columns shown.');
       router.refresh();
     });
   }
@@ -434,17 +429,15 @@ export function RecipeColumnOrderManager({
           </button>
         </h2>
         <button
-          aria-label="Check None"
-          className={styles.checkNone}
-          disabled={
-            isPending ||
-            columns.every(({ key, required }) => required || hiddenColumns.includes(key))
-          }
-          title="Check None"
+          aria-label="Show all recipe columns"
+          className={styles.showAll}
+          disabled={isPending || hiddenColumns.length === 0}
+          title="Show all recipe columns"
           type="button"
-          onClick={hideOptionalColumns}
+          onClick={showAllColumns}
         >
-          <EyeOff aria-hidden="true" size={18} />
+          <Eye aria-hidden="true" size={18} />
+          <span>All</span>
         </button>
       </div>
       <div hidden={!isExpanded} id="recipe-column-order-list">

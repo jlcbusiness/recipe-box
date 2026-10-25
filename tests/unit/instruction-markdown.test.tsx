@@ -234,6 +234,25 @@ describe('instruction Markdown', () => {
     ]);
   });
 
+  it('preserves a line break before a photo that starts a new authored line', () => {
+    expect(parseInstructionMarkdown(`Gather all ingredients.\n[[photo:${photoId}]]-left`)).toEqual([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', value: 'Gather all ingredients. ' },
+          { type: 'photo', id: photoId, alignment: 'left', lineBreakBefore: true },
+        ],
+      },
+    ]);
+    expect(parseInstructionMarkdown(`Gather all ingredients. [[photo:${photoId}]]-left`)[0]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', value: 'Gather all ingredients. ' },
+        { type: 'photo', id: photoId, alignment: 'left' },
+      ],
+    });
+  });
+
   it('parses portion-qualified and legacy ingredient markers as readable mentions', () => {
     expect(
       parseInstructionMarkdown(
