@@ -110,8 +110,10 @@ Write the focused browser tests before production UI changes:
   and the page has no horizontal overflow.
 
 Run the focused Settings browser tests on Chromium and Fold 6, then unit tests,
-typecheck, lint, and `git diff --check`. Do not run `npm run dev:local`; it
-resets local Supabase data.
+typecheck, lint, and `git diff --check`. Reuse local data when useful; a reset
+is allowed when a clean baseline is worth the reset and reload effort. Follow
+the README procedure and reload the synthetic fixture. Never reset linked or
+hosted Supabase.
 
 ## Completion criteria
 

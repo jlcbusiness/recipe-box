@@ -377,6 +377,7 @@ export function MeasurementEditor({
       2,
       measurement.quantity.length + (measurement.derivedFromDensity ? 1 : 0),
     );
+    const isLongDensityDerived = measurement.derivedFromDensity && inputSize >= 12;
     return (
       <div className="recipe-measurement-control">
         <label htmlFor={inputId}>
@@ -385,7 +386,7 @@ export function MeasurementEditor({
           </span>
         </label>
         <div
-          className={`recipe-measurement-input-wrap${measurement.derivedFromDensity && measurement.quantity ? ' is-density-derived' : ''}`}
+          className={`recipe-measurement-input-wrap${measurement.derivedFromDensity && measurement.quantity ? ' is-density-derived' : ''}${isLongDensityDerived ? ' is-density-derived-long' : ''}`}
         >
           <input
             aria-describedby={inputDescribedBy}

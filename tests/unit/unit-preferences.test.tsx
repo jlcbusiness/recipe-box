@@ -214,6 +214,37 @@ describe('unit preference action', () => {
     });
   });
 
+  it('saves private-print instruction-photo opt-out independently', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const getUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
+    createClient.mockResolvedValue({ auth: { getUser }, rpc });
+    const formData = new FormData();
+    formData.set('changed_dimension', 'print_photos');
+    formData.set('include_instruction_photos_in_private_print', 'false');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'saved',
+      message: 'Saved.',
+    });
+    expect(rpc).toHaveBeenCalledWith('update_account_unit_preferences', {
+      p_include_instruction_photos_in_private_print: false,
+    });
+  });
+
+  it('rejects an invalid private-print photo preference before calling Supabase', async () => {
+    const formData = new FormData();
+    formData.set('changed_dimension', 'print_photos');
+    formData.set('include_instruction_photos_in_private_print', 'sometimes');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'error',
+      message: 'Choose a valid print preference.',
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it('rejects an unsupported hand preference before calling Supabase', async () => {
     const formData = new FormData();
     formData.set('changed_dimension', 'hand');
@@ -298,6 +329,48 @@ describe('unit preference action', () => {
         .getByRole('checkbox', { name: 'Omit instruction emphasis when printing' })
         .getAttribute('checked'),
     ).toBeNull();
+    expect(
+      (
+        screen.getByRole('checkbox', {
+          name: 'Omit instruction photos when printing',
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(false);
+  });
+
+  it('restores the saved private-print photo setting when its save fails', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: new Error('Database unavailable.') });
+    const getUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
+    createClient.mockResolvedValue({ auth: { getUser }, rpc });
+    render(
+      <UnitPreferences
+        durationColor="orange"
+        handPreference="right"
+        includeInstructionPhotosInPrivatePrint
+        ingredientColor="blue"
+        ingredientPresentation="standard"
+        privatePrintUsesColors
+        temperatureColor="red"
+        temperatureSystem="fahrenheit"
+        volumeSystem="us_customary"
+        weightSystem="us_customary"
+      />,
+    );
+
+    const omitPhotos = screen.getByRole('checkbox', {
+      name: 'Omit instruction photos when printing',
+    });
+    fireEvent.click(omitPhotos);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status').textContent).toBe('Print preference could not be saved.');
+      expect((omitPhotos as HTMLInputElement).checked).toBe(false);
+    });
+    expect(rpc).toHaveBeenCalledWith('update_account_unit_preferences', {
+      p_include_instruction_photos_in_private_print: false,
+    });
   });
 
   it('opens a 4-by-4 color palette and saves a selected color', async () => {

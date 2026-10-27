@@ -37,6 +37,7 @@ const preferenceFields = new Set([
   'temperature_color',
   'duration_color',
   'private_print_uses_colors',
+  'include_instruction_photos_in_private_print',
   'recipe_column_order',
   'recipe_hidden_columns',
 ]);
@@ -175,7 +176,9 @@ function validateData(
     (preferences.temperature_system !== undefined &&
       !['fahrenheit', 'celsius'].includes(String(preferences.temperature_system))) ||
     (preferences.private_print_uses_colors !== undefined &&
-      typeof preferences.private_print_uses_colors !== 'boolean')
+      typeof preferences.private_print_uses_colors !== 'boolean') ||
+    (preferences.include_instruction_photos_in_private_print !== undefined &&
+      typeof preferences.include_instruction_photos_in_private_print !== 'boolean')
   ) {
     throw new Error('The bundle contains unsupported account preference fields.');
   }

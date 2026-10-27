@@ -244,7 +244,9 @@ describe('instruction Markdown', () => {
         ],
       },
     ]);
-    expect(parseInstructionMarkdown(`Gather all ingredients. [[photo:${photoId}]]-left`)[0]).toEqual({
+    expect(
+      parseInstructionMarkdown(`Gather all ingredients. [[photo:${photoId}]]-left`)[0],
+    ).toEqual({
       type: 'paragraph',
       content: [
         { type: 'text', value: 'Gather all ingredients. ' },

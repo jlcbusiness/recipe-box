@@ -166,9 +166,11 @@ Write focused automated tests before production code:
   add its importer-compatibility test when its fields are defined.
 
 Run focused unit and API tests first, then Chromium and Fold 6 acceptance,
-TypeScript, Biome, Markdown lint, and `git diff --check`. Do not use
-`npm run dev:local` or reset local Supabase. Use the existing server if running;
-otherwise start only a free-port local server for UI verification.
+TypeScript, Biome, Markdown lint, and `git diff --check`. Reuse local data when
+useful; a reset is allowed when a clean baseline is worth the reset and reload
+effort. Follow the README procedure and reload the synthetic fixture. Never
+reset linked or hosted Supabase. Use the existing server if running; otherwise
+start only a free-port local server for UI verification.
 
 ## Completion criteria
 

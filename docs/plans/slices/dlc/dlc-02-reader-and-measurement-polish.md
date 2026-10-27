@@ -147,7 +147,9 @@ where their existing contracts allow them. All conversions remain transient.
   presentation, sort, print, and wake-lock regression tests continue to pass.
 - Focused tests run first, followed by TypeScript, Biome, Markdown lint, the
   relevant Chromium/Fold 6 E2E and accessibility checks, and production build.
-  Do not reset local Supabase data; use the existing local test harness.
+Reuse local test data when useful; a reset is allowed when a clean baseline
+is worth the reset and reload effort. Follow the README procedure and reload
+the synthetic fixture. Never reset linked or hosted Supabase.
 
 ## Assumptions
 

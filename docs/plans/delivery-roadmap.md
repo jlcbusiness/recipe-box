@@ -36,6 +36,18 @@ first-admin command are documented; hosted provider, deployment, email, import,
 Firewall, and physical-device acceptance remain outstanding. Do not mark the
 slice complete based on local tests alone.
 
+DLC 08 is implemented and locally accepted, with its behavior recorded in the
+[comprehensive reference](comprehensive-reference.md) and
+[visual design guide](visual-design.md). Unit, database, accessibility, and
+serial full E2E checks pass. The final one-worker E2E run passed 323 tests with
+5 skipped after the lengthy admin-role test received a 60-second timeout,
+matching its sibling invitation flow. Earlier default two-worker runs had
+intermittent failures; their cases passed in focused reruns. Print-to-PDF
+confirmed the landscape default, and a manual browser-dialog switch to portrait
+produced a two-page letter PDF measuring 612 x 792 points. The default
+two-worker test-suite flakiness remains a general test-reliability caveat, not
+a reproducible DLC 08 failure.
+
 ## Mandatory Slice Preparation
 
 Before implementing any roadmap slice:

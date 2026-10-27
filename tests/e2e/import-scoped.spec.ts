@@ -5,6 +5,7 @@ import { strToU8, zipSync } from 'fflate';
 import sharp from 'sharp';
 import {
   buildBundleManifest,
+  EXPORT_SCHEMA_VERSION,
   type ExportScope,
   exportTableNames,
   type PortableData,
@@ -22,7 +23,7 @@ function createScopedArchive(
 ) {
   const data: PortableData = {
     format: 'recipe-box-data',
-    schema_version: 1,
+    schema_version: EXPORT_SCHEMA_VERSION,
     scope,
     account_preferences: {},
     records: Object.fromEntries(
@@ -129,6 +130,7 @@ function createPublicationMediaArchive({
     byte_size: fullImageBytes.byteLength + thumbnailBytes.byteLength,
     width: 32,
     height: 24,
+    crop: null,
     created_at: createdAt,
     updated_at: createdAt,
   };
@@ -800,6 +802,7 @@ test('replaces a publication with three recipes and four media assets @e2e', asy
       byte_size: fullImageBytes.byteLength + thumbnailImageBytes.byteLength,
       width: 32,
       height: 24,
+      crop: null,
       created_at: createdAt,
       updated_at: createdAt,
     });

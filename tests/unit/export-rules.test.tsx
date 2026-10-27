@@ -36,6 +36,7 @@ function createSnapshot() {
       temperature_color: 'red',
       duration_color: 'orange',
       private_print_uses_colors: true,
+      include_instruction_photos_in_private_print: false,
       is_admin: true,
       sign_in_method: 'password',
       last_database_export_at: '2026-01-01T00:00:00.000Z',
@@ -252,6 +253,7 @@ describe('export rules', () => {
       temperature_color: 'red',
       duration_color: 'orange',
       private_print_uses_colors: true,
+      include_instruction_photos_in_private_print: false,
     });
     expect(output.records.recipes[0]).toMatchObject({ is_private: true });
     expect(output.records.recipes[0]).not.toHaveProperty('food_type_category');

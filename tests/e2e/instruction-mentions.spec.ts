@@ -131,9 +131,9 @@ test('instruction mention rows stay ordered, owner-scoped, and atomic across rec
     );
     const [creationHistory] = await creationHistoryResponse.json();
     expect(creationHistory.after_data.steps[0].mentions).toEqual([
-      { position: 0, recipe_ingredient_id: firstIngredientId },
-      { position: 1, recipe_ingredient_id: firstIngredientId },
-      { position: 2, recipe_ingredient_id: secondIngredientId },
+      { position: 0, recipe_ingredient_id: firstIngredientId, portion_ordinal: null },
+      { position: 1, recipe_ingredient_id: firstIngredientId, portion_ordinal: null },
+      { position: 2, recipe_ingredient_id: secondIngredientId, portion_ordinal: null },
     ]);
 
     const directMentionWrite = await request.post(`${config.apiUrl}/rest/v1/recipe_step_mentions`, {
@@ -213,12 +213,12 @@ test('instruction mention rows stay ordered, owner-scoped, and atomic across rec
     const updateHistory = await updateHistoryResponse.json();
     expect(updateHistory).toHaveLength(2);
     expect(updateHistory[1].after_data.steps[0].mentions).toEqual([
-      { position: 0, recipe_ingredient_id: secondIngredientId },
+      { position: 0, recipe_ingredient_id: secondIngredientId, portion_ordinal: null },
     ]);
     expect(updateHistory[1].before_data.steps[0].mentions).toEqual([
-      { position: 0, recipe_ingredient_id: firstIngredientId },
-      { position: 1, recipe_ingredient_id: firstIngredientId },
-      { position: 2, recipe_ingredient_id: secondIngredientId },
+      { position: 0, recipe_ingredient_id: firstIngredientId, portion_ordinal: null },
+      { position: 1, recipe_ingredient_id: firstIngredientId, portion_ordinal: null },
+      { position: 2, recipe_ingredient_id: secondIngredientId, portion_ordinal: null },
     ]);
 
     const referencedRowDeletion = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {

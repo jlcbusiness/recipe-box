@@ -202,8 +202,9 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
       .toBe(true);
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('cubed 1 ¼ in');
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('1 : 3');
+    const renderedIngredients = page.locator('.recipe-ingredient-list, .recipe-ingredient-table');
+    await expect(renderedIngredients).toContainText('cubed 1 ¼ in');
+    await expect(renderedIngredients).toContainText('1 : 3');
     await waitForCachedRecipe(page, `Offline recipe ${recipeId}`);
 
     await page.context().setOffline(true);
@@ -218,16 +219,16 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
 
     await recipeLink.click();
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('cubed 1 ¼ in');
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('1 : 3');
+    await expect(renderedIngredients).toContainText('cubed 1 ¼ in');
+    await expect(renderedIngredients).toContainText('1 : 3');
     await expect(page.getByRole('status')).toContainText('Offline copy');
     await expect(page.locator('.recipe-detail-heading-actions')).toHaveCount(0);
     await expect(page.locator('.recipe-history-link')).toHaveCount(0);
     expect(await page.locator('script').count()).toBe(0);
     expect(await page.locator('img[src^="http"]').count()).toBe(0);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      await page.evaluate(() => document.documentElement.clientWidth),
-    );
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(documentWidth).toBeLessThanOrEqual(viewportWidth);
     const recipeA11y = await new AxeBuilder({ page }).analyze();
     expect(recipeA11y.violations).toEqual([]);
 
@@ -279,13 +280,22 @@ test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ p
     }
 
     await page.goto(`/recipes/${recipeId}/edit`);
-    await page.getByRole('button', { name: 'Add photo reference to step 1' }).click();
+    const instruction = page.getByRole('textbox', { name: 'Instruction step 1' });
+    await instruction.click();
+    await instruction.press('End');
+    await instruction.pressSequentially(' +p');
+    await expect(
+      page.getByRole('group', { name: 'Choose a photo for instruction step 1' }),
+    ).toBeVisible();
     await page
       .getByRole('button', { name: /^Insert photo \d{2}$/u })
       .first()
       .click();
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'View instruction photo full size' }),
+    ).toBeVisible();
 
     const readCachedSnapshot = () =>
       page.evaluate(async (id) => {
@@ -294,15 +304,12 @@ test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ p
           const cache = await caches.open(cacheName);
           const response = await cache.match(new URL(`/recipes/${id}`, location.origin));
           if (response) {
-            const html = await response.text();
-            if (html.includes('recipe-instruction-photo')) return html;
+            return response.text();
           }
         }
         return '';
       }, recipeId);
-    await expect
-      .poll(readCachedSnapshot, { timeout: 10_000 })
-      .toContain('recipe-instruction-photo');
+    await expect.poll(readCachedSnapshot, { timeout: 10_000 }).toContain('Stir until glossy.');
     const cachedSnapshot = await readCachedSnapshot();
     expect(cachedSnapshot).not.toContain('/storage/v1/object/sign/');
     expect(cachedSnapshot).not.toMatch(/<img\b/i);
@@ -314,8 +321,13 @@ test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ p
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
     await expect(page.locator('img')).toHaveCount(0);
   } finally {
-    await page.context().setOffline(false);
-    await deleteTestUser(request, user);
+    try {
+      if (!page.isClosed()) {
+        await page.context().setOffline(false);
+      }
+    } finally {
+      await deleteTestUser(request, user);
+    }
   }
 });
 

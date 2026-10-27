@@ -142,7 +142,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 8px 0;
+  margin: 0;
 }
 
 .recipe-secondary-link.recipe-edit-back {
@@ -2242,6 +2242,26 @@
   width: 29%;
 }
 
+.recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
+  .recipe-ingredient-name-col {
+  width: 16.5%;
+}
+
+.recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
+  .recipe-ingredient-detail-col {
+  width: 12.5%;
+}
+
+.recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
+  .recipe-ingredient-measurements-col {
+  width: calc(50.5% - 100px);
+}
+
+.recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
+  .recipe-ingredient-preparation-col {
+  width: 20.5%;
+}
+
 .recipe-ingredient-actions-col {
   width: 32px;
 }
@@ -2985,14 +3005,15 @@
 }
 
 .recipe-detail-section {
-  width: min(100%, 1012px);
-  margin-top: 30px;
+  width: min(100%, max(1012px, calc(100% - 2in)));
+  margin: 30px auto 0;
   border-top: 1px solid var(--line);
   padding-top: 18px;
 }
 
 .recipe-summary-layout {
-  width: min(100%, 1012px);
+  width: 100%;
+  margin-inline: 0;
 }
 
 .recipe-summary-layout-with-photos {

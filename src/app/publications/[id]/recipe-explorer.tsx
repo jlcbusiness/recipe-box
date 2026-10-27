@@ -10,7 +10,6 @@ import {
 } from '../../../lib/explorer-state';
 import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
-import { FramedMediaImage } from '../../media/framed-media-image';
 import { getRecipeExplorerColumnValues, recipeStateLabels } from '../../../lib/recipes/data';
 import {
   getRecipeSearchFacetValues,
@@ -27,6 +26,7 @@ import {
   ExplorerListPreferences,
 } from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
+import { FramedMediaImage } from '../../media/framed-media-image';
 import { AlternatingRecipeGrid } from '../../recipes/find/alternating-recipe-grid';
 import { RecipeColumnFilter } from '../../recipes/find/recipe-column-filter';
 import { RecipeSearchToolbar } from '../../recipes/find/recipe-search-toolbar';

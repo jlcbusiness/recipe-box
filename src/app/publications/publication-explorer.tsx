@@ -17,6 +17,7 @@ import Link from 'next/link';
 import type { MouseEvent, ReactNode } from 'react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { createExplorerState, type ExplorerDisplayPreferences } from '../../lib/explorer-state';
+import type { CropRect } from '../../lib/media/rules';
 import type {
   PublicationSearchFilter,
   PublicationSearchResult,
@@ -25,7 +26,6 @@ import type {
 import type { PublicationType } from '../../lib/recipes/data';
 import { ExplorerColumnResizeHandle, ExplorerListPreferences } from '../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../explorer-state-persistence';
-import type { CropRect } from '../../lib/media/rules';
 import { PublicationColumnFilter } from './publication-column-filter';
 import { PublicationCommaList } from './publication-comma-list';
 import { PublicationCover } from './publication-cover';

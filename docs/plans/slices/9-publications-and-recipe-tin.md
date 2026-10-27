@@ -266,10 +266,11 @@ database-test opportunities, not as missing runtime constraints.
 Run `npm run test:unit -- tests/unit/publication-validation.test.tsx`, then
 `npx playwright test tests/e2e/publications.spec.ts --workers=1` for the focused
 Slice 9 acceptance flows in Chromium and Fold 6. Use only local Supabase and
-unique test accounts. Do not run `npm run dev:local`, `npm run supabase:reset`,
-or any other command that resets local data. The broader release gate remains
-`npm run typecheck`, `npm run lint`, an isolated production build, and the
-relevant recipe and publication suites.
+unique test accounts. Reuse local data when useful; a reset is allowed when a
+clean baseline is worth the reset and reload effort. Follow the README
+procedure and reload the synthetic fixture. Never reset a linked or hosted
+project. The broader release gate remains `npm run typecheck`, `npm run lint`,
+an isolated production build, and the relevant recipe and publication suites.
 
 ## Completion criteria
 

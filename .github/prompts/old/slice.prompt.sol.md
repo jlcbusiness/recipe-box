@@ -92,8 +92,11 @@ operation, permissions or data isolation, and persistence behavior.
 Check narrow, intermediate, and wide layouts where responsiveness matters.
 Inspect automated screenshots and supplement them with behavioral,
 accessibility, and geometry assertions. Run the focused tests first, then the
-required repository checks. Do not reset local data or stop a running service
-unless repository instructions and the user explicitly permit it.
+required repository checks. Reuse local data when useful; reset local
+Supabase when a clean baseline is worth the reset and reload effort, then
+reload the synthetic fixture. Follow the README reset and recovery procedure.
+Never reset linked or hosted data as part of local testing or stop a running
+service as a shortcut.
 
 For an authorized reset, follow the [README recovery procedure](../../README.md#resetting-and-recovering-local-data).
 Reset setup reapplies migrations; recreate the local Auth account, then import.

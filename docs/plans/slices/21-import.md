@@ -223,10 +223,12 @@ relationship behavior and verification evidence.
   operation, visible focus, accessible labels/status, axe, and responsive
   overflow at relevant layout boundaries.
 - Run focused unit and API tests first, then Chromium and Fold 6 acceptance,
-  TypeScript, Biome, Markdown lint, and `git diff --check`. Reset only the
-  dedicated `/tmp/recipe-box-import-acceptance` Supabase project when its test
-  setup requires it. Never reset the active local stack or start a competing
-  dev server without explicit authorization.
+  TypeScript, Biome, Markdown lint, and `git diff --check`. Prefer the dedicated
+  `/tmp/recipe-box-import-acceptance` Supabase project for isolated destructive
+  acceptance setup. Resetting active local Supabase is also allowed when a
+  clean baseline is worth the reset and reload effort; follow the README
+  procedure and reload the synthetic fixture. Never reset linked or hosted
+  Supabase or start a competing dev server as a shortcut.
 
 ## Assumptions and deferred decisions
 

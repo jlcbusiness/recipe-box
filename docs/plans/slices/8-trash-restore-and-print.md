@@ -229,11 +229,12 @@ styles:
 ## Verification
 
 Run focused lifecycle and ingredient-formatting unit tests first, then
-database/RLS/Cron tests against the running local Supabase stack, then the
-focused browser and axe suites in Chromium and Fold 6. Do not run `npm run dev:local`,
-`npm run supabase:reset`, or another command that resets local data while
-working against existing fixtures. Finish with `npm run typecheck`, `npm run
-lint`, `npm run build`, and the relevant full recipe suite.
+database/RLS/Cron tests against local Supabase, then the focused browser and
+axe suites in Chromium and Fold 6. Reuse existing local fixtures when useful;
+a reset is allowed when a clean baseline is worth the reset and reload effort.
+Follow the README procedure and reload the synthetic fixture. Never reset a
+linked or hosted project. Finish with `npm run typecheck`, `npm run lint`,
+`npm run build`, and the relevant full recipe suite.
 
 ## Completion criteria
 

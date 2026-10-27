@@ -155,8 +155,10 @@ supported mobile widths.
 Run the focused unit tests if sorting/count projection has isolated logic, then
 `npx playwright test tests/e2e/publications.spec.ts --grep 'Library Explorer'`
 in Chromium and Fold 6. Finish with `npm run typecheck`, `npm run lint`, and
-`git diff --check`. Do not run `npm run dev:local`, reset local Supabase, or
-stop the existing development servers.
+`git diff --check`. Reuse local data when useful; a reset is allowed when a
+clean baseline is worth the reset and reload effort. Follow the README
+procedure and reload the synthetic fixture. Never reset linked or hosted
+Supabase or stop an existing server as a shortcut.
 
 ## Completion criteria
 

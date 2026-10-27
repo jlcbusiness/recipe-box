@@ -79,12 +79,13 @@ that the design guide and requirements leave open.
   breakpoints or boundary widths identified in the brief. Use realistic
   content. Compare the rendered result with the brief and acceptance tests;
   fix mismatches before calling the slice complete. Automated tests and
-  screenshots complement each other. Do not reset local data or stop an
-  existing development server as a validation shortcut. For an authorized
-  reset, follow the [README recovery procedure](../../README.md#resetting-and-recovering-local-data)
-  to export before reset, reapply migrations, recreate the local Auth account,
-  and import. The ZIP restores account data and ready images, not Auth users or
-  history. Prefer an isolated Supabase project for acceptance tests.
+  screenshots complement each other. Reuse local data when it is useful; a
+  local reset is allowed when a clean baseline is worth the reset and reload
+  effort. Follow the [README reset and recovery procedure](../../README.md#resetting-and-recovering-local-data)
+  and reload the synthetic fixture after migrations. Export local data outside
+  the fixture if it must be retained. Never reset a linked or hosted project
+  as part of local acceptance testing, and do not stop an existing development
+  server as a shortcut.
 4. Run the focused tests first, then the required type, lint, accessibility,
   build, and broader checks appropriate to the changed surface. Update the
   visual guide's current-implementation section only to describe behavior

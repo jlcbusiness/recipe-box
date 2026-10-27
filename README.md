@@ -430,24 +430,31 @@ the versioned migrations and seed script, then starts Next.js.
 
 Use `npm run dev` for routine starts; it applies pending migrations without
 resetting the local database. `npm run dev:local` is a destructive clean reset:
-it removes local database state, including local Auth users. Do not use it as a
-routine restart or against a shared local stack without explicit authorization.
+it removes local database state, including local Auth users. A reset is fine
+when a clean baseline is worth the reset and reload effort; use `npm run dev`
+for a routine restart. For the synthetic baseline, run
+`npm run seed:synthetic -- --local` after the stack is ready. Reset only local
+Supabase, never a linked or hosted project. Preserve or export any local data
+that is not represented in the synthetic fixture before resetting.
 
 ### Resetting and recovering local data
 
-Before an authorized reset, download a **full database export** from Settings
-and confirm the export completed. Keep the ZIP outside the local Supabase
-Storage bucket and any temporary project directory. `npm run dev:local`
-reapplies the versioned migrations and seed script; the local project
-configuration stays in the working copy. After it starts, create a fresh local
-Auth account, sign in, and import the ZIP from Settings.
+Local resets are allowed whenever their value justifies the time to reset and
+reload. `npm run dev:local` reapplies the versioned migrations and SQL seed
+script; alternatively, run `supabase db reset --local` against the running
+local stack. Both remove local database state and Auth users. Once the stack is
+ready, `npm run seed:synthetic -- --local` recreates the synthetic test
+accounts and fixture data. The fixture is a repeatable test baseline, not a
+backup of arbitrary local data.
 
-The ZIP restores account-owned records, preferences, and ready image variants;
-it does not restore Auth users, passwords, or change history. Recreating the
-local Auth account is a separate setup step, and import maps the restored data
-to that account. For destructive acceptance tests, prefer a dedicated isolated
-Supabase project to avoid disturbing the active local stack. See the
-[Slice 21 import brief](docs/plans/slices/21-import.md) for the import contract.
+If local records outside the fixture need to be retained, download a **full
+database export** from Settings before resetting and keep it outside Supabase
+Storage and temporary project directories. The ZIP restores account-owned
+records, preferences, and ready image variants; it does not restore Auth users,
+passwords, or change history. Recreate a local Auth account and import the ZIP
+from Settings to recover those records. Never reset a linked or hosted database
+as part of local testing. See the [Slice 21 import brief](docs/plans/slices/21-import.md)
+for the import contract.
 
 - App: <http://localhost:3000>
 - Supabase API: <http://127.0.0.1:55421>

@@ -13,13 +13,14 @@ brief.
 ## Prepare
 
 - Read `AGENTS.md` and inspect the worktree. Preserve user changes and follow
-  repository safety rules; do not reset local data or stop a running service
-  without authorization.
-- For an authorized reset, follow the [README recovery procedure](../../README.md#resetting-and-recovering-local-data).
-  Reset setup reapplies migrations while local configuration remains in the
-  working copy; recreate the local Auth account, then import. The ZIP restores
-  account data and ready images, not Auth users or history. Prefer an isolated
-  project for destructive tests.
+  repository safety rules. Reuse local data when it is useful; a local reset
+  is permitted when a clean baseline is worth the reset and reload effort.
+- Follow the [README reset and recovery procedure](../../README.md#resetting-and-recovering-local-data).
+  Reapply migrations, then reload the synthetic baseline with
+  `npm run seed:synthetic -- --local`. A reset removes all local database
+  records and Auth users, including data outside the fixture. Preserve any
+  such data separately if needed. Never reset a linked or hosted project as
+  part of local work.
 - Follow the roadmap's Mandatory Slice Preparation, Standing Rules, and
   Completion Rule. Read `first-draft-spec.md` first, then the selected roadmap
   entry and relevant sections of the comprehensive reference, data model,
@@ -92,10 +93,12 @@ more than one. Record accepted decisions and material deferrals in
   persistence, accessibility, and responsive boundaries in the brief. Inspect
   the widths immediately around each relevant reflow boundary and at least one
   intermediate width where wrapping changes.
-- Reuse the existing dev server. Do not start a competing server, stop a
-  running service, or reset local data without authorization. Run focused tests
-  first, then relevant type, lint, accessibility, and build checks. Screenshots
-  supplement behavioral and geometry checks; they do not replace them.
+- Reuse the existing dev server. Do not start a competing server or stop a
+  running service as a validation shortcut. Reset local Supabase when a clean
+  baseline is worth its reload cost, then restore the fixture as described in
+  the README; never reset linked or hosted data. Run focused tests first, then
+  relevant type, lint, accessibility, and build checks. Screenshots supplement
+  behavioral and geometry checks; they do not replace them.
 - When a product contract changes, update its focused tests to match the new
   observable behavior. Do not weaken an assertion merely to make a failing test
   pass.

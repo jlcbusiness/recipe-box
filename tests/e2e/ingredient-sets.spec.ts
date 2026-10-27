@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test';
 import { unzipSync } from 'fflate';
+import { EXPORT_SCHEMA_VERSION } from '../../src/lib/exports/rules';
 import {
   createTestUser,
   deleteTestUser,
@@ -385,8 +386,8 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       ]) {
         const { data, manifest } = await exportData(page, request, scope);
         expect(manifest.scope).toEqual(scope);
-        expect(manifest.schema_version).toBe(3);
-        expect(data.schema_version).toBe(3);
+        expect(manifest.schema_version).toBe(EXPORT_SCHEMA_VERSION);
+        expect(data.schema_version).toBe(EXPORT_SCHEMA_VERSION);
         expect(
           data.records.recipe_ingredient_sets.filter((set) => set.recipe_id === recipe.id),
         ).toEqual(expectedSets);

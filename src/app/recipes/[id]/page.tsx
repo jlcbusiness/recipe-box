@@ -265,6 +265,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   let temperatureSystem: TemperatureSystem = 'fahrenheit';
   let ingredientPresentation: 'standard' | 'ingredient_first' = 'standard';
   let privatePrintUsesColors = true;
+  let includeInstructionPhotosInPrivatePrint = true;
   let emphasisColors = {
     ingredient: getInstructionEmphasisColor(defaultInstructionEmphasis.ingredient),
     temperature: getInstructionEmphasisColor(defaultInstructionEmphasis.temperature),
@@ -274,7 +275,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     const { data: account } = await supabase
       .from('accounts')
       .select(
-        'volume_system, weight_system, temperature_system, ingredient_presentation, ingredient_color, temperature_color, duration_color, private_print_uses_colors',
+        'volume_system, weight_system, temperature_system, ingredient_presentation, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print',
       )
       .eq('id', authData.user.id)
       .maybeSingle();
@@ -301,6 +302,8 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       ),
     };
     privatePrintUsesColors = account?.private_print_uses_colors !== false;
+    includeInstructionPhotosInPrivatePrint =
+      account?.include_instruction_photos_in_private_print !== false;
   }
   if (!recipe) {
     notFound();
@@ -375,69 +378,70 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 
   return (
     <main
-      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}${privatePrintUsesColors ? '' : ' no-print-emphasis-colors'}`}
+      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}${privatePrintUsesColors ? '' : ' no-print-emphasis-colors'}${includeInstructionPhotosInPrivatePrint ? '' : ' no-instruction-photos'}`}
       aria-labelledby="page-title"
     >
       <OfflineSnapshotCapture recipeId={recipe.id} />
-      <div className="recipe-page-heading recipe-detail-heading">
-        <div className="recipe-detail-title">
-          <h1 id="page-title">{recipe.name}</h1>
-          {recipe.publication && (
-            <p className="recipe-attribution">
-              <span>
-                {recipe.publication.publication_type === 'collection' ? 'In the ' : 'From '}
-              </span>
-              <Link href={`/publications/${recipe.publication.id}`}>
-                <cite>{recipe.publication.name}</cite>
-              </Link>
-              {recipe.publication.publication_type !== 'collection' && recipe.publication_page
-                ? ` · ${recipe.publication.publication_type === 'book' ? `p. ${recipe.publication_page}` : recipe.publication_page}`
-                : ''}
-              {recipe.publication.publication_type !== 'collection' && recipe.recipe_url && (
-                <a className="recipe-source-link" href={recipe.recipe_url}>
-                  <span className="recipe-source-url-full">{recipe.recipe_url}</span>
-                  <span className="recipe-source-url-mobile">View online</span>
-                </a>
-              )}
-            </p>
-          )}
-        </div>
-        <div className="recipe-detail-tags-row">
-          <TagChips
-            tags={recipe.tags}
-            trailingActions={
-              <div className="recipe-detail-heading-actions recipe-screen-only">
-                <RecipeShareActions
-                  isPrivate={recipe.is_private}
-                  publicId={recipe.public_id}
-                  recipeId={recipe.id}
-                  version={recipe.version}
-                />
-                <RecipePrintAction />
-                <ExportAction
-                  ariaLabel="Export recipe"
-                  buttonLabel="Export recipe"
-                  buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
-                  className="recipe-detail-export-action"
-                  scope={{ type: 'recipe', id: recipe.id }}
-                />
-                <Link
-                  aria-label="Edit"
-                  className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
-                  href={`/recipes/${recipe.id}/edit`}
-                  title="Edit recipe"
-                >
-                  <Pencil aria-hidden="true" size={16} strokeWidth={2} />
-                </Link>
-              </div>
-            }
-          />
-        </div>
-      </div>
       <RecipeReaderProvider serves={recipe.serves}>
         <RecipeSummaryLayout hasPhotos={photos.length > 0}>
+          <div className="recipe-page-heading recipe-detail-heading">
+            <div className="recipe-detail-title">
+              <h1 id="page-title">{recipe.name}</h1>
+              {recipe.publication && (
+                <p className="recipe-attribution">
+                  <span>
+                    {recipe.publication.publication_type === 'collection' ? 'In the ' : 'From '}
+                  </span>
+                  <Link href={`/publications/${recipe.publication.id}`}>
+                    <cite>{recipe.publication.name}</cite>
+                  </Link>
+                  {recipe.publication.publication_type !== 'collection' && recipe.publication_page
+                    ? ` · ${recipe.publication.publication_type === 'book' ? `p. ${recipe.publication_page}` : recipe.publication_page}`
+                    : ''}
+                  {recipe.publication.publication_type !== 'collection' && recipe.recipe_url && (
+                    <a className="recipe-source-link" href={recipe.recipe_url}>
+                      <span className="recipe-source-url-full">{recipe.recipe_url}</span>
+                      <span className="recipe-source-url-mobile">View online</span>
+                    </a>
+                  )}
+                </p>
+              )}
+            </div>
+            {recipe.tags.length > 0 && (
+              <div className="recipe-detail-tags-row">
+                <TagChips tags={recipe.tags} />
+              </div>
+            )}
+            <div className="recipe-detail-heading-actions recipe-screen-only">
+              <RecipeShareActions
+                isPrivate={recipe.is_private}
+                publicId={recipe.public_id}
+                recipeId={recipe.id}
+                version={recipe.version}
+              />
+              <RecipePrintAction />
+              <ExportAction
+                ariaLabel="Export recipe"
+                buttonLabel="Export recipe"
+                buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
+                className="recipe-detail-export-action"
+                scope={{ type: 'recipe', id: recipe.id }}
+              />
+              <Link
+                aria-label="Edit"
+                className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
+                href={`/recipes/${recipe.id}/edit`}
+                title="Edit recipe"
+              >
+                <Pencil aria-hidden="true" size={16} strokeWidth={2} />
+              </Link>
+            </div>
+          </div>
           <RecipePhotoGallery photos={photos} />
-          <section className="recipe-detail-section" aria-labelledby="metadata-title">
+          <section
+            aria-labelledby="metadata-title"
+            className="recipe-detail-section recipe-print-metadata"
+          >
             <h2 id="metadata-title">Recipe details</h2>
             {sections.length > 0 && (
               <dl className="recipe-metadata">
@@ -464,7 +468,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               </dl>
             )}
             {times.length > 0 && (
-              <div className="recipe-detail-times">
+              <div className="recipe-detail-times recipe-print-metadata-times">
                 <h3 className="recipe-detail-times-title">Time Breakdown</h3>
                 <dl className="recipe-metadata recipe-time-list">
                   {times.map(([label, value]) => (

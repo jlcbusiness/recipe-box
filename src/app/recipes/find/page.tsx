@@ -9,7 +9,6 @@ import {
 } from '../../../lib/explorer-state';
 import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
-import { FramedMediaImage } from '../../media/framed-media-image';
 import {
   getIngredients,
   getPublications,
@@ -33,6 +32,7 @@ import {
   ExplorerListPreferences,
 } from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
+import { FramedMediaImage } from '../../media/framed-media-image';
 import { AlternatingRecipeGrid } from './alternating-recipe-grid';
 import { RecipeColumnFilter } from './recipe-column-filter';
 import { RecipeFilterBuilder } from './recipe-filter-builder';

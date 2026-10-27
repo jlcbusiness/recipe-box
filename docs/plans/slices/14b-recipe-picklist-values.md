@@ -97,7 +97,10 @@ reassigned or explicitly cleared according to their field semantics.
   measurement references, protected-value rules, atomic rewrite behavior,
   recipe version/history updates, and stale revision rollback.
 - Run focused 14B tests, the relevant unit tests, typecheck, lint, and
-  `git diff --check`. Apply pending migrations without resetting local data.
+  `git diff --check`. Apply pending migrations in place when retaining the
+  current data is useful; reset local Supabase when a clean baseline is worth
+  the reset and reload effort, then restore the synthetic fixture. Never reset
+  linked or hosted Supabase.
 
 ## Completion criteria
 

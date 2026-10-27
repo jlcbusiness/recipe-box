@@ -39,11 +39,11 @@ export default async function HelpPage() {
             <div>
               <dt>Ingredient</dt>
               <dd>
-                Type <code>#</code> and choose an ingredient suggestion. If there is more than one section, 
-                the reference includes the section in its code; for example, <code>#sugar-sauce</code>. If 
-                an ingredient is divided, the two parts are referenced in the code with <code>-1</code> and{' '}
-                <code>-2</code> at the end. For instance, <code>#sugar-sauce-1</code>. Ordinary unconfirmed text
-                remains unlinked.
+                Type <code>#</code> and choose an ingredient suggestion. If there is more than one
+                section, the reference includes the section in its code; for example,{' '}
+                <code>#sugar-sauce</code>. If an ingredient is divided, the two parts are referenced
+                in the code with <code>-1</code> and <code>-2</code> at the end. For instance,{' '}
+                <code>#sugar-sauce-1</code>. Ordinary unconfirmed text remains unlinked.
               </dd>
             </div>
             <div>
@@ -96,7 +96,7 @@ export default async function HelpPage() {
             Focus the relevant control before using a shortcut. <code>Ctrl</code> means the Control
             key.
           </p>
-          <br / >
+          <br />
           <div className="help-shortcut-groups">
             <div>
               <h3>Moving between controls</h3>

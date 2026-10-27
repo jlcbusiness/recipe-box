@@ -13,7 +13,10 @@ const ignoredDirectories = new Set([
 ]);
 const ignoredPaths = new Set(['docs/plans/discussion', '.github/prompts/update.prompt.md']);
 const ignoredAgentFiles = new Set(['AGENTS.md', 'CLAUDE.md']);
-const ignoredMarkdownFiles = new Set(['.github/prompts/update.prompt.md']);
+const ignoredMarkdownFiles = new Set([
+  '.github/prompts/update.prompt.md',
+  'docs/development/user-credentials.md',
+]);
 
 async function collectMarkdownFiles() {
   const files = [];

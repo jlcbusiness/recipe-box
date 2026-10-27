@@ -1974,21 +1974,19 @@ test('image management panes stage covers and immediately manage decorative reci
         .getByRole('heading', { name: 'Recipe details' })
         .boundingBox();
       const actionBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
-      const tagsRowBounds = await page.locator('.recipe-detail-tags-row').boundingBox();
+      const titleBounds = await page.locator('.recipe-detail-title').boundingBox();
       expect(metadataBounds).not.toBeNull();
       expect(actionBounds).not.toBeNull();
-      expect(tagsRowBounds).not.toBeNull();
-      if (!metadataBounds || !featureBounds || !actionBounds || !tagsRowBounds) {
+      expect(titleBounds).not.toBeNull();
+      if (!metadataBounds || !featureBounds || !actionBounds || !titleBounds) {
         throw new Error('Expected desktop recipe summary and title controls to be visible');
       }
       await expect(featureImage).toHaveCSS('max-height', '280px');
       expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(281);
       expect(featureBounds.x + featureBounds.width).toBeLessThan(metadataBounds.x);
-      expect(Math.abs((featureImageBounds?.y ?? 0) - metadataBounds.y)).toBeLessThanOrEqual(4);
-      expect(actionBounds.y).toBeGreaterThanOrEqual(tagsRowBounds.y);
-      expect(actionBounds.y + actionBounds.height).toBeLessThanOrEqual(
-        tagsRowBounds.y + tagsRowBounds.height,
-      );
+      expect(Math.abs((featureImageBounds?.y ?? 0) - titleBounds.y)).toBeLessThanOrEqual(4);
+      expect(Math.abs(actionBounds.y - titleBounds.y)).toBeLessThanOrEqual(1);
+      expect(actionBounds.x).toBeGreaterThanOrEqual(titleBounds.x + titleBounds.width);
       await expect(page.locator('main.recipes-main')).toHaveCSS('padding-top', '17px');
     } else {
       if (imageMaxHeight === null) {

@@ -118,6 +118,7 @@ describe('import bundle validation', () => {
       duration_color: 'orange',
       temperature_system: 'celsius',
       private_print_uses_colors: false,
+      include_instruction_photos_in_private_print: true,
     };
 
     expect(() =>
@@ -138,6 +139,17 @@ describe('import bundle validation', () => {
         createBundleEntries({
           schemaVersion: 3,
           accountPreferences: { ...preferences, temperature_system: 'kelvin' },
+        }),
+      ),
+    ).toThrow(/preference/i);
+    expect(() =>
+      validateImportBundleFiles(
+        createBundleEntries({
+          schemaVersion: 3,
+          accountPreferences: {
+            ...preferences,
+            include_instruction_photos_in_private_print: 'yes',
+          },
         }),
       ),
     ).toThrow(/preference/i);

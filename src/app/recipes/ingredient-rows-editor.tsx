@@ -753,8 +753,10 @@ function PreparationCellEditor({
   rowNumber,
   options,
   picklists,
+  initialCharacter,
   onCommit,
   onEnterCommit,
+  onTabCommit,
   onCancel,
   onChange,
 }: {
@@ -762,8 +764,10 @@ function PreparationCellEditor({
   rowNumber: number;
   options: string[];
   picklists: RecipePicklistValue[];
+  initialCharacter?: string;
   onCommit: (value: string) => void;
   onEnterCommit: (value: string) => void;
+  onTabCommit: () => void;
   onCancel: () => void;
   onChange: (update: Partial<IngredientRowDraft>) => void;
 }) {
@@ -779,10 +783,12 @@ function PreparationCellEditor({
         label={`Preparation, row ${rowNumber}`}
         options={options}
         value={row.preparation}
+        initialCharacter={initialCharacter}
         fitContent
         onDraftChange={setPreparation}
         onCommit={onCommit}
         onEnterCommit={onEnterCommit}
+        onTabCommit={onTabCommit}
         onCancel={onCancel}
       />
       <PreparationControls
@@ -1632,9 +1638,11 @@ export function IngredientRowsEditor({
             rowNumber={rowIndex + 1}
             options={prepOptions}
             picklists={picklists}
+            initialCharacter={initialCharacter}
             onCancel={() => setActiveCell(null)}
             onCommit={(value) => commitCell(row.id, field, value, 'tab')}
             onEnterCommit={(value) => commitCell(row.id, field, value, 'enter')}
+            onTabCommit={() => focusNextCell(row.id, field)}
             onChange={(update) => commitRows(updateIngredientRow(rowsRef.current, row.id, update))}
           />
         ) : field === 'preparation' ? (

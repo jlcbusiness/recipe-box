@@ -170,8 +170,10 @@ column was added.
 
 Write the focused failing tests before production code. Run focused unit/API and
 browser/accessibility checks first, then typecheck, Biome, Markdown lint, and a
-production build. Reuse the existing development server and local database; do
-not reset local data or stop a running service.
+production build. Reuse the existing development server and local data when
+useful. A local reset is allowed when a clean baseline is worth the reset and
+reload effort; follow the README procedure and reload the synthetic fixture.
+Never reset linked or hosted Supabase or stop a running service as a shortcut.
 
 ## Accepted direction and deferrals
 

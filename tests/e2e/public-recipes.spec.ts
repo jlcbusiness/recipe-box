@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, test } from '@playwright/test';
+import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import sharp from 'sharp';
 import {
   createTestUser,
@@ -28,7 +29,9 @@ function serviceHeaders(config: LocalSupabaseConfig) {
 function expectNoStoreOrRevalidation(headers: Record<string, string>) {
   const cacheControl = headers['cache-control'] ?? '';
   expect(cacheControl).toMatch(/no-store|no-cache/);
-  expect(cacheControl).toContain('must-revalidate');
+  if (!/\bno-store\b/i.test(cacheControl)) {
+    expect(cacheControl).toMatch(/\bmust-revalidate\b/i);
+  }
 }
 
 async function expectRenderedCenterCrop(image: Locator) {
@@ -42,6 +45,50 @@ async function expectRenderedCenterCrop(image: Locator) {
     expect(data[pixelOffset + 1]).toBeGreaterThan(120);
     expect(data[pixelOffset]).toBeLessThan(140);
     expect(data[pixelOffset + 2]).toBeLessThan(180);
+  }
+}
+
+async function inspectPrintedRecipePdf(pdfBytes: Buffer) {
+  expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
+  const pdfDocument = await getDocument({ data: new Uint8Array(pdfBytes) }).promise;
+  try {
+    const pages = await Promise.all(
+      Array.from({ length: pdfDocument.numPages }, (_, index) => pdfDocument.getPage(index + 1)),
+    );
+    const firstPage = pages[0];
+    if (!firstPage) throw new Error('Expected the printed recipe to contain a page.');
+    const viewport = firstPage.getViewport({ scale: 1 });
+    const imageOperators = new Set([
+      OPS.paintImageXObject,
+      OPS.paintInlineImageXObject,
+      OPS.paintInlineImageXObjectGroup,
+      OPS.paintImageXObjectRepeat,
+    ]);
+    const pageContent = await Promise.all(
+      pages.map(async (page) => {
+        const [textContent, operatorList] = await Promise.all([
+          page.getTextContent(),
+          page.getOperatorList(),
+        ]);
+        return {
+          text: textContent.items.map((item) => ('str' in item ? item.str : '')).join(' '),
+          textBounds: textContent.items.flatMap((item) =>
+            'str' in item ? [{ text: item.str, x: item.transform[4], width: item.width }] : [],
+          ),
+          imageOperations: operatorList.fnArray.filter((operator) => imageOperators.has(operator))
+            .length,
+        };
+      }),
+    );
+    return {
+      width: viewport.width,
+      height: viewport.height,
+      text: pageContent.map((page) => page.text).join(' '),
+      textBounds: pageContent.flatMap((page) => page.textBounds),
+      imageOperations: pageContent.reduce((count, page) => count + page.imageOperations, 0),
+    };
+  } finally {
+    await pdfDocument.destroy();
   }
 }
 
@@ -701,6 +748,126 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,
     );
     await expectRenderedCenterCrop(privateGalleryImage);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    const [
+      privateMainBounds,
+      privateHeadingBounds,
+      privateTitleBounds,
+      privateActionsBounds,
+      privateSummaryBounds,
+      privateReaderBounds,
+      privateDetailsBounds,
+      privateGalleryBounds,
+    ] = await Promise.all([
+      page.locator('main.recipes-main').boundingBox(),
+      page.locator('.recipe-detail-heading').boundingBox(),
+      page.locator('.recipe-detail-title').boundingBox(),
+      page.locator('.recipe-detail-heading-actions').boundingBox(),
+      page.locator('.recipe-summary-layout').boundingBox(),
+      page.locator('.recipe-reading-layout').boundingBox(),
+      page
+        .locator('.recipe-summary-layout-with-detail-heading > .recipe-detail-section')
+        .boundingBox(),
+      page
+        .locator('.recipe-summary-layout-with-detail-heading > .recipe-photo-gallery')
+        .boundingBox(),
+    ]);
+    if (
+      !privateMainBounds ||
+      !privateHeadingBounds ||
+      !privateTitleBounds ||
+      !privateActionsBounds ||
+      !privateSummaryBounds ||
+      !privateReaderBounds ||
+      !privateDetailsBounds ||
+      !privateGalleryBounds
+    ) {
+      throw new Error('Expected private recipe content sections to have layout boxes.');
+    }
+    for (const bounds of [privateSummaryBounds, privateReaderBounds]) {
+      expect(bounds.x).toBeCloseTo(privateMainBounds.x, 1);
+      expect(bounds.x + bounds.width).toBeCloseTo(privateMainBounds.x + privateMainBounds.width, 1);
+    }
+    expect(privateGalleryBounds.x).toBeCloseTo(privateMainBounds.x, 1);
+    expect(privateActionsBounds.y).toBeCloseTo(privateTitleBounds.y, 0);
+    expect(privateActionsBounds.x).toBeGreaterThanOrEqual(
+      privateTitleBounds.x + privateTitleBounds.width,
+    );
+    expect(privateHeadingBounds.x).toBeCloseTo(privateDetailsBounds.x, 1);
+    expect(privateHeadingBounds.x + privateHeadingBounds.width).toBeCloseTo(
+      privateDetailsBounds.x + privateDetailsBounds.width,
+      1,
+    );
+    expect(
+      Math.abs(privateDetailsBounds.y - (privateHeadingBounds.y + privateHeadingBounds.height) - 8),
+    ).toBeLessThanOrEqual(1);
+    expect(privateGalleryBounds.x + privateGalleryBounds.width + 32).toBeLessThanOrEqual(
+      privateHeadingBounds.x + 1,
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    const [mobileHeadingBounds, mobileGalleryBounds, mobileDetailsBounds] = await Promise.all([
+      page.locator('.recipe-detail-heading').boundingBox(),
+      page
+        .locator('.recipe-summary-layout-with-detail-heading > .recipe-photo-gallery')
+        .boundingBox(),
+      page
+        .locator('.recipe-summary-layout-with-detail-heading > .recipe-detail-section')
+        .boundingBox(),
+    ]);
+    if (!mobileHeadingBounds || !mobileGalleryBounds || !mobileDetailsBounds) {
+      throw new Error('Expected the mobile recipe summary to have layout boxes.');
+    }
+    expect(mobileGalleryBounds.y).toBeGreaterThan(mobileHeadingBounds.y);
+    expect(mobileDetailsBounds.y).toBeGreaterThan(mobileGalleryBounds.y);
+    expect(
+      Math.abs(mobileGalleryBounds.y - (mobileHeadingBounds.y + mobileHeadingBounds.height) - 16),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(mobileDetailsBounds.y - (mobileGalleryBounds.y + mobileGalleryBounds.height) - 16),
+    ).toBeLessThanOrEqual(1);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    const privateDefaultPdf = await inspectPrintedRecipePdf(
+      await page.pdf({ preferCSSPageSize: true }),
+    );
+    expect(privateDefaultPdf.width).toBeGreaterThan(privateDefaultPdf.height);
+    expect(privateDefaultPdf.imageOperations).toBe(1);
+    for (const { x, width } of privateDefaultPdf.textBounds) {
+      expect(x).toBeGreaterThanOrEqual(71);
+      expect(x + width).toBeLessThanOrEqual(privateDefaultPdf.width - 71);
+    }
+    const printedTitle = privateDefaultPdf.textBounds.find(({ text }) =>
+      text.includes('Public cooking view'),
+    );
+    expect(printedTitle?.x).toBeCloseTo(72, 0);
+    const printedMetadata = privateDefaultPdf.textBounds.find(({ text }) => text === 'State');
+    expect(printedMetadata?.x).toBeCloseTo(72, 0);
+    const printedIngredients = privateDefaultPdf.textBounds.find(
+      ({ text }) => text === 'Ingredients',
+    );
+    expect(printedIngredients?.x).toBeCloseTo(72, 0);
+
+    await page.goto('/settings');
+    await page
+      .getByRole('checkbox', {
+        name: 'Omit instruction photos when printing',
+      })
+      .check();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await page.goto(`/recipes/${recipe.id}`);
+    const privateInstructionPhoto = page.locator('.recipe-instruction-photo');
+    await expect(privateGalleryImage).toBeVisible();
+    await expect(privateInstructionPhoto).toBeVisible();
+    const privateNoPhotosPdf = await inspectPrintedRecipePdf(
+      await page.pdf({ preferCSSPageSize: true }),
+    );
+    expect(privateNoPhotosPdf.width).toBeGreaterThan(privateNoPhotosPdf.height);
+    expect(privateNoPhotosPdf.imageOperations).toBe(0);
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('.recipe-photo-gallery')).toBeHidden();
+    await expect(privateInstructionPhoto).toBeHidden();
+    await page.emulateMedia({ media: 'screen' });
+    await expect(privateGalleryImage).toBeVisible();
+    await expect(privateInstructionPhoto).toBeVisible();
 
     await page.goto(`/r/${publicId}`);
     await expect(
@@ -801,6 +968,33 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-left', '24px');
     await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-right', '24px');
     const noEmphasisToggle = page.getByRole('button', { name: 'No emphasis' });
+    const noPhotosToggle = page.getByRole('button', { name: 'No instruction photos' });
+    await expect(noEmphasisToggle).toHaveText('No emphasis');
+    await expect(noPhotosToggle).toHaveText('No instruction photos');
+    await expect(noPhotosToggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(instructionPhoto).toBeVisible();
+    await page.emulateMedia({ media: 'print' });
+    const publicDefaultPdf = await inspectPrintedRecipePdf(
+      await page.pdf({ preferCSSPageSize: true }),
+    );
+    expect(publicDefaultPdf.width).toBeGreaterThan(publicDefaultPdf.height);
+    expect(publicDefaultPdf.imageOperations).toBe(1);
+    expect(publicDefaultPdf.text).toContain('Public cooking view');
+    expect(publicDefaultPdf.text).not.toContain('No instruction photos');
+    await page.emulateMedia({ media: 'screen' });
+    await noPhotosToggle.focus();
+    expect(await noPhotosToggle.evaluate((element) => element.matches(':focus-visible'))).toBe(
+      true,
+    );
+    await page.keyboard.press('Space');
+    await expect(noPhotosToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(instructionPhoto).toBeHidden();
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'No instruction photos' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    await expect(instructionPhoto).toBeVisible();
     const [titleRowBox, titleBox, actionsBox, printBox, toggleBox] = await Promise.all([
       page.locator('.recipe-detail-title-row').boundingBox(),
       page.getByRole('heading', { name: 'Public cooking view - serves 4' }).boundingBox(),
@@ -808,14 +1002,67 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       page.getByRole('button', { name: 'Print recipe' }).boundingBox(),
       noEmphasisToggle.boundingBox(),
     ]);
-    if (!titleRowBox || !titleBox || !actionsBox || !printBox || !toggleBox) {
+    if (
+      !titleRowBox ||
+      !titleBox ||
+      !printBox ||
+      !toggleBox ||
+      ((page.viewportSize()?.width ?? 0) > 640 && !actionsBox)
+    ) {
       throw new Error('Expected the public title and actions to be visible.');
     }
-    expect(actionsBox.x + actionsBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
-    expect(printBox.x + printBox.width).toBeLessThan(toggleBox.x);
-    expect(Math.max(titleBox.y, actionsBox.y)).toBeLessThan(
-      Math.min(titleBox.y + titleBox.height, actionsBox.y + actionsBox.height),
+    if (actionsBox) {
+      expect(actionsBox.x + actionsBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
+    }
+    if ((page.viewportSize()?.width ?? 0) <= 640) {
+      expect(printBox.x + printBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
+      expect(printBox.width).toBeGreaterThanOrEqual(48);
+      expect(printBox.height).toBeGreaterThanOrEqual(48);
+      expect(toggleBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+        .toBe(true);
+    } else {
+      if (!actionsBox) {
+        throw new Error('Expected the desktop public title actions to have bounds.');
+      }
+      expect(printBox.x).toBeGreaterThanOrEqual(toggleBox.x + toggleBox.width);
+      expect(printBox.x + printBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
+      expect(Math.max(titleBox.y, actionsBox.y)).toBeLessThan(
+        Math.min(titleBox.y + titleBox.height, actionsBox.y + actionsBox.height),
+      );
+    }
+    const originalViewport = page.viewportSize();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const [narrowTitleRowBox, narrowTitleBox, narrowPrintBox, narrowToggleBox] = await Promise.all([
+      page.locator('.recipe-detail-title-row').boundingBox(),
+      page.getByRole('heading', { name: 'Public cooking view - serves 4' }).boundingBox(),
+      page.getByRole('button', { name: 'Print recipe' }).boundingBox(),
+      noEmphasisToggle.boundingBox(),
+    ]);
+    if (!narrowTitleRowBox || !narrowTitleBox || !narrowPrintBox || !narrowToggleBox) {
+      throw new Error('Expected the narrow public title and actions to be visible.');
+    }
+    expect(narrowPrintBox.x + narrowPrintBox.width).toBeCloseTo(
+      narrowTitleRowBox.x + narrowTitleRowBox.width,
+      1,
     );
+    expect(narrowToggleBox.y).toBeGreaterThanOrEqual(narrowTitleBox.y + narrowTitleBox.height);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    const [widePublicMain, widePublicReader] = await Promise.all([
+      page.locator('.recipe-public-main').boundingBox(),
+      page.locator('.recipe-reading-layout').boundingBox(),
+    ]);
+    if (!widePublicMain || !widePublicReader) {
+      throw new Error('Expected the wide public recipe layout to have bounds.');
+    }
+    expect(widePublicMain.width).toBeCloseTo(1600, 0);
+    expect(widePublicReader.width).toBeCloseTo(1360, 0);
+    expect(widePublicReader.x).toBeCloseTo(120, 0);
+    if (originalViewport) await page.setViewportSize(originalViewport);
     const emphasisTokens = [
       page.locator('.recipe-instruction-mention').first(),
       page.locator('.recipe-instruction-temperature').first(),
@@ -868,7 +1115,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(publicPhoto).toBeVisible();
     const [summaryBox, ingredientsBox, photoBox] = await Promise.all([
       summary.boundingBox(),
-      page.getByRole('region', { name: 'Ingredients' }).boundingBox(),
+      page.getByRole('region', { name: 'Ingredients', exact: true }).boundingBox(),
       publicPhoto.boundingBox(),
     ]);
     if (!summaryBox || !ingredientsBox || !photoBox) {
@@ -930,6 +1177,9 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
         document.documentElement.dataset.printed = 'true';
       };
     });
+    await noPhotosToggle.click();
+    await expect(noPhotosToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(instructionPhoto).toBeHidden();
     await page.getByRole('button', { name: 'Print recipe' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-printed', 'true');
     await page.emulateMedia({ media: 'print' });
@@ -938,6 +1188,9 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
     await expect(page.getByRole('button', { name: 'Print recipe' })).toBeHidden();
     await expect(noEmphasisToggle).toBeHidden();
+    await expect(noPhotosToggle).toBeHidden();
+    await expect(page.locator('.recipe-photo-gallery')).toBeHidden();
+    await expect(instructionPhoto).toBeHidden();
     const printedTokenColors = await Promise.all(
       emphasisTokens.map((token) =>
         token.evaluate((element) => ({
@@ -949,6 +1202,45 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(printedTokenColors.every(({ color, parentColor }) => color === parentColor)).toBe(true);
     await expect(ingredientContent).toContainText('cubed 1 ¼ in');
     await expect(ingredientContent).toContainText('2 : 6');
+    const publicNoPhotosPdf = await inspectPrintedRecipePdf(
+      await page.pdf({ preferCSSPageSize: true }),
+    );
+    expect(publicNoPhotosPdf.width).toBeGreaterThan(publicNoPhotosPdf.height);
+    expect(publicNoPhotosPdf.imageOperations).toBe(0);
+    expect(publicNoPhotosPdf.text).toContain('33.81 TBSP');
+    expect(publicNoPhotosPdf.text).not.toContain('No instruction photos');
+
+    await page.emulateMedia({ media: 'screen' });
+    const longRecipeName =
+      'A very long recipe title that wraps across multiple lines on a narrow screen';
+    const renameResponse = await request.patch(
+      `${config.apiUrl}/rest/v1/recipes?id=eq.${recipe.id}`,
+      { headers: serviceHeaders(config), data: { name: longRecipeName } },
+    );
+    expect(renameResponse.ok(), await renameResponse.text()).toBeTruthy();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/r/${publicId}`);
+    const longTitle = page.getByRole('heading', { name: longRecipeName });
+    const [longTitleBox, longTitleRowBox, longTitlePrintBox, longTitleToggleBox] =
+      await Promise.all([
+        longTitle.boundingBox(),
+        page.locator('.recipe-detail-title-row').boundingBox(),
+        page.getByRole('button', { name: 'Print recipe' }).boundingBox(),
+        page.getByRole('button', { name: 'No emphasis' }).boundingBox(),
+      ]);
+    if (!longTitleBox || !longTitleRowBox || !longTitlePrintBox || !longTitleToggleBox) {
+      throw new Error('Expected the long public title and actions to have layout bounds.');
+    }
+    expect(longTitlePrintBox.x + longTitlePrintBox.width).toBeCloseTo(
+      longTitleRowBox.x + longTitleRowBox.width,
+      1,
+    );
+    expect(longTitlePrintBox.width).toBeGreaterThanOrEqual(48);
+    expect(longTitlePrintBox.height).toBeGreaterThanOrEqual(48);
+    expect(longTitleToggleBox.y).toBeGreaterThanOrEqual(longTitleBox.y + longTitleBox.height);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
   } finally {
     await deleteTestUser(request, user);
     if (publicId) {

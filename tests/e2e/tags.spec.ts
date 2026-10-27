@@ -496,26 +496,39 @@ test('recipes can assign, edit, and remove private tags @e2e @a11y', async ({ pa
     await expect(detailTags.getByRole('listitem').nth(1)).toHaveText('Weeknight');
     const finalTagBounds = await detailTags.locator('li').nth(1).boundingBox();
     const detailTagsBounds = await detailTags.boundingBox();
+    const detailTitleBounds = await page.locator('.recipe-detail-title').boundingBox();
+    const detailHeadingBounds = await page.locator('.recipe-detail-heading').boundingBox();
     const detailActions = page.locator('.recipe-detail-heading-actions');
     const detailActionsBounds = await detailActions.boundingBox();
     expect(detailTagsBounds).not.toBeNull();
+    expect(detailTitleBounds).not.toBeNull();
+    expect(detailHeadingBounds).not.toBeNull();
+    expect(detailActionsBounds).not.toBeNull();
     if ((page.viewportSize()?.width ?? 0) <= 760) {
       expect(detailActionsBounds?.y).toBeGreaterThanOrEqual(
         (finalTagBounds?.y ?? 0) + (finalTagBounds?.height ?? 0),
       );
-    } else {
-      expect(
-        Math.abs(
-          (detailActionsBounds?.y ?? 0) +
-            (detailActionsBounds?.height ?? 0) / 2 -
-            ((finalTagBounds?.y ?? 0) + (finalTagBounds?.height ?? 0) / 2),
+    } else if (
+      detailTitleBounds &&
+      detailActionsBounds &&
+      detailHeadingBounds &&
+      detailTagsBounds
+    ) {
+      expect(Math.abs(detailActionsBounds.y - detailTitleBounds.y)).toBeLessThanOrEqual(1);
+      expect(detailActionsBounds.x).toBeGreaterThanOrEqual(
+        detailTitleBounds.x + detailTitleBounds.width,
+      );
+      expect(detailTagsBounds.y).toBeGreaterThanOrEqual(
+        Math.max(
+          detailTitleBounds.y + detailTitleBounds.height,
+          detailActionsBounds.y + detailActionsBounds.height,
         ),
-      ).toBeLessThanOrEqual(1);
+      );
+      expect(detailActionsBounds.x + detailActionsBounds.width).toBeCloseTo(
+        detailHeadingBounds.x + detailHeadingBounds.width,
+        0,
+      );
     }
-    expect((detailActionsBounds?.x ?? 0) + (detailActionsBounds?.width ?? 0)).toBeCloseTo(
-      (detailTagsBounds?.x ?? 0) + (detailTagsBounds?.width ?? 0),
-      0,
-    );
     await expect(page.getByRole('link', { name: 'Weeknight' })).toHaveCount(0);
     const recipeId = new URL(page.url()).pathname.split('/').at(-1);
     expect(recipeId).toBeTruthy();
@@ -575,6 +588,7 @@ test('publications can create, reuse, edit, and remove private tags @e2e @a11y',
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Library' }).click();
     await page.getByRole('link', { name: 'Add publication' }).click();
+    await page.waitForLoadState('networkidle');
     await page.getByRole('radio', { name: 'Book' }).check();
     await page.getByLabel('Name', { exact: true }).fill('Tagged collection');
     const tags = page.getByRole('group', { name: 'Tags' });

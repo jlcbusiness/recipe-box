@@ -136,8 +136,10 @@ finder into a publication or changes one publication's result set to another.
 
 Before production code, write the focused failing unit, database/API, browser,
 and accessibility tests above. Run those first, then typecheck, Biome, Markdown
-lint, and a production build. Reuse the existing development server; never run
-`npm run dev:local`, reset local Supabase, or stop a running server.
+lint, and a production build. Reuse the existing development server when
+useful. A local reset is allowed when a clean baseline is worth the reset and
+reload effort; follow the README procedure and reload the synthetic fixture.
+Never reset linked or hosted Supabase or stop a running server as a shortcut.
 
 ## Assumptions And Deferred Decisions
 

@@ -140,13 +140,13 @@ retain readable text and see the image in its recipe context.
   all three categories to None when checked and restores the default blue, red,
   and orange colors when unchecked. None removes app-applied color and emphasis
   for its category while preserving readable content.
-- Private print uses the account's selected emphasis by default. A Settings
-  checkbox opts out of instruction emphasis for private print and is unchecked
-  by default. Public recipes have an icon-only **No emphasis** control that
-  removes app-applied colors and emphasis styling from the current view and its
-  print output; authored Markdown formatting remains intact.
-  Public pages and public print use fixed application defaults, never account
-  preferences.
+- Private print uses the account's selected emphasis by default. DLC 08 adds a
+  separate Settings opt-out for instruction photos; both private print choices
+  are print-only. Public recipes use fixed application defaults, never account
+  preferences, and provide transient text-labeled **No emphasis** and **No
+  instruction photos** controls for the current view and its print output.
+  Authored Markdown formatting remains intact. DLC 08 owns their responsive
+  placement and the remaining print-layout rules.
 - Referenced images float right by default or left with `-left`, at the exact
   inline reference and aligned with that line. On narrow screens, images are
   left-aligned blocks. Keep at least 1mm vertical separation below every
@@ -205,8 +205,8 @@ retain readable text and see the image in its recipe context.
 - **Readers:** Browser tests cover private and authorized public rendering,
   signed URL refresh/expiry behavior, print policy, offline fallback, and the
   single-image modal viewer and its dismissal behavior, the absence of private
-  media URLs in saved content or public payloads, the public No emphasis
-  control, and None styling in the private reader.
+  media URLs in saved content or public payloads, both public print toggles,
+  and None styling in the private reader.
 - **Editor workflow:** Desktop and mobile tests cover typing and removing
   duration delimiters, opening the gallery picker with `+p`, selecting and
   canceling a photo, insertion at the caret, `-w<width>`, `-left`, `-center`,

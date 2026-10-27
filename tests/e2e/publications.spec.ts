@@ -1622,7 +1622,8 @@ test('publication records and creation history stay private to their owner @e2e'
     await page.getByRole('link', { name: 'Library', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Other Account Cookbook' })).toHaveCount(0);
     await page.getByRole('link', { name: 'Recipe Tin' }).click();
-    await page.getByRole('link', { name: 'Add Recipe' }).click();
+    await page.getByRole('link', { name: 'Add Recipe' }).first().click();
+    await page.waitForLoadState('networkidle');
     await page.locator('.recipe-form').getByLabel('Name').fill('Rejected foreign assignment');
     await page.locator('input[name="publication_id"]').evaluate((input, value) => {
       (input as HTMLInputElement).value = value;
@@ -1648,6 +1649,7 @@ test('publication forms show only the fields for their selected type @e2e @a11y'
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Library' }).click();
     await page.getByRole('link', { name: 'Add publication' }).click();
+    await page.waitForLoadState('networkidle');
 
     await page.getByRole('radio', { name: 'Magazine' }).check();
     await page.getByLabel('Name').fill('Bon Appetit');
@@ -1664,6 +1666,7 @@ test('publication forms show only the fields for their selected type @e2e @a11y'
 
     await page.getByRole('link', { name: 'Library', exact: true }).click();
     await page.getByRole('link', { name: 'Add publication' }).click();
+    await page.waitForLoadState('networkidle');
     await page.getByRole('radio', { name: 'Site' }).check();
     await page.getByLabel('Name').fill('Example Cooking');
     await expect(page.getByLabel('Author')).toHaveCount(0);

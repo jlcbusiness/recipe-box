@@ -153,8 +153,10 @@ Write these automated tests before the implementation:
 ## Local commands
 
 - `npm run dev:local` starts local Supabase, resets migrations and seed data,
-  and starts the app. Resetting deletes local Auth users; do not use it when
-  preserving a manually-created account.
+  and starts the app. A reset deletes local Auth users. Use it when a clean
+  baseline is worth the reset and reload effort, then run
+  `npm run seed:synthetic -- --local`; preserve or export any non-fixture local
+  data that must survive. Never reset a linked or hosted project.
 - `npm test` runs unit, end-to-end, RLS, Mailpit, and accessibility suites. Test
   users are generated and removed automatically.
 - `npm run lint` and `npm run typecheck` validate code and types.

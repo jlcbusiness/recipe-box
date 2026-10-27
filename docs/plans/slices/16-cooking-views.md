@@ -102,19 +102,26 @@ Excluded:
 
 - Place compact, icon-only Presentation and Sort buttons beside the Ingredients
   title when the title, summary, and toolbar fit. Put the lowercase italic
-  presentation/sort summary directly below Ingredients. At narrower widths,
-  preserve the title and summary at natural width and wrap the toolbar below the
-  summary rather than compressing the summary; at 760px and below, always place
-  the toolbar on its own row below the summary. Each control cycles to the next
-  mode and changes its icon to show the active mode; its accessible name and
-  tooltip identify the current and next mode. Keep a reserved sort-direction
-  toggle slot to the left of Sort so the toolbar does not shift when direction
-  is available. Keep all controls operable by keyboard and touch.
+  presentation/sort summary directly below Ingredients. Keep the toolbar
+  immediately beside the title rather than pushing it to the column edge. At
+  narrower widths, preserve the title and summary at natural width and wrap the
+  toolbar below the summary rather than compressing the summary; at 760px and
+  below, always place the toolbar on its own row below the summary. Each control
+  cycles to the next mode and changes its icon to show the active mode; its
+  accessible name and tooltip identify the current and next mode. Keep a
+  sort-direction toggle next to Sort, but remove it from layout when unavailable
+  so the first visible toolbar control stays 3mm from the title. Keep all
+  controls operable by keyboard and touch. Keep the first ingredient group at
+  the same vertical offset below the shared heading in Standard and
+  Ingredient-first.
 - Standard keeps the existing natural amount-first row format. On desktop,
-  place Ingredients beside Instructions in the recipe reading area; size the
-  Ingredients column to its widest row, cap it at half the available reader
-  width, and let Instructions use the remaining space. On mobile, retain the
-  vertical reading flow.
+  place Ingredients beside Instructions in the recipe reading area. Size the
+  Ingredients column to the larger of the widest ingredient row plus 1mm or the
+  natural width of its heading and toolbar plus 4mm; let Instructions use the
+  remaining space. Ingredient-first uses the table's natural content width as
+  the row-width basis with the same heading-and-toolbar allowance. Constrain
+  the column to available width when necessary to prevent page-level horizontal
+  overflow. On mobile, retain the vertical reading flow.
 - Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
   Preparation columns. Rows without a volume or weight use a cell spanning both
   measurement columns. Specifics appears lowercase and indented under the

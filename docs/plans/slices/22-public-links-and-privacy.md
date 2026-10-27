@@ -118,9 +118,11 @@ page and photos on the next request.
   actions, opening and dismissing the single-image viewer, image and viewport
   bounds, privacy changes taking effect on reload, unavailable/gone states,
   and Axe checks.
-- Do not reset or stop the active local Supabase stack. Use a uniquely named,
-  isolated temporary Supabase project for destructive migration and purge
-  acceptance. Do not run `npm run dev:local`.
+- Prefer a uniquely named, isolated temporary Supabase project for destructive
+  migration and purge acceptance. A local reset is also allowed when a clean
+  baseline is worth the reset and reload effort; follow the README procedure
+  and reload the synthetic fixture. Never reset linked or hosted Supabase.
+  Do not stop the active local stack as a shortcut.
 
 ## Completion criteria
 

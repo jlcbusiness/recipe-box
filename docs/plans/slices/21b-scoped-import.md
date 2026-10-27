@@ -161,10 +161,12 @@ publication record.
   dimensions, and no horizontal overflow. Include a public Recipe Tin Replace
   case and preserve the existing 21A tests.
 - Run focused unit and API tests first, then Chromium and Fold 6 acceptance,
-  TypeScript, Biome, Markdown lint, and `git diff --check`. Use only the
-  isolated `/tmp/recipe-box-import-acceptance` Supabase project for destructive
-  acceptance setup; do not reset the active local stack or start a competing
-  development server.
+  TypeScript, Biome, Markdown lint, and `git diff --check`. Prefer the isolated
+  `/tmp/recipe-box-import-acceptance` Supabase project for destructive
+  acceptance setup. Resetting active local Supabase is allowed when a clean
+  baseline is worth the reset and reload effort; follow the README procedure
+  and reload the synthetic fixture. Never reset linked or hosted Supabase or
+  start a competing development server as a shortcut.
 
 ## Completion criteria
 

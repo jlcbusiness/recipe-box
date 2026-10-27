@@ -212,8 +212,13 @@ attribution `In the Recipe Tin`; the Tin is a Library entry, not a separate
 navigation destination.
 Recipe titles and major detail section headings use 16pt (about 21.33px). The
 mobile Times subsection title is 18px navy small caps. The desktop Recipe Tin
-list content is up to about 1172px wide and the detail metadata area is up to
-about 1012px wide.
+list content is up to about 1172px wide. The private photo/metadata summary
+and Ingredients/Instructions share the full main-content width and its outer
+gutters; do not add another centered inset to the summary or reader. On desktop,
+place the title and attribution beside the actions in the column beside the
+gallery, with tags below that row when present. Keep the metadata divider 8px
+below the title/action/tag group. On mobile, keep the title group before the
+gallery, then details and reading content.
 
 ### Account menu
 
@@ -337,8 +342,11 @@ The palette stays within the Settings content width, supports keyboard
 selection and Escape dismissal, and saves each choice independently. **None**
 removes app-applied color and emphasis styling for that category while keeping
 the text readable. A **Turn off all emphasis** checkbox sits below the
-private-print checkbox; checking it sets all three categories to None, and
-unchecking it restores their default blue, red, and orange colors.
+color rows; checking it sets all three categories to None, and unchecking it
+restores their default blue, red, and orange colors. The print-only omission
+choices are grouped under **Print options** in a column beside Instruction
+emphasis on desktop and stack below it on narrower screens. Both are off by
+default and leave the private on-screen reader unchanged.
 
 Tags use a separate full-width, unframed Settings section after Ingredient
 catalog. It is collapsed by default, uses the same left-side disclosure chevron
@@ -573,19 +581,24 @@ interruption tolerance, legibility, and one-handed operation.
 Recipe detail offers Standard and Ingredient-first presentations. Standard
 keeps ingredient rows in saved order and renders Amount, lowercase Specifics
 and ingredient name, then Preparation. Both presentations keep Ingredients
-beside Instructions on desktop. Ingredients uses a stable 46% reader-grid
-track, independent of populated row content; Instructions uses the remaining
-space. Ingredient-first uses a semantic table with Ingredient, Volume, Weight,
-and Preparation columns, and the table fills the full Ingredients track even
-when row fields are empty. Count, informal, and unmeasured values span the
-Volume and Weight columns; Volume and Weight remain separate when present.
+beside Instructions on desktop. Size the Ingredients track to the larger of the
+widest Standard ingredient row plus 1mm or the natural width of the Ingredients
+heading and toolbar plus 4mm; Instructions uses the remaining space.
+Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
+Preparation columns, and its natural table width is the row-width basis for
+the same sizing rule. Count, informal, and unmeasured values span the Volume
+and Weight columns; Volume and Weight remain separate when present.
+The first ingredient group starts at the same vertical offset below the shared
+heading in both presentations.
 Specifics display indented and fully lowercase beneath the ingredient name.
 Cells are left-aligned with no more than 3mm between columns on desktop and 1mm
 on mobile. Mobile headers shorten to Vol, Wt, and Prep. At 760px and below,
 Ingredients and Instructions stack vertically and the table fills the
-Ingredients section. The desktop reader initializes from the saved account
-default, while mobile starts Ingredient-first. A reader's explicit change is
-transient.
+Ingredients section. On narrower desktop widths, constrain the Ingredients
+track to the available reader width and keep any table overflow local rather
+than allowing page-level horizontal overflow. The desktop reader initializes
+from the saved account default, while mobile starts Ingredient-first. A
+reader's explicit change is transient.
 
 Ingredient sets are visually quiet: a one-set recipe retains its current list
 without a set label. Multiple non-empty sets stay in set order and use a thin
@@ -697,8 +710,9 @@ authored token remains unchanged; public pages and print retain its authored
 unit and round to the nearest 5 degrees in that unit. `!medium low!` displays
 as `medium low` in private and public output without unit conversion. Reader
 text keeps its authored meaning without clock or thermometer icons. Private
-print follows the account emphasis unless the opt-out checkbox is checked; it
-is unchecked by default and suppresses all app-applied instruction formatting.
+print follows account emphasis and includes inline instruction photos by
+default. Separate print-only Settings controls can omit emphasis or inline
+photos; neither changes the on-screen reader.
 
 Typing `+p` opens a four-column thumbnail pane for the recipe's ready gallery
 photos, anchored at the caret. It overlays the editor and opens above or below
@@ -745,6 +759,14 @@ navigation.
   use the same Standard-view formatter and ordering as recipe detail; app chrome
   and editing controls are omitted. Amounts remain unscaled and unconverted.
 
+DLC 08 keeps recipe galleries visible on screen but omits gallery photos and an
+open image viewer from print. Private print applies the two account-wide
+print-only preferences; public print follows the current transient page
+controls. Metadata becomes a compact wrapping summary, and the title, metadata,
+ingredients, and instructions share a one-inch print-page margin. The reading
+area keeps its active presentation and available-width layout, and `@page`
+requests landscape while allowing a browser print-dialog override.
+
 ### History (Slice 23 current implementation)
 
 Recipe and publication detail place a labeled History link after the record's
@@ -770,13 +792,16 @@ remain part of Slice 25.
 ## Public Recipe View (Slice 22 current implementation)
 
 The guest recipe page has 24px horizontal gutters and a centered content width.
-Keep Print and an icon-only, accessible **No emphasis** toggle together at the
-right of the title row. The toggle removes app-applied colors and emphasis from
-the current public view and its print output, preserves authored Markdown
-formatting, and does not change account preferences. When the recipe has a
-serving count, append `- serves n` to its
-title, separated by a space, in regular 16px text. Do not repeat Serves in the
-separate metadata summary.
+Use text-labeled **No emphasis** and **No instruction photos** toggles; both
+start unpressed, change only the current page, and reset on reload. They affect
+the visible public recipe and its print output, preserve authored Markdown
+formatting, and do not read or change account preferences. On narrow screens,
+keep the icon-only Print action at the far-right edge of the title actions at
+every width, with a 48px touch target, accessible name, tooltip, and visible
+focus. Put the text toggles before Print on desktop and below the title on
+narrow screens. When the recipe has a serving count, append
+`- serves n` to its title, separated by a space, in regular 16px text. Do not
+repeat Serves in the separate metadata summary.
 
 Public photos are limited to 420px wide and `min(280px, 60vh)` high. At widths
 above 760px, position the photo gallery beside the Times and Equipment summary;
@@ -785,8 +810,12 @@ this overview. Clicking a non-thumbnail public recipe photo opens that image in
 the modal viewer at intrinsic size, constrained to the viewport without
 enlarging a smaller image. The top-right close action, Escape, and clicking
 outside the image dismiss it. The viewer does not provide gallery navigation.
-See [Slice 22](slices/22-public-links-and-privacy.md) for the public data and
-interaction contract.
+Print omits gallery photos and controls, reflects the visible inline-photo and
+emphasis states, and requests landscape. Public metadata and reading content
+use the available width with centered 1-inch reader gutters once the reader
+grows beyond its existing 1012px measure. See [Slice 22](slices/22-public-links-and-privacy.md)
+for the public data and interaction contract and [DLC 08](slices/dlc/dlc-08-recipe-public-and-print-layout.md)
+for the print and responsive-width contract.
 
 ## Publication Editing
 

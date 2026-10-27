@@ -211,6 +211,7 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
         temperature_color: 'red',
         duration_color: 'orange',
         private_print_uses_colors: false,
+        include_instruction_photos_in_private_print: false,
       }),
     });
     const preview = importDialog.getByRole('region', { name: 'Import details' });
@@ -258,6 +259,7 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
         .getByRole('button', { name: 'Set ingredient color to Dark Yellow' }),
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByLabel('Omit instruction emphasis when printing')).toBeChecked();
+    await expect(page.getByLabel('Omit instruction photos when printing')).toBeChecked();
   } finally {
     await deleteTestUser(request, user);
   }

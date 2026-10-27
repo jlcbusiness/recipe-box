@@ -1,4 +1,4 @@
-import { Ban, Printer } from 'lucide-react';
+import { Ban, ImageOff, Printer } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import { type ReactNode, useState } from 'react';
@@ -226,6 +226,7 @@ function RecipePhotos({ photos, name }: { photos: PublicRecipePhoto[]; name: str
 
 export default function PublicRecipePage(props: PublicRecipePageProps) {
   const [disableInstructionEmphasis, setDisableInstructionEmphasis] = useState(false);
+  const [disableInstructionPhotos, setDisableInstructionPhotos] = useState(false);
 
   if (props.state !== 'active') {
     return (
@@ -281,7 +282,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
 
   return (
     <main
-      className={`recipes-main recipe-public-main${disableInstructionEmphasis ? ' no-instruction-emphasis' : ''}`}
+      className={`recipes-main recipe-public-main${disableInstructionEmphasis ? ' no-instruction-emphasis' : ''}${disableInstructionPhotos ? ' no-instruction-photos' : ''}`}
       aria-labelledby="page-title"
     >
       <Head>
@@ -301,6 +302,26 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
               )}
             </h1>
             <div className="recipe-public-title-actions">
+              <div className="recipe-public-controls recipe-screen-only">
+                <button
+                  aria-pressed={disableInstructionEmphasis}
+                  className="recipe-secondary-button recipe-detail-action recipe-public-toggle"
+                  type="button"
+                  onClick={() => setDisableInstructionEmphasis((current) => !current)}
+                >
+                  <Ban aria-hidden="true" size={16} strokeWidth={2} />
+                  No emphasis
+                </button>
+                <button
+                  aria-pressed={disableInstructionPhotos}
+                  className="recipe-secondary-button recipe-detail-action recipe-public-toggle"
+                  type="button"
+                  onClick={() => setDisableInstructionPhotos((current) => !current)}
+                >
+                  <ImageOff aria-hidden="true" size={16} strokeWidth={2} />
+                  No instruction photos
+                </button>
+              </div>
               <button
                 aria-label="Print recipe"
                 className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-screen-only"
@@ -309,16 +330,6 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                 onClick={() => window.print()}
               >
                 <Printer aria-hidden="true" size={16} strokeWidth={2} />
-              </button>
-              <button
-                aria-label="No emphasis"
-                aria-pressed={disableInstructionEmphasis}
-                className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-screen-only"
-                title="No emphasis"
-                type="button"
-                onClick={() => setDisableInstructionEmphasis((current) => !current)}
-              >
-                <Ban aria-hidden="true" size={16} strokeWidth={2} />
               </button>
             </div>
           </div>

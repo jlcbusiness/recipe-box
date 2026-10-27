@@ -158,10 +158,11 @@ Write these tests before production code:
 
 ## Verification
 
-Run the measurement unit tests first. Run database and browser tests only
-against the existing local Supabase stack; do not run `npm run dev:local`,
-`npm run supabase:reset`, or any command that resets the local database. Then
-run TypeScript typecheck, Biome, and the focused recipe suite.
+Run the measurement unit tests first. Use the existing local Supabase stack
+when its state is useful. A local reset is allowed when a clean baseline is
+worth the reset and reload effort; follow the README procedure and reload the
+synthetic fixture. Never reset a linked or hosted project. Then run TypeScript
+typecheck, Biome, and the focused recipe suite.
 
 ## Completion criteria
 

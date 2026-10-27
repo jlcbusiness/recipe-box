@@ -9,7 +9,7 @@ export function RecipeSummaryLayout({
 }) {
   return (
     <div
-      className={`recipe-summary-layout${hasPhotos ? ' recipe-summary-layout-with-photos' : ''}`}
+      className={`recipe-summary-layout recipe-summary-layout-with-detail-heading${hasPhotos ? ' recipe-summary-layout-with-photos' : ''}`}
     >
       {children}
     </div>

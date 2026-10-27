@@ -110,8 +110,11 @@ control, and recipe creation/update history is recorded transactionally.
 - Exercise owner isolation with two users. Keep fixtures deterministic by
   selecting picklist values by category/value and time inputs by integer minute
   counts, not by database insertion order.
-- Reset the local database only through the documented `npm run dev:local`
-  workflow; browser tests create and clean their own Auth users and recipes.
+- Reset local Supabase through the documented `npm run dev:local` workflow
+  when a clean baseline is worth the reset and reload effort; after the reset,
+  run `npm run seed:synthetic -- --local` to restore fixture accounts and
+  recipes. Browser tests create and clean their own additional Auth users and
+  recipes. Never reset a linked or hosted project.
 
 ## Test-first acceptance
 

@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import sharp from 'sharp';
+import { EXPORT_SCHEMA_VERSION } from '../../src/lib/exports/rules';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
 function serviceHeaders(serviceRoleKey: string) {
@@ -275,7 +276,7 @@ test('database export includes more than 1,000 rows, verified private images, an
       };
     };
 
-    expect(manifest.schema_version).toBe(3);
+    expect(manifest.schema_version).toBe(EXPORT_SCHEMA_VERSION);
     expect(manifest.scope).toEqual({ type: 'database' });
     expect(portableData.records.ingredients).toHaveLength(1005);
     expect(portableData.records.recipes).toContainEqual(expect.objectContaining({ id: recipeId }));

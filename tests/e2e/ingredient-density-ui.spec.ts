@@ -67,6 +67,7 @@ test('Settings stages, searches, edits, and removes trusted ingredient densities
 
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.waitForLoadState('networkidle');
     const section = page.getByRole('region', { name: 'Trusted densities' });
     const toggle = section.getByRole('button', { name: 'Trusted densities', exact: true });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -560,14 +561,19 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
           bounds.left +
           amountInput.clientLeft +
           Number.parseFloat(style.paddingLeft) +
-          context.measureText(amountInput.value).width;
+          context.measureText(amountInput.value).width -
+          amountInput.scrollLeft;
         return indicator.getBoundingClientRect().left - textEnd;
       });
     }
 
     async function changeDesktopIngredient(name: string) {
       const table = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
-      await table.locator('tbody tr').first().locator('[data-field="ingredientName"]').click();
+      await table
+        .locator('tbody tr[data-row-id]')
+        .first()
+        .locator('[data-field="ingredientName"]')
+        .click();
       const ingredientInput = table.getByRole('combobox', { name: 'Ingredient, row 1' });
       await ingredientInput.fill(name);
       await page.getByRole('option', { name, exact: true }).click();
@@ -701,6 +707,12 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
         ),
       ).toBe(false);
       expect(longAmountBounds?.width).toBeGreaterThan(shortWeightBounds?.width ?? 0);
+      const longAmountScreenshot = testInfo.outputPath('recipe-density-long-derived-mobile.png');
+      await page.screenshot({ path: longAmountScreenshot, fullPage: true });
+      await testInfo.attach('recipe-density-long-derived-mobile', {
+        path: longAmountScreenshot,
+        contentType: 'image/png',
+      });
       await volumeAmount.fill('1/7');
       await volumeAmount.fill('1/8');
       await expect(weightAmount).toHaveValue('30');
@@ -808,6 +820,12 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
         ),
       ).toBe(false);
       expect(longAmountBounds?.width).toBeGreaterThan(shortWeightBounds?.width ?? 0);
+      const longAmountScreenshot = testInfo.outputPath('recipe-density-long-derived-desktop.png');
+      await page.screenshot({ path: longAmountScreenshot, fullPage: true });
+      await testInfo.attach('recipe-density-long-derived-desktop', {
+        path: longAmountScreenshot,
+        contentType: 'image/png',
+      });
       await volumeAmount.fill('1/7');
       await volumeAmount.fill('1/8');
       await expect(weightAmount).toHaveValue('30');

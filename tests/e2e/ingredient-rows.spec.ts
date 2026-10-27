@@ -399,6 +399,7 @@ test('ingredient catalog merge preserves repeated rows, measurements, mentions, 
     const sourceMarker = `[[ingredient:${rowIds[0]}|ground-pepper]]`;
     const rows = rowIds.map((id, index) => ({
       recipe_ingredient_id: id,
+      ingredient_set_id: id,
       ingredient_id: null,
       ingredient_name: index === 1 ? 'Pepper' : 'Ground pepper',
       is_main: index === 0,
@@ -416,6 +417,11 @@ test('ingredient catalog merge preserves repeated rows, measurements, mentions, 
     }));
     return {
       ...recipePayload(name, rows),
+      p_ingredient_sets: rowIds.map((id, index) => ({
+        id,
+        label: index === 0 ? 'Main' : 'For the sauce',
+        position: index,
+      })),
       p_instruction_steps: [
         {
           id: stepId,
@@ -424,27 +430,38 @@ test('ingredient catalog merge preserves repeated rows, measurements, mentions, 
           plain_text: 'Add #ground-pepper.',
         },
       ],
+      p_publication_id: null,
+      p_publication_page: null,
+      p_recipe_url: null,
+      p_recipe_relationships: { references: [] },
+      p_tag_ids: [],
     };
   }
 
   try {
-    const firstRecipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
-      headers: ownerHeaders,
-      data: recipeWithIngredients(
-        'Catalog merge repeated rows',
-        [sourceRowIds[0], targetRowId],
-        sourceStepIds[0],
-      ),
-    });
+    const firstRecipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_ingredient_sets`,
+      {
+        headers: ownerHeaders,
+        data: recipeWithIngredients(
+          'Catalog merge repeated rows',
+          [sourceRowIds[0], targetRowId],
+          sourceStepIds[0],
+        ),
+      },
+    );
     expect(firstRecipeResponse.ok(), await firstRecipeResponse.text()).toBeTruthy();
-    const secondRecipeResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
-      headers: ownerHeaders,
-      data: recipeWithIngredients(
-        'Catalog merge second recipe',
-        [sourceRowIds[1]],
-        sourceStepIds[1],
-      ),
-    });
+    const secondRecipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_ingredient_sets`,
+      {
+        headers: ownerHeaders,
+        data: recipeWithIngredients(
+          'Catalog merge second recipe',
+          [sourceRowIds[1]],
+          sourceStepIds[1],
+        ),
+      },
+    );
     expect(secondRecipeResponse.ok(), await secondRecipeResponse.text()).toBeTruthy();
 
     const catalogResponse = await request.get(
@@ -664,7 +681,7 @@ test('ingredient catalog rename records before and after recipe snapshots @e2e @
       { name: 'Toasted Cumin', is_main: true, detail: 'whole', preparation: 'toasted' },
     ]);
     expect(history[1].after_data.steps[0].mentions).toEqual([
-      { position: 0, recipe_ingredient_id: rowId },
+      { position: 0, recipe_ingredient_id: rowId, portion_ordinal: null },
     ]);
 
     const catalogHistoryResponse = await request.get(
@@ -960,8 +977,14 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(keyboardPreparation).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(grid.locator('[aria-label="Preparation, row 1"]')).toHaveText('chopped');
-    await grid.locator('[aria-label="Preparation, row 1"]').click();
+    await grid.locator('[aria-label="Preparation, row 1"] .recipe-ingredient-cell-value').click();
+    await expect(keyboardPreparation).toBeFocused();
+    await expect(page.getByRole('listbox')).toBeVisible();
     await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('option', { name: 'crushed', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await page.keyboard.press('Tab');
     await expect(grid.locator('[aria-label="Preparation, row 1"]')).toHaveText('crushed');
     await expect(grid.getByRole('cell', { name: 'Add ingredient row' })).toBeFocused();
@@ -973,7 +996,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     const firstDetailEditor = page.getByRole('textbox', { name: 'Specifics, row 1' });
     await firstDetailEditor.fill('fresh');
     await page.keyboard.press('Enter');
-    await grid.locator('[aria-label="Preparation, row 1"]').click();
+    await grid.locator('[aria-label="Preparation, row 1"] .recipe-ingredient-cell-value').click();
     const firstPreparation = page.getByRole('combobox', { name: 'Preparation, row 1' });
     await expect(page.getByRole('listbox')).toBeVisible();
     await expect(page.getByRole('option', { name: 'chopped', exact: true })).toBeVisible();
@@ -1455,26 +1478,43 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     ).toBeLessThanOrEqual((currentEditorBounds?.x ?? 0) + (currentEditorBounds?.width ?? 0));
     for (const width of [900, 899, 760, 640]) {
       await page.setViewportSize({ width, height: 520 });
+      const readPopoverGeometry = () =>
+        editor.evaluate((dialog) => {
+          const controls = dialog.querySelector('.recipe-preparation-controls');
+          if (!controls) {
+            return null;
+          }
+          const popoverBounds = dialog.getBoundingClientRect();
+          const controlsBounds = controls.getBoundingClientRect();
+          return {
+            popoverLeft: popoverBounds.left,
+            popoverRight: popoverBounds.right,
+            controlsLeft: controlsBounds.left,
+            controlsRight: controlsBounds.right,
+          };
+        });
       await expect
         .poll(async () => {
-          const bounds = await editor.boundingBox();
-          return bounds !== null && bounds.x >= 0 && bounds.x + bounds.width <= width;
+          const geometry = await readPopoverGeometry();
+          return (
+            geometry !== null &&
+            geometry.popoverLeft >= 0 &&
+            geometry.popoverRight <= width &&
+            geometry.controlsLeft >= geometry.popoverLeft - 1 &&
+            geometry.controlsRight <= geometry.popoverRight + 1
+          );
         })
         .toBe(true);
-      const resizedEditorBounds = await editor.boundingBox();
-      const resizedControlsBounds = await editor
-        .locator('.recipe-preparation-controls')
-        .boundingBox();
-      expect(resizedEditorBounds).not.toBeNull();
-      expect(resizedControlsBounds).not.toBeNull();
-      expect(resizedEditorBounds?.x).toBeGreaterThanOrEqual(0);
-      expect((resizedEditorBounds?.x ?? 0) + (resizedEditorBounds?.width ?? 0)).toBeLessThanOrEqual(
-        width,
+      const resizedGeometry = await readPopoverGeometry();
+      expect(resizedGeometry).not.toBeNull();
+      expect(resizedGeometry?.popoverLeft).toBeGreaterThanOrEqual(0);
+      expect(resizedGeometry?.popoverRight).toBeLessThanOrEqual(width);
+      expect(resizedGeometry?.controlsLeft).toBeGreaterThanOrEqual(
+        (resizedGeometry?.popoverLeft ?? 0) - 1,
       );
-      expect(resizedControlsBounds?.x).toBeGreaterThanOrEqual(resizedEditorBounds?.x ?? 0);
-      expect(
-        (resizedControlsBounds?.x ?? 0) + (resizedControlsBounds?.width ?? 0),
-      ).toBeLessThanOrEqual((resizedEditorBounds?.x ?? 0) + (resizedEditorBounds?.width ?? 0));
+      expect(resizedGeometry?.controlsRight).toBeLessThanOrEqual(
+        (resizedGeometry?.popoverRight ?? 0) + 1,
+      );
       await expect(size).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),

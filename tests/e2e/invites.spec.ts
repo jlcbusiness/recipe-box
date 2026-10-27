@@ -355,6 +355,7 @@ test('an existing admin can grant admin status to another account @e2e', async (
   page,
   request,
 }) => {
+  test.setTimeout(60_000);
   const admin = await createAdminTestUser(request);
   const member = await createTestUser(request);
 

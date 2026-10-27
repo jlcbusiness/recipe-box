@@ -1206,30 +1206,47 @@ export function RecipeReader({
           </div>
         </div>
         {presentation === 'ingredient_first' ? (
-          <table
-            aria-label="Recipe ingredients"
-            className={`recipe-ingredient-table recipe-ingredient-first-table${cookMode ? ' recipe-ingredient-first-table-cook-mode' : ''}`}
+          <section
+            aria-label="Scrollable recipe ingredients"
+            className="recipe-ingredient-first-table-scroll"
+            style={{ minWidth: 0, overflowX: 'auto' }}
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users need a tab stop to scroll this region.
+            tabIndex={0}
           >
-            <thead className="visually-hidden">
-              <tr>
-                {cookMode && <td aria-hidden="true" className="recipe-cook-checkbox-heading" />}
-                <th scope="col">Ingredient</th>
-                <th scope="col">
-                  <span className="recipe-reader-label-desktop">Volume</span>
-                  <span className="recipe-reader-label-mobile">Vol</span>
-                </th>
-                <th scope="col">
-                  <span className="recipe-reader-label-desktop">Weight</span>
-                  <span className="recipe-reader-label-mobile">Wt</span>
-                </th>
-                <th scope="col">
-                  <span className="recipe-reader-label-desktop">Preparation</span>
-                  <span className="recipe-reader-label-mobile">Prep</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>{renderIngredientGroups()}</tbody>
-          </table>
+            <table
+              aria-label="Recipe ingredients"
+              className={`recipe-ingredient-table recipe-ingredient-first-table${cookMode ? ' recipe-ingredient-first-table-cook-mode' : ''}`}
+            >
+              {cookMode && (
+                <colgroup>
+                  <col className="recipe-cook-checkbox-column" />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                </colgroup>
+              )}
+              <thead className="visually-hidden">
+                <tr>
+                  {cookMode && <td aria-hidden="true" className="recipe-cook-checkbox-heading" />}
+                  <th scope="col">Ingredient</th>
+                  <th scope="col">
+                    <span className="recipe-reader-label-desktop">Volume</span>
+                    <span className="recipe-reader-label-mobile">Vol</span>
+                  </th>
+                  <th scope="col">
+                    <span className="recipe-reader-label-desktop">Weight</span>
+                    <span className="recipe-reader-label-mobile">Wt</span>
+                  </th>
+                  <th scope="col">
+                    <span className="recipe-reader-label-desktop">Preparation</span>
+                    <span className="recipe-reader-label-mobile">Prep</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>{renderIngredientGroups()}</tbody>
+            </table>
+          </section>
         ) : (
           <ol className="recipe-ingredient-list">{renderIngredientGroups()}</ol>
         )}

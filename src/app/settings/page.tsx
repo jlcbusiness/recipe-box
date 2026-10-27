@@ -35,7 +35,7 @@ export default async function SettingsPage() {
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select(
-      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, recipe_column_order, recipe_hidden_columns, last_database_export_at',
+      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at',
     )
     .eq('id', data.user.id)
     .maybeSingle();
@@ -197,6 +197,9 @@ export default async function SettingsPage() {
               : defaultInstructionEmphasis.duration
           }
           handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
+          includeInstructionPhotosInPrivatePrint={
+            account.include_instruction_photos_in_private_print !== false
+          }
           ingredientColor={
             isInstructionEmphasisColor(account.ingredient_color)
               ? account.ingredient_color

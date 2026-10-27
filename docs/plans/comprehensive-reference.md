@@ -398,7 +398,9 @@ trailing empty row.
   clearing all transient volume and weight overrides.
 - **Dimensions:** Conversion stays within volume or within weight. Volume-to-weight conversion needs a trusted density (3.3).
 - **Printing:** The printed recipe reflects the active scale, account defaults, and per-ingredient overrides while
-  omitting the interactive controls.
+  omitting the interactive controls. DLC 08 hides recipe gallery photos, applies the private inline-photo and
+  instruction-emphasis preferences, presents metadata as a compact wrapping summary, and requests landscape; the
+  browser print dialog may override orientation.
 - **Public pages:** Guests have no saved unit preferences. Public recipe pages
   use US customary units and keep scaling and unit overrides transient.
 - **System naming:** The app uses "US customary", not "imperial", because UK imperial pints and gallons differ.
@@ -681,13 +683,17 @@ preserved.
     Ingredient mentions retain independent bold, italic, and underline
     controls. Color is optional emphasis; the readable text and units carry the
     meaning.
-  - Private print follows the account's emphasis by default. Settings has a
-    checkbox to omit instruction emphasis from private print; it is unchecked
-    by default.
+  - Private print follows the account's emphasis and includes inline
+    instruction photos by default. Settings has separate print-only controls
+    to omit emphasis or inline photos; both omission choices are off by default
+    and do not change the private on-screen reader.
     Public readers and public print use fixed application defaults rather than
-    account preferences. A local, icon-only **No emphasis** toggle beside Print
-    removes app-applied color and emphasis styling from the current public view
-    and its print output; authored Markdown formatting remains intact.
+    account preferences. Transient, text-labeled **No emphasis** and **No
+    instruction photos** toggles affect the current public view and its print
+    output, reset on reload, and preserve authored Markdown formatting. On
+    narrow screens, Print sits at the title area's top-right with a 48px touch
+    target, accessible name, tooltip, and visible focus; the toggles appear
+    below the title.
   - **Structured Tracking:** Only confirmed selections create a structured foreign-key link to the ingredient row. Plain
     text does not trigger instruction-appearance sorting.
   - Divided rows offer one autocomplete option for each portion and no whole-row
@@ -1198,7 +1204,13 @@ show `- serves n` inline after the title, separated by a space, in regular 16px
 text; do not repeat Serves in the summary. Use 24px horizontal page gutters. Cap public
 photos at 420px wide and `min(280px, 60vh)` high. Above 760px, show the photo
 gallery beside the Time Breakdown and Equipment summary; at narrower widths, stack the
-summary below the photos.
+summary below the photos. The **No emphasis** and **No instruction photos**
+buttons are text-labeled, start unpressed, and keep transient state only for
+the loaded page. On narrow screens, place Print at the title area's top-right
+and the toggles below the title. Public print matches the visible guest
+presentation and field order, omits controls and gallery photos, and honors the
+active inline-photo and emphasis choices without loading Account preferences.
+Print requests landscape while leaving the browser dialog authoritative.
 
 ### 9.4 Secure Image Delivery
 
@@ -1419,14 +1431,18 @@ above.
 A full database ZIP is an account-data backup, not a backup of the Supabase
 project. It restores account-owned records, preferences, and ready image
 variants. It does not include Auth users or credentials, or change history.
-Keep a completed full export outside Supabase Storage before any authorized
-local reset.
+Local resets are allowed when a clean baseline is worth the reset and reload
+effort. The repeatable synthetic fixture can restore its test accounts and
+data; it does not preserve arbitrary local records. Export local data that is
+not represented by the fixture if it needs to survive a reset.
 
-To recover app data after a local reset, reapply the project's migrations and
-seed script, create a fresh local Auth account, and import the full database
-ZIP from Settings. Import is owner-derived, so it does not require the original
-Auth user ID. The local project configuration remains separate from the ZIP;
-this workflow restores account data, not Auth identities or history.
+After `npm run dev:local` or `supabase db reset --local` has reapplied
+migrations, run `npm run seed:synthetic -- --local` to restore the synthetic
+baseline. To recover other exported app data, create a fresh local Auth
+account and import the full database ZIP from Settings. Import is owner-derived,
+so it does not require the original Auth user ID. This workflow restores
+account data, not Auth identities or history. Never reset a linked or hosted
+database as part of local testing.
 
 ---
 

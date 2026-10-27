@@ -330,7 +330,7 @@ a {
 .private-shell {
   display: grid;
   min-height: 100vh;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: fit-content(140px) minmax(0, 1fr);
 }
 
 .private-nav {
@@ -1365,6 +1365,26 @@ h1 {
   font-weight: 700;
 }
 
+.settings-instruction-emphasis-layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.15fr) minmax(240px, 0.85fr);
+  gap: 32px;
+}
+
+.settings-instruction-emphasis-column {
+  min-width: 0;
+}
+
+.settings-print-options {
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+}
+
+.settings-print-options-list {
+  display: grid;
+  gap: 20px;
+}
+
 .settings-emphasis-preferences {
   position: relative;
   display: grid;
@@ -1473,7 +1493,8 @@ h1 {
 }
 
 .settings-emphasis-swatch:focus-visible,
-.settings-print-emphasis-toggle input:focus-visible {
+.settings-print-emphasis-toggle input:focus-visible,
+.settings-emphasis-toggle input:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
@@ -1496,7 +1517,7 @@ h1 {
   }
 }
 
-.settings-print-emphasis-toggle {
+.settings-emphasis-toggle {
   display: flex;
   width: fit-content;
   align-items: center;
@@ -1505,11 +1526,40 @@ h1 {
   cursor: pointer;
 }
 
-.settings-print-emphasis-toggle input {
+.settings-emphasis-toggle input {
   width: 18px;
   height: 18px;
   margin: 0;
   accent-color: var(--leaf);
+}
+
+.settings-print-emphasis-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.settings-print-emphasis-toggle input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--leaf);
+}
+
+@media (max-width: 900px) {
+  .settings-instruction-emphasis-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .settings-print-options {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    padding: 20px 0 0;
+  }
 }
 
 .settings-unit-preferences {
@@ -1901,7 +1951,7 @@ h1 {
 }
 
 .recipe-public-main {
-  width: min(100%, 1060px);
+  width: 100%;
   margin-inline: auto;
   padding: 24px 24px 48px;
 }
@@ -1960,9 +2010,63 @@ h1 {
   gap: 8px;
 }
 
+.recipe-public-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.recipe-public-toggle {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
 .recipe-public-title-actions [aria-pressed="true"] {
   border-color: var(--navy);
   background: #e9efad;
+}
+
+.recipe-public-main.no-instruction-photos .recipe-instruction-photo {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .recipe-public-main .recipe-detail-title-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 8px;
+  }
+
+  .recipe-public-main .recipe-detail-title-row h1 {
+    grid-column: 1;
+  }
+
+  .recipe-public-title-actions {
+    display: contents;
+  }
+
+  .recipe-public-title-actions > .recipe-detail-action {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .recipe-public-controls {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .recipe-public-title-actions > .recipe-icon-action {
+    justify-self: end;
+  }
+
+  .recipe-public-toggle {
+    white-space: normal;
+  }
 }
 
 .recipe-instruction-mention.is-unemphasized,

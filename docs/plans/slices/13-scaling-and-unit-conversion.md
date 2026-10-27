@@ -145,9 +145,11 @@ Write focused failing coverage before production code:
 Run the focused unit and owner-scoped database/API tests first, followed by the
 recipe detail and print browser tests on Chromium and Fold 6. Use the isolated
 `npm run test:migration:magazine` harness to verify unit defaults for accounts
-created before and after the migration without resetting shared local data.
-Then run `npm run typecheck`, `npm run lint`, and the production build. Do not
-use `npm run dev:local` for validation because it resets the local database.
+created before and after the migration. Reuse local data when useful; a local
+reset is allowed when a clean baseline is worth the reset and reload effort.
+Follow the README procedure and reload the synthetic fixture. Never reset
+linked or hosted Supabase. Then run `npm run typecheck`, `npm run lint`, and the
+production build.
 
 ## Completion criteria
 

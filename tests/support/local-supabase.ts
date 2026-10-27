@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline';
 import type { APIRequestContext } from '@playwright/test';
+import { LOCAL_TEST_PASSWORD } from './local-test-password.mjs';
 
 export type LocalSupabaseConfig = {
   apiUrl: string;
@@ -63,7 +64,7 @@ export async function getLocalSupabaseConfig(): Promise<LocalSupabaseConfig> {
 export async function createTestUser(request: APIRequestContext): Promise<TestUser> {
   const { apiUrl, anonKey } = await getLocalSupabaseConfig();
   const email = `slice1-${randomUUID()}@example.test`;
-  const password = 'local-test-password-42';
+  const password = LOCAL_TEST_PASSWORD;
   const response = await request.post(`${apiUrl}/auth/v1/signup`, {
     headers: { apikey: anonKey },
     data: { email, password },

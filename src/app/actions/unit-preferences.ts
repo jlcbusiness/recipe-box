@@ -1,10 +1,10 @@
 'use server';
 
+import type { InstructionEmphasisColor } from '../../lib/recipes/instruction-emphasis';
 import {
   defaultInstructionEmphasis,
   isInstructionEmphasisColor,
 } from '../../lib/recipes/instruction-emphasis';
-import type { InstructionEmphasisColor } from '../../lib/recipes/instruction-emphasis';
 import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
@@ -116,6 +116,26 @@ export async function saveUnitPreferences(
 
     const { error } = await supabase.rpc('update_account_unit_preferences', {
       p_private_print_uses_colors: privatePrintUsesColors === 'true',
+    });
+    return error
+      ? { status: 'error', message: 'Print preference could not be saved.' }
+      : { status: 'saved', message: 'Saved.' };
+  }
+
+  if (changedDimension === 'print_photos') {
+    const includeInstructionPhotos = formData.get('include_instruction_photos_in_private_print');
+    if (includeInstructionPhotos !== 'true' && includeInstructionPhotos !== 'false') {
+      return { status: 'error', message: 'Choose a valid print preference.' };
+    }
+
+    const supabase = await createClient();
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) {
+      return { status: 'error', message: 'Sign in to save preferences.' };
+    }
+
+    const { error } = await supabase.rpc('update_account_unit_preferences', {
+      p_include_instruction_photos_in_private_print: includeInstructionPhotos === 'true',
     });
     return error
       ? { status: 'error', message: 'Print preference could not be saved.' }

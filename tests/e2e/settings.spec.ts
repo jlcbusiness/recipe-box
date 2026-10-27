@@ -392,7 +392,10 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
   }
 });
 
-test('Settings can turn off and restore all instruction emphasis @e2e', async ({ page, request }) => {
+test('Settings can turn off and restore all instruction emphasis @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
   const headers = {
@@ -403,16 +406,32 @@ test('Settings can turn off and restore all instruction emphasis @e2e', async ({
   try {
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.waitForLoadState('networkidle');
     const allEmphasisToggle = page.getByRole('checkbox', { name: 'Turn off all emphasis' });
     await expect(allEmphasisToggle).toBeVisible();
-    const [printBounds, emphasisBounds] = await Promise.all([
-      page.locator('.settings-print-emphasis-toggle').nth(0).boundingBox(),
-      page.locator('.settings-print-emphasis-toggle').nth(1).boundingBox(),
+    const emphasisColumn = page.locator('.settings-instruction-emphasis-column');
+    const printOptions = page.getByRole('region', { name: 'Print options' });
+    const [emphasisBounds, printOptionsBounds] = await Promise.all([
+      emphasisColumn.boundingBox(),
+      printOptions.boundingBox(),
     ]);
-    if (!printBounds || !emphasisBounds) {
-      throw new Error('Expected both instruction emphasis checkboxes to be visible.');
+    if (!emphasisBounds || !printOptionsBounds) {
+      throw new Error('Expected the emphasis and print-options columns to be visible.');
     }
-    expect(emphasisBounds.y).toBeGreaterThanOrEqual(printBounds.y + printBounds.height);
+    if ((page.viewportSize()?.width ?? 0) > 900) {
+      expect(printOptionsBounds.x).toBeGreaterThanOrEqual(emphasisBounds.x + emphasisBounds.width);
+    } else {
+      expect(printOptionsBounds.y).toBeGreaterThanOrEqual(emphasisBounds.y + emphasisBounds.height);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+        .toBe(true);
+    }
+    const layoutScreenshot = testInfo.outputPath('settings-print-options-layout.png');
+    await page.screenshot({ path: layoutScreenshot, fullPage: true });
+    await testInfo.attach('settings-print-options-layout', {
+      path: layoutScreenshot,
+      contentType: 'image/png',
+    });
     await allEmphasisToggle.check();
     await expect(page.getByRole('status')).toHaveText('All instruction emphasis turned off.');
     const saved = await request.get(
@@ -444,6 +463,61 @@ test('Settings can turn off and restore all instruction emphasis @e2e', async ({
     expect(await restored.json()).toEqual([
       { ingredient_color: 'blue', temperature_color: 'red', duration_color: 'orange' },
     ]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Settings can omit inline instruction photos from private print @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${user.accessToken}`,
+  };
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    const omitPhotos = page.getByRole('checkbox', {
+      name: 'Omit instruction photos when printing',
+    });
+    await expect(omitPhotos).toBeVisible();
+    await expect(omitPhotos).not.toBeChecked();
+    if (testInfo.project.name === 'Fold 6') {
+      await omitPhotos.tap();
+    } else {
+      await omitPhotos.check();
+    }
+    await expect(omitPhotos).toBeChecked();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    const saved = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=include_instruction_photos_in_private_print&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await saved.json()).toEqual([{ include_instruction_photos_in_private_print: false }]);
+
+    await page.reload();
+    await expect(omitPhotos).toBeChecked();
+    if (testInfo.project.name === 'Fold 6') {
+      await omitPhotos.tap();
+    } else {
+      await omitPhotos.uncheck();
+    }
+    await expect(omitPhotos).not.toBeChecked();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect
+      .poll(async () => {
+        const response = await request.get(
+          `${config.apiUrl}/rest/v1/accounts?select=include_instruction_photos_in_private_print&id=eq.${user.id}`,
+          { headers },
+        );
+        return response.json();
+      })
+      .toEqual([{ include_instruction_photos_in_private_print: true }]);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -835,7 +909,8 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     const showAllBox = await columnSection
       .getByRole('button', { name: 'Show all recipe columns' })
       .boundingBox();
-    if (!showAllBox) throw new Error('Expected the Show all recipe columns control beside the header.');
+    if (!showAllBox)
+      throw new Error('Expected the Show all recipe columns control beside the header.');
     expect(showAllBox.x).toBeGreaterThanOrEqual(headingBox.x + headingBox.width - 1);
     expect(
       Math.abs(showAllBox.y + showAllBox.height / 2 - (headingBox.y + headingBox.height / 2)),
@@ -1022,9 +1097,7 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     await page.getByRole('button', { name: 'Recipe columns', exact: true }).click();
     const totalTimeRow = page.locator('[data-recipe-column-row="total_time_minutes"]');
     if ((await totalTimeRow.getAttribute('data-hidden')) !== 'true') {
-      await totalTimeRow
-        .getByRole('button', { name: 'Hide Total Time in recipe tables' })
-        .click();
+      await totalTimeRow.getByRole('button', { name: 'Hide Total Time in recipe tables' }).click();
     }
     await expect(totalTimeRow).toHaveAttribute('data-hidden', 'true');
     await page.getByRole('button', { name: 'Show all recipe columns' }).click();

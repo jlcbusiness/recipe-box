@@ -313,9 +313,11 @@ Before implementation, verify the current Next.js 16 and Supabase/PostgREST
 APIs against their installed docs and official references, then write focused
 failing tests before production code. Search scope is recipe notes plus
 publication name and author; do not add a Publication Notes field. Follow
-`AGENTS.md` for the Next.js documentation location. Do not run
-`npm run dev:local`, reset local Supabase, or stop the existing development
-server.
+`AGENTS.md` for the Next.js documentation location. Reuse local data when
+useful; a reset is allowed when a clean baseline is worth the reset and reload
+effort. Follow the README procedure and reload the synthetic fixture. Never
+reset linked or hosted Supabase or stop the existing development server as a
+shortcut.
 
 Slice 17 is complete when all included workflows work for an authenticated
 owner, search remains private and current after source changes, publication

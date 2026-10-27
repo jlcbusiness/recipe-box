@@ -108,10 +108,15 @@ nullable `portion_ordinal` on ingredient mentions. Media asset rows include a
 remain within the oriented image. Null means Fit/contain and preserves the
 complete source. The nullable ratio stores portion 1's share of
 the canonical total; ordinal 1 or 2 identifies the referenced portion.
-`account_preferences` contains only product preferences. Domain record IDs and
-relationship IDs are preserved. Owner `account_id`, Auth user IDs, admin and
-sign-in-method values, signed URLs, private Storage paths, and export timestamps
-are omitted. Import assigns ownership to the authenticated destination account.
+`account_preferences` contains only product preferences and is empty for
+publication and recipe scopes. Database bundles may include
+`include_instruction_photos_in_private_print`; the boolean is optional so
+older bundles remain valid, and a missing value preserves the destination
+account's current setting. The field was added without changing schema version
+5. Domain record IDs and relationship IDs are preserved. Owner `account_id`,
+Auth user IDs, admin and sign-in-method values, signed URLs, private Storage
+paths, and export timestamps are omitted. Import assigns ownership to the
+authenticated destination account.
 
 Media asset rows describe ready assets only. Their full and thumbnail storage
 paths are represented by their matching relative `images/...` paths. Trashed

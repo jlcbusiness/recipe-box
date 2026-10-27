@@ -1,6 +1,18 @@
+.recipe-public-title-actions > .recipe-icon-action {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+}
+
 @media print {
   @page {
     margin: 18mm;
+  }
+
+  @page recipe {
+    margin: 1in;
+    size: landscape;
   }
 
   html,
@@ -14,6 +26,10 @@
   .private-shell {
     display: block;
     min-height: 0;
+  }
+
+  main.recipes-main {
+    page: recipe;
   }
 
   .private-shell .private-nav,
@@ -45,6 +61,31 @@
     margin-bottom: 18px;
   }
 
+  .recipe-photo-gallery {
+    display: none !important;
+  }
+
+  .private-content main.recipes-main .recipe-summary-layout {
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .private-content main.recipes-main .recipe-summary-layout-with-photos {
+    display: block;
+  }
+
+  .image-viewer-dialog {
+    display: none !important;
+  }
+
+  .no-instruction-photos .recipe-instruction-photo {
+    display: none;
+  }
+
+  .recipe-public-overview {
+    display: block;
+  }
+
   .recipe-photo-feature-image {
     max-height: 1.5in;
   }
@@ -58,9 +99,50 @@
     page-break-inside: avoid;
   }
 
+  .recipe-print-metadata {
+    width: 100%;
+    margin-top: 0;
+    border: 0;
+    padding: 0;
+  }
+
+  .recipe-print-metadata > h2 {
+    display: none;
+  }
+
+  .recipe-print-metadata .recipe-metadata,
+  .recipe-print-metadata-times .recipe-time-list,
+  .recipe-public-summary .recipe-time-list {
+    gap: 4px 14px;
+  }
+
+  .recipe-print-metadata .recipe-metadata > div,
+  .recipe-print-metadata-times .recipe-time-list > div,
+  .recipe-public-summary .recipe-time-list > div {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .recipe-print-metadata .recipe-metadata dd,
+  .recipe-print-metadata-times .recipe-time-list dd,
+  .recipe-public-summary .recipe-time-list dd {
+    margin: 0;
+  }
+
+  .recipe-print-metadata .recipe-detail-classification {
+    margin-top: 4px;
+  }
+
+  .recipe-print-metadata-times {
+    margin-top: 4px;
+  }
+
   .recipe-reading-layout {
     width: 100%;
     margin-top: 18px;
+    margin-inline: 0;
   }
 
   .recipe-reading-layout > .recipe-detail-section {

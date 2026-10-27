@@ -163,10 +163,11 @@ Write these tests before production code:
 ## Verification
 
 Run the focused instruction and mention unit tests first, followed by the
-database/API and browser/accessibility tests against the existing local
-Supabase stack. Do not run `npm run dev:local`, `npm run supabase:reset`, or
-another command that resets local data. Then run TypeScript typecheck, Biome,
-and the focused recipe suite.
+database/API and browser/accessibility tests against local Supabase. Reuse
+existing local data when useful; a reset is allowed when a clean baseline is
+worth the reset and reload effort. Follow the README procedure and reload the
+synthetic fixture. Never reset a linked or hosted project. Then run TypeScript
+typecheck, Biome, and the focused recipe suite.
 
 ## Completion criteria
 

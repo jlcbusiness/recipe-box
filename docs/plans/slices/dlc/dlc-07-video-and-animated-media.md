@@ -3,6 +3,11 @@
 This brief evaluates and, if feasible, extends the private media pipeline to
 video and animated image assets. It depends on the media security work in DLC 06.
 
+## Status
+
+Deferred. No implementation is planned unless support for the capability is
+specifically requested.
+
 ## Outcome
 
 A person can attach supported motion media to a recipe and view it through the

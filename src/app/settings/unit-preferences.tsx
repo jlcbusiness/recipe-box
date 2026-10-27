@@ -49,6 +49,7 @@ const instructionColorDimensions = [
 
 export function UnitPreferences({
   durationColor,
+  includeInstructionPhotosInPrivatePrint = true,
   ingredientPresentation,
   ingredientColor,
   handPreference,
@@ -62,6 +63,7 @@ export function UnitPreferences({
   ingredientPresentation: IngredientPresentation;
   ingredientColor: InstructionEmphasisColor;
   handPreference: 'left' | 'right';
+  includeInstructionPhotosInPrivatePrint?: boolean;
   privatePrintUsesColors: boolean;
   temperatureColor: InstructionEmphasisColor;
   temperatureSystem: TemperatureSystem;
@@ -80,6 +82,7 @@ export function UnitPreferences({
   const durationColorRef = useRef<HTMLInputElement>(null);
   const allEmphasisDisabledRef = useRef<HTMLInputElement>(null);
   const privatePrintUsesColorsRef = useRef<HTMLInputElement>(null);
+  const includeInstructionPhotosRef = useRef<HTMLInputElement>(null);
   const emphasisPickerRef = useRef<HTMLDivElement>(null);
   const activeEmphasisTriggerRef = useRef<HTMLButtonElement>(null);
   const emphasisPaletteId = useId();
@@ -98,6 +101,7 @@ export function UnitPreferences({
     temperatureColor,
     durationColor,
     privatePrintUsesColors,
+    includeInstructionPhotosInPrivatePrint,
   });
   const [state, formAction, isPending] = useActionState(saveUnitPreferences, {});
 
@@ -112,6 +116,7 @@ export function UnitPreferences({
       temperatureColor,
       durationColor,
       privatePrintUsesColors,
+      includeInstructionPhotosInPrivatePrint,
     });
   }, [
     durationColor,
@@ -119,6 +124,7 @@ export function UnitPreferences({
     ingredientColor,
     ingredientPresentation,
     privatePrintUsesColors,
+    includeInstructionPhotosInPrivatePrint,
     temperatureColor,
     resolvedTemperatureSystem,
     volumeSystem,
@@ -139,6 +145,7 @@ export function UnitPreferences({
         temperatureColor,
         durationColor,
         privatePrintUsesColors,
+        includeInstructionPhotosInPrivatePrint,
       });
     }
   }, [
@@ -147,6 +154,7 @@ export function UnitPreferences({
     ingredientColor,
     ingredientPresentation,
     privatePrintUsesColors,
+    includeInstructionPhotosInPrivatePrint,
     router,
     state,
     temperatureColor,
@@ -253,8 +261,8 @@ export function UnitPreferences({
   function updateAllEmphasis(turnedOff: boolean) {
     const colors: Record<'ingredient' | 'temperature' | 'duration', InstructionEmphasisColor> =
       turnedOff
-      ? { ingredient: 'none', temperature: 'none', duration: 'none' }
-      : defaultInstructionEmphasis;
+        ? { ingredient: 'none', temperature: 'none', duration: 'none' }
+        : defaultInstructionEmphasis;
     setPreferences((current) => ({
       ...current,
       ingredientColor: colors.ingredient,
@@ -287,6 +295,17 @@ export function UnitPreferences({
     }
     if (privatePrintUsesColorsRef.current) {
       privatePrintUsesColorsRef.current.value = String(value);
+    }
+    formRef.current?.requestSubmit();
+  }
+
+  function updateIncludeInstructionPhotos(value: boolean) {
+    setPreferences((current) => ({ ...current, includeInstructionPhotosInPrivatePrint: value }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'print_photos';
+    }
+    if (includeInstructionPhotosRef.current) {
+      includeInstructionPhotosRef.current.value = String(value);
     }
     formRef.current?.requestSubmit();
   }
@@ -368,6 +387,12 @@ export function UnitPreferences({
           ref={privatePrintUsesColorsRef}
           type="hidden"
           value={String(preferences.privatePrintUsesColors)}
+        />
+        <input
+          name="include_instruction_photos_in_private_print"
+          ref={includeInstructionPhotosRef}
+          type="hidden"
+          value={String(preferences.includeInstructionPhotosInPrivatePrint)}
         />
         <div className="settings-preference-group">
           <div className="settings-unit-preference-fields">
@@ -455,125 +480,148 @@ export function UnitPreferences({
           </div>
         </div>
         <div className="settings-preference-group settings-instruction-emphasis">
-          <h3>Instruction emphasis</h3>
-          <div className="settings-emphasis-preferences" ref={emphasisPickerRef}>
-            <div className="settings-emphasis-fields">
-              {instructionColorDimensions.map(({ dimension, label, preferenceKey }) => {
-                const value = preferences[preferenceKey];
-                const selectedOption = instructionEmphasisOptions.find(
-                  (option) => option.value === value,
-                );
-                const isOpen = openColorDimension === dimension;
+          <div className="settings-instruction-emphasis-layout">
+            <div className="settings-instruction-emphasis-column">
+              <h3>Instruction emphasis</h3>
+              <div className="settings-emphasis-preferences" ref={emphasisPickerRef}>
+                <div className="settings-emphasis-fields">
+                  {instructionColorDimensions.map(({ dimension, label, preferenceKey }) => {
+                    const value = preferences[preferenceKey];
+                    const selectedOption = instructionEmphasisOptions.find(
+                      (option) => option.value === value,
+                    );
+                    const isOpen = openColorDimension === dimension;
 
-                return (
-                  <fieldset
-                    aria-labelledby={`${emphasisPaletteId}-${dimension}-label`}
-                    className="settings-emphasis-row"
-                    key={dimension}
-                  >
-                    <span
-                      className="settings-emphasis-label"
-                      id={`${emphasisPaletteId}-${dimension}-label`}
-                    >
-                      {label}
-                    </span>
-                    <div className="settings-emphasis-picker">
-                      <button
-                        aria-controls={emphasisPaletteId}
-                        aria-expanded={isOpen}
-                        aria-label={`${label}: ${selectedOption?.label ?? 'None'}`}
-                        className={`settings-emphasis-swatch settings-emphasis-trigger${value === 'none' ? ' is-none' : ''}`}
-                        disabled={isPending}
-                        ref={isOpen ? activeEmphasisTriggerRef : null}
-                        style={
-                          selectedOption?.color
-                            ? { backgroundColor: selectedOption.color }
-                            : undefined
-                        }
-                        title={`Change ${label.toLowerCase()}`}
-                        type="button"
-                        onClick={() =>
-                          setOpenColorDimension((current) =>
-                            current === dimension ? null : dimension,
-                          )
-                        }
+                    return (
+                      <fieldset
+                        aria-labelledby={`${emphasisPaletteId}-${dimension}-label`}
+                        className="settings-emphasis-row"
+                        key={dimension}
                       >
-                        {value === 'none' ? (
+                        <span
+                          className="settings-emphasis-label"
+                          id={`${emphasisPaletteId}-${dimension}-label`}
+                        >
+                          {label}
+                        </span>
+                        <div className="settings-emphasis-picker">
+                          <button
+                            aria-controls={emphasisPaletteId}
+                            aria-expanded={isOpen}
+                            aria-label={`${label}: ${selectedOption?.label ?? 'None'}`}
+                            className={`settings-emphasis-swatch settings-emphasis-trigger${value === 'none' ? ' is-none' : ''}`}
+                            disabled={isPending}
+                            ref={isOpen ? activeEmphasisTriggerRef : null}
+                            style={
+                              selectedOption?.color
+                                ? { backgroundColor: selectedOption.color }
+                                : undefined
+                            }
+                            title={`Change ${label.toLowerCase()}`}
+                            type="button"
+                            onClick={() =>
+                              setOpenColorDimension((current) =>
+                                current === dimension ? null : dimension,
+                              )
+                            }
+                          >
+                            {value === 'none' ? (
+                              <Ban aria-hidden="true" size={17} strokeWidth={1.8} />
+                            ) : (
+                              <Check aria-hidden="true" size={16} strokeWidth={2.5} />
+                            )}
+                          </button>
+                        </div>
+                      </fieldset>
+                    );
+                  })}
+                </div>
+                <fieldset
+                  aria-label={`${activeColorPreference?.label ?? 'Instruction color'} choices`}
+                  className="settings-emphasis-palette"
+                  hidden={!activeColorPreference}
+                  id={emphasisPaletteId}
+                >
+                  <legend className="settings-emphasis-palette-legend">
+                    {activeColorPreference?.label ?? 'Instruction color'}
+                  </legend>
+                  <div className="settings-emphasis-palette-grid">
+                    {instructionEmphasisOptions.map((option) => (
+                      <button
+                        aria-label={`Set ${activeColorPreference?.label.toLowerCase() ?? 'instruction color'} to ${option.label}`}
+                        aria-pressed={
+                          activeColorPreference !== undefined &&
+                          preferences[activeColorPreference.preferenceKey] === option.value
+                        }
+                        className={`settings-emphasis-swatch${option.value === 'none' ? ' is-none' : ''}`}
+                        disabled={isPending || !activeColorPreference}
+                        key={option.value}
+                        onClick={() => {
+                          if (!activeColorPreference) return;
+                          updateColor(activeColorPreference.dimension, option.value);
+                          setOpenColorDimension(null);
+                          activeEmphasisTriggerRef.current?.focus();
+                        }}
+                        style={option.color ? { backgroundColor: option.color } : undefined}
+                        title={option.label}
+                        type="button"
+                      >
+                        {activeColorPreference &&
+                          preferences[activeColorPreference.preferenceKey] === option.value &&
+                          option.value !== 'none' && (
+                            <Check aria-hidden="true" size={16} strokeWidth={2.5} />
+                          )}
+                        {option.value === 'none' ? (
                           <Ban aria-hidden="true" size={17} strokeWidth={1.8} />
-                        ) : (
-                          <Check aria-hidden="true" size={16} strokeWidth={2.5} />
-                        )}
+                        ) : null}
                       </button>
-                    </div>
-                  </fieldset>
-                );
-              })}
-            </div>
-            <fieldset
-              aria-label={`${activeColorPreference?.label ?? 'Instruction color'} choices`}
-              className="settings-emphasis-palette"
-              hidden={!activeColorPreference}
-              id={emphasisPaletteId}
-            >
-              <legend className="settings-emphasis-palette-legend">
-                {activeColorPreference?.label ?? 'Instruction color'}
-              </legend>
-              <div className="settings-emphasis-palette-grid">
-                {instructionEmphasisOptions.map((option) => (
-                  <button
-                    aria-label={`Set ${activeColorPreference?.label.toLowerCase() ?? 'instruction color'} to ${option.label}`}
-                    aria-pressed={
-                      activeColorPreference !== undefined &&
-                      preferences[activeColorPreference.preferenceKey] === option.value
-                    }
-                    className={`settings-emphasis-swatch${option.value === 'none' ? ' is-none' : ''}`}
-                    disabled={isPending || !activeColorPreference}
-                    key={option.value}
-                    onClick={() => {
-                      if (!activeColorPreference) return;
-                      updateColor(activeColorPreference.dimension, option.value);
-                      setOpenColorDimension(null);
-                      activeEmphasisTriggerRef.current?.focus();
-                    }}
-                    style={option.color ? { backgroundColor: option.color } : undefined}
-                    title={option.label}
-                    type="button"
-                  >
-                    {activeColorPreference &&
-                      preferences[activeColorPreference.preferenceKey] === option.value &&
-                      option.value !== 'none' && (
-                        <Check aria-hidden="true" size={16} strokeWidth={2.5} />
-                      )}
-                    {option.value === 'none' ? (
-                      <Ban aria-hidden="true" size={17} strokeWidth={1.8} />
-                    ) : null}
-                  </button>
-                ))}
+                    ))}
+                  </div>
+                </fieldset>
               </div>
-            </fieldset>
+              <label className="settings-emphasis-toggle">
+                <input
+                  checked={
+                    preferences.ingredientColor === 'none' &&
+                    preferences.temperatureColor === 'none' &&
+                    preferences.durationColor === 'none'
+                  }
+                  disabled={isPending}
+                  onChange={(event) => updateAllEmphasis(event.currentTarget.checked)}
+                  type="checkbox"
+                />
+                Turn off all emphasis
+              </label>
+            </div>
+            <section
+              aria-labelledby="settings-print-options-title"
+              className="settings-print-options"
+            >
+              <h3 id="settings-print-options-title">Print options</h3>
+              <div className="settings-print-options-list">
+                <label className="settings-print-emphasis-toggle">
+                  <input
+                    checked={!preferences.privatePrintUsesColors}
+                    disabled={isPending}
+                    onChange={(event) => updatePrivatePrintUsesColors(!event.currentTarget.checked)}
+                    type="checkbox"
+                  />
+                  Omit instruction emphasis when printing
+                </label>
+                <label className="settings-print-emphasis-toggle">
+                  <input
+                    checked={!preferences.includeInstructionPhotosInPrivatePrint}
+                    disabled={isPending}
+                    onChange={(event) =>
+                      updateIncludeInstructionPhotos(!event.currentTarget.checked)
+                    }
+                    type="checkbox"
+                  />
+                  Omit instruction photos when printing
+                </label>
+              </div>
+            </section>
           </div>
-          <label className="settings-print-emphasis-toggle">
-            <input
-              checked={!preferences.privatePrintUsesColors}
-              disabled={isPending}
-              onChange={(event) => updatePrivatePrintUsesColors(!event.currentTarget.checked)}
-              type="checkbox"
-            />
-            Omit instruction emphasis when printing
-          </label>
-          <label className="settings-print-emphasis-toggle">
-            <input
-              checked={
-                preferences.ingredientColor === 'none' &&
-                preferences.temperatureColor === 'none' &&
-                preferences.durationColor === 'none'
-              }
-              disabled={isPending}
-              onChange={(event) => updateAllEmphasis(event.currentTarget.checked)}
-              type="checkbox"
-            />
-            Turn off all emphasis
-          </label>
         </div>
       </form>
       <p aria-live="polite" className="settings-unit-status" role="status">

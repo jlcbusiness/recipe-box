@@ -157,10 +157,12 @@ Write these tests before production code:
 
 ## Verification
 
-Run the focused unit tests and Slice 5 end-to-end/accessibility tests against the
-existing local Supabase stack without resetting or replacing it. Then run
-TypeScript typecheck, Biome, and the full relevant recipe test suite. Do not
-run `npm run dev:local`; it resets the database.
+Run the focused unit tests and Slice 5 end-to-end/accessibility tests against
+the existing local Supabase stack when its state is useful. A local reset is
+allowed when a clean baseline is worth the reset and reload effort; follow the
+README procedure and reload the synthetic fixture. Never reset a linked or
+hosted project. Then run TypeScript typecheck, Biome, and the full relevant
+recipe test suite.
 
 ## Completion criteria
 

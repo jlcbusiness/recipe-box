@@ -130,8 +130,10 @@ remain owner-scoped and usable on desktop and Fold 6 mobile.
 Run the focused publication lifecycle suite with one Chromium worker, the
 publication deletion and recipe Trash flows in the Fold 6 project, then
 `npm run typecheck`, `npm run lint`, `supabase db lint --local`, and
-`git diff --check`. Do not reset or stop the local Supabase stack or existing
-application servers.
+`git diff --check`. Reuse local Supabase and application servers when useful.
+A local reset is allowed when a clean baseline is worth the reset and reload
+effort; follow the README procedure and reload the synthetic fixture. Never
+reset linked or hosted Supabase or stop a running server as a shortcut.
 
 ## Completion criteria
 

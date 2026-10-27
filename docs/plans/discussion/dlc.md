@@ -3,7 +3,7 @@
 - export html #9
 - "nuke all" button #24
 - add equipment in recipe (and for other picklists) #25
-- allow for image cropping/sizing #6
+🗸 allow for image cropping/sizing #6
 - convert the verdicts into actual ratings #10
 - add the ability to favorite? #10
 - look up all deferred stuff from the slices, have copilot assemble
@@ -23,11 +23,11 @@
 🗸 if ingredient used more then once, use [ingred][n] in ref names #4
   🗸 if ingredient sets are involved, tag per set...? #4
 🗸 the ability to color temperatures and times #5
-- remove recipe width limit #8
-- don't show images in printed recipe, spread recipe details across a line #8
-  - oof, haha, also fix public recipes! #8
-    - actually, public recipes and printed recipes should probably mirror each other #8
-  - default to landscape #8
+🗸 remove recipe width limit #8
+🗸 don't show images in printed recipe, spread recipe details across a line #8
+  🗸 oof, haha, also fix public recipes! #8
+    🗸 actually, public recipes and printed recipes should probably mirror each other #8
+  🗸 default to landscape #8
 - add lists in steps #25
 🗸 grams don't have an underline to show you can change them #2
 🗸 use of hour in times (maybe auto-translate times over 60?) #2

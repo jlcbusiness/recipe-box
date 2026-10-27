@@ -50,8 +50,8 @@ security without prematurely creating recipe or other domain tables.
 | Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Explorer state | A per-account last-used recipe or publication explorer configuration: filters, sort, direction, view, List-column visibility, desktop widths, and fixed publication scope when applicable. |
-| Preference | Account-level defaults: ingredient presentation, volume, weight, and temperature display systems, mobile hand preference, independent ingredient/temperature/duration emphasis colors, and whether private print uses those colors. |
-| Account | The account record linked to the sign-in identity; it owns private data, volume, weight, and temperature display-system defaults, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
+| Preference | Account-level defaults: ingredient presentation, volume, weight, and temperature display systems, mobile hand preference, independent ingredient/temperature/duration emphasis colors, and private-print emphasis and inline-photo choices. |
+| Account | The account record linked to the sign-in identity; it owns private data, volume, weight, and temperature display-system defaults, print preferences, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. A recipe photo has a unique, persisted two-digit reference code within its recipe; covers have no code. |
 | History event | An append-only forensic record of a saved change. |
@@ -167,10 +167,17 @@ Slice 13 stores `volume_system` and `weight_system` on Account as non-null
 accounts receive the same defaults when the migration is applied; the isolated
 migration harness verifies those defaults for both existing and newly created
 accounts. Authenticated owners retain their existing account read policy, but
-direct updates remain restricted to the existing column grant. A narrow
-authenticated function derives the account from `auth.uid()` and can update
-only these two preferences; it accepts no account ID and is not executable by
-`public` or `anon`.
+direct updates remain restricted. A narrow authenticated preference function
+derives the account from `auth.uid()` and updates only its explicit
+allow-listed preference columns; it accepts no account ID and is not
+executable by `public` or `anon`.
+
+DLC 08 adds the non-null Account field
+`include_instruction_photos_in_private_print`, defaulting to `true` for
+existing and new accounts. It controls inline instruction photos in private
+print only; gallery photos are always omitted from print. Its value is
+included in database bundle preferences and remains optional when importing
+older bundles.
 
 ## Required Future Detail
 

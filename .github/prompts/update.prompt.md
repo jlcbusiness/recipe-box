@@ -1,3 +1,3 @@
-Pplease update all relevant and appropriate docs and tests, , and create and run all necessary tests.
+Pplease update and/or create all relevant and appropriate docs and tests, and run any necessary tests.
 
 Wwould you say this app satisfies 

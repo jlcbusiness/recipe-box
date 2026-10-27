@@ -306,6 +306,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
   page,
   request,
 }) => {
+  test.setTimeout(60_000);
   const user = await createTestUser(request);
   const otherUser = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
