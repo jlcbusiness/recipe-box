@@ -45,7 +45,7 @@ while retaining the existing single-image viewer without gallery navigation.
 
 ### Phase 3: Recipe knowledge and discovery
 
-- **DLC 10:** [Ratings and favorites](dlc-10-ratings-and-favorites.md)
+- **DLC 10:** [Recipe score, stars, and hearts](dlc-10-ratings-and-favorites.md)
 - **DLC 11:** [Yield and servings](dlc-11-yield-and-servings.md)
 - **DLC 12:** [Recipe nutrition](dlc-12-recipe-nutrition.md)
 - **DLC 13:** [Advanced query groups](dlc-13-advanced-query-groups.md)
@@ -64,11 +64,14 @@ while retaining the existing single-image viewer without gallery navigation.
 - **DLC 23:** [Households and account roles](dlc-23-households-and-account-roles.md)
 - **DLC 24:** [Account content reset](dlc-24-account-content-reset.md)
 
-### Phase 5: Recipe-editor workflow follow-up
+### Phase 5: Recipe and document-output follow-up
 
 - **DLC 26 (planned):** Add `Ctrl+S` (and `Cmd+S` on macOS) to invoke the
   explicit Save recipe flow, reusing its validation and error handling without
   introducing autosave. A focused brief is still needed.
+- **DLC 27 (candidate):** [Ingredient sets and instruction groups](dlc-27-ingredient-instruction-groups.md)
+  will define how ingredient sets pair with instruction groups and how those
+  sections flow through print and standalone exports.
 
 ## Sequencing notes
 
@@ -86,6 +89,9 @@ while retaining the existing single-image viewer without gallery navigation.
 - History portability follows history restoration and browsing. Offline editing
   and household collaboration require focused architecture proofs before
   implementation planning is complete.
+- DLC 27 depends on ingredient sets (DLC 03), instruction authoring (DLC 05),
+  and the paginated document-output contract (DLC 09); its relationship and
+  editor behavior must be resolved in its brief before implementation.
 - DLC 24 means erasing account content while retaining authentication. Full
   account deletion is a separate, existing guarded administrative capability.
 

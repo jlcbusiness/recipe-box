@@ -1,6 +1,11 @@
+.recipe-sharing-action-form {
+  display: flex;
+  align-items: center;
+}
+
 @media (min-width: 641px) {
   .recipe-detail-heading-actions {
-    grid-template-columns: 36px 84px repeat(3, 36px);
+    grid-template-columns: 36px 84px repeat(5, 36px);
   }
 
   .recipe-sharing-action-form {
@@ -43,6 +48,10 @@
   line-height: 1.05;
   text-align: left;
   white-space: nowrap;
+}
+
+.recipe-privacy-toggle-state-compact {
+  display: none;
 }
 
 .recipe-privacy-toggle-track {
@@ -90,8 +99,8 @@
   top: calc(100% + 6px);
   right: 0;
   z-index: 1;
-  width: min(36ch, calc(100vw - 24px));
-  max-width: calc(100vw - 24px);
+  width: min(36ch, calc(100vw - 40px));
+  max-width: calc(100vw - 40px);
 }
 
 .recipe-page-heading .eyebrow,

@@ -902,18 +902,27 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     await page.goto(`/recipes/${recipeId}`);
     const recipeExport = page.getByRole('button', { name: 'Export recipe' });
     const recipePrint = page.getByRole('button', { name: 'Print' });
+    const recipeSettings = page.getByRole('button', { name: 'Page settings' });
     const recipeEdit = page.getByRole('link', { name: 'Edit' });
     await expect(recipeExport).toBeVisible();
     const recipeDetails = page.getByRole('region', { name: 'Recipe details' });
     const recipeDetailsTopBeforeExport = (await recipeDetails.boundingBox())?.y;
     await expect(recipeExport.locator('.export-action-label')).toBeHidden();
-    const [exportBackground, printBackground, editBackground] = await Promise.all([
-      recipeExport.evaluate((element) => getComputedStyle(element).backgroundColor),
-      recipePrint.evaluate((element) => getComputedStyle(element).backgroundColor),
-      recipeEdit.evaluate((element) => getComputedStyle(element).backgroundColor),
-    ]);
-    expect(exportBackground).toBe('rgb(247, 249, 244)');
+    await expect(recipeExport.locator('.export-action-icon')).toBeVisible();
+    const exportIconMask = await recipeExport
+      .locator('.export-action-icon')
+      .evaluate((element) => getComputedStyle(element).maskImage);
+    expect(exportIconMask).toContain('export-arrow.png');
+    const [exportBackground, printBackground, settingsBackground, editBackground] =
+      await Promise.all([
+        recipeExport.evaluate((element) => getComputedStyle(element).backgroundColor),
+        recipePrint.evaluate((element) => getComputedStyle(element).backgroundColor),
+        recipeSettings.evaluate((element) => getComputedStyle(element).backgroundColor),
+        recipeEdit.evaluate((element) => getComputedStyle(element).backgroundColor),
+      ]);
+    expect(exportBackground).toBe('rgb(56, 96, 68)');
     expect(printBackground).toBe('rgb(56, 96, 68)');
+    expect(settingsBackground).toBe('rgb(247, 249, 244)');
     expect(editBackground).toBe('rgb(247, 249, 244)');
     await expectKeyboardFocusVisible(page, recipeExport);
     const recipeA11y = await new AxeBuilder({ page }).analyze();
@@ -936,8 +945,13 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     await expect(recipeError).toHaveText('Unable to prepare the export. Please try again.');
     const recipeErrorBox = await recipeError.boundingBox();
     const recipeErrorActionBox = await recipeExport.boundingBox();
+    const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(recipeErrorBox?.y).toBeGreaterThanOrEqual(
       (recipeErrorActionBox?.y ?? 0) + (recipeErrorActionBox?.height ?? 0),
+    );
+    expect(recipeErrorBox?.x).toBeGreaterThanOrEqual(0);
+    expect((recipeErrorBox?.x ?? 0) + (recipeErrorBox?.width ?? 0)).toBeLessThanOrEqual(
+      viewportWidth,
     );
     expect(
       await Promise.all(
@@ -956,18 +970,24 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     const recipeDownloadResult = await recipeDownload;
     expect(recipeDownloadResult.suggestedFilename()).toBe(`${recipeName} - Recipe Export.zip`);
     expect(new URL(page.url()).pathname).toBe(`/recipes/${recipeId}`);
-    await expect(page.locator('.recipe-detail-export-action .export-action-feedback')).toHaveText(
-      'Recipe export ready. Download started.',
+    const sharedFeedback = page.locator('.recipe-action-feedback-region');
+    await expect(sharedFeedback).toHaveText('Recipe export ready. Download started.');
+    await expect(page.locator('.recipe-detail-export-action .export-action-feedback')).toHaveCount(
+      0,
     );
+    const recipeOutputDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Print & Download' }).click();
+    await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+    await recipeOutputDownload;
+    await expect(sharedFeedback).toHaveText('HTML download started.');
+    await expect(page.locator('.recipe-action-feedback-region')).toHaveCount(1);
     const recipeActionTops = await page
       .locator('.recipe-detail-heading-actions button, .recipe-detail-heading-actions a')
       .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
-    expect(new Set(recipeActionTops).size).toBe(isMobile ? 2 : 1);
+    expect(new Set(recipeActionTops).size).toBe(1);
     expect((await recipeDetails.boundingBox())?.y).toBe(recipeDetailsTopBeforeExport);
     const recipeExportBox = await recipeExport.boundingBox();
-    const recipeFeedbackBox = await page
-      .locator('.recipe-detail-export-action .export-action-feedback')
-      .boundingBox();
+    const recipeFeedbackBox = await sharedFeedback.boundingBox();
     expect(recipeFeedbackBox?.y).toBeGreaterThanOrEqual(
       (recipeExportBox?.y ?? 0) + (recipeExportBox?.height ?? 0),
     );

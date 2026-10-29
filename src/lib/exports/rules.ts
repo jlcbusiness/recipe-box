@@ -19,6 +19,8 @@ const preferenceFields = [
   'duration_color',
   'private_print_uses_colors',
   'include_instruction_photos_in_private_print',
+  'repeat_ingredients_in_private_print',
+  'include_private_details_in_private_print',
   'recipe_column_order',
   'recipe_hidden_columns',
 ] as const;

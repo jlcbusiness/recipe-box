@@ -53,7 +53,12 @@ export function RecipeShareActions({
       >
         <Share2 aria-hidden="true" size={16} strokeWidth={2} />
       </button>
-      <form action={setRecipePrivacy} className="recipe-sharing-action-form">
+      <form
+        action={setRecipePrivacy}
+        className={
+          isPrivate ? 'recipe-sharing-action-form' : 'recipe-sharing-action-form is-linkable'
+        }
+      >
         <input name="recipe_id" type="hidden" value={recipeId} />
         <input name="expected_version" type="hidden" value={version} />
         <input name="is_private" type="hidden" value={String(!isPrivate)} />
@@ -66,7 +71,16 @@ export function RecipeShareActions({
           type="submit"
         >
           <span aria-hidden="true" className="recipe-privacy-toggle-state">
-            {isPrivate ? 'Private' : 'Linkable'}
+            <span className="recipe-privacy-toggle-state-full">
+              {isPrivate ? 'Private' : 'Linkable'}
+            </span>
+            {!isPrivate && (
+              <span className="recipe-privacy-toggle-state-compact">
+                Can
+                <br />
+                Link
+              </span>
+            )}
           </span>
           <span aria-hidden="true" className="recipe-privacy-toggle-track">
             <span className="recipe-privacy-toggle-thumb" />

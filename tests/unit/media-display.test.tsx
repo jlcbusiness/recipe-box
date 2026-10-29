@@ -23,6 +23,33 @@ function photo(id: string, position: number, crop: MediaAssetDisplay['crop']): M
 }
 
 describe('recipe photo gallery', () => {
+  it('keeps a twelve-photo recipe to one feature image with selectable thumbnails', () => {
+    const photos = Array.from({ length: 12 }, (_, position) => ({
+      ...photo(`photo-${position + 1}`, position, null),
+      is_primary: position === 5,
+    }));
+    render(<RecipePhotoGallery photos={photos} />);
+
+    expect(document.querySelectorAll('.recipe-photo-feature-image')).toHaveLength(1);
+    expect(
+      document.querySelector('.recipe-photo-feature-image')?.getAttribute('data-photo-id'),
+    ).toBe('photo-6');
+    const thumbnails = screen.getAllByRole('button', { name: /^Show photo \d+$/u });
+    expect(thumbnails).toHaveLength(12);
+    const lastThumbnail = thumbnails.at(-1);
+    if (!lastThumbnail) throw new Error('Expected the twelfth photo thumbnail.');
+    expect(screen.getByRole('button', { name: 'Show photo 6' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+
+    fireEvent.click(lastThumbnail);
+
+    expect(
+      document.querySelector('.recipe-photo-feature-image')?.getAttribute('data-photo-id'),
+    ).toBe('photo-12');
+    expect(lastThumbnail.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('applies each photo crop to its thumbnail and selected feature image', () => {
     const firstCrop = { left: 0.25, top: 0, width: 0.5, height: 1, rotation: 0 } as const;
     const secondCrop = { left: 0.1, top: 0.2, width: 0.4, height: 0.5, rotation: 90 } as const;

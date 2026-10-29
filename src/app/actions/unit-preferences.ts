@@ -142,6 +142,46 @@ export async function saveUnitPreferences(
       : { status: 'saved', message: 'Saved.' };
   }
 
+  if (changedDimension === 'print_repeat_ingredients') {
+    const repeatIngredients = formData.get('repeat_ingredients_in_private_print');
+    if (repeatIngredients !== 'true' && repeatIngredients !== 'false') {
+      return { status: 'error', message: 'Choose a valid print preference.' };
+    }
+
+    const supabase = await createClient();
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) {
+      return { status: 'error', message: 'Sign in to save preferences.' };
+    }
+
+    const { error } = await supabase.rpc('update_account_unit_preferences', {
+      p_repeat_ingredients_in_private_print: repeatIngredients === 'true',
+    });
+    return error
+      ? { status: 'error', message: 'Print preference could not be saved.' }
+      : { status: 'saved', message: 'Saved.' };
+  }
+
+  if (changedDimension === 'print_private_details') {
+    const includePrivateDetails = formData.get('include_private_details_in_private_print');
+    if (includePrivateDetails !== 'true' && includePrivateDetails !== 'false') {
+      return { status: 'error', message: 'Choose a valid print preference.' };
+    }
+
+    const supabase = await createClient();
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) {
+      return { status: 'error', message: 'Sign in to save preferences.' };
+    }
+
+    const { error } = await supabase.rpc('update_account_unit_preferences', {
+      p_include_private_details_in_private_print: includePrivateDetails === 'true',
+    });
+    return error
+      ? { status: 'error', message: 'Print preference could not be saved.' }
+      : { status: 'saved', message: 'Saved.' };
+  }
+
   if (changedDimension === 'hand') {
     if (!isHandPreference(handPreference)) {
       return { status: 'error', message: 'Choose a valid hand preference.' };

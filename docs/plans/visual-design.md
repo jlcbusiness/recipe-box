@@ -112,8 +112,9 @@ and full-width metadata groups.
   not checkboxes or selectable text. One single- or multi-picklist menu is open
   at a time; Escape closes it and returns focus to the trigger.
 - **State is explicit:** Name occupies the first row. State defaults to Want to
-  try; its active Enthusiasm, Verdict, Reason, or Occasion Details field shares
-  the next row with State, with Serves at the end of that row. The following row
+  try; its active Enthusiasm, Verdict, Score, Reason, or Occasion Details
+  field shares the next row with State, with Serves at the end of that row.
+  Tried recipes show Verdict and optional Score together. The following row
   holds Food Type, Meal Type, and Cuisine. Equipment follows Serves on the
   State row.
 - **Time is deliberate:** Component minutes are small, spinner-free numeric
@@ -196,20 +197,55 @@ adjacent recipe fields.
 ### Recipe list, detail, and headings
 
 On desktop, the recipe list shows Name, Food Type, State, and an Opinion column
-for the active Enthusiasm, Verdict, or Reason. On mobile, it shows Name and
-Opinion. Recipe detail follows the edit-form order but uses a distinct view
+for the active Enthusiasm, Verdict, or Reason; Score and active custom marker
+stamps are available through the existing list-column preferences. The Star
+and Heart columns are visible by default in each recipe-list explorer, but
+owners can independently hide or show them; saved visibility choices override
+the default for that account and explorer context. Active stamps align at the
+right of List rows; inactive markers leave the cell empty. Grid cards stack
+active custom stamps at the top-right. On mobile, the list shows Name and
+Opinion with compact Score and active marker indicators.
+Recipe detail follows the edit-form order but uses a distinct view
 order: State and its active response, Occasion Details when present, Serves,
 Total Time, Equipment, Food Type, Meal Type, Cuisine, remaining times, then
 Notes. On desktop, Food Type, Meal Type, and Cuisine share their own full-width
-row. Private recipe detail places alphabetized tag chips and compact Print/Edit
-actions in one wrapping tag line beneath the heading. Print and Edit follow the
-chips with compact spacing rather than being pushed to the far edge; retain this
-action line when the recipe has no tags. Give the line vertical margins
-matching the action spacing. Both controls expose descriptive accessible names
-and tooltips. Their visible buttons are 36px square; on mobile, their hit areas
-expand to 48px without changing their visible size. Recipe Tin recipes use the
+row. Private recipe detail places alphabetized tag chips beneath the heading,
+with a compact action toolbar below. The toolbar orders share and privacy
+controls, immediate Star and Heart stamp toggles, **Print & Download**,
+Export, **Page Settings**, and Edit. Star and Heart are independent of State.
+The custom stamp itself is the immediate, keyboard-operable toggle, without
+raised-button chrome. Its off state is a clearly discernible muted outline; its
+on state uses muted ink and a pale rose or warm-gold fill. Use a darker
+contrast-safe outline; gold alone is not sufficiently contrasting on either
+paper surface. Accessible names and pressed states describe the action and
+state, with visible focus and no reliance on color alone. Neither marker is
+shown on public recipe pages.
+Keep the actions compact rather than pushing them to the far edge; retain the
+toolbar when the recipe has no tags. Give the line vertical margins matching
+the action spacing. Marker stamps have no visible word labels or word-based
+tooltips.
+At 640px and below, the output trigger uses a Download icon and the accessible
+name and tooltip `Download`; it continues to open the same Print, HTML, PNG,
+and PDF menu. Wider layouts retain the printer icon and `Print & Download`
+name.
+Private recipe Export and Print & Download use one shared feedback area beneath
+the action toolbar; public recipe output uses the same area beneath its
+controls. Output progress is nonblocking and dismissible; clicking outside
+hides its notice without stopping generation. Success and cancellation notices
+auto-dismiss after five seconds, while recoverable errors remain until
+dismissed. Public Print automatically opens the print dialog when its document
+is ready, matching private Print. The shared area stays within the viewport at
+narrow mobile widths.
+Recipe Export keeps its existing retryable status behavior.
+Icon buttons are 36px square; on mobile, their hit areas expand to 48px without
+changing their visible size. On mobile, the linkable privacy switch uses the
+two-line label `Can` / `Link` so the full action toolbar fits on one row at
+standard phone widths. The toolbar wraps without horizontal overflow when the
+available width is too narrow or the switch is in its Private state. Recipe Tin recipes use the
 attribution `In the Recipe Tin`; the Tin is a Library entry, not a separate
 navigation destination.
+On mobile recipe detail, Download and Page Settings menus open centered below
+the action toolbar and remain within the viewport.
 Recipe titles and major detail section headings use 16pt (about 21.33px). The
 mobile Times subsection title is 18px navy small caps. The desktop Recipe Tin
 list content is up to about 1172px wide. The private photo/metadata summary
@@ -428,13 +464,13 @@ action is disabled and a live status announces progress; success starts the
 download and announces completion. Errors remain visible and retryable without
 leaving Settings. The action has a 48px minimum hit area and a visible focus
 state. Publication Export appears before Edit on publication detail, while
-recipe Export sits beside Print and Edit; Library cards have no export action.
-Publication toolbar actions use 40px square controls on mobile; recipe detail
-actions use 36px square controls to match Print and Edit.
-On standard recipe detail, Print uses the filled leaf treatment with a pale
-green edge, while Export and Edit use light backgrounds with green borders; the
-Recipe Tin keeps its brown palette, with Export and Edit both on light
-backgrounds.
+recipe Export remains in the detail action toolbar; Library cards have no
+export action. Publication toolbar actions use 40px square controls on mobile;
+recipe detail actions use 36px square controls with 48px mobile hit areas.
+On standard recipe detail, Print & Download and Export use the filled leaf
+treatment with a pale green edge, while Page Settings and Edit use light
+backgrounds with green borders; the Recipe Tin keeps its brown palette.
+Export actions use the supplied square-arrow-out icon.
 On mobile publication detail, Sort, direction, and view controls form a
 connected 40px group. List columns is a separate 40px outlined button with the
 same leaf border and paper background as Edit. The disconnected controls have
@@ -588,6 +624,11 @@ Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
 Preparation columns, and its natural table width is the row-width basis for
 the same sizing rule. Count, informal, and unmeasured values span the Volume
 and Weight columns; Volume and Weight remain separate when present.
+Ingredient-first rows alternate a light-tin shade for readability; the other
+rows and ingredient-set dividers remain unshaded in private and public reader
+views. Printed ingredient-first output retains the light-tin shading, gives the
+first ingredient after each set divider the same neutral top rule as the other
+ingredient rows, and leaves the dividers unshaded.
 The first ingredient group starts at the same vertical offset below the shared
 heading in both presentations.
 Specifics display indented and fully lowercase beneath the ingredient name.
@@ -767,6 +808,18 @@ ingredients, and instructions share a one-inch print-page margin. The reading
 area keeps its active presentation and available-width layout, and `@page`
 requests landscape while allowing a browser print-dialog override.
 
+DLC 09 supersedes this baseline for **Print & Download → Print**: it prints the
+same paginated landscape pages as the PNG and PDF exports, with 1/4-inch
+margins, continuous instruction numbering, and page numbers. The shared
+paginated header combines timing and equipment into a compact wrapping
+metadata summary, separated from attribution by 8px. Labels and values keep
+consistent alignment and breathing room. Instruction photos use balanced
+12px vertical margins, and their list numbering continues across page breaks.
+Ingredient-set headings remain visually distinct from ingredient names, with
+preparation specifics on a separate indented line. Standalone HTML stays
+responsive and unpaginated, with a larger label/value scale and the same
+metadata and attribution spacing.
+
 ### History (Slice 23 current implementation)
 
 Recipe and publication detail place a labeled History link after the record's
@@ -803,19 +856,30 @@ narrow screens. When the recipe has a serving count, append
 `- serves n` to its title, separated by a space, in regular 16px text. Do not
 repeat Serves in the separate metadata summary.
 
-Public photos are limited to 420px wide and `min(280px, 60vh)` high. At widths
-above 760px, position the photo gallery beside the Times and Equipment summary;
-at 760px and below, stack the summary after the photos. Keep Ingredients below
-this overview. Clicking a non-thumbnail public recipe photo opens that image in
-the modal viewer at intrinsic size, constrained to the viewport without
-enlarging a smaller image. The top-right close action, Escape, and clicking
-outside the image dismiss it. The viewer does not provide gallery navigation.
+Public photos use the shared featured-image gallery: show one selected,
+framed feature image and, when there is more than one photo, compact selectable
+thumbnails. Select the primary photo by default, falling back to the first
+photo in display order; do not show every photo as a large image. Limit the
+feature image to 420px wide and `min(280px, 60vh)` high. At widths above 760px,
+position the gallery beside the Times and Equipment summary; at 760px and
+below, stack the summary after the gallery. Keep Ingredients below this
+overview. Selecting a thumbnail changes the feature image; clicking the feature
+image opens it in the modal viewer at intrinsic size, constrained to the
+viewport without enlarging a smaller image. The top-right close action, Escape,
+and clicking outside the image dismiss it. The viewer does not provide gallery
+navigation.
 Print omits gallery photos and controls, reflects the visible inline-photo and
 emphasis states, and requests landscape. Public metadata and reading content
 use the available width with centered 1-inch reader gutters once the reader
 grows beyond its existing 1012px measure. See [Slice 22](slices/22-public-links-and-privacy.md)
 for the public data and interaction contract and [DLC 08](slices/dlc/dlc-08-recipe-public-and-print-layout.md)
-for the print and responsive-width contract.
+for the print and responsive-width contract. The public Print & Download
+control uses the same filled leaf treatment as standard private recipe detail.
+At 640px and below, public and private output triggers use a Download icon and
+the accessible name and tooltip `Download`, while retaining the same four-item
+output menu.
+Public Download and Page Settings buttons remain 36px square with the existing
+48px mobile hit areas, matching private recipe controls.
 
 ## Publication Editing
 
@@ -930,6 +994,11 @@ spans the full row. Recipe links stay regular weight and underline on desktop
 hover or keyboard focus. On mobile, the table header is hidden, the recipe
 name occupies its own first line, and the remaining labeled fields wrap
 without horizontal page scrolling.
+
+Find and each publication's recipe list include immediate ⭐ and ❤️ filter
+controls. Their visible labels are emoji only, their accessible names describe
+the marker-only filter, and enabling both requires both markers. The controls
+compose with other filters and publication scope.
 
 Grid uses responsive 220px minimum columns with 12px gaps; five columns fit
 when the grid has at least 1,148px of usable width. Desktop cards are 234px

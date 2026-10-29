@@ -232,6 +232,13 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
     const recipeA11y = await new AxeBuilder({ page }).analyze();
     expect(recipeA11y.violations).toEqual([]);
 
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.getByRole('status')).toBeHidden();
+    expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toContain(
+      'DM Sans Variable',
+    );
+    await page.emulateMedia({ media: null });
+
     await page.context().setOffline(false);
     await page.goto(`/recipes/${recipe.id}`);
     await page.locator('.account-menu-trigger').click();

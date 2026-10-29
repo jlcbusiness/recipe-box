@@ -35,7 +35,7 @@ export default async function SettingsPage() {
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select(
-      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at',
+      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at',
     )
     .eq('id', data.user.id)
     .maybeSingle();
@@ -200,6 +200,9 @@ export default async function SettingsPage() {
           includeInstructionPhotosInPrivatePrint={
             account.include_instruction_photos_in_private_print !== false
           }
+          includePrivateDetailsInPrivatePrint={
+            account.include_private_details_in_private_print === true
+          }
           ingredientColor={
             isInstructionEmphasisColor(account.ingredient_color)
               ? account.ingredient_color
@@ -209,6 +212,7 @@ export default async function SettingsPage() {
             account.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard'
           }
           privatePrintUsesColors={account.private_print_uses_colors !== false}
+          repeatIngredientsInPrivatePrint={account.repeat_ingredients_in_private_print !== false}
           temperatureColor={
             isInstructionEmphasisColor(account.temperature_color)
               ? account.temperature_color

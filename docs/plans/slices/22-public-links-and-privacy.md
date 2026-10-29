@@ -72,13 +72,15 @@ alone does not create a tombstone. Restore keeps the same public ID.
 
 The guest page has no private navigation, account actions, edit/delete/clone
 controls, or links into the owner's library. Open in Ingredient-first view;
-reuse the established transient scaling, unit switching, and print behavior
-without persisting guest choices. Keep controls keyboard-operable and labeled,
+shade odd ingredient rows with the light-tin wash, leaving even rows and
+ingredient-set dividers unshaded to match the private reader. Reuse the
+established transient scaling, unit switching, and print behavior without
+persisting guest choices. Keep controls keyboard-operable and labeled,
 retain visible focus, and ensure print output uses the active scaled and unit
 presentation. External URLs are the only clickable references; in-app recipe
 names remain non-interactive.
 
-The public page uses 24px horizontal gutters. Keep the recipe title and Print
+The public page uses 24px horizontal gutters. Keep the recipe title and output
 button on one row; when Serves is set, show it inline after the title as
 lowercase `- serves n`, separated from the title by a space, in regular 16px
 text. Cap public photos at 420px wide
@@ -90,6 +92,13 @@ viewport without enlarging smaller images. The top-right close action, Escape,
 and clicking outside the image dismiss it; clicking the image itself leaves the
 viewer open. The viewer displays one image and does not provide gallery
 navigation.
+
+The public output trigger retains the same Print, HTML, PNG, and PDF menu. At
+640px and below, use a Download icon with the accessible name and tooltip
+`Download`; wider layouts use the printer icon and `Print & Download`. Center
+the open mobile menu beneath the title actions and keep it within the viewport.
+Keep the public Download and Page Settings buttons 36px square with 48px
+mobile hit areas, matching private recipe controls.
 
 The owner can copy the stable link and toggle Private/Linkable from the recipe
 workflow. Make sharing discoverable with a recognizable copy/share icon button,
@@ -113,7 +122,8 @@ page and photos on the next request.
   on every result, and no photo signing for unavailable recipes.
 - Chromium and Fold 6 tests cover owner copy/toggle behavior, guest cooking
   controls, serving scaling, unit switching, print content, safe references,
-  title/Print alignment, inline serving-label typography, page gutters, capped
+  title/output-trigger alignment, mobile Download naming and icon, inline
+  serving-label typography, page gutters, capped
   photo sizing, responsive photo/summary placement, no private navigation or
   actions, opening and dismissing the single-image viewer, image and viewport
   bounds, privacy changes taking effect on reload, unavailable/gone states,

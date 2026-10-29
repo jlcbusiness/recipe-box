@@ -76,6 +76,10 @@ leaving browser print-dialog overrides available.
 - Keep gallery photos visible on private and public screens but omit the
   gallery from every print output. Inline instruction photos remain visible
   on screen and default to printing in both contexts.
+- On public screens, reuse the private featured-image gallery: show one
+  selected, framed photo with compact selectable thumbnails for additional
+  photos. Select the primary photo by default, fall back to display order, and
+  keep the feature image within the public 420px-by-`min(280px, 60vh)` limit.
 - Request landscape print orientation with a consistent one-inch page margin
   for the title, metadata, ingredients, and instructions. Remove screen-only
   reader gutters and the hidden gallery column from print layout, and allow
@@ -176,6 +180,9 @@ leaving browser print-dialog overrides available.
   omission in all print outputs. Assert inline instruction images appear or
   disappear according to each surface's preference, including no-image and
   multiple-image recipes.
+- Public gallery tests verify one feature image, primary-photo default,
+  selectable thumbnails for a twelve-photo recipe, responsive placement, and
+  full-size viewing without gallery navigation.
 - Generate and inspect print PDFs for landscape page dimensions, one-inch
   margins around all printed text, matching left edges for the title,
   metadata, and Ingredients section, compact metadata layout and wrapping,

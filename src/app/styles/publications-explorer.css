@@ -7,12 +7,16 @@
 
 @media print {
   @page {
-    margin: 18mm;
-  }
+    size: letter landscape;
+    margin: 0.25in;
 
-  @page recipe {
-    margin: 1in;
-    size: landscape;
+    @bottom-right {
+      color: #596057;
+      content: "Page " counter(page) " of " counter(pages);
+      font:
+        8pt "DM Sans Variable",
+        sans-serif;
+    }
   }
 
   html,
@@ -28,12 +32,10 @@
     min-height: 0;
   }
 
-  main.recipes-main {
-    page: recipe;
-  }
-
   .private-shell .private-nav,
-  .recipe-screen-only {
+  .recipe-screen-only,
+  .recipe-public-title-actions,
+  .offline-page-status {
     display: none;
   }
 

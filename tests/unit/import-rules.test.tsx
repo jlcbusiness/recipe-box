@@ -119,6 +119,8 @@ describe('import bundle validation', () => {
       temperature_system: 'celsius',
       private_print_uses_colors: false,
       include_instruction_photos_in_private_print: true,
+      repeat_ingredients_in_private_print: false,
+      include_private_details_in_private_print: false,
     };
 
     expect(() =>
@@ -149,6 +151,28 @@ describe('import bundle validation', () => {
           accountPreferences: {
             ...preferences,
             include_instruction_photos_in_private_print: 'yes',
+          },
+        }),
+      ),
+    ).toThrow(/preference/i);
+    expect(() =>
+      validateImportBundleFiles(
+        createBundleEntries({
+          schemaVersion: 3,
+          accountPreferences: {
+            ...preferences,
+            repeat_ingredients_in_private_print: 'yes',
+          },
+        }),
+      ),
+    ).toThrow(/preference/i);
+    expect(() =>
+      validateImportBundleFiles(
+        createBundleEntries({
+          schemaVersion: 3,
+          accountPreferences: {
+            ...preferences,
+            include_private_details_in_private_print: 'yes',
           },
         }),
       ),

@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(10);
+select plan(18);
 
 insert into auth.users (
   id,
@@ -56,6 +56,19 @@ select ok(
   'existing and new accounts default to printing instruction photos'
 );
 
+select ok(
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'accounts'
+      and column_name = 'include_private_details_in_private_print'
+      and is_nullable = 'NO'
+      and column_default = 'false'
+  ),
+  'private-only output details are excluded by default'
+);
+
 select is(
   (
     select count(*)::integer
@@ -70,20 +83,34 @@ select is(
   'new account rows receive the enabled preference'
 );
 
+select is(
+  (
+    select count(*)::integer
+    from public.accounts
+    where id in (
+      '90000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000002'
+    )
+      and not include_private_details_in_private_print
+  ),
+  2,
+  'new accounts start with private-only output details disabled'
+);
+
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.update_account_unit_preferences(text, text, text, text, text, text, text, boolean, text, boolean)',
+    'public.update_account_unit_preferences(text, text, text, text, text, text, text, boolean, text, boolean, boolean, boolean)',
     'EXECUTE'
   )
   and not has_function_privilege(
     'anon',
-    'public.update_account_unit_preferences(text, text, text, text, text, text, text, boolean, text, boolean)',
+    'public.update_account_unit_preferences(text, text, text, text, text, text, text, boolean, text, boolean, boolean, boolean)',
     'EXECUTE'
   )
   and not has_function_privilege(
     'public',
-    'public.update_account_unit_preferences(text, text, text, text, text, text, text, boolean, text, boolean)',
+    'public.update_account_unit_preferences(text, text, text, text, text, text, text, boolean, text, boolean, boolean, boolean)',
     'EXECUTE'
   ),
   'only authenticated users can execute the owner-derived preference RPC'
@@ -119,6 +146,25 @@ select is(
 select lives_ok(
   $$
     select public.update_account_unit_preferences(
+      p_include_private_details_in_private_print => true
+    )
+  $$,
+  'an authenticated owner can opt into private-only print details'
+);
+
+select is(
+  (
+    select include_private_details_in_private_print
+    from public.accounts
+    where id = '90000000-0000-4000-8000-000000000001'
+  ),
+  true,
+  'the private-only print preference is stored'
+);
+
+select lives_ok(
+  $$
+    select public.update_account_unit_preferences(
       p_temperature_system => 'celsius'
     )
   $$,
@@ -135,6 +181,16 @@ select is(
   'partial preference updates preserve the photo print choice'
 );
 
+select is(
+  (
+    select include_private_details_in_private_print
+    from public.accounts
+    where id = '90000000-0000-4000-8000-000000000001'
+  ),
+  true,
+  'partial preference updates preserve the private-only print choice'
+);
+
 set local role postgres;
 
 select is(
@@ -145,6 +201,16 @@ select is(
   ),
   true,
   'one account cannot change another account preference'
+);
+
+select is(
+  (
+    select include_private_details_in_private_print
+    from public.accounts
+    where id = '90000000-0000-4000-8000-000000000002'
+  ),
+  false,
+  'one account cannot change another account private-only print preference'
 );
 
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
@@ -166,11 +232,34 @@ select throws_ok(
   'database imports reject non-boolean photo print preferences'
 );
 
+select throws_ok(
+  $$
+    select public.commit_database_import_with_preferences(
+      '90000000-0000-4000-8000-000000000001',
+      '{"include_private_details_in_private_print":"true"}'::jsonb,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      '{}'::uuid[],
+      '{}'::uuid[]
+    )
+  $$,
+  '23514',
+  'Account preferences are invalid.',
+  'database imports reject non-boolean private-only print preferences'
+);
+
 select is(
   public.read_export_snapshot('90000000-0000-4000-8000-000000000001')
     #>> '{accountPreferences,include_instruction_photos_in_private_print}',
   'false',
   'database export snapshots include the saved photo print preference'
+);
+
+select is(
+  public.read_export_snapshot('90000000-0000-4000-8000-000000000001')
+    #>> '{accountPreferences,include_private_details_in_private_print}',
+  'true',
+  'database export snapshots include the private-only print preference'
 );
 
 select * from finish();

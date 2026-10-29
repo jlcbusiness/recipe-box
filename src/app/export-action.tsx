@@ -1,9 +1,13 @@
 'use client';
 
-import { Download } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { type RefObject, useEffect, useRef, useState } from 'react';
 import type { ExportScope } from '../lib/exports/rules';
+import {
+  ActionFeedback,
+  type ActionFeedbackKind,
+  useRecipeActionFeedback,
+} from './recipe-action-feedback';
 
 type ExportActionProps = {
   scope: ExportScope;
@@ -16,7 +20,7 @@ type ExportActionProps = {
 };
 
 type Feedback = {
-  kind: 'working' | 'success' | 'error';
+  kind: ActionFeedbackKind;
   message: string;
 };
 
@@ -37,8 +41,18 @@ export function ExportAction({
   const activeRequest = useRef<AbortController | null>(null);
   const pathname = usePathname();
   const previousPathname = useRef(pathname);
+  const recipeActionFeedback = useRecipeActionFeedback();
   const label = scopeLabel(scope);
   const buttonId = `export-${scope.type}-${'id' in scope ? scope.id : 'database'}`;
+
+  function updateFeedback(next: Feedback, resetDismissed = false) {
+    setFeedback(next);
+    recipeActionFeedback?.publishFeedback(
+      'recipe-export',
+      { ...next, autoDismiss: false, dismissOnOutside: false },
+      resetDismissed,
+    );
+  }
 
   useEffect(() => {
     if (previousPathname.current !== pathname) {
@@ -61,7 +75,7 @@ export function ExportAction({
   async function startExport() {
     const controller = new AbortController();
     activeRequest.current = controller;
-    setFeedback({ kind: 'working', message: `Preparing ${label} export...` });
+    updateFeedback({ kind: 'working', message: `Preparing ${label} export...` }, true);
     try {
       const response = await fetch('/api/exports', {
         method: 'POST',
@@ -85,7 +99,7 @@ export function ExportAction({
       document.body.append(download);
       download.click();
       download.remove();
-      setFeedback({
+      updateFeedback({
         kind: 'success',
         message: `${label[0].toUpperCase()}${label.slice(1)} export ready. Download started.`,
       });
@@ -93,7 +107,7 @@ export function ExportAction({
       if (controller.signal.aborted) {
         return;
       }
-      setFeedback({
+      updateFeedback({
         kind: 'error',
         message:
           error instanceof Error
@@ -113,7 +127,11 @@ export function ExportAction({
         aria-label={ariaLabel}
         aria-hidden={triggerHidden || undefined}
         aria-busy={feedback?.kind === 'working'}
-        aria-describedby={feedback ? `${buttonId}-feedback` : undefined}
+        aria-describedby={
+          feedback
+            ? (recipeActionFeedback?.feedbackIds['recipe-export'] ?? `${buttonId}-feedback`)
+            : undefined
+        }
         className={`${buttonClassName} export-action-button`}
         disabled={feedback?.kind === 'working'}
         onClick={startExport}
@@ -121,18 +139,17 @@ export function ExportAction({
         tabIndex={triggerHidden ? -1 : undefined}
         type="button"
       >
-        <Download aria-hidden="true" size={16} />
+        <span aria-hidden="true" className="export-action-icon" />
         <span className="export-action-label">{buttonLabel}</span>
       </button>
-      {feedback && (
-        <p
-          aria-live={feedback.kind === 'error' ? 'assertive' : 'polite'}
-          className={`export-action-feedback export-action-feedback-${feedback.kind}`}
+      {feedback && !recipeActionFeedback && (
+        <ActionFeedback
+          className="export-action-feedback"
           id={`${buttonId}-feedback`}
-          role={feedback.kind === 'error' ? 'alert' : 'status'}
-        >
-          {feedback.message}
-        </p>
+          kind={feedback.kind}
+          message={feedback.message}
+          messageClassName={`export-action-feedback-${feedback.kind}`}
+        />
       )}
     </div>
   );

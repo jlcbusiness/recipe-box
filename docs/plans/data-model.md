@@ -36,7 +36,7 @@ security without prematurely creating recipe or other domain tables.
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, optional integer Serves count, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
+| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient and optional trusted density. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
@@ -50,7 +50,7 @@ security without prematurely creating recipe or other domain tables.
 | Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Explorer state | A per-account last-used recipe or publication explorer configuration: filters, sort, direction, view, List-column visibility, desktop widths, and fixed publication scope when applicable. |
-| Preference | Account-level defaults: ingredient presentation, volume, weight, and temperature display systems, mobile hand preference, independent ingredient/temperature/duration emphasis colors, and private-print emphasis and inline-photo choices. |
+| Preference | Account-level defaults: ingredient presentation, volume, weight, and temperature display systems, mobile hand preference, independent ingredient/temperature/duration emphasis colors, and private-print emphasis, inline-photo, repeated-ingredient, and owner-only-detail choices. |
 | Account | The account record linked to the sign-in identity; it owns private data, volume, weight, and temperature display-system defaults, print preferences, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. A recipe photo has a unique, persisted two-digit reference code within its recipe; covers have no code. |
@@ -175,9 +175,24 @@ executable by `public` or `anon`.
 DLC 08 adds the non-null Account field
 `include_instruction_photos_in_private_print`, defaulting to `true` for
 existing and new accounts. It controls inline instruction photos in private
-print only; gallery photos are always omitted from print. Its value is
+print and standalone outputs; gallery photos are always omitted. Its value is
 included in database bundle preferences and remains optional when importing
 older bundles.
+
+The DLC 09 print preference also adds the non-null Account field
+`repeat_ingredients_in_private_print`, defaulting to `true` for existing and
+new accounts. It supplies the private **Page Settings** default for Print,
+HTML, PNG, and PDF; changes made on a recipe page are transient. The preference
+is included in database bundles and remains optional when importing older
+bundles.
+
+The private-only details preference adds the non-null Account field
+`include_private_details_in_private_print`, defaulting to `false` for existing
+and new accounts. It controls whether owner-only metadata, notes, pairings, and
+references are included in private Print and Download outputs. Page-level
+changes are transient; the preference is included in database bundles and
+remains optional when importing older bundles. Recipe tags are not included in
+standalone output regardless of this preference.
 
 ## Required Future Detail
 

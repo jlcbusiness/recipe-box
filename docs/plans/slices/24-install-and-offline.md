@@ -77,6 +77,9 @@ runs. No hosted service, database change, or local-data reset is required.
   workers for full offline reloads. Its `experimental.useOffline` guide covers
   retrying soft navigations and Server Actions, but explicitly does not make a
   full reload work offline, so it is not this slice's storage mechanism.
+- Do not register the service worker during normal development; unregister this
+  app's existing worker there to keep development assets fresh. The E2E server
+  explicitly enables registration so offline behavior remains covered.
 - The Cache API is explicit application storage: it does not obey HTTP cache
   headers and entries persist until evicted or deleted. Keep the server's
   `no-store` privacy behavior and implement a dedicated, versioned, bounded

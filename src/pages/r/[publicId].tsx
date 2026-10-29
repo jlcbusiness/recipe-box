@@ -1,8 +1,10 @@
-import { Ban, ImageOff, Printer } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ImageViewer } from '../../app/media/image-viewer';
+import { RecipePhotoGallery } from '../../app/media/media-display';
+import { RecipeActionFeedbackProvider } from '../../app/recipe-action-feedback';
+import { RecipeOutputActions } from '../../app/recipes/recipe-output-actions';
 import {
   RecipeInstructionMention,
   RecipeReader,
@@ -59,6 +61,7 @@ function renderInstructionBlocks(
   const ingredientsById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient]));
   const headingTags = [null, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
   const renderInline = (tokens: InstructionInlineToken[], prefix: string) => {
+    let precedingText = '';
     const photoOccurrences = new Map<string, number>();
     return tokens.flatMap((token, index) => {
       const key = `${prefix}-${index}`;
@@ -93,28 +96,36 @@ function renderInstructionBlocks(
             : [];
         }
         case 'text':
+          precedingText += token.value;
           return token.value;
         case 'strong':
+          precedingText += token.value;
           return <strong key={key}>{token.value}</strong>;
         case 'emphasis':
+          precedingText += token.value;
           return <em key={key}>{token.value}</em>;
         case 'strike':
+          precedingText += token.value;
           return <del key={key}>{token.value}</del>;
         case 'code':
+          precedingText += token.value;
           return <code key={key}>{token.value}</code>;
         case 'duration':
+          precedingText += token.value;
           return (
             <span className="recipe-instruction-duration" key={key}>
               {token.value}
             </span>
           );
         case 'temperature':
+          precedingText += token.value;
           return (
             <span className="recipe-instruction-temperature" key={key}>
               {token.value}
             </span>
           );
         case 'link': {
+          precedingText += token.label;
           const href = getSafePublicReferenceHref(token.url);
           return href ? (
             <a href={href} key={key} rel="noreferrer">
@@ -126,16 +137,20 @@ function renderInstructionBlocks(
         }
         case 'mention': {
           const ingredient = ingredientsById.get(token.id);
-          return ingredient ? (
+          if (!ingredient) return `#${token.slug}`;
+          const startsSentence = !precedingText || /[.!?]["')\]]*\s*$/u.test(precedingText);
+          const displayName = startsSentence
+            ? ingredient.ingredient_name
+            : ingredient.ingredient_name.toLocaleLowerCase();
+          precedingText += displayName;
+          return (
             <RecipeInstructionMention
-              displayName={ingredient.ingredient_name}
+              displayName={displayName}
               ingredient={ingredient}
               key={key}
               preserveStoredUnits={preserveStoredUnits}
               unitSystems={unitSystems}
             />
-          ) : (
-            `#${token.slug}`
           );
         }
         default: {
@@ -199,35 +214,7 @@ function renderInstructionBlocks(
   });
 }
 
-function RecipePhotos({ photos, name }: { photos: PublicRecipePhoto[]; name: string }) {
-  if (photos.length === 0) return null;
-  return (
-    <section className="recipe-photo-gallery" aria-label={`${name} photos`}>
-      {withOccurrenceKeys(
-        photos,
-        (photo) => `${photo.description}-${photo.width}-${photo.height}`,
-      ).map(({ item: photo, key }, index) => (
-        <ImageViewer
-          alt={photo.description || `${name}, photo ${index + 1}`}
-          buttonLabel={`View ${photo.description || `${name}, photo ${index + 1}`} full size`}
-          crop={photo.crop}
-          height={photo.height}
-          imageClassName="recipe-public-photo"
-          key={key}
-          src={photo.full_url}
-          triggerClassName="recipe-public-photo-trigger"
-          triggerLoading="eager"
-          width={photo.width}
-        />
-      ))}
-    </section>
-  );
-}
-
 export default function PublicRecipePage(props: PublicRecipePageProps) {
-  const [disableInstructionEmphasis, setDisableInstructionEmphasis] = useState(false);
-  const [disableInstructionPhotos, setDisableInstructionPhotos] = useState(false);
-
   if (props.state !== 'active') {
     return (
       <main className="recipes-main recipe-public-main">
@@ -281,10 +268,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
   );
 
   return (
-    <main
-      className={`recipes-main recipe-public-main${disableInstructionEmphasis ? ' no-instruction-emphasis' : ''}${disableInstructionPhotos ? ' no-instruction-photos' : ''}`}
-      aria-labelledby="page-title"
-    >
+    <main className="recipes-main recipe-public-main" aria-labelledby="page-title">
       <Head>
         <title>{`${recipe.name} | Recipe Box`}</title>
         <meta name="robots" content="noindex, nofollow" />
@@ -302,35 +286,17 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
               )}
             </h1>
             <div className="recipe-public-title-actions">
-              <div className="recipe-public-controls recipe-screen-only">
-                <button
-                  aria-pressed={disableInstructionEmphasis}
-                  className="recipe-secondary-button recipe-detail-action recipe-public-toggle"
-                  type="button"
-                  onClick={() => setDisableInstructionEmphasis((current) => !current)}
-                >
-                  <Ban aria-hidden="true" size={16} strokeWidth={2} />
-                  No emphasis
-                </button>
-                <button
-                  aria-pressed={disableInstructionPhotos}
-                  className="recipe-secondary-button recipe-detail-action recipe-public-toggle"
-                  type="button"
-                  onClick={() => setDisableInstructionPhotos((current) => !current)}
-                >
-                  <ImageOff aria-hidden="true" size={16} strokeWidth={2} />
-                  No instruction photos
-                </button>
-              </div>
-              <button
-                aria-label="Print recipe"
-                className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-screen-only"
-                title="Print recipe"
-                type="button"
-                onClick={() => window.print()}
-              >
-                <Printer aria-hidden="true" size={16} strokeWidth={2} />
-              </button>
+              <RecipeActionFeedbackProvider>
+                <RecipeOutputActions
+                  defaultSettings={{
+                    repeatIngredients: true,
+                    includeInstructionPhotos: true,
+                    useEmphasisColors: true,
+                    includePrivateDetails: false,
+                  }}
+                  isPublic
+                />
+              </RecipeActionFeedbackProvider>
             </div>
           </div>
           {recipe.attribution && (
@@ -347,7 +313,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
             photos.length > 0 && hasPublicSummary ? ' recipe-public-overview-split' : ''
           }`}
         >
-          <RecipePhotos name={recipe.name} photos={photos} />
+          <RecipePhotoGallery photos={photos} recipeName={recipe.name} />
           {hasPublicSummary && (
             <div className="recipe-public-summary">
               {times.length > 0 && (

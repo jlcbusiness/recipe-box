@@ -308,6 +308,51 @@ test('ingredient sections stay simple across reader, editor, and public views @e
   const fillingRowId = randomUUID();
   const listKeyWarnings: string[] = [];
   const hydrationWarnings: string[] = [];
+  let privatePrintButtonColors = {
+    backgroundColor: '',
+    borderColor: '',
+    color: '',
+  };
+
+  await page.addInitScript(() => {
+    window.print = () => {
+      const topDocument = window.top?.document;
+      const oddCell = document.querySelector<HTMLElement>(
+        '.recipe-output-ingredient-column .recipe-ingredient-first-table tbody tr[data-ingredient-stripe="odd"] > th',
+      );
+      const evenCell = document.querySelector<HTMLElement>(
+        '.recipe-output-ingredient-column .recipe-ingredient-first-table tbody tr[data-ingredient-stripe="even"] > th',
+      );
+      const sectionFirstCells = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.recipe-output-ingredient-column .recipe-ingredient-first-table tbody tr.recipe-ingredient-set-divider + tr > th',
+        ),
+      );
+      const oddStyle = oddCell ? getComputedStyle(oddCell) : null;
+      const evenStyle = evenCell ? getComputedStyle(evenCell) : null;
+      const sectionFirstBorders = sectionFirstCells.map((cell) => {
+        const style = getComputedStyle(cell);
+        return `${style.borderTopStyle} ${style.borderTopColor}`;
+      });
+      topDocument?.documentElement.setAttribute(
+        'data-print-stripe-odd',
+        oddStyle?.backgroundColor ?? 'missing',
+      );
+      topDocument?.documentElement.setAttribute(
+        'data-print-stripe-even',
+        evenStyle?.backgroundColor ?? 'missing',
+      );
+      topDocument?.documentElement.setAttribute(
+        'data-print-stripe-adjust',
+        oddStyle?.getPropertyValue('print-color-adjust') ?? 'missing',
+      );
+      topDocument?.documentElement.setAttribute(
+        'data-print-section-first-borders',
+        sectionFirstBorders.join('|') || 'missing',
+      );
+      window.top?.dispatchEvent(new Event('afterprint'));
+    };
+  });
 
   try {
     const publicationResponse = await request.post(
@@ -621,6 +666,32 @@ test('ingredient sections stay simple across reader, editor, and public views @e
         'background-color',
         'rgb(237, 244, 233)',
       );
+      const privatePrintButton = page.getByRole('button', { name: 'Print & Download' });
+      privatePrintButtonColors = await privatePrintButton.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          color: style.color,
+        };
+      });
+      expect(privatePrintButtonColors.backgroundColor).toBe('rgb(56, 96, 68)');
+      expect(privatePrintButtonColors.color).toBe('rgb(255, 255, 255)');
+      await privatePrintButton.click();
+      await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-print-stripe-odd',
+        'rgb(237, 244, 233)',
+      );
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-print-stripe-even',
+        'rgba(0, 0, 0, 0)',
+      );
+      await expect(page.locator('html')).toHaveAttribute('data-print-stripe-adjust', 'exact');
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-print-section-first-borders',
+        'solid rgb(213, 215, 209)|solid rgb(213, 215, 209)',
+      );
     });
 
     const publicId = await test.step('create a linkable recipe ID', async () => {
@@ -662,9 +733,46 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       await page.goto(`/r/${publicId}`, { timeout: 15_000 });
       await expect(page.getByRole('heading', { name: 'For the sauce', level: 3 })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'For the filling', level: 3 })).toBeVisible();
+      const publicIngredientRows = page.locator(
+        '.recipe-ingredient-first-table tbody tr[data-ingredient-stripe]',
+      );
+      await expect(publicIngredientRows).toHaveCount(3);
+      await expect(publicIngredientRows.nth(0).locator('th')).toHaveCSS(
+        'background-color',
+        'rgb(237, 244, 233)',
+      );
+      await expect(publicIngredientRows.nth(1).locator('th')).toHaveCSS(
+        'background-color',
+        'rgba(0, 0, 0, 0)',
+      );
       const publicHtml = await page.content();
       expect(publicHtml).not.toContain(sauceSetId);
       expect(publicHtml).not.toContain(fillingSetId);
+      const publicPrintButton = page.getByRole('button', { name: 'Print & Download' });
+      const publicPrintButtonColors = await publicPrintButton.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          color: style.color,
+        };
+      });
+      expect(publicPrintButtonColors).toEqual(privatePrintButtonColors);
+      await page.getByRole('button', { name: 'Print & Download' }).click();
+      await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-print-stripe-odd',
+        'rgb(237, 244, 233)',
+      );
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-print-stripe-even',
+        'rgba(0, 0, 0, 0)',
+      );
+      await expect(page.locator('html')).toHaveAttribute('data-print-stripe-adjust', 'exact');
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-print-section-first-borders',
+        'solid rgb(213, 215, 209)|solid rgb(213, 215, 209)',
+      );
     });
 
     await page.goto(`/recipes/${recipe.id}/edit`);

@@ -1,6 +1,6 @@
   
-- export png #9
-- export html #9
+🗸 export png #9
+🗸 export html #9
 - "nuke all" button #24
 - add equipment in recipe (and for other picklists) #25
 🗸 allow for image cropping/sizing #6

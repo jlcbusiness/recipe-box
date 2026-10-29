@@ -26,8 +26,9 @@ import { ExportAction } from '../../export-action';
 import { ImageViewer } from '../../media/image-viewer';
 import { RecipePhotoGallery } from '../../media/media-display';
 import { OfflineSnapshotCapture } from '../../offline-snapshot-capture';
+import { RecipeActionFeedbackProvider } from '../../recipe-action-feedback';
 import { TagChips } from '../../tags/tag-controls';
-import { RecipePrintAction } from '../recipe-detail-actions';
+import { RecipeOutputActions } from '../recipe-output-actions';
 import {
   RecipeInstructionMention,
   RecipeReader,
@@ -266,6 +267,8 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   let ingredientPresentation: 'standard' | 'ingredient_first' = 'standard';
   let privatePrintUsesColors = true;
   let includeInstructionPhotosInPrivatePrint = true;
+  let repeatIngredientsInPrivatePrint = true;
+  let includePrivateDetailsInPrivatePrint = false;
   let emphasisColors = {
     ingredient: getInstructionEmphasisColor(defaultInstructionEmphasis.ingredient),
     temperature: getInstructionEmphasisColor(defaultInstructionEmphasis.temperature),
@@ -275,7 +278,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     const { data: account } = await supabase
       .from('accounts')
       .select(
-        'volume_system, weight_system, temperature_system, ingredient_presentation, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print',
+        'volume_system, weight_system, temperature_system, ingredient_presentation, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print',
       )
       .eq('id', authData.user.id)
       .maybeSingle();
@@ -304,6 +307,9 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     privatePrintUsesColors = account?.private_print_uses_colors !== false;
     includeInstructionPhotosInPrivatePrint =
       account?.include_instruction_photos_in_private_print !== false;
+    repeatIngredientsInPrivatePrint = account?.repeat_ingredients_in_private_print !== false;
+    includePrivateDetailsInPrivatePrint =
+      account?.include_private_details_in_private_print === true;
   }
   if (!recipe) {
     notFound();
@@ -413,28 +419,40 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               </div>
             )}
             <div className="recipe-detail-heading-actions recipe-screen-only">
-              <RecipeShareActions
-                isPrivate={recipe.is_private}
-                publicId={recipe.public_id}
-                recipeId={recipe.id}
-                version={recipe.version}
-              />
-              <RecipePrintAction />
-              <ExportAction
-                ariaLabel="Export recipe"
-                buttonLabel="Export recipe"
-                buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
-                className="recipe-detail-export-action"
-                scope={{ type: 'recipe', id: recipe.id }}
-              />
-              <Link
-                aria-label="Edit"
-                className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
-                href={`/recipes/${recipe.id}/edit`}
-                title="Edit recipe"
-              >
-                <Pencil aria-hidden="true" size={16} strokeWidth={2} />
-              </Link>
+              <RecipeActionFeedbackProvider>
+                <RecipeShareActions
+                  isPrivate={recipe.is_private}
+                  publicId={recipe.public_id}
+                  recipeId={recipe.id}
+                  version={recipe.version}
+                />
+                <RecipeOutputActions
+                  defaultSettings={{
+                    repeatIngredients: repeatIngredientsInPrivatePrint,
+                    includeInstructionPhotos: includeInstructionPhotosInPrivatePrint,
+                    useEmphasisColors: privatePrintUsesColors,
+                    includePrivateDetails: includePrivateDetailsInPrivatePrint,
+                  }}
+                  exportAction={
+                    <ExportAction
+                      ariaLabel="Export recipe"
+                      buttonLabel="Export recipe"
+                      buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
+                      className="recipe-detail-export-action"
+                      scope={{ type: 'recipe', id: recipe.id }}
+                    />
+                  }
+                  isPublic={false}
+                />
+                <Link
+                  aria-label="Edit"
+                  className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
+                  href={`/recipes/${recipe.id}/edit`}
+                  title="Edit recipe"
+                >
+                  <Pencil aria-hidden="true" size={16} strokeWidth={2} />
+                </Link>
+              </RecipeActionFeedbackProvider>
             </div>
           </div>
           <RecipePhotoGallery photos={photos} />
@@ -446,7 +464,16 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             {sections.length > 0 && (
               <dl className="recipe-metadata">
                 {sections.map(([label, value]) => (
-                  <div key={label}>
+                  <div
+                    data-private-output-only={
+                      ['State', 'Enthusiasm', 'Verdict', 'Reason', 'Occasion Details'].includes(
+                        label ?? '',
+                      )
+                        ? ''
+                        : undefined
+                    }
+                    key={label}
+                  >
                     <dt>{label}</dt>
                     {label === 'Serves' && recipe.serves !== null ? (
                       <RecipeServesControl serves={recipe.serves} />
@@ -458,7 +485,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               </dl>
             )}
             {classificationSections.length > 0 && (
-              <dl className="recipe-metadata recipe-detail-classification">
+              <dl className="recipe-metadata recipe-detail-classification" data-private-output-only>
                 {classificationSections.map(([label, value]) => (
                   <div key={label}>
                     <dt>{label}</dt>
@@ -498,7 +525,11 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       </RecipeReaderProvider>
       {recipe.ingredients.length === 0 && instructions}
       {(recipe.pairings.length > 0 || recipe.incoming_pairings.length > 0) && (
-        <section className="recipe-detail-section" aria-labelledby="pairs-with-title">
+        <section
+          className="recipe-detail-section"
+          aria-labelledby="pairs-with-title"
+          data-private-output-only
+        >
           <h2 id="pairs-with-title">Pairs With</h2>
           {recipe.pairings.length > 0 && (
             <ul className="recipe-relationship-list">
@@ -536,13 +567,21 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         </section>
       )}
       {recipe.notes_markdown && (
-        <section className="recipe-detail-section" aria-labelledby="notes-title">
+        <section
+          className="recipe-detail-section"
+          aria-labelledby="notes-title"
+          data-private-output-only
+        >
           <h2 id="notes-title">Notes</h2>
           <p className="recipe-notes">{renderMarkdown(recipe.notes_markdown)}</p>
         </section>
       )}
       {recipe.references.length > 0 && (
-        <section className="recipe-detail-section" aria-labelledby="references-title">
+        <section
+          className="recipe-detail-section"
+          aria-labelledby="references-title"
+          data-private-output-only
+        >
           <h2 id="references-title">References</h2>
           <ul className="recipe-relationship-list">
             {recipe.references.map((reference) => (

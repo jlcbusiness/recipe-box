@@ -38,6 +38,8 @@ const preferenceFields = new Set([
   'duration_color',
   'private_print_uses_colors',
   'include_instruction_photos_in_private_print',
+  'repeat_ingredients_in_private_print',
+  'include_private_details_in_private_print',
   'recipe_column_order',
   'recipe_hidden_columns',
 ]);
@@ -178,7 +180,11 @@ function validateData(
     (preferences.private_print_uses_colors !== undefined &&
       typeof preferences.private_print_uses_colors !== 'boolean') ||
     (preferences.include_instruction_photos_in_private_print !== undefined &&
-      typeof preferences.include_instruction_photos_in_private_print !== 'boolean')
+      typeof preferences.include_instruction_photos_in_private_print !== 'boolean') ||
+    (preferences.repeat_ingredients_in_private_print !== undefined &&
+      typeof preferences.repeat_ingredients_in_private_print !== 'boolean') ||
+    (preferences.include_private_details_in_private_print !== undefined &&
+      typeof preferences.include_private_details_in_private_print !== 'boolean')
   ) {
     throw new Error('The bundle contains unsupported account preference fields.');
   }

@@ -85,8 +85,11 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Meal Type** | Multi-select picklist | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc. | "When or how do I serve this?" Settings-managed multi-select dropdown. Multiple values are toggled with buttons; selected values show a checkmark, leaf-green text, and a pale green background. |
 | **Cuisine** | Multi-select picklist | American, Italian, Chinese, Mexican, French, Thai, Indian, Fusion, etc. | Settings-managed multi-select dropdown to cleanly support fusion cooking. |
 | **Main Ingredients** | Derived index | Derived from ingredient rows | Not an independent metadata input. Automatically compiled from ingredient rows marked with the `Main` checkbox. |
-| **State** | Single-select enum | `Want to try`, `Tried`, `Will not try` | New recipes default to `Want to try`. Place State immediately after Name; its active Enthusiasm, Verdict, or Reason, Serves, and Equipment share its row. Food Type, Meal Type, and Cuisine follow on the next wrapping row. Changing State clears stale conditional values. |
-| **Verdict** | Single-select picklist | Favorite, delicious, staple, practice, try again, occasionally, specific occasion, once-a-year-rich, so-so, no, hell no, MISTAKE | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. |
+| **State** | Single-select enum | `Want to try`, `Tried`, `Will not try` | New recipes default to `Want to try`. Place State immediately after Name; its active Enthusiasm, Verdict and optional Score, or Reason, Serves, and Equipment share its row. Food Type, Meal Type, and Cuisine follow on the next wrapping row. Changing State clears stale conditional values, including Score. |
+| **Verdict** | Single-select picklist | Favorite, delicious, staple, practice, try again, occasionally, specific occasion, once-a-year-rich, so-so, no, hell no, MISTAKE | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. Existing values, including Favorite, are preserved and are not mapped to Score, Star, or Heart. |
+| **Score** | Optional signed integer | `-5`, `-3`, `-1`, `0`, `1`, `2`, `3`, `4`, `5` | Visible only when `State == Tried`; changing State away from Tried clears it. The negative descriptions (`-1` Needs work, `-3` No, `-5` DO NOT TRY) and neutral `0` explain intended meaning only; the UI and accessible names remain numeric. Red is a supplementary cue. |
+| **Star** | Boolean marker | On or off | Private “note this” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Heart and Verdict. Each recipe defaults off. |
+| **Heart** | Boolean marker | On or off | Private “love this and want to repeat it” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Star, Score, Verdict, and State. Each recipe defaults off. |
 | **Enthusiasm** | Single-select picklist | Absolutely, sounds good!, try, specific occasion, maybe, eh | Visible **only** when `State == Want to try`. The empty prompt reads “What am I feeling?” User-customizable in settings. |
 | **Occasion Details** | Free text | Text string describing the occasion | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected. |
 | **Reason** | Single-line text | Text string explaining rejection | Visible **only** when `State == Will not try`. |
@@ -235,8 +238,13 @@ time is broken down into specific categories:
   spacing beyond the neighboring field gap.
 - Center the Serves number within its 36px input on desktop and mobile.
 - On desktop, the recipe list shows Name, Food Type, State, and Opinion, which
-  shows the active Enthusiasm, Verdict, or Reason. On mobile, the list shows
-  Name and Opinion. Detail view uses content-sized wrapping metadata in this
+  shows the active Enthusiasm, Verdict, or Reason; Score and active custom
+  marker stamps are available through list-column preferences, with marker
+  columns visible by default and independently hideable. List indicators align
+  right; Grid indicators stack at the top-right. Only active stamps are drawn.
+  On mobile, the list shows Name and Opinion with compact Score and active
+  marker indicators. Detail view
+  uses content-sized wrapping metadata in this
   order: State/response, Occasion
   Details when present, Serves, Total Time, Equipment, Food Type, Meal Type,
   Cuisine, remaining times, then Notes. On desktop, Food Type, Meal Type, and
@@ -909,6 +917,12 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   operators, including blank checks where supported. Multiple filters combine
   with `AND`; nested `AND`/`OR` query groups and named-query lifecycle are
   deferred.
+- **Marker quick filters:** Find and each publication's recipe list provide
+  immediate, URL-backed toggle buttons visually labeled only ⭐ and ❤️;
+  descriptive accessible names identify each marker-only filter. Either may be
+  enabled alone; when both are enabled, recipes must have both markers. They
+  combine with other search filters using `AND`.
+- **Score search:** Score is available as a recipe filter and sort field.
 - **Last-used explorer state:** Each explorer restores its owner's last-used
   filters, sort key, sort direction, and List/Grid choice. A valid shareable
   URL takes precedence over remembered search state. Publication recipe scope
@@ -916,10 +930,15 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
 - **List display preferences:** Each account can choose visible List columns
   and resize desktop column widths independently in Find, Library, and each
   publication recipe explorer. A small settings icon opens the column chooser.
-  These preferences belong to the exact explorer context, not a saved view or
-  search URL. Column visibility applies immediately; widths are adjusted by
-  pointer or touch dragging. Resizing has no keyboard equivalent by explicit
-  product choice; all other explorer controls remain keyboard-operable.
+  Star and Heart columns are visible by default in each recipe-list explorer
+  and may be hidden or shown independently. An owner's saved visibility choice
+  overrides the default for that exact account and explorer context. Active
+  custom stamp indicators align right in List and stack at the top-right of
+  Grid cards; inactive markers are not drawn. These preferences are not part of
+  a saved view or search URL. Column visibility applies immediately; widths are
+  adjusted by pointer or touch dragging. Resizing has no keyboard equivalent
+  by explicit product choice; all other explorer controls remain
+  keyboard-operable.
 
 ### 7.2 Full-Text Search
 
@@ -1189,6 +1208,7 @@ When an unauthenticated guest accesses a valid public recipe link:
 - **Restricted / Hidden Elements:**
   - No application navigation, sidebar, or account links.
   - No edit, delete, or clone buttons.
+  - No owner-only evaluation metadata, including Verdict, Score, Star, or Heart.
   - Publication name is displayed as static text attribution, not a clickable link.
   - Safe external HTTP(S) references are clickable; in-app recipe references
     remain static text.
@@ -1577,8 +1597,7 @@ The following features were discussed and intentionally set aside for post-v1 re
 - Automated web recipe URL scrapers
 - Ingredient alias mapping (e.g., `bell pepper` $\leftrightarrow$ `capsicum`)
 - Formal allergen and dietary restriction tags/warnings
-- Simple star ratings, a separate favorites/bookmark list, cooking attempt logs,
-  star ratings over time, and cook history
+- Cooking attempt logs, historical Score changes over time, and cook history
 - Multi-user household collaboration and role permissions
 - Native mobile applications (Expo / React Native)
 - Historical version rollback/restoration engine

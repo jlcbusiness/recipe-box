@@ -70,7 +70,7 @@ const nextProcess = spawn(process.execPath, [nextExecutable, 'dev', ...nextArgs]
     NEXT_PUBLIC_SITE_URL: `http://localhost:${port}`,
     SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
     SIGNUP_MODE: testMode ? 'open' : (process.env.SIGNUP_MODE ?? 'open'),
-    ...(testMode ? { NEXT_DIST_DIR: '.next-e2e' } : {}),
+    ...(testMode ? { NEXT_DIST_DIR: '.next-e2e', NEXT_PUBLIC_ENABLE_PWA: 'true' } : {}),
   },
 });
 

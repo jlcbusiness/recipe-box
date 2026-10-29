@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -1415,8 +1416,19 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
     await expect(page.getByRole('heading', { name: 'Accessible recipe' })).toBeVisible();
     for (const width of [1280, 1600, 390]) {
       await page.setViewportSize({ width, height: 844 });
+      const isMobileOutput = width <= 640;
+      const outputAction = page.getByRole('button', {
+        name: isMobileOutput ? 'Download' : 'Print & Download',
+      });
+      await expect(outputAction).toHaveAttribute(
+        'title',
+        isMobileOutput ? 'Download' : 'Print & Download',
+      );
+      await expect(
+        outputAction.locator(`svg.lucide-${isMobileOutput ? 'download' : 'printer'}`),
+      ).toBeVisible();
       const editBounds = await page.getByRole('link', { name: 'Edit' }).boundingBox();
-      const printBounds = await page.getByRole('button', { name: 'Print' }).boundingBox();
+      const printBounds = await outputAction.boundingBox();
       expect(editBounds?.height).toBe(printBounds?.height);
       expect(editBounds?.width).toBe(printBounds?.width);
       expect(editBounds?.x).toBeGreaterThan(printBounds?.x ?? 0);
@@ -1424,11 +1436,7 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
         await page
           .getByRole('link', { name: 'Edit' })
           .evaluate((element) => getComputedStyle(element).borderRadius),
-      ).toBe(
-        await page
-          .getByRole('button', { name: 'Print' })
-          .evaluate((element) => getComputedStyle(element).borderRadius),
-      );
+      ).toBe(await outputAction.evaluate((element) => getComputedStyle(element).borderRadius));
     }
     const detailA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -2976,6 +2984,11 @@ test('recipe detail print matches the active presentation @e2e', async ({
 }, testInfo) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
+  const serviceHeaders = {
+    apikey: config.serviceRoleKey,
+    Authorization: `Bearer ${config.serviceRoleKey}`,
+  };
+  const privateDetailsPreferenceUrl = `${config.apiUrl}/rest/v1/accounts?select=include_private_details_in_private_print&id=eq.${user.id}`;
   const ingredientRowId = randomUUID();
   const saltRowId = randomUUID();
   const stepId = randomUUID();
@@ -3073,6 +3086,38 @@ test('recipe detail print matches the active presentation @e2e', async ({
     const weightPicker = page.getByRole('combobox', { name: 'Weight' });
     await expect(volumePicker).toContainText('US customary');
     await expect(weightPicker).toContainText('US customary');
+    const repeatIngredientsPreference = page.getByRole('checkbox', {
+      name: 'Repeat ingredients on each page in print and downloads',
+    });
+    const privateDetailsPreference = page.getByRole('checkbox', {
+      name: 'Include private-only details in print and downloads',
+    });
+    await expect(repeatIngredientsPreference).toBeChecked();
+    await expect(privateDetailsPreference).not.toBeChecked();
+    await privateDetailsPreference.check();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect
+      .poll(async () => {
+        const response = await request.get(privateDetailsPreferenceUrl, {
+          headers: serviceHeaders,
+        });
+        return (await response.json())[0]?.include_private_details_in_private_print;
+      })
+      .toBe(true);
+    await page.reload();
+    await expect(privateDetailsPreference).toBeChecked();
+    await privateDetailsPreference.uncheck();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect
+      .poll(async () => {
+        const response = await request.get(privateDetailsPreferenceUrl, {
+          headers: serviceHeaders,
+        });
+        return (await response.json())[0]?.include_private_details_in_private_print;
+      })
+      .toBe(false);
+    await repeatIngredientsPreference.uncheck();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
     await volumePicker.click();
     const volumeOptions = page.getByRole('listbox').getByRole('option');
     await expect(volumeOptions).toHaveCount(2);
@@ -3083,7 +3128,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(volumePicker).toContainText('Metric');
     await page.addInitScript(() => {
       window.print = () => {
-        document.documentElement.dataset.printRequested = 'true';
+        window.top?.document.documentElement.setAttribute('data-print-requested', 'true');
       };
     });
     await page.goto(`/recipes/${(await saved.json())[0].id}`);
@@ -3103,7 +3148,82 @@ test('recipe detail print matches the active presentation @e2e', async ({
       'Ingredient view: Standard; next Ingredient-first',
     );
     await expect(page.locator('.recipe-reader-subtitle')).toHaveText('standard, order entered');
-    await expect(page.getByRole('button', { name: 'Print' })).toBeVisible();
+    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    const settingsButton = page.getByRole('button', { name: 'Page settings' });
+    await expect(outputButton).toBeVisible();
+    await settingsButton.click();
+    const settingsPanel = page.getByRole('dialog', { name: 'Page settings' });
+    await expect(settingsPanel).toBeVisible();
+    const settingsPanelBox = await settingsPanel.boundingBox();
+    const viewport = page.viewportSize();
+    if (!settingsPanelBox || !viewport) {
+      throw new Error('Expected the page settings menu and viewport to have layout bounds.');
+    }
+    expect(settingsPanelBox.x).toBeGreaterThanOrEqual(0);
+    expect(settingsPanelBox.x + settingsPanelBox.width).toBeLessThanOrEqual(viewport.width);
+    const pageRepeatIngredients = page.getByRole('checkbox', {
+      name: 'Repeat ingredients on each page',
+    });
+    await expect(pageRepeatIngredients).not.toBeChecked();
+    await pageRepeatIngredients.check();
+    await page.reload();
+    await settingsButton.click();
+    await expect(
+      page.getByRole('checkbox', { name: 'Repeat ingredients on each page' }),
+    ).not.toBeChecked();
+    const pagePrivateDetails = page.getByRole('checkbox', {
+      name: 'Include private-only details',
+    });
+    await expect(pagePrivateDetails).not.toBeChecked();
+    await page.keyboard.press('Escape');
+
+    const defaultHtmlDownloadPromise = page.waitForEvent('download');
+    await outputButton.click();
+    const outputMenu = page.getByRole('menu', { name: 'Print and download actions' });
+    await expect(outputMenu).toBeVisible();
+    const outputMenuBox = await outputMenu.boundingBox();
+    if (!outputMenuBox) {
+      throw new Error('Expected the print and download menu to have layout bounds.');
+    }
+    expect(outputMenuBox.x).toBeGreaterThanOrEqual(0);
+    expect(outputMenuBox.x + outputMenuBox.width).toBeLessThanOrEqual(viewport.width);
+    await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+    const defaultHtmlDownload = await defaultHtmlDownloadPromise;
+    const defaultHtmlPath = await defaultHtmlDownload.path();
+    if (!defaultHtmlPath)
+      throw new Error('Expected the default HTML download to have a file path.');
+    const defaultHtml = await readFile(defaultHtmlPath, 'utf8');
+    expect(defaultHtml.replace(/<!--[\s\S]*?-->/g, '')).toContain('Serves 4');
+    expect(defaultHtml).not.toContain('Want to try');
+    expect(defaultHtml).not.toContain('Serve warm.');
+
+    await settingsButton.click();
+    await pagePrivateDetails.check();
+    await page.keyboard.press('Escape');
+    const privateHtmlDownloadPromise = page.waitForEvent('download');
+    await outputButton.click();
+    await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+    const privateHtmlDownload = await privateHtmlDownloadPromise;
+    const privateHtmlPath = await privateHtmlDownload.path();
+    if (!privateHtmlPath)
+      throw new Error('Expected the private HTML download to have a file path.');
+    const privateHtml = await readFile(privateHtmlPath, 'utf8');
+    expect(privateHtml).toContain('Want to try');
+    expect(privateHtml).toContain('Serve warm.');
+
+    await page.reload();
+    await settingsButton.click();
+    await expect(
+      page.getByRole('checkbox', { name: 'Include private-only details' }),
+    ).not.toBeChecked();
+    await page.keyboard.press('Escape');
+    if (initialPresentation === 'Ingredient-first') {
+      await presentationButton.click();
+      await expect(presentationButton).toHaveAttribute(
+        'title',
+        'Ingredient view: Standard; next Ingredient-first',
+      );
+    }
     const printIngredient = page.locator('.recipe-ingredient-list li').first();
     const flourMention = page.getByRole('button', { name: 'flour', exact: true });
     const amountPopup = page.getByRole('tooltip');
@@ -3490,11 +3610,22 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(printedIngredientCells).toHaveCount(3);
     await expect(printedIngredientCells.nth(0)).toContainText('12 TBSP');
     await expect(printedIngredientCells.nth(1)).toContainText('2 ⅛ oz');
-    await page.getByRole('button', { name: 'Print' }).click();
+    await outputButton.click();
+    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
+    await expect(page.locator('.recipe-output-feedback-success')).toHaveText('Print request sent.');
+    await expect(outputButton).toBeEnabled();
+    const printFrame = page.locator('iframe[title="Recipe print document"]');
+    await expect(printFrame).toHaveCount(1);
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await expect(printFrame).toHaveCount(0);
+    await settingsButton.click();
+    await expect(settingsPanel).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.emulateMedia({ media: 'print' });
-    await expect(page.getByRole('button', { name: 'Print' })).toBeHidden();
+    await expect(outputButton).toBeHidden();
+    await expect(settingsButton).toBeHidden();
     await expect(page.getByRole('link', { name: 'Edit' })).toBeHidden();
     await expect(page.getByRole('button', { name: 'Scale recipe' })).toBeHidden();
     await expect(page.getByRole('combobox', { name: 'Change Flour volume unit' })).toBeVisible();

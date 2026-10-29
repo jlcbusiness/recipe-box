@@ -18,17 +18,39 @@ function createOfflineSnapshot(recipeId: string) {
     .map((link) => new URL(link.href, window.location.origin))
     .filter(
       (url) =>
-        url.origin === window.location.origin && url.pathname.startsWith('/_next/static/css/'),
+        url.origin === window.location.origin &&
+        url.pathname.startsWith('/_next/static/') &&
+        url.pathname.endsWith('.css'),
     )
     .map((url) => `${url.pathname}${url.search}`);
+  const stylesheetRules = Array.from(document.styleSheets)
+    .filter(
+      (stylesheet) =>
+        !stylesheet.href ||
+        new URL(stylesheet.href, window.location.origin).origin === window.location.origin,
+    )
+    .map((stylesheet) =>
+      Array.from(stylesheet.cssRules)
+        .filter((rule) => rule.type !== CSSRule.IMPORT_RULE)
+        .map((rule) =>
+          rule.cssText.replace(
+            /url\((['"]?)(.*?)\1\)/gi,
+            (match, _quote: string, assetPath: string) => {
+              if (!assetPath || assetPath.startsWith('data:') || assetPath.startsWith('#')) {
+                return match;
+              }
+              return `url("${new URL(assetPath, stylesheet.href ?? document.baseURI)}")`;
+            },
+          ),
+        )
+        .join('\n'),
+    )
+    .join('\n');
   const offlineDocument = document.implementation.createHTMLDocument(title);
   offlineDocument.documentElement.lang = 'en';
-  for (const stylePath of styles) {
-    const link = offlineDocument.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = stylePath;
-    offlineDocument.head.append(link);
-  }
+  const style = offlineDocument.createElement('style');
+  style.textContent = stylesheetRules;
+  offlineDocument.head.append(style);
   const viewport = offlineDocument.createElement('meta');
   viewport.name = 'viewport';
   viewport.content = 'width=device-width, initial-scale=1';
@@ -45,11 +67,18 @@ function createOfflineSnapshot(recipeId: string) {
   const main = offlineDocument.importNode(sourceMain, true);
   main
     .querySelectorAll(
-      'script,style,form,button,input,select,textarea,img,image,picture,source,video,audio,iframe,object,embed,nav,.recipe-detail-heading-actions,.recipe-history-link',
+      'script,style,form,input,select,textarea,img,image,picture,source,video,audio,iframe,object,embed,nav,.recipe-detail-heading-actions,.recipe-history-link,.recipe-screen-only',
     )
     .forEach((element) => {
       element.remove();
     });
+  main.querySelectorAll('button').forEach((button) => {
+    if (button.textContent?.trim()) {
+      button.replaceWith(...Array.from(button.childNodes));
+    } else {
+      button.remove();
+    }
+  });
   main.querySelectorAll('a').forEach((link) => {
     link.replaceWith(...Array.from(link.childNodes));
   });

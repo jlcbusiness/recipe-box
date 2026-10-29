@@ -233,6 +233,68 @@ describe('unit preference action', () => {
     });
   });
 
+  it('saves the private repeated-ingredients default independently', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const getUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
+    createClient.mockResolvedValue({ auth: { getUser }, rpc });
+    const formData = new FormData();
+    formData.set('changed_dimension', 'print_repeat_ingredients');
+    formData.set('repeat_ingredients_in_private_print', 'false');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'saved',
+      message: 'Saved.',
+    });
+    expect(rpc).toHaveBeenCalledWith('update_account_unit_preferences', {
+      p_repeat_ingredients_in_private_print: false,
+    });
+  });
+
+  it('saves the private-details print default independently', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const getUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
+    createClient.mockResolvedValue({ auth: { getUser }, rpc });
+    const formData = new FormData();
+    formData.set('changed_dimension', 'print_private_details');
+    formData.set('include_private_details_in_private_print', 'true');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'saved',
+      message: 'Saved.',
+    });
+    expect(rpc).toHaveBeenCalledWith('update_account_unit_preferences', {
+      p_include_private_details_in_private_print: true,
+    });
+  });
+
+  it('rejects an invalid private-details print default before calling Supabase', async () => {
+    const formData = new FormData();
+    formData.set('changed_dimension', 'print_private_details');
+    formData.set('include_private_details_in_private_print', 'sometimes');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'error',
+      message: 'Choose a valid print preference.',
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid private repeated-ingredients default before calling Supabase', async () => {
+    const formData = new FormData();
+    formData.set('changed_dimension', 'print_repeat_ingredients');
+    formData.set('repeat_ingredients_in_private_print', 'sometimes');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'error',
+      message: 'Choose a valid print preference.',
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it('rejects an invalid private-print photo preference before calling Supabase', async () => {
     const formData = new FormData();
     formData.set('changed_dimension', 'print_photos');
@@ -332,10 +394,17 @@ describe('unit preference action', () => {
     expect(
       (
         screen.getByRole('checkbox', {
-          name: 'Omit instruction photos when printing',
+          name: 'Omit instruction photos in print and downloads',
         }) as HTMLInputElement
       ).checked,
     ).toBe(false);
+    expect(
+      (
+        screen.getByRole('checkbox', {
+          name: 'Repeat ingredients on each page in print and downloads',
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
   });
 
   it('restores the saved private-print photo setting when its save fails', async () => {
@@ -360,7 +429,7 @@ describe('unit preference action', () => {
     );
 
     const omitPhotos = screen.getByRole('checkbox', {
-      name: 'Omit instruction photos when printing',
+      name: 'Omit instruction photos in print and downloads',
     });
     fireEvent.click(omitPhotos);
 

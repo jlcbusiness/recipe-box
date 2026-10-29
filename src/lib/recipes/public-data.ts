@@ -33,6 +33,7 @@ function createPublicDataAdminClient() {
 export type PublicRecipePhoto = {
   id: string;
   description: string;
+  is_primary: boolean;
   width: number;
   height: number;
   crop: CropRect | null;
@@ -85,6 +86,7 @@ type MeasurementRow = RecipeMeasurement & { recipe_ingredient_id: string };
 type PublicPhotoRow = {
   id: string;
   description: string;
+  is_primary: boolean;
   width: number;
   height: number;
   crop: CropRect | null;
@@ -104,7 +106,7 @@ async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
   const supabase = createPublicDataAdminClient();
   const { data, error } = await supabase
     .from('media_assets')
-    .select('id, description, width, height, crop, full_path, thumbnail_path')
+    .select('id, description, is_primary, width, height, crop, full_path, thumbnail_path')
     .eq('recipe_id', recipeId)
     .eq('asset_type', 'recipe_photo')
     .eq('status', 'ready')

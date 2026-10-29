@@ -50,10 +50,12 @@ const instructionColorDimensions = [
 export function UnitPreferences({
   durationColor,
   includeInstructionPhotosInPrivatePrint = true,
+  includePrivateDetailsInPrivatePrint = false,
   ingredientPresentation,
   ingredientColor,
   handPreference,
   privatePrintUsesColors,
+  repeatIngredientsInPrivatePrint = true,
   temperatureColor,
   temperatureSystem,
   volumeSystem,
@@ -64,7 +66,9 @@ export function UnitPreferences({
   ingredientColor: InstructionEmphasisColor;
   handPreference: 'left' | 'right';
   includeInstructionPhotosInPrivatePrint?: boolean;
+  includePrivateDetailsInPrivatePrint?: boolean;
   privatePrintUsesColors: boolean;
+  repeatIngredientsInPrivatePrint?: boolean;
   temperatureColor: InstructionEmphasisColor;
   temperatureSystem: TemperatureSystem;
   volumeSystem: MeasurementSystem;
@@ -83,6 +87,8 @@ export function UnitPreferences({
   const allEmphasisDisabledRef = useRef<HTMLInputElement>(null);
   const privatePrintUsesColorsRef = useRef<HTMLInputElement>(null);
   const includeInstructionPhotosRef = useRef<HTMLInputElement>(null);
+  const repeatIngredientsRef = useRef<HTMLInputElement>(null);
+  const includePrivateDetailsRef = useRef<HTMLInputElement>(null);
   const emphasisPickerRef = useRef<HTMLDivElement>(null);
   const activeEmphasisTriggerRef = useRef<HTMLButtonElement>(null);
   const emphasisPaletteId = useId();
@@ -102,6 +108,8 @@ export function UnitPreferences({
     durationColor,
     privatePrintUsesColors,
     includeInstructionPhotosInPrivatePrint,
+    repeatIngredientsInPrivatePrint,
+    includePrivateDetailsInPrivatePrint,
   });
   const [state, formAction, isPending] = useActionState(saveUnitPreferences, {});
 
@@ -117,6 +125,8 @@ export function UnitPreferences({
       durationColor,
       privatePrintUsesColors,
       includeInstructionPhotosInPrivatePrint,
+      repeatIngredientsInPrivatePrint,
+      includePrivateDetailsInPrivatePrint,
     });
   }, [
     durationColor,
@@ -125,6 +135,8 @@ export function UnitPreferences({
     ingredientPresentation,
     privatePrintUsesColors,
     includeInstructionPhotosInPrivatePrint,
+    includePrivateDetailsInPrivatePrint,
+    repeatIngredientsInPrivatePrint,
     temperatureColor,
     resolvedTemperatureSystem,
     volumeSystem,
@@ -146,6 +158,8 @@ export function UnitPreferences({
         durationColor,
         privatePrintUsesColors,
         includeInstructionPhotosInPrivatePrint,
+        repeatIngredientsInPrivatePrint,
+        includePrivateDetailsInPrivatePrint,
       });
     }
   }, [
@@ -155,6 +169,8 @@ export function UnitPreferences({
     ingredientPresentation,
     privatePrintUsesColors,
     includeInstructionPhotosInPrivatePrint,
+    includePrivateDetailsInPrivatePrint,
+    repeatIngredientsInPrivatePrint,
     router,
     state,
     temperatureColor,
@@ -310,6 +326,28 @@ export function UnitPreferences({
     formRef.current?.requestSubmit();
   }
 
+  function updateRepeatIngredients(value: boolean) {
+    setPreferences((current) => ({ ...current, repeatIngredientsInPrivatePrint: value }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'print_repeat_ingredients';
+    }
+    if (repeatIngredientsRef.current) {
+      repeatIngredientsRef.current.value = String(value);
+    }
+    formRef.current?.requestSubmit();
+  }
+
+  function updateIncludePrivateDetails(value: boolean) {
+    setPreferences((current) => ({ ...current, includePrivateDetailsInPrivatePrint: value }));
+    if (changedDimensionRef.current) {
+      changedDimensionRef.current.value = 'print_private_details';
+    }
+    if (includePrivateDetailsRef.current) {
+      includePrivateDetailsRef.current.value = String(value);
+    }
+    formRef.current?.requestSubmit();
+  }
+
   const activeColorPreference = instructionColorDimensions.find(
     ({ dimension }) => dimension === openColorDimension,
   );
@@ -393,6 +431,18 @@ export function UnitPreferences({
           ref={includeInstructionPhotosRef}
           type="hidden"
           value={String(preferences.includeInstructionPhotosInPrivatePrint)}
+        />
+        <input
+          name="repeat_ingredients_in_private_print"
+          ref={repeatIngredientsRef}
+          type="hidden"
+          value={String(preferences.repeatIngredientsInPrivatePrint)}
+        />
+        <input
+          name="include_private_details_in_private_print"
+          ref={includePrivateDetailsRef}
+          type="hidden"
+          value={String(preferences.includePrivateDetailsInPrivatePrint)}
         />
         <div className="settings-preference-group">
           <div className="settings-unit-preference-fields">
@@ -617,7 +667,25 @@ export function UnitPreferences({
                     }
                     type="checkbox"
                   />
-                  Omit instruction photos when printing
+                  Omit instruction photos in print and downloads
+                </label>
+                <label className="settings-print-emphasis-toggle">
+                  <input
+                    checked={preferences.repeatIngredientsInPrivatePrint}
+                    disabled={isPending}
+                    onChange={(event) => updateRepeatIngredients(event.currentTarget.checked)}
+                    type="checkbox"
+                  />
+                  Repeat ingredients on each page in print and downloads
+                </label>
+                <label className="settings-print-emphasis-toggle">
+                  <input
+                    checked={preferences.includePrivateDetailsInPrivatePrint}
+                    disabled={isPending}
+                    onChange={(event) => updateIncludePrivateDetails(event.currentTarget.checked)}
+                    type="checkbox"
+                  />
+                  Include private-only details in print and downloads
                 </label>
               </div>
             </section>

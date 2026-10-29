@@ -186,17 +186,10 @@
 }
 
 .recipe-public-main .recipe-photo-gallery {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.recipe-public-photo {
-  display: block;
-  width: auto;
-  max-width: min(100%, 420px);
-  max-height: min(280px, 60vh);
-  object-fit: contain;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 0;
 }
 
 .recipe-public-overview {
@@ -316,6 +309,17 @@
 .recipe-photo-thumbnail-button:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
+}
+
+.recipe-public-main .recipe-photo-feature-image {
+  max-width: min(100%, 420px);
+  max-height: min(280px, 60vh);
+}
+
+.recipe-public-main .recipe-photo-thumbnails {
+  width: 100%;
+  max-width: min(100%, 280px);
+  justify-self: center;
 }
 
 .media-manager {
@@ -2752,7 +2756,7 @@ section.recipe-detail-section .recipe-relationship-list a {
     gap: 18px;
   }
 
-  .recipe-page-heading .recipe-primary-link {
+  .recipe-page-heading .recipe-primary-link:not(.recipe-icon-action) {
     width: 100%;
   }
 
@@ -2816,8 +2820,42 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .recipe-detail-heading-actions {
+    display: flex;
+    width: 100%;
     flex: 0 0 auto;
-    column-gap: 12px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .recipe-detail-heading-actions .recipe-output-action:has(.recipe-output-menu),
+  .recipe-detail-heading-actions .recipe-output-action:has(.recipe-page-settings-panel) {
+    position: static;
+  }
+
+  .recipe-detail-heading-actions .recipe-output-menu,
+  .recipe-detail-heading-actions .recipe-page-settings-panel {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  .recipe-sharing-action-form {
+    width: 128px;
+    flex: 0 0 128px;
+  }
+
+  .recipe-sharing-action-form.is-linkable {
+    width: 60px;
+    flex: 0 0 60px;
+  }
+
+  .recipe-privacy-toggle-state-full {
+    display: none;
+  }
+
+  .recipe-privacy-toggle-state-compact {
+    display: block;
+    white-space: normal;
   }
 
   .recipe-detail-tags-row {
