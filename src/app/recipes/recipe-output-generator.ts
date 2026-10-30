@@ -962,7 +962,11 @@ export async function generateRecipeOutputDocument(
     Array.from(titleSource.childNodes)
       .filter(
         (node) =>
-          !(node instanceof HTMLElement && node.classList.contains('recipe-public-serves-inline')),
+          !(
+            node instanceof HTMLElement &&
+            (node.classList.contains('recipe-public-serves-inline') ||
+              node.classList.contains('recipe-public-makes-inline'))
+          ),
       )
       .map((node) => node.textContent ?? '')
       .join('')

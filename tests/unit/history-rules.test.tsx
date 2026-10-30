@@ -13,6 +13,8 @@ describe('history event formatting', () => {
           public_id: 'public-link-secret-id',
           version: 2,
           name: 'Sunday roast',
+          makes_quantity: 1,
+          makes_thing: 'baby',
           bake_time_minutes: 45,
           picklists: {
             food_type: 'Roast',
@@ -45,6 +47,8 @@ describe('history event formatting', () => {
           public_id: 'public-link-secret-id',
           version: 3,
           name: 'Sunday roast potatoes',
+          makes_quantity: 3,
+          makes_thing: 'babies',
           bake_time_minutes: 45,
           picklists: {
             food_type: 'Roast',
@@ -81,6 +85,16 @@ describe('history event formatting', () => {
       label: 'Name',
       before: 'Sunday roast',
       after: 'Sunday roast potatoes',
+    });
+    expect(entry.changes).toContainEqual({
+      label: 'Makes quantity',
+      before: '1',
+      after: '3',
+    });
+    expect(entry.changes).toContainEqual({
+      label: 'Makes thing',
+      before: 'baby',
+      after: 'babies',
     });
     expect(entry.changes).toContainEqual({
       label: 'Ingredients',

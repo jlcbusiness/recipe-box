@@ -3,6 +3,8 @@ import {
   calculateTotalMinutes,
   clearConditionalValuesForStateChange,
   formatRecipeDuration,
+  formatRecipeMakes,
+  parseMakesInput,
   shouldShowOccasionDetails,
 } from '../../src/lib/recipes/recipe-rules';
 
@@ -45,6 +47,31 @@ describe('recipe metadata rules', () => {
     expect(shouldShowOccasionDetails('specific_occasion')).toBe(true);
     expect(shouldShowOccasionDetails('favorite')).toBe(false);
     expect(shouldShowOccasionDetails(null)).toBe(false);
+  });
+
+  it('validates Makes as an optional pair and preserves authored thing text', () => {
+    expect(parseMakesInput('', '')).toEqual({ quantity: null, thing: null });
+    expect(parseMakesInput('1,200', '  baby cakes  ')).toEqual({
+      quantity: 1200,
+      thing: '  baby cakes  ',
+    });
+    expect(parseMakesInput('', 'cookies')).toEqual({
+      error: 'Enter both a Makes quantity and thing, or leave both blank.',
+    });
+    expect(parseMakesInput('2', '   ')).toEqual({
+      error: 'Enter both a Makes quantity and thing, or leave both blank.',
+    });
+  });
+
+  it.each(['0', '-1', '1.5', '12,00'])('rejects invalid Makes quantity %s', (quantity) => {
+    expect(parseMakesInput(quantity, 'cookies')).toEqual({
+      error: 'Makes quantity must be a whole number greater than zero.',
+    });
+  });
+
+  it('formats scaled Makes quantities without rewriting the authored thing', () => {
+    expect(formatRecipeMakes(3, 'baby')).toBe('3 baby');
+    expect(formatRecipeMakes(1, 'cookies', 0.5)).toBe('½ cookies');
   });
 
   it('sums component durations only when explicitly requested', () => {

@@ -32,6 +32,7 @@ import { RecipeMarkerActions } from '../recipe-marker-actions';
 import { RecipeOutputActions } from '../recipe-output-actions';
 import {
   RecipeInstructionMention,
+  RecipeMakesValue,
   RecipeReader,
   RecipeReaderProvider,
   RecipeServesControl,
@@ -340,8 +341,10 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Occasion Details', recipe.occasion_details],
     ['Serves', recipe.serves === null ? null : formatGroupedInteger(recipe.serves)],
     [
-      'Total time',
-      recipe.total_time_minutes === null ? null : formatRecipeDuration(recipe.total_time_minutes),
+      'Makes',
+      recipe.makes_quantity === null || recipe.makes_thing === null
+        ? null
+        : `${recipe.makes_quantity} ${recipe.makes_thing}`,
     ],
     ['Equipment', assignedValues('equipment', recipe.equipment_ids).join(', ')],
   ].filter(([label, value]) => Boolean(value) || (label === 'Rating' && recipe.score !== null));
@@ -351,6 +354,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Cuisine', assignedValues('cuisine', recipe.cuisine_ids).join(', ')],
   ].filter(([, value]) => Boolean(value));
   const times = [
+    ['Total time', recipe.total_time_minutes],
     ['Prep', recipe.prep_time_minutes],
     ['Mixing', recipe.mixing_time_minutes],
     ['Marinate', recipe.marinate_time_minutes],
@@ -361,7 +365,6 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Cooling', recipe.cooling_time_minutes],
     ['Rest', recipe.rest_time_minutes],
   ].filter(([, value]) => value !== null);
-  const hasTotalTime = recipe.total_time_minutes !== null;
   const unitSystems = { volume: volumeSystem, weight: weightSystem };
   const instructions = recipe.steps.length > 0 && (
     <section
@@ -476,13 +479,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               <dl className="recipe-metadata">
                 {sections.map(([label, value]) => (
                   <div
-                    className={
-                      label === 'Rating'
-                        ? 'recipe-detail-rating-metadata'
-                        : label === 'Total time'
-                          ? 'recipe-detail-total-time-metadata'
-                          : undefined
-                    }
+                    className={label === 'Rating' ? 'recipe-detail-rating-metadata' : undefined}
                     data-private-output-only={
                       [
                         'State',
@@ -500,6 +497,13 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                     <dt>{label}</dt>
                     {label === 'Serves' && recipe.serves !== null ? (
                       <RecipeServesControl serves={recipe.serves} />
+                    ) : label === 'Makes' &&
+                      recipe.makes_quantity !== null &&
+                      recipe.makes_thing !== null ? (
+                      <RecipeMakesValue
+                        makesQuantity={recipe.makes_quantity}
+                        makesThing={recipe.makes_thing}
+                      />
                     ) : (
                       <dd>
                         {label === 'Rating' && recipe.score !== null ? (
@@ -527,24 +531,19 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                 ))}
               </dl>
             )}
-            {(times.length > 0 || hasTotalTime) && (
-              <div
-                className={`recipe-detail-times recipe-print-metadata-times${times.length === 0 ? ' recipe-detail-times-mobile-only' : ''}`}
-              >
+            {times.length > 0 && (
+              <div className="recipe-detail-times recipe-print-metadata-times">
                 <h3 className="recipe-detail-times-title">Time Breakdown</h3>
                 <dl className="recipe-metadata recipe-time-list">
                   {times.map(([label, value]) => (
-                    <div key={label}>
+                    <div
+                      className={label === 'Total time' ? 'recipe-total-time' : undefined}
+                      key={label}
+                    >
                       <dt>{label}</dt>
                       <dd>{formatRecipeDuration(value as number)}</dd>
                     </div>
                   ))}
-                  {recipe.total_time_minutes !== null && (
-                    <div className="recipe-detail-mobile-total-time">
-                      <dt>Total time</dt>
-                      <dd>{formatRecipeDuration(recipe.total_time_minutes)}</dd>
-                    </div>
-                  )}
                 </dl>
               </div>
             )}

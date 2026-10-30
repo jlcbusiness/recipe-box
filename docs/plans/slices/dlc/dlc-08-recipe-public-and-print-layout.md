@@ -200,6 +200,9 @@ leaving browser print-dialog overrides available.
   full main-content width, while public reader checks retain centered 1-inch
   gutters above the 1012px measure. Axe checks cover changed controls and
   semantics.
+- Time-summary tests verify that Total Time precedes component times, fills its
+  own row above them on mobile, and is separated from the first component time
+  by a fixed vertical rule centered in the gap on desktop.
 - Write all focused automated tests before production changes. Then run the
   affected unit, API, browser, accessibility, TypeScript, targeted Biome,
   Markdown lint, and production-build checks.
@@ -212,7 +215,9 @@ Confirmed decisions:
   then the recipe-reading content. Preserve the Ingredients/Instructions
   composition and adapt its width responsively.
 - Compact horizontal metadata is print-only; the on-screen metadata
-  arrangement remains unchanged.
+  arrangement otherwise remains unchanged. Total Time is shown first in the
+  private and public time breakdowns, above component times on mobile and
+  separated by a fixed vertical rule on desktop.
 - Private recipe title, summary, and reader share the full width inside the
   private page's outer gutters. Public recipe readers retain their separate
   centered 1-inch gutter behavior above the 1012px measure.

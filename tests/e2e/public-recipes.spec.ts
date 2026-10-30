@@ -104,6 +104,7 @@ async function createRecipe(
   extraIngredientRows: unknown[] = [],
   instructionSuffix = '',
   plainTextSuffix = instructionSuffix,
+  makes?: { quantity: number; thing: string },
 ) {
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
@@ -197,6 +198,13 @@ async function createRecipe(
   });
   expect(response.ok(), await response.text()).toBeTruthy();
   const [recipe] = await response.json();
+  if (makes) {
+    const makesUpdate = await request.patch(`${config.apiUrl}/rest/v1/recipes?id=eq.${recipe.id}`, {
+      headers: serviceHeaders(config),
+      data: { makes_quantity: makes.quantity, makes_thing: makes.thing },
+    });
+    expect(makesUpdate.ok(), await makesUpdate.text()).toBeTruthy();
+  }
   return recipe as { id: string; version: number };
 }
 
@@ -1916,6 +1924,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       ],
       ' Bake at F!350 for =45m=.',
       ' Bake at 350°F for 45m.',
+      { quantity: 3, thing: 'baby cakes' },
     );
     publicId = await getPublicId(request, config, recipe.id);
     const carrotUpdate = await request.patch(
@@ -1936,6 +1945,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.getByRole('heading', { name: 'Public cooking view' })).toBeVisible();
     await page.getByRole('link', { name: 'Edit' }).click();
     await expect(page).toHaveURL(`/recipes/${recipe.id}/edit`);
+    await expect(page.getByLabel('Makes quantity')).toHaveValue('3');
+    await expect(page.getByLabel('Makes thing')).toHaveValue('baby cakes');
     await page.getByRole('button', { name: 'Manage recipe photos' }).click();
     const photoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
     const photoPattern = Buffer.from(
@@ -2172,13 +2183,28 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page).toHaveURL(`/recipes/${recipe.id}`);
 
     await page.goto(`/r/${publicId}`);
-    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    const outputButton = page.getByRole('button', {
+      name: /^(?:Print & )?Download$/u,
+    });
     await expect(
-      page.getByRole('heading', { name: 'Public cooking view - serves 4' }),
+      page.getByRole('heading', {
+        name: 'Public cooking view - serves 4 · Makes 3 baby cakes',
+      }),
     ).toBeVisible();
     await expect(page).toHaveTitle('Public cooking view | Recipe Box');
+    await expect(page.locator('.recipe-public-makes-inline')).toContainText('Makes 3 baby cakes');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-size', '16px');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-weight', '400');
+    const publicScaleButton = page.getByRole('button', { name: 'Scale recipe' });
+    await publicScaleButton.click();
+    const publicScalePane = page.getByRole('dialog', { name: 'Scale recipe' });
+    await publicScalePane.getByLabel('To').fill('8');
+    await publicScalePane.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.locator('.recipe-public-makes-inline')).toContainText('Makes 6 baby cakes');
+    await publicScaleButton.click();
+    await publicScalePane.getByRole('button', { name: 'Reset' }).click();
+    await expect(page.locator('.recipe-public-makes-inline')).toContainText('Makes 3 baby cakes');
+    await publicScaleButton.click();
     await expect(page.locator('.recipe-instruction-temperature')).toHaveText('350°F');
     await expect(page.getByText('Fold flour into batter.')).toBeVisible();
     const instructionPhoto = page.locator('.recipe-instruction-photo .framed-media-image');
@@ -2206,6 +2232,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(publicHtml).toMatch(/<img[^>]+src="data:image\/[^;]+;base64,/u);
     expect(publicHtml).not.toContain('storage/v1/object/sign');
     expect(publicHtml).not.toContain('Private note sentinel');
+    expect(publicHtml).toContain('recipe-public-makes-inline');
+    expect(publicHtml).toContain('3 baby cakes');
 
     const publicPngDownloadPromise = page.waitForEvent('download');
     await outputButton.click();
@@ -2434,6 +2462,51 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(summary.getByRole('heading', { name: 'Time Breakdown' })).toBeVisible();
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
+    const timeList = summary.locator('.recipe-time-list');
+    const totalTimeEntry = timeList.locator('.recipe-total-time');
+    await expect(timeList.locator('dt').first()).toHaveText('Total time');
+    const summaryViewport = page.viewportSize();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    expect(
+      await totalTimeEntry.evaluate((element) => getComputedStyle(element, '::after').display),
+    ).toBe('block');
+    const publicDividerGeometry = await totalTimeEntry.evaluate((element) => {
+      const next = element.nextElementSibling;
+      if (!next) return null;
+
+      const bounds = element.getBoundingClientRect();
+      const nextBounds = next.getBoundingClientRect();
+      const style = getComputedStyle(element, '::after');
+      const paddingRight = Number.parseFloat(getComputedStyle(element).paddingRight);
+      const dividerCenter =
+        bounds.right - Number.parseFloat(style.right) - Number.parseFloat(style.width) / 2;
+      const fieldGapCenter = (bounds.right - paddingRight + nextBounds.left) / 2;
+      return { dividerCenter, fieldGapCenter };
+    });
+    expect(publicDividerGeometry).not.toBeNull();
+    if (!publicDividerGeometry) {
+      throw new Error('Expected the public Total Time divider to have a following component time.');
+    }
+    expect(
+      Math.abs(publicDividerGeometry.dividerCenter - publicDividerGeometry.fieldGapCenter),
+    ).toBeLessThanOrEqual(1);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(totalTimeEntry).toHaveCSS('flex-basis', '100%');
+    expect(
+      await totalTimeEntry.evaluate((element) => getComputedStyle(element, '::after').display),
+    ).toBe('none');
+    const [publicTotalTimeBounds, publicFirstComponentBounds] = await Promise.all([
+      totalTimeEntry.boundingBox(),
+      timeList.locator('> div').nth(1).boundingBox(),
+    ]);
+    expect(publicTotalTimeBounds).not.toBeNull();
+    expect(publicFirstComponentBounds).not.toBeNull();
+    if (publicTotalTimeBounds && publicFirstComponentBounds) {
+      expect(publicFirstComponentBounds.y).toBeGreaterThanOrEqual(
+        publicTotalTimeBounds.y + publicTotalTimeBounds.height,
+      );
+    }
+    if (summaryViewport) await page.setViewportSize(summaryViewport);
     const publicGallery = page.locator('.recipe-public-overview-split .recipe-photo-gallery');
     const publicPhoto = publicGallery.locator('.recipe-photo-feature-image');
     await expect(publicPhoto).toBeVisible();
@@ -2572,7 +2645,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       await Promise.all([
         longTitle.boundingBox(),
         page.locator('.recipe-detail-title-row').boundingBox(),
-        page.getByRole('button', { name: 'Print & Download' }).boundingBox(),
+        page.getByRole('button', { name: /^(?:Print & )?Download$/u }).boundingBox(),
         page.getByRole('button', { name: 'Page settings' }).boundingBox(),
       ]);
     if (!longTitleBox || !longTitleRowBox || !longTitlePrintBox || !longTitleSettingsBox) {

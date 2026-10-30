@@ -4,8 +4,8 @@
 - "nuke all" button #24
 - add equipment in recipe (and for other picklists) #25
 🗸 allow for image cropping/sizing #6
-- convert the verdicts into actual ratings #10
-- add the ability to favorite? #10
+🗸 convert the verdicts into actual ratings #10
+🗸 add the ability to favorite? #10
 - look up all deferred stuff from the slices, have copilot assemble
 🗸 color library icon to automatically draw you to it #1
 🗸 the ability to jump to a picklist item by typing the first letter when selected #1

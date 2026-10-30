@@ -117,7 +117,8 @@ export type RecipeSearchSortKey =
   | 'pairs_with'
   | 'opinion'
   | 'citation'
-  | 'score';
+  | 'score'
+  | 'makes';
 
 export type RecipeSearchSortOption = { value: RecipeSearchSortKey; label: string };
 

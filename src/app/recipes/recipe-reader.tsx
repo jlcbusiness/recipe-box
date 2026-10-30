@@ -59,6 +59,7 @@ import {
   sortRecipeIngredients,
   transformIngredientForDisplay,
 } from '../../lib/recipes/recipe-reader-rules';
+import { formatRecipeMakes } from '../../lib/recipes/recipe-rules';
 import {
   Picklist as ReaderPicklist,
   type PicklistOption as ReaderPicklistOption,
@@ -590,6 +591,37 @@ export function RecipeServesControl({ serves }: { serves: number }) {
   );
 }
 
+export function RecipeMakesValue({
+  makesQuantity,
+  makesThing,
+}: {
+  makesQuantity: number;
+  makesThing: string;
+}) {
+  const { multiplier } = useRecipeScale();
+  return (
+    <dd className="recipe-makes-value">
+      <span>{formatRecipeMakes(makesQuantity, makesThing, multiplier)}</span>
+    </dd>
+  );
+}
+
+export function RecipeMakesInlineValue({
+  makesQuantity,
+  makesThing,
+}: {
+  makesQuantity: number;
+  makesThing: string;
+}) {
+  const { multiplier } = useRecipeScale();
+  return (
+    <span className="recipe-public-makes-inline">
+      {' · Makes '}
+      {formatRecipeMakes(makesQuantity, makesThing, multiplier)}
+    </span>
+  );
+}
+
 function ReaderUnitPicklist({
   ingredientName,
   dimension,
@@ -791,6 +823,29 @@ export function RecipeReader({
     ),
   }));
   const sortedIngredients = ingredientGroups.flatMap((group) => group.ingredients);
+  const ingredientFirstColumnPresence = { volume: false, weight: false, preparation: false };
+  for (const ingredient of sortedIngredients) {
+    const displayIngredient = transformIngredientForDisplay(ingredient, {
+      multiplier,
+      preserveStoredUnits,
+      unitSystems,
+      unitOverrides: unitOverrides[ingredient.id],
+    });
+    const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
+    ingredientFirstColumnPresence.volume ||= parts.measurements.some(
+      (measurement) =>
+        measurement.measurementType === 'volume' ||
+        measurement.measurementType === 'count' ||
+        measurement.measurementType === 'informal',
+    );
+    ingredientFirstColumnPresence.volume ||= Boolean(parts.unmeasuredPhrase);
+    ingredientFirstColumnPresence.weight ||= parts.measurements.some(
+      (measurement) => measurement.measurementType === 'weight',
+    );
+    ingredientFirstColumnPresence.preparation ||= Boolean(
+      parts.preparation || parts.size || renderPortionBreakdown(ingredient, displayIngredient),
+    );
+  }
   const ingredientStripes = new Map(
     ingredientGroups.flatMap(({ ingredients: groupIngredients }) =>
       groupIngredients.map(
@@ -965,6 +1020,10 @@ export function RecipeReader({
       const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
       const checked = Boolean(checkedIngredients[ingredient.id]);
       const portionBreakdown = renderPortionBreakdown(ingredient, displayIngredient);
+      const isDividedPreparation = parts.preparation?.toLocaleLowerCase() === 'divided';
+      const portionNoteClassName = isDividedPreparation
+        ? 'recipe-ingredient-portion-note recipe-ingredient-portion-note-divided'
+        : 'recipe-ingredient-portion-note';
 
       if (presentation === 'ingredient_first') {
         const hasDimensionalMeasurement = parts.measurements.some(
@@ -994,7 +1053,7 @@ export function RecipeReader({
                 {renderIngredientCheck(ingredient, true)}
               </td>
             )}
-            <th scope="row">
+            <th className="recipe-ingredient-column-ingredient" scope="row">
               <span className="recipe-reader-table-name">{parts.name}</span>
               {parts.specifics && (
                 <span className="recipe-reader-specifics">
@@ -1004,7 +1063,7 @@ export function RecipeReader({
             </th>
             {hasDimensionalMeasurement ? (
               <>
-                <td>
+                <td className="recipe-ingredient-column-volume">
                   {hasOtherMeasurement && (
                     <>
                       {otherMeasurements}
@@ -1019,27 +1078,42 @@ export function RecipeReader({
                     </>
                   )}
                 </td>
-                <td>
+                <td className="recipe-ingredient-column-weight">
                   {renderPortions(ingredient, displayIngredient, defaultIngredient, ['weight'])}
                 </td>
               </>
             ) : (
-              <td colSpan={2}>
-                {otherMeasurements}
-                {parts.unmeasuredPhrase && (
-                  <>
-                    {hasOtherMeasurement && ' '}
-                    {parts.unmeasuredPhrase}
-                  </>
-                )}
-              </td>
+              <>
+                <td className="recipe-ingredient-column-volume">
+                  {otherMeasurements}
+                  {parts.unmeasuredPhrase && (
+                    <>
+                      {hasOtherMeasurement && ' '}
+                      {parts.unmeasuredPhrase}
+                    </>
+                  )}
+                </td>
+                <td className="recipe-ingredient-column-weight" />
+              </>
             )}
-            <td>
-              {[parts.preparation, parts.size].filter(Boolean).join(' ')}
+            <td className="recipe-ingredient-column-preparation">
+              <span
+                className={
+                  isDividedPreparation ? 'recipe-ingredient-preparation-divided' : undefined
+                }
+              >
+                {[parts.preparation, parts.size].filter(Boolean).join(' ')}
+              </span>
               {portionBreakdown && (
-                <span className="recipe-ingredient-portion-note">
-                  {parts.preparation ? ' ' : 'divided '}
-                  {portionBreakdown}
+                <span className={portionNoteClassName}>
+                  {parts.preparation ? (
+                    ' '
+                  ) : (
+                    <>
+                      <span className="recipe-ingredient-portion-label">divided</span>{' '}
+                    </>
+                  )}
+                  <span className="recipe-ingredient-portion-values">{portionBreakdown}</span>
                 </span>
               )}
             </td>
@@ -1114,6 +1188,18 @@ export function RecipeReader({
   const DirectionIcon = sortDirection === 'ascending' ? ArrowUp : ArrowDown;
   const hasSortDirection = sortMode === 'alphabetical' || sortMode === 'size';
   const presentationSummary = presentation === 'ingredient_first' ? 'first' : 'standard';
+  const ingredientFirstTableClasses = [
+    'recipe-ingredient-table',
+    'recipe-ingredient-first-table',
+    cookMode ? 'recipe-ingredient-first-table-cook-mode' : '',
+    ingredientFirstColumnPresence.volume ? '' : 'recipe-ingredient-first-table-hide-volume-mobile',
+    ingredientFirstColumnPresence.weight ? '' : 'recipe-ingredient-first-table-hide-weight-mobile',
+    ingredientFirstColumnPresence.preparation
+      ? ''
+      : 'recipe-ingredient-first-table-hide-preparation-mobile',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
@@ -1213,32 +1299,29 @@ export function RecipeReader({
             // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users need a tab stop to scroll this region.
             tabIndex={0}
           >
-            <table
-              aria-label="Recipe ingredients"
-              className={`recipe-ingredient-table recipe-ingredient-first-table${cookMode ? ' recipe-ingredient-first-table-cook-mode' : ''}`}
-            >
-              {cookMode && (
-                <colgroup>
-                  <col className="recipe-cook-checkbox-column" />
-                  <col />
-                  <col />
-                  <col />
-                  <col />
-                </colgroup>
-              )}
+            <table aria-label="Recipe ingredients" className={ingredientFirstTableClasses}>
+              <colgroup>
+                {cookMode && <col className="recipe-cook-checkbox-column" />}
+                <col className="recipe-ingredient-column-ingredient" />
+                <col className="recipe-ingredient-column-volume" />
+                <col className="recipe-ingredient-column-weight" />
+                <col className="recipe-ingredient-column-preparation" />
+              </colgroup>
               <thead className="visually-hidden">
                 <tr>
                   {cookMode && <td aria-hidden="true" className="recipe-cook-checkbox-heading" />}
-                  <th scope="col">Ingredient</th>
-                  <th scope="col">
+                  <th className="recipe-ingredient-column-ingredient" scope="col">
+                    Ingredient
+                  </th>
+                  <th className="recipe-ingredient-column-volume" scope="col">
                     <span className="recipe-reader-label-desktop">Volume</span>
                     <span className="recipe-reader-label-mobile">Vol</span>
                   </th>
-                  <th scope="col">
+                  <th className="recipe-ingredient-column-weight" scope="col">
                     <span className="recipe-reader-label-desktop">Weight</span>
                     <span className="recipe-reader-label-mobile">Wt</span>
                   </th>
-                  <th scope="col">
+                  <th className="recipe-ingredient-column-preparation" scope="col">
                     <span className="recipe-reader-label-desktop">Preparation</span>
                     <span className="recipe-reader-label-mobile">Prep</span>
                   </th>

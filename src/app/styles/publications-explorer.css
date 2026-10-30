@@ -133,6 +133,11 @@
     margin: 0;
   }
 
+  .recipe-print-metadata-times .recipe-time-list > .recipe-total-time:not(:only-child)::after,
+  .recipe-public-summary .recipe-time-list > .recipe-total-time:not(:only-child)::after {
+    right: -0.5px;
+  }
+
   .recipe-print-metadata .recipe-detail-classification {
     margin-top: 4px;
   }
@@ -3434,6 +3439,7 @@
 .explorer-list-preferences:not([data-visible-columns~="occasion_details"])
   [data-explorer-column="occasion_details"],
 .explorer-list-preferences:not([data-visible-columns~="serves"]) [data-explorer-column="serves"],
+.explorer-list-preferences:not([data-visible-columns~="makes"]) [data-explorer-column="makes"],
 .explorer-list-preferences:not([data-visible-columns~="equipment"])
   [data-explorer-column="equipment"],
 .explorer-list-preferences:not([data-visible-columns~="food_type"])

@@ -16,7 +16,7 @@ import {
   serializeInstructionSteps,
 } from '../../lib/recipes/instruction-rules';
 import { parseGroupedInteger } from '../../lib/recipes/measurement-rules';
-import { isRecipeScore } from '../../lib/recipes/recipe-rules';
+import { isRecipeScore, parseMakesInput } from '../../lib/recipes/recipe-rules';
 import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
@@ -331,6 +331,15 @@ export async function saveRecipe(
     return { error: 'Serves must be a whole number greater than zero.' };
   }
 
+  const makesThingValue = formData.get('makes_thing');
+  if (makesThingValue !== null && typeof makesThingValue !== 'string') {
+    return { error: 'Makes thing must be text.' };
+  }
+  const makes = parseMakesInput(formText(formData, 'makes_quantity'), makesThingValue ?? '');
+  if ('error' in makes) {
+    return { error: makes.error };
+  }
+
   const scoreText = formText(formData, 'score');
   const parsedScore = scoreText ? Number(scoreText) : null;
   if (
@@ -359,7 +368,7 @@ export async function saveRecipe(
     return { error: 'Enter a valid HTTP(S) URL.' };
   }
 
-  const { data, error } = await supabase.rpc('save_recipe_with_score', {
+  const { data, error } = await supabase.rpc('save_recipe_with_makes', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_name: name,
@@ -370,6 +379,8 @@ export async function saveRecipe(
     p_occasion_details: formText(formData, 'occasion_details') || null,
     p_reason: formText(formData, 'reason') || null,
     p_serves: serves,
+    p_makes_quantity: makes.quantity,
+    p_makes_thing: makes.thing,
     p_prep_time_minutes: times.prep_time_minutes,
     p_mixing_time_minutes: times.mixing_time_minutes,
     p_marinate_time_minutes: times.marinate_time_minutes,

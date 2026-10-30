@@ -20,7 +20,7 @@ const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -136,6 +136,40 @@ function createBundleEntries(options: {
 }
 
 describe('import bundle validation', () => {
+  it('preserves Makes fields in version 8 bundles and accepts version 7 without them', () => {
+    const currentEntries = createBundleEntries({
+      schemaVersion: 8,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        score: null,
+        is_starred: false,
+        is_hearted: false,
+        makes_quantity: 2,
+        makes_thing: 'baby cakes',
+      },
+    });
+    const legacyEntries = createBundleEntries({
+      schemaVersion: 7,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        score: null,
+        is_starred: false,
+        is_hearted: false,
+      },
+    });
+
+    expect(validateImportBundleFiles(currentEntries).data.records.recipes[0]).toMatchObject({
+      makes_quantity: 2,
+      makes_thing: 'baby cakes',
+    });
+    expect(validateImportBundleFiles(legacyEntries).data.records.recipes[0]).toMatchObject({
+      makes_quantity: null,
+      makes_thing: null,
+    });
+  });
+
   it('preserves distinct original and framed image variants in version 7 bundles', () => {
     const entries = createBundleEntries({
       schemaVersion: 7,
@@ -204,6 +238,7 @@ describe('import bundle validation', () => {
       'score',
       'starred',
       'hearted',
+      'makes',
     ]);
   });
 
@@ -396,6 +431,8 @@ describe('import bundle validation', () => {
         score: null,
         is_starred: false,
         is_hearted: false,
+        makes_quantity: null,
+        makes_thing: null,
       },
     ]);
     expect(bundle.data.records.recipe_ingredient_sets).toHaveLength(1);

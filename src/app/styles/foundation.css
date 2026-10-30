@@ -2017,7 +2017,8 @@ h1 {
   flex: 1 1 auto;
 }
 
-.recipe-public-serves-inline {
+.recipe-public-serves-inline,
+.recipe-public-makes-inline {
   font-size: 16px;
   font-weight: 400;
 }

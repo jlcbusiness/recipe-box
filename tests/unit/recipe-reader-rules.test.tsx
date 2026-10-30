@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  RecipeMakesValue,
   RecipeReader,
   RecipeReaderProvider,
   RecipeServesControl,
@@ -520,6 +521,10 @@ describe('recipe reader measurement rules', () => {
             <dt>Serves</dt>
             <RecipeServesControl serves={4} />
           </div>
+          <div>
+            <dt>Makes</dt>
+            <RecipeMakesValue makesQuantity={2} makesThing="baby" />
+          </div>
         </dl>
         <RecipeReader
           defaultPresentation="standard"
@@ -571,17 +576,18 @@ describe('recipe reader measurement rules', () => {
     fireEvent.change(screen.getByLabelText('By'), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect(screen.getByText('Serves 8')).toBeDefined();
+    expect(screen.getByText('4 baby')).toBeDefined();
     expect(screen.getByRole('listitem').textContent?.replace(/\s+/gu, ' ').trim()).toBe(
       '2 cups flour',
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Scale recipe' }));
-    fireEvent.change(screen.getByLabelText('By'), { target: { value: '3' } });
-    fireEvent.keyDown(screen.getByLabelText('By'), { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: 'Scale recipe' })).toBeNull();
-    expect(screen.getByText('Serves 8')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.getByRole('dialog', { name: 'Scale recipe' })).toBeDefined();
+    expect(screen.getByText('Serves 4')).toBeDefined();
+    expect(screen.getByText('2 baby')).toBeDefined();
     expect(screen.getByRole('listitem').textContent?.replace(/\s+/gu, ' ').trim()).toBe(
-      '2 cups flour',
+      '1 cup flour',
     );
   });
 

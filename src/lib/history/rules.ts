@@ -33,6 +33,8 @@ const fieldLabels: Record<string, string> = {
   occasion_details: 'Occasion details',
   reason: 'Reason',
   serves: 'Serves',
+  makes_quantity: 'Makes quantity',
+  makes_thing: 'Makes thing',
   prep_time_minutes: 'Prep time',
   mixing_time_minutes: 'Mixing time',
   marinate_time_minutes: 'Marinating time',

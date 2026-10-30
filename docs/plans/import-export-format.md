@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 7 archive contains:
+A version 8 archive contains:
 
 ```text
 manifest.json
@@ -31,7 +31,7 @@ already the official image.
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 7,
+  "schema_version": 8,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "0.1.0",
   "scope": {
@@ -70,7 +70,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 7,
+  "schema_version": 8,
   "scope": {
     "type": "database"
   },
@@ -100,7 +100,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v7; future
+array contains only the normalized product fields selected for v8; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -117,7 +117,9 @@ uncropped files needed for future edits. A source path may alias its official
 path. `byte_size` counts every distinct stored file, while
 `source_byte_size` counts the retained source variants. The nullable ratio
 stores portion 1's share of the canonical total; ordinal 1 or 2 identifies the
-referenced portion.
+referenced portion. Recipe rows include nullable `makes_quantity` and
+`makes_thing` fields, which are either both null or a positive integer and
+non-empty authored text. Versions 1 through 7 import both Makes fields as null.
 `account_preferences` contains only product preferences and is empty for
 publication and recipe scopes. Database bundles may include
 `include_instruction_photos_in_private_print`; the boolean is optional so
@@ -153,9 +155,10 @@ Version 2 adds ingredient-set records and row membership. Version 3 adds
 divided-portion ratios, Size values and units, and mention ordinals. Version 4
 adds nullable media crop framing with 0-degree rotation. Version 5 adds
 quarter-turn rotation. Version 6 adds recipe ratings and independent star and
-heart markers. Version 7 is current and preserves distinct official display
-images and retained source images so future framing edits remain reversible.
-Versions 1 through 6 import with their existing compatibility rules; older
+heart markers. Version 7 preserves distinct official display images and
+retained source images so future framing edits remain reversible. Version 8 is
+current and adds the optional paired Makes quantity and thing. Versions 1
+through 7 import with their existing compatibility rules; older
 media rows treat their full and thumbnail files as the retained source.
 
 A v1 import synthesizes one `Main` set per recipe and assigns that recipe's
@@ -169,7 +172,7 @@ upgrades never reinterpret a missing field as permission to expose private
 content.
 
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 7, verify all file sizes and checksums before
+accept only versions 1 through 8, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

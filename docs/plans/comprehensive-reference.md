@@ -94,7 +94,8 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Occasion Details** | Free text | Text string describing the occasion | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected. |
 | **Reason** | Single-line text | Text string explaining rejection | Visible **only** when `State == Will not try`. |
 | **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Settings-managed multi-select dropdown; follows Serves on the State row. |
-| **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears at the end of the State row, immediately before Equipment. It is the base serving count for recipe scaling; discrete-item Yield is not captured in this field. |
+| **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling. |
+| **Makes** | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes` | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged. |
 | **Tags** | Multi-select account-owned tags | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17. |
 | **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
 
@@ -249,11 +250,14 @@ time is broken down into specific categories:
   marker indicators. Detail view
   uses content-sized wrapping metadata in this
   order: State/response, Occasion
-  Details when present, Serves, Total Time, Equipment, Food Type, Meal Type,
-  Cuisine, remaining times, then Notes. On desktop, Food Type, Meal Type, and
-  Cuisine occupy a dedicated full-width row. On mobile, component times and
-  Total Time appear in a separate subsection with a divider and small-caps
-  “Time Breakdown” title; desktop Total Time remains in the main metadata.
+  Details when present, Serves, Makes, Equipment, Food Type, Meal Type,
+  Cuisine, then Notes. On desktop, Food Type, Meal Type, and Cuisine occupy a
+  dedicated full-width row. Total Time leads the separate time breakdown on
+  private and public pages. On mobile, it occupies a full-width row above
+  component times in the subsection with a divider and small-caps “Time
+  Breakdown” title. On desktop, a fixed vertical rule separates Total Time
+  from component times, centered in the gap before the first component time.
+  Omit the rule when no component time is present.
   Recipe Tin does not appear as a
   duplicate breadcrumb or attribution when it is already selected in navigation.
   Recipe-page headings are about 16pt (about 21.33px). A recipe assigned to a
@@ -490,6 +494,9 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
 - **Column 1: Ingredient** (with Specifics rendered as a distinct subtitle beneath the name).
 - **Column 2: Amount** (quantity and unit, formatted as volume / weight if dual).
 - **Column 3: Preparation** (diced, melted, minced, etc.).
+- In mobile Ingredient-First view, put divided portion ratios on a separate
+  line below the `divided` label. Keep desktop Ingredient-First and Standard
+  presentation inline.
 
 ```text
 +---------------------------+----------------+---------------+
@@ -528,11 +535,11 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
   the toolbar on its own row below the summary. The sort-direction control keeps
   its slot when unavailable on wider layouts, but collapses on mobile so visible
   controls align with the heading. The Screen Lock control follows Scale at the
-  standard mobile toolbar gap. Cook-mode check-off keeps its 48px target and may
-  reclaim only the ingredient-side spacing needed for its checkbox rail at
-  narrow widths. In mobile Ingredient-first cook mode, the table remains aligned
-  to the section's left edge instead of shifting right to center the added
-  checkbox column.
+  standard mobile toolbar gap. In mobile Ingredient-first cook mode, the table
+  remains aligned to the section's left edge instead of shifting right to
+  center the added checkbox column. The 21px checkbox rail gives the checkbox
+  1mm clearance from the table edge and ingredient column, with a 48px-tall hit
+  area.
 
 ### 4.2 Ingredient Sorting Options
 
@@ -1235,8 +1242,9 @@ When an unauthenticated guest accesses a valid public recipe link:
     remain static text.
   - In-app pairs-with links are displayed as static text.
 
-The public time summary is labeled “Time Breakdown” and follows the shared
-duration format in 2.2. Public ingredients use the same transient scalar
+The public time summary is labeled “Time Breakdown,” places Total Time before
+component times, and follows the shared duration format in 2.2. Public
+ingredients use the same transient scalar
 teaspoon `pinch` display rule; saved account unit preferences are never read or
 exposed.
 
@@ -1356,7 +1364,7 @@ Print requests landscape while leaving the browser dialog authoritative.
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 7 archives
+user-facing backup mechanism; Supabase backups are not used. Version 8 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
@@ -1398,7 +1406,7 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Imports accept supported v1 through v7 bundles only after validating archive
+Imports accept supported v1 through v8 bundles only after validating archive
 integrity, scope, and required graph data. Versions 1 through 3 default media
 framing to null (Fit/contain); version 4 preserves each media asset's nullable
 normalized crop rectangle at 0-degree rotation, and version 5 preserves its
@@ -1406,6 +1414,8 @@ quarter-turn rotation. Version 6 adds recipe ratings and personal markers.
 Version 7 preserves distinct official display and retained-source image
 variants; versions 1 through 6 treat their full and thumbnail files as the
 source. Invalid framing is rejected before applying records.
+Version 8 preserves the paired Makes quantity and thing; earlier versions
+default both fields to null.
 Version 1 recipes receive a synthesized `Main` set and their ingredient rows
 are assigned to it. Version 2
 preserves the included set records and row membership. Versions 1 and 2 default

@@ -36,7 +36,7 @@ security without prematurely creating recipe or other domain tables.
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
+| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient and optional trusted density. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
@@ -90,6 +90,9 @@ columns.
   value.
 - Main ingredients are derived from recipe-ingredient flags, not duplicated
   recipe metadata.
+- Makes is an optional recipe-level pair: a positive integer quantity and
+  non-empty authored thing text. Both are present or absent together; reader
+  scaling changes only the displayed quantity.
 - A divided row stores its first-portion ratio; the second portion uses the
   complement, and existing measurements remain the canonical total. Only
   scalar Unit, Count, and Things measurements divide.
@@ -144,8 +147,9 @@ columns.
   next saved or reset. Crop updates use the active parent's version and append
   the corresponding history event.
   `byte_size` counts all distinct stored source and display files, and
-  `source_byte_size` counts the retained source variants. Portable bundle v7
-  preserves all image variants; versions 1 through 6 treat their full and
+  `source_byte_size` counts the retained source variants. Portable bundle v8
+  preserves all image variants and paired Makes fields; versions 1 through 7
+  treat their full and
   thumbnail files as the source. Public projections sign only official
   display paths, never retained source paths.
   Recipe photos also have a unique, persisted two-digit reference code within

@@ -114,17 +114,19 @@ and full-width metadata groups.
   at a time; Escape closes it and returns focus to the trigger.
 - **State is explicit:** Name occupies the first row. State defaults to Want to
   try; its active Enthusiasm, Verdict, Rating, Reason, or Occasion Details
-  field shares the next row with State, with Serves at the end of that row.
+  field shares the next row with State, followed by Serves and the paired Makes
+  controls under one heading.
   Tried recipes show Verdict and optional Rating together. The following row
-  holds Food Type, Meal Type, and Cuisine. Equipment follows Serves on the
-  State row.
+  holds Food Type, Meal Type, and Cuisine. Equipment follows Makes on the State
+  row.
 - **Time is deliberate:** Component minutes are small, spinner-free numeric
   inputs. Total Time is separate and changes only through the adjacent sigma
   action.
-- **Group mobile view times:** Keep Total Time in the main recipe metadata. Show
-  component times in a separate subsection with a divider and small-caps
-  “Times” title on mobile. The current title is 18px navy small caps; component
-  labels remain muted.
+- **Group view times:** Put Total Time first in the private and public time
+  breakdowns. On mobile, give it a full-width row above component times. On
+  desktop, separate it from component times with a fixed vertical rule. Keep the
+  mobile subsection divider and 18px navy small-caps “Time Breakdown” title;
+  component labels remain muted.
 
 ### Picklist behavior
 
@@ -152,9 +154,9 @@ Single- and multi-picklist labels share the same 13px bold typography. Trigger
 text stays regular-weight whether selected or not, so neither control type
 looks heavier by default.
 
-Recipe metadata inputs, single- and multi-picklist triggers, Serves, Reason,
-and Occasion Details remain 36px high on desktop and mobile, matching Name and
-Publication. Multi-picklist options have a 30px minimum on desktop and 36px on
+Recipe metadata inputs, single- and multi-picklist triggers, Serves, both Makes
+controls, Reason, and Occasion Details remain 36px high on desktop and mobile,
+matching Name and Publication. Multi-picklist options have a 30px minimum on desktop and 36px on
 mobile. Keep component-time inputs compact; larger hit areas belong to distinct
 actions, not these recipe-entry controls.
 
@@ -178,10 +180,14 @@ immediately before Once-a-year-rich and So-so. Reason is a single-line field.
 
 ### Serves and times
 
-Serves is one optional positive integer with no group heading. Equipment follows
-it on the State row. Center the numeric text and label text for Serves and time
-fields. The Serves input is 36px high on desktop and mobile, matching the
-recipe picklist triggers.
+Serves is one optional positive integer. The Makes group has one heading over a
+positive integer quantity and free-text thing input; its values are either both
+present or both blank. Equipment follows Makes on the State row. Center the
+numeric text and label text for Serves, Makes quantity, and time fields. Serves
+and Makes controls are 36px high on desktop and mobile, matching the recipe
+picklist triggers. Keep the Makes quantity and thing inputs on one line at every
+viewport: size quantity for two digits and let the thing input fill the remaining
+width under the shared heading.
 Times are grouped under “Times (min)” and wrap naturally. Each numeric input is
 sized to five characters or its visible label, whichever needs more room, with
 8px gaps. Total occupies its own final row, with a square icon-only `Σ` button
@@ -229,9 +235,15 @@ On narrow desktop recipe details, let the featured image shrink only as needed
 to keep the action bar within the available heading width.
 Recipe detail follows the edit-form order but uses a distinct view
 order: State and its active response, optional Rating, Occasion Details when
-present, Serves, Total Time, Equipment, Food Type, Meal Type, Cuisine, remaining
-times, then Notes. On desktop, Food Type, Meal Type, and Cuisine share their own full-width
-row. Private recipe detail places alphabetized tag chips beneath the heading,
+present, Serves, Makes, Equipment, Food Type, Meal Type, Cuisine, then Notes.
+Total Time leads the separate time breakdown instead of appearing in metadata.
+Center the numeric Rating value beneath its label on desktop and mobile.
+On desktop, Food Type, Meal Type, and Cuisine share their own full-width row.
+Center the fixed vertical rule in the gap between Total Time and the first
+component time; omit it when there are no component times.
+The Makes heading labels its value, so show only the quantity and authored thing
+in the value. The public title has no separate
+Makes heading and retains the inline label. Private recipe detail places alphabetized tag chips beneath the heading,
 with a compact action toolbar below. The toolbar orders immediate Star and
 Heart stamp toggles before share and privacy controls, **Print & Download**,
 Export, **Page Settings**, and Edit. Star and Heart are independent of State.
@@ -658,8 +670,10 @@ widest Standard ingredient row plus 1mm or the natural width of the Ingredients
 heading and toolbar plus 4mm; Instructions uses the remaining space.
 Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
 Preparation columns, and its natural table width is the row-width basis for
-the same sizing rule. Count, informal, and unmeasured values span the Volume
-and Weight columns; Volume and Weight remain separate when present.
+the same sizing rule. Count, informal, and unmeasured values appear in Volume
+when no dimensional measurement is present; Volume and Weight remain separate.
+At 760px and below, hide any Volume, Weight, or Preparation column that has no
+content anywhere in the recipe.
 Ingredient-first rows alternate a light-tin shade for readability; the other
 rows and ingredient-set dividers remain unshaded in private and public reader
 views. Printed ingredient-first output retains the light-tin shading, gives the
@@ -673,7 +687,9 @@ on mobile. Mobile headers shorten to Vol, Wt, and Prep. At 760px and below,
 Ingredients and Instructions stack vertically and the table fills the
 Ingredients section. On narrower desktop widths, constrain the Ingredients
 track to the available reader width and keep any table overflow local rather
-than allowing page-level horizontal overflow. The desktop reader initializes
+than allowing page-level horizontal overflow. In mobile Ingredient-first view,
+show divided portion ratios on a separate line beneath the “divided” label;
+preserve inline formatting on desktop and in Standard view. The desktop reader initializes
 from the saved account default, while mobile starts Ingredient-first. A
 reader's explicit change is transient.
 
@@ -717,7 +733,9 @@ Ingredient column. Exiting mode or changing recipes clears check-off, and
 system-released locks can be reacquired when the document becomes visible.
 Unit labels, including single-letter abbreviations such as `g`, have one
 continuous underline at rest. In mobile Ingredient-first cook mode, the table
-stays aligned to the section's left edge when the checkbox rail is present.
+stays aligned to the section's left edge when the checkbox rail is present. The
+checkbox rail is 21px wide, placing the checkbox 1mm from the table edge and
+1mm from the ingredient column while keeping its hit area 48px tall.
 In the private reader's automatic same-system display, fractions at or above
 `1/4` stay in their current unit unless they equal exactly one smaller unit or
 the immediate smaller unit expresses the amount as a fraction from `1/4` up to
@@ -749,8 +767,9 @@ current scaled and converted amount in one square popup above the mention,
 clamped to the visual viewport, with a strong background and small pointer
 tail; click or tap pins it, and Escape or outside interaction dismisses it.
 The popup contains no nested tooltip and does not print. Scaling
-controls retain the active scale and unit choices for print. Serves stays in
-recipe metadata and updates only after scale submission. The Scale icon is in
+controls retain the active scale and unit choices for print. Serves and Makes
+stay in recipe metadata and update only after scale submission; Makes scales
+its quantity without changing the authored thing text. The Scale icon is in
 the Ingredients toolbar and opens a compact pane with Scale, To, Reset when the
 value differs from its base, a filled Submit button, and a top-right close
 control. The integer field is centered and has no spinner arrows. Escape or
@@ -890,7 +909,9 @@ every width, with a 48px touch target, accessible name, tooltip, and visible
 focus. Put the text toggles before Print on desktop and below the title on
 narrow screens. When the recipe has a serving count, append
 `- serves n` to its title, separated by a space, in regular 16px text. Do not
-repeat Serves in the separate metadata summary.
+repeat Serves in the separate metadata summary. Show Makes beside Serves in the
+public title; scale only its quantity and preserve its authored thing. Standalone
+output retains both values beside the recipe name.
 
 Public photos use the shared featured-image gallery: show one selected,
 framed feature image and, when there is more than one photo, compact selectable

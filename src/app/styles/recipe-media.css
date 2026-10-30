@@ -1458,7 +1458,8 @@
   text-decoration-thickness: 1px;
 }
 
-.recipe-serves-value {
+.recipe-serves-value,
+.recipe-makes-value {
   gap: 4mm;
   color: var(--ink);
   font-weight: 500;
@@ -1905,6 +1906,11 @@ section.recipe-detail-section .recipe-relationship-list a {
   overflow-wrap: anywhere;
 }
 
+.recipe-detail-rating-metadata dd {
+  justify-content: center;
+  text-align: center;
+}
+
 .recipe-detail-score {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1921,17 +1927,28 @@ section.recipe-detail-section .recipe-relationship-list a {
   margin-top: 11px;
 }
 
-.recipe-detail-times-mobile-only,
-.recipe-metadata > .recipe-detail-mobile-total-time {
-  display: none;
-}
-
 .recipe-detail-times-title {
   display: none;
 }
 
 .recipe-time-list {
   margin-top: 0;
+}
+
+.recipe-time-list > .recipe-total-time {
+  position: relative;
+  padding-right: 14px;
+}
+
+.recipe-time-list > .recipe-total-time:not(:only-child)::after {
+  position: absolute;
+  top: 0;
+  right: -7.5px;
+  bottom: 0;
+  display: block;
+  width: 1px;
+  background: var(--line);
+  content: "";
 }
 
 .recipe-attribution {
@@ -2310,6 +2327,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .recipe-ingredient-first-table {
     margin-left: 0;
+    table-layout: auto;
   }
 
   .recipe-ingredient-first-table-scroll {
@@ -2340,6 +2358,38 @@ section.recipe-detail-section .recipe-relationship-list a {
   .private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table th,
   .private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table td {
     padding-right: 1mm;
+  }
+
+  .recipe-ingredient-first-table-hide-volume-mobile .recipe-ingredient-column-volume,
+  .recipe-ingredient-first-table-hide-weight-mobile .recipe-ingredient-column-weight,
+  .recipe-ingredient-first-table-hide-preparation-mobile .recipe-ingredient-column-preparation {
+    display: none;
+  }
+
+  .recipe-ingredient-first-table .recipe-ingredient-portion-label,
+  .recipe-ingredient-first-table .recipe-ingredient-portion-note-divided {
+    display: block;
+  }
+
+  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-column,
+  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-heading,
+  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell {
+    width: 21px;
+    min-width: 21px;
+  }
+
+  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell {
+    padding-right: 0;
+  }
+
+  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell .recipe-cook-checkbox {
+    width: 21px;
+    min-width: 21px;
+    justify-content: flex-start;
+  }
+
+  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell input {
+    margin-left: 1mm;
   }
 
   .recipe-ingredient-set-divider th,
@@ -3123,21 +3173,13 @@ section.recipe-detail-section .recipe-relationship-list a {
     padding-top: 11px;
   }
 
-  .recipe-metadata > .recipe-detail-total-time-metadata {
+  .recipe-time-list > .recipe-total-time {
+    flex: 1 0 100%;
+    padding-right: 0;
+  }
+
+  .recipe-time-list > .recipe-total-time:not(:only-child)::after {
     display: none;
-  }
-
-  .recipe-detail-rating-metadata dd {
-    justify-content: center;
-    text-align: center;
-  }
-
-  .recipe-detail-times-mobile-only {
-    display: block;
-  }
-
-  .recipe-metadata > .recipe-detail-mobile-total-time {
-    display: grid;
   }
 
   .recipe-detail-times-title {

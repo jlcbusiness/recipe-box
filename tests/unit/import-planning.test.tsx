@@ -34,7 +34,13 @@ function createInput() {
     { id: sourcePublicationId, publication_type: 'book', name: 'Baking Annual' },
   ];
   data.records.recipes = [
-    { id: sourceRecipeId, publication_id: sourcePublicationId, name: 'Lemon cake' },
+    {
+      id: sourceRecipeId,
+      publication_id: sourcePublicationId,
+      name: 'Lemon cake',
+      makes_quantity: 2,
+      makes_thing: 'baby cakes',
+    },
   ];
   data.records.recipe_steps = [
     {
@@ -90,6 +96,8 @@ describe('database import planning', () => {
         id: newRecipeId,
         publication_id: newPublicationId,
         name: 'Lemon cake',
+        makes_quantity: 2,
+        makes_thing: 'baby cakes',
         is_private: true,
       },
     ]);
@@ -127,6 +135,8 @@ describe('database import planning', () => {
       id: newRecipeId,
       publication_id: destinationPublicationId,
       name: 'Lemon cake (Imported)',
+      makes_quantity: 2,
+      makes_thing: 'baby cakes',
     });
   });
 

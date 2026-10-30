@@ -57,6 +57,8 @@ type PublicRecipeRow = {
   publication_id: string | null;
   publication_page: string | null;
   serves: number | null;
+  makes_quantity: number | null;
+  makes_thing: string | null;
   prep_time_minutes: number | null;
   mixing_time_minutes: number | null;
   marinate_time_minutes: number | null;
@@ -153,7 +155,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   const { data: row, error } = await supabase
     .from('recipes')
     .select(
-      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes',
+      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes',
     )
     .eq('public_id', publicId)
     .maybeSingle();

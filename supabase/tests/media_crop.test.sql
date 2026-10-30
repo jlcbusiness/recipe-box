@@ -102,9 +102,11 @@ select ok(
     from pg_catalog.pg_proc as routine
     join pg_catalog.pg_namespace as proc_schema on proc_schema.oid = routine.pronamespace
     where proc_schema.nspname = 'public'
-      and routine.proname = 'update_media_crop'
+      and routine.proname = 'update_media_crop_assets_with_dimensions'
       and pg_catalog.pg_get_function_identity_arguments(routine.oid) =
-        'p_asset_id uuid, p_expected_version integer, p_crop jsonb'
+        'p_asset_id uuid, p_expected_version integer, p_crop jsonb, p_full_path text, '
+        || 'p_thumbnail_path text, p_byte_size bigint, p_display_width integer, '
+        || 'p_display_height integer'
   ),
   'framing changes use the version-checked media RPC'
 );
@@ -124,7 +126,7 @@ select ok(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.update_media_crop(uuid, integer, jsonb)',
+    'public.update_media_crop_assets_with_dimensions(uuid, integer, jsonb, text, text, bigint, integer, integer)',
     'EXECUTE'
   ),
   'authenticated owners can request framing changes'
@@ -133,12 +135,12 @@ select ok(
 select ok(
   not has_function_privilege(
     'anon',
-    'public.update_media_crop(uuid, integer, jsonb)',
+    'public.update_media_crop_assets_with_dimensions(uuid, integer, jsonb, text, text, bigint, integer, integer)',
     'EXECUTE'
   )
   and not has_function_privilege(
     'public',
-    'public.update_media_crop(uuid, integer, jsonb)',
+    'public.update_media_crop_assets_with_dimensions(uuid, integer, jsonb, text, text, bigint, integer, integer)',
     'EXECUTE'
   ),
   'anonymous and public roles cannot request framing changes'
@@ -169,10 +171,15 @@ set local role authenticated;
 
 select throws_ok(
   $$
-    select * from public.update_media_crop(
+    select * from public.update_media_crop_assets_with_dimensions(
       '20000000-0000-4000-8000-000000000004',
       0,
-      '{"left":0.1,"top":0.1,"width":0.5,"height":0.5,"rotation":0}'::jsonb
+      '{"left":0.1,"top":0.1,"width":0.5,"height":0.5,"rotation":0}'::jsonb,
+      '20000000-0000-4000-8000-000000000001/assets/20000000-0000-4000-8000-000000000004/framing/40000000-0000-4000-8000-000000000001/full.webp',
+      '20000000-0000-4000-8000-000000000001/assets/20000000-0000-4000-8000-000000000004/framing/40000000-0000-4000-8000-000000000001/thumb.webp',
+      101,
+      16,
+      12
     )
   $$,
   'PT409',
@@ -181,10 +188,15 @@ select throws_ok(
 );
 
 select is(
-  (select version from public.update_media_crop(
+  (select version from public.update_media_crop_assets_with_dimensions(
     '20000000-0000-4000-8000-000000000004',
     1,
-    '{"left":0.1,"top":0.1,"width":0.5,"height":0.5,"rotation":0}'::jsonb
+    '{"left":0.1,"top":0.1,"width":0.5,"height":0.5,"rotation":0}'::jsonb,
+    '20000000-0000-4000-8000-000000000001/assets/20000000-0000-4000-8000-000000000004/framing/40000000-0000-4000-8000-000000000001/full.webp',
+    '20000000-0000-4000-8000-000000000001/assets/20000000-0000-4000-8000-000000000004/framing/40000000-0000-4000-8000-000000000001/thumb.webp',
+    101,
+    16,
+    12
   )),
   2,
   'an owner can save framing and the parent version increments'
@@ -205,10 +217,15 @@ select set_config(
 
 select throws_ok(
   $$
-    select * from public.update_media_crop(
+    select * from public.update_media_crop_assets_with_dimensions(
       '20000000-0000-4000-8000-000000000004',
       2,
-      '{"left":0.2,"top":0.2,"width":0.4,"height":0.4,"rotation":0}'::jsonb
+      '{"left":0.2,"top":0.2,"width":0.4,"height":0.4,"rotation":0}'::jsonb,
+      '20000000-0000-4000-8000-000000000001/assets/20000000-0000-4000-8000-000000000004/framing/40000000-0000-4000-8000-000000000001/full.webp',
+      '20000000-0000-4000-8000-000000000001/assets/20000000-0000-4000-8000-000000000004/framing/40000000-0000-4000-8000-000000000001/thumb.webp',
+      101,
+      16,
+      12
     )
   $$,
   'P0002',

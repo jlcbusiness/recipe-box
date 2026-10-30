@@ -273,6 +273,8 @@ export function RecipeForm({
   const [state, setState] = useState<RecipeState>(recipe?.state ?? 'want_to_try');
   const [foodTypeId, setFoodTypeId] = useState(recipe?.food_type_id ?? '');
   const [serves, setServes] = useState(formatOptionalInteger(recipe?.serves));
+  const [makesQuantity, setMakesQuantity] = useState(formatOptionalInteger(recipe?.makes_quantity));
+  const [makesThing, setMakesThing] = useState(recipe?.makes_thing ?? '');
   const [verdictId, setVerdictId] = useState(recipe?.verdict_id ?? '');
   const [score, setScore] = useState(recipe?.score?.toString() ?? '');
   const [enthusiasmId, setEnthusiasmId] = useState(recipe?.enthusiasm_id ?? '');
@@ -828,6 +830,33 @@ export function RecipeForm({
               onChange={(event) => setServes(event.currentTarget.value)}
             />
           </label>
+          <fieldset className="recipe-field recipe-makes-field">
+            <legend>Makes</legend>
+            <div className="recipe-makes-inputs">
+              <input
+                aria-label="Makes quantity"
+                id="makes-quantity"
+                inputMode="numeric"
+                name="makes_quantity"
+                placeholder="Qty"
+                type="text"
+                value={makesQuantity}
+                onBlur={(event) =>
+                  setMakesQuantity(formatGroupedIntegerInput(event.currentTarget.value))
+                }
+                onChange={(event) => setMakesQuantity(event.currentTarget.value)}
+              />
+              <input
+                aria-label="Makes thing"
+                id="makes-thing"
+                name="makes_thing"
+                placeholder="What it makes"
+                type="text"
+                value={makesThing}
+                onChange={(event) => setMakesThing(event.currentTarget.value)}
+              />
+            </div>
+          </fieldset>
           <MultiPicklist
             category="equipment"
             label="Equipment"

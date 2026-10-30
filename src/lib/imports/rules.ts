@@ -168,13 +168,13 @@ function validateData(
   const preferences = { ...asRecord(data.account_preferences, 'Account preferences') };
   const legacyColumnOrder = preferences.recipe_column_order;
   if (
-    schemaVersion < 6 &&
+    schemaVersion < 8 &&
     Array.isArray(legacyColumnOrder) &&
     legacyColumnOrder.every((column): column is string => typeof column === 'string')
   ) {
     preferences.recipe_column_order = [
       ...legacyColumnOrder,
-      ...(['score', 'starred', 'hearted'] as const).filter(
+      ...(['score', 'starred', 'hearted', 'makes'] as const).filter(
         (column) => !legacyColumnOrder.includes(column),
       ),
     ];
@@ -214,9 +214,11 @@ function validateData(
       throw new Error(`The ${table} records must be an array.`);
     }
     const allowedFields = new Set(
-      table === 'recipes' && schemaVersion < 6
+      table === 'recipes'
         ? portableRecordFields[table].filter(
-            (field) => !['score', 'is_starred', 'is_hearted'].includes(field),
+            (field) =>
+              !(schemaVersion < 6 && ['score', 'is_starred', 'is_hearted'].includes(field)) &&
+              !(schemaVersion < 8 && ['makes_quantity', 'makes_thing'].includes(field)),
           )
         : table === 'recipe_ingredients' && schemaVersion < 3
           ? portableRecordFields[table].filter(
@@ -267,6 +269,33 @@ function validateData(
         (recipe.score !== null && recipe.state !== 'tried')
       ) {
         throw new Error('The bundle contains invalid recipe score or marker data.');
+      }
+    }
+  }
+
+  if (schemaVersion < 8) {
+    records.recipes = (records.recipes as ExportRecord[]).map((recipe) => ({
+      ...recipe,
+      makes_quantity: null,
+      makes_thing: null,
+    }));
+  } else {
+    for (const recipe of records.recipes as ExportRecord[]) {
+      const quantity = recipe.makes_quantity;
+      const thing = recipe.makes_thing;
+      if (
+        !Object.hasOwn(recipe, 'makes_quantity') ||
+        !Object.hasOwn(recipe, 'makes_thing') ||
+        !(
+          (quantity === null && thing === null) ||
+          (typeof quantity === 'number' &&
+            Number.isSafeInteger(quantity) &&
+            quantity > 0 &&
+            typeof thing === 'string' &&
+            thing.trim().length > 0)
+        )
+      ) {
+        throw new Error('The bundle contains invalid recipe Makes data.');
       }
     }
   }

@@ -724,6 +724,50 @@ test('preparation choices reveal inline divided portions and cubed Size @e2e @a1
     await expect(ingredientList).not.toContainText('1st');
     await expect(ingredientList).not.toContainText('2nd');
     await expect(ingredientList).toContainText('cubed 0.5 cm');
+
+    const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
+    const currentPresentation = await presentationToggle.getAttribute('aria-label');
+    if (currentPresentation?.startsWith('Ingredient view: Standard.')) {
+      await presentationToggle.click();
+    }
+    const saltRow = page
+      .getByRole('table', { name: 'Recipe ingredients' })
+      .locator('tbody tr[data-ingredient-stripe]')
+      .filter({ hasText: /salt/u })
+      .first();
+    const preparationCell = saltRow.locator('.recipe-ingredient-column-preparation');
+    const dividedLabel = preparationCell.locator('.recipe-ingredient-preparation-divided');
+    const portionValues = preparationCell.locator('.recipe-ingredient-portion-values');
+    await expect(preparationCell).toContainText('divided ⅔ : ⅓');
+    await expect(dividedLabel).toBeVisible();
+    await expect(portionValues).toBeVisible();
+
+    const lineGeometry = () =>
+      preparationCell.evaluate((cell) => {
+        const label = cell.querySelector('.recipe-ingredient-preparation-divided');
+        const values = cell.querySelector('.recipe-ingredient-portion-values');
+        if (!(label instanceof HTMLElement) || !(values instanceof HTMLElement)) {
+          throw new Error('Expected divided preparation and portion values.');
+        }
+        const labelBounds = label.getBoundingClientRect();
+        return {
+          labelBottom: labelBounds.bottom,
+          labelTop: labelBounds.top,
+          valuesTop: values.getBoundingClientRect().top,
+        };
+      });
+
+    const desktopLineGeometry = await lineGeometry();
+    expect(
+      Math.abs(desktopLineGeometry.labelTop - desktopLineGeometry.valuesTop),
+    ).toBeLessThanOrEqual(1);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(preparationCell.locator('.recipe-ingredient-portion-note-divided')).toHaveCSS(
+      'display',
+      'block',
+    );
+    const mobileLineGeometry = await lineGeometry();
+    expect(mobileLineGeometry.valuesTop).toBeGreaterThan(mobileLineGeometry.labelBottom);
   } finally {
     await deleteTestUser(request, user);
   }

@@ -123,14 +123,19 @@ Excluded:
   the column to available width when necessary to prevent page-level horizontal
   overflow. On mobile, retain the vertical reading flow.
 - Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
-  Preparation columns. Rows without a volume or weight use a cell spanning both
-  measurement columns. Specifics appears lowercase and indented under the
-  ingredient name. Mobile abbreviates the measurement headers to Vol, Wt, and
-  Prep. Keep paired measurements together and retain current scaling, unit
-  conversion, preparation, and print formatting.
+  Preparation columns. Count, informal, and unmeasured values appear in Volume
+  when no dimensional measurement is present. Specifics appears lowercase and
+  indented under the ingredient name. Mobile abbreviates the measurement
+  headers to Vol, Wt, and Prep, and omits any of these columns when it is empty
+  across the recipe. In mobile Ingredient-first view, display divided portion
+  ratios on a separate line beneath the “divided” label; preserve inline
+  formatting on desktop and in Standard view.
+  Keep paired measurements together and retain current scaling, unit conversion,
+  preparation, and print formatting.
 - Cook mode is an icon-only switch in the Ingredients toolbar. While active,
-  each ingredient has a labeled native checkbox with a minimum 48px hit target;
-  Ingredient-first adds an unlabeled checkbox column before Ingredient.
+  each ingredient has a labeled native checkbox with a 48px-high hit area;
+  Ingredient-first adds an unlabeled checkbox column before Ingredient. On
+  mobile, keep the checkbox 1mm from the table edge and Ingredient column.
   Checked rows have a visible check and subdued strike-through. Announce
   wake-lock active, unavailable, and failed states through a polite status;
   allow the warning to be dismissed. Cook controls do not appear in print.
@@ -168,8 +173,9 @@ Write focused automated tests before production code:
   return. Use a deterministic Wake Lock API stub; do not rely on hardware or
   browser timing.
 - Accessibility tests cover labels, keyboard operation, visible focus, polite
-  status announcements, semantic table headers, checkbox names, 48px mobile
-  targets, contrast, and absence of horizontal overflow on Chromium and Fold 6.
+  status announcements, semantic table headers, checkbox names, 48px-high
+  mobile targets, contrast, and absence of horizontal overflow on Chromium and
+  Fold 6.
 - Capture automated desktop and mobile screenshots for both presentations and
   active cook mode. Screenshots supplement behavior and accessibility tests.
 

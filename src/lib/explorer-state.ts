@@ -53,6 +53,7 @@ const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
     maxWidth: 600,
   },
   { key: 'serves', label: 'Serves', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'makes', label: 'Makes', defaultVisible: false, minWidth: 120, maxWidth: 600 },
   { key: 'equipment', label: 'Equipment', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   { key: 'food_type', label: 'Food Type', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   { key: 'meal_type', label: 'Meal Type', defaultVisible: false, minWidth: 96, maxWidth: 600 },

@@ -2165,6 +2165,38 @@
   min-height: 36px;
 }
 
+.recipe-form .recipe-makes-field {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.recipe-form .recipe-makes-field > legend {
+  padding: 0;
+  text-align: center;
+}
+
+.recipe-makes-inputs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.recipe-form input[name="makes_quantity"] {
+  flex: 0 0 4ch;
+  width: 4ch;
+  min-height: 36px;
+  padding-inline: 4px;
+}
+
+.recipe-form input[name="makes_thing"] {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  min-height: 36px;
+}
+
 .recipe-form input[name="reason"] {
   width: min(24rem, 100%);
   min-height: 36px;

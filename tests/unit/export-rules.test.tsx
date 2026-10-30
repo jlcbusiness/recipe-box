@@ -55,6 +55,8 @@ function createSnapshot() {
           score: 5,
           is_starred: true,
           is_hearted: false,
+          makes_quantity: 2,
+          makes_thing: 'baby cakes',
           is_private: true,
           public_link_id: 'future-public-link-identity',
           food_type_category: 'food_type',
@@ -292,6 +294,8 @@ describe('export rules', () => {
       score: 5,
       is_starred: true,
       is_hearted: false,
+      makes_quantity: 2,
+      makes_thing: 'baby cakes',
     });
     expect(output.records.media_assets[0]).toMatchObject({
       full_path: `images/${firstAssetId}/full.webp`,
@@ -322,7 +326,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(7);
+    expect(manifest.schema_version).toBe(8);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

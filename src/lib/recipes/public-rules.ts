@@ -3,6 +3,8 @@ import type { RecipeIngredientSet, RecipeRecord } from './data';
 export type PublicRecipeSource = {
   name: string;
   serves: number | null;
+  makes_quantity: number | null;
+  makes_thing: string | null;
   prep_time_minutes: number | null;
   mixing_time_minutes: number | null;
   marinate_time_minutes: number | null;
@@ -32,6 +34,8 @@ export type PublicRecipeReference = {
 export type PublicRecipePayload = {
   name: string;
   serves: number | null;
+  makes_quantity: number | null;
+  makes_thing: string | null;
   timings: {
     prep: number | null;
     mixing: number | null;
@@ -154,6 +158,8 @@ export function buildPublicRecipePayload(
   return {
     name: recipe.name,
     serves: recipe.serves,
+    makes_quantity: recipe.makes_quantity,
+    makes_thing: recipe.makes_thing,
     timings: {
       prep: recipe.prep_time_minutes,
       mixing: recipe.mixing_time_minutes,

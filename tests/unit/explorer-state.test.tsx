@@ -78,6 +78,7 @@ describe('explorer state contract', () => {
         'visibility',
         'occasion_details',
         'serves',
+        'makes',
         'equipment',
         'cuisine',
         'tags',

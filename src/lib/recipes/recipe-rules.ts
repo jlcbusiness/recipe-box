@@ -1,4 +1,4 @@
-import { formatGroupedInteger } from './measurement-rules';
+import { formatGroupedInteger, formatQuantity, parseGroupedInteger } from './measurement-rules';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
 
@@ -50,6 +50,41 @@ export function isRecipeScore(value: number): value is RecipeScore {
 
 export function shouldShowOccasionDetails(selectedValue: string | null): boolean {
   return selectedValue === 'specific_occasion';
+}
+
+export function parseMakesInput(
+  quantityText: string,
+  thingText: string,
+): { quantity: number | null; thing: string | null } | { error: string } {
+  const quantityValue = quantityText.trim();
+  const hasThing = thingText.trim().length > 0;
+  if (!quantityValue && !hasThing) {
+    return { quantity: null, thing: null };
+  }
+  if (!quantityValue || !hasThing) {
+    return { error: 'Enter both a Makes quantity and thing, or leave both blank.' };
+  }
+
+  const quantity = parseGroupedInteger(quantityValue);
+  if (quantity === null || quantity <= 0) {
+    return { error: 'Makes quantity must be a whole number greater than zero.' };
+  }
+
+  return { quantity, thing: thingText };
+}
+
+export function formatRecipeMakes(quantity: number, thing: string, multiplier = 1): string {
+  if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+    throw new Error('Makes quantity must be a positive safe integer.');
+  }
+  if (!thing.trim()) {
+    throw new Error('Makes thing must not be blank.');
+  }
+  if (!Number.isFinite(multiplier) || multiplier <= 0) {
+    throw new Error('Recipe scale multiplier must be positive and finite.');
+  }
+
+  return `${formatQuantity(quantity * multiplier, 'us_customary')} ${thing}`;
 }
 
 export function calculateTotalMinutes(times: RecipeComponentTimes): number {

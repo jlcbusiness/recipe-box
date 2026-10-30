@@ -233,9 +233,10 @@ widths before completion.
   say “Rating.” Keep the minimum column widths compact but sufficient for the
   resize hit area. Column resize handles show one centered visible line.
 - In recipe detail, show optional Rating as its own metadata field beside
-  Verdict rather than appending it to the Verdict value. Display negative
-  numeric Ratings in tomato red as a supplementary cue across private detail
-  and list surfaces; keep the score numeric and private.
+  Verdict rather than appending it to the Verdict value. Center the numeric
+  Rating beneath its label on desktop and mobile. Display negative numeric
+  Ratings in tomato red as a supplementary cue across private detail and list
+  surfaces; keep the score numeric and private.
 - Active stamps are visible in every private recipe List and Grid view. List
   indicators align right with at least 2mm of right-side padding; Grid
   indicators stack at the top-right, with an available numeric Rating below

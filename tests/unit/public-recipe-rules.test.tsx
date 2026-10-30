@@ -30,6 +30,8 @@ const privateRecipe = {
   occasion_details: 'Family birthday',
   reason: 'Too much effort',
   serves: 8,
+  makes_quantity: 2,
+  makes_thing: 'citrus cakes',
   prep_time_minutes: 15,
   mixing_time_minutes: null,
   marinate_time_minutes: null,
@@ -174,6 +176,8 @@ describe('public recipe projection', () => {
     expect(payload).toEqual({
       name: 'Citrus cake',
       serves: 8,
+      makes_quantity: 2,
+      makes_thing: 'citrus cakes',
       timings: {
         prep: 15,
         mixing: null,

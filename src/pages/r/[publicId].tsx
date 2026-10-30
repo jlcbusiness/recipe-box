@@ -7,6 +7,7 @@ import { RecipeActionFeedbackProvider } from '../../app/recipe-action-feedback';
 import { RecipeOutputActions } from '../../app/recipes/recipe-output-actions';
 import {
   RecipeInstructionMention,
+  RecipeMakesInlineValue,
   RecipeReader,
   RecipeReaderProvider,
 } from '../../app/recipes/recipe-reader';
@@ -236,6 +237,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
 
   const { recipe, photos } = props;
   const times = [
+    ['Total time', recipe.timings.total],
     ['Prep', recipe.timings.prep],
     ['Mixing', recipe.timings.mixing],
     ['Marinate', recipe.timings.marinate],
@@ -245,7 +247,6 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
     ['Bake', recipe.timings.bake],
     ['Cooling', recipe.timings.cooling],
     ['Rest', recipe.timings.rest],
-    ['Total', recipe.timings.total],
   ].filter(([, value]) => value !== null);
   const hasPublicSummary = times.length > 0 || recipe.equipment.length > 0;
   const preserveStoredUnits = true;
@@ -275,77 +276,86 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
         <title>{`${recipe.name} | Recipe Box`}</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
-      <div className="recipe-page-heading recipe-detail-heading">
-        <div className="recipe-detail-title">
-          <div className="recipe-detail-title-row">
-            <h1 id="page-title">
-              {recipe.name}
-              {recipe.serves !== null && (
-                <span className="recipe-public-serves-inline">
-                  {' - serves '}
-                  {formatGroupedInteger(recipe.serves)}
-                </span>
-              )}
-            </h1>
-            <div className="recipe-public-title-actions">
-              <RecipeActionFeedbackProvider>
-                <RecipeOutputActions
-                  defaultSettings={{
-                    repeatIngredients: true,
-                    includeInstructionPhotos: true,
-                    useEmphasisColors: true,
-                    includePrivateDetails: false,
-                  }}
-                  isPublic
-                />
-              </RecipeActionFeedbackProvider>
-            </div>
-          </div>
-          {recipe.attribution && (
-            <p className="recipe-attribution">
-              <cite>{recipe.attribution.publication_name}</cite>
-              {recipe.attribution.page ? ` · p. ${recipe.attribution.page}` : ''}
-            </p>
-          )}
-        </div>
-      </div>
-      {(photos.length > 0 || hasPublicSummary) && (
-        <div
-          className={`recipe-public-overview${
-            photos.length > 0 && hasPublicSummary ? ' recipe-public-overview-split' : ''
-          }`}
-        >
-          <RecipePhotoGallery photos={photos} recipeName={recipe.name} />
-          {hasPublicSummary && (
-            <div className="recipe-public-summary">
-              {times.length > 0 && (
-                <section className="recipe-detail-section" aria-labelledby="timings-title">
-                  <h2 id="timings-title">Time Breakdown</h2>
-                  <dl className="recipe-metadata recipe-time-list">
-                    {times.map(([label, value]) => (
-                      <div key={label}>
-                        <dt>{label}</dt>
-                        <dd>{formatRecipeDuration(value as number)}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
-              )}
-              {recipe.equipment.length > 0 && (
-                <section className="recipe-detail-section" aria-labelledby="equipment-title">
-                  <h2 id="equipment-title">Equipment</h2>
-                  <ul className="recipe-relationship-list">
-                    {recipe.equipment.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </div>
-          )}
-        </div>
-      )}
       <RecipeReaderProvider serves={recipe.serves}>
+        <div className="recipe-page-heading recipe-detail-heading">
+          <div className="recipe-detail-title">
+            <div className="recipe-detail-title-row">
+              <h1 id="page-title">
+                {recipe.name}
+                {recipe.serves !== null && (
+                  <span className="recipe-public-serves-inline">
+                    {' - serves '}
+                    {formatGroupedInteger(recipe.serves)}
+                  </span>
+                )}
+                {recipe.makes_quantity !== null && recipe.makes_thing !== null && (
+                  <RecipeMakesInlineValue
+                    makesQuantity={recipe.makes_quantity}
+                    makesThing={recipe.makes_thing}
+                  />
+                )}
+              </h1>
+              <div className="recipe-public-title-actions">
+                <RecipeActionFeedbackProvider>
+                  <RecipeOutputActions
+                    defaultSettings={{
+                      repeatIngredients: true,
+                      includeInstructionPhotos: true,
+                      useEmphasisColors: true,
+                      includePrivateDetails: false,
+                    }}
+                    isPublic
+                  />
+                </RecipeActionFeedbackProvider>
+              </div>
+            </div>
+            {recipe.attribution && (
+              <p className="recipe-attribution">
+                <cite>{recipe.attribution.publication_name}</cite>
+                {recipe.attribution.page ? ` · p. ${recipe.attribution.page}` : ''}
+              </p>
+            )}
+          </div>
+        </div>
+        {(photos.length > 0 || hasPublicSummary) && (
+          <div
+            className={`recipe-public-overview${
+              photos.length > 0 && hasPublicSummary ? ' recipe-public-overview-split' : ''
+            }`}
+          >
+            <RecipePhotoGallery photos={photos} recipeName={recipe.name} />
+            {hasPublicSummary && (
+              <div className="recipe-public-summary">
+                {times.length > 0 && (
+                  <section className="recipe-detail-section" aria-labelledby="timings-title">
+                    <h2 id="timings-title">Time Breakdown</h2>
+                    <dl className="recipe-metadata recipe-time-list">
+                      {times.map(([label, value]) => (
+                        <div
+                          className={label === 'Total time' ? 'recipe-total-time' : undefined}
+                          key={label}
+                        >
+                          <dt>{label}</dt>
+                          <dd>{formatRecipeDuration(value as number)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
+                {recipe.equipment.length > 0 && (
+                  <section className="recipe-detail-section" aria-labelledby="equipment-title">
+                    <h2 id="equipment-title">Equipment</h2>
+                    <ul className="recipe-relationship-list">
+                      {recipe.equipment.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {recipe.ingredients.length > 0 ? (
           <RecipeReader
             defaultPresentation="ingredient_first"
@@ -362,41 +372,41 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
         ) : (
           instructions
         )}
+        {recipe.pairings.length > 0 && (
+          <section className="recipe-detail-section" aria-labelledby="pairs-with-title">
+            <h2 id="pairs-with-title">Pairs With</h2>
+            <ul className="recipe-relationship-list">
+              {withOccurrenceKeys(recipe.pairings, (item) => item).map(({ item, key }) => (
+                <li key={key}>{item}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {recipe.references.length > 0 && (
+          <section className="recipe-detail-section" aria-labelledby="references-title">
+            <h2 id="references-title">References</h2>
+            <ul className="recipe-relationship-list">
+              {withOccurrenceKeys(
+                recipe.references,
+                (reference) => `${reference.display_text}-${reference.href ?? ''}`,
+              ).map(({ item: reference, key }) => {
+                const href = getSafePublicReferenceHref(reference.href);
+                return (
+                  <li key={key}>
+                    {href ? (
+                      <a href={href} rel="noreferrer">
+                        {reference.display_text}
+                      </a>
+                    ) : (
+                      reference.display_text
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
       </RecipeReaderProvider>
-      {recipe.pairings.length > 0 && (
-        <section className="recipe-detail-section" aria-labelledby="pairs-with-title">
-          <h2 id="pairs-with-title">Pairs With</h2>
-          <ul className="recipe-relationship-list">
-            {withOccurrenceKeys(recipe.pairings, (item) => item).map(({ item, key }) => (
-              <li key={key}>{item}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {recipe.references.length > 0 && (
-        <section className="recipe-detail-section" aria-labelledby="references-title">
-          <h2 id="references-title">References</h2>
-          <ul className="recipe-relationship-list">
-            {withOccurrenceKeys(
-              recipe.references,
-              (reference) => `${reference.display_text}-${reference.href ?? ''}`,
-            ).map(({ item: reference, key }) => {
-              const href = getSafePublicReferenceHref(reference.href);
-              return (
-                <li key={key}>
-                  {href ? (
-                    <a href={href} rel="noreferrer">
-                      {reference.display_text}
-                    </a>
-                  ) : (
-                    reference.display_text
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
     </main>
   );
 }

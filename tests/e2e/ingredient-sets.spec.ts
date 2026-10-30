@@ -227,6 +227,8 @@ async function saveRecipeWithSets(
     setId: string;
     name: string;
     position: number;
+    preparation?: string;
+    volume?: { amountMin: number; unitCode: string };
   }>,
   publicationId: string,
 ) {
@@ -238,8 +240,18 @@ async function saveRecipeWithSets(
     position: row.position,
     is_main: false,
     detail: '',
-    preparation: '',
-    measurements: [],
+    preparation: row.preparation ?? '',
+    measurements: row.volume
+      ? [
+          {
+            measurement_type: 'volume',
+            amount_min: row.volume.amountMin,
+            amount_max: null,
+            unit_code: row.volume.unitCode,
+            picklist_value_id: null,
+          },
+        ]
+      : [],
   }));
   const response = await request.post(
     `${config.apiUrl}/rest/v1/rpc/save_recipe_with_ingredient_sets`,
@@ -1293,5 +1305,123 @@ test('ingredient sections stay simple across reader, editor, and public views @e
     expect(await purgedHistoryResponse.json()).toEqual([]);
   } finally {
     await Promise.all([deleteTestUser(request, otherUser), deleteTestUser(request, user)]);
+  }
+});
+
+test('mobile grouped ingredient rows reach the table edge when an empty column is hidden @e2e', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000);
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const sauceSetId = randomUUID();
+  const fillingSetId = randomUUID();
+
+  try {
+    const publicationResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/create_publication`,
+      {
+        headers: ownerHeaders(config, user),
+        data: {
+          p_name: 'Mobile table width publication',
+          p_publication_type: 'book',
+          p_author: null,
+          p_edition: null,
+          p_isbn: null,
+          p_retailer_url: null,
+          p_issue: null,
+          p_site_url: null,
+        },
+      },
+    );
+    expect(publicationResponse.ok(), await publicationResponse.text()).toBeTruthy();
+    const publicationId = (await publicationResponse.json()) as string;
+    const recipe = await saveRecipeWithSets(
+      request,
+      config,
+      user,
+      [
+        { id: sauceSetId, label: 'For the sauce', position: 0 },
+        { id: fillingSetId, label: 'For the filling', position: 1 },
+      ],
+      [
+        {
+          id: randomUUID(),
+          setId: sauceSetId,
+          name: 'Tomatoes',
+          position: 0,
+          volume: { amountMin: 1, unitCode: 'cup' },
+        },
+        {
+          id: randomUUID(),
+          setId: fillingSetId,
+          name: 'Onion',
+          position: 1,
+          preparation: 'diced',
+        },
+      ],
+      publicationId,
+    );
+    const presentationPreference = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/update_account_unit_preferences`,
+      {
+        headers: { ...ownerHeaders(config, user), 'Content-Type': 'application/json' },
+        data: {
+          p_volume_system: null,
+          p_weight_system: null,
+          p_ingredient_presentation: 'ingredient_first',
+        },
+      },
+    );
+    expect(presentationPreference.status()).toBe(204);
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/(?:recipes|publications(?:\/[0-9a-f-]+)?)$/);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(`/recipes/${recipe.id}`);
+    await expect(page.getByRole('heading', { name: 'Weeknight curry' })).toBeVisible();
+
+    const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
+    const currentPresentation = await presentationToggle.getAttribute('aria-label');
+    if (currentPresentation?.startsWith('Ingredient view: Standard.')) {
+      await presentationToggle.click();
+    }
+    await expect(presentationToggle).toHaveAttribute(
+      'aria-label',
+      'Ingredient view: Ingredient-first. Activate for Standard.',
+    );
+
+    const table = page.getByRole('table', { name: 'Recipe ingredients' });
+    await expect(table).toBeVisible();
+    await expect(table).toHaveClass(/recipe-ingredient-first-table-hide-weight-mobile/u);
+    await expect(table).not.toHaveClass(/recipe-ingredient-first-table-hide-volume-mobile/u);
+    await expect(table).not.toHaveClass(/recipe-ingredient-first-table-hide-preparation-mobile/u);
+    const ingredientRow = table.locator('tbody tr[data-ingredient-stripe]').first();
+    const tableBounds = await table.boundingBox();
+    const lastVisibleCellRight = await ingredientRow.evaluate((row) => {
+      if (!(row instanceof HTMLTableRowElement)) {
+        throw new Error('Expected an ingredient table row.');
+      }
+      const visibleCells = Array.from(row.cells).filter(
+        (cell) => getComputedStyle(cell).display !== 'none',
+      );
+      const lastVisibleCell = visibleCells.at(-1);
+      if (!lastVisibleCell) {
+        throw new Error('Expected a visible ingredient table cell.');
+      }
+      return lastVisibleCell.getBoundingClientRect().right;
+    });
+    expect(tableBounds).not.toBeNull();
+    if (tableBounds) {
+      expect(
+        Math.abs(tableBounds.x + tableBounds.width - lastVisibleCellRight),
+      ).toBeLessThanOrEqual(1);
+    }
+  } finally {
+    await deleteTestUser(request, user);
   }
 });
