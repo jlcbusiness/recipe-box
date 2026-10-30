@@ -363,6 +363,14 @@ export async function POST(request: Request) {
     }
 
     const destinationAssetIds = new Map<string, string>();
+    const mediaSources: Array<{
+      id: string;
+      source_full_path: string;
+      source_thumbnail_path: string;
+      source_byte_size: number;
+      display_width: number;
+      display_height: number;
+    }> = [];
     for (const asset of bundle.data.records.media_assets) {
       const sourceId = String(asset.id);
       const destinationId = plan.idMappings.media_assets.get(sourceId);
@@ -393,18 +401,44 @@ export async function POST(request: Request) {
           throw new ImportBundleError('The import plan is missing an image record.', 422);
         }
         const stagedMetadata = stager.metadataBySourceAsset.get(sourceId);
+        const sourceFullPath = paths.sourceFullPath ?? paths.fullPath;
+        const sourceThumbnailPath = paths.sourceThumbnailPath ?? paths.thumbnailPath;
+        const sourceByteSize =
+          (stagedMetadata?.variantByteSizes[paths.sourceFullPath ? 'source-full' : 'full'] ?? 0) +
+          (stagedMetadata?.variantByteSizes[
+            paths.sourceThumbnailPath ? 'source-thumbnail' : 'thumbnail'
+          ] ?? 0);
+        const displayWidth = stagedMetadata?.width;
+        const displayHeight = stagedMetadata?.height;
         if (
           !stagedMetadata ||
+          typeof displayWidth !== 'number' ||
+          !Number.isSafeInteger(displayWidth) ||
+          displayWidth < 1 ||
+          displayWidth > 2048 ||
+          typeof displayHeight !== 'number' ||
+          !Number.isSafeInteger(displayHeight) ||
+          displayHeight < 1 ||
+          displayHeight > 2048 ||
           stagedMetadata.byteSize !== Number(plannedAsset.byte_size) ||
-          stagedMetadata.width !== Number(plannedAsset.width) ||
-          stagedMetadata.height !== Number(plannedAsset.height)
+          (stagedMetadata.sourceWidth ?? stagedMetadata.width) !== Number(plannedAsset.width) ||
+          (stagedMetadata.sourceHeight ?? stagedMetadata.height) !== Number(plannedAsset.height) ||
+          sourceByteSize !== Number(plannedAsset.source_byte_size)
         ) {
           throw new ImportBundleError('An image does not match its declared metadata.', 422);
         }
+        mediaSources.push({
+          id: destinationId,
+          source_full_path: sourceFullPath,
+          source_thumbnail_path: sourceThumbnailPath,
+          source_byte_size: sourceByteSize,
+          display_width: displayWidth,
+          display_height: displayHeight,
+        });
       }
     }
 
-    const { data, error } = await admin.rpc('commit_database_import_with_preferences', {
+    const { data, error } = await admin.rpc('commit_database_import_with_media_sources', {
       p_account_id: authData.user.id,
       p_account_preferences:
         scope.type === 'database' && accountPreferencesAction === 'archive'
@@ -414,6 +448,7 @@ export async function POST(request: Request) {
       p_expected_versions: expectedVersions,
       p_replace_recipe_ids: plan.replaceRecipeIds,
       p_replace_publication_ids: plan.replacePublicationIds,
+      p_media_sources: mediaSources,
     });
     if (error) {
       if (!(await cleanupStagedMedia(admin, authData.user.id, stagedPaths))) {

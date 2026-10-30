@@ -28,6 +28,7 @@ import { RecipePhotoGallery } from '../../media/media-display';
 import { OfflineSnapshotCapture } from '../../offline-snapshot-capture';
 import { RecipeActionFeedbackProvider } from '../../recipe-action-feedback';
 import { TagChips } from '../../tags/tag-controls';
+import { RecipeMarkerActions } from '../recipe-marker-actions';
 import { RecipeOutputActions } from '../recipe-output-actions';
 import {
   RecipeInstructionMention,
@@ -87,6 +88,8 @@ function renderInstructionMarkdown(
                   alt=""
                   buttonLabel="View instruction photo full size"
                   crop={photo.crop}
+                  displayHeight={photo.display_height}
+                  displayWidth={photo.display_width}
                   key={`${prefix}-photo-${token.id}-${occurrence}`}
                   height={photo.height}
                   src={photo.full_url}
@@ -333,6 +336,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   const sections = [
     ['State', recipeStateLabels[recipe.state]],
     response,
+    ['Rating', recipe.score === null ? null : String(recipe.score)],
     ['Occasion Details', recipe.occasion_details],
     ['Serves', recipe.serves === null ? null : formatGroupedInteger(recipe.serves)],
     [
@@ -340,7 +344,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       recipe.total_time_minutes === null ? null : formatRecipeDuration(recipe.total_time_minutes),
     ],
     ['Equipment', assignedValues('equipment', recipe.equipment_ids).join(', ')],
-  ].filter(([, value]) => Boolean(value));
+  ].filter(([label, value]) => Boolean(value) || (label === 'Rating' && recipe.score !== null));
   const classificationSections = [
     ['Food Type', valueFor(recipe.food_type_id)],
     ['Meal Type', assignedValues('meal_type', recipe.meal_type_ids).join(', ')],
@@ -357,6 +361,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Cooling', recipe.cooling_time_minutes],
     ['Rest', recipe.rest_time_minutes],
   ].filter(([, value]) => value !== null);
+  const hasTotalTime = recipe.total_time_minutes !== null;
   const unitSystems = { volume: volumeSystem, weight: weightSystem };
   const instructions = recipe.steps.length > 0 && (
     <section
@@ -437,7 +442,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                     <ExportAction
                       ariaLabel="Export recipe"
                       buttonLabel="Export recipe"
-                      buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action"
+                      buttonClassName="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-detail-export-trigger"
                       className="recipe-detail-export-action"
                       scope={{ type: 'recipe', id: recipe.id }}
                     />
@@ -452,6 +457,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                 >
                   <Pencil aria-hidden="true" size={16} strokeWidth={2} />
                 </Link>
+                <RecipeMarkerActions
+                  starred={recipe.is_starred}
+                  hearted={recipe.is_hearted}
+                  recipeId={recipe.id}
+                  version={recipe.version}
+                />
               </RecipeActionFeedbackProvider>
             </div>
           </div>
@@ -465,10 +476,22 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               <dl className="recipe-metadata">
                 {sections.map(([label, value]) => (
                   <div
+                    className={
+                      label === 'Rating'
+                        ? 'recipe-detail-rating-metadata'
+                        : label === 'Total time'
+                          ? 'recipe-detail-total-time-metadata'
+                          : undefined
+                    }
                     data-private-output-only={
-                      ['State', 'Enthusiasm', 'Verdict', 'Reason', 'Occasion Details'].includes(
-                        label ?? '',
-                      )
+                      [
+                        'State',
+                        'Enthusiasm',
+                        'Verdict',
+                        'Rating',
+                        'Reason',
+                        'Occasion Details',
+                      ].includes(label ?? '')
                         ? ''
                         : undefined
                     }
@@ -478,7 +501,17 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                     {label === 'Serves' && recipe.serves !== null ? (
                       <RecipeServesControl serves={recipe.serves} />
                     ) : (
-                      <dd>{value}</dd>
+                      <dd>
+                        {label === 'Rating' && recipe.score !== null ? (
+                          <span
+                            className={`recipe-detail-score${recipe.score < 0 ? ' recipe-score-negative' : ''}`}
+                          >
+                            {value}
+                          </span>
+                        ) : (
+                          value
+                        )}
+                      </dd>
                     )}
                   </div>
                 ))}
@@ -494,8 +527,10 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                 ))}
               </dl>
             )}
-            {times.length > 0 && (
-              <div className="recipe-detail-times recipe-print-metadata-times">
+            {(times.length > 0 || hasTotalTime) && (
+              <div
+                className={`recipe-detail-times recipe-print-metadata-times${times.length === 0 ? ' recipe-detail-times-mobile-only' : ''}`}
+              >
                 <h3 className="recipe-detail-times-title">Time Breakdown</h3>
                 <dl className="recipe-metadata recipe-time-list">
                   {times.map(([label, value]) => (
@@ -504,6 +539,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                       <dd>{formatRecipeDuration(value as number)}</dd>
                     </div>
                   ))}
+                  {recipe.total_time_minutes !== null && (
+                    <div className="recipe-detail-mobile-total-time">
+                      <dt>Total time</dt>
+                      <dd>{formatRecipeDuration(recipe.total_time_minutes)}</dd>
+                    </div>
+                  )}
                 </dl>
               </div>
             )}

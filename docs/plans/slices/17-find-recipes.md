@@ -81,6 +81,17 @@ combobox interaction contract. Use compact field/operator/value controls for
 structured filters, a visible summary of active filters, and a clear-all
 action. Keep the Library's established List/Grid, sort, and direction control
 behavior. In recipe Grid, show the real default photo without cropping away
+
+Query refinements are staged until the owner selects **apply**. Editing values,
+removing a rule, and clearing all rules do not change the results until apply is
+selected; Enter in a complete rule applies the same criteria. Disable apply
+while any rule is incomplete, but allow an empty rule set so apply can clear the
+current query refinements. **Clear all** is a matching outlined button with
+inverted colors and clears only staged rules. Keep the Starred and Hearted
+boolean fields available in Query, but do not show the separate Star and Heart
+quick-filter buttons in Query mode. Switching between Search and Query clears
+the criteria from the mode being left and refreshes the results. Style the Query
+**apply** button in italic serif type. In recipe Grid, show the real default photo without cropping away
 meaningful content; omit the image area when there is no photo instead of
 adding an empty decorative card. Keep publication scope visible on its detail
 page. Do not add explanatory feature copy, nested cards, or a preview pane.
@@ -231,11 +242,26 @@ need combobox semantics.
   § 7.1: text `Contains`, `Does Not Contain`, `Equals`, `Starts With`, `Is
   Empty`, `Is Not Empty`; multi-select `Contains Any`, `Contains All`, `Does
   Not Contain`; numeric/time/date comparisons and `Between`; and enum `In` and
-  `Not In`. Validate filter field, operator, and value types against an
-  allowlist on the server.
+  `Not In`. Rating comparisons accept signed values from -5 through 5 and also
+  support `Exists` and `Doesn't Exist`. Validate filter field, operator, and
+  value types against an allowlist on the server.
 - Slice 17 initially rendered fixed recipe fields for each explorer context.
   Slice 19 subsequently added List-column visibility without changing filter
   or sort semantics.
+- Simple List rows show Rating as a number only while retaining a visually
+  hidden “Rating” label for assistive technology. Recipe titles shrink and
+  truncate before the non-shrinking score and marker group without causing
+  horizontal page overflow. Center Rating values in mobile Details cells as
+  well as desktop columns.
+- In mobile Details views, active Star and Heart stamps share the recipe-title
+  row at the right, vertically centered on the title. Search and Query also
+  show the numeric Rating beside them without a visible label; the visible
+  spacing between Rating and Star matches the spacing between Star and Heart.
+- Grid cards place an available numeric Rating below the active Star and Heart
+  icons in one opaque, card-colored pill. Vertically center the complete stack
+  in a pill sized to its contents: one Rating or marker forms a 32px circle,
+  and additional signals extend the pill vertically with equal visual spacing.
+  Negative Grid Ratings use tomato red.
 - Default publication List columns remain Name (with its type icon), Author,
   Edition/Issue, and Recipes. The chooser can show/hide Tags, Date Added, and
   Date Changed; Name is required. Keep Type represented in Name rather than
@@ -248,7 +274,9 @@ need combobox semantics.
   visual row and flips the starting color on the next row, based on the
   rendered row and column positions. The publication recipe Grid uses the
   current default photo where available and preserves photo content rather
-  than using a tight crop. On mobile, keep the existing 720px responsive
+  than using a tight crop. Center each complete image frame in its fixed image
+  slot without repositioning the subject within that frame. On mobile, keep the
+  existing 720px responsive
   convention: List at or below the breakpoint, Grid above it. Adapt controls
   to touch-sized targets and prevent horizontal page overflow.
 - Show total matching count and distinguish an empty account/library from a

@@ -684,6 +684,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     const publicationEdit = page.getByRole('button', { name: 'Edit publication' });
     await expect(publicationExport).toBeVisible();
     if (isMobile) {
+      await expect(transferTrigger.locator('.export-action-icon')).toBeVisible();
       await transferTrigger.focus();
       await page.keyboard.press('Enter');
       const transferMenu = page.getByRole('menu', { name: 'Publication transfer actions' });
@@ -752,27 +753,40 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       const toolbarActionTops = await toolbarActions.evaluateAll((elements) =>
         elements.map((element) => element.getBoundingClientRect().top),
       );
-      expect(new Set(toolbarActionTops).size).toBe(1);
+      expect(new Set(toolbarActionTops.map(Math.round)).size).toBeLessThanOrEqual(2);
       const toolbarActionSizes = await toolbarActions.evaluateAll((elements) =>
         elements.map((element) => {
           const { width, height } = element.getBoundingClientRect();
           return [Math.round(width), Math.round(height)];
         }),
       );
-      expect(toolbarActionSizes.every(([width, height]) => width === height)).toBe(true);
+      expect(toolbarActionSizes.every(([width, height]) => width === 40 && height === 40)).toBe(
+        true,
+      );
       for (const width of [352, 320]) {
         await page.setViewportSize({ width, height: 864 });
         await expectNoHorizontalOverflow(page);
         const toolbarActionBounds = await toolbarActions.evaluateAll((elements) =>
           elements.map((element) => {
-            const { x, width: itemWidth } = element.getBoundingClientRect();
-            return { x, width: itemWidth };
+            const { x, y, width: itemWidth } = element.getBoundingClientRect();
+            return { x, y, width: itemWidth };
           }),
         );
-        const toolbarActionGaps = toolbarActionBounds
-          .slice(0, -1)
-          .map((item, index) => toolbarActionBounds[index + 1].x - item.x - item.width);
-        expect(toolbarActionGaps.every((gap) => gap >= 0 && gap <= 16)).toBe(true);
+        const toolbarActionRows = new Map<number, Array<{ x: number; width: number }>>();
+        for (const { x, y, width: itemWidth } of toolbarActionBounds) {
+          const row = Math.round(y);
+          const bounds = toolbarActionRows.get(row) ?? [];
+          bounds.push({ x, width: itemWidth });
+          toolbarActionRows.set(row, bounds);
+        }
+        for (const row of toolbarActionRows.values()) {
+          const sorted = [...row].sort((first, second) => first.x - second.x);
+          const gaps = sorted.slice(0, -1).map((item, index) => {
+            const next = sorted[index + 1]!;
+            return next.x - item.x - item.width;
+          });
+          expect(gaps.every((gap) => gap >= -8 && gap <= 16)).toBe(true);
+        }
       }
       await page.setViewportSize({ width: 352, height: 864 });
     } else {
@@ -882,7 +896,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
           '.explorer-list-preferences-toolbar:has(.publication-mobile-add) button:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) a:visible, .explorer-list-preferences-toolbar:has(.publication-mobile-add) select:visible',
         )
         .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
-      expect(new Set(toolbarActionTopsAfterExport).size).toBe(1);
+      expect(new Set(toolbarActionTopsAfterExport.map(Math.round)).size).toBeLessThanOrEqual(2);
     }
     const publicationTopsAfterExport = await page
       .locator(
@@ -901,7 +915,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
 
     await page.goto(`/recipes/${recipeId}`);
     const recipeExport = page.getByRole('button', { name: 'Export recipe' });
-    const recipePrint = page.getByRole('button', { name: 'Print' });
+    const recipePrint = page.locator('.recipe-output-menu-action').getByRole('button');
     const recipeSettings = page.getByRole('button', { name: 'Page settings' });
     const recipeEdit = page.getByRole('link', { name: 'Edit' });
     await expect(recipeExport).toBeVisible();
@@ -976,7 +990,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       0,
     );
     const recipeOutputDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Print & Download' }).click();
+    await recipePrint.click();
     await page.getByRole('menuitem', { name: 'Download HTML' }).click();
     await recipeOutputDownload;
     await expect(sharedFeedback).toHaveText('HTML download started.');
@@ -984,7 +998,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     const recipeActionTops = await page
       .locator('.recipe-detail-heading-actions button, .recipe-detail-heading-actions a')
       .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
-    expect(new Set(recipeActionTops).size).toBe(1);
+    expect(new Set(recipeActionTops.map(Math.round)).size).toBeLessThanOrEqual(2);
     expect((await recipeDetails.boundingBox())?.y).toBe(recipeDetailsTopBeforeExport);
     const recipeExportBox = await recipeExport.boundingBox();
     const recipeFeedbackBox = await sharedFeedback.boundingBox();

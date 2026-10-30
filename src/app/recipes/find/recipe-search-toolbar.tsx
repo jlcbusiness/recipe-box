@@ -14,6 +14,15 @@ import { useRecipeSearchMode } from './recipe-search-tabs';
 type SortOption = { value: RecipeSearchSortKey; label: string };
 type RecipeExplorerView = 'details' | 'grid' | 'list';
 
+function preservedFilters(
+  mode: 'search' | 'query' | undefined,
+  filters: RecipeSearchFilter[],
+): RecipeSearchFilter[] {
+  return mode === 'search'
+    ? filters.filter(({ field }) => field === 'starred' || field === 'hearted')
+    : filters;
+}
+
 function controlHref({
   path,
   query,
@@ -84,7 +93,7 @@ export function RecipeSearchToolbar({
     controlHref({
       path,
       query: searchMode?.mode === 'search' ? query : '',
-      filters: searchMode?.mode === 'query' ? filters : [],
+      filters: preservedFilters(searchMode?.mode, filters),
       columnSelections,
       sort: next.sort ?? sort,
       direction: next.direction ?? direction,
@@ -180,7 +189,7 @@ export function RecipeSearchPagination({
     controlHref({
       path,
       query: searchMode?.mode === 'search' ? query : '',
-      filters: searchMode?.mode === 'query' ? filters : [],
+      filters: preservedFilters(searchMode?.mode, filters),
       columnSelections,
       sort,
       direction,

@@ -22,6 +22,9 @@ const privateRecipe = {
   },
   food_type_id: 'private-food-type',
   state: 'tried',
+  score: -5,
+  is_starred: true,
+  is_hearted: true,
   verdict_id: 'private-verdict',
   enthusiasm_id: 'private-enthusiasm',
   occasion_details: 'Family birthday',
@@ -235,6 +238,9 @@ describe('public recipe projection', () => {
     });
 
     const serialized = JSON.stringify(payload);
+    expect(payload).not.toHaveProperty('score');
+    expect(payload).not.toHaveProperty('is_starred');
+    expect(payload).not.toHaveProperty('is_hearted');
     for (const forbiddenValue of [
       'private-recipe-id',
       'private-publication-id',

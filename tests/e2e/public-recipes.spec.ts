@@ -1794,6 +1794,87 @@ test('standalone output reports unavailable photos, supports retry, and aborts i
   }
 });
 
+test('public outputs omit private Rating and marker data @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipe = await createRecipe(request, config, user, 'Public signal output');
+    const signalUpdate = await request.patch(
+      `${config.apiUrl}/rest/v1/recipes?id=eq.${recipe.id}&account_id=eq.${user.id}`,
+      {
+        headers: serviceHeaders(config),
+        data: { state: 'tried', score: -5, is_starred: true, is_hearted: true },
+      },
+    );
+    expect(signalUpdate.ok(), await signalUpdate.text()).toBeTruthy();
+
+    const publicId = await getPublicId(request, config, recipe.id);
+    await page.goto(`/r/${publicId}`);
+    await expect(page.getByRole('heading', { name: 'Public signal output' })).toBeVisible();
+    await expect(
+      page.locator(
+        '.recipe-detail-score, .recipe-marker-actions, [data-marker="star"], [data-marker="heart"]',
+      ),
+    ).toHaveCount(0);
+    await expect(page.locator('.recipe-public-main')).not.toContainText('-5');
+
+    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    if (testInfo.project.name !== 'Fold 6') {
+      const htmlDownloadPromise = page.waitForEvent('download');
+      await outputButton.click();
+      await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+      const htmlDownload = await htmlDownloadPromise;
+      const htmlPath = await htmlDownload.path();
+      if (!htmlPath) throw new Error('Expected the public HTML output to have a file path.');
+      const html = await readFile(htmlPath, 'utf8');
+      expect(html).not.toContain('>-5</');
+
+      const standalonePage = await page.context().newPage();
+      try {
+        await standalonePage.setContent(html);
+        await expect(
+          standalonePage.locator(
+            '.recipe-public-main .recipe-detail-score, .recipe-public-main .recipe-marker-actions, .recipe-public-main [data-marker="star"], .recipe-public-main [data-marker="heart"]',
+          ),
+        ).toHaveCount(0);
+        await expect(standalonePage.locator('.recipe-public-main')).not.toContainText('-5');
+      } finally {
+        await standalonePage.close();
+      }
+
+      const pngDownloadPromise = page.waitForEvent('download');
+      await outputButton.click();
+      await page.getByRole('menuitem', { name: 'Download PNG' }).click();
+      const pngDownload = await pngDownloadPromise;
+      const pngPath = await pngDownload.path();
+      if (!pngPath) throw new Error('Expected the public PNG output to have a file path.');
+      expect((await sharp(await readFile(pngPath)).metadata()).format).toBe('png');
+
+      const pdfDownloadPromise = page.waitForEvent('download');
+      await outputButton.click();
+      await page.getByRole('menuitem', { name: 'Download PDF' }).click();
+      const pdfDownload = await pdfDownloadPromise;
+      const pdfPath = await pdfDownload.path();
+      if (!pdfPath) throw new Error('Expected the public PDF output to have a file path.');
+      const downloadedPdf = await inspectPrintedRecipePdf(await readFile(pdfPath));
+      expect(downloadedPdf.text).not.toContain('-5');
+      expect(downloadedPdf.text).not.toContain('Star recipe');
+      expect(downloadedPdf.text).not.toContain('Heart recipe');
+    }
+
+    const printedPdf = await inspectPrintedRecipePdf(await page.pdf({ preferCSSPageSize: true }));
+    expect(printedPdf.text).not.toContain('-5');
+    expect(printedPdf.text).not.toContain('Star recipe');
+    expect(printedPdf.text).not.toContain('Heart recipe');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('a guest can scale, switch units, and print the public recipe @e2e', async ({
   page,
   request,
@@ -1875,7 +1956,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       'Photo framing saved.',
     );
     const framedPhotoResponse = await request.get(
-      `${config.apiUrl}/rest/v1/media_assets?select=crop,width,height&recipe_id=eq.${recipe.id}&status=eq.ready`,
+      `${config.apiUrl}/rest/v1/media_assets?select=crop,width,height,display_width,display_height,full_path,source_full_path&recipe_id=eq.${recipe.id}&status=eq.ready`,
       { headers: ownerHeaders(config, user) },
     );
     expect(framedPhotoResponse.ok(), await framedPhotoResponse.text()).toBeTruthy();
@@ -1883,10 +1964,15 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       crop: { left: number; top: number; width: number; height: number } | null;
       width: number;
       height: number;
+      display_width: number;
+      display_height: number;
+      full_path: string;
+      source_full_path: string;
     }[];
     const savedCrop = framedPhoto.crop;
     expect(savedCrop).not.toBeNull();
     if (!savedCrop) throw new Error('Expected saved public recipe framing.');
+    expect(framedPhoto.full_path).not.toBe(framedPhoto.source_full_path);
     const savedCropAspectRatio =
       (savedCrop.width * framedPhoto.width) / (savedCrop.height * framedPhoto.height);
     expect(savedCrop.left).toBeGreaterThan(300 / 2400);
@@ -1896,9 +1982,9 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page).toHaveURL(`/recipes/${recipe.id}`);
     const cachedGalleryImage = page.locator('.recipe-photo-feature-image');
     await expect(cachedGalleryImage).toBeVisible();
-    expect(await cachedGalleryImage.getAttribute('viewBox')).toBe(
-      `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,
-    );
+    expect(await cachedGalleryImage.evaluate((image) => image.tagName)).toBe('IMG');
+    await expect(cachedGalleryImage).toHaveAttribute('width', String(framedPhoto.display_width));
+    await expect(cachedGalleryImage).toHaveAttribute('height', String(framedPhoto.display_height));
     const galleryBounds = await cachedGalleryImage.boundingBox();
     expect(galleryBounds).not.toBeNull();
     if (!galleryBounds) throw new Error('Expected the cropped gallery image to have bounds.');
@@ -1933,9 +2019,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(savedSteps.some((step) => step.content_markdown.includes('[[photo:'))).toBe(true);
     const privateGalleryImage = page.locator('.recipe-photo-feature-image');
     await expect(privateGalleryImage).toBeVisible();
-    expect(await privateGalleryImage.getAttribute('viewBox')).toBe(
-      `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,
-    );
+    await expect(privateGalleryImage).toHaveAttribute('width', String(framedPhoto.display_width));
+    await expect(privateGalleryImage).toHaveAttribute('height', String(framedPhoto.display_height));
     await expectRenderedCenterCrop(privateGalleryImage);
     await page.setViewportSize({ width: 1600, height: 1000 });
     const [
@@ -2109,10 +2194,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       2,
     );
     await expectRenderedCenterCrop(instructionPhoto);
-    const publicPhotoViewBox = await instructionPhoto.getAttribute('viewBox');
-    expect(publicPhotoViewBox).toBe(
-      `${savedCrop.left * framedPhoto.width} ${savedCrop.top * framedPhoto.height} ${savedCrop.width * framedPhoto.width} ${savedCrop.height * framedPhoto.height}`,
-    );
+    await expect(instructionPhoto).toHaveAttribute('width', String(framedPhoto.display_width));
+    await expect(instructionPhoto).toHaveAttribute('height', String(framedPhoto.display_height));
     const publicHtmlDownloadPromise = page.waitForEvent('download');
     await outputButton.click();
     await page.getByRole('menuitem', { name: 'Download HTML' }).click();
@@ -2120,7 +2203,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     const publicHtmlPath = await publicHtmlDownload.path();
     if (!publicHtmlPath) throw new Error('Expected the public HTML download to have a file path.');
     const publicHtml = await readFile(publicHtmlPath, 'utf8');
-    expect(publicHtml).toMatch(/<image[^>]+href="data:image\/[^;]+;base64,/u);
+    expect(publicHtml).toMatch(/<img[^>]+src="data:image\/[^;]+;base64,/u);
     expect(publicHtml).not.toContain('storage/v1/object/sign');
     expect(publicHtml).not.toContain('Private note sentinel');
 
@@ -2502,10 +2585,10 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       longTitleRowBox.x + longTitleRowBox.width,
       1,
     );
-    expect(longTitlePrintBox.width).toBeGreaterThanOrEqual(48);
-    expect(longTitlePrintBox.height).toBeGreaterThanOrEqual(48);
-    expect(longTitleSettingsBox.width).toBeGreaterThanOrEqual(48);
-    expect(longTitleSettingsBox.height).toBeGreaterThanOrEqual(48);
+    expect(longTitlePrintBox.width).toBeCloseTo(36, 0);
+    expect(longTitlePrintBox.height).toBeCloseTo(36, 0);
+    expect(longTitleSettingsBox.width).toBeCloseTo(36, 0);
+    expect(longTitleSettingsBox.height).toBeCloseTo(36, 0);
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);

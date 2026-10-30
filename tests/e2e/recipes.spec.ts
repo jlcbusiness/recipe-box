@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
@@ -451,16 +451,19 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
 
     await expect(page.getByRole('heading', { name: 'Sunday tomato soup' })).toBeVisible();
     await expect(page.locator('.recipe-serves-value')).toContainText('Serves 1,200');
-    await expect(page.locator('.recipe-time-list dd')).toHaveText([
-      '16 hr 55 min',
-      '10 min',
-      '31 min',
-    ]);
     await expect(
-      page
-        .locator('.recipe-metadata:not(.recipe-time-list) dd')
-        .filter({ hasText: '17 hr 36 min' }),
-    ).toBeVisible();
+      page.locator('.recipe-time-list > div:not(.recipe-detail-mobile-total-time) dd'),
+    ).toHaveText(['16 hr 55 min', '10 min', '31 min']);
+    const totalTimeMetadata = page
+      .locator('.recipe-metadata:not(.recipe-time-list) dd')
+      .filter({ hasText: '17 hr 36 min' });
+    if (await page.evaluate(() => window.matchMedia('(max-width: 760px)').matches)) {
+      await expect(page.locator('.recipe-detail-mobile-total-time')).toBeVisible();
+      await expect(totalTimeMetadata).toBeHidden();
+    } else {
+      await expect(page.locator('.recipe-detail-mobile-total-time')).toBeHidden();
+      await expect(totalTimeMetadata).toBeVisible();
+    }
     const detailsAfterPhotoFreeHeading = page.locator(
       '.recipe-summary-layout-with-detail-heading > .recipe-detail-section',
     );
@@ -531,7 +534,10 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.locator('.recipe-detail-classification')).toHaveCSS('margin-top', '11px');
     await expect(page.locator('.recipe-detail-times')).toHaveCSS('margin-top', '11px');
     await expect(page.locator('.recipe-time-list')).toHaveCSS('margin-top', '0px');
-    await expect(page.locator('.recipe-time-list dt')).toHaveText(['Prep', 'Mixing', 'Cook']);
+    await expect(
+      page.locator('.recipe-time-list > div:not(.recipe-detail-mobile-total-time) dt'),
+    ).toHaveText(['Prep', 'Mixing', 'Cook']);
+    await expect(page.locator('.recipe-detail-mobile-total-time')).toBeHidden();
     const detailSectionBounds = await page.locator('.recipe-detail-section').first().boundingBox();
     const classificationBounds = await page.locator('.recipe-detail-classification').boundingBox();
     expect(
@@ -590,10 +596,10 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(timesSection).toHaveCSS('border-top-width', '1px');
     await expect(timesSection).toHaveCSS('border-top-style', 'solid');
     await expect(timesSection).toContainText('Prep');
-    await expect(timesSection).not.toContainText('Total time');
+    await expect(timesSection).toContainText('Total time');
     await expect(
       page.locator('.recipe-metadata:not(.recipe-time-list) dt').filter({ hasText: 'Total time' }),
-    ).toHaveCount(1);
+    ).toBeHidden();
     await expect(page.getByText('Add fresh basil at the end.')).toBeVisible();
     await page.setViewportSize({ width: 1600, height: 1000 });
 
@@ -631,7 +637,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole('columnheader', { name: 'Food Type' })).toBeHidden();
     await expect(page.getByRole('columnheader', { name: 'State' })).toBeHidden();
-    await expect(recipeRow.locator('td:visible')).toHaveCount(4);
+    await expect(recipeRow.locator('td:visible')).toHaveCount(5);
     await recipeRow.getByRole('link', { name: 'Sunday tomato soup' }).click();
 
     await expect(
@@ -756,6 +762,612 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.getByRole('row', { name: /Sunday tomato and basil soup/ })).toContainText(
       'Contains an ingredient I avoid.',
     );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Rating fits its choices and negative values stay distinct and red @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const recipeName =
+    'Negative rating layout with a title that should truncate before its numeric rating and recipe markers in narrow mobile lists';
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill(recipeName);
+    await selectSinglePicklist(page, 'State', 'Tried');
+    await page.getByRole('combobox', { name: 'Verdict', exact: true }).click();
+    await page.getByRole('option', { name: /so-so/i }).click();
+    await page.getByLabel('Serves').fill('4');
+
+    const rating = page.getByRole('combobox', { name: 'Rating', exact: true });
+    const expectRatingFieldToFitOptions = async () => {
+      const bounds = await rating.evaluate((element) => {
+        const field = element.closest('.recipe-single-picklist');
+        const measure = field?.querySelector('.single-picklist-measure');
+        return {
+          fieldWidth: field?.getBoundingClientRect().width ?? 0,
+          triggerWidth: element.getBoundingClientRect().width,
+          optionWidth: measure?.getBoundingClientRect().width ?? 0,
+        };
+      });
+      expect(bounds.optionWidth).toBeGreaterThan(0);
+      expect(bounds.triggerWidth - bounds.optionWidth).toBeLessThanOrEqual(45);
+      expect(Math.abs(bounds.fieldWidth - bounds.triggerWidth)).toBeLessThanOrEqual(1);
+    };
+    const expectRatingOptionsToBeCentered = async () => {
+      await rating.click();
+      const scoreMenu = page.locator('.recipe-score-picklist-menu');
+      const options = scoreMenu.locator('.single-picklist-option');
+      await expect(scoreMenu).toBeVisible();
+      await expect(options).toHaveCount(9);
+      const optionGeometry = await options.evaluateAll((elements) =>
+        elements.map((option) => {
+          const optionBounds = option.getBoundingClientRect();
+          const label = option.querySelector<HTMLElement>(':scope > span:last-child');
+          const labelBounds = label?.getBoundingClientRect();
+          const check = option.querySelector<HTMLElement>('.single-picklist-check');
+          const checkBounds = check?.getBoundingClientRect();
+          return {
+            selected: option.getAttribute('aria-selected') === 'true',
+            optionCenter: optionBounds.x + optionBounds.width / 2,
+            labelCenter: labelBounds ? labelBounds.x + labelBounds.width / 2 : null,
+            labelLeft: labelBounds?.left ?? null,
+            checkRight: checkBounds?.right ?? null,
+            checkText: check?.textContent,
+          };
+        }),
+      );
+      for (const option of optionGeometry) {
+        expect(option.labelCenter).not.toBeNull();
+        if (option.labelCenter === null) {
+          throw new Error('Expected each Rating option to have a centered numeric label.');
+        }
+        expect(Math.abs(option.optionCenter - option.labelCenter)).toBeLessThanOrEqual(1);
+        if (option.selected) {
+          expect(option.checkText).toBe('✓');
+          expect(option.checkRight).not.toBeNull();
+          expect(option.labelLeft).not.toBeNull();
+          if (option.checkRight === null || option.labelLeft === null) {
+            throw new Error('Expected the selected Rating check to be separate from its value.');
+          }
+          expect(option.checkRight).toBeLessThan(option.labelLeft);
+        }
+      }
+      await page.keyboard.press('Escape');
+    };
+
+    await expect(rating).toContainText('—');
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await expectRatingFieldToFitOptions();
+      await expectRatingOptionsToBeCentered();
+    }
+
+    await selectSinglePicklist(page, 'Rating', '-5');
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await expectRatingFieldToFitOptions();
+      await expectRatingOptionsToBeCentered();
+      await expectRatingOptionsToBeCentered();
+    }
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    const detailRating = page.locator('.recipe-detail-score');
+    const ratingDetailsField = page
+      .locator('.recipe-metadata > div')
+      .filter({ has: page.getByText('Rating', { exact: true }) });
+    const servesDetailsField = page
+      .locator('.recipe-metadata > div')
+      .filter({ has: page.getByText('Serves', { exact: true }) });
+    await expect(ratingDetailsField.locator('dt')).toHaveText('Rating');
+    await expect(detailRating).toHaveText('-5');
+    await expect(detailRating).toHaveCSS('color', 'rgb(180, 62, 50)');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(ratingDetailsField.locator('dd')).toHaveCSS('justify-content', 'center');
+    const [mobileRatingFieldBounds, mobileRatingValueBounds] = await Promise.all([
+      ratingDetailsField.boundingBox(),
+      detailRating.boundingBox(),
+    ]);
+    expect(mobileRatingFieldBounds).not.toBeNull();
+    expect(mobileRatingValueBounds).not.toBeNull();
+    if (!mobileRatingFieldBounds || !mobileRatingValueBounds) {
+      throw new Error('Expected mobile Rating metadata geometry.');
+    }
+    expect(
+      Math.abs(
+        mobileRatingFieldBounds.x +
+          mobileRatingFieldBounds.width / 2 -
+          (mobileRatingValueBounds.x + mobileRatingValueBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+
+    const [ratingBounds, servesBounds] = await Promise.all([
+      ratingDetailsField.boundingBox(),
+      servesDetailsField.boundingBox(),
+    ]);
+    expect(ratingBounds).not.toBeNull();
+    expect(servesBounds).not.toBeNull();
+    if (!ratingBounds || !servesBounds) {
+      throw new Error('Expected separate Rating and Serves metadata fields.');
+    }
+    const fieldsOverlap =
+      ratingBounds.x < servesBounds.x + servesBounds.width &&
+      ratingBounds.x + ratingBounds.width > servesBounds.x &&
+      ratingBounds.y < servesBounds.y + servesBounds.height &&
+      ratingBounds.y + ratingBounds.height > servesBounds.y;
+    expect(fieldsOverlap).toBe(false);
+
+    const publicationPath = await page.locator('.recipe-attribution a').getAttribute('href');
+    expect(publicationPath).not.toBeNull();
+    if (!publicationPath) {
+      throw new Error('Expected the saved recipe to remain in its publication.');
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+    for (const path of [
+      `/recipes/find?tab=search&view=list&q=${encodeURIComponent(recipeName)}`,
+      '/recipes/find?tab=query&view=list',
+    ]) {
+      await page.goto(path);
+      const findRow = page
+        .locator('.recipe-explorer-simple-list-row')
+        .filter({ has: page.getByRole('link', { name: recipeName, exact: true }) });
+      const findRating = findRow.locator('.recipe-score-indicator');
+      const [rowBounds, scoreBounds] = await Promise.all([
+        findRow.boundingBox(),
+        findRating.boundingBox(),
+      ]);
+      await expect(findRow).toHaveCount(1);
+      expect(
+        await findRating.evaluate((element) =>
+          Number.parseFloat(getComputedStyle(element).paddingRight),
+        ),
+      ).toBeGreaterThanOrEqual(7.5);
+      expect(rowBounds).not.toBeNull();
+      expect(scoreBounds).not.toBeNull();
+      if (!rowBounds || !scoreBounds) {
+        throw new Error('Expected desktop Find Rating list geometry.');
+      }
+      expect(
+        Math.abs(rowBounds.y + rowBounds.height / 2 - (scoreBounds.y + scoreBounds.height / 2)),
+      ).toBeLessThanOrEqual(1);
+    }
+
+    await page.setViewportSize({ width: 352, height: 844 });
+    await page.goto(`${publicationPath}?view=list`);
+    const expectListRowToTruncate = async (row: Locator) => {
+      const geometry = await row.evaluate((element) => {
+        const link = element.querySelector('a');
+        const signals = element.querySelector('.recipe-explorer-list-signals');
+        const rowBounds = element.getBoundingClientRect();
+        const linkBounds = link?.getBoundingClientRect();
+        const signalsBounds = signals?.getBoundingClientRect();
+        return {
+          viewportWidth: window.innerWidth,
+          pageWidth: document.documentElement.scrollWidth,
+          linkClientWidth: link?.clientWidth ?? 0,
+          linkScrollWidth: link?.scrollWidth ?? 0,
+          textOverflow: link ? getComputedStyle(link).textOverflow : '',
+          overflow: link ? getComputedStyle(link).overflow : '',
+          rowRight: rowBounds.right,
+          linkRight: linkBounds?.right ?? Infinity,
+          signalsRight: signalsBounds?.right ?? Infinity,
+        };
+      });
+      expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth);
+      expect(geometry.linkScrollWidth).toBeGreaterThan(geometry.linkClientWidth);
+      expect(geometry.textOverflow).toBe('ellipsis');
+      expect(geometry.overflow).toBe('hidden');
+      expect(geometry.linkRight).toBeLessThanOrEqual(geometry.signalsRight + 1);
+      expect(geometry.signalsRight).toBeLessThanOrEqual(geometry.rowRight + 1);
+    };
+    const publicationRow = page
+      .locator('.recipe-explorer-simple-list-row')
+      .filter({ has: page.getByRole('link', { name: recipeName, exact: true }) });
+    const listRating = publicationRow.locator('.recipe-score-indicator');
+    await expect(publicationRow).toHaveCount(1);
+    await expect(listRating).toHaveCount(1);
+    await expect(listRating.locator('.visually-hidden')).toHaveText('Rating ');
+    await expect(listRating.locator('.recipe-score-negative')).toHaveText('-5');
+    await expect(listRating.locator('.recipe-score-negative')).toHaveCSS(
+      'color',
+      'rgb(180, 62, 50)',
+    );
+    await expectListRowToTruncate(publicationRow);
+
+    for (const path of [
+      `/recipes/find?tab=search&view=list&q=${encodeURIComponent(recipeName)}`,
+      '/recipes/find?tab=query&view=list',
+    ]) {
+      await page.goto(path);
+      const findRow = page
+        .locator('.recipe-explorer-simple-list-row')
+        .filter({ has: page.getByRole('link', { name: recipeName, exact: true }) });
+      await expect(findRow).toHaveCount(1);
+      const findRating = findRow.locator('.recipe-score-indicator');
+      await expect(findRating.locator('.visually-hidden')).toHaveText('Rating ');
+      await expect(findRating.locator('.recipe-score-negative')).toHaveText('-5');
+      await expectListRowToTruncate(findRow);
+    }
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Mobile marker layout');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Mobile marker layout' })).toBeVisible();
+
+    const desktopToolbar = page.locator('.recipe-detail-heading-actions');
+    const desktopStar = page.getByRole('button', { name: 'Star recipe' });
+    const desktopHeart = page.getByRole('button', { name: 'Heart recipe' });
+    const desktopActionSelectors = [
+      ':scope > button[aria-label="Copy share link"]',
+      ':scope > .recipe-sharing-action-form',
+      ':scope > .recipe-output-menu-action',
+      ':scope > .recipe-detail-export-action > .recipe-detail-export-trigger',
+      ':scope > .recipe-output-settings-action',
+      ':scope > a[aria-label="Edit"]',
+    ];
+    const desktopControlBounds = await Promise.all([
+      desktopStar.boundingBox(),
+      desktopHeart.boundingBox(),
+      ...desktopActionSelectors.map((selector) => desktopToolbar.locator(selector).boundingBox()),
+    ]);
+    expect(desktopControlBounds.every((bounds) => bounds !== null)).toBe(true);
+    if (desktopControlBounds.some((bounds) => bounds === null)) {
+      throw new Error('Expected desktop recipe marker and action controls.');
+    }
+    const desktopControls = desktopControlBounds.filter((bounds) => bounds !== null);
+    const desktopRowTops = desktopControls.map((bounds) => bounds.y);
+    expect(Math.max(...desktopRowTops) - Math.min(...desktopRowTops)).toBeLessThanOrEqual(1);
+    const [starIconBounds, heartIconBounds] = await Promise.all([
+      desktopStar.locator('svg').boundingBox(),
+      desktopHeart.locator('svg').boundingBox(),
+    ]);
+    expect(starIconBounds).not.toBeNull();
+    expect(heartIconBounds).not.toBeNull();
+    if (!starIconBounds || !heartIconBounds) {
+      throw new Error('Expected desktop Star and Heart icons.');
+    }
+    const copyBounds = desktopControls[2]!;
+    const markerIconGap = heartIconBounds.x - (starIconBounds.x + starIconBounds.width);
+    const heartToShareGap = copyBounds.x - (heartIconBounds.x + heartIconBounds.width);
+    expect(Math.abs(markerIconGap - heartToShareGap)).toBeLessThanOrEqual(1);
+    const desktopGaps = desktopControls.slice(3).map((bounds, index) => {
+      const previousBounds = desktopControls[index + 2]!;
+      return bounds.x - (previousBounds.x + previousBounds.width);
+    });
+    for (const gap of desktopGaps) {
+      expect(Math.abs(gap - 8)).toBeLessThanOrEqual(1);
+    }
+
+    await page.setViewportSize({ width: 761, height: 900 });
+    const wrappedHeadingBounds = await page.locator('.recipe-detail-heading').boundingBox();
+    const wrappedTitleBounds = await page.locator('.recipe-detail-title').boundingBox();
+    const wrappedToolbarBounds = await desktopToolbar.boundingBox();
+    expect(wrappedHeadingBounds).not.toBeNull();
+    expect(wrappedTitleBounds).not.toBeNull();
+    expect(wrappedToolbarBounds).not.toBeNull();
+    if (!wrappedHeadingBounds || !wrappedTitleBounds || !wrappedToolbarBounds) {
+      throw new Error('Expected narrow desktop recipe heading geometry.');
+    }
+    expect(wrappedToolbarBounds.y).toBeGreaterThanOrEqual(
+      wrappedTitleBounds.y + wrappedTitleBounds.height,
+    );
+    expect(Math.abs(wrappedToolbarBounds.x - wrappedHeadingBounds.x)).toBeLessThanOrEqual(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const actionToolbar = page.locator('.recipe-detail-heading-actions');
+    const markerActions = actionToolbar.locator('.recipe-marker-actions');
+    const markerGroupBounds = await markerActions.boundingBox();
+    const toolbarBounds = await actionToolbar.boundingBox();
+    const privacyToggle = page.getByRole('switch', { name: 'Make private' });
+    const expectPrivacyContentsEvenlySpaced = async () => {
+      const [toggleBounds, labelBounds, trackBounds] = await Promise.all([
+        privacyToggle.boundingBox(),
+        privacyToggle.locator('.recipe-privacy-toggle-state-compact').boundingBox(),
+        privacyToggle.locator('.recipe-privacy-toggle-track').boundingBox(),
+      ]);
+      expect(toggleBounds).not.toBeNull();
+      expect(labelBounds).not.toBeNull();
+      expect(trackBounds).not.toBeNull();
+      if (!toggleBounds || !labelBounds || !trackBounds) {
+        throw new Error('Expected Can Link switch content geometry.');
+      }
+      const spacing = [
+        labelBounds.x - toggleBounds.x,
+        trackBounds.x - labelBounds.x - labelBounds.width,
+        toggleBounds.x + toggleBounds.width - trackBounds.x - trackBounds.width,
+      ];
+      expect(Math.max(...spacing) - Math.min(...spacing)).toBeLessThanOrEqual(1);
+      await expect(privacyToggle.locator('.recipe-privacy-toggle-state-compact')).toHaveCSS(
+        'font-size',
+        '11px',
+      );
+      await expect(privacyToggle.locator('.recipe-privacy-toggle-track')).toHaveCSS(
+        'width',
+        '24px',
+      );
+    };
+    await expectPrivacyContentsEvenlySpaced();
+    const heartButton = page.getByRole('button', { name: 'Heart recipe' });
+    const starButton = page.getByRole('button', { name: 'Star recipe' });
+    const editButton = actionToolbar.getByRole('link', { name: 'Edit' });
+    const pageSettingsButton = page.getByRole('button', { name: 'Page settings' });
+    const heartBounds = await heartButton.boundingBox();
+    const starBounds = await starButton.boundingBox();
+    const heartFormBounds = await heartButton.locator('..').boundingBox();
+    const editBounds = await editButton.boundingBox();
+    const pageSettingsBounds = await pageSettingsButton.boundingBox();
+    const toolbarActionSelectors = [
+      ':scope > button[aria-label="Copy share link"]',
+      ':scope > .recipe-sharing-action-form',
+      ':scope > .recipe-output-menu-action',
+      ':scope > .recipe-detail-export-action > .recipe-detail-export-trigger',
+      ':scope > .recipe-output-settings-action',
+      ':scope > a[aria-label="Edit"]',
+    ];
+    const toolbarActionBounds = await Promise.all(
+      toolbarActionSelectors.map((selector) => actionToolbar.locator(selector).boundingBox()),
+    );
+    const otherActionBottoms = await actionToolbar
+      .locator(
+        ':scope > :not(.recipe-marker-actions):not(.recipe-marker-action-status):not(.recipe-share-copy-status)',
+      )
+      .evaluateAll((elements) =>
+        elements
+          .map((element) => element.getBoundingClientRect())
+          .filter((bounds) => bounds.width > 0 && bounds.height > 0)
+          .map((bounds) => bounds.bottom),
+      );
+    expect(markerGroupBounds).not.toBeNull();
+    expect(toolbarBounds).not.toBeNull();
+    expect(heartBounds).not.toBeNull();
+    expect(starBounds).not.toBeNull();
+    expect(heartFormBounds).not.toBeNull();
+    expect(editBounds).not.toBeNull();
+    expect(pageSettingsBounds).not.toBeNull();
+    expect(toolbarActionBounds.every((bounds) => bounds !== null)).toBe(true);
+    expect(otherActionBottoms.length).toBeGreaterThan(0);
+    if (
+      !markerGroupBounds ||
+      !toolbarBounds ||
+      !heartBounds ||
+      !starBounds ||
+      !heartFormBounds ||
+      !editBounds ||
+      !pageSettingsBounds ||
+      toolbarActionBounds.some((bounds) => bounds === null)
+    ) {
+      throw new Error('Expected recipe marker action geometry.');
+    }
+    expect(markerGroupBounds.y).toBeGreaterThanOrEqual(Math.max(...otherActionBottoms) - 1);
+    expect(
+      Math.abs(
+        starBounds.x + starBounds.width / 2 - (pageSettingsBounds.x + pageSettingsBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    const actionGaps = toolbarActionBounds.slice(1).map((bounds, index) => {
+      const previousBounds = toolbarActionBounds[index]!;
+      return bounds!.x - (previousBounds.x + previousBounds.width);
+    });
+    expect(toolbarActionBounds[1]!.width).toBeGreaterThan(36);
+    expect(
+      Math.abs(toolbarActionBounds[1]!.width - (toolbarBounds.width - 200)),
+    ).toBeLessThanOrEqual(1);
+    for (const actionGap of actionGaps.slice(1)) {
+      expect(Math.abs(actionGap - actionGaps[0])).toBeLessThanOrEqual(1);
+    }
+    expect(starBounds.y).toBeGreaterThanOrEqual(pageSettingsBounds.y + pageSettingsBounds.height);
+    expect(
+      Math.abs(
+        heartBounds.x + heartBounds.width / 2 - (heartFormBounds.x + heartFormBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(heartBounds.x + heartBounds.width / 2 - (editBounds.x + editBounds.width / 2)),
+    ).toBeLessThanOrEqual(1);
+    expect(await heartButton.evaluate((element) => getComputedStyle(element).width)).toBe('36px');
+    expect(await heartButton.evaluate((element) => getComputedStyle(element).height)).toBe('36px');
+    expect(await editButton.evaluate((element) => getComputedStyle(element).width)).toBe('36px');
+    expect(await editButton.evaluate((element) => getComputedStyle(element).height)).toBe('36px');
+    expect(await heartButton.evaluate((element) => getComputedStyle(element).borderRadius)).toBe(
+      await editButton.evaluate((element) => getComputedStyle(element).borderRadius),
+    );
+    expect(heartFormBounds.width).toBe(48);
+    expect(heartFormBounds.height).toBe(48);
+    const inactiveBorders = await Promise.all(
+      [starButton, heartButton].map((button) =>
+        button.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            borderColor: style.borderTopColor,
+            color: style.color,
+            borderWidth: style.borderTopWidth,
+          };
+        }),
+      ),
+    );
+    for (const border of inactiveBorders) {
+      expect(border.borderWidth).toBe('1px');
+      expect(border.borderColor).toBe(border.color);
+    }
+
+    const starFormBounds = await starButton.locator('..').boundingBox();
+    expect(starFormBounds).not.toBeNull();
+    if (!starFormBounds) throw new Error('Expected the Star action hit area.');
+    await page.mouse.click(starFormBounds.x + 2, starFormBounds.y + starFormBounds.height / 2);
+    await expect(starButton).toHaveAttribute('aria-pressed', 'true');
+    const activeStarStyles = await starButton.evaluate((element) => ({
+      backgroundColor: getComputedStyle(element).backgroundColor,
+      boxShadow: getComputedStyle(element).boxShadow,
+      iconFill: getComputedStyle(element.querySelector('svg')!).fill,
+    }));
+    expect(activeStarStyles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(activeStarStyles.boxShadow).toContain('inset');
+    expect(activeStarStyles.iconFill).toBe('rgb(224, 180, 61)');
+    const markerAccessibility = await new AxeBuilder({ page })
+      .include('.recipe-marker-actions')
+      .analyze();
+    expect(markerAccessibility.violations).toEqual([]);
+    await starButton.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    await expect(starButton).toBeFocused();
+    const starFocusStyles = await starButton.evaluate((element) => ({
+      focusVisible: element.matches(':focus-visible'),
+      outlineStyle: getComputedStyle(element).outlineStyle,
+    }));
+    expect(starFocusStyles.focusVisible).toBe(true);
+    expect(starFocusStyles.outlineStyle).not.toBe('none');
+    await page.keyboard.press('Space');
+    await expect(starButton).toHaveAttribute('aria-pressed', 'false');
+    await starButton.focus();
+    await page.keyboard.press('Space');
+    await expect(starButton).toHaveAttribute('aria-pressed', 'true');
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    await expectPrivacyContentsEvenlySpaced();
+    const narrowToolbarBounds = await actionToolbar.boundingBox();
+    const narrowSettingsBounds = await pageSettingsButton.boundingBox();
+    const narrowStarBounds = await starButton.boundingBox();
+    const narrowHeartBounds = await heartButton.boundingBox();
+    const narrowEditBounds = await editButton.boundingBox();
+    const narrowHeartFormBounds = await heartButton.locator('..').boundingBox();
+    const narrowActionBounds = await Promise.all(
+      toolbarActionSelectors.map((selector) => actionToolbar.locator(selector).boundingBox()),
+    );
+    const narrowDocumentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(narrowToolbarBounds).not.toBeNull();
+    expect(narrowSettingsBounds).not.toBeNull();
+    expect(narrowStarBounds).not.toBeNull();
+    expect(narrowHeartBounds).not.toBeNull();
+    expect(narrowEditBounds).not.toBeNull();
+    expect(narrowHeartFormBounds).not.toBeNull();
+    expect(narrowActionBounds.every((bounds) => bounds !== null)).toBe(true);
+    if (
+      !narrowToolbarBounds ||
+      !narrowSettingsBounds ||
+      !narrowStarBounds ||
+      !narrowHeartBounds ||
+      !narrowEditBounds ||
+      !narrowHeartFormBounds ||
+      narrowActionBounds.some((bounds) => bounds === null)
+    ) {
+      throw new Error('Expected narrow mobile recipe action geometry.');
+    }
+    expect(narrowDocumentWidth).toBeLessThanOrEqual(320);
+    expect(
+      Math.abs(
+        narrowStarBounds.x +
+          narrowStarBounds.width / 2 -
+          (narrowSettingsBounds.x + narrowSettingsBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(narrowStarBounds.y).toBeGreaterThanOrEqual(
+      narrowSettingsBounds.y + narrowSettingsBounds.height,
+    );
+    expect(
+      Math.abs(
+        narrowHeartBounds.x +
+          narrowHeartBounds.width / 2 -
+          (narrowEditBounds.x + narrowEditBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(narrowHeartBounds.x + narrowHeartBounds.width).toBeLessThanOrEqual(
+      narrowToolbarBounds.x + narrowToolbarBounds.width + 1,
+    );
+    const narrowActionGaps = narrowActionBounds.slice(1).map((bounds, index) => {
+      const previousBounds = narrowActionBounds[index]!;
+      return bounds!.x - (previousBounds.x + previousBounds.width);
+    });
+    expect(narrowActionBounds[1]!.width).toBeGreaterThan(36);
+    expect(
+      Math.abs(narrowActionBounds[1]!.width - (narrowToolbarBounds.width - 200)),
+    ).toBeLessThanOrEqual(1);
+    for (const actionGap of narrowActionGaps.slice(1)) {
+      expect(Math.abs(actionGap - narrowActionGaps[0])).toBeLessThanOrEqual(1);
+    }
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('recipe marker actions recover from a stale-version conflict @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Marker conflict recovery');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Marker conflict recovery' })).toBeVisible();
+
+    const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+    expect(recipeId).toBeTruthy();
+    const headers = {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${user.accessToken}`,
+    };
+    const recipeResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=version&id=eq.${recipeId}`,
+      { headers },
+    );
+    expect(recipeResponse.ok(), await recipeResponse.text()).toBeTruthy();
+    const [{ version }] = (await recipeResponse.json()) as { version: number }[];
+    const concurrentMarker = await request.post(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+      headers,
+      data: {
+        p_recipe_id: recipeId,
+        p_expected_version: version,
+        p_marker: 'star',
+        p_enabled: true,
+      },
+    });
+    expect(concurrentMarker.ok(), await concurrentMarker.text()).toBeTruthy();
+
+    const heartButton = page.getByRole('button', { name: 'Heart recipe' });
+    await heartButton.click();
+    await expect(page.locator('.recipe-marker-action-status')).toHaveText(
+      'This recipe changed in another session. Reload before changing its markers.',
+    );
+    await expect(heartButton).toHaveAttribute('aria-pressed', 'false');
+
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Star recipe' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await heartButton.click();
+    await expect(heartButton).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.recipe-marker-action-status')).toHaveText('');
   } finally {
     await deleteTestUser(request, user);
   }

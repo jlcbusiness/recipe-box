@@ -81,6 +81,9 @@ function publicationMediaBundle() {
             status: 'ready',
             full_path: `images/${sourceAssetId}/full.webp`,
             thumbnail_path: `images/${sourceAssetId}/thumbnail.webp`,
+            source_full_path: `images/${sourceAssetId}/full.webp`,
+            source_thumbnail_path: `images/${sourceAssetId}/thumbnail.webp`,
+            source_byte_size: 12,
             content_type: 'image/webp',
             byte_size: 12,
             width: 10,
@@ -109,7 +112,17 @@ function mockStagedImages() {
         imageSink: vi.fn(),
         stagedPaths,
         pathsBySourceAsset: new Map([[sourceAssetId, { fullPath, thumbnailPath }]]),
-        metadataBySourceAsset: new Map([[sourceAssetId, { byteSize: 12, width: 10, height: 10 }]]),
+        metadataBySourceAsset: new Map([
+          [
+            sourceAssetId,
+            {
+              byteSize: 12,
+              width: 10,
+              height: 10,
+              variantByteSizes: { full: 6, thumbnail: 6 },
+            },
+          ],
+        ]),
       };
     },
   );
@@ -152,11 +165,12 @@ describe('import commit route', () => {
     expect(body).toMatchObject({ imported: true, result: { recipes: 1 } });
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenLastCalledWith(
-      'commit_database_import_with_preferences',
+      'commit_database_import_with_media_sources',
       expect.objectContaining({
         p_account_id: accountId,
         p_account_preferences: {},
         p_expected_versions: [],
+        p_media_sources: [],
         p_records: expect.objectContaining({
           recipes: [expect.objectContaining({ id: expect.any(String) })],
         }),
@@ -205,7 +219,7 @@ describe('import commit route', () => {
     expect(keepCurrent.status).toBe(200);
 
     const commitCalls = rpc.mock.calls.filter(
-      ([name]) => name === 'commit_database_import_with_preferences',
+      ([name]) => name === 'commit_database_import_with_media_sources',
     );
     expect(commitCalls.map(([, args]) => args.p_account_preferences)).toEqual([
       { volume_system: 'metric' },
@@ -677,6 +691,16 @@ describe('import commit route', () => {
       `${accountId}/assets/${destinationAssetId}/thumb.webp`,
     ]);
     expect(commitArgs.p_account_preferences).toEqual({});
+    expect(commitArgs.p_media_sources).toEqual([
+      {
+        id: destinationAssetId,
+        source_full_path: `${accountId}/assets/${destinationAssetId}/full.webp`,
+        source_thumbnail_path: `${accountId}/assets/${destinationAssetId}/thumb.webp`,
+        source_byte_size: 12,
+        display_width: 10,
+        display_height: 10,
+      },
+    ]);
     expect(readStoredImportBundle).toHaveBeenCalledTimes(2);
     expect(readStoredImportBundle.mock.calls[1]?.[3]).toEqual(expect.any(Function));
     expect(createImportImageStager).toHaveBeenCalledWith(

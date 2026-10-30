@@ -6,7 +6,7 @@ import { EXPORT_DATA_BYTES_LIMIT, EXPORT_MEDIA_BYTES_LIMIT } from '../exports/ru
 
 const compressedArchiveLimit = 1_258_291_200;
 const imagePathPattern =
-  /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail)\.webp$/i;
+  /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
 const manifestLimit = 1024 * 1024;
 const entryCountLimit = 20_000;
 

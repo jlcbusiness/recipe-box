@@ -90,17 +90,23 @@ function createPublicationMediaArchive({
   createdAt,
   fullImageBytes,
   publicationName,
+  sourceFullImageBytes,
+  sourceThumbnailBytes,
   thumbnailBytes,
 }: {
   createdAt: string;
   fullImageBytes: Uint8Array;
   publicationName: string;
+  sourceFullImageBytes: Uint8Array;
+  sourceThumbnailBytes: Uint8Array;
   thumbnailBytes: Uint8Array;
 }) {
   const publicationId = randomUUID();
   const assetId = randomUUID();
   const fullPath = `images/${assetId}/full.webp`;
   const thumbnailPath = `images/${assetId}/thumbnail.webp`;
+  const sourceFullPath = `images/${assetId}/source-full.webp`;
+  const sourceThumbnailPath = `images/${assetId}/source-thumbnail.webp`;
   const publication = {
     id: publicationId,
     publication_type: 'book',
@@ -123,14 +129,21 @@ function createPublicationMediaArchive({
     status: 'ready',
     full_path: fullPath,
     thumbnail_path: thumbnailPath,
+    source_full_path: sourceFullPath,
+    source_thumbnail_path: sourceThumbnailPath,
+    source_byte_size: sourceFullImageBytes.byteLength + sourceThumbnailBytes.byteLength,
     content_type: 'image/webp',
     description: null,
     position: 0,
     is_primary: false,
-    byte_size: fullImageBytes.byteLength + thumbnailBytes.byteLength,
+    byte_size:
+      fullImageBytes.byteLength +
+      thumbnailBytes.byteLength +
+      sourceFullImageBytes.byteLength +
+      sourceThumbnailBytes.byteLength,
     width: 32,
     height: 24,
-    crop: null,
+    crop: { left: 0.25, top: 0, width: 0.75, height: 1, rotation: 0 },
     created_at: createdAt,
     updated_at: createdAt,
   };
@@ -141,6 +154,8 @@ function createPublicationMediaArchive({
     [
       { path: fullPath, bytes: fullImageBytes },
       { path: thumbnailPath, bytes: thumbnailBytes },
+      { path: sourceFullPath, bytes: sourceFullImageBytes },
+      { path: sourceThumbnailPath, bytes: sourceThumbnailBytes },
     ],
     [mediaAsset],
   );
@@ -1082,18 +1097,27 @@ test('stages scoped media in destination storage and removes partial staging on 
   })
     .webp()
     .toBuffer();
-  const thumbnailImageBytes = await sharp(fullImageBytes).resize(16, 12).webp().toBuffer();
+  const croppedFullImageBytes = await sharp(fullImageBytes)
+    .extract({ left: 8, top: 0, width: 24, height: 24 })
+    .webp()
+    .toBuffer();
+  const thumbnailImageBytes = await sharp(croppedFullImageBytes).resize(16, 16).webp().toBuffer();
+  const sourceThumbnailImageBytes = await sharp(fullImageBytes).resize(16, 12).webp().toBuffer();
   const invalidThumbnailBytes = Buffer.from('invalid webp variant');
   const validImport = createPublicationMediaArchive({
     createdAt,
-    fullImageBytes,
+    fullImageBytes: croppedFullImageBytes,
     publicationName: validPublicationName,
+    sourceFullImageBytes: fullImageBytes,
+    sourceThumbnailBytes: sourceThumbnailImageBytes,
     thumbnailBytes: thumbnailImageBytes,
   });
   const failedImport = createPublicationMediaArchive({
     createdAt,
-    fullImageBytes,
+    fullImageBytes: croppedFullImageBytes,
     publicationName: failedPublicationName,
+    sourceFullImageBytes: fullImageBytes,
+    sourceThumbnailBytes: sourceThumbnailImageBytes,
     thumbnailBytes: invalidThumbnailBytes,
   });
   let successfulStoragePaths: string[] = [];
@@ -1112,11 +1136,14 @@ test('stages scoped media in destination storage and removes partial staging on 
     await expect(dialog.getByRole('button', { name: 'Import publication' })).toBeEnabled();
     await dialog.getByRole('button', { name: 'Import publication' }).click();
     await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/i);
+    const coverImage = page.locator('.publication-cover-image-content');
+    await expect(coverImage).toHaveAttribute('width', '24');
+    await expect(coverImage).toHaveAttribute('height', '24');
     const destinationPublicationId = new URL(page.url()).pathname.split('/').at(-1);
     expect(destinationPublicationId).toBeTruthy();
 
     const mediaResponse = await request.get(
-      `${apiUrl}/rest/v1/media_assets?select=id,publication_id,full_path,thumbnail_path,byte_size,width,height&publication_id=eq.${destinationPublicationId}`,
+      `${apiUrl}/rest/v1/media_assets?select=id,publication_id,full_path,thumbnail_path,source_full_path,source_thumbnail_path,byte_size,source_byte_size,width,height,display_width,display_height&publication_id=eq.${destinationPublicationId}`,
       { headers: ownerHeaders(anonKey, user.accessToken) },
     );
     expect(mediaResponse.ok(), await mediaResponse.text()).toBeTruthy();
@@ -1126,22 +1153,43 @@ test('stages scoped media in destination storage and removes partial staging on 
       full_path: string;
       thumbnail_path: string;
       byte_size: number;
+      source_byte_size: number;
       width: number;
       height: number;
+      display_width: number;
+      display_height: number;
+      source_full_path: string;
+      source_thumbnail_path: string;
     }>;
     expect(storedAsset).toMatchObject({
       publication_id: destinationPublicationId,
       full_path: `${user.id}/assets/${storedAsset.id}/full.webp`,
       thumbnail_path: `${user.id}/assets/${storedAsset.id}/thumb.webp`,
-      byte_size: fullImageBytes.byteLength + thumbnailImageBytes.byteLength,
+      source_full_path: `${user.id}/assets/${storedAsset.id}/source/full.webp`,
+      source_thumbnail_path: `${user.id}/assets/${storedAsset.id}/source/thumb.webp`,
+      byte_size:
+        croppedFullImageBytes.byteLength +
+        thumbnailImageBytes.byteLength +
+        fullImageBytes.byteLength +
+        sourceThumbnailImageBytes.byteLength,
+      source_byte_size: fullImageBytes.byteLength + sourceThumbnailImageBytes.byteLength,
       width: 32,
       height: 24,
+      display_width: 24,
+      display_height: 24,
     });
     expect(storedAsset.id).not.toBe(validImport.mediaAsset.id);
-    successfulStoragePaths = [storedAsset.full_path, storedAsset.thumbnail_path];
+    successfulStoragePaths = [
+      storedAsset.full_path,
+      storedAsset.thumbnail_path,
+      storedAsset.source_full_path,
+      storedAsset.source_thumbnail_path,
+    ];
     for (const [path, expectedBytes] of [
-      [storedAsset.full_path, fullImageBytes],
+      [storedAsset.full_path, croppedFullImageBytes],
       [storedAsset.thumbnail_path, thumbnailImageBytes],
+      [storedAsset.source_full_path, fullImageBytes],
+      [storedAsset.source_thumbnail_path, sourceThumbnailImageBytes],
     ] as const) {
       const storedImage = await request.get(
         `${apiUrl}/storage/v1/object/authenticated/recipe-media/${path}`,

@@ -12,12 +12,14 @@ describe('recipe metadata rules', () => {
       clearConditionalValuesForStateChange('want_to_try', 'tried', {
         verdictId: null,
         enthusiasmId: 'enthusiasm-specific-occasion',
+        score: '4',
         occasionDetails: 'Birthday dinner',
         reason: null,
       }),
     ).toEqual({
       verdictId: null,
       enthusiasmId: null,
+      score: null,
       occasionDetails: null,
       reason: null,
     });
@@ -26,12 +28,14 @@ describe('recipe metadata rules', () => {
       clearConditionalValuesForStateChange('will_not_try', 'want_to_try', {
         verdictId: null,
         enthusiasmId: null,
+        score: null,
         occasionDetails: null,
         reason: 'Ingredient allergy',
       }),
     ).toEqual({
       verdictId: null,
       enthusiasmId: null,
+      score: null,
       occasionDetails: null,
       reason: null,
     });

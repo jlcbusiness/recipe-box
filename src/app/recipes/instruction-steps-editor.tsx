@@ -750,6 +750,8 @@ export function InstructionStepsEditor({
                           alt=""
                           className="recipe-instruction-photo-choice-img"
                           crop={photo.crop}
+                          displayHeight={photo.display_height}
+                          displayWidth={photo.display_width}
                           height={photo.height}
                           src={photo.thumbnail_url}
                           width={photo.width}

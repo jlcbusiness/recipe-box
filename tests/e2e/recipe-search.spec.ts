@@ -28,47 +28,62 @@ async function createContractRecipe(
     totalTime: number | null;
     notes: string;
     ingredients?: string[];
+    score?: number;
   },
 ): Promise<string> {
-  const response = await request.post(`${apiUrl}/rest/v1/rpc/save_recipe`, {
-    headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
-    data: {
-      p_recipe_id: null,
-      p_expected_version: null,
-      p_name: recipe.name,
-      p_food_type_id: null,
-      p_state: recipe.state,
-      p_verdict_id: null,
-      p_enthusiasm_id: null,
-      p_occasion_details: null,
-      p_reason: null,
-      p_serves: null,
-      p_prep_time_minutes: null,
-      p_mixing_time_minutes: null,
-      p_marinate_time_minutes: null,
-      p_chill_time_minutes: null,
-      p_freeze_time_minutes: null,
-      p_cook_time_minutes: null,
-      p_bake_time_minutes: null,
-      p_cooling_time_minutes: null,
-      p_rest_time_minutes: null,
-      p_total_time_minutes: recipe.totalTime,
-      p_notes_markdown: recipe.notes,
-      p_meal_type_ids: [],
-      p_cuisine_ids: [],
-      p_equipment_ids: [],
-      p_ingredient_rows: (recipe.ingredients ?? []).map((ingredientName) => ({
-        recipe_ingredient_id: randomUUID(),
-        ingredient_id: null,
-        ingredient_name: ingredientName,
-        is_main: false,
-        detail: '',
-        preparation: '',
-        measurements: [],
-      })),
-      p_instruction_steps: [],
+  const response = await request.post(
+    `${apiUrl}/rest/v1/rpc/${recipe.score === undefined ? 'save_recipe' : 'save_recipe_with_score'}`,
+    {
+      headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
+      data: {
+        p_recipe_id: null,
+        p_expected_version: null,
+        p_name: recipe.name,
+        p_food_type_id: null,
+        p_state: recipe.state,
+        p_verdict_id: null,
+        p_enthusiasm_id: null,
+        p_occasion_details: null,
+        p_reason: null,
+        p_serves: null,
+        p_prep_time_minutes: null,
+        p_mixing_time_minutes: null,
+        p_marinate_time_minutes: null,
+        p_chill_time_minutes: null,
+        p_freeze_time_minutes: null,
+        p_cook_time_minutes: null,
+        p_bake_time_minutes: null,
+        p_cooling_time_minutes: null,
+        p_rest_time_minutes: null,
+        p_total_time_minutes: recipe.totalTime,
+        p_notes_markdown: recipe.notes,
+        p_meal_type_ids: [],
+        p_cuisine_ids: [],
+        p_equipment_ids: [],
+        p_ingredient_rows: (recipe.ingredients ?? []).map((ingredientName) => ({
+          recipe_ingredient_id: randomUUID(),
+          ingredient_id: null,
+          ingredient_name: ingredientName,
+          is_main: false,
+          detail: '',
+          preparation: '',
+          measurements: [],
+        })),
+        p_instruction_steps: [],
+        ...(recipe.score === undefined
+          ? {}
+          : {
+              p_score: recipe.score,
+              p_ingredient_sets: [{ id: randomUUID(), label: 'Main', position: 0 }],
+              p_publication_id: null,
+              p_publication_page: null,
+              p_recipe_url: null,
+              p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+              p_tag_ids: [],
+            }),
+      },
     },
-  });
+  );
   const responseBody = await response.text();
   expect(response.ok(), responseBody).toBeTruthy();
   const [createdRecipe] = JSON.parse(responseBody) as { id: string; version: number }[];
@@ -95,6 +110,34 @@ async function setContractRecipePrivate(
     data: { p_recipe_id: recipeId, p_expected_version: version, p_is_private: true },
   });
   expect(privacyResponse.ok(), await privacyResponse.text()).toBeTruthy();
+}
+
+async function setContractRecipeMarker(
+  request: import('@playwright/test').APIRequestContext,
+  apiUrl: string,
+  anonKey: string,
+  accessToken: string,
+  recipeId: string,
+  marker: 'star' | 'heart',
+) {
+  const headers = { apikey: anonKey, Authorization: `Bearer ${accessToken}` };
+  const recipeResponse = await request.get(
+    `${apiUrl}/rest/v1/recipes?select=version&id=eq.${recipeId}`,
+    { headers },
+  );
+  const recipeResponseBody = await recipeResponse.text();
+  expect(recipeResponse.ok(), recipeResponseBody).toBeTruthy();
+  const [{ version }] = JSON.parse(recipeResponseBody) as { version: number }[];
+  const markerResponse = await request.post(`${apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+    headers,
+    data: {
+      p_recipe_id: recipeId,
+      p_expected_version: version,
+      p_marker: marker,
+      p_enabled: true,
+    },
+  });
+  expect(markerResponse.ok(), await markerResponse.text()).toBeTruthy();
 }
 
 test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, request }) => {
@@ -131,6 +174,7 @@ test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, r
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
 
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/recipes/find?column_visibility=private&sort=name&direction=asc&view=details');
     await expect(page.getByText('1 recipe found')).toBeVisible();
     await page.getByRole('button', { name: 'Choose List columns' }).click();
@@ -155,6 +199,26 @@ test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, r
         ...new Set(cells.map((cell) => Math.round(cell.getBoundingClientRect().top))),
       ]);
     expect(visibleCellTops).toHaveLength(1);
+    const [headerGeometry, cellGeometry] = await Promise.all([
+      page.locator('.find-recipes-list thead th:visible').evaluateAll((cells) =>
+        cells.map((cell) => {
+          const { x, y, width } = cell.getBoundingClientRect();
+          return { x, top: Math.round(y), width };
+        }),
+      ),
+      privateRow.locator('td:visible').evaluateAll((cells) =>
+        cells.map((cell) => {
+          const { x, y, width } = cell.getBoundingClientRect();
+          return { x, top: Math.round(y), width };
+        }),
+      ),
+    ]);
+    expect(new Set(headerGeometry.map(({ top }) => top)).size).toBe(1);
+    expect(headerGeometry).toHaveLength(cellGeometry.length);
+    for (const [index, header] of headerGeometry.entries()) {
+      expect(Math.abs(header.x - cellGeometry[index].x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(header.width - cellGeometry[index].width)).toBeLessThanOrEqual(1);
+    }
     await expect(privateRow.locator('[data-explorer-column="visibility"]')).toHaveText('Private');
     await expect(page.getByRole('link', { name: linkableRecipeName, exact: true })).toHaveCount(0);
 
@@ -170,6 +234,868 @@ test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, r
       .filter({ has: page.getByRole('link', { name: linkableRecipeName }) });
     await expect(linkableRow.locator('[data-explorer-column="visibility"]')).toHaveText('Linkable');
     await expect(page.getByRole('link', { name: privateRecipeName, exact: true })).toHaveCount(0);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find Recipes Query filters by Starred and Hearted @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const markedRecipeName = 'Query marker fixture';
+    const unmarkedRecipeName = 'Query unmarked fixture';
+    const markedRecipeId = await createContractRecipe(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      {
+        name: markedRecipeName,
+        state: 'want_to_try',
+        totalTime: null,
+        notes: '',
+      },
+    );
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: unmarkedRecipeName,
+      state: 'want_to_try',
+      totalTime: null,
+      notes: '',
+    });
+    for (const marker of ['star', 'heart'] as const) {
+      await setContractRecipeMarker(
+        request,
+        config.apiUrl,
+        config.anonKey,
+        user.accessToken,
+        markedRecipeId,
+        marker,
+      );
+    }
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/recipes/find?tab=query&sort=name&direction=asc&view=details');
+    await expect(page.locator('.recipe-marker-filters')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Filter recipes by Star' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Filter recipes by Heart' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    const starredRule = page.locator('.recipe-filter-row').first();
+    await selectFilterOption(page, starredRule, 'Field', 'Starred');
+    await selectFilterOption(page, starredRule, 'Operator', 'Is');
+    await starredRule.getByRole('combobox', { name: 'Value' }).click();
+    await expect(page.getByRole('option', { name: 'Yes', exact: true })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'No', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await selectFilterOption(page, starredRule, 'Value', 'Yes');
+    const applyButton = page.getByRole('button', { name: 'apply', exact: true });
+    await expect(applyButton).toBeEnabled();
+    await expect(page.getByText('2 recipes found')).toBeVisible();
+    await expect(page.getByRole('link', { name: markedRecipeName })).toBeVisible();
+    await expect(page.getByRole('link', { name: unmarkedRecipeName })).toBeVisible();
+    expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(0);
+    await applyButton.click();
+
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(starredRule.getByRole('combobox', { name: 'Field' })).toContainText('Starred');
+    await expect(page.getByRole('link', { name: markedRecipeName })).toBeVisible();
+    await expect(page.getByRole('link', { name: unmarkedRecipeName })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    await expect(applyButton).toBeDisabled();
+    const heartedRule = page.locator('.recipe-filter-row').nth(1);
+    await selectFilterOption(page, heartedRule, 'Field', 'Hearted');
+    await selectFilterOption(page, heartedRule, 'Operator', 'Is');
+    await selectFilterOption(page, heartedRule, 'Value', 'Yes');
+    expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(1);
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await applyButton.click();
+
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(starredRule.getByRole('combobox', { name: 'Field' })).toContainText('Starred');
+    await expect(heartedRule.getByRole('combobox', { name: 'Field' })).toContainText('Hearted');
+    await expect(page.getByRole('link', { name: markedRecipeName })).toBeVisible();
+    expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(2);
+
+    await page.getByRole('button', { name: 'clear all' }).click();
+    await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(2);
+    await applyButton.click();
+    await expect(page.getByText('2 recipes found')).toBeVisible();
+    expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(0);
+
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    const resetRule = page.locator('.recipe-filter-row').first();
+    await selectFilterOption(page, resetRule, 'Field', 'Starred');
+    await selectFilterOption(page, resetRule, 'Operator', 'Is');
+    await selectFilterOption(page, resetRule, 'Value', 'Yes');
+    await applyButton.click();
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Search' }).click();
+    await expect(page).toHaveURL((url) => {
+      const params = url.searchParams;
+      return params.get('tab') === 'search' && !params.has('filter') && !params.has('q');
+    });
+    await expect(page.locator('.recipe-marker-filters')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Filter recipes by Star' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Filter recipes by Heart' })).toBeVisible();
+    await expect(page.getByText('2 recipes found')).toBeVisible();
+    await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
+
+    const searchInput = page.locator('#recipe-search');
+    await searchInput.fill(markedRecipeName);
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await page.getByRole('tab', { name: 'Query' }).click();
+    await expect(page).toHaveURL((url) => {
+      const params = url.searchParams;
+      return params.get('tab') === 'query' && !params.has('filter') && !params.has('q');
+    });
+    await expect(searchInput).toHaveValue('');
+    await expect(page.getByText('2 recipes found')).toBeVisible();
+    await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Switch to List view' }).click();
+    const markerIndicators = page.locator('.recipe-explorer-simple-list .recipe-marker-indicators');
+    await expect(markerIndicators).toHaveCount(1);
+    const queryMarkerPadding = await markerIndicators.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).paddingRight),
+    );
+    expect(queryMarkerPadding).toBeGreaterThanOrEqual(7.5);
+
+    await page.getByRole('tab', { name: 'Search' }).click();
+    await expect(markerIndicators).toHaveCount(1);
+    const searchMarkerPadding = await markerIndicators.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).paddingRight),
+    );
+    expect(searchMarkerPadding).toBeGreaterThanOrEqual(7.5);
+
+    await page.getByRole('tab', { name: 'Query' }).click();
+    await expect(page.locator('.recipe-marker-filters')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Filter recipes by Star' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Filter recipes by Heart' })).toHaveCount(0);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find Recipes Query filters signed Rating values and Rating existence @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const ratedRecipeName = 'Query negative Rating fixture';
+    const unratedRecipeName = 'Query missing Rating fixture';
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: ratedRecipeName,
+      state: 'tried',
+      totalTime: null,
+      notes: '',
+      score: -3,
+    });
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: unratedRecipeName,
+      state: 'tried',
+      totalTime: null,
+      notes: '',
+    });
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/recipes/find?tab=query&sort=name&direction=asc&view=details');
+
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    const ratingRule = page.locator('.recipe-filter-row').first();
+    await selectFilterOption(page, ratingRule, 'Field', 'Rating');
+    await selectFilterOption(page, ratingRule, 'Operator', '=');
+    const ratingValue = ratingRule.locator('input[type="number"]');
+    await expect(ratingValue).toHaveAttribute('min', '-5');
+    await expect(ratingValue).toHaveAttribute('max', '5');
+    await ratingValue.fill('-3');
+    await page.getByRole('button', { name: 'apply', exact: true }).click();
+
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByRole('link', { name: ratedRecipeName })).toBeVisible();
+    await expect(page.getByRole('link', { name: unratedRecipeName })).toHaveCount(0);
+
+    await selectFilterOption(page, ratingRule, 'Operator', 'Exists');
+    await expect(ratingRule.locator('input[type="number"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'apply', exact: true }).click();
+
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByRole('link', { name: ratedRecipeName })).toBeVisible();
+    await expect(page.getByRole('link', { name: unratedRecipeName })).toHaveCount(0);
+    const existsFilter = JSON.parse(new URL(page.url()).searchParams.get('filter') ?? '{}');
+    expect(existsFilter).toMatchObject({ field: 'score', operator: 'is_not_empty' });
+    expect(existsFilter).not.toHaveProperty('value');
+
+    await selectFilterOption(page, ratingRule, 'Operator', "Doesn't Exist");
+    await expect(ratingRule.locator('input[type="number"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'apply', exact: true }).click();
+
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByRole('link', { name: ratedRecipeName })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: unratedRecipeName })).toBeVisible();
+    const missingFilter = JSON.parse(new URL(page.url()).searchParams.get('filter') ?? '{}');
+    expect(missingFilter).toMatchObject({ field: 'score', operator: 'is_empty' });
+    expect(missingFilter).not.toHaveProperty('value');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find Recipes centers and resizes Rating and marker columns in Search and Query @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipeId = await createContractRecipe(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      {
+        name: `Marker column layout ${randomUUID()}`,
+        state: 'want_to_try',
+        totalTime: null,
+        notes: '',
+      },
+    );
+    for (const marker of ['star', 'heart'] as const) {
+      await setContractRecipeMarker(
+        request,
+        config.apiUrl,
+        config.anonKey,
+        user.accessToken,
+        recipeId,
+        marker,
+      );
+    }
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/recipes/find?tab=query&view=details');
+
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Rating', exact: true }).check();
+    await expect(page.locator('th[data-explorer-column="score"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    const table = page.locator('.find-recipes-list');
+    const row = table.locator('tbody tr').filter({ hasText: /Marker column layout/ });
+    await expect(row).toHaveCount(1);
+    await expect(table.locator('thead tr')).toHaveCSS('border-bottom-width', '1px');
+    await expect(table.locator('thead th').first()).toHaveCSS('border-bottom-width', '0px');
+    await expect(row).toHaveCSS('border-bottom-width', '1px');
+    await expect(row.locator('td').first()).toHaveCSS('border-bottom-width', '0px');
+
+    const expectCentered = async (
+      column: string,
+      cell: Locator,
+      content: Locator,
+      measureCellText = false,
+    ) => {
+      const [cellBounds, measuredTextBounds] = await Promise.all([
+        cell.boundingBox(),
+        measureCellText
+          ? cell.evaluate((element) => {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              const { x, y, width, height } = range.getBoundingClientRect();
+              return { x, y, width, height };
+            })
+          : Promise.resolve(null),
+      ]);
+      const contentBounds = measuredTextBounds ?? (await content.boundingBox());
+      if (!cellBounds || !contentBounds) {
+        throw new Error('Expected the Find Recipe column content to be measurable.');
+      }
+      const { expectedTrackCenter, visibleCenter } = await table.evaluate((element, columnKey) => {
+        const preferences = element.closest<HTMLElement>('.explorer-list-preferences');
+        const visibleColumns = preferences?.dataset.visibleColumns?.split(' ') ?? [];
+        const columnWidths = getComputedStyle(element)
+          .gridTemplateColumns.trim()
+          .split(/\s+/)
+          .map(Number.parseFloat);
+        const columnIndex = visibleColumns.indexOf(columnKey);
+        if (columnIndex < 0 || columnWidths[columnIndex] === undefined) {
+          throw new Error(`The ${columnKey} column must have a rendered grid track.`);
+        }
+        const gap = Number.parseFloat(getComputedStyle(element).columnGap) || 0;
+        const offset = columnWidths
+          .slice(0, columnIndex)
+          .reduce((total, width) => total + width + gap, 0);
+        const trackCenter =
+          element.getBoundingClientRect().left + offset + columnWidths[columnIndex] / 2;
+        return { expectedTrackCenter: trackCenter, visibleCenter: trackCenter - gap / 2 };
+      }, column);
+      expect(
+        Math.abs(cellBounds.x + cellBounds.width / 2 - expectedTrackCenter),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(visibleCenter - (contentBounds.x + contentBounds.width / 2)),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(
+          cellBounds.y + cellBounds.height / 2 - (contentBounds.y + contentBounds.height / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+    };
+    const expectResizeHandleCentered = async (column: string) => {
+      const header = table.locator(`th[data-explorer-column="${column}"]`);
+      const handle = header.locator(`[data-explorer-resize-column="${column}"]`);
+      const [headerBounds, handleBounds] = await Promise.all([
+        header.boundingBox(),
+        handle.boundingBox(),
+      ]);
+      if (!headerBounds || !handleBounds) {
+        throw new Error(`Expected the ${column} column resize handle to be measurable.`);
+      }
+      expect(
+        Math.abs(handleBounds.x + handleBounds.width / 2 - (headerBounds.x + headerBounds.width)),
+      ).toBeLessThanOrEqual(1);
+    };
+
+    const expectColumnsCentered = async () => {
+      await expect(table.locator('th[data-explorer-column="score"]')).toContainText('Rtg');
+      await expectResizeHandleCentered('score');
+      await expectCentered(
+        'score',
+        table.locator('th[data-explorer-column="score"]'),
+        table.locator('th[data-explorer-column="score"] abbr'),
+      );
+      await expectCentered(
+        'score',
+        row.locator('td[data-explorer-column="score"]'),
+        row.locator('td[data-explorer-column="score"]').getByText('—', { exact: true }),
+        true,
+      );
+      for (const [column, marker] of [
+        ['starred', 'star'],
+        ['hearted', 'heart'],
+      ] as const) {
+        await expectResizeHandleCentered(column);
+        await expectCentered(
+          column,
+          table.locator(`th[data-explorer-column="${column}"]`),
+          table.locator(`th[data-explorer-column="${column}"] .recipe-marker-column-heading`),
+        );
+        await expectCentered(
+          column,
+          row.locator(`td[data-explorer-column="${column}"]`),
+          row.locator(`td[data-explorer-column="${column}"] .recipe-marker-stamp`),
+        );
+        await expect(table.locator(`th[data-explorer-column="${column}"]`)).toContainText(
+          marker === 'star' ? 'Star' : 'Heart',
+        );
+      }
+    };
+
+    await expectColumnsCentered();
+
+    for (const [column, minWidth, maxWidth] of [
+      ['score', 64, 120],
+      ['starred', 56, 96],
+      ['hearted', 56, 96],
+    ] as const) {
+      const header = table.locator(`th[data-explorer-column="${column}"]`);
+      const handle = header.locator(`[data-explorer-resize-column="${column}"]`);
+      for (const width of [maxWidth, minWidth]) {
+        const [headerBounds, handleBounds] = await Promise.all([
+          header.boundingBox(),
+          handle.boundingBox(),
+        ]);
+        if (!headerBounds || !handleBounds) {
+          throw new Error(`Expected the ${column} column and resize handle to be measurable.`);
+        }
+        const startX = handleBounds.x + handleBounds.width / 2;
+        const centerY = handleBounds.y + handleBounds.height / 2;
+        await page.mouse.move(startX, centerY);
+        await page.mouse.down();
+        await page.mouse.move(startX + width - headerBounds.width, centerY, { steps: 6 });
+        await page.mouse.up();
+        await expect
+          .poll(async () => Math.round((await header.boundingBox())?.width ?? 0))
+          .toBe(width);
+      }
+    }
+
+    await page.goto('/recipes/find?tab=search&view=details');
+    await expect(row).toHaveCount(1);
+    await expectColumnsCentered();
+    await expect(page.locator('.recipe-marker-filters')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Filter recipes by Star' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Filter recipes by Heart' })).toBeVisible();
+    await expect(table.locator('th[data-explorer-column="starred"]')).toHaveCSS('width', '56px');
+    await expect(table.locator('th[data-explorer-column="hearted"]')).toHaveCSS('width', '56px');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find mobile Details aligns active markers with recipe titles @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipeName = `Mobile marker title ${randomUUID()} ${'long recipe name '.repeat(5)}`;
+    const ratingOnlyRecipeName = `Grid rating only ${randomUUID()}`;
+    const heartOnlyRecipeName = `Grid heart only ${randomUUID()}`;
+    const twoSignalRecipeName = `Grid two signals ${randomUUID()}`;
+    const recipeId = await createContractRecipe(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      {
+        name: recipeName,
+        state: 'tried',
+        totalTime: null,
+        notes: '',
+        score: -3,
+      },
+    );
+    for (const marker of ['star', 'heart'] as const) {
+      await setContractRecipeMarker(
+        request,
+        config.apiUrl,
+        config.anonKey,
+        user.accessToken,
+        recipeId,
+        marker,
+      );
+    }
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: ratingOnlyRecipeName,
+      state: 'tried',
+      totalTime: null,
+      notes: '',
+      score: 2,
+    });
+    const heartOnlyRecipeId = await createContractRecipe(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      {
+        name: heartOnlyRecipeName,
+        state: 'want_to_try',
+        totalTime: null,
+        notes: '',
+      },
+    );
+    await setContractRecipeMarker(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      heartOnlyRecipeId,
+      'heart',
+    );
+    const twoSignalRecipeId = await createContractRecipe(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      {
+        name: twoSignalRecipeName,
+        state: 'tried',
+        totalTime: null,
+        notes: '',
+        score: 0,
+      },
+    );
+    await setContractRecipeMarker(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      twoSignalRecipeId,
+      'star',
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.goto('/recipes/find?tab=search&view=details');
+
+    const listColumnsButton = page.getByRole('button', { name: 'Choose List columns' });
+    const expectColumnChooserConnected = async () => {
+      const [chooserBounds, viewControlsBounds] = await Promise.all([
+        listColumnsButton.boundingBox(),
+        page.locator('.recipe-explorer-view-controls').boundingBox(),
+      ]);
+      expect(chooserBounds).not.toBeNull();
+      expect(viewControlsBounds).not.toBeNull();
+      if (!chooserBounds || !viewControlsBounds) {
+        throw new Error('Expected mobile view and column control geometry.');
+      }
+      expect(
+        Math.abs(chooserBounds.x - (viewControlsBounds.x + viewControlsBounds.width)),
+      ).toBeLessThanOrEqual(1);
+      await expect(listColumnsButton).toHaveCSS('border-left-width', '0px');
+    };
+
+    await expect(listColumnsButton).toHaveCSS('width', '40px');
+    await expect(listColumnsButton).toHaveCSS('height', '40px');
+    await expectColumnChooserConnected();
+    await page.getByRole('tab', { name: 'Query' }).click();
+    await expect(page.locator('.recipe-marker-filters')).toHaveCount(0);
+    await expect(listColumnsButton).toHaveCSS('width', '40px');
+    await expect(listColumnsButton).toHaveCSS('height', '40px');
+    await expectColumnChooserConnected();
+    await page.getByRole('tab', { name: 'Search' }).click();
+    await expect(page.locator('.recipe-marker-filters')).toBeVisible();
+
+    const table = page.locator('.find-recipes-list');
+    const row = table.locator('tbody tr').filter({ hasText: recipeName });
+    await expect(row).toHaveCount(1);
+    const titleBounds = await row.locator('.find-recipes-mobile-title').boundingBox();
+    const titleRowBounds = await row.locator('.mobile-details-title-row').boundingBox();
+    const markerGroupBounds = await row.locator('.mobile-details-title-markers').boundingBox();
+    const starStampBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="starred"] .recipe-marker-stamp',
+      )
+      .boundingBox();
+    const heartStampBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="hearted"] .recipe-marker-stamp',
+      )
+      .boundingBox();
+    const mobileRating = row.locator('.mobile-details-title-rating');
+    const ratingBounds = await mobileRating.boundingBox();
+    const ratingTextBounds = await mobileRating
+      .locator(':scope > span:not(.visually-hidden)')
+      .boundingBox();
+    const starIconBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="starred"] .recipe-marker-stamp svg',
+      )
+      .boundingBox();
+    const heartIconBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="hearted"] .recipe-marker-stamp svg',
+      )
+      .boundingBox();
+    const metadataBounds = await row.locator('.find-recipes-mobile-metadata').boundingBox();
+    const titleOverflow = await row.locator('.find-recipes-mobile-title').evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      overflow: getComputedStyle(element).overflow,
+      scrollWidth: element.scrollWidth,
+      textOverflow: getComputedStyle(element).textOverflow,
+    }));
+    const viewControlsBounds = await page.locator('.recipe-explorer-view-controls').boundingBox();
+    const markerFiltersBounds = await page.locator('.recipe-marker-filters').boundingBox();
+    const starFilterBounds = await page
+      .getByRole('button', { name: 'Filter recipes by Star' })
+      .boundingBox();
+    const rowBounds = await row.boundingBox();
+
+    await expect(row.locator('.mobile-details-title-markers')).toBeVisible();
+    await expect(mobileRating.locator('.visually-hidden')).toHaveText('Rating ');
+    await expect(mobileRating.locator('.recipe-score-negative')).toHaveText('-3');
+    await expect(mobileRating.locator('.recipe-score-negative')).toHaveCSS(
+      'color',
+      'rgb(180, 62, 50)',
+    );
+    await expect(row.locator('.find-recipes-mobile-metadata')).not.toContainText('Rating');
+    await expect(row.locator('.find-recipes-mobile-metadata .recipe-marker-stamp')).toHaveCount(0);
+    await expect(row.locator('td[data-explorer-column="starred"]')).toBeHidden();
+    await expect(row.locator('td[data-explorer-column="hearted"]')).toBeHidden();
+    expect(titleBounds).not.toBeNull();
+    expect(titleRowBounds).not.toBeNull();
+    expect(titleOverflow.scrollWidth).toBeGreaterThan(titleOverflow.clientWidth);
+    expect(titleOverflow.overflow).toBe('hidden');
+    expect(titleOverflow.textOverflow).toBe('ellipsis');
+    expect(markerGroupBounds).not.toBeNull();
+    expect(ratingBounds).not.toBeNull();
+    expect(ratingTextBounds).not.toBeNull();
+    expect(starStampBounds).not.toBeNull();
+    expect(heartStampBounds).not.toBeNull();
+    expect(starIconBounds).not.toBeNull();
+    expect(heartIconBounds).not.toBeNull();
+    expect(metadataBounds).not.toBeNull();
+    expect(viewControlsBounds).not.toBeNull();
+    expect(markerFiltersBounds).not.toBeNull();
+    expect(starFilterBounds).not.toBeNull();
+    expect(rowBounds).not.toBeNull();
+    if (
+      !titleBounds ||
+      !titleRowBounds ||
+      !markerGroupBounds ||
+      !ratingBounds ||
+      !ratingTextBounds ||
+      !starStampBounds ||
+      !heartStampBounds ||
+      !starIconBounds ||
+      !heartIconBounds ||
+      !metadataBounds ||
+      !viewControlsBounds ||
+      !markerFiltersBounds ||
+      !starFilterBounds ||
+      !rowBounds
+    ) {
+      throw new Error('Expected mobile Find title, marker, metadata, and toolbar geometry.');
+    }
+    const titleCenterY = titleBounds.y + titleBounds.height / 2;
+    const starCenterY = starStampBounds.y + starStampBounds.height / 2;
+    const heartCenterY = heartStampBounds.y + heartStampBounds.height / 2;
+    const ratingCenterY = ratingBounds.y + ratingBounds.height / 2;
+    expect(Math.abs(titleCenterY - ratingCenterY)).toBeLessThanOrEqual(1);
+    expect(Math.abs(titleCenterY - starCenterY)).toBeLessThanOrEqual(1);
+    expect(Math.abs(titleCenterY - heartCenterY)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(titleCenterY - (starIconBounds.y + starIconBounds.height / 2) - 2),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(titleCenterY - (heartIconBounds.y + heartIconBounds.height / 2) - 2),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        starIconBounds.x -
+          ratingTextBounds.x -
+          ratingTextBounds.width -
+          (heartIconBounds.x - starIconBounds.x - starIconBounds.width),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(starStampBounds.x + starStampBounds.width).toBeLessThan(heartStampBounds.x);
+    expect(ratingBounds.x + ratingBounds.width).toBeLessThan(starStampBounds.x);
+    expect(heartStampBounds.x + heartStampBounds.width).toBeLessThanOrEqual(
+      titleRowBounds.x + titleRowBounds.width - 7,
+    );
+    expect(
+      Math.abs(
+        markerGroupBounds.x + markerGroupBounds.width - (titleRowBounds.x + titleRowBounds.width),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(metadataBounds.y).toBeGreaterThanOrEqual(titleRowBounds.y + titleRowBounds.height);
+    expect(
+      Math.abs(
+        markerFiltersBounds.y +
+          markerFiltersBounds.height / 2 -
+          (viewControlsBounds.y + viewControlsBounds.height / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(markerFiltersBounds.x + markerFiltersBounds.width).toBeLessThanOrEqual(
+      viewControlsBounds.x,
+    );
+    expect(starFilterBounds.width).toBe(40);
+    expect(starFilterBounds.height).toBe(40);
+    expect(
+      Math.abs(titleRowBounds.x + titleRowBounds.width - (rowBounds.x + rowBounds.width)),
+    ).toBeLessThanOrEqual(1);
+
+    await page.getByRole('tab', { name: 'Query' }).click();
+    await expect(row.locator('.mobile-details-title-rating .recipe-score-negative')).toHaveText(
+      '-3',
+    );
+    await expect(page.locator('.recipe-marker-filters')).toHaveCount(0);
+    const queryTitleBounds = await row.locator('.mobile-details-title-text').boundingBox();
+    const queryRatingBounds = await row.locator('.mobile-details-title-rating').boundingBox();
+    const queryStarBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="starred"] .recipe-marker-stamp',
+      )
+      .boundingBox();
+    const queryHeartBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="hearted"] .recipe-marker-stamp',
+      )
+      .boundingBox();
+    const queryRatingTextBounds = await row
+      .locator('.mobile-details-title-rating > span:not(.visually-hidden)')
+      .boundingBox();
+    const queryStarIconBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="starred"] .recipe-marker-stamp svg',
+      )
+      .boundingBox();
+    const queryHeartIconBounds = await row
+      .locator(
+        '.mobile-details-title-markers [data-explorer-column="hearted"] .recipe-marker-stamp svg',
+      )
+      .boundingBox();
+    expect(queryTitleBounds).not.toBeNull();
+    expect(queryRatingBounds).not.toBeNull();
+    expect(queryStarBounds).not.toBeNull();
+    expect(queryHeartBounds).not.toBeNull();
+    expect(queryRatingTextBounds).not.toBeNull();
+    expect(queryStarIconBounds).not.toBeNull();
+    expect(queryHeartIconBounds).not.toBeNull();
+    if (
+      !queryTitleBounds ||
+      !queryRatingBounds ||
+      !queryStarBounds ||
+      !queryHeartBounds ||
+      !queryRatingTextBounds ||
+      !queryStarIconBounds ||
+      !queryHeartIconBounds
+    ) {
+      throw new Error('Expected mobile Query Details title, Rating, and marker geometry.');
+    }
+    const queryTitleCenterY = queryTitleBounds.y + queryTitleBounds.height / 2;
+    expect(
+      Math.abs(queryTitleCenterY - (queryRatingBounds.y + queryRatingBounds.height / 2)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(queryTitleCenterY - (queryStarBounds.y + queryStarBounds.height / 2)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(queryTitleCenterY - (queryHeartBounds.y + queryHeartBounds.height / 2)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(queryTitleCenterY - (queryStarIconBounds.y + queryStarIconBounds.height / 2) - 2),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(queryTitleCenterY - (queryHeartIconBounds.y + queryHeartIconBounds.height / 2) - 2),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        queryStarIconBounds.x -
+          queryRatingTextBounds.x -
+          queryRatingTextBounds.width -
+          (queryHeartIconBounds.x - queryStarIconBounds.x - queryStarIconBounds.width),
+      ),
+    ).toBeLessThanOrEqual(1);
+
+    for (const tab of ['search', 'query'] as const) {
+      for (const viewport of [
+        { width: 1280, height: 900 },
+        { width: 390, height: 844 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await page.goto(`/recipes/find?tab=${tab}&view=grid`);
+        const gridPillFixtures = [
+          { name: recipeName, markerCount: 2, hasRating: true },
+          ...(tab === 'search' && viewport.width === 390
+            ? [
+                { name: ratingOnlyRecipeName, markerCount: 0, hasRating: true },
+                { name: heartOnlyRecipeName, markerCount: 1, hasRating: false },
+                { name: twoSignalRecipeName, markerCount: 1, hasRating: true },
+              ]
+            : []),
+        ];
+        for (const fixture of gridPillFixtures) {
+          const card = page.locator('.find-recipes-grid li').filter({ hasText: fixture.name });
+          const gridStack = card.locator('.recipe-grid-marker-indicators');
+          const gridContent = gridStack.locator('.recipe-grid-marker-content');
+          const markerStack = gridStack.locator('.recipe-marker-indicators');
+          const gridRating = gridStack.locator('.recipe-grid-rating-indicator');
+          const [gridStackBounds, gridContentBounds] = await Promise.all([
+            gridStack.boundingBox(),
+            gridContent.boundingBox(),
+          ]);
+          const gridRatingBounds = fixture.hasRating ? await gridRating.boundingBox() : null;
+          await expect(card).toHaveCount(1);
+          await expect(card).toHaveAttribute('data-stripe-cell', /^(odd|even)$/);
+          await expect(gridStack).toHaveCSS('border-radius', '9999px');
+          await expect(gridStack).toHaveCSS('min-height', '32px');
+          await expect(gridStack).toHaveCSS('min-width', '32px');
+          await expect(card.locator('.find-recipes-grid-metadata')).not.toContainText('Rating');
+          await expect(markerStack.locator('svg')).toHaveCount(fixture.markerCount);
+          await expect(gridRating).toHaveCount(fixture.hasRating ? 1 : 0);
+          expect(gridStackBounds).not.toBeNull();
+          expect(gridContentBounds).not.toBeNull();
+          if (!gridStackBounds || !gridContentBounds) {
+            throw new Error('Expected the Grid pill and its content to have measurable bounds.');
+          }
+          const [pillBackground, cardBackground] = await Promise.all([
+            gridStack.evaluate((element) => getComputedStyle(element).backgroundColor),
+            card.evaluate((element) => getComputedStyle(element).backgroundColor),
+          ]);
+          expect(pillBackground).not.toBe('rgba(0, 0, 0, 0)');
+          expect(pillBackground).toBe(cardBackground);
+          expect(gridStackBounds.width).toBe(32);
+          expect(gridStackBounds.height).toBeGreaterThanOrEqual(32);
+          expect(gridStackBounds.height).toBeCloseTo(gridContentBounds.height + 8, 0);
+          expect(
+            Math.abs(
+              gridStackBounds.y +
+                gridStackBounds.height / 2 -
+                (gridContentBounds.y + gridContentBounds.height / 2),
+            ),
+          ).toBeLessThanOrEqual(1);
+          expect(gridContentBounds.width).toBe(24);
+          const signalBounds = await gridContent
+            .locator('svg, .recipe-grid-rating-indicator')
+            .evaluateAll((signals) =>
+              signals.map((signal) => {
+                const bounds = signal.getBoundingClientRect();
+                return { y: bounds.y, height: bounds.height };
+              }),
+            );
+          expect(signalBounds).toHaveLength(fixture.markerCount + (fixture.hasRating ? 1 : 0));
+          expect(signalBounds.every(({ height }) => height === 16)).toBe(true);
+          for (const [index, signal] of signalBounds.entries()) {
+            const previousSignal = signalBounds[index - 1];
+            if (previousSignal) {
+              expect(signal.y - previousSignal.y).toBeCloseTo(21, 0);
+            }
+          }
+          if (fixture.hasRating) {
+            expect(gridRatingBounds).not.toBeNull();
+            if (!gridRatingBounds) {
+              throw new Error('Expected the Grid Rating to have measurable bounds.');
+            }
+            await expect(gridRating).toHaveCSS('width', '24px');
+            await expect(gridRating).toHaveCSS('height', '16px');
+          }
+          if (fixture.name === recipeName) {
+            await expect(markerStack).toHaveAttribute('aria-label', 'Starred, Hearted');
+            await expect(gridRating.locator('.visually-hidden')).toHaveText('Rating ');
+            await expect(gridRating).toHaveClass(/recipe-score-negative/);
+            await expect(gridRating).toContainText('-3');
+            await expect(gridRating).toHaveCSS('color', 'rgb(180, 62, 50)');
+            expect(gridRatingBounds).not.toBeNull();
+            if (!gridRatingBounds) {
+              throw new Error('Expected the negative Grid Rating to have measurable bounds.');
+            }
+            const markerStackBounds = await markerStack.boundingBox();
+            expect(markerStackBounds).not.toBeNull();
+            if (!markerStackBounds) {
+              throw new Error('Expected the Grid markers to have measurable bounds.');
+            }
+            expect(gridStackBounds.y).toBeLessThan(markerStackBounds.y);
+            expect(gridStackBounds.y + gridStackBounds.height).toBeGreaterThan(
+              markerStackBounds.y + markerStackBounds.height,
+            );
+            expect(gridRatingBounds.y).toBeGreaterThanOrEqual(
+              markerStackBounds.y + markerStackBounds.height,
+            );
+          }
+        }
+      }
+    }
   } finally {
     await deleteTestUser(request, user);
   }
@@ -274,7 +1200,7 @@ test('List column preferences do not change recipe Grid cards @e2e', async ({ pa
     await page.getByRole('checkbox', { name: 'Total Time', exact: true }).uncheck();
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name visibility',
+      'name visibility score starred hearted',
     );
 
     await page.getByRole('button', { name: 'Switch to List view' }).click();
@@ -853,6 +1779,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await selectFilterOption(page, independentStateRule, 'Field', 'State');
     await selectFilterValue(page, independentStateRule, 'Want to Try');
     await page.getByRole('button', { name: 'clear all' }).click();
+    await page.getByRole('button', { name: 'apply' }).click();
     await expect(page).toHaveURL((url) => {
       const searchParams = new URL(url).searchParams;
       return (
@@ -969,6 +1896,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       actionsBounds,
       addRuleBounds,
       clearAllBounds,
+      applyBounds,
     ] = await Promise.all([
       lastRule.boundingBox(),
       lastRule.getByRole('button', { name: 'Remove filter 3' }).boundingBox(),
@@ -978,6 +1906,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       page.locator('.recipe-filter-actions').boundingBox(),
       page.getByRole('button', { name: 'Add rule' }).boundingBox(),
       page.getByRole('button', { name: 'clear all' }).boundingBox(),
+      page.getByRole('button', { name: 'apply', exact: true }).boundingBox(),
     ]);
     const [removeStrokeWidth, addRuleFontSize, rowBorder] = await Promise.all([
       lastRule
@@ -989,21 +1918,31 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
         .evaluate((button) => getComputedStyle(button).fontSize),
       lastRule.evaluate((row) => getComputedStyle(row).borderTopWidth),
     ]);
-    const [addRuleTextStyle, clearAllTextStyle] = await Promise.all([
-      page.locator('.recipe-filter-add .recipe-ingredient-empty-prompt').evaluate((text) => {
-        const styles = getComputedStyle(text);
+    const [clearAllStyle, applyStyle] = await Promise.all([
+      page.getByRole('button', { name: 'clear all' }).evaluate((button) => {
+        const styles = getComputedStyle(button);
         return {
+          backgroundColor: styles.backgroundColor,
+          borderRadius: styles.borderRadius,
+          color: styles.color,
           fontFamily: styles.fontFamily,
           fontSize: styles.fontSize,
           fontStyle: styles.fontStyle,
+          fontWeight: styles.fontWeight,
+          height: styles.height,
         };
       }),
-      page.locator('.recipe-filter-clear-all .recipe-ingredient-empty-prompt').evaluate((text) => {
-        const styles = getComputedStyle(text);
+      page.getByRole('button', { name: 'apply', exact: true }).evaluate((button) => {
+        const styles = getComputedStyle(button);
         return {
+          backgroundColor: styles.backgroundColor,
+          borderRadius: styles.borderRadius,
+          color: styles.color,
           fontFamily: styles.fontFamily,
           fontSize: styles.fontSize,
           fontStyle: styles.fontStyle,
+          fontWeight: styles.fontWeight,
+          height: styles.height,
         };
       }),
     ]);
@@ -1015,22 +1954,35 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       !valueBounds ||
       !actionsBounds ||
       !addRuleBounds ||
-      !clearAllBounds
+      !clearAllBounds ||
+      !applyBounds
     ) {
       throw new Error('The final query rule controls must be measurable.');
     }
     expect(removeBounds.x).toBeGreaterThanOrEqual(valueBounds.x + valueBounds.width);
     expect(Math.abs(addRuleBounds.y - clearAllBounds.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(clearAllBounds.y - applyBounds.y)).toBeLessThanOrEqual(1);
     expect(addRuleBounds.width).toBeLessThan(actionsBounds.width / 2);
     expect(
-      Math.abs(clearAllBounds.x + clearAllBounds.width - actionsBounds.x - actionsBounds.width),
+      Math.abs(applyBounds.x + applyBounds.width - actionsBounds.x - actionsBounds.width),
     ).toBeLessThanOrEqual(1);
     expect(Math.abs(addRuleBounds.x - actionsBounds.x)).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(clearAllBounds.x + clearAllBounds.width - (removeBounds.x + removeBounds.width)),
-    ).toBeLessThanOrEqual(1);
-    expect(clearAllTextStyle).toEqual(addRuleTextStyle);
-    expect(lastRule.getByRole('button', { name: 'Apply' })).toHaveCount(0);
+    expect(clearAllBounds.x).toBeLessThan(applyBounds.x);
+    expect(clearAllStyle.backgroundColor).toBe(applyStyle.color);
+    expect(clearAllStyle.color).toBe(applyStyle.backgroundColor);
+    expect(clearAllStyle.borderRadius).toBe(applyStyle.borderRadius);
+    expect(clearAllStyle.fontFamily).toBe(applyStyle.fontFamily);
+    expect(clearAllStyle.fontSize).toBe(applyStyle.fontSize);
+    expect(applyStyle.fontStyle).toBe('italic');
+    expect(applyStyle.fontFamily).toContain('Georgia');
+    expect(clearAllStyle.fontStyle).toBe(applyStyle.fontStyle);
+    expect(clearAllStyle.fontWeight).toBe(applyStyle.fontWeight);
+    expect(clearAllStyle.height).toBe(applyStyle.height);
+    await expect(page.getByRole('button', { name: 'apply', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'clear all' })).toHaveCSS(
+      'text-decoration-line',
+      'none',
+    );
     for (const bounds of [fieldBounds, operatorBounds, valueBounds]) {
       expect(bounds.height).toBe(36);
     }

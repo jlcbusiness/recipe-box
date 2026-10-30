@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDownUp, Download, Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { ExportAction } from '../export-action';
 import { ImportAction } from '../settings/database-import-action';
@@ -89,7 +89,7 @@ export function PublicationTransferMenu({ publicationId }: { publicationId: stri
           title="Import or export"
           type="button"
         >
-          <ArrowDownUp aria-hidden="true" size={18} />
+          <span aria-hidden="true" className="export-action-icon" />
         </button>
         {isOpen && (
           <div

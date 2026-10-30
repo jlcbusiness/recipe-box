@@ -40,6 +40,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Supabase database guidance
 
+- The local Supabase database is disposable for development and testing. A local
+  reset (`supabase db reset --local` or `npm run dev:local`) reapplies migrations
+  and SQL seed data, but deletes all local Auth users and database records. Once
+  the stack is ready, run `npm run seed:synthetic -- --local` to recreate the
+  synthetic test accounts and fixture data. See
+  [local-synthetic-data.md](docs/development/local-synthetic-data.md) for the
+  accounts and recovery limits. `npm run dev` applies pending migrations without
+  resetting. Never reset a linked or hosted database.
 - Before pushing migrations, inspect `supabase migration list --linked` and
   preview with `supabase db push --linked --dry-run`. If a migration appears
   pending but its effects may already exist remotely, verify the schema before

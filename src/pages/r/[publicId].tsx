@@ -78,6 +78,8 @@ function renderInstructionBlocks(
                   buttonLabel="View instruction photo full size"
                   crop={photo.crop}
                   height={photo.height}
+                  displayHeight={photo.display_height}
+                  displayWidth={photo.display_width}
                   key={`${prefix}-photo-${token.id}-${occurrence}`}
                   src={photo.full_url}
                   triggerClassName={[

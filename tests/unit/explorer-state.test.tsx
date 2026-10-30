@@ -255,6 +255,40 @@ describe('explorer state contract', () => {
     ).toBe('details');
   });
 
+  it('accepts compact Rating and marker columns at their supported minimum widths', () => {
+    const definitions = new Map(
+      explorerColumnDefinitions['recipes-find'].map(({ key, label, minWidth }) => [
+        key,
+        { label, minWidth },
+      ]),
+    );
+    expect(definitions.get('score')).toEqual({ label: 'Rating', minWidth: 64 });
+    expect(definitions.get('starred')).toEqual({ label: 'Star', minWidth: 56 });
+    expect(definitions.get('hearted')).toEqual({ label: 'Heart', minWidth: 56 });
+
+    const state = {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['score', 'starred', 'hearted'],
+        column_widths: { score: 64, starred: 56, hearted: 56 },
+      },
+      direction: 'asc',
+      filters: [],
+      sort: 'name',
+      view: 'details',
+    };
+    expect(createExplorerState('recipes-find', state)).not.toBeNull();
+    expect(
+      createExplorerState('recipes-find', {
+        ...state,
+        display_preferences: {
+          ...state.display_preferences,
+          column_widths: { score: 63, starred: 55, hearted: 55 },
+        },
+      }),
+    ).toBeNull();
+  });
+
   it('rejects unsupported display columns, duplicate visibility, invalid widths, and version mismatches', () => {
     const base = {
       direction: 'asc',

@@ -3,7 +3,7 @@
 import { readFile } from 'node:fs/promises';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { normalizeImage } from '../../src/lib/media/image-processing';
+import { cropImage, normalizeImage } from '../../src/lib/media/image-processing';
 import { inspectImageBuffer } from '../../src/lib/media/rules';
 
 describe('image normalization', () => {
@@ -86,9 +86,53 @@ describe('image normalization', () => {
     expect(result.thumbnail.height).toBe(360);
   });
 
+  it('creates display variants from normalized crop coordinates and rotation', async () => {
+    const source = await sharp({
+      create: {
+        width: 100,
+        height: 50,
+        channels: 3,
+        background: { r: 170, g: 90, b: 55 },
+      },
+    })
+      .webp()
+      .toBuffer();
+
+    const result = await cropImage(source, {
+      left: 0.1,
+      top: 0.2,
+      width: 0.5,
+      height: 0.5,
+      rotation: 90,
+    });
+
+    expect(result.full.width).toBe(25);
+    expect(result.full.height).toBe(50);
+    expect(result.thumbnail.width).toBe(25);
+    expect(result.thumbnail.height).toBe(50);
+    expect((await sharp(result.full.buffer).metadata()).format).toBe('webp');
+  });
+
   it('rejects malformed image bytes with a typed processing error', async () => {
     await expect(normalizeImage(Buffer.from('not an image'), 'jpeg')).rejects.toMatchObject({
       code: 'invalid_image',
     });
+  });
+
+  it('rejects invalid saved crop coordinates', async () => {
+    const source = await sharp({
+      create: {
+        width: 100,
+        height: 50,
+        channels: 3,
+        background: { r: 170, g: 90, b: 55 },
+      },
+    })
+      .webp()
+      .toBuffer();
+
+    await expect(
+      cropImage(source, { left: 0.8, top: 0, width: 0.5, height: 0.5, rotation: 0 }),
+    ).rejects.toMatchObject({ code: 'invalid_image' });
   });
 });

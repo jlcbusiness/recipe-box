@@ -2,19 +2,21 @@
 
 This brief extends Slice 12's private still-image workflow with optional,
 reversible framing for recipe photos and publication covers. It does not
-change accepted image formats or replace uploaded image bytes.
+change accepted image formats or discard uploaded source images.
 
 ## Status
 
 Approved scope: Fit/contain remains the default. Only an explicitly saved crop
 changes display framing. The uncropped source appears only in the framing
-editor.
+editor. Saved framing produces versioned official display files while the
+normalized source files remain available for future framing changes.
 
 ## Outcome
 
 An owner can set and reset how recipe photos and publication covers appear.
-Every display uses saved framing; the complete image is shown by default and
-the uncropped source is shown only in the framing editor.
+Every display uses the official framed files when available; the complete
+image is shown by default and the uncropped source is shown only in the framing
+editor.
 
 ## Scope
 
@@ -32,9 +34,12 @@ the uncropped source is shown only in the framing editor.
   Do not crop automatically or use Fill. Existing display behavior is
   unchanged until the owner explicitly saves a crop.
 - Store nullable normalized crop coordinates on each ready media asset. Null
-  means the full image. Framing changes presentation metadata only and never
-  replaces the stored full-size WebP or thumbnail. The original is displayed
-  only in the framing editor. Each asset is framed independently.
+  means the full image. Retain the normalized source full-size WebP and
+  thumbnail, and generate versioned official display files from saved framing.
+  Normal displays use generated files without applying crop math again. Reset
+  points the official paths back to the retained source. Existing assets keep
+  metadata-based display until framing is next saved or reset. Each asset is
+  framed independently.
 - Offer Free, Original, Square, 4:3, 3:2, 16:9, and 9:16 aspect ratios using
   the shared mobile-safe Picklist. Common ratio labels and orientation follow
   the active crop frame; Original follows the rotated source image. Support
@@ -84,12 +89,17 @@ the API as beta and recommend pinning the package version.
   pending uploads cannot.
 - Crop updates are authenticated, owner-authorized, and version-checked against
   the active parent. They append the existing recipe-photo or publication-cover
-  history event, including before/after framing. They do not upload bytes,
-  alter quota accounting, or create Storage objects.
-- Extend explicit media export/import field allow-lists so framing round-trips
-  with a photo. Invalid crop metadata rejects the bundle before applying any
-  records. Public projections include framing only after the existing public
-  ID, privacy, and active-lifecycle checks.
+  history event, including before/after framing. Crop saves upload versioned
+  display files, atomically point the asset at them, count source and official
+  files toward the quota, and queue replaced display files only after the
+  database update succeeds. Reset reuses source files.
+- Extend explicit media export/import allow-lists so framing, official display
+  files, and retained source files round-trip together. Bundle version 7
+  preserves all distinct image variants; versions 1 through 6 remain
+  compatible and treat their full and thumbnail files as the source. Invalid
+  crop metadata rejects the bundle before applying any records. Public
+  projections expose only official display files after the existing public ID,
+  privacy, and active-lifecycle checks.
 - Keep recipe-photo RLS and signed URL checks unchanged. Removed or purged
   assets cannot be addressed by stale crop metadata; no general public bucket
   or image URL is introduced.
@@ -103,9 +113,9 @@ the API as beta and recommend pinning the package version.
   update active recipe photos or covers; invalid coordinates, wrong media
   kinds, and stale versions are rejected; successful updates record
   before/after framing in the correct history stream.
- Export/import tests verify rotation-aware framing round-trips in bundle
- version 5, version 4 framing imports at 0 degrees, versions 1-3 import
- without framing, and malformed framing fails before database changes.
+ Export/import tests verify source and official image variants round-trip in
+ bundle version 7, versions 1 through 6 remain compatible, and malformed
+ framing fails before database changes.
  Browser tests verify recipe and cover crop preview, Apply/Submit, Cancel,
   Reset, save failure, and framing independence from photo default/order. They
   verify saved framing at private/public detail, instruction images, Explorer
@@ -141,7 +151,7 @@ successfully.
 
 ## Decisions recorded
 
-The accepted framing, viewer, mobile interaction, data model, and bundle v5
+The accepted framing, viewer, mobile interaction, data model, and bundle v7
 choices are recorded in `decision-log.md`, the comprehensive reference, data
 model, portable bundle format, DLC roadmap, and visual guide. Keep this brief as
 the implementation boundary; update its acceptance status only after all

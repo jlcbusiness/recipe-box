@@ -154,7 +154,7 @@ async function createOwner(config) {
   return { id: result.user.id, accessToken: result.access_token };
 }
 
-async function createRecipe(config, owner) {
+async function createRecipe(config, owner, values = {}) {
   const [recipe] = await apiCall(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_relationships`, {
     method: 'POST',
     headers: ownerHeaders(config, owner),
@@ -190,6 +190,7 @@ async function createRecipe(config, owner) {
       p_recipe_url: null,
       p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
       p_tag_ids: [],
+      ...values,
     },
   });
   assert.ok(recipe?.id);
@@ -206,6 +207,15 @@ async function runMigrationTest() {
   const owner = await createOwner(config);
   const recipe = await createRecipe(config, owner);
   const service = serviceHeaders(config);
+  const [favoriteVerdict] = await apiCall(
+    `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id&category=eq.verdict&value=eq.Favorite`,
+    { headers: ownerHeaders(config, owner) },
+  );
+  assert.ok(favoriteVerdict?.id, 'the owner should have the existing Favorite verdict');
+  const favoriteRecipe = await createRecipe(config, owner, {
+    p_state: 'tried',
+    p_verdict_id: favoriteVerdict.id,
+  });
   const [set] = await apiCall(
     `${config.apiUrl}/rest/v1/recipe_ingredient_sets?select=id&recipe_id=eq.${recipe.id}`,
     { headers: service },
@@ -280,6 +290,17 @@ async function runMigrationTest() {
     },
     { portion_one_ratio: null, size_value: null, size_unit: null },
   );
+  const [existingFavoriteSignals] = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=state,verdict_id,score,is_starred,is_hearted&id=eq.${favoriteRecipe.id}`,
+    { headers: service },
+  );
+  assert.deepEqual(existingFavoriteSignals, {
+    state: 'tried',
+    verdict_id: favoriteVerdict.id,
+    score: null,
+    is_starred: false,
+    is_hearted: false,
+  });
 
   const [secondSet] = await apiCall(`${config.apiUrl}/rest/v1/recipe_ingredient_sets`, {
     method: 'POST',
@@ -509,7 +530,217 @@ async function runMigrationTest() {
     body: { preparation: 'cubed', size_value: 2.5, size_unit: 'cm' },
   });
 
-  console.log('Ingredient portion migration preflight and database constraints passed.');
+  const scorePayload = {
+    ...savePayload,
+    p_name: 'Score and marker migration fixture',
+    p_state: 'tried',
+    p_ingredient_rows: [],
+    p_instruction_steps: [],
+    p_ingredient_sets: [{ id: randomUUID(), label: 'Main', position: 0 }],
+    p_score: 3,
+  };
+  const [scoredRecipe] = await apiCall(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_score`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: scorePayload,
+  });
+  assert.ok(scoredRecipe?.id);
+  let scoredVersion = scoredRecipe.version;
+  for (const score of [-5, -3, -1, 0, 1, 2, 4, 5]) {
+    const [savedScore] = await apiCall(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_score`, {
+      method: 'POST',
+      headers: ownerHeaders(config, owner),
+      body: {
+        ...scorePayload,
+        p_recipe_id: scoredRecipe.id,
+        p_expected_version: scoredVersion,
+        p_score: score,
+      },
+    });
+    assert.ok(savedScore?.version, `Rating ${score} should be accepted`);
+    scoredVersion = savedScore.version;
+  }
+
+  for (const invalidPayload of [
+    { ...scorePayload, p_name: 'Invalid score fixture', p_score: 6 },
+    { ...scorePayload, p_name: 'Invalid state fixture', p_state: 'want_to_try' },
+  ]) {
+    const invalidScore = await apiAttempt(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_score`, {
+      method: 'POST',
+      headers: ownerHeaders(config, owner),
+      body: invalidPayload,
+    });
+    assert.equal(invalidScore.ok, false, 'invalid recipe scores should be rejected');
+  }
+  const invalidStoredScore = await apiAttempt(
+    `${config.apiUrl}/rest/v1/recipes?id=eq.${scoredRecipe.id}`,
+    { method: 'PATCH', headers: service, body: { score: 6 } },
+  );
+  assert.equal(invalidStoredScore.ok, false, 'the database should reject invalid stored scores');
+  const [scoreAfterInvalidWrite] = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=score&id=eq.${scoredRecipe.id}`,
+    { headers: service },
+  );
+  assert.deepEqual(scoreAfterInvalidWrite, { score: 5 });
+
+  const otherOwner = await createOwner(config);
+  const foreignRecipeRead = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=id,score,is_starred,is_hearted&id=eq.${scoredRecipe.id}`,
+    { headers: ownerHeaders(config, otherOwner) },
+  );
+  assert.deepEqual(foreignRecipeRead, [], 'recipe signal fields should remain owner-scoped');
+  const trashedRecord = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=version,trashed_at&id=eq.${recipe.id}`,
+    { headers: service },
+  );
+  assert.ok(trashedRecord[0]?.trashed_at);
+  const trashedMarker = await apiAttempt(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: {
+      p_recipe_id: recipe.id,
+      p_expected_version: trashedRecord[0].version,
+      p_marker: 'star',
+      p_enabled: true,
+    },
+  });
+  assert.equal(trashedMarker.ok, false, 'trashed recipes should reject marker writes');
+  assert.match(String(trashedMarker.error), /P0002/u);
+
+  const [starred] = await apiCall(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: {
+      p_recipe_id: scoredRecipe.id,
+      p_expected_version: scoredVersion,
+      p_marker: 'star',
+      p_enabled: true,
+    },
+  });
+  const staleMarker = await apiAttempt(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: {
+      p_recipe_id: scoredRecipe.id,
+      p_expected_version: scoredRecipe.version,
+      p_marker: 'heart',
+      p_enabled: true,
+    },
+  });
+  assert.equal(staleMarker.ok, false, 'marker updates should reject stale versions');
+  assert.match(String(staleMarker.error), /PT409/u);
+  const [unchangedAfterConflict] = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=version,score,is_starred,is_hearted&id=eq.${scoredRecipe.id}`,
+    { headers: service },
+  );
+  assert.deepEqual(unchangedAfterConflict, {
+    version: starred.version,
+    score: 5,
+    is_starred: true,
+    is_hearted: false,
+  });
+  const foreignMarker = await apiAttempt(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+    method: 'POST',
+    headers: ownerHeaders(config, otherOwner),
+    body: {
+      p_recipe_id: scoredRecipe.id,
+      p_expected_version: starred.version,
+      p_marker: 'heart',
+      p_enabled: true,
+    },
+  });
+  assert.equal(foreignMarker.ok, false, 'non-owners should not be able to change markers');
+  assert.match(String(foreignMarker.error), /P0002/u);
+  const anonymousMarker = await apiAttempt(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+    method: 'POST',
+    headers: { apikey: config.anonKey },
+    body: {
+      p_recipe_id: scoredRecipe.id,
+      p_expected_version: starred.version,
+      p_marker: 'heart',
+      p_enabled: true,
+    },
+  });
+  assert.equal(anonymousMarker.ok, false, 'unauthenticated users should not change markers');
+
+  const [hearted] = await apiCall(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: {
+      p_recipe_id: scoredRecipe.id,
+      p_expected_version: starred.version,
+      p_marker: 'heart',
+      p_enabled: true,
+    },
+  });
+  const historyUrl = `${config.apiUrl}/rest/v1/recipe_history?select=event_type,before_data,after_data&record_id=eq.${scoredRecipe.id}&order=created_at.asc,id.asc`;
+  const markerHistory = await apiCall(historyUrl, {
+    headers: ownerHeaders(config, owner),
+  });
+  const starEvent = markerHistory.find(
+    ({ event_type, after_data }) =>
+      event_type === 'recipe.updated' &&
+      after_data?.is_starred === true &&
+      after_data?.is_hearted === false,
+  );
+  assert.ok(starEvent, 'the Star update should create a history event');
+  assert.equal(starEvent.before_data.is_starred, false);
+  assert.equal(starEvent.after_data.score, 5);
+  const heartEvent = markerHistory.find(
+    ({ event_type, after_data }) =>
+      event_type === 'recipe.updated' &&
+      after_data?.is_starred === true &&
+      after_data?.is_hearted === true,
+  );
+  assert.ok(heartEvent, 'the Heart update should create a history event');
+  assert.equal(heartEvent.before_data.is_starred, true);
+  assert.equal(heartEvent.before_data.is_hearted, false);
+  const foreignHistory = await apiCall(historyUrl, {
+    headers: ownerHeaders(config, otherOwner),
+  });
+  assert.deepEqual(foreignHistory, [], 'recipe history should remain owner-scoped');
+
+  const scoredMarkerSearch = await apiCall(`${config.apiUrl}/rest/v1/rpc/search_recipes`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: {
+      p_query: null,
+      p_limit: 10,
+      p_offset: 0,
+      p_filters: [
+        { field: 'score', operator: 'greater_than', value: 2 },
+        { field: 'starred', operator: 'is', value: ['true'] },
+        { field: 'hearted', operator: 'is', value: ['true'] },
+      ],
+      p_sort_key: 'score',
+      p_sort_direction: 'desc',
+      p_publication_id: null,
+    },
+  });
+  assert.ok(
+    scoredMarkerSearch.some(({ recipe_id }) => recipe_id === scoredRecipe.id),
+    'score and marker filters should match the private recipe',
+  );
+
+  const [clearedScore] = await apiCall(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_score`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: {
+      ...scorePayload,
+      p_recipe_id: scoredRecipe.id,
+      p_expected_version: hearted.version,
+      p_state: 'want_to_try',
+      p_score: null,
+    },
+  });
+  const [personalSignals] = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=score,is_starred,is_hearted&id=eq.${scoredRecipe.id}`,
+    { headers: service },
+  );
+  assert.equal(clearedScore.id, scoredRecipe.id);
+  assert.deepEqual(personalSignals, { score: null, is_starred: true, is_hearted: true });
+
+  console.log('Ingredient portions and DLC 10 migration checks passed.');
 }
 
 try {

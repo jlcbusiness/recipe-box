@@ -157,11 +157,11 @@ async function createRecipe(
   return recipe.id;
 }
 
-async function createImageBuffer() {
+async function createImageBuffer(width = 32, height = 24) {
   return sharp({
     create: {
-      width: 32,
-      height: 24,
+      width,
+      height,
       channels: 3,
       background: { r: 126, g: 154, b: 116 },
     },
@@ -759,6 +759,24 @@ test('recipe photo framing supports keyboard access and save recovery @e2e @a11y
 
     await page.goto(`/recipes/${recipeId}`);
     const featureImage = page.locator('.recipe-photo-feature-image');
+    await expect(featureImage).toBeVisible();
+    const readImageDimensions = () =>
+      featureImage.evaluate((image) => {
+        if (!(image instanceof HTMLImageElement)) {
+          throw new Error('The recipe photo should be a rendered image.');
+        }
+        return {
+          width: Number(image.getAttribute('width')),
+          height: Number(image.getAttribute('height')),
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          loaded: image.complete && image.naturalWidth > 0,
+        };
+      });
+    await expect.poll(async () => (await readImageDimensions()).loaded).toBe(true);
+    const imageDimensions = await readImageDimensions();
+    expect(imageDimensions.width).toBe(imageDimensions.naturalWidth);
+    expect(imageDimensions.height).toBe(imageDimensions.naturalHeight);
     await featureImage.click();
     const imageViewer = page.locator('.image-viewer-dialog');
     await expect(imageViewer).toHaveJSProperty('open', true);
@@ -893,6 +911,7 @@ test('image management panes stage covers and immediately manage decorative reci
     const publicationId = await createBook(request, apiUrl, headers, publicationName);
     const recipeId = await createRecipe(request, apiUrl, headers, recipeName);
     const imageBuffer = await createImageBuffer();
+    const recipePhotoBuffer = await createImageBuffer(640, 480);
     await signIn(page, owner.email, owner.password);
 
     await page.goto(`/publications/${publicationId}`);
@@ -1163,7 +1182,7 @@ test('image management panes stage covers and immediately manage decorative reci
       ...Array.from({ length: 5 }, (_, index) => ({
         name: `photo-${index + 1}.png`,
         mimeType: 'image/png',
-        buffer: imageBuffer,
+        buffer: recipePhotoBuffer,
       })),
       {
         name: 'still-tiny.heic',
@@ -1349,19 +1368,35 @@ test('image management panes stage covers and immediately manage decorative reci
     expect(cropPatchBody.crop).toMatchObject({ rotation: 270 });
     expect(cropPatchResult, JSON.stringify(cropPatchBody)).toHaveProperty('version');
     const savedPhotoCropResponse = await request.get(
-      `${apiUrl}/rest/v1/media_assets?select=id,crop&recipe_id=eq.${recipeId}&status=eq.ready`,
+      `${apiUrl}/rest/v1/media_assets?select=id,crop,full_path,thumbnail_path,source_full_path,source_thumbnail_path&recipe_id=eq.${recipeId}&status=eq.ready`,
       { headers },
     );
     expect(savedPhotoCropResponse.ok(), await savedPhotoCropResponse.text()).toBeTruthy();
     const savedPhotoCrops = (await savedPhotoCropResponse.json()) as {
       id: string;
       crop: { rotation?: number } | null;
+      full_path: string;
+      thumbnail_path: string;
+      source_full_path: string;
+      source_thumbnail_path: string;
     }[];
-    expect(savedPhotoCrops.some((asset) => asset.crop?.rotation === 270)).toBe(true);
-    await expect(
-      photoDialog.locator('.recipe-photo-grid-item.is-default .recipe-photo-grid-image image'),
-    ).toHaveAttribute('transform', /rotate\(270\)/);
+    const savedPhoto = savedPhotoCrops.find((asset) => asset.crop?.rotation === 270);
+    expect(savedPhoto).toBeDefined();
+    expect(savedPhoto?.full_path).not.toBe(savedPhoto?.source_full_path);
+    expect(savedPhoto?.thumbnail_path).not.toBe(savedPhoto?.source_thumbnail_path);
+    expect(savedPhoto?.full_path).toMatch(/\/framing\/[^/]+\/full\.webp$/);
+    expect(savedPhoto?.thumbnail_path).toMatch(/\/framing\/[^/]+\/thumb\.webp$/);
+    expect(savedPhoto?.full_path.replace(/\/full\.webp$/, '')).toBe(
+      savedPhoto?.thumbnail_path.replace(/\/thumb\.webp$/, ''),
+    );
+    const framedImage = photoDialog.locator(
+      '.recipe-photo-grid-item.is-default .recipe-photo-grid-image',
+    );
+    await expect(framedImage).toHaveJSProperty('tagName', 'IMG');
+    await expect(framedImage).toHaveAttribute('src', /\/framing\/.+\/thumb\.webp/);
     await photoDialog.getByRole('button', { name: 'Adjust framing for photo 1' }).click();
+    const cropEditorDialog = page.getByRole('dialog', { name: 'Adjust image framing' });
+    await expect(cropEditorDialog).toBeVisible();
     await expect(page.locator('.image-crop-editor-rotation-value')).toHaveCount(0);
     if (viewportWidth <= 640) {
       await page.setViewportSize(viewportSize);
@@ -1392,12 +1427,19 @@ test('image management panes stage covers and immediately manage decorative reci
     ).toBeLessThanOrEqual(1);
     await expect(page.locator('.recipe-photo-manager-pencil')).toBeVisible();
     const triggerPhotoSource = await page
-      .locator('.recipe-photo-manager-trigger .framed-media-image image')
-      .getAttribute('href');
+      .locator('.recipe-photo-manager-trigger .framed-media-image')
+      .getAttribute('src');
     const primaryGridPhotoSource = await photoDialog
-      .locator('.recipe-photo-grid-item.is-default .recipe-photo-grid-image image')
-      .getAttribute('href');
-    expect(triggerPhotoSource).toBe(primaryGridPhotoSource);
+      .locator('.recipe-photo-grid-item.is-default .recipe-photo-grid-image')
+      .getAttribute('src');
+    if (!triggerPhotoSource || !primaryGridPhotoSource) {
+      throw new Error('Expected official full-size and thumbnail image URLs.');
+    }
+    const triggerPhotoPath = new URL(triggerPhotoSource).pathname;
+    const primaryGridPhotoPath = new URL(primaryGridPhotoSource).pathname;
+    expect(triggerPhotoPath).toMatch(/\/framing\/[^/]+\/thumb\.webp$/);
+    expect(primaryGridPhotoPath).toMatch(/\/framing\/[^/]+\/thumb\.webp$/);
+    expect(triggerPhotoPath).toBe(primaryGridPhotoPath);
     const heicAssetResponse = await request.get(
       `${apiUrl}/rest/v1/media_assets?select=width,height,full_path,thumbnail_path&recipe_id=eq.${recipeId}&status=eq.ready&width=eq.320&height=eq.427`,
       { headers },
@@ -1970,23 +2012,64 @@ test('image management panes stage covers and immediately manage decorative reci
     ).toBeLessThanOrEqual(1);
     expect(featureImageBounds?.width ?? Infinity).toBeLessThanOrEqual(280);
     if (viewportWidth > 760) {
+      await page.setViewportSize({ width: 761, height: 900 });
+      const summaryLayout = page.locator('.recipe-summary-layout-with-photos');
+      const originalSummaryWidth = await summaryLayout.evaluate((element) => element.style.width);
+      await summaryLayout.evaluate((element) => {
+        element.style.width = '584px';
+      });
+      const constrainedFeatureBounds = await page.locator('.recipe-photo-feature').boundingBox();
+      const constrainedFeatureImageBounds = await featureImage.boundingBox();
       const metadataBounds = await page
         .getByRole('heading', { name: 'Recipe details' })
         .boundingBox();
+      const titleElement = page.locator('.recipe-detail-title h1');
+      const originalTitle = await titleElement.textContent();
+      await titleElement.evaluate(
+        (element) =>
+          (element.textContent =
+            'A recipe title long enough to wrap across several lines while the action toolbar remains on its own row below it'),
+      );
       const actionBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
       const titleBounds = await page.locator('.recipe-detail-title').boundingBox();
+      const titleTextBounds = await titleElement.boundingBox();
       expect(metadataBounds).not.toBeNull();
       expect(actionBounds).not.toBeNull();
       expect(titleBounds).not.toBeNull();
-      if (!metadataBounds || !featureBounds || !actionBounds || !titleBounds) {
+      expect(titleTextBounds).not.toBeNull();
+      expect(constrainedFeatureBounds).not.toBeNull();
+      expect(constrainedFeatureImageBounds).not.toBeNull();
+      if (
+        !metadataBounds ||
+        !constrainedFeatureBounds ||
+        !constrainedFeatureImageBounds ||
+        !actionBounds ||
+        !titleBounds ||
+        !titleTextBounds
+      ) {
         throw new Error('Expected desktop recipe summary and title controls to be visible');
       }
       await expect(featureImage).toHaveCSS('max-height', '280px');
       expect((await featureImage.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(281);
-      expect(featureBounds.x + featureBounds.width).toBeLessThan(metadataBounds.x);
-      expect(Math.abs((featureImageBounds?.y ?? 0) - titleBounds.y)).toBeLessThanOrEqual(4);
-      expect(Math.abs(actionBounds.y - titleBounds.y)).toBeLessThanOrEqual(1);
-      expect(actionBounds.x).toBeGreaterThanOrEqual(titleBounds.x + titleBounds.width);
+      expect(constrainedFeatureBounds.x + constrainedFeatureBounds.width).toBeLessThan(
+        metadataBounds.x,
+      );
+      expect(Math.abs(constrainedFeatureImageBounds.y - titleBounds.y)).toBeLessThanOrEqual(4);
+      expect(constrainedFeatureImageBounds.width).toBeLessThan(featureImageBounds?.width ?? 0);
+      expect(actionBounds.width).toBeLessThanOrEqual(titleTextBounds.width + 1);
+      expect(actionBounds.x + actionBounds.width).toBeLessThanOrEqual(
+        (page.viewportSize()?.width ?? 0) - 8,
+      );
+      expect(actionBounds.y).toBeGreaterThanOrEqual(titleBounds.y + titleBounds.height - 1);
+      await summaryLayout.evaluate((element, width) => {
+        if (width) {
+          element.style.width = width;
+        } else {
+          element.style.removeProperty('width');
+        }
+      }, originalSummaryWidth);
+      await titleElement.evaluate((element, text) => (element.textContent = text), originalTitle);
+      await page.setViewportSize(viewportSize);
       await expect(page.locator('main.recipes-main')).toHaveCSS('padding-top', '17px');
     } else {
       if (imageMaxHeight === null) {

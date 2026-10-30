@@ -56,6 +56,55 @@ describe('import image staging', () => {
       byteSize: fullImage.byteLength + thumbnail.byteLength,
       width: 2,
       height: 2,
+      variantByteSizes: {
+        full: fullImage.byteLength,
+        thumbnail: thumbnail.byteLength,
+      },
+    });
+  });
+
+  it('stages retained source variants separately from the official framed files', async () => {
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    const fullImage = await createWebp(2, 2);
+    const thumbnail = await createWebp(1, 1);
+    const sourceFull = await createWebp(4, 3);
+    const sourceThumbnail = await createWebp(3, 2);
+    const stager = createImportImageStager(
+      createAdmin(upload),
+      accountId,
+      new Map([[sourceAssetId, destinationAssetId]]),
+    );
+
+    await stager.imageSink(`images/${sourceAssetId}/full.webp`, Readable.from([fullImage]));
+    await stager.imageSink(`images/${sourceAssetId}/thumbnail.webp`, Readable.from([thumbnail]));
+    await stager.imageSink(`images/${sourceAssetId}/source-full.webp`, Readable.from([sourceFull]));
+    await stager.imageSink(
+      `images/${sourceAssetId}/source-thumbnail.webp`,
+      Readable.from([sourceThumbnail]),
+    );
+
+    expect(stager.pathsBySourceAsset.get(sourceAssetId)).toEqual({
+      fullPath: `${accountId}/assets/${destinationAssetId}/full.webp`,
+      thumbnailPath: `${accountId}/assets/${destinationAssetId}/thumb.webp`,
+      sourceFullPath: `${accountId}/assets/${destinationAssetId}/source/full.webp`,
+      sourceThumbnailPath: `${accountId}/assets/${destinationAssetId}/source/thumb.webp`,
+    });
+    expect(stager.metadataBySourceAsset.get(sourceAssetId)).toEqual({
+      byteSize:
+        fullImage.byteLength +
+        thumbnail.byteLength +
+        sourceFull.byteLength +
+        sourceThumbnail.byteLength,
+      width: 2,
+      height: 2,
+      sourceWidth: 4,
+      sourceHeight: 3,
+      variantByteSizes: {
+        full: fullImage.byteLength,
+        thumbnail: thumbnail.byteLength,
+        'source-full': sourceFull.byteLength,
+        'source-thumbnail': sourceThumbnail.byteLength,
+      },
     });
   });
 

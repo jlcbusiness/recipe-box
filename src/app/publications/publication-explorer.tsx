@@ -36,6 +36,8 @@ type ExplorerPublication = PublicationSearchResult & {
   cover_crop: CropRect | null;
   cover_image_width: number;
   cover_image_height: number;
+  cover_display_width: number;
+  cover_display_height: number;
 };
 type PublicationFilter = 'all' | PublicationType;
 type ViewMode = 'list' | 'grid';
@@ -645,6 +647,8 @@ export function PublicationExplorer({
                   >
                     <PublicationCover
                       crop={publication.cover_crop}
+                      displayHeight={publication.cover_display_height}
+                      displayWidth={publication.cover_display_width}
                       imageHeight={publication.cover_image_height}
                       imageUrl={publication.cover_image_url}
                       imageWidth={publication.cover_image_width}

@@ -45,6 +45,7 @@ import {
 import {
   calculateTotalMinutes,
   clearConditionalValuesForStateChange,
+  recipeScoreValues,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
 import { createUuid } from '../../lib/uuid';
@@ -77,7 +78,7 @@ type RecipeFormProps = {
   recipe?: RecipeRecord;
 };
 
-type RecipeSinglePicklistCategory = 'food_type' | 'state' | 'verdict' | 'enthusiasm';
+type RecipeSinglePicklistCategory = 'food_type' | 'state' | 'verdict' | 'enthusiasm' | 'score';
 type RecipePicklistKey = RecipeMultiSelectCategory | RecipeSinglePicklistCategory;
 
 type SinglePicklistOption = {
@@ -110,6 +111,7 @@ function formatOptionalInteger(value: number | null | undefined): string {
 function SinglePicklist({
   label,
   name,
+  menuClassName = 'recipe-picklist-menu',
   value,
   placeholder,
   options,
@@ -120,6 +122,7 @@ function SinglePicklist({
 }: {
   label: string;
   name: string;
+  menuClassName?: string;
   value: string;
   placeholder: string;
   options: SinglePicklistOption[];
@@ -137,7 +140,7 @@ function SinglePicklist({
         className="recipe-picklist-trigger"
         label={label}
         measureLabel={placeholder}
-        menuClassName="recipe-picklist-menu"
+        menuClassName={menuClassName}
         onAddOption={onAddOption}
         onOpenChange={onOpenChange}
         onSelect={onChange}
@@ -271,6 +274,7 @@ export function RecipeForm({
   const [foodTypeId, setFoodTypeId] = useState(recipe?.food_type_id ?? '');
   const [serves, setServes] = useState(formatOptionalInteger(recipe?.serves));
   const [verdictId, setVerdictId] = useState(recipe?.verdict_id ?? '');
+  const [score, setScore] = useState(recipe?.score?.toString() ?? '');
   const [enthusiasmId, setEnthusiasmId] = useState(recipe?.enthusiasm_id ?? '');
   const [occasionDetails, setOccasionDetails] = useState(recipe?.occasion_details ?? '');
   const [reason, setReason] = useState(recipe?.reason ?? '');
@@ -409,11 +413,13 @@ export function RecipeForm({
       const cleared = clearConditionalValuesForStateChange(state, nextState, {
         verdictId,
         enthusiasmId,
+        score,
         occasionDetails,
         reason,
       });
       setVerdictId(cleared.verdictId ?? '');
       setEnthusiasmId(cleared.enthusiasmId ?? '');
+      setScore(cleared.score ?? '');
       setOccasionDetails(cleared.occasionDetails ?? '');
       setReason(cleared.reason ?? '');
     }
@@ -767,6 +773,22 @@ export function RecipeForm({
               isOpen={openPicklist === 'verdict'}
               onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'verdict' : null)}
               onChange={(value) => handleSelectionChange('verdict', value)}
+            />
+          )}
+          {state === 'tried' && (
+            <SinglePicklist
+              label="Rating"
+              name="score"
+              menuClassName="recipe-picklist-menu recipe-score-picklist-menu"
+              value={score}
+              placeholder="—"
+              options={recipeScoreValues.map((value) => ({
+                value: String(value),
+                label: String(value),
+              }))}
+              isOpen={openPicklist === 'score'}
+              onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'score' : null)}
+              onChange={setScore}
             />
           )}
           {state === 'will_not_try' && (

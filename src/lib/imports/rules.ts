@@ -15,9 +15,10 @@ import {
 import { isValidNormalizedCrop } from '../media/rules';
 import { validateIngredientSetLabels } from '../recipes/ingredient-set-rules';
 import { instructionEmphasisOptions } from '../recipes/instruction-emphasis';
+import { isRecipeScore } from '../recipes/recipe-rules';
 
 const imagePathPattern =
-  /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail)\.webp$/i;
+  /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
 const requiredManifestKeys = [
   'format',
   'schema_version',
@@ -164,7 +165,20 @@ function validateData(
     throw new Error('The bundle manifest and data scopes do not match.');
   }
 
-  const preferences = asRecord(data.account_preferences, 'Account preferences');
+  const preferences = { ...asRecord(data.account_preferences, 'Account preferences') };
+  const legacyColumnOrder = preferences.recipe_column_order;
+  if (
+    schemaVersion < 6 &&
+    Array.isArray(legacyColumnOrder) &&
+    legacyColumnOrder.every((column): column is string => typeof column === 'string')
+  ) {
+    preferences.recipe_column_order = [
+      ...legacyColumnOrder,
+      ...(['score', 'starred', 'hearted'] as const).filter(
+        (column) => !legacyColumnOrder.includes(column),
+      ),
+    ];
+  }
   const instructionColors = new Set<string>(
     instructionEmphasisOptions.map((option) => option.value),
   );
@@ -200,21 +214,59 @@ function validateData(
       throw new Error(`The ${table} records must be an array.`);
     }
     const allowedFields = new Set(
-      table === 'recipe_ingredients' && schemaVersion < 3
+      table === 'recipes' && schemaVersion < 6
         ? portableRecordFields[table].filter(
-            (field) =>
-              field !== 'portion_one_ratio' && field !== 'size_value' && field !== 'size_unit',
+            (field) => !['score', 'is_starred', 'is_hearted'].includes(field),
           )
-        : table === 'recipe_step_mentions' && schemaVersion < 3
-          ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
-          : table === 'media_assets' && schemaVersion < 4
-            ? portableRecordFields[table].filter((field) => field !== 'crop')
-            : portableRecordFields[table],
+        : table === 'recipe_ingredients' && schemaVersion < 3
+          ? portableRecordFields[table].filter(
+              (field) =>
+                field !== 'portion_one_ratio' && field !== 'size_value' && field !== 'size_unit',
+            )
+          : table === 'recipe_step_mentions' && schemaVersion < 3
+            ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
+            : table === 'media_assets'
+              ? portableRecordFields[table].filter(
+                  (field) =>
+                    (schemaVersion >= 4 || field !== 'crop') &&
+                    (schemaVersion >= 7 ||
+                      !['source_full_path', 'source_thumbnail_path', 'source_byte_size'].includes(
+                        field,
+                      )),
+                )
+              : portableRecordFields[table],
     );
     for (const [index, item] of (records[table] as unknown[]).entries()) {
       const record = asRecord(item, `The ${table} record at index ${index}`);
       if (Object.keys(record).some((field) => !allowedFields.has(field))) {
         throw new Error(`The ${table} record contains an unsupported field.`);
+      }
+    }
+  }
+
+  const recipes = records.recipes as ExportRecord[];
+  if (schemaVersion < 6) {
+    records.recipes = recipes.map((recipe) => ({
+      ...recipe,
+      score: null,
+      is_starred: false,
+      is_hearted: false,
+    }));
+  } else {
+    for (const recipe of recipes) {
+      if (
+        !Object.hasOwn(recipe, 'score') ||
+        !Object.hasOwn(recipe, 'is_starred') ||
+        !Object.hasOwn(recipe, 'is_hearted') ||
+        (recipe.score !== null &&
+          (typeof recipe.score !== 'number' ||
+            !Number.isInteger(recipe.score) ||
+            !isRecipeScore(recipe.score))) ||
+        typeof recipe.is_starred !== 'boolean' ||
+        typeof recipe.is_hearted !== 'boolean' ||
+        (recipe.score !== null && recipe.state !== 'tried')
+      ) {
+        throw new Error('The bundle contains invalid recipe score or marker data.');
       }
     }
   }
@@ -252,24 +304,52 @@ function validateData(
   }
 
   records.media_assets = (records.media_assets as ExportRecord[]).map((asset) => {
-    if (schemaVersion < 4) return { ...asset, crop: null };
-    if (!Object.hasOwn(asset, 'crop')) {
-      throw new Error('A media asset is missing its crop framing.');
+    let crop: unknown = null;
+    if (schemaVersion >= 4) {
+      if (!Object.hasOwn(asset, 'crop')) {
+        throw new Error('A media asset is missing its crop framing.');
+      }
+      if (asset.crop !== null) {
+        const cropRecord = asRecord(asset.crop, 'A media asset crop');
+        assertExactKeys(
+          cropRecord,
+          schemaVersion >= 5
+            ? ['left', 'top', 'width', 'height', 'rotation']
+            : ['left', 'top', 'width', 'height'],
+          'A media asset crop',
+        );
+        crop = schemaVersion >= 5 ? cropRecord : { ...cropRecord, rotation: 0 };
+        if (!isValidNormalizedCrop(crop)) {
+          throw new Error('The bundle contains invalid media crop framing.');
+        }
+      }
     }
-    if (asset.crop === null) return asset;
-    const crop = asRecord(asset.crop, 'A media asset crop');
-    assertExactKeys(
-      crop,
-      schemaVersion >= 5
-        ? ['left', 'top', 'width', 'height', 'rotation']
-        : ['left', 'top', 'width', 'height'],
-      'A media asset crop',
-    );
-    const normalizedCrop = schemaVersion >= 5 ? crop : { ...crop, rotation: 0 };
-    if (!isValidNormalizedCrop(normalizedCrop)) {
-      throw new Error('The bundle contains invalid media crop framing.');
+
+    const sourceFields =
+      schemaVersion < 7
+        ? {
+            source_full_path: asset.full_path,
+            source_thumbnail_path: asset.thumbnail_path,
+            source_byte_size: asset.byte_size,
+          }
+        : {
+            source_full_path: asset.source_full_path,
+            source_thumbnail_path: asset.source_thumbnail_path,
+            source_byte_size: asset.source_byte_size,
+          };
+    if (
+      schemaVersion >= 7 &&
+      (!Object.hasOwn(asset, 'source_full_path') ||
+        !Object.hasOwn(asset, 'source_thumbnail_path') ||
+        !Object.hasOwn(asset, 'source_byte_size') ||
+        typeof sourceFields.source_full_path !== 'string' ||
+        typeof sourceFields.source_thumbnail_path !== 'string' ||
+        !Number.isSafeInteger(sourceFields.source_byte_size) ||
+        Number(sourceFields.source_byte_size) < 1)
+    ) {
+      throw new Error('A media asset is missing its retained source image metadata.');
     }
-    return { ...asset, crop: normalizedCrop };
+    return { ...asset, crop, ...sourceFields };
   });
 
   const setsByRecipe = new Map<string, ExportRecord[]>();
@@ -312,6 +392,7 @@ function validateData(
     throw new Error('The selected publication is missing from the bundle.');
   }
 
+  data.account_preferences = preferences;
   return data as unknown as PortableData;
 }
 
@@ -607,17 +688,44 @@ export function validateImportBundleFiles(
     assetIds.add(asset.id);
     const fullPath = `images/${asset.id}/full.webp`;
     const thumbnailPath = `images/${asset.id}/thumbnail.webp`;
-    if (asset.full_path !== fullPath || asset.thumbnail_path !== thumbnailPath) {
+    const sourceFullPath = `images/${asset.id}/source-full.webp`;
+    const sourceThumbnailPath = `images/${asset.id}/source-thumbnail.webp`;
+    if (
+      asset.full_path !== fullPath ||
+      asset.thumbnail_path !== thumbnailPath ||
+      ![fullPath, sourceFullPath].includes(String(asset.source_full_path)) ||
+      ![thumbnailPath, sourceThumbnailPath].includes(String(asset.source_thumbnail_path))
+    ) {
       throw new Error('A media asset has invalid image paths.');
     }
-    expectedImages.add(fullPath);
-    expectedImages.add(thumbnailPath);
+    const assetPaths = new Set([
+      fullPath,
+      thumbnailPath,
+      String(asset.source_full_path),
+      String(asset.source_thumbnail_path),
+    ]);
+    for (const path of assetPaths) {
+      expectedImages.add(path);
+    }
     const fullImage = images.get(fullPath);
     const thumbnailImage = images.get(thumbnailPath);
+    const sourceBytes = new Set([
+      String(asset.source_full_path),
+      String(asset.source_thumbnail_path),
+    ]);
+    const sourceByteSize = [...sourceBytes].reduce(
+      (total, path) => total + (images.get(path)?.size_bytes ?? 0),
+      0,
+    );
+    const assetByteSize = [...assetPaths].reduce(
+      (total, path) => total + (images.get(path)?.size_bytes ?? 0),
+      0,
+    );
     if (
       !fullImage ||
       !thumbnailImage ||
-      asset.byte_size !== fullImage.size_bytes + thumbnailImage.size_bytes
+      asset.byte_size !== assetByteSize ||
+      asset.source_byte_size !== sourceByteSize
     ) {
       throw new Error('A media asset is missing a required image variant or has an invalid size.');
     }

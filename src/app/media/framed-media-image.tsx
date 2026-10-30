@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { CropRect } from '../../lib/media/rules';
 
 type FramedMediaImageProps = {
@@ -5,6 +6,8 @@ type FramedMediaImageProps = {
   className?: string;
   crop: CropRect | null;
   dataPhotoId?: string;
+  displayHeight?: number;
+  displayWidth?: number;
   height: number;
   loading?: 'eager' | 'lazy';
   src: string;
@@ -16,11 +19,29 @@ export function FramedMediaImage({
   className,
   crop,
   dataPhotoId,
+  displayHeight,
+  displayWidth,
   height,
   loading = 'lazy',
   src,
   width,
 }: FramedMediaImageProps) {
+  if (!crop) {
+    return (
+      <Image
+        alt={alt}
+        aria-hidden={alt.length === 0 || undefined}
+        className={`framed-media-image${className ? ` ${className}` : ''}`}
+        data-photo-id={dataPhotoId}
+        height={displayHeight ?? height}
+        loading={loading}
+        src={src}
+        unoptimized
+        width={displayWidth ?? width}
+      />
+    );
+  }
+
   const left = crop?.left ?? 0;
   const top = crop?.top ?? 0;
   const cropWidth = crop?.width ?? 1;

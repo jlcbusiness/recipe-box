@@ -29,6 +29,7 @@ export default async function PublicationPage({
     status?: string;
     sort?: string;
     direction?: string;
+    filter?: string | string[];
     page?: string;
     view?: string;
     column_name?: string | string[];
@@ -106,6 +107,8 @@ export default async function PublicationPage({
       <div className="publication-detail-heading">
         <PublicationCover
           crop={publicationCover?.crop}
+          displayHeight={publicationCover?.display_height}
+          displayWidth={publicationCover?.display_width}
           imageHeight={publicationCover?.height}
           imageUrl={publicationCover?.thumbnail_url}
           imageWidth={publicationCover?.width}

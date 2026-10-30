@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import {
   createContext,
   type KeyboardEvent,
@@ -14,7 +15,7 @@ export type RecipeSearchMode = 'search' | 'query';
 
 type RecipeSearchModeContextValue = {
   mode: RecipeSearchMode;
-  setMode: (mode: RecipeSearchMode) => void;
+  switchMode: (mode: RecipeSearchMode) => void;
 };
 
 const RecipeSearchModeContext = createContext<RecipeSearchModeContextValue | null>(null);
@@ -27,9 +28,30 @@ export function RecipeSearchModeProvider({
   initialMode: RecipeSearchMode;
 }) {
   const [mode, setMode] = useState(initialMode);
+  const previousInitialModeRef = useRef(initialMode);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (previousInitialModeRef.current === initialMode) return;
+    previousInitialModeRef.current = initialMode;
+    setMode(initialMode);
+  }, [initialMode]);
+
+  function switchMode(nextMode: RecipeSearchMode) {
+    if (mode === nextMode) return;
+
+    const params = new URLSearchParams(window.location.search);
+    params.delete('filter');
+    params.delete('page');
+    if (mode === 'search') params.delete('q');
+    params.set('tab', nextMode);
+
+    setMode(nextMode);
+    router.replace(`/recipes/find?${params.toString()}`, { scroll: false });
+  }
 
   return (
-    <RecipeSearchModeContext.Provider value={{ mode, setMode }}>
+    <RecipeSearchModeContext.Provider value={{ mode, switchMode }}>
       {children}
     </RecipeSearchModeContext.Provider>
   );
@@ -93,7 +115,7 @@ export function RecipeSearchTabs({
   const searchMode = useRecipeSearchMode();
   if (!searchMode) throw new Error('RecipeSearchTabs must be inside RecipeSearchModeProvider.');
 
-  const { mode, setMode } = searchMode;
+  const { mode, switchMode } = searchMode;
   const tabRefs = useRef<Record<RecipeSearchMode, HTMLButtonElement | null>>({
     search: null,
     query: null,
@@ -113,7 +135,7 @@ export function RecipeSearchTabs({
 
     if (!nextMode) return;
     event.preventDefault();
-    setMode(nextMode);
+    switchMode(nextMode);
     tabRefs.current[nextMode]?.focus();
   }
 
@@ -131,7 +153,7 @@ export function RecipeSearchTabs({
           role="tab"
           tabIndex={mode === 'search' ? 0 : -1}
           type="button"
-          onClick={() => setMode('search')}
+          onClick={() => switchMode('search')}
           onKeyDown={(event) => handleTabKeyDown(event, 'search')}
         >
           Search
@@ -147,7 +169,7 @@ export function RecipeSearchTabs({
           role="tab"
           tabIndex={mode === 'query' ? 0 : -1}
           type="button"
-          onClick={() => setMode('query')}
+          onClick={() => switchMode('query')}
           onKeyDown={(event) => handleTabKeyDown(event, 'query')}
         >
           Query

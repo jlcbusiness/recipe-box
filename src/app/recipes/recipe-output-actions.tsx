@@ -395,7 +395,7 @@ export function RecipeOutputActions({
 
   return (
     <>
-      <div className="recipe-output-action">
+      <div className="recipe-output-action recipe-output-menu-action">
         <button
           aria-controls={openPanel === 'output' ? outputMenuId : undefined}
           aria-expanded={openPanel === 'output'}
@@ -465,7 +465,7 @@ export function RecipeOutputActions({
         )}
       </div>
       {exportAction}
-      <div className="recipe-output-action">
+      <div className="recipe-output-action recipe-output-settings-action">
         <button
           aria-controls={openPanel === 'settings' ? settingsId : undefined}
           aria-expanded={openPanel === 'settings'}

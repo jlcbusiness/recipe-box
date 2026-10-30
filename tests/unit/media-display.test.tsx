@@ -16,13 +16,35 @@ function photo(id: string, position: number, crop: MediaAssetDisplay['crop']): M
     byte_size: 1024,
     width: 1000,
     height: 500,
+    display_width: 1000,
+    display_height: 500,
     crop,
+    saved_crop: crop,
     full_url: `https://example.test/${id}-full.webp`,
     thumbnail_url: `https://example.test/${id}-thumbnail.webp`,
+    source_full_url: `https://example.test/${id}-source.webp`,
   };
 }
 
 describe('recipe photo gallery', () => {
+  it('uses official display dimensions for materialized files', () => {
+    render(
+      <RecipePhotoGallery
+        photos={[
+          {
+            ...photo('materialized', 0, null),
+            display_width: 320,
+            display_height: 240,
+          },
+        ]}
+      />,
+    );
+
+    const featureImage = document.querySelector('.recipe-photo-feature-image');
+    expect(featureImage?.getAttribute('width')).toBe('320');
+    expect(featureImage?.getAttribute('height')).toBe('240');
+  });
+
   it('keeps a twelve-photo recipe to one feature image with selectable thumbnails', () => {
     const photos = Array.from({ length: 12 }, (_, position) => ({
       ...photo(`photo-${position + 1}`, position, null),

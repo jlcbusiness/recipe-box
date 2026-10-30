@@ -2265,13 +2265,13 @@ body:not(:has(.recipe-tin-theme))
   position: relative;
   display: grid;
   width: max-content;
-  grid-template-columns: 36px 84px repeat(5, 36px);
+  grid-template-columns: repeat(3, 36px) 84px repeat(4, 36px);
   align-items: start;
   gap: 8px;
 }
 
 .recipe-sharing-action-form {
-  grid-column: 2 / 4;
+  grid-column: 4 / 5;
   width: 100%;
   margin: 0;
 }

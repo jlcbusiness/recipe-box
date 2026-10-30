@@ -74,7 +74,7 @@ describe('ExplorerListPreferences', () => {
     const view = renderPreferences();
     const root = view.container.querySelector('.explorer-list-preferences');
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name publication state visibility total_time_minutes',
+      'name publication state visibility total_time_minutes starred hearted',
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Choose List columns' }));
@@ -85,18 +85,53 @@ describe('ExplorerListPreferences', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Publication' }));
 
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name state visibility total_time_minutes',
+      'name state visibility total_time_minutes starred hearted',
     );
     await waitFor(() => {
       expect(saveExplorerState).toHaveBeenCalledWith('recipes-find', {
         ...state,
         schema_version: 2,
         display_preferences: {
-          visible_columns: ['state', 'visibility', 'total_time_minutes'],
+          visible_columns: ['state', 'visibility', 'total_time_minutes', 'starred', 'hearted'],
           column_widths: {},
         },
       });
     });
+  });
+
+  it('renders trailing controls after the list settings control', () => {
+    const view = render(
+      <ExplorerListPreferences
+        context="recipes-find"
+        state={state}
+        toolbar={<div>Sort and view</div>}
+        toolbarTrailing={<button type="button">Marker filters</button>}
+      >
+        <p>Results</p>
+      </ExplorerListPreferences>,
+    );
+    const settings = screen.getByRole('button', { name: 'Choose List columns' });
+    const markerFilters = screen.getByRole('button', { name: 'Marker filters' });
+
+    expect(
+      Boolean(settings.compareDocumentPosition(markerFilters) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBe(true);
+    expect(
+      view.container.querySelector('.explorer-list-preferences-toolbar')?.lastElementChild,
+    ).toBe(markerFilters);
+  });
+
+  it('keeps Rating and marker columns compact while preserving resize hit areas', () => {
+    const view = renderPreferences({
+      initialPreferences: {
+        visible_columns: ['score', 'starred', 'hearted'],
+        column_widths: {},
+      },
+    });
+    const root = view.container.querySelector<HTMLElement>('.explorer-list-preferences');
+    expect(root?.style.getPropertyValue('--explorer-list-grid-template-columns')).toContain(
+      '64px 56px 56px',
+    );
   });
 
   it('keeps visibility usable after a failed save and clears the error on retry', async () => {
@@ -111,7 +146,7 @@ describe('ExplorerListPreferences', () => {
     fireEvent.click(publication);
 
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name state visibility total_time_minutes',
+      'name state visibility total_time_minutes starred hearted',
     );
     expect((await screen.findByRole('alert')).textContent).toBe(
       'Explorer preference could not be saved.',
@@ -120,7 +155,7 @@ describe('ExplorerListPreferences', () => {
     fireEvent.click(publication);
 
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name publication state visibility total_time_minutes',
+      'name publication state visibility total_time_minutes starred hearted',
     );
     await waitFor(() => {
       expect(saveExplorerState).toHaveBeenCalledTimes(2);
@@ -151,7 +186,7 @@ describe('ExplorerListPreferences', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset columns' }));
 
     expect(root?.getAttribute('data-visible-columns')).toBe(
-      'name publication state visibility total_time_minutes',
+      'name publication state visibility total_time_minutes starred hearted',
     );
     expect(root?.style.getPropertyValue('--explorer-column-width-name')).toBe('');
     await waitFor(() => {
@@ -159,7 +194,14 @@ describe('ExplorerListPreferences', () => {
         ...state,
         schema_version: 2,
         display_preferences: {
-          visible_columns: ['publication', 'state', 'visibility', 'total_time_minutes'],
+          visible_columns: [
+            'publication',
+            'state',
+            'visibility',
+            'total_time_minutes',
+            'starred',
+            'hearted',
+          ],
           column_widths: {},
         },
       });

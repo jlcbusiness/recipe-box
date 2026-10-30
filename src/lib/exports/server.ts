@@ -215,17 +215,20 @@ export async function createExportDownload(
         throw new Error('A selected image record is unavailable.');
       }
 
-      const assetId = String(asset.id);
       let assetBytes = 0;
       const variants = [
-        { column: 'full_path', entry: `images/${assetId}/full.webp` },
-        {
-          column: 'thumbnail_path',
-          entry: `images/${assetId}/thumbnail.webp`,
-        },
+        { column: 'full_path', entry: String(asset.full_path) },
+        { column: 'thumbnail_path', entry: String(asset.thumbnail_path) },
+        { column: 'source_full_path', entry: String(asset.source_full_path) },
+        { column: 'source_thumbnail_path', entry: String(asset.source_thumbnail_path) },
       ];
+      const entries = new Set<string>();
 
       for (const variant of variants) {
+        if (entries.has(variant.entry)) {
+          continue;
+        }
+        entries.add(variant.entry);
         const bytes = await downloadImage(admin, accountId, source[variant.column]);
         if (signal?.aborted) {
           throw new Error('The export request was canceled.');

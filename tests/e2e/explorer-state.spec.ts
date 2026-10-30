@@ -1,5 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
@@ -53,9 +54,7 @@ async function createPublication(
   return (await response.json()) as string;
 }
 
-test('Publication recipe display preferences save Citation widths and detail filters @e2e', async ({
-  request,
-}) => {
+test('Publication recipe preferences save Rating and marker widths @e2e', async ({ request }) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
 
@@ -65,8 +64,16 @@ test('Publication recipe display preferences save Citation widths and detail fil
     await saveExplorerState(request, config, user, context, {
       schema_version: 2,
       display_preferences: {
-        visible_columns: ['publication', 'publication_page', 'state', 'citation'],
-        column_widths: { citation: 180 },
+        visible_columns: [
+          'publication',
+          'publication_page',
+          'state',
+          'citation',
+          'score',
+          'starred',
+          'hearted',
+        ],
+        column_widths: { citation: 180, score: 64, starred: 56, hearted: 56 },
       },
       column_filters: {
         publication_page: ['42'],
@@ -92,8 +99,16 @@ test('Publication recipe display preferences save Citation widths and detail fil
     expect(saved.state).toMatchObject({
       schema_version: 2,
       display_preferences: {
-        visible_columns: ['publication', 'publication_page', 'state', 'citation'],
-        column_widths: { citation: 180 },
+        visible_columns: [
+          'publication',
+          'publication_page',
+          'state',
+          'citation',
+          'score',
+          'starred',
+          'hearted',
+        ],
+        column_widths: { citation: 180, score: 64, starred: 56, hearted: 56 },
       },
       column_filters: {
         publication_page: ['42'],
@@ -102,6 +117,497 @@ test('Publication recipe display preferences save Citation widths and detail fil
       filters: [{ field: 'citation', operator: 'contains', value: 'cookbook' }],
       view: 'details',
     });
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Publication recipe details center Rating and marker columns @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const performanceErrors: string[] = [];
+  page.on('pageerror', (error) => {
+    if (/negative time stamp/i.test(error.message)) performanceErrors.push(error.message);
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /negative time stamp/i.test(message.text())) {
+      performanceErrors.push(message.text());
+    }
+  });
+
+  try {
+    const publicationId = await createPublication(
+      request,
+      config,
+      user,
+      'Rating and marker alignment',
+    );
+    const recipeResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_score`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        data: {
+          p_recipe_id: null,
+          p_expected_version: null,
+          p_name: 'Column alignment fixture',
+          p_food_type_id: null,
+          p_state: 'tried',
+          p_verdict_id: null,
+          p_enthusiasm_id: null,
+          p_occasion_details: null,
+          p_reason: null,
+          p_serves: null,
+          p_prep_time_minutes: null,
+          p_mixing_time_minutes: null,
+          p_marinate_time_minutes: null,
+          p_chill_time_minutes: null,
+          p_freeze_time_minutes: null,
+          p_cook_time_minutes: null,
+          p_bake_time_minutes: null,
+          p_cooling_time_minutes: null,
+          p_rest_time_minutes: null,
+          p_total_time_minutes: null,
+          p_notes_markdown: '',
+          p_meal_type_ids: [],
+          p_cuisine_ids: [],
+          p_equipment_ids: [],
+          p_ingredient_rows: [],
+          p_instruction_steps: [],
+          p_publication_id: publicationId,
+          p_publication_page: null,
+          p_recipe_url: null,
+          p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+          p_tag_ids: [],
+          p_ingredient_sets: [{ id: randomUUID(), label: 'Main', position: 0 }],
+          p_score: -3,
+        },
+      },
+    );
+    expect(recipeResponse.ok(), await recipeResponse.text()).toBeTruthy();
+    const [recipe] = (await recipeResponse.json()) as { id: string; version: number }[];
+
+    for (const [marker, expectedVersion] of [
+      ['star', recipe.version],
+      ['heart', recipe.version + 1],
+    ] as const) {
+      const markerResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/set_recipe_marker`, {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        data: {
+          p_recipe_id: recipe.id,
+          p_expected_version: expectedVersion,
+          p_marker: marker,
+          p_enabled: true,
+        },
+      });
+      expect(markerResponse.ok(), await markerResponse.text()).toBeTruthy();
+    }
+
+    const context = `publication-recipes:${publicationId}`;
+    await saveExplorerState(request, config, user, context, {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['state', 'total_time_minutes', 'score', 'starred', 'hearted'],
+        column_widths: { score: 120, starred: 80, hearted: 80 },
+      },
+      column_filters: {},
+      filters: [],
+      sort: 'name',
+      direction: 'asc',
+      view: 'details',
+    });
+
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/publications/${publicationId}?view=details`);
+
+    const table = page.locator('.publication-recipe-list');
+    const ratingHeader = table.locator('th[data-explorer-column="score"]');
+    const starHeader = table.locator('th[data-explorer-column="starred"]');
+    const heartHeader = table.locator('th[data-explorer-column="hearted"]');
+    const recipeRow = table.locator('tbody tr');
+    await expect(recipeRow).toHaveCount(1);
+    await expect(ratingHeader).toContainText('Rtg');
+    await expect(page.getByRole('link', { name: 'Column alignment fixture' })).toBeVisible();
+    const [headerGeometry, cellGeometry] = await Promise.all([
+      table.locator('thead th:visible').evaluateAll((cells) =>
+        cells.map((cell) => {
+          const { x, y, width } = cell.getBoundingClientRect();
+          return { x, top: Math.round(y), width };
+        }),
+      ),
+      recipeRow.locator('td:visible').evaluateAll((cells) =>
+        cells.map((cell) => {
+          const { x, y, width } = cell.getBoundingClientRect();
+          return { x, top: Math.round(y), width };
+        }),
+      ),
+    ]);
+    expect(new Set(headerGeometry.map(({ top }) => top)).size).toBe(1);
+    expect(new Set(cellGeometry.map(({ top }) => top)).size).toBe(1);
+    expect(headerGeometry).toHaveLength(cellGeometry.length);
+    for (const [index, header] of headerGeometry.entries()) {
+      expect(Math.abs(header.x - cellGeometry[index].x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(header.width - cellGeometry[index].width)).toBeLessThanOrEqual(1);
+    }
+
+    const columnsButton = page.getByRole('button', { name: 'Choose List columns' });
+    await columnsButton.click();
+    await expect(page.getByRole('checkbox', { name: 'Rating', exact: true })).toBeChecked();
+    await page.keyboard.press('Escape');
+
+    const expectCentered = async (cell: Locator, content: Locator) => {
+      const [cellBounds, contentBounds, gap] = await Promise.all([
+        cell.boundingBox(),
+        content.boundingBox(),
+        table.evaluate((element) => Number.parseFloat(getComputedStyle(element).columnGap)),
+      ]);
+      if (!cellBounds || !contentBounds) {
+        throw new Error('Expected visible column content bounds.');
+      }
+      expect(
+        Math.abs(
+          cellBounds.x +
+            cellBounds.width / 2 -
+            gap / 2 -
+            (contentBounds.x + contentBounds.width / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(
+          cellBounds.y + cellBounds.height / 2 - (contentBounds.y + contentBounds.height / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+    };
+    const expectTrackCentered = async (column: string) => {
+      const expectedTrackCenter = await table.evaluate((element, columnKey) => {
+        const preferences = element.closest<HTMLElement>('.explorer-list-preferences');
+        const visibleColumns = preferences?.dataset.visibleColumns?.split(' ') ?? [];
+        const columnWidths = getComputedStyle(element)
+          .gridTemplateColumns.trim()
+          .split(/\s+/)
+          .map(Number.parseFloat);
+        const columnIndex = visibleColumns.indexOf(columnKey);
+        if (columnIndex < 0 || columnWidths[columnIndex] === undefined) {
+          throw new Error(`The ${columnKey} column must have a rendered grid track.`);
+        }
+        const gap = Number.parseFloat(getComputedStyle(element).columnGap) || 0;
+        const offset = columnWidths
+          .slice(0, columnIndex)
+          .reduce((total, width) => total + width + gap, 0);
+        return element.getBoundingClientRect().left + offset + columnWidths[columnIndex] / 2;
+      }, column);
+      for (const cell of [
+        table.locator(`thead th[data-explorer-column="${column}"]`),
+        recipeRow.locator(`td[data-explorer-column="${column}"]`),
+      ]) {
+        const bounds = await cell.boundingBox();
+        if (!bounds) throw new Error(`Expected the ${column} column to be measurable.`);
+        expect(Math.abs(bounds.x + bounds.width / 2 - expectedTrackCenter)).toBeLessThanOrEqual(1);
+      }
+    };
+
+    const ratingCell = recipeRow.locator('td[data-explorer-column="score"]');
+    const ratingText = await ratingCell.evaluate((cell) => {
+      const range = document.createRange();
+      range.selectNodeContents(cell);
+      const { x, y, width, height } = range.getBoundingClientRect();
+      return { x, y, width, height };
+    });
+    const ratingCellBounds = await ratingCell.boundingBox();
+    if (!ratingCellBounds) throw new Error('Expected the Rating cell bounds.');
+
+    expect(
+      Math.abs(
+        ratingCellBounds.x +
+          ratingCellBounds.width / 2 -
+          (await table.evaluate((element) =>
+            Number.parseFloat(getComputedStyle(element).columnGap),
+          )) /
+            2 -
+          (ratingText.x + ratingText.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        ratingCellBounds.y + ratingCellBounds.height / 2 - (ratingText.y + ratingText.height / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    await expectCentered(ratingHeader, ratingHeader.locator('abbr'));
+    await expectCentered(starHeader, starHeader.locator('.recipe-marker-column-heading'));
+    await expectCentered(heartHeader, heartHeader.locator('.recipe-marker-column-heading'));
+    await expectCentered(
+      recipeRow.locator('td[data-explorer-column="starred"]'),
+      recipeRow.locator('td[data-explorer-column="starred"] .recipe-marker-stamp'),
+    );
+    await expectCentered(
+      recipeRow.locator('td[data-explorer-column="hearted"]'),
+      recipeRow.locator('td[data-explorer-column="hearted"] .recipe-marker-stamp'),
+    );
+    for (const column of ['score', 'starred', 'hearted']) {
+      await expectTrackCentered(column);
+    }
+
+    const [rowBounds, firstCellBounds, lastCellBounds, separator] = await Promise.all([
+      recipeRow.boundingBox(),
+      recipeRow.locator('td:visible').first().boundingBox(),
+      recipeRow.locator('td:visible').last().boundingBox(),
+      recipeRow.evaluate((row) => ({
+        rowBorder: getComputedStyle(row).borderBottomWidth,
+        cellBorders: [...row.querySelectorAll('td')].map(
+          (cell) => getComputedStyle(cell).borderBottomWidth,
+        ),
+      })),
+    ]);
+    if (!rowBounds || !firstCellBounds || !lastCellBounds) {
+      throw new Error('Expected row and visible cell bounds.');
+    }
+    expect(Math.abs(rowBounds.x - firstCellBounds.x)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(rowBounds.x + rowBounds.width - (lastCellBounds.x + lastCellBounds.width)),
+    ).toBeLessThanOrEqual(1);
+    await expect(table.locator('thead tr')).toHaveCSS('border-bottom-width', '1px');
+    await expect(table.locator('thead th').first()).toHaveCSS('border-bottom-width', '0px');
+    expect(separator.rowBorder).toBe('1px');
+    expect(separator.cellBorders.every((border) => border === '0px')).toBeTruthy();
+
+    for (const [column, minWidth] of [
+      ['score', 64],
+      ['starred', 56],
+      ['hearted', 56],
+    ] as const) {
+      const header = table.locator(`th[data-explorer-column="${column}"]`);
+      const handle = header.locator(`[data-explorer-resize-column="${column}"]`);
+      const [headerBounds, handleBounds] = await Promise.all([
+        header.boundingBox(),
+        handle.boundingBox(),
+      ]);
+      if (!headerBounds || !handleBounds) {
+        throw new Error(`Expected the ${column} column and resize handle to be measurable.`);
+      }
+
+      const startX = handleBounds.x + handleBounds.width / 2;
+      expect(Math.abs(startX - (headerBounds.x + headerBounds.width))).toBeLessThanOrEqual(1);
+      const centerY = handleBounds.y + handleBounds.height / 2;
+      await page.mouse.move(startX, centerY);
+      await page.mouse.down();
+      await page.mouse.move(startX + minWidth - headerBounds.width, centerY, { steps: 6 });
+      await page.mouse.up();
+      await expect.poll(async () => (await header.boundingBox())?.width).toBe(minWidth);
+    }
+
+    await expect(page.locator('.explorer-list-preferences-error')).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const response = await request.get(
+          `${config.apiUrl}/rest/v1/explorer_state?select=state&context_key=eq.${encodeURIComponent(context)}`,
+          {
+            headers: {
+              apikey: config.anonKey,
+              Authorization: `Bearer ${user.accessToken}`,
+            },
+          },
+        );
+        expect(response.ok(), await response.text()).toBeTruthy();
+        const [saved] = (await response.json()) as {
+          state: { display_preferences: { column_widths: Record<string, number> } };
+        }[];
+        return saved?.state.display_preferences.column_widths;
+      })
+      .toMatchObject({ score: 64, starred: 56, hearted: 56 });
+
+    await page.goto(`/publications/${publicationId}?sort=name&direction=asc&page=1&view=list`);
+    const markerIndicators = page.locator(
+      '.publication-recipe-simple-list .recipe-marker-indicators',
+    );
+    await expect(markerIndicators).toHaveCount(1);
+    const markerPadding = await markerIndicators.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).paddingRight),
+    );
+    expect(markerPadding).toBeGreaterThanOrEqual(7.5);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/publications/${publicationId}?view=details`);
+    const mobileRecipeRow = table.locator('tbody tr');
+    const mobileTitleBounds = await mobileRecipeRow
+      .locator('td[data-explorer-column="name"] .mobile-details-title-text')
+      .boundingBox();
+    const mobileTitleRowBounds = await mobileRecipeRow
+      .locator('td[data-explorer-column="name"] .mobile-details-title-row')
+      .boundingBox();
+    const mobileMarkerGroupBounds = await mobileRecipeRow
+      .locator('td[data-explorer-column="name"] .mobile-details-title-markers')
+      .boundingBox();
+    const mobileStarBounds = await mobileRecipeRow
+      .locator(
+        'td[data-explorer-column="name"] .mobile-details-title-markers [data-explorer-column="starred"] .recipe-marker-stamp',
+      )
+      .boundingBox();
+    const mobileHeartBounds = await mobileRecipeRow
+      .locator(
+        'td[data-explorer-column="name"] .mobile-details-title-markers [data-explorer-column="hearted"] .recipe-marker-stamp',
+      )
+      .boundingBox();
+    const mobileRatingCell = mobileRecipeRow.locator('td[data-explorer-column="score"]');
+    const mobileRatingTextBounds = await mobileRatingCell.evaluate((cell) => {
+      const range = document.createRange();
+      range.selectNodeContents(cell);
+      const { x, width } = range.getBoundingClientRect();
+      return { x, width, cell: cell.getBoundingClientRect().toJSON() };
+    });
+    const toolbarContentBounds = await page
+      .locator('.explorer-list-preferences-toolbar-content')
+      .boundingBox();
+    const viewControlsBounds = await page.locator('.recipe-explorer-view-controls').boundingBox();
+    const markerFiltersBounds = await page.locator('.recipe-marker-filters').boundingBox();
+    expect(mobileTitleBounds).not.toBeNull();
+    expect(mobileTitleRowBounds).not.toBeNull();
+    expect(mobileMarkerGroupBounds).not.toBeNull();
+    expect(mobileStarBounds).not.toBeNull();
+    expect(mobileHeartBounds).not.toBeNull();
+    expect(mobileRatingCell).toHaveCSS('align-items', 'center');
+    expect(toolbarContentBounds).not.toBeNull();
+    expect(viewControlsBounds).not.toBeNull();
+    expect(markerFiltersBounds).not.toBeNull();
+    if (
+      !mobileTitleBounds ||
+      !mobileTitleRowBounds ||
+      !mobileMarkerGroupBounds ||
+      !mobileStarBounds ||
+      !mobileHeartBounds ||
+      !toolbarContentBounds ||
+      !viewControlsBounds ||
+      !markerFiltersBounds
+    ) {
+      throw new Error('Expected mobile publication recipe and toolbar geometry.');
+    }
+    await expect(mobileRecipeRow.locator('td[data-explorer-column="starred"]')).toBeHidden();
+    await expect(mobileRecipeRow.locator('td[data-explorer-column="hearted"]')).toBeHidden();
+    const titleCenterY = mobileTitleBounds.y + mobileTitleBounds.height / 2;
+    const starCenterY = mobileStarBounds.y + mobileStarBounds.height / 2;
+    const heartCenterY = mobileHeartBounds.y + mobileHeartBounds.height / 2;
+    expect(Math.abs(titleCenterY - starCenterY)).toBeLessThanOrEqual(1);
+    expect(Math.abs(titleCenterY - heartCenterY)).toBeLessThanOrEqual(1);
+    expect(mobileStarBounds.x + mobileStarBounds.width).toBeLessThan(mobileHeartBounds.x);
+    expect(
+      Math.abs(
+        mobileMarkerGroupBounds.x +
+          mobileMarkerGroupBounds.width -
+          (mobileTitleRowBounds.x + mobileTitleRowBounds.width),
+      ),
+    ).toBeLessThanOrEqual(8);
+    expect(
+      Math.abs(
+        mobileRatingTextBounds.cell.x +
+          mobileRatingTextBounds.cell.width / 2 -
+          (mobileRatingTextBounds.x + mobileRatingTextBounds.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(markerFiltersBounds.y).toBeGreaterThanOrEqual(
+      viewControlsBounds.y + viewControlsBounds.height,
+    );
+    expect(Math.abs(markerFiltersBounds.x - toolbarContentBounds.x)).toBeLessThanOrEqual(1);
+    expect(performanceErrors).toEqual([]);
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(`/publications/${publicationId}?view=grid`);
+      const gridStack = page.locator('.recipe-grid-marker-indicators');
+      const gridCard = page
+        .locator('.find-recipes-grid li')
+        .filter({ hasText: 'Column alignment fixture' });
+      const gridContent = gridStack.locator('.recipe-grid-marker-content');
+      const markerStack = gridStack.locator('.recipe-marker-indicators');
+      const gridRating = gridStack.locator('.recipe-grid-rating-indicator');
+      const [gridStackBounds, gridContentBounds, markerStackBounds, gridRatingBounds] =
+        await Promise.all([
+          gridStack.boundingBox(),
+          gridContent.boundingBox(),
+          markerStack.boundingBox(),
+          gridRating.boundingBox(),
+        ]);
+      await expect(gridStack).toHaveCount(1);
+      await expect(gridCard).toHaveCount(1);
+      await expect(gridCard).toHaveAttribute('data-stripe-cell', /^(odd|even)$/);
+      await expect(markerStack).toHaveAttribute('aria-label', 'Starred, Hearted');
+      await expect(gridRating.locator('.visually-hidden')).toHaveText('Rating ');
+      await expect(gridRating).toHaveClass(/recipe-score-negative/);
+      await expect(gridRating).toContainText('-3');
+      await expect(gridRating).toHaveCSS('color', 'rgb(180, 62, 50)');
+      await expect(gridStack).toHaveCSS('border-radius', '9999px');
+      await expect(gridStack).toHaveCSS('min-height', '32px');
+      await expect(gridStack).toHaveCSS('min-width', '32px');
+      await expect(page.locator('.find-recipes-grid-metadata')).not.toContainText('Rating');
+      expect(gridStackBounds).not.toBeNull();
+      expect(gridContentBounds).not.toBeNull();
+      expect(markerStackBounds).not.toBeNull();
+      expect(gridRatingBounds).not.toBeNull();
+      if (!gridStackBounds || !gridContentBounds || !markerStackBounds || !gridRatingBounds) {
+        throw new Error('Expected publication Grid markers and Rating to have measurable bounds.');
+      }
+      const [pillBackground, cardBackground] = await Promise.all([
+        gridStack.evaluate((element) => getComputedStyle(element).backgroundColor),
+        gridCard.evaluate((element) => getComputedStyle(element).backgroundColor),
+      ]);
+      expect(pillBackground).not.toBe('rgba(0, 0, 0, 0)');
+      expect(pillBackground).toBe(cardBackground);
+      expect(gridStackBounds.width).toBe(32);
+      expect(gridStackBounds.height).toBeCloseTo(gridContentBounds.height + 8, 0);
+      expect(gridStackBounds.height).toBeGreaterThanOrEqual(32);
+      expect(
+        Math.abs(
+          gridStackBounds.y +
+            gridStackBounds.height / 2 -
+            (gridContentBounds.y + gridContentBounds.height / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(gridRatingBounds.width).toBe(24);
+      expect(gridRatingBounds.height).toBe(16);
+      const signalBounds = await gridContent
+        .locator('svg, .recipe-grid-rating-indicator')
+        .evaluateAll((signals) =>
+          signals.map((signal) => {
+            const bounds = signal.getBoundingClientRect();
+            return { y: bounds.y, height: bounds.height };
+          }),
+        );
+      expect(signalBounds).toHaveLength(3);
+      expect(signalBounds.every(({ height }) => height === 16)).toBe(true);
+      for (const [index, signal] of signalBounds.entries()) {
+        const previousSignal = signalBounds[index - 1];
+        if (previousSignal) {
+          expect(signal.y - previousSignal.y).toBeCloseTo(21, 0);
+        }
+      }
+      expect(gridRatingBounds.y).toBeGreaterThanOrEqual(
+        markerStackBounds.y + markerStackBounds.height,
+      );
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const path of [
+      `/publications/${publicationId}?view=list`,
+      `/publications/${publicationId}?view=grid`,
+      '/recipes/find?tab=search&view=list',
+      '/recipes/find?tab=query&view=grid',
+    ]) {
+      await page.goto(path);
+      await expect(page.getByRole('button', { name: 'Choose List columns' })).toHaveCount(0);
+      const finalViewButton = page.locator('.recipe-explorer-view-controls > :last-child');
+      await expect(finalViewButton).toHaveCSS('border-right-width', '1px');
+      await expect(finalViewButton).toHaveCSS('border-top-right-radius', '3px');
+    }
   } finally {
     await deleteTestUser(request, user);
   }
@@ -441,11 +947,11 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
     await page.goto('/recipes/find');
     const originalUrl = page.url();
     await page.getByRole('button', { name: 'Choose List columns' }).click();
-    await page.getByRole('checkbox', { name: 'Publication' }).uncheck();
+    await page.getByRole('checkbox', { name: 'State', exact: true }).uncheck();
 
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name state visibility',
+      'name publication visibility score starred hearted',
     );
     await expect(page).toHaveURL(originalUrl);
 
@@ -465,7 +971,7 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
         }[];
         return rows[0]?.state.display_preferences?.visible_columns;
       })
-      .toEqual(['state', 'visibility']);
+      .toEqual(['publication', 'visibility', 'score', 'starred', 'hearted']);
 
     await page.reload();
     const reloadedParams = new URL(page.url()).searchParams;
@@ -474,7 +980,7 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
     expect(reloadedParams.has('column_widths')).toBe(false);
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name state visibility',
+      'name publication visibility score starred hearted',
     );
 
     await saveExplorerState(request, config, user, 'recipes-find', {
@@ -503,7 +1009,7 @@ test('Find Recipes persists column visibility without changing the URL @e2e', as
         schema_version: 2,
         sort: 'updated_at',
         display_preferences: {
-          visible_columns: ['state', 'visibility'],
+          visible_columns: ['publication', 'visibility', 'score', 'starred', 'hearted'],
           column_widths: {},
         },
       });
@@ -639,17 +1145,17 @@ test('Find Recipes keeps column changes usable when saving fails and retries @e2
     });
 
     await page.getByRole('button', { name: 'Choose List columns' }).click();
-    await page.getByRole('checkbox', { name: 'Publication' }).uncheck();
+    await page.getByRole('checkbox', { name: 'State', exact: true }).uncheck();
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name state visibility',
+      'name publication visibility score starred hearted',
     );
     await expect(page.locator('.explorer-list-preferences-error')).toHaveText(
       'Explorer display preferences could not be saved.',
     );
 
     await page.unroute('**/recipes/find*');
-    await page.getByRole('checkbox', { name: 'Publication' }).check();
+    await page.getByRole('checkbox', { name: 'State', exact: true }).check();
     await expect
       .poll(async () => {
         const response = await request.get(
@@ -666,7 +1172,7 @@ test('Find Recipes keeps column changes usable when saving fails and retries @e2
         }[];
         return rows[0]?.state.display_preferences?.visible_columns;
       })
-      .toContain('publication');
+      .toContain('state');
     await expect(page.locator('.explorer-list-preferences-error')).toHaveCount(0);
   } finally {
     await deleteTestUser(request, user);
@@ -826,6 +1332,128 @@ test('publication recipe mobile filters follow visible columns @e2e', async ({ p
     await signIn(page, user.email, user.password);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/publications/${publicationId}?view=details`);
+
+    const toolbarContentBounds = await page
+      .locator('.explorer-list-preferences-toolbar-content')
+      .boundingBox();
+    const viewControlsBounds = await page.locator('.recipe-explorer-view-controls').boundingBox();
+    const markerFiltersBounds = await page.locator('.recipe-marker-filters').boundingBox();
+    const mobileActionsBounds = await page.locator('.publication-mobile-actions').boundingBox();
+    const toolbarBounds = await page.locator('.explorer-list-preferences-toolbar').boundingBox();
+    const columnControlsBounds = await page
+      .locator('.explorer-list-preferences-controls')
+      .boundingBox();
+    const columnButton = page.getByRole('button', { name: 'Choose List columns' });
+    expect(toolbarContentBounds).not.toBeNull();
+    expect(viewControlsBounds).not.toBeNull();
+    expect(markerFiltersBounds).not.toBeNull();
+    expect(mobileActionsBounds).not.toBeNull();
+    expect(toolbarBounds).not.toBeNull();
+    expect(columnControlsBounds).not.toBeNull();
+    await expect(columnButton).toHaveCSS('border-left-width', '1px');
+    if (
+      !toolbarContentBounds ||
+      !viewControlsBounds ||
+      !markerFiltersBounds ||
+      !mobileActionsBounds ||
+      !toolbarBounds ||
+      !columnControlsBounds
+    ) {
+      throw new Error('Expected publication mobile toolbar geometry.');
+    }
+    expect(markerFiltersBounds.y).toBeGreaterThanOrEqual(
+      viewControlsBounds.y + viewControlsBounds.height,
+    );
+    expect(Math.abs(markerFiltersBounds.x - toolbarContentBounds.x)).toBeLessThanOrEqual(1);
+    expect(columnControlsBounds.x).toBeGreaterThanOrEqual(
+      toolbarContentBounds.x + toolbarContentBounds.width - 1,
+    );
+    expect(
+      Math.abs(columnControlsBounds.x - (viewControlsBounds.x + viewControlsBounds.width)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        mobileActionsBounds.y +
+          mobileActionsBounds.height / 2 -
+          (viewControlsBounds.y + viewControlsBounds.height / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(mobileActionsBounds.x).toBeGreaterThanOrEqual(
+      columnControlsBounds.x + columnControlsBounds.width - 1,
+    );
+    expect(viewControlsBounds.y + viewControlsBounds.height).toBeLessThan(markerFiltersBounds.y);
+    expect(
+      Math.abs(
+        mobileActionsBounds.x + mobileActionsBounds.width - (toolbarBounds.x + toolbarBounds.width),
+      ),
+    ).toBeLessThanOrEqual(1);
+
+    await page.setViewportSize({ width: 352, height: 844 });
+    const narrowToolbarContentBounds = await page
+      .locator('.explorer-list-preferences-toolbar-content')
+      .boundingBox();
+    const narrowViewControlsBounds = await page
+      .locator('.recipe-explorer-view-controls')
+      .boundingBox();
+    const narrowColumnControlsBounds = await page
+      .locator('.explorer-list-preferences-controls')
+      .boundingBox();
+    const narrowColumnButton = page.getByRole('button', { name: 'Choose List columns' });
+    const narrowMarkerFiltersBounds = await page.locator('.recipe-marker-filters').boundingBox();
+    const narrowMobileActionsBounds = await page
+      .locator('.publication-mobile-actions')
+      .boundingBox();
+    const narrowToolbarBounds = await page
+      .locator('.explorer-list-preferences-toolbar')
+      .boundingBox();
+    expect(narrowToolbarContentBounds).not.toBeNull();
+    expect(narrowViewControlsBounds).not.toBeNull();
+    expect(narrowColumnControlsBounds).not.toBeNull();
+    expect(narrowMarkerFiltersBounds).not.toBeNull();
+    expect(narrowMobileActionsBounds).not.toBeNull();
+    expect(narrowToolbarBounds).not.toBeNull();
+    if (
+      !narrowToolbarContentBounds ||
+      !narrowViewControlsBounds ||
+      !narrowColumnControlsBounds ||
+      !narrowMarkerFiltersBounds ||
+      !narrowMobileActionsBounds ||
+      !narrowToolbarBounds
+    ) {
+      throw new Error('Expected narrow publication mobile toolbar geometry.');
+    }
+    await expect(narrowColumnButton).toHaveCSS('border-left-width', '1px');
+    expect(
+      Math.abs(
+        narrowMobileActionsBounds.y +
+          narrowMobileActionsBounds.height / 2 -
+          (narrowViewControlsBounds.y + narrowViewControlsBounds.height / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(narrowMobileActionsBounds.x).toBeGreaterThanOrEqual(
+      narrowColumnControlsBounds.x + narrowColumnControlsBounds.width - 1,
+    );
+    expect(narrowColumnControlsBounds.x).toBeGreaterThanOrEqual(
+      narrowToolbarContentBounds.x + narrowToolbarContentBounds.width - 1,
+    );
+    expect(
+      Math.abs(
+        narrowColumnControlsBounds.x -
+          (narrowViewControlsBounds.x + narrowViewControlsBounds.width),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(narrowMobileActionsBounds.x + narrowMobileActionsBounds.width).toBeLessThanOrEqual(
+      narrowToolbarBounds.x + narrowToolbarBounds.width + 1,
+    );
+    expect(narrowMarkerFiltersBounds.y).toBeGreaterThanOrEqual(
+      Math.max(
+        narrowViewControlsBounds.y + narrowViewControlsBounds.height,
+        narrowMobileActionsBounds.y + narrowMobileActionsBounds.height,
+      ),
+    );
+    expect(
+      Math.abs(narrowMarkerFiltersBounds.x - narrowToolbarContentBounds.x),
+    ).toBeLessThanOrEqual(1);
 
     const mobileColumnFilters = page.getByRole('navigation', {
       name: 'Filter publication recipe columns',

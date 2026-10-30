@@ -85,6 +85,7 @@ export function ExplorerListPreferences({
   state,
   initialPreferences,
   toolbar,
+  toolbarTrailing,
   toolbarAction,
   columnDefinitions,
   showControl = true,
@@ -94,6 +95,7 @@ export function ExplorerListPreferences({
   state: ExplorerState;
   initialPreferences?: ExplorerDisplayPreferences;
   toolbar?: ReactNode;
+  toolbarTrailing?: ReactNode;
   toolbarAction?: ReactNode;
   columnDefinitions?: ExplorerColumnDefinition[];
   showControl?: boolean;
@@ -151,9 +153,12 @@ export function ExplorerListPreferences({
     ({ key, required }) => required || visibleColumns.has(key),
   );
   const gridTemplate = displayedDefinitions
-    .map(({ key, maxWidth }) => {
+    .map(({ key, minWidth, maxWidth }) => {
       const width = preferences.column_widths[key];
       if (width !== undefined) return `${Math.min(width, maxWidth)}px`;
+      if (key === 'score' || key === 'starred' || key === 'hearted') {
+        return `${minWidth}px`;
+      }
       return key === 'name' ? `minmax(0, min(45%, ${maxWidth}px))` : `fit-content(${maxWidth}px)`;
     })
     .join(' ');
@@ -332,6 +337,7 @@ export function ExplorerListPreferences({
         <div className="explorer-list-preferences-toolbar">
           <div className="explorer-list-preferences-toolbar-content">{toolbar}</div>
           {controls}
+          {toolbarTrailing}
           {toolbarAction}
         </div>
       ) : (

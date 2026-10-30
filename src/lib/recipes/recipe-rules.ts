@@ -2,9 +2,13 @@ import { formatGroupedInteger } from './measurement-rules';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
 
+export const recipeScoreValues = [-5, -3, -1, 0, 1, 2, 3, 4, 5] as const;
+export type RecipeScore = (typeof recipeScoreValues)[number];
+
 export type ConditionalRecipeValues = {
   verdictId: string | null;
   enthusiasmId: string | null;
+  score: string | null;
   occasionDetails: string | null;
   reason: string | null;
 };
@@ -34,9 +38,14 @@ export function clearConditionalValuesForStateChange(
   return {
     verdictId: null,
     enthusiasmId: null,
+    score: null,
     occasionDetails: null,
     reason: null,
   };
+}
+
+export function isRecipeScore(value: number): value is RecipeScore {
+  return recipeScoreValues.some((score) => score === value);
 }
 
 export function shouldShowOccasionDetails(selectedValue: string | null): boolean {

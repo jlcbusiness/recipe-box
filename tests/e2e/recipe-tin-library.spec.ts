@@ -159,7 +159,9 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     await page.goto(`/recipes/${tinRecipeId}`);
     const recipeTinTheme = page.locator('main.recipe-tin-theme');
     await expect(recipeTinTheme).toHaveCount(1);
-    const printAction = page.getByRole('button', { name: 'Print' });
+    const printAction = page.getByRole('button', {
+      name: initialViewport.width <= 720 ? 'Download' : 'Print',
+    });
     const editAction = page.getByRole('link', { name: 'Edit' });
     await expect(printAction).toHaveCSS('background-color', 'rgb(96, 76, 56)');
     await expect(printAction).toHaveCSS('color', 'rgb(255, 255, 255)');
@@ -303,9 +305,12 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       expect(Math.round(addRecipeBounds.width)).toBe(40);
       expect(Math.round(addRecipeBounds.height)).toBe(40);
       expect(columnsButtonBounds.x + columnsButtonBounds.width).toBeLessThan(addRecipeBounds.x);
-      expect(
-        Math.abs(columnsButtonBounds.x - viewControlsBounds.x - viewControlsBounds.width),
-      ).toBeLessThanOrEqual(1);
+      const gapAfterViewControls =
+        columnsButtonBounds.x - (viewControlsBounds.x + viewControlsBounds.width);
+      expect(gapAfterViewControls).toBeGreaterThanOrEqual(-1);
+      expect(gapAfterViewControls).toBeLessThanOrEqual(1);
+      expect(columnsButtonBounds.width).toBe(40);
+      expect(columnsButtonBounds.height).toBe(40);
       if (Math.abs(columnsButtonBounds.y - addRecipeBounds.y) <= 1) {
         expect(addRecipeBounds.x).toBeGreaterThanOrEqual(
           columnsButtonBounds.x + columnsButtonBounds.width,
@@ -327,18 +332,21 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
             return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
           }),
         );
-      expect(toolbarItemBounds).toHaveLength(3);
+      expect(toolbarItemBounds).toHaveLength(4);
+      const toolbarContent = toolbarItemBounds[0];
       const toolbarControls = toolbarItemBounds[1];
-      const toolbarActions = toolbarItemBounds[2];
-      if (!toolbarControls || !toolbarActions) throw new Error('Expected toolbar item bounds');
-      const controlsAndActionsShareRow = Math.abs(toolbarActions.y - toolbarControls.y) <= 1;
-      if (controlsAndActionsShareRow) {
-        const gap = toolbarActions.x - toolbarControls.x - toolbarControls.width;
-        expect(gap).toBeGreaterThanOrEqual(0);
-      } else {
+      const toolbarFilters = toolbarItemBounds[2];
+      const toolbarActions = toolbarItemBounds[3];
+      if (!toolbarContent || !toolbarControls || !toolbarFilters || !toolbarActions) {
+        throw new Error('Expected toolbar item bounds');
+      }
+      expect(toolbarFilters.y).toBeGreaterThanOrEqual(toolbarContent.y + toolbarContent.height);
+      if ((page.viewportSize()?.width ?? 1280) <= 380) {
         expect(toolbarActions.y).toBeGreaterThanOrEqual(
-          toolbarControls.y + toolbarControls.height + 1,
+          toolbarControls.y + toolbarControls.height,
         );
+      } else {
+        expect(toolbarActions.y).toBeCloseTo(toolbarControls.y, 0);
       }
 
       const toolbarBounds = await page
@@ -350,6 +358,13 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       if (!toolbarBounds || !actionGroupBounds) {
         throw new Error('Expected the toolbar and mobile action group to be visible');
       }
+      expect(Math.abs(toolbarFilters.x - toolbarBounds.x)).toBeLessThanOrEqual(1);
+      const chooserOverlapsActions =
+        columnsButtonBounds.x < actionGroupBounds.x + actionGroupBounds.width &&
+        columnsButtonBounds.x + columnsButtonBounds.width > actionGroupBounds.x &&
+        columnsButtonBounds.y < actionGroupBounds.y + actionGroupBounds.height &&
+        columnsButtonBounds.y + columnsButtonBounds.height > actionGroupBounds.y;
+      expect(chooserOverlapsActions).toBe(false);
       expect(
         Math.abs(
           toolbarBounds.x + toolbarBounds.width - actionGroupBounds.x - actionGroupBounds.width,

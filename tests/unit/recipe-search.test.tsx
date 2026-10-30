@@ -25,15 +25,21 @@ describe('recipe search URL contract', () => {
     const visiblePublicationColumns = explorerColumnDefinitions['publication-recipes'].filter(
       ({ defaultVisible, required }) => required || defaultVisible,
     );
-    const searchOptions = getRecipeSearchSortOptions(visibleSearchColumns, true);
-    const publicationOptions = getRecipeSearchSortOptions(visiblePublicationColumns);
+    const searchColumns = [...visibleSearchColumns, { key: 'score', label: 'Rating' }];
+    const publicationColumns = [...visiblePublicationColumns, { key: 'score', label: 'Rating' }];
+    const searchOptions = getRecipeSearchSortOptions(searchColumns, true);
+    const publicationOptions = getRecipeSearchSortOptions(publicationColumns);
 
     expect(searchOptions.map(({ value }) => value)).toEqual([
       'relevance',
-      ...visibleSearchColumns.map(({ key }) => key),
+      ...searchColumns
+        .filter(({ key }) => key !== 'starred' && key !== 'hearted')
+        .map(({ key }) => key),
     ]);
     expect(publicationOptions.map(({ value }) => value)).toEqual(
-      visiblePublicationColumns.map(({ key }) => key),
+      publicationColumns
+        .filter(({ key }) => key !== 'starred' && key !== 'hearted')
+        .map(({ key }) => key),
     );
     expect(searchOptions.some(({ value }) => value === 'opinion')).toBe(false);
   });

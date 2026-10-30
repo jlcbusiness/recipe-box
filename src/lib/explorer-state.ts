@@ -146,6 +146,9 @@ const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
     minWidth: 96,
     maxWidth: 600,
   },
+  { key: 'score', label: 'Rating', defaultVisible: false, minWidth: 64, maxWidth: 120 },
+  { key: 'starred', label: 'Star', defaultVisible: true, minWidth: 56, maxWidth: 96 },
+  { key: 'hearted', label: 'Heart', defaultVisible: true, minWidth: 56, maxWidth: 96 },
 ];
 
 function recipeColumns(defaultVisible: string[]): ExplorerColumnDefinition[] {
@@ -162,7 +165,14 @@ export const explorerColumnDefinitions: Record<
   'recipes-find' | 'publications' | 'publication-recipes',
   ExplorerColumnDefinition[]
 > = {
-  'recipes-find': recipeColumns(['publication', 'state', 'visibility', 'total_time_minutes']),
+  'recipes-find': recipeColumns([
+    'publication',
+    'state',
+    'visibility',
+    'total_time_minutes',
+    'starred',
+    'hearted',
+  ]),
   publications: [
     nameColumn,
     { key: 'author', label: 'Author', defaultVisible: true, minWidth: 96, maxWidth: 600 },
@@ -178,9 +188,13 @@ export const explorerColumnDefinitions: Record<
       maxWidth: 600,
     },
   ],
-  'publication-recipes': recipeColumns(['publication', 'state', 'visibility']).filter(
-    ({ key }) => key !== 'publication',
-  ),
+  'publication-recipes': recipeColumns([
+    'publication',
+    'state',
+    'visibility',
+    'starred',
+    'hearted',
+  ]).filter(({ key }) => key !== 'publication'),
 };
 
 export const defaultRecipeColumnOrder = ['name', ...recipeColumnDefinitions.map(({ key }) => key)];
@@ -196,18 +210,18 @@ export function normalizeHiddenRecipeColumns(value: unknown): string[] {
 }
 
 export function normalizeRecipeColumnOrder(value: unknown): string[] {
-  if (!Array.isArray(value) || value.length !== defaultRecipeColumnOrder.length) {
+  if (!Array.isArray(value)) {
     return [...defaultRecipeColumnOrder];
   }
   const keys = value.filter((item): item is string => typeof item === 'string');
   if (
-    keys.length !== defaultRecipeColumnOrder.length ||
-    new Set(keys).size !== defaultRecipeColumnOrder.length ||
+    keys.length !== value.length ||
+    new Set(keys).size !== keys.length ||
     keys.some((key) => !defaultRecipeColumnOrder.includes(key))
   ) {
     return [...defaultRecipeColumnOrder];
   }
-  return keys;
+  return [...keys, ...defaultRecipeColumnOrder.filter((key) => !keys.includes(key))];
 }
 
 export function getExplorerColumns(
@@ -253,7 +267,10 @@ export type ExplorerState = {
   type?: 'all' | 'book' | 'magazine' | 'site';
 };
 
-const recipeSortKeys = new Set(['relevance', ...defaultRecipeColumnOrder]);
+const recipeSortKeys = new Set([
+  'relevance',
+  ...defaultRecipeColumnOrder.filter((key) => key !== 'starred' && key !== 'hearted'),
+]);
 const publicationSortKeys = new Set([
   'relevance',
   'name',
@@ -295,6 +312,9 @@ const recipeFilterFields = new Set([
   'cooling_time_minutes',
   'rest_time_minutes',
   'total_time_minutes',
+  'score',
+  'starred',
+  'hearted',
   'created_at',
   'updated_at',
 ]);

@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto';
 
-export const EXPORT_SCHEMA_VERSION = 5;
+export const EXPORT_SCHEMA_VERSION = 7;
 export const EXPORT_DATA_BYTES_LIMIT = 64 * 1024 * 1024;
 export const EXPORT_MEDIA_BYTES_LIMIT = 1024 * 1024 * 1024;
 export const DATABASE_EXPORT_REMINDER_DAYS = 30;
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const imagePathPattern =
-  /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail)\.webp$/i;
+  /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
 const preferenceFields = [
   'volume_system',
   'weight_system',
@@ -208,6 +208,9 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'name',
     'food_type_id',
     'state',
+    'score',
+    'is_starred',
+    'is_hearted',
     'verdict_id',
     'enthusiasm_id',
     'occasion_details',
@@ -324,6 +327,9 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'status',
     'full_path',
     'thumbnail_path',
+    'source_full_path',
+    'source_thumbnail_path',
+    'source_byte_size',
     'content_type',
     'description',
     'position',
@@ -351,6 +357,15 @@ function portableRecord(table: ExportTableName, record: ExportRecord): ExportRec
     }
     portable.full_path = `images/${assetId}/full.webp`;
     portable.thumbnail_path = `images/${assetId}/thumbnail.webp`;
+    portable.source_full_path =
+      record.source_full_path === record.full_path
+        ? portable.full_path
+        : `images/${assetId}/source-full.webp`;
+    portable.source_thumbnail_path =
+      record.source_thumbnail_path === record.thumbnail_path
+        ? portable.thumbnail_path
+        : `images/${assetId}/source-thumbnail.webp`;
+    portable.source_byte_size = record.source_byte_size ?? record.byte_size;
   }
 
   return portable;

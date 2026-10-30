@@ -10,12 +10,16 @@ export function PublicationCover({
   crop = null,
   imageWidth = 72,
   imageHeight = 96,
+  displayWidth,
+  displayHeight,
 }: {
   publication: PublicationOption;
   imageUrl?: string | null;
   crop?: CropRect | null;
   imageWidth?: number;
   imageHeight?: number;
+  displayWidth?: number;
+  displayHeight?: number;
 }) {
   if (publication.publication_type === 'collection') {
     return (
@@ -37,25 +41,16 @@ export function PublicationCover({
       <span
         className={`publication-cover publication-cover-image ${publication.publication_type === 'site' ? 'publication-cover-site' : ''}`}
       >
-        {crop ? (
-          <FramedMediaImage
-            alt={publication.name}
-            className="publication-cover-image-content"
-            crop={crop}
-            height={imageHeight}
-            src={imageUrl}
-            width={imageWidth}
-          />
-        ) : (
-          <Image
-            alt={publication.name}
-            className="publication-cover-image-content"
-            height={96}
-            src={imageUrl}
-            unoptimized
-            width={72}
-          />
-        )}
+        <FramedMediaImage
+          alt={publication.name}
+          className="publication-cover-image-content"
+          crop={crop}
+          displayHeight={displayHeight}
+          displayWidth={displayWidth}
+          height={imageHeight}
+          src={imageUrl}
+          width={imageWidth}
+        />
       </span>
     );
   }

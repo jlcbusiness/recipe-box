@@ -11,6 +11,8 @@ type ImageViewerProps = {
   buttonLabel: string;
   crop?: CropRect | null;
   dataPhotoId?: string;
+  displayHeight?: number;
+  displayWidth?: number;
   height: number;
   imageClassName?: string;
   src: string;
@@ -25,6 +27,8 @@ export function ImageViewer({
   buttonLabel,
   crop = null,
   dataPhotoId,
+  displayHeight,
+  displayWidth,
   height,
   imageClassName,
   src,
@@ -71,6 +75,8 @@ export function ImageViewer({
           className={imageClassName}
           crop={crop}
           dataPhotoId={dataPhotoId}
+          displayHeight={displayHeight}
+          displayWidth={displayWidth}
           height={height}
           loading={triggerLoading}
           src={src}
@@ -113,6 +119,8 @@ export function ImageViewer({
                   alt={alt}
                   className="image-viewer-full-image"
                   crop={crop}
+                  displayHeight={displayHeight}
+                  displayWidth={displayWidth}
                   height={height}
                   loading="eager"
                   src={src}

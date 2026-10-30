@@ -34,6 +34,9 @@ export type RecipeSearchFilterField =
   | 'tag'
   | 'opinion'
   | 'publication_source'
+  | 'score'
+  | 'starred'
+  | 'hearted'
   | 'serves'
   | 'prep_time_minutes'
   | 'mixing_time_minutes'
@@ -113,7 +116,8 @@ export type RecipeSearchSortKey =
   | 'updated_at'
   | 'pairs_with'
   | 'opinion'
-  | 'citation';
+  | 'citation'
+  | 'score';
 
 export type RecipeSearchSortOption = { value: RecipeSearchSortKey; label: string };
 
@@ -123,7 +127,9 @@ export function getRecipeSearchSortOptions(
 ): RecipeSearchSortOption[] {
   return [
     ...(includeRelevance ? [{ value: 'relevance' as const, label: 'Relevance' }] : []),
-    ...columns.map(({ key, label }) => ({ value: key as RecipeSearchSortKey, label })),
+    ...columns
+      .filter(({ key }) => key !== 'starred' && key !== 'hearted')
+      .map(({ key, label }) => ({ value: key as RecipeSearchSortKey, label })),
   ];
 }
 

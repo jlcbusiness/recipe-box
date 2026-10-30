@@ -1,6 +1,7 @@
 import type { createClient } from '../supabase/server';
 import type { IngredientDensity } from './density-rules';
 import type { MeasurementType } from './measurement-rules';
+import type { RecipeScore } from './recipe-rules';
 import type { TagColorKey } from './tag-colors';
 
 export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
@@ -140,6 +141,9 @@ export type RecipeRecord = {
   state: RecipeState;
   verdict_id: string | null;
   enthusiasm_id: string | null;
+  score: RecipeScore | null;
+  is_starred: boolean;
+  is_hearted: boolean;
   occasion_details: string | null;
   reason: string | null;
   serves: number | null;
@@ -300,7 +304,7 @@ export async function getRecipe(
   const { data, error } = await supabase
     .from('recipes')
     .select(
-      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, version, created_at, updated_at',
+      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, version, created_at, updated_at',
     )
     .eq('id', recipeId)
     .is('trashed_at', null)
@@ -547,7 +551,7 @@ export async function getRecipeExplorerColumnValues(
     supabase
       .from('recipes')
       .select(
-        'id, publication_id, publication_page, recipe_url, state, is_private, food_type_id, verdict_id, enthusiasm_id, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, created_at, updated_at',
+        'id, publication_id, publication_page, recipe_url, state, is_private, food_type_id, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, created_at, updated_at',
       )
       .in('id', recipeIds),
     supabase
@@ -725,6 +729,9 @@ export async function getRecipeExplorerColumnValues(
         cooling_time_minutes: optionalValue(recipe.cooling_time_minutes),
         rest_time_minutes: optionalValue(recipe.rest_time_minutes),
         total_time_minutes: optionalValue(recipe.total_time_minutes),
+        score: optionalValue(recipe.score),
+        starred: recipe.is_starred ? 'true' : null,
+        hearted: recipe.is_hearted ? 'true' : null,
         created_at: recipe.created_at,
         updated_at: recipe.updated_at,
         pairs_with: pairingsByRecipe.get(recipe.id)?.join(', ') ?? null,
@@ -732,6 +739,39 @@ export async function getRecipeExplorerColumnValues(
       };
       return [recipe.id, values];
     }),
+  );
+}
+
+export type RecipeMarkerState = {
+  score: RecipeScore | null;
+  is_starred: boolean;
+  is_hearted: boolean;
+};
+
+export async function getRecipeMarkerStates(
+  supabase: RecipeSupabaseClient,
+  recipeIds: string[],
+): Promise<Map<string, RecipeMarkerState>> {
+  if (recipeIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('recipes')
+    .select('id, score, is_starred, is_hearted')
+    .in('id', recipeIds);
+
+  if (error) {
+    throw new Error('Unable to load recipe markers.');
+  }
+
+  return new Map(
+    (data ?? []).map((recipe) => [
+      recipe.id,
+      {
+        score: recipe.score as RecipeScore | null,
+        is_starred: recipe.is_starred,
+        is_hearted: recipe.is_hearted,
+      },
+    ]),
   );
 }
 

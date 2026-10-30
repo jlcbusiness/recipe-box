@@ -10,13 +10,19 @@ import {
 } from '../../../lib/explorer-state';
 import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
-import { getRecipeExplorerColumnValues, recipeStateLabels } from '../../../lib/recipes/data';
+import {
+  getRecipeExplorerColumnValues,
+  getRecipeMarkerStates,
+  recipeStateLabels,
+} from '../../../lib/recipes/data';
 import {
   getRecipeSearchFacetValues,
   getRecipeSearchSortOptions,
   parseRecipeSearchColumnFilters,
+  parseRecipeSearchFilters,
   type RecipeSearchColumnSelections,
   type RecipeSearchFacetOption,
+  type RecipeSearchFilter,
   type RecipeSearchSortKey,
   searchRecipes,
 } from '../../../lib/recipes/search';
@@ -30,6 +36,13 @@ import { FramedMediaImage } from '../../media/framed-media-image';
 import { AlternatingRecipeGrid } from '../../recipes/find/alternating-recipe-grid';
 import { RecipeColumnFilter } from '../../recipes/find/recipe-column-filter';
 import { RecipeSearchToolbar } from '../../recipes/find/recipe-search-toolbar';
+import { RecipeMarkerFilters } from '../../recipes/recipe-marker-filters';
+import {
+  RecipeGridMarkerIndicators,
+  RecipeMarkerColumnHeader,
+  RecipeMarkerIndicators,
+  RecipeMarkerStamp,
+} from '../../recipes/recipe-marker-icons';
 
 const pageSize = 50;
 const dateFormatter = new Intl.DateTimeFormat('en', {
@@ -44,6 +57,7 @@ const recipeViewOptions = [
   { value: 'grid', label: 'Grid' },
 ] as const;
 type RecipeExplorerSearchParams = {
+  filter?: string | string[];
   sort?: string;
   direction?: string;
   page?: string;
@@ -64,6 +78,7 @@ type RecipeExplorerSearchParams = {
 function searchHref({
   path,
   columnSelections,
+  filters,
   sortKey,
   sortDirection,
   page,
@@ -71,12 +86,14 @@ function searchHref({
 }: {
   path: string;
   columnSelections: RecipeSearchColumnSelections;
+  filters: RecipeSearchFilter[];
   sortKey: RecipeSearchSortKey;
   sortDirection: 'asc' | 'desc';
   page: number;
   view: 'details' | 'grid' | 'list';
 }) {
   const params = new URLSearchParams();
+  for (const filter of filters) params.append('filter', JSON.stringify(filter));
   for (const [key, values] of Object.entries(columnSelections)) {
     if (values === undefined) continue;
     const name = `column_${key}`;
@@ -102,11 +119,12 @@ export async function PublicationRecipeExplorer({
   const parsedColumnFilters = parseRecipeSearchColumnFilters(searchParams);
   const columnFilters = parsedColumnFilters.filters;
   const columnSelections = parsedColumnFilters.selections;
+  const filters = parseRecipeSearchFilters(searchParams.filter);
   const requestedPage = Math.max(
     1,
     Math.min(20_001, Number.parseInt(searchParams.page ?? '1', 10) || 1),
   );
-  const sortDirection = searchParams.direction === 'desc' ? 'desc' : 'asc';
+  const sortDirection: 'asc' | 'desc' = searchParams.direction === 'desc' ? 'desc' : 'asc';
   const view =
     searchParams.view === 'grid' ? 'grid' : searchParams.view === 'list' ? 'list' : 'details';
   const supabase = await createClient();
@@ -130,9 +148,15 @@ export async function PublicationRecipeExplorer({
     rememberedState?.display_preferences ??
     defaultExplorerDisplayPreferences(context, recipeColumns);
   const visibleColumnKeys = new Set(displayPreferences.visible_columns);
-  const sortOptions = getRecipeSearchSortOptions(
-    recipeColumns.filter(({ key, required }) => required || visibleColumnKeys.has(key)),
+  const visibleSortColumns = recipeColumns.filter(
+    ({ key, required }) => required || visibleColumnKeys.has(key),
   );
+  const sortOptions = getRecipeSearchSortOptions([
+    ...visibleSortColumns,
+    ...(visibleSortColumns.some(({ key }) => key === 'score')
+      ? []
+      : [{ key: 'score', label: 'Rating' }]),
+  ]);
   const sortKey = sortOptions.some(({ value }) => value === searchParams.sort)
     ? (searchParams.sort as RecipeSearchSortKey)
     : 'name';
@@ -140,7 +164,7 @@ export async function PublicationRecipeExplorer({
     <RecipeSearchToolbar
       columnSelections={columnSelections}
       direction={sortDirection}
-      filters={[]}
+      filters={filters}
       options={sortOptions}
       path={path}
       query=""
@@ -160,12 +184,12 @@ export async function PublicationRecipeExplorer({
   }
 
   const searchOptions = {
-    filters: view === 'details' ? columnFilters : [],
+    filters: [...filters, ...(view === 'details' ? columnFilters : [])],
     sortKey,
     sortDirection,
     publicationId,
     limit: pageSize,
-  } as const;
+  };
   let page = requestedPage;
   let recipes = await searchRecipes(supabase, '', {
     ...searchOptions,
@@ -180,7 +204,7 @@ export async function PublicationRecipeExplorer({
     });
     matchingCount = firstPage[0]?.total_count;
   }
-  matchingCount ??= columnFilters.length > 0 ? 0 : (activeRecipes.count ?? 0);
+  matchingCount ??= filters.length + columnFilters.length > 0 ? 0 : (activeRecipes.count ?? 0);
   const pageCount = Math.max(1, Math.ceil(matchingCount / pageSize));
   if (page > pageCount) {
     page = pageCount;
@@ -191,11 +215,12 @@ export async function PublicationRecipeExplorer({
   }
 
   const recipeIds = recipes.map(({ recipe_id }) => recipe_id);
-  const [recipeColumnValues, recipePhotos] = await Promise.all([
+  const [recipeColumnValues, recipePhotos, recipeMarkerStates] = await Promise.all([
     view === 'details'
       ? getRecipeExplorerColumnValues(supabase, recipeIds)
       : Promise.resolve(new Map<string, Record<string, string | null>>()),
     view === 'grid' ? getPrimaryRecipePhotos(supabase, recipeIds) : Promise.resolve(new Map()),
+    view !== 'details' ? getRecipeMarkerStates(supabase, recipeIds) : Promise.resolve(new Map()),
   ]);
 
   const facetFields = [
@@ -217,7 +242,7 @@ export async function PublicationRecipeExplorer({
           await getRecipeSearchFacetValues(
             supabase,
             '',
-            columnFilters.filter((columnFilter) => columnFilter.field !== field),
+            [...filters, ...columnFilters.filter((columnFilter) => columnFilter.field !== field)],
             field,
             publicationId,
           ),
@@ -247,7 +272,7 @@ export async function PublicationRecipeExplorer({
   const columnFilter = (field: keyof typeof columnFacetOptions) => (
     <RecipeColumnFilter
       action={path}
-      baseFilters={[]}
+      baseFilters={filters}
       baseQuery=""
       columnSelections={columnSelections}
       direction={sortDirection}
@@ -264,6 +289,7 @@ export async function PublicationRecipeExplorer({
     searchHref({
       path,
       columnSelections,
+      filters,
       sortKey,
       sortDirection,
       page: nextPage,
@@ -276,7 +302,7 @@ export async function PublicationRecipeExplorer({
     column_filters: Object.fromEntries(
       Object.entries(columnSelections).filter(([, selections]) => selections !== undefined),
     ),
-    filters: [],
+    filters,
     sort: sortKey,
     direction: sortDirection,
     view,
@@ -300,6 +326,16 @@ export async function PublicationRecipeExplorer({
           }
         }
         toolbar={toolbar}
+        toolbarTrailing={
+          <RecipeMarkerFilters
+            action={path}
+            columnSelections={columnSelections}
+            direction={sortDirection}
+            filters={filters}
+            sort={sortKey}
+            view={view}
+          />
+        }
         toolbarAction={mobileToolbarActions}
       >
         <p className="find-recipes-count" role="status">
@@ -350,7 +386,17 @@ export async function PublicationRecipeExplorer({
                 <tr>
                   {recipeColumns.map(({ key, label }) => (
                     <th data-explorer-column={key} key={key} scope="col">
-                      {isFilterColumn(key) ? columnFilter(key) : label}
+                      {isFilterColumn(key) ? (
+                        columnFilter(key)
+                      ) : key === 'starred' ? (
+                        <RecipeMarkerColumnHeader label={label} marker="star" />
+                      ) : key === 'hearted' ? (
+                        <RecipeMarkerColumnHeader label={label} marker="heart" />
+                      ) : key === 'score' ? (
+                        <abbr title="Rating">Rtg</abbr>
+                      ) : (
+                        label
+                      )}
                       <ExplorerColumnResizeHandle column={key} />
                     </th>
                   ))}
@@ -374,9 +420,43 @@ export async function PublicationRecipeExplorer({
                         return (
                           <td data-explorer-column={key} data-label={label} key={key}>
                             {key === 'name' ? (
-                              <Link href={`/recipes/${recipe.recipe_id}`}>
-                                {recipe.recipe_name}
+                              <Link
+                                className="publication-recipe-title-link"
+                                href={`/recipes/${recipe.recipe_id}`}
+                              >
+                                <span className="mobile-details-title-row">
+                                  <span className="mobile-details-title-text">
+                                    {recipe.recipe_name}
+                                  </span>
+                                  {(details?.starred === 'true' || details?.hearted === 'true') && (
+                                    <span className="mobile-details-title-markers">
+                                      {details?.starred === 'true' && (
+                                        <span data-explorer-column="starred">
+                                          <RecipeMarkerStamp label="Starred" marker="star" />
+                                        </span>
+                                      )}
+                                      {details?.hearted === 'true' && (
+                                        <span data-explorer-column="hearted">
+                                          <RecipeMarkerStamp label="Hearted" marker="heart" />
+                                        </span>
+                                      )}
+                                    </span>
+                                  )}
+                                </span>
                               </Link>
+                            ) : key === 'starred' || key === 'hearted' ? (
+                              details?.[key] === 'true' ? (
+                                <RecipeMarkerStamp
+                                  label={key === 'starred' ? 'Starred' : 'Hearted'}
+                                  marker={key === 'starred' ? 'star' : 'heart'}
+                                />
+                              ) : null
+                            ) : key === 'score' && value !== null ? (
+                              <span
+                                className={Number(value) < 0 ? 'recipe-score-negative' : undefined}
+                              >
+                                {value}
+                              </span>
                             ) : key === 'recipe_url' && value ? (
                               <a className="publication-recipe-url-link" href={value}>
                                 <span className="publication-recipe-url-host">
@@ -398,24 +478,53 @@ export async function PublicationRecipeExplorer({
           </div>
         ) : view === 'list' ? (
           <ul className="publication-recipe-simple-list">
-            {recipes.map((recipe) => (
-              <li key={recipe.recipe_id}>
-                <Link href={`/recipes/${recipe.recipe_id}`}>{recipe.recipe_name}</Link>
-              </li>
-            ))}
+            {recipes.map((recipe) => {
+              const markerState = recipeMarkerStates.get(recipe.recipe_id);
+              return (
+                <li key={recipe.recipe_id}>
+                  <div className="recipe-explorer-simple-list-row">
+                    <Link href={`/recipes/${recipe.recipe_id}`}>{recipe.recipe_name}</Link>
+                    <span className="recipe-explorer-list-signals">
+                      {markerState?.score !== null && markerState?.score !== undefined && (
+                        <span className="recipe-score-indicator">
+                          <span className="visually-hidden">Rating </span>
+                          <span
+                            className={markerState.score < 0 ? 'recipe-score-negative' : undefined}
+                          >
+                            {markerState.score}
+                          </span>
+                        </span>
+                      )}
+                      <RecipeMarkerIndicators
+                        starred={markerState?.is_starred ?? false}
+                        hearted={markerState?.is_hearted ?? false}
+                      />
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <AlternatingRecipeGrid>
             {recipes.map((recipe) => {
               const photo = recipePhotos.get(recipe.recipe_id);
+              const markerState = recipeMarkerStates.get(recipe.recipe_id);
               return (
                 <li key={recipe.recipe_id}>
                   <Link href={`/recipes/${recipe.recipe_id}`}>
+                    <RecipeGridMarkerIndicators
+                      starred={markerState?.is_starred ?? false}
+                      hearted={markerState?.is_hearted ?? false}
+                      score={markerState?.score}
+                    />
                     {photo && (
                       <FramedMediaImage
                         alt={photo.description || `Photo of ${recipe.recipe_name}`}
                         className="find-recipes-card-image"
                         crop={photo.crop}
+                        displayHeight={photo.display_height}
+                        displayWidth={photo.display_width}
                         height={photo.height}
                         src={photo.thumbnail_url}
                         width={photo.width}

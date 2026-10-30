@@ -51,6 +51,10 @@ function createSnapshot() {
           publication_id: firstPublicationId,
           publication_page: 'Spring 2026',
           name: 'Lemon cake',
+          state: 'tried',
+          score: 5,
+          is_starred: true,
+          is_hearted: false,
           is_private: true,
           public_link_id: 'future-public-link-identity',
           food_type_category: 'food_type',
@@ -64,6 +68,10 @@ function createSnapshot() {
           account_id: ownerId,
           publication_id: secondPublicationId,
           name: 'Tomato soup',
+          state: 'tried',
+          score: null,
+          is_starred: false,
+          is_hearted: true,
           is_private: false,
           trashed_at: null,
         },
@@ -72,6 +80,10 @@ function createSnapshot() {
           account_id: ownerId,
           publication_id: firstPublicationId,
           name: 'Trashed lemon loaf',
+          state: 'tried',
+          score: -5,
+          is_starred: true,
+          is_hearted: true,
           is_private: false,
           trashed_at: '2026-10-01T00:00:00.000Z',
         },
@@ -139,6 +151,12 @@ function createSnapshot() {
           crop: { left: 0.25, top: 0.125, width: 0.5, height: 0.75, rotation: 90 },
           full_path: `${ownerId}/assets/${firstAssetId}/full.webp`,
           thumbnail_path: `${ownerId}/assets/${firstAssetId}/thumb.webp`,
+          source_full_path: `${ownerId}/assets/${firstAssetId}/full.webp`,
+          source_thumbnail_path: `${ownerId}/assets/${firstAssetId}/thumb.webp`,
+          source_byte_size: 1200,
+          byte_size: 1200,
+          width: 1200,
+          height: 800,
           created_by_user_id: ownerId,
         },
         {
@@ -150,6 +168,10 @@ function createSnapshot() {
           crop: null,
           full_path: `${ownerId}/assets/${secondAssetId}/full.webp`,
           thumbnail_path: `${ownerId}/assets/${secondAssetId}/thumb.webp`,
+          source_full_path: `${ownerId}/assets/${secondAssetId}/full.webp`,
+          source_thumbnail_path: `${ownerId}/assets/${secondAssetId}/thumb.webp`,
+          source_byte_size: 1500,
+          byte_size: 1500,
         },
         {
           id: unrelatedAssetId,
@@ -266,6 +288,11 @@ describe('export rules', () => {
     expect(output.records.recipes[0]).not.toHaveProperty('public_link_id');
     expect(output.records.recipes[0]).not.toHaveProperty('trashed_by_user_id');
     expect(output.records.recipes[0]).not.toHaveProperty('account_id');
+    expect(output.records.recipes[0]).toMatchObject({
+      score: 5,
+      is_starred: true,
+      is_hearted: false,
+    });
     expect(output.records.media_assets[0]).toMatchObject({
       full_path: `images/${firstAssetId}/full.webp`,
       thumbnail_path: `images/${firstAssetId}/thumbnail.webp`,
@@ -295,7 +322,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(5);
+    expect(manifest.schema_version).toBe(7);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

@@ -7,7 +7,16 @@ import { ImageViewer } from './image-viewer';
 
 type RecipePhotoGalleryPhoto = Pick<
   MediaAssetDisplay,
-  'id' | 'description' | 'is_primary' | 'width' | 'height' | 'crop' | 'full_url' | 'thumbnail_url'
+  | 'id'
+  | 'description'
+  | 'is_primary'
+  | 'width'
+  | 'height'
+  | 'display_width'
+  | 'display_height'
+  | 'crop'
+  | 'full_url'
+  | 'thumbnail_url'
 >;
 
 export function RecipePhotoGallery({
@@ -44,6 +53,8 @@ export function RecipePhotoGallery({
           buttonLabel={imageButtonLabel}
           crop={selectedPhoto.crop}
           dataPhotoId={selectedPhoto.id}
+          displayHeight={selectedPhoto.display_height}
+          displayWidth={selectedPhoto.display_width}
           height={selectedPhoto.height}
           imageClassName="recipe-photo-feature-image"
           src={selectedPhoto.full_url}
@@ -68,6 +79,8 @@ export function RecipePhotoGallery({
                   alt=""
                   className="recipe-photo-thumbnail-image"
                   crop={photo.crop}
+                  displayHeight={photo.display_height}
+                  displayWidth={photo.display_width}
                   height={photo.height}
                   src={photo.thumbnail_url}
                   width={photo.width}

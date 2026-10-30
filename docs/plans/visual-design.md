@@ -105,16 +105,17 @@ and full-width metadata groups.
 ### Guiding concepts
 
 - **Text-fit, not equal-width:** Single-choice selects fit their longest option.
-  Metadata and time controls flow left to right and wrap when the viewport runs
-  out of room.
+  The Rating selector uses a short em-dash unset prompt so its width is governed
+  by the numeric choices, not a longer placeholder. Metadata and time controls
+  flow left to right and wrap when the viewport runs out of room.
 - **A choice is not text selection:** Recipe multi-picklists use the dedicated
   `MultiPicklist` module and open a compact dropdown. Options are toggle buttons,
   not checkboxes or selectable text. One single- or multi-picklist menu is open
   at a time; Escape closes it and returns focus to the trigger.
 - **State is explicit:** Name occupies the first row. State defaults to Want to
-  try; its active Enthusiasm, Verdict, Score, Reason, or Occasion Details
+  try; its active Enthusiasm, Verdict, Rating, Reason, or Occasion Details
   field shares the next row with State, with Serves at the end of that row.
-  Tried recipes show Verdict and optional Score together. The following row
+  Tried recipes show Verdict and optional Rating together. The following row
   holds Food Type, Meal Type, and Cuisine. Equipment follows Serves on the
   State row.
 - **Time is deliberate:** Component minutes are small, spinner-free numeric
@@ -197,33 +198,66 @@ adjacent recipe fields.
 ### Recipe list, detail, and headings
 
 On desktop, the recipe list shows Name, Food Type, State, and an Opinion column
-for the active Enthusiasm, Verdict, or Reason; Score and active custom marker
+for the active Enthusiasm, Verdict, or Reason; Rating and active custom marker
 stamps are available through the existing list-column preferences. The Star
 and Heart columns are visible by default in each recipe-list explorer, but
 owners can independently hide or show them; saved visibility choices override
 the default for that account and explorer context. Active stamps align at the
-right of List rows; inactive markers leave the cell empty. Grid cards stack
-active custom stamps at the top-right. On mobile, the list shows Name and
-Opinion with compact Score and active marker indicators.
+right of List rows; inactive markers leave the cell empty. Grid cards place
+active custom stamps and an available numeric Rating in one opaque, card-colored
+pill at the top-right, with the Rating below the stamps. The complete marker and
+Rating stack is vertically centered in a card-colored pill sized to its contents:
+a single Rating or marker forms a 32px circle, and additional signals extend the
+pill vertically with equal visual spacing between signals. On mobile, the list
+shows Name and Opinion with compact
+Rating and active marker indicators. In mobile Details views, active Star and
+Heart stamps share the recipe-title row at the right; Search and Query also
+show the numeric Rating beside those stamps without a visible label. Center the
+Rating and stamps vertically on the title, with equal visual spacing between
+the Rating and Star and between Star and Heart, optically raising the marker
+glyphs as needed; the remaining metadata continues below. Negative numeric
+Ratings use tomato red as a supplementary cue wherever they appear in private
+detail, List, and Grid views.
+Center numeric Rating choices in the recipe-edit picklist. Long titles truncate
+with an ellipsis before the stamps, with at least 8px of trailing space after
+the rightmost stamp. In simple List rows, show a Rating as its number only while
+retaining a visually hidden “Rating” label for assistive technology. Keep the
+title link shrinkable and truncate it before the non-shrinking score and marker
+group, without horizontal page overflow. Center Rating values in mobile Details
+cells as well as within desktop column tracks.
+On narrow desktop recipe details, let the featured image shrink only as needed
+to keep the action bar within the available heading width.
 Recipe detail follows the edit-form order but uses a distinct view
-order: State and its active response, Occasion Details when present, Serves,
-Total Time, Equipment, Food Type, Meal Type, Cuisine, remaining times, then
-Notes. On desktop, Food Type, Meal Type, and Cuisine share their own full-width
+order: State and its active response, optional Rating, Occasion Details when
+present, Serves, Total Time, Equipment, Food Type, Meal Type, Cuisine, remaining
+times, then Notes. On desktop, Food Type, Meal Type, and Cuisine share their own full-width
 row. Private recipe detail places alphabetized tag chips beneath the heading,
-with a compact action toolbar below. The toolbar orders share and privacy
-controls, immediate Star and Heart stamp toggles, **Print & Download**,
+with a compact action toolbar below. The toolbar orders immediate Star and
+Heart stamp toggles before share and privacy controls, **Print & Download**,
 Export, **Page Settings**, and Edit. Star and Heart are independent of State.
-The custom stamp itself is the immediate, keyboard-operable toggle, without
-raised-button chrome. Its off state is a clearly discernible muted outline; its
-on state uses muted ink and a pale rose or warm-gold fill. Use a darker
-contrast-safe outline; gold alone is not sufficiently contrasting on either
-paper surface. Accessible names and pressed states describe the action and
-state, with visible focus and no reliance on color alone. Neither marker is
+At desktop widths, keep the title alongside the action toolbar only when the
+title can retain at least as much width as the toolbar; otherwise wrap the
+toolbar below the title. Keep the visual gap between Star and Heart equal to the
+gap between Heart and the Share button.
+The custom stamp itself is the immediate, keyboard-operable toggle. On desktop,
+keep it visually unraised: its off state is a clearly discernible muted outline,
+and its on state uses its warm-gold or rose fill inside the outline without a
+tinted button background. On mobile, give each toggle a marker-color outline so
+it reads as a button; active toggles use the same faint accent fill and filled
+icon as the marker filters. Hover uses a paler fill; after activation, suppress
+hover until the pointer leaves so the on/off state remains visible. Use a
+darker contrast-safe outline; gold alone is not sufficiently contrasting on
+either paper surface. Accessible names and pressed states describe the action
+and state, with visible focus and no reliance on color alone. Neither marker is
 shown on public recipe pages.
-Keep the actions compact rather than pushing them to the far edge; retain the
-toolbar when the recipe has no tags. Give the line vertical margins matching
-the action spacing. Marker stamps have no visible word labels or word-based
-tooltips.
+Keep the desktop actions compact rather than pushing them to the far edge. On
+mobile, use even 4px gaps between the six first-row actions and let Can Link
+expand into the remaining width, with equal spacing around its label and switch.
+Place the marker toggles on a second row with Star centered under Page Settings
+and Heart under Edit. Retain the toolbar when the recipe has no tags. Give the
+line vertical margins matching the action spacing. Show marker error feedback
+below the action row, but do not show pending or success notices. Marker stamps
+have no visible word labels or word-based tooltips.
 At 640px and below, the output trigger uses a Download icon and the accessible
 name and tooltip `Download`; it continues to open the same Print, HTML, PNG,
 and PDF menu. Wider layouts retain the printer icon and `Print & Download`
@@ -471,15 +505,17 @@ On standard recipe detail, Print & Download and Export use the filled leaf
 treatment with a pale green edge, while Page Settings and Edit use light
 backgrounds with green borders; the Recipe Tin keeps its brown palette.
 Export actions use the supplied square-arrow-out icon.
-On mobile publication detail, Sort, direction, and view controls form a
-connected 40px group. List columns is a separate 40px outlined button with the
-same leaf border and paper background as Edit. The disconnected controls have
-equal 8px gaps above 340px and compact uniformly to 4px at 340px and below,
-without horizontal overflow.
+On mobile publication detail, Sort, direction, view, and List columns form one
+connected 40px group, with a visible divider between View and List columns.
+Keep the group separated from the publication actions; the disconnected
+controls have equal 8px gaps above 340px and compact uniformly to 4px at 340px
+and below, without horizontal overflow.
 
 On desktop, publication Export and Import recipe remain separate actions. On
 mobile, one 40px transfer-menu button offers `Export publication` and `Import
 recipe`; Edit and Add Recipe remain icon-only actions in the compact toolbar.
+Use the same export-arrow icon as recipe Export, not a sort-direction icon, and
+keep the mobile publication actions 40px square.
 The menu supports keyboard navigation and returns focus to its trigger when
 closed. Export feedback overlays the page beneath its button without moving the
 action row or following content. Settings keeps its 48px mobile target while
@@ -977,8 +1013,10 @@ corner icon opposite Remove, with a larger invisible touch target.
 Recipe Apply saves immediately; publication-cover Apply stages the framing
 until Submit. Cancel discards the current framing draft. Outside the editor,
 the complete source is shown with Fit/contain unless framing was explicitly
-saved. The existing image viewer shows saved framing and retains its
-single-image close behavior without gallery navigation.
+saved. Saving framing generates versioned official display files while
+retaining the source for further edits and reset. The existing image viewer
+shows saved framing and retains its single-image close behavior without
+gallery navigation.
 
 ## Find Recipes (Slice 17)
 
@@ -987,18 +1025,52 @@ single-image close behavior without gallery navigation.
 The global recipe search and publication-scoped recipe results share the same
 List and Grid presentation with fields appropriate to each explorer. Slice 19
 added per-context List-column visibility and desktop widths. On desktop,
-headers are 16px, sentence case, left-aligned, and aligned with their values. The header
-has no zebra fill. Publication data rows alternate a subtle leaf tint against
+headers are 16px, sentence case, left-aligned, and aligned with their values,
+except Rating, Star, and Heart headers and cells, which are centered
+horizontally and vertically. The Rating header reads “Rtg”; chooser and filter
+menus use “Rating.” The header has no zebra fill. Publication data rows alternate a subtle leaf tint against
 the neutral table surface, starting with a tinted first recipe row; the fill
-spans the full row. Recipe links stay regular weight and underline on desktop
-hover or keyboard focus. On mobile, the table header is hidden, the recipe
-name occupies its own first line, and the remaining labeled fields wrap
-without horizontal page scrolling.
+spans the full row. Desktop row separators run continuously across column gaps.
+Recipe links stay regular weight and underline on desktop hover or keyboard
+focus. On mobile, the table header is hidden, the recipe name occupies its own
+first line, and the remaining labeled fields wrap without horizontal page
+scrolling.
 
-Find and each publication's recipe list include immediate ⭐ and ❤️ filter
-controls. Their visible labels are emoji only, their accessible names describe
-the marker-only filter, and enabling both requires both markers. The controls
-compose with other filters and publication scope.
+Find's Search mode and each publication's recipe list include immediate Star
+and Heart filter controls beside their explorer controls. Query has no quick
+marker filters; it provides staged Starred and Hearted fields instead. Reuse
+the shared custom marker artwork instead of emoji; active and hovered controls
+use the corresponding gold or heart-red accent over a faint, paper-mixed
+background. Match button size and shape to neighboring toolbar controls.
+Accessible names describe each marker-only filter, and enabling both requires
+both markers. Search filters remain separate URL-backed criteria; publication
+filters also remain scoped to their publication. On mobile, place Search
+filters to the left of the view controls on the same row, and keep publication
+filters below the view and column controls. Keep Choose columns attached to the
+view controls and publication actions beside them, without overlap.
+Marker-column headers use the same artwork with screen-reader labels.
+
+Find's Query mode includes **Starred** and **Hearted** boolean fields. Each uses
+single-value **Is**/**Isn't** operators with **Yes** and **No** choices, and
+query criteria remain visible and editable after submission.
+Query rules stay staged while their values are edited, removed, or cleared.
+Switching between Search and Query clears the criteria from the mode being left
+and refreshes the results without those criteria. The right-aligned **apply**
+button uses italic serif type, submits complete criteria, and is disabled while
+any rule is incomplete. **Clear all** is a matching outlined button with
+inverted colors and clears only the staged rules. Enter in a complete rule
+applies the same query, and applying an empty rule set clears the current query
+refinements.
+
+On desktop, the private recipe-detail toolbar places Star and Heart to the left
+of its share, privacy, print, export, settings, and edit actions. On mobile,
+use even 4px gaps between the six actions, let Can Link expand into the
+remaining row width with equal spacing around its label and switch, and place
+the markers on a second row, with Star aligned under Page Settings and Heart
+under Edit.
+Marker feedback appears below the action row rather than overlapping adjacent
+controls. Column resize handles retain their existing hit area and show one
+centered line.
 
 Grid uses responsive 220px minimum columns with 12px gaps; five columns fit
 when the grid has at least 1,148px of usable width. Desktop cards are 234px
@@ -1006,8 +1078,12 @@ high, while mobile cards size to their content. Use a true checkerboard:
 alternate card colors across each visual row and flip the starting color on
 the next row. Keep this pattern correct as responsive columns reflow, with a
 shared restrained shadow. Show the actual default recipe photo with Fit/contain
-unless it has saved framing; keep its 144px image area transparent and the recipe title visible
-directly below. In publication Grid, state and total time share one compact
+unless it has saved framing; keep its 144px image area transparent and the recipe
+title visible directly below. Keep the image slot consistent across cards. Center
+each complete image frame in that slot, but do not attempt to auto-center its
+subject: source composition and intentionally offset saved framing can place the
+visible subject left or right within an otherwise centered frame.
+In publication Grid, state and total time share one compact
 metadata row so the image, title, and metadata each retain their own layout
 space. Preserve the same result data between List and Grid. On desktop, card
 titles underline on hover or keyboard focus.
@@ -1021,8 +1097,19 @@ keep Name visible. Visibility changes apply immediately and persist per account
 and exact explorer context; they do not depend on the active search URL or
 change its filters. The chooser remains available when switching to Grid, but
 only affects List presentation.
+On mobile, keep the chooser within the viewport and allow its options to scroll
+vertically when they exceed the available height.
+When the chooser is omitted in List or Grid, keep the View group’s outer
+right border and radius; when it is rendered, retain the divider between View
+and Choose List columns while keeping both groups connected.
 
-On table layouts, drag a visible column divider to resize. Show the
+On table layouts, drag a visible column divider to resize. Center Rating, Star,
+and Heart values and headers in both axes, accounting for the visible divider
+spacing; retain 64px as Rating's minimum and 56px for each marker column so
+labels, icons, and the resize hit area fit.
+On desktop, table row separators span the full row across column gaps instead
+of breaking at each cell.
+Show the
 column-resize cursor at the divider and support mouse, pen, and touch pointer
 input. Use a touch hit area centered on the visible divider. Width changes apply
 during the drag and persist when the pointer is released. Bound widths to

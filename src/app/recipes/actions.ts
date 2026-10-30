@@ -16,11 +16,17 @@ import {
   serializeInstructionSteps,
 } from '../../lib/recipes/instruction-rules';
 import { parseGroupedInteger } from '../../lib/recipes/measurement-rules';
+import { isRecipeScore } from '../../lib/recipes/recipe-rules';
 import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
   error?: string;
   recipeId?: string;
+};
+
+export type RecipeMarkerActionState = {
+  status: 'idle' | 'success' | 'error';
+  message: string;
 };
 
 type RecipeRelationshipsPayload = {
@@ -325,6 +331,18 @@ export async function saveRecipe(
     return { error: 'Serves must be a whole number greater than zero.' };
   }
 
+  const scoreText = formText(formData, 'score');
+  const parsedScore = scoreText ? Number(scoreText) : null;
+  if (
+    scoreText &&
+    (parsedScore === null || !Number.isSafeInteger(parsedScore) || !isRecipeScore(parsedScore))
+  ) {
+    return { error: 'Choose one of the allowed numeric Rating values.' };
+  }
+  if (scoreText && state !== 'tried') {
+    return { error: 'Rating is available only for Tried recipes.' };
+  }
+
   const recipeId = optionalId(formData, 'recipe_id');
   const expectedVersionText = formText(formData, 'expected_version');
   const expectedVersion = expectedVersionText ? Number(expectedVersionText) : null;
@@ -341,7 +359,7 @@ export async function saveRecipe(
     return { error: 'Enter a valid HTTP(S) URL.' };
   }
 
-  const { data, error } = await supabase.rpc('save_recipe_with_ingredient_sets', {
+  const { data, error } = await supabase.rpc('save_recipe_with_score', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_name: name,
@@ -374,6 +392,7 @@ export async function saveRecipe(
     p_recipe_relationships: relationships,
     p_tag_ids: selectedIds(formData, 'tag_ids'),
     p_ingredient_sets: ingredientSets,
+    p_score: state === 'tried' ? parsedScore : null,
   });
 
   if (error) {
@@ -443,6 +462,60 @@ export async function setRecipePrivacy(formData: FormData): Promise<void> {
   revalidatePath('/recipes');
   revalidatePath(`/recipes/${recipeId}`);
   redirect(`/recipes/${recipeId}`);
+}
+
+export async function setRecipeMarker(
+  _previousState: RecipeMarkerActionState,
+  formData: FormData,
+): Promise<RecipeMarkerActionState> {
+  const recipeId = formText(formData, 'recipe_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  const marker = formText(formData, 'marker');
+  const enabledText = formText(formData, 'enabled');
+  if (
+    !recipeId ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 1 ||
+    !['star', 'heart'].includes(marker) ||
+    !['true', 'false'].includes(enabledText)
+  ) {
+    return { status: 'error', message: 'Reload this recipe before changing its markers.' };
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { status: 'error', message: 'Sign in before changing recipe markers.' };
+  }
+
+  const { error } = await supabase.rpc('set_recipe_marker', {
+    p_recipe_id: recipeId,
+    p_expected_version: expectedVersion,
+    p_marker: marker,
+    p_enabled: enabledText === 'true',
+  });
+  if (error) {
+    if (error.code === 'PT409' || error.code === '40001') {
+      return {
+        status: 'error',
+        message: 'This recipe changed in another session. Reload before changing its markers.',
+      };
+    }
+    if (error.code === 'P0002') {
+      return { status: 'error', message: 'This recipe is no longer available.' };
+    }
+    return { status: 'error', message: 'Unable to update this marker. Try again.' };
+  }
+
+  revalidatePath('/recipes');
+  revalidatePath(`/recipes/${recipeId}`);
+  revalidatePath('/recipes/find');
+  revalidatePath('/publications');
+  revalidatePath('/publications/[id]', 'page');
+  return {
+    status: 'success',
+    message: `${marker === 'star' ? 'Star' : 'Heart'} ${enabledText === 'true' ? 'added' : 'removed'}.`,
+  };
 }
 
 export async function trashRecipe(formData: FormData): Promise<void> {

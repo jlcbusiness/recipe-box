@@ -36,6 +36,8 @@ export type PublicRecipePhoto = {
   is_primary: boolean;
   width: number;
   height: number;
+  display_width: number;
+  display_height: number;
   crop: CropRect | null;
   full_url: string;
   thumbnail_url: string;
@@ -89,9 +91,12 @@ type PublicPhotoRow = {
   is_primary: boolean;
   width: number;
   height: number;
+  display_width: number;
+  display_height: number;
   crop: CropRect | null;
   full_path: string;
   thumbnail_path: string;
+  source_full_path: string;
 };
 
 type SignedPublicPhoto = Omit<PublicRecipePhoto, 'id'> & { assetId: string };
@@ -106,7 +111,9 @@ async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
   const supabase = createPublicDataAdminClient();
   const { data, error } = await supabase
     .from('media_assets')
-    .select('id, description, is_primary, width, height, crop, full_path, thumbnail_path')
+    .select(
+      'id, description, is_primary, width, height, display_width, display_height, crop, full_path, thumbnail_path, source_full_path',
+    )
     .eq('recipe_id', recipeId)
     .eq('asset_type', 'recipe_photo')
     .eq('status', 'ready')
@@ -116,7 +123,7 @@ async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
 
   const rows = (data ?? []) as PublicPhotoRow[];
   return Promise.all(
-    rows.map(async ({ id, full_path, thumbnail_path, ...metadata }) => {
+    rows.map(async ({ id, full_path, thumbnail_path, source_full_path, ...metadata }) => {
       const [full, thumbnail] = await Promise.all([
         supabase.storage.from('recipe-media').createSignedUrl(full_path, signedUrlLifetimeSeconds),
         supabase.storage
@@ -128,6 +135,7 @@ async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
       }
       return {
         ...metadata,
+        crop: full_path === source_full_path ? metadata.crop : null,
         assetId: id,
         full_url: full.data.signedUrl,
         thumbnail_url: thumbnail.data.signedUrl,

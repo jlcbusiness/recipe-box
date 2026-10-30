@@ -134,18 +134,25 @@ columns.
 - A media asset belongs to exactly one active or trashed recipe or publication
   and is stored in the private media bucket. Each publication has at most one
   cover; each recipe has at most 12 ordered photos and one primary photo.
-  Each ready asset has nullable normalized crop framing; null displays the
-  complete image with Fit/contain, while a saved rectangle and quarter-turn
-  rotation are reversible presentation metadata and never replace the stored
-  WebP variants. Crop updates use the active parent's version and append the
-  corresponding history event. Portable bundle v5 preserves framing and
-  rotation; v4 imports default rotation to 0 degrees, and versions 1 through 3
-  default framing to null.
+  Each ready asset retains normalized source WebP paths and official display
+  paths. With no crop, the official paths alias the source; saving framing
+  creates unique, versioned full and thumbnail display files while preserving
+  the source for future edits and reset. `width` and `height` describe the
+  retained source; `display_width` and `display_height` track the official
+  full-size image so display dimensions remain accurate after cropping.
+  Legacy assets continue rendering their saved framing until the framing is
+  next saved or reset. Crop updates use the active parent's version and append
+  the corresponding history event.
+  `byte_size` counts all distinct stored source and display files, and
+  `source_byte_size` counts the retained source variants. Portable bundle v7
+  preserves all image variants; versions 1 through 6 treat their full and
+  thumbnail files as the source. Public projections sign only official
+  display paths, never retained source paths.
   Recipe photos also have a unique, persisted two-digit reference code within
   their recipe, independent of gallery order. Instruction shorthand resolves
   through the stable asset UUID; the visible code is only an authoring label.
-  Account quota counts the processed full and thumbnail derivatives, not the
-  staged original.
+  Account quota counts every retained source and official display file, not
+  the staged upload.
 - Trashing a parent hides its media without breaking the association.
   Permanent parent purge queues the staged and processed object paths before
   cascading the media metadata.

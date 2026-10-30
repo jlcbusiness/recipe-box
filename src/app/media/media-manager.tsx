@@ -1,6 +1,7 @@
 'use client';
 
 import { Camera, ClipboardPaste, Crop, ImagePlus, Pencil, X } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ClipboardEvent, PointerEvent } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -300,9 +301,9 @@ export function MediaManager({
     setError('');
     setCropEditing({
       asset,
-      crop: asset.crop,
+      crop: asset.saved_crop,
       height: asset.height,
-      src: asset.full_url,
+      src: asset.source_full_url,
       width: asset.width,
     });
   }
@@ -330,9 +331,10 @@ export function MediaManager({
     if (cover) {
       setCropEditing({
         asset: cover,
-        crop: pendingCoverFraming?.assetId === cover.id ? pendingCoverFraming.crop : cover.crop,
+        crop:
+          pendingCoverFraming?.assetId === cover.id ? pendingCoverFraming.crop : cover.saved_crop,
         height: cover.height,
-        src: cover.full_url,
+        src: cover.source_full_url,
         width: cover.width,
       });
     }
@@ -782,7 +784,10 @@ export function MediaManager({
               alt=""
               className="recipe-photo-manager-image"
               crop={primaryRecipePhoto.crop}
+              displayHeight={primaryRecipePhoto.display_height}
+              displayWidth={primaryRecipePhoto.display_width}
               height={primaryRecipePhoto.height}
+              loading="eager"
               src={primaryRecipePhoto.thumbnail_url}
               width={primaryRecipePhoto.width}
             />
@@ -818,16 +823,20 @@ export function MediaManager({
               alt=""
               className="publication-cover-manager-image"
               crop={currentCoverCrop ?? null}
+              displayHeight={cover.display_height}
+              displayWidth={cover.display_width}
               height={cover.height}
               src={currentCoverUrl}
               width={cover.width}
             />
           ) : currentCoverUrl ? (
-            <img
+            <Image
               alt=""
               className="publication-cover-manager-image"
               height={96}
+              loading="lazy"
               src={currentCoverUrl}
+              unoptimized
               width={72}
             />
           ) : (
@@ -983,6 +992,8 @@ export function MediaManager({
                             alt=""
                             className="recipe-photo-grid-image"
                             crop={asset.crop}
+                            displayHeight={asset.display_height}
+                            displayWidth={asset.display_width}
                             height={asset.height}
                             src={asset.thumbnail_url}
                             width={asset.width}
@@ -1121,16 +1132,20 @@ export function MediaManager({
                       alt=""
                       className="publication-cover-editor-image"
                       crop={currentCoverCrop ?? null}
+                      displayHeight={cover.display_height}
+                      displayWidth={cover.display_width}
                       height={cover.height}
                       src={currentCoverUrl}
                       width={cover.width}
                     />
                   ) : currentCoverUrl ? (
-                    <img
+                    <Image
                       alt=""
                       className="publication-cover-editor-image"
                       height={240}
+                      loading="lazy"
                       src={currentCoverUrl}
+                      unoptimized
                       width={180}
                     />
                   ) : (

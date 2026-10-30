@@ -87,7 +87,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Main Ingredients** | Derived index | Derived from ingredient rows | Not an independent metadata input. Automatically compiled from ingredient rows marked with the `Main` checkbox. |
 | **State** | Single-select enum | `Want to try`, `Tried`, `Will not try` | New recipes default to `Want to try`. Place State immediately after Name; its active Enthusiasm, Verdict and optional Score, or Reason, Serves, and Equipment share its row. Food Type, Meal Type, and Cuisine follow on the next wrapping row. Changing State clears stale conditional values, including Score. |
 | **Verdict** | Single-select picklist | Favorite, delicious, staple, practice, try again, occasionally, specific occasion, once-a-year-rich, so-so, no, hell no, MISTAKE | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. Existing values, including Favorite, are preserved and are not mapped to Score, Star, or Heart. |
-| **Score** | Optional signed integer | `-5`, `-3`, `-1`, `0`, `1`, `2`, `3`, `4`, `5` | Visible only when `State == Tried`; changing State away from Tried clears it. The negative descriptions (`-1` Needs work, `-3` No, `-5` DO NOT TRY) and neutral `0` explain intended meaning only; the UI and accessible names remain numeric. Red is a supplementary cue. |
+| **Score** | Optional signed integer | `-5`, `-3`, `-1`, `0`, `1`, `2`, `3`, `4`, `5` | Visible only when `State == Tried`; changing State away from Tried clears it. The negative descriptions (`-1` Needs work, `-3` No, `-5` DO NOT TRY) and neutral `0` explain intended meaning only; the UI and accessible names remain numeric. Negative numeric values use tomato red as a supplementary cue wherever Rating appears in private detail and list views. |
 | **Star** | Boolean marker | On or off | Private “note this” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Heart and Verdict. Each recipe defaults off. |
 | **Heart** | Boolean marker | On or off | Private “love this and want to repeat it” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Star, Score, Verdict, and State. Each recipe defaults off. |
 | **Enthusiasm** | Single-select picklist | Absolutely, sounds good!, try, specific occasion, maybe, eh | Visible **only** when `State == Want to try`. The empty prompt reads “What am I feeling?” User-customizable in settings. |
@@ -166,8 +166,11 @@ time is broken down into specific categories:
   the existing single-image viewer, preserving the saved crop's aspect ratio
   within each display's bounds. Fixed square thumbnail viewports may letterbox a
   crop but must not stretch it. Only the framing editor shows the complete
-  uncropped source while the owner adjusts the frame. Framing changes metadata
-  only; stored WebP variants remain unchanged.
+  uncropped source while the owner adjusts the frame. Saved framing generates
+  versioned official WebP display files while retaining the normalized source
+  variants for future edits and reset. New displays use those generated files;
+  legacy assets retain metadata-based framing until the next framing save or
+  reset.
 - The framing editor offers responsive Free, Original, Square, 4:3, 3:2, and
   16:9 choices in the shared mobile-safe Picklist. Common ratio orientation
   follows the active crop frame, so portrait framing shows 3:4, 2:3, and 9:16;
@@ -248,9 +251,10 @@ time is broken down into specific categories:
   order: State/response, Occasion
   Details when present, Serves, Total Time, Equipment, Food Type, Meal Type,
   Cuisine, remaining times, then Notes. On desktop, Food Type, Meal Type, and
-  Cuisine occupy a dedicated full-width row. On mobile, component times appear
-  in a separate subsection with a divider and small-caps “Time Breakdown” title; Total
-  Time remains in the main metadata. Recipe Tin does not appear as a
+  Cuisine occupy a dedicated full-width row. On mobile, component times and
+  Total Time appear in a separate subsection with a divider and small-caps
+  “Time Breakdown” title; desktop Total Time remains in the main metadata.
+  Recipe Tin does not appear as a
   duplicate breadcrumb or attribution when it is already selected in navigation.
   Recipe-page headings are about 16pt (about 21.33px). A recipe assigned to a
   publication presents its origin as a compact subtitle directly beneath the
@@ -917,12 +921,19 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   operators, including blank checks where supported. Multiple filters combine
   with `AND`; nested `AND`/`OR` query groups and named-query lifecycle are
   deferred.
-- **Marker quick filters:** Find and each publication's recipe list provide
-  immediate, URL-backed toggle buttons visually labeled only ⭐ and ❤️;
-  descriptive accessible names identify each marker-only filter. Either may be
-  enabled alone; when both are enabled, recipes must have both markers. They
-  combine with other search filters using `AND`.
+- **Marker quick filters:** Find's Search mode and each publication's recipe
+  list provide immediate, URL-backed toggle buttons visually labeled only ⭐
+  and ❤️. Query has no quick marker filters; it provides staged Starred and
+  Hearted fields instead. Descriptive accessible names identify each
+  marker-only filter. Either may be enabled alone; when both are enabled,
+  recipes must have both markers. They combine with other filters using `AND`.
+  On mobile, Search filters sit to the left of view controls on the same row;
+  publication filters sit below the view and column controls. Keep Choose
+  columns attached to the view controls and publication actions beside them
+  without overlap.
 - **Score search:** Score is available as a recipe filter and sort field.
+  Rating comparisons accept signed values from -5 through 5 and support
+  Exists/Doesn't Exist checks.
 - **Last-used explorer state:** Each explorer restores its owner's last-used
   filters, sort key, sort direction, and List/Grid choice. A valid shareable
   URL takes precedence over remembered search state. Publication recipe scope
@@ -934,11 +945,21 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   and may be hidden or shown independently. An owner's saved visibility choice
   overrides the default for that exact account and explorer context. Active
   custom stamp indicators align right in List and stack at the top-right of
-  Grid cards; inactive markers are not drawn. These preferences are not part of
+  Grid cards; show an available numeric Rating below the Grid marker icons.
+  Inactive markers are not drawn. These preferences are not part of
   a saved view or search URL. Column visibility applies immediately; widths are
   adjusted by pointer or touch dragging. Resizing has no keyboard equivalent
   by explicit product choice; all other explorer controls remain
-  keyboard-operable.
+  keyboard-operable.   In mobile Details views, active Star and Heart indicators share the
+  recipe-title row at the right, vertically centered on the title; the
+  remaining metadata continues below. Search and Query Details place the
+  numeric Rating beside those stamps without a visible label, with equal
+  visible spacing from Rating to Star and Star to Heart. Grid Ratings appear
+  below the markers in an opaque pill matching the card surface. Vertically
+  center the complete stack in a pill sized to its contents: one Rating or
+  marker forms a 32px circle, and additional signals extend the pill vertically
+  with equal visual spacing. Negative values remain tomato red. Center numeric Rating
+  choices in the recipe-edit picklist on desktop and mobile.
 
 ### 7.2 Full-Text Search
 
@@ -992,11 +1013,11 @@ and a single-line mobile list:
   the default recipe photo when available with Fit/contain unless the owner has
   saved framing. Filter and sort fields follow the recipe field catalog; Slice
   18 restores its last-used
-  state without losing the publication scope. On mobile, Sort, direction, and
-  View form a connected 40px group. List columns is a separate outlined 40px
-  button matching Edit's leaf border and paper background. Disconnected
-  controls have equal 8px gaps above 340px, reducing uniformly to 4px at 340px
-  and below without horizontal overflow.
+  state without losing the publication scope. On mobile, Sort, direction, View,
+  and List columns form one connected 40px group, with a visible divider
+  between View and List columns. Keep publication actions separate, with equal
+  8px gaps above 340px, reducing uniformly to 4px at 340px and below without
+  horizontal overflow.
 
 ---
 
@@ -1335,7 +1356,7 @@ Print requests landscape while leaving the browser dialog authoritative.
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 5 archives
+user-facing backup mechanism; Supabase backups are not used. Version 7 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
@@ -1345,14 +1366,17 @@ contain:
   membership, portion ratio, Size value/unit, and mention ordinal. Owner
   account IDs, Auth user IDs, admin and
   sign-in-method fields, signed URLs, private Storage paths, and export
-  timestamps are omitted. Media rows include nullable normalized crop framing;
-  product preferences and recipe privacy are retained.
-- `images/<asset-id>/full.webp` and `images/<asset-id>/thumbnail.webp`: Both
-  ready WebP variants for every included media asset, addressed by stable asset
-  UUID. Pending uploads and history are excluded.
+  timestamps are omitted. Media rows include nullable normalized crop framing
+  and retained source path/size metadata; product preferences and recipe
+  privacy are retained.
+- `images/<asset-id>/full.webp`, `thumbnail.webp`, `source-full.webp`, and
+  `source-thumbnail.webp`: Every distinct official and retained-source WebP
+  variant for each included media asset, addressed by stable asset UUID.
+  Source paths may alias official paths when the source is the current display.
+  Pending uploads and history are excluded.
 
 The manifest lists every payload file except itself. Archive paths are limited
-to `data.json` and UUID-scoped full or thumbnail WebP paths. The portable
+to `data.json` and UUID-scoped official or retained-source WebP paths. The portable
 contract and compatibility rules are defined in
 [import-export-format.md](import-export-format.md).
 
@@ -1374,11 +1398,14 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Imports accept supported v1 through v5 bundles only after validating archive
+Imports accept supported v1 through v7 bundles only after validating archive
 integrity, scope, and required graph data. Versions 1 through 3 default media
 framing to null (Fit/contain); version 4 preserves each media asset's nullable
 normalized crop rectangle at 0-degree rotation, and version 5 preserves its
-quarter-turn rotation. Invalid framing is rejected before applying records.
+quarter-turn rotation. Version 6 adds recipe ratings and personal markers.
+Version 7 preserves distinct official display and retained-source image
+variants; versions 1 through 6 treat their full and thumbnail files as the
+source. Invalid framing is rejected before applying records.
 Version 1 recipes receive a synthesized `Main` set and their ingredient rows
 are assigned to it. Version 2
 preserves the included set records and row membership. Versions 1 and 2 default

@@ -8,17 +8,24 @@ import { FULL_IMAGE_MAX_EDGE, THUMBNAIL_MAX_EDGE } from '../media/rules';
 export const MAX_IMPORT_MEDIA_OBJECT_BYTES = 20 * 1024 * 1024;
 
 const imagePathPattern =
-  /^images\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/(full|thumbnail)\.webp$/i;
+  /^images\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
 
 export type StagedImportImagePaths = {
   fullPath: string;
   thumbnailPath: string;
+  sourceFullPath?: string;
+  sourceThumbnailPath?: string;
 };
 
 export type StagedImportImageMetadata = {
   byteSize: number;
   width?: number;
   height?: number;
+  sourceWidth?: number;
+  sourceHeight?: number;
+  variantByteSizes: Partial<
+    Record<'full' | 'thumbnail' | 'source-full' | 'source-thumbnail', number>
+  >;
 };
 
 export function createImportImageStager(
@@ -52,7 +59,11 @@ export function createImportImageStager(
       chunks.push(bytes);
     }
 
-    const variant = match[2]?.toLowerCase();
+    const variant = match[2]?.toLowerCase() as
+      | 'full'
+      | 'thumbnail'
+      | 'source-full'
+      | 'source-thumbnail';
     const image = Buffer.concat(chunks, byteSize);
     let imageMetadata: Awaited<ReturnType<ReturnType<typeof sharp>['metadata']>>;
     try {
@@ -63,7 +74,8 @@ export function createImportImageStager(
     } catch {
       throw new Error('An imported image variant is invalid.');
     }
-    const maxEdge = variant === 'thumbnail' ? THUMBNAIL_MAX_EDGE : FULL_IMAGE_MAX_EDGE;
+    const isThumbnail = variant === 'thumbnail' || variant === 'source-thumbnail';
+    const maxEdge = isThumbnail ? THUMBNAIL_MAX_EDGE : FULL_IMAGE_MAX_EDGE;
     if (
       imageMetadata.format !== 'webp' ||
       !imageMetadata.width ||
@@ -74,7 +86,14 @@ export function createImportImageStager(
     ) {
       throw new Error('An imported image variant is invalid.');
     }
-    const fileName = variant === 'thumbnail' ? 'thumb.webp' : 'full.webp';
+    const fileName =
+      variant === 'thumbnail'
+        ? 'thumb.webp'
+        : variant === 'source-full'
+          ? 'source/full.webp'
+          : variant === 'source-thumbnail'
+            ? 'source/thumb.webp'
+            : 'full.webp';
     const objectPath = `${accountId}/assets/${destinationAssetId}/${fileName}`;
     stagedPaths.add(objectPath);
     const { error } = await admin.storage.from('recipe-media').upload(objectPath, image, {
@@ -89,16 +108,27 @@ export function createImportImageStager(
     const currentPaths = pathsBySourceAsset.get(sourceAssetId) ?? {};
     if (variant === 'thumbnail') {
       currentPaths.thumbnailPath = objectPath;
+    } else if (variant === 'source-full') {
+      currentPaths.sourceFullPath = objectPath;
+    } else if (variant === 'source-thumbnail') {
+      currentPaths.sourceThumbnailPath = objectPath;
     } else {
       currentPaths.fullPath = objectPath;
     }
     pathsBySourceAsset.set(sourceAssetId, currentPaths);
 
-    const currentMetadata = metadataBySourceAsset.get(sourceAssetId) ?? { byteSize: 0 };
+    const currentMetadata = metadataBySourceAsset.get(sourceAssetId) ?? {
+      byteSize: 0,
+      variantByteSizes: {},
+    };
     currentMetadata.byteSize += byteSize;
-    if (variant !== 'thumbnail') {
+    currentMetadata.variantByteSizes[variant] = byteSize;
+    if (variant === 'full') {
       currentMetadata.width = imageMetadata.width;
       currentMetadata.height = imageMetadata.height;
+    } else if (variant === 'source-full') {
+      currentMetadata.sourceWidth = imageMetadata.width;
+      currentMetadata.sourceHeight = imageMetadata.height;
     }
     metadataBySourceAsset.set(sourceAssetId, currentMetadata);
   }

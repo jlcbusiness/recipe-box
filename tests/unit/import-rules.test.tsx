@@ -20,12 +20,13 @@ const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
   records?: Partial<PortableData['records']>;
   includeImages?: boolean;
+  sourceVariants?: boolean;
 }) {
   const scope = options.scope ?? { type: 'database' as const };
   const schemaVersion = options.schemaVersion ?? 2;
@@ -62,10 +63,22 @@ function createBundleEntries(options: {
   const dataBytes = Buffer.from(JSON.stringify(data), 'utf8');
   const files = [{ path: 'data.json', bytes: dataBytes }];
   if (options.includeImages) {
+    const sourceFull = Buffer.from('source-full-image');
+    const sourceThumbnail = Buffer.from('source-thumbnail-image');
     files.push(
       { path: `images/${assetId}/full.webp`, bytes: Buffer.from('full-image') },
       { path: `images/${assetId}/thumbnail.webp`, bytes: Buffer.from('thumbnail-image') },
     );
+    if (options.sourceVariants) {
+      files.push(
+        { path: `images/${assetId}/source-full.webp`, bytes: sourceFull },
+        { path: `images/${assetId}/source-thumbnail.webp`, bytes: sourceThumbnail },
+      );
+    }
+    const displayByteSize = Buffer.byteLength('full-image') + Buffer.byteLength('thumbnail-image');
+    const sourceByteSize = options.sourceVariants
+      ? sourceFull.byteLength + sourceThumbnail.byteLength
+      : displayByteSize;
     data.records.media_assets.push({
       id: assetId,
       recipe_id: recipeId,
@@ -78,9 +91,20 @@ function createBundleEntries(options: {
       description: '',
       position: 0,
       is_primary: true,
-      byte_size: Buffer.byteLength('full-image') + Buffer.byteLength('thumbnail-image'),
+      byte_size: displayByteSize + (options.sourceVariants ? sourceByteSize : 0),
       width: 32,
       height: 24,
+      ...(schemaVersion >= 7
+        ? {
+            source_full_path: options.sourceVariants
+              ? `images/${assetId}/source-full.webp`
+              : `images/${assetId}/full.webp`,
+            source_thumbnail_path: options.sourceVariants
+              ? `images/${assetId}/source-thumbnail.webp`
+              : `images/${assetId}/thumbnail.webp`,
+            source_byte_size: sourceByteSize,
+          }
+        : {}),
       ...(schemaVersion >= 4
         ? {
             crop: {
@@ -93,6 +117,7 @@ function createBundleEntries(options: {
           }
         : {}),
     });
+
     const updatedDataBytes = Buffer.from(JSON.stringify(data), 'utf8');
     files[0] = { path: 'data.json', bytes: updatedDataBytes };
   }
@@ -111,6 +136,110 @@ function createBundleEntries(options: {
 }
 
 describe('import bundle validation', () => {
+  it('preserves distinct original and framed image variants in version 7 bundles', () => {
+    const entries = createBundleEntries({
+      schemaVersion: 7,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        state: 'tried',
+        score: 1,
+        is_starred: false,
+        is_hearted: false,
+      },
+      includeImages: true,
+      sourceVariants: true,
+    });
+
+    const result = validateImportBundleFiles(entries);
+    expect(result.data.records.media_assets[0]).toMatchObject({
+      source_full_path: `images/${assetId}/source-full.webp`,
+      source_thumbnail_path: `images/${assetId}/source-thumbnail.webp`,
+      source_byte_size:
+        Buffer.byteLength('source-full-image') + Buffer.byteLength('source-thumbnail-image'),
+    });
+    expect(result.images.size).toBe(4);
+  });
+
+  it('backfills retained source metadata for version 6 media records', () => {
+    const entries = createBundleEntries({
+      schemaVersion: 6,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        state: 'tried',
+        score: 1,
+        is_starred: false,
+        is_hearted: false,
+      },
+      includeImages: true,
+    });
+
+    const result = validateImportBundleFiles(entries);
+    expect(result.data.records.media_assets[0]).toMatchObject({
+      source_full_path: `images/${assetId}/full.webp`,
+      source_thumbnail_path: `images/${assetId}/thumbnail.webp`,
+      source_byte_size: Buffer.byteLength('full-image') + Buffer.byteLength('thumbnail-image'),
+    });
+    expect(result.images.size).toBe(2);
+  });
+
+  it('defaults personal signals when importing a pre-DLC 10 recipe bundle', () => {
+    const entries = createBundleEntries({
+      schemaVersion: 5,
+      recipe: { id: recipeId, name: 'Lemon cake', state: 'tried' },
+      accountPreferences: { recipe_column_order: ['name', 'state'] },
+    });
+
+    const result = validateImportBundleFiles(entries);
+
+    expect(result.data.records.recipes[0]).toMatchObject({
+      score: null,
+      is_starred: false,
+      is_hearted: false,
+    });
+    expect(result.data.account_preferences.recipe_column_order).toEqual([
+      'name',
+      'state',
+      'score',
+      'starred',
+      'hearted',
+    ]);
+  });
+
+  it('validates version 6 personal recipe signals', () => {
+    const valid = createBundleEntries({
+      schemaVersion: 6,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        state: 'tried',
+        score: -3,
+        is_starred: true,
+        is_hearted: false,
+      },
+    });
+
+    expect(validateImportBundleFiles(valid).data.records.recipes[0]).toMatchObject({
+      score: -3,
+      is_starred: true,
+      is_hearted: false,
+    });
+
+    const invalid = createBundleEntries({
+      schemaVersion: 6,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        state: 'want_to_try',
+        score: 2,
+        is_starred: false,
+        is_hearted: true,
+      },
+    });
+    expect(() => validateImportBundleFiles(invalid)).toThrow(/score or marker/i);
+  });
+
   it('accepts and validates instruction emphasis preferences in database bundles', () => {
     const preferences = {
       ingredient_color: 'dark_blue',
@@ -259,7 +388,15 @@ describe('import bundle validation', () => {
     expect(bundle.manifest.schema_version).toBe(1);
     expect(bundle.data.scope).toEqual({ type: 'recipe', id: recipeId });
     expect(bundle.data.records.recipes).toEqual([
-      { id: recipeId, name: 'Lemon cake', publication_id: null, is_private: true },
+      {
+        id: recipeId,
+        name: 'Lemon cake',
+        publication_id: null,
+        is_private: true,
+        score: null,
+        is_starred: false,
+        is_hearted: false,
+      },
     ]);
     expect(bundle.data.records.recipe_ingredient_sets).toHaveLength(1);
     expect(bundle.data.records.recipe_ingredient_sets[0]).toMatchObject({
@@ -340,6 +477,7 @@ describe('import bundle validation', () => {
       '0.1.0',
       new Date('2026-10-15T12:00:00.000Z'),
     );
+    manifest.schema_version = 5;
     entries.set('data.json', dataBytes);
     entries.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
 
@@ -541,7 +679,7 @@ describe('import bundle validation', () => {
 
     const unsupported = createBundleEntries({});
     const manifest = JSON.parse(new TextDecoder().decode(unsupported.get('manifest.json')));
-    manifest.schema_version = 6;
+    manifest.schema_version = 7;
     unsupported.set('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
     expect(() => validateImportBundleFiles(unsupported)).toThrow(/version/i);
 

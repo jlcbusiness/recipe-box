@@ -1,2 +1,3 @@
 - swap out one color swatch for "custom", uses standard 16M color picker
-- possible work in an alternate emphasis like bold, italics, and underline. 
+- possible work in an alternate emphasis like bold, italics, and underline.
+- add image as a column for mobile details (uses primary, resized to thumb)
