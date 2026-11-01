@@ -43,7 +43,10 @@ export function RecipeSearchModeProvider({
     const params = new URLSearchParams(window.location.search);
     params.delete('filter');
     params.delete('page');
-    if (mode === 'search') params.delete('q');
+    if (mode === 'search') {
+      params.delete('q');
+      params.delete('main');
+    }
     params.set('tab', nextMode);
 
     setMode(nextMode);
@@ -102,6 +105,44 @@ export function RecipeSearchInput({
       value={value}
       onChange={(event) => setValue(event.target.value)}
     />
+  );
+}
+
+export function RecipeMainIngredientsToggle({ defaultChecked }: { defaultChecked: boolean }) {
+  const searchMode = useRecipeSearchMode();
+  if (!searchMode) {
+    throw new Error('RecipeMainIngredientsToggle must be inside RecipeSearchModeProvider.');
+  }
+
+  const [checked, setChecked] = useState(defaultChecked);
+  const previousDefaultCheckedRef = useRef(defaultChecked);
+
+  useEffect(() => {
+    if (previousDefaultCheckedRef.current === defaultChecked) return;
+    previousDefaultCheckedRef.current = defaultChecked;
+    setChecked(defaultChecked);
+  }, [defaultChecked]);
+
+  return (
+    <label className="find-recipes-main-toggle">
+      <input
+        checked={checked}
+        disabled={searchMode.mode !== 'search'}
+        name="main"
+        onChange={(event) => {
+          const form = event.currentTarget.form;
+          setChecked(event.currentTarget.checked);
+          const searchText = form?.querySelector<HTMLInputElement>('input[type="search"]')?.value;
+          if (searchText?.trim()) {
+            // Let React commit the new checked state before the GET form serializes it.
+            requestAnimationFrame(() => form?.requestSubmit());
+          }
+        }}
+        type="checkbox"
+        value="1"
+      />
+      Main ingredients only
+    </label>
   );
 }
 

@@ -65,6 +65,14 @@ recipe states and opinions, uses existing recipe picklist values, references
 every listed ingredient in instructions, emphasizes durations and oven or
 stovetop heat, and assigns one gallery image plus one or two inline images per
 recipe. Inline photos vary in step placement, alignment, width, and framing.
+Recipes also receive pseudo-random personal signals derived from their slug:
+most Tried recipes get a score, and about a third are starred and a quarter
+hearted. The values are stable across reseeds.
+Every fixture ingredient also receives a Settings nutrition profile from
+`scripts/synthetic-ingredient-nutrition.mjs`: plausible, rounded values based
+on typical USDA FoodData Central entries, with all 15 standard nutrients and a
+volume serving size so fixture recipes (stored in cups) calculate a complete
+estimate. The seed only rewrites profiles that differ from those values.
 Afterlight Kitchen also includes repeated ingredients across separate sections,
 divided ingredients with equal and unequal portion ratios, and cubed tofu with
 size metadata. These examples are part of the reloadable fixture, so the normal

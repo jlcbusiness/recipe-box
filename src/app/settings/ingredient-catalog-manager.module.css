@@ -143,7 +143,7 @@
 .addRow {
   display: grid;
   min-height: 52px;
-  grid-template-columns: minmax(0, 1fr) 132px;
+  grid-template-columns: minmax(0, 1fr) 176px;
   align-items: center;
   border-bottom: 1px solid var(--line);
   background: var(--paper);
@@ -197,7 +197,7 @@
 
 .rowActions {
   display: flex;
-  width: 132px;
+  width: 176px;
   align-items: center;
   justify-content: flex-end;
   grid-column: 2;
@@ -509,6 +509,188 @@
   text-align: right;
 }
 
+.equivalentDialog {
+  position: fixed;
+  inset: 4mm 0;
+  width: min(460px, calc(100% - 16px));
+  max-width: none;
+  height: fit-content;
+  max-height: calc(100dvh - 8mm);
+  overflow: auto;
+  scrollbar-width: thin;
+  margin: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0;
+  box-shadow: 0 16px 48px rgb(20 30 25 / 24%);
+}
+
+.equivalentDialog::backdrop {
+  background: rgb(20 30 25 / 42%);
+}
+
+.equivalentForm {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.equivalentForm .paneHeading {
+  align-items: flex-start;
+  margin: -18px -18px 0;
+  padding: 12px 14px;
+}
+
+.equivalentHeadingText {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 0;
+  padding-top: 6px;
+}
+
+.equivalentTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 20px;
+}
+
+/* Sized in em so browser text scaling keeps the icon proportional to the title. */
+.equivalentTitleIcon {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  color: var(--leaf);
+}
+
+/* Overrides the Settings accordion's 44px heading target. */
+.equivalentHeadingText .equivalentTitle {
+  min-height: 0;
+}
+
+.equivalentTitleText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.equivalentSubtitle {
+  margin: 0 0 0 30px;
+  color: var(--muted);
+  font-size: 15px;
+  font-style: italic;
+}
+
+.equivalentField {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.equivalentField {
+  justify-items: start;
+}
+
+.equivalentPicklist {
+  min-height: 40px;
+}
+
+.equivalentGroup input {
+  width: calc(3ch + 18px);
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fffefa;
+  color: var(--ink);
+  font: inherit;
+  padding: 6px 8px;
+}
+
+.equivalentGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.equivalentGroup input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  text-align: right;
+}
+
+.equivalentGroup input::-webkit-inner-spin-button,
+.equivalentGroup input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.equivalentGroup legend {
+  margin-bottom: 5px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.equivalentError {
+  margin: 0;
+  color: #a12e26;
+  font-size: 14px;
+}
+
+.equivalentActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.equivalentActions span {
+  flex: 1;
+}
+
+.equivalentActions button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 12px;
+}
+
+.equivalentActions button:last-child {
+  border-color: var(--leaf);
+  background: var(--leaf);
+  color: white;
+  font-weight: 700;
+}
+
+.equivalentActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.equivalentField select:focus-visible,
+.equivalentGroup input:focus-visible,
+.equivalentGroup select:focus-visible,
+.equivalentActions button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 @media (max-width: 760px) {
   .columns {
     display: block;
@@ -527,6 +709,14 @@
     background: var(--paper);
     box-shadow: 0 8px 28px rgb(36 40 32 / 24%);
     padding: 16px;
+  }
+
+  .equivalentForm {
+    padding: 14px;
+  }
+
+  .equivalentForm .paneHeading {
+    margin: -14px -14px 0;
   }
 
   .mergePane {

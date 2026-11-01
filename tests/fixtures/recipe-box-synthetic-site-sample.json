@@ -1233,6 +1233,7 @@
             {
               "name": "Sea Salt",
               "amount": "1.5",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-4-sea-salt"
@@ -2139,6 +2140,7 @@
             {
               "name": "Sea Salt",
               "amount": "1.5",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-5-sea-salt"
@@ -2542,6 +2544,7 @@
             {
               "name": "Sea Salt",
               "amount": "1",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-9-sea-salt"
@@ -3498,6 +3501,7 @@
             {
               "name": "Sea Salt",
               "amount": "0.125",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-7-sea-salt"
@@ -3888,6 +3892,7 @@
             {
               "name": "Sea Salt",
               "amount": "0.5",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-3-sea-salt"
@@ -4812,6 +4817,7 @@
             {
               "name": "Sea Salt",
               "amount": "1.5",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-3-sea-salt"
@@ -8396,6 +8402,7 @@
             {
               "name": "Sea Salt",
               "amount": "1",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-8-sea-salt"
@@ -8778,6 +8785,7 @@
             {
               "name": "Sea Salt",
               "amount": "1",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-4-sea-salt"
@@ -9378,6 +9386,7 @@
             {
               "name": "Sea Salt",
               "amount": "1",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-3-sea-salt"
@@ -10178,6 +10187,7 @@
             {
               "name": "Sea Salt",
               "amount": "0.75",
+              "unitCode": "tsp",
               "specifics": "fine",
               "preparation": "",
               "key": "ingredient-10-sea-salt"

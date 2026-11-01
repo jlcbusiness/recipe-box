@@ -7,6 +7,14 @@ import type {
   RecipeMeasurement,
 } from './data';
 import {
+  calculateRecipeNutrition,
+  type NutrientValues,
+  type NutritionBasis,
+  type NutritionDensity,
+  type NutritionEquivalent,
+  type NutritionProfile,
+} from './nutrition-rules';
+import {
   buildPublicRecipePayload,
   type PublicRecipePayload,
   type PublicRecipeSource,
@@ -69,6 +77,7 @@ type PublicRecipeRow = {
   cooling_time_minutes: number | null;
   rest_time_minutes: number | null;
   total_time_minutes: number | null;
+  nutrition_overrides: NutrientValues;
 };
 
 type IngredientRow = Pick<
@@ -83,6 +92,8 @@ type IngredientRow = Pick<
   | 'portion_one_ratio'
   | 'size_value'
   | 'size_unit'
+  | 'nutrition_serving_size_override'
+  | 'nutrition_overrides'
 >;
 
 type MeasurementRow = RecipeMeasurement & { recipe_ingredient_id: string };
@@ -155,7 +166,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   const { data: row, error } = await supabase
     .from('recipes')
     .select(
-      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes',
+      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, nutrition_overrides',
     )
     .eq('public_id', publicId)
     .maybeSingle();
@@ -214,7 +225,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
     supabase
       .from('recipe_ingredients')
       .select(
-        'id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation, portion_one_ratio, size_value, size_unit',
+        'id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation, portion_one_ratio, size_value, size_unit, nutrition_serving_size_override, nutrition_overrides',
       )
       .eq('account_id', recipeRow.account_id)
       .eq('recipe_id', recipeRow.id)
@@ -260,28 +271,59 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   const ingredientRows = (ingredientResult.data ?? []) as IngredientRow[];
   const ingredientIds = [...new Set(ingredientRows.map((ingredient) => ingredient.ingredient_id))];
   const ingredientRowIds = ingredientRows.map((ingredient) => ingredient.id);
-  const [canonicalResult, measurementResult] = await Promise.all([
-    ingredientIds.length
-      ? supabase
-          .from('ingredients')
-          .select('id, name')
-          .eq('account_id', recipeRow.account_id)
-          .in('id', ingredientIds)
-      : Promise.resolve({ data: [], error: null }),
-    ingredientRowIds.length
-      ? supabase
-          .from('recipe_ingredient_measurements')
-          .select(
-            'id, recipe_ingredient_id, position, measurement_type, amount_min, amount_max, unit_code, picklist_value_id',
-          )
-          .eq('account_id', recipeRow.account_id)
-          .in('recipe_ingredient_id', ingredientRowIds)
-          .order('recipe_ingredient_id')
-          .order('position')
-      : Promise.resolve({ data: [], error: null }),
-  ]);
+  const [canonicalResult, measurementResult, profileResult, equivalentResult, densityResult] =
+    await Promise.all([
+      ingredientIds.length
+        ? supabase
+            .from('ingredients')
+            .select('id, name')
+            .eq('account_id', recipeRow.account_id)
+            .in('id', ingredientIds)
+        : Promise.resolve({ data: [], error: null }),
+      ingredientRowIds.length
+        ? supabase
+            .from('recipe_ingredient_measurements')
+            .select(
+              'id, recipe_ingredient_id, position, measurement_type, amount_min, amount_max, unit_code, picklist_value_id',
+            )
+            .eq('account_id', recipeRow.account_id)
+            .in('recipe_ingredient_id', ingredientRowIds)
+            .order('recipe_ingredient_id')
+            .order('position')
+        : Promise.resolve({ data: [], error: null }),
+      ingredientIds.length
+        ? supabase
+            .from('ingredient_nutrition_profiles')
+            .select(
+              'ingredient_id, serving_size_amount, serving_size_dimension, serving_size_unit_code, nutrients',
+            )
+            .eq('account_id', recipeRow.account_id)
+            .in('ingredient_id', ingredientIds)
+        : Promise.resolve({ data: [], error: null }),
+      ingredientIds.length
+        ? supabase
+            .from('ingredient_measure_equivalents')
+            .select(
+              'ingredient_id, measurement_type, picklist_value_id, picklist_value, volume_amount, volume_unit_code, weight_amount, weight_unit_code',
+            )
+            .eq('account_id', recipeRow.account_id)
+            .in('ingredient_id', ingredientIds)
+        : Promise.resolve({ data: [], error: null }),
+      ingredientIds.length
+        ? supabase
+            .from('ingredient_densities')
+            .select(
+              'ingredient_id, volume_amount, volume_unit_code, weight_amount, weight_unit_code',
+            )
+            .eq('account_id', recipeRow.account_id)
+            .in('ingredient_id', ingredientIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
   ensureNoError(canonicalResult.error);
   ensureNoError(measurementResult.error);
+  ensureNoError(profileResult.error);
+  ensureNoError(equivalentResult.error);
+  ensureNoError(densityResult.error);
 
   const measurementRows = (measurementResult.data ?? []) as MeasurementRow[];
   const measurementOptionIds = [
@@ -318,19 +360,87 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
     measurementsByIngredient.set(measurement.recipe_ingredient_id, rows);
   }
 
+  const profileByIngredient = new Map(
+    (profileResult.data ?? []).map((profile) => [
+      profile.ingredient_id,
+      {
+        servingSize: {
+          amount: Number(profile.serving_size_amount),
+          dimension: profile.serving_size_dimension as NutritionBasis['dimension'],
+          unitCode: profile.serving_size_unit_code,
+        },
+        nutrients: profile.nutrients as NutritionProfile['nutrients'],
+      },
+    ]),
+  );
+  const equivalentByIngredient = new Map(
+    (equivalentResult.data ?? []).map((equivalent) => [
+      equivalent.ingredient_id,
+      {
+        measurementType: equivalent.measurement_type as NutritionEquivalent['measurementType'],
+        picklistValueId: equivalent.picklist_value_id,
+        picklistValue: equivalent.picklist_value,
+        volume:
+          equivalent.volume_amount === null
+            ? null
+            : { amount: Number(equivalent.volume_amount), unitCode: equivalent.volume_unit_code },
+        weight:
+          equivalent.weight_amount === null
+            ? null
+            : { amount: Number(equivalent.weight_amount), unitCode: equivalent.weight_unit_code },
+      },
+    ]),
+  );
+  const densityByIngredient = new Map(
+    (densityResult.data ?? []).map((density) => [
+      density.ingredient_id,
+      {
+        volumeAmount: Number(density.volume_amount),
+        volumeUnitCode: density.volume_unit_code,
+        weightAmount: Number(density.weight_amount),
+        weightUnitCode: density.weight_unit_code,
+      } satisfies NutritionDensity,
+    ]),
+  );
   const ingredients: RecipeIngredient[] = ingredientRows.map((ingredient) => ({
     ...ingredient,
     ingredient_name: ingredientNames.get(ingredient.ingredient_id) ?? '',
     portion_one_ratio: ingredient.portion_one_ratio,
     size_value: ingredient.size_value,
     size_unit: ingredient.size_unit,
+    nutrition_serving_size_override:
+      ingredient.nutrition_serving_size_override as NutritionBasis | null,
+    nutrition_overrides: ingredient.nutrition_overrides as RecipeIngredient['nutrition_overrides'],
+    nutrition_profile: profileByIngredient.get(ingredient.ingredient_id) ?? null,
+    nutrition_equivalent: equivalentByIngredient.get(ingredient.ingredient_id) ?? null,
+    density: densityByIngredient.get(ingredient.ingredient_id) ?? null,
     measurements: measurementsByIngredient.get(ingredient.id) ?? [],
   }));
+  const nutritionPerServing = calculateRecipeNutrition(
+    ingredients.map((ingredient) => ({
+      measurements: ingredient.measurements.map((measurement) => ({
+        type: measurement.measurement_type,
+        amount: measurement.amount_min,
+        maximum: measurement.amount_max,
+        unitCode: measurement.unit_code,
+        picklistValueId: measurement.picklist_value_id,
+        picklistValue: measurement.picklist_value,
+      })),
+      profile: ingredient.nutrition_profile ?? null,
+      servingSizeOverride: ingredient.nutrition_serving_size_override ?? null,
+      nutrientOverrides: ingredient.nutrition_overrides ?? {},
+      density: ingredient.density ?? null,
+      equivalent: ingredient.nutrition_equivalent ?? null,
+    })),
+    recipeRow.serves,
+    recipeRow.nutrition_overrides,
+  ).perServing;
   const source: PublicRecipeSource = {
     ...recipeRow,
     publication: publicationResult.data,
     ingredient_sets: (ingredientSetResult.data ?? []) as RecipeIngredientSet[],
     ingredients,
+    nutrition_per_serving: nutritionPerServing,
     steps: (stepResult.data ?? []) as RecipeInstructionStep[],
     pairings: pairingResult.data ?? [],
     references: referenceResult.data ?? [],

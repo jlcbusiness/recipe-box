@@ -15,6 +15,13 @@ import {
 import { isValidNormalizedCrop } from '../media/rules';
 import { validateIngredientSetLabels } from '../recipes/ingredient-set-rules';
 import { instructionEmphasisOptions } from '../recipes/instruction-emphasis';
+import {
+  isNutritionBasis,
+  type NutritionProfile,
+  validateNutritionFieldOverrides,
+  validateNutritionProfile,
+  validateNutritionValues,
+} from '../recipes/nutrition-rules';
 import { isRecipeScore } from '../recipes/recipe-rules';
 
 const imagePathPattern =
@@ -89,6 +96,86 @@ function sameScope(left: ExportScope, right: ExportScope) {
     left.type === right.type &&
     ('id' in left ? left.id === ('id' in right ? right.id : '') : !('id' in right))
   );
+}
+
+function validateNutritionRecords(records: PortableData['records']) {
+  for (const recipe of records.recipes) {
+    if (validateNutritionValues(recipe.nutrition_overrides)) {
+      throw new Error('The bundle contains invalid recipe nutrition values.');
+    }
+  }
+  for (const ingredient of records.recipe_ingredients) {
+    if (
+      !(
+        ingredient.nutrition_serving_size_override === null ||
+        isNutritionBasis(ingredient.nutrition_serving_size_override)
+      ) ||
+      validateNutritionFieldOverrides(ingredient.nutrition_overrides)
+    ) {
+      throw new Error('The bundle contains invalid recipe ingredient nutrition values.');
+    }
+  }
+  const nutritionIngredientIds = new Set<string>();
+  for (const profile of records.ingredient_nutrition_profiles) {
+    const ingredientId = profile.ingredient_id;
+    const value = {
+      servingSize: {
+        amount: Number(profile.serving_size_amount),
+        dimension: profile.serving_size_dimension,
+        unitCode: profile.serving_size_unit_code,
+      },
+      nutrients: profile.nutrients,
+    };
+    if (
+      typeof ingredientId !== 'string' ||
+      nutritionIngredientIds.has(ingredientId) ||
+      validateNutritionProfile(value as NutritionProfile)
+    ) {
+      throw new Error('The bundle contains an invalid ingredient nutrition profile.');
+    }
+    nutritionIngredientIds.add(ingredientId);
+  }
+  const equivalentIngredientIds = new Set<string>();
+  for (const equivalent of records.ingredient_measure_equivalents) {
+    const id = equivalent.ingredient_id;
+    if (
+      typeof id !== 'string' ||
+      equivalentIngredientIds.has(id) ||
+      !['count', 'informal'].includes(String(equivalent.measurement_type))
+    ) {
+      throw new Error('The bundle contains an invalid ingredient measure equivalent.');
+    }
+    const validMeasure = (amount: unknown, unit: unknown, dimension: 'volume' | 'weight') => {
+      const units =
+        dimension === 'volume'
+          ? ['tsp', 'tbsp', 'fl_oz', 'cup', 'pt', 'qt', 'gal', 'ml', 'l']
+          : ['oz', 'lb', 'g', 'kg'];
+      return (
+        (amount === null && unit === null) ||
+        (typeof amount === 'number' &&
+          Number.isFinite(amount) &&
+          amount > 0 &&
+          typeof unit === 'string' &&
+          units.includes(unit))
+      );
+    };
+    const hasVolume = equivalent.volume_amount != null;
+    const hasWeight = equivalent.weight_amount != null;
+    if (
+      (!hasVolume && !hasWeight) ||
+      !validMeasure(equivalent.volume_amount, equivalent.volume_unit_code, 'volume') ||
+      !validMeasure(equivalent.weight_amount, equivalent.weight_unit_code, 'weight') ||
+      (equivalent.measurement_type === 'count' &&
+        (equivalent.picklist_value_id != null || equivalent.picklist_value != null)) ||
+      (equivalent.measurement_type === 'informal' &&
+        (typeof equivalent.picklist_value_id !== 'string' ||
+          typeof equivalent.picklist_value !== 'string' ||
+          !equivalent.picklist_value.trim()))
+    ) {
+      throw new Error('The bundle contains an invalid ingredient measure equivalent.');
+    }
+    equivalentIngredientIds.add(id);
+  }
 }
 
 function validateIngredientPortionFields(records: PortableData['records']) {
@@ -204,10 +291,14 @@ function validateData(
   }
 
   const records = asRecord(data.records, 'The bundle records');
-  const inputTables =
-    schemaVersion === 1
-      ? exportTableNames.filter((table) => table !== 'recipe_ingredient_sets')
-      : exportTableNames;
+  const inputTables = exportTableNames.filter(
+    (table) =>
+      !(schemaVersion === 1 && table === 'recipe_ingredient_sets') &&
+      !(
+        schemaVersion < 9 &&
+        ['ingredient_nutrition_profiles', 'ingredient_measure_equivalents'].includes(table)
+      ),
+  );
   assertExactKeys(records, [...inputTables], 'The bundle records');
   for (const table of inputTables) {
     if (!Array.isArray(records[table])) {
@@ -218,12 +309,20 @@ function validateData(
         ? portableRecordFields[table].filter(
             (field) =>
               !(schemaVersion < 6 && ['score', 'is_starred', 'is_hearted'].includes(field)) &&
-              !(schemaVersion < 8 && ['makes_quantity', 'makes_thing'].includes(field)),
+              !(schemaVersion < 8 && ['makes_quantity', 'makes_thing'].includes(field)) &&
+              !(schemaVersion < 9 && field === 'nutrition_overrides'),
           )
-        : table === 'recipe_ingredients' && schemaVersion < 3
+        : table === 'recipe_ingredients'
           ? portableRecordFields[table].filter(
               (field) =>
-                field !== 'portion_one_ratio' && field !== 'size_value' && field !== 'size_unit',
+                !(
+                  schemaVersion < 3 &&
+                  ['portion_one_ratio', 'size_value', 'size_unit'].includes(field)
+                ) &&
+                !(
+                  schemaVersion < 9 &&
+                  ['nutrition_serving_size_override', 'nutrition_overrides'].includes(field)
+                ),
             )
           : table === 'recipe_step_mentions' && schemaVersion < 3
             ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
@@ -273,6 +372,20 @@ function validateData(
     }
   }
 
+  if (schemaVersion < 9) {
+    records.recipes = (records.recipes as ExportRecord[]).map((recipe) => ({
+      ...recipe,
+      nutrition_overrides: {},
+    }));
+    records.recipe_ingredients = (records.recipe_ingredients as ExportRecord[]).map((row) => ({
+      ...row,
+      nutrition_serving_size_override: null,
+      nutrition_overrides: {},
+    }));
+    records.ingredient_nutrition_profiles = [];
+    records.ingredient_measure_equivalents = [];
+  }
+
   if (schemaVersion < 8) {
     records.recipes = (records.recipes as ExportRecord[]).map((recipe) => ({
       ...recipe,
@@ -301,6 +414,7 @@ function validateData(
   }
 
   validateIngredientPortionFields(records as unknown as PortableData['records']);
+  validateNutritionRecords(records as unknown as PortableData['records']);
 
   if (schemaVersion === 1) {
     const setsByRecipe = new Map<string, ExportRecord>();
@@ -514,7 +628,13 @@ function validateDatabaseReferences(records: PortableData['records']) {
     const tableIds = new Set<string>();
     for (const [index, value] of records[table].entries()) {
       const record = asRecord(value, `The ${table} record at index ${index}`);
-      const id = table === 'ingredient_densities' ? record.ingredient_id : record.id;
+      const id = [
+        'ingredient_densities',
+        'ingredient_nutrition_profiles',
+        'ingredient_measure_equivalents',
+      ].includes(table)
+        ? record.ingredient_id
+        : record.id;
       if (typeof id === 'string') {
         if (tableIds.has(id)) {
           throw new Error(`The ${table} records contain a duplicate identifier.`);
@@ -591,6 +711,17 @@ function validateDatabaseReferences(records: PortableData['records']) {
   }
   for (const density of records.ingredient_densities) {
     requireReference('ingredients', density.ingredient_id, 'ingredient');
+  }
+  for (const profile of records.ingredient_nutrition_profiles) {
+    requireReference('ingredients', profile.ingredient_id, 'nutrition profile ingredient');
+  }
+  for (const equivalent of records.ingredient_measure_equivalents) {
+    requireReference('ingredients', equivalent.ingredient_id, 'equivalent ingredient');
+    optionalReference(
+      'recipe_picklist_values',
+      equivalent.picklist_value_id,
+      'equivalent Things unit',
+    );
   }
   for (const assignment of records.recipe_tags) {
     requireReference('recipes', assignment.recipe_id, 'recipe');

@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { createHash, createHmac } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { LOCAL_TEST_PASSWORD } from '../tests/support/local-test-password.mjs';
+import { SYNTHETIC_INGREDIENT_NUTRITION } from './synthetic-ingredient-nutrition.mjs';
 import { findLocalOwner } from './synthetic-owner-selection.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -334,7 +335,7 @@ function recipePayload(
                 measurement_type: 'volume',
                 amount_min: amount,
                 amount_max: null,
-                unit_code: 'cup',
+                unit_code: ingredient.unitCode ?? 'cup',
                 picklist_value_id: null,
               },
             ]
@@ -381,6 +382,26 @@ function recipePayload(
       label,
       position,
     })),
+    p_score: personalSignals(recipe).score,
+  };
+}
+
+const SCORE_VALUES = [-5, -3, -1, 0, 1, 2, 3, 4, 5];
+
+function signalSeed(recipe, key) {
+  return createHash('sha256').update(`${recipe.slug}:signals:${key}`).digest().readUInt32BE(0);
+}
+
+// Hash-derived so values look random but stay stable across reseeds.
+function personalSignals(recipe) {
+  const scoreSeed = signalSeed(recipe, 'score');
+  return {
+    score:
+      recipe.state === 'tried' && scoreSeed % 5 !== 0
+        ? SCORE_VALUES[(scoreSeed >>> 3) % SCORE_VALUES.length]
+        : null,
+    starred: signalSeed(recipe, 'star') % 3 === 0,
+    hearted: signalSeed(recipe, 'heart') % 4 === 0,
   };
 }
 
@@ -574,6 +595,93 @@ async function makeImageBuffers(recipe, photo) {
     .webp({ quality: 80 })
     .toBuffer();
   return { full, thumbnail, width, height };
+}
+
+// Mirrors cropImage in src/lib/media/image-processing.ts.
+async function makeFramedBuffers(source, crop) {
+  const metadata = await sharp(source).metadata();
+  const quarterTurn = crop.rotation === 90 || crop.rotation === 270;
+  const rotatedWidth = quarterTurn ? metadata.height : metadata.width;
+  const rotatedHeight = quarterTurn ? metadata.width : metadata.height;
+  const left = Math.min(rotatedWidth - 1, Math.floor(crop.left * rotatedWidth));
+  const top = Math.min(rotatedHeight - 1, Math.floor(crop.top * rotatedHeight));
+  const width = Math.max(
+    1,
+    Math.min(rotatedWidth - left, Math.ceil((crop.left + crop.width) * rotatedWidth) - left),
+  );
+  const height = Math.max(
+    1,
+    Math.min(rotatedHeight - top, Math.ceil((crop.top + crop.height) * rotatedHeight) - top),
+  );
+  const rotated = crop.rotation === 0 ? sharp(source) : sharp(source).rotate(crop.rotation);
+  const cropped = await rotated.extract({ left, top, width, height }).toBuffer();
+  const full = await sharp(cropped)
+    .resize(2048, 2048, { fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 82, effort: 4 })
+    .toBuffer({ resolveWithObject: true });
+  const thumbnail = await sharp(cropped)
+    .resize(480, 480, { fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 78, effort: 4 })
+    .toBuffer();
+  return { full: full.data, thumbnail, width: full.info.width, height: full.info.height };
+}
+
+async function frameMediaAsset(api, accountId, recipe, photo, assetId, expectedVersion) {
+  const source = await makeImageBuffers(recipe, photo);
+  const framed = await makeFramedBuffers(source.full, photo.crop);
+  const folder = `${accountId}/assets/${assetId}/framing/${randomUUID()}`;
+  const fullPath = `${folder}/full.webp`;
+  const thumbnailPath = `${folder}/thumb.webp`;
+  const uploaded = [];
+  try {
+    await uploadStorageObject(
+      api.url,
+      api.serviceHeaders,
+      `/storage/v1/object/recipe-media/${fullPath}`,
+      framed.full,
+    );
+    uploaded.push(fullPath);
+    await uploadStorageObject(
+      api.url,
+      api.serviceHeaders,
+      `/storage/v1/object/recipe-media/${thumbnailPath}`,
+      framed.thumbnail,
+    );
+    uploaded.push(thumbnailPath);
+    const [result] = await api.rpc('update_media_crop_assets_with_dimensions', {
+      p_asset_id: assetId,
+      p_expected_version: expectedVersion,
+      p_crop: photo.crop,
+      p_full_path: fullPath,
+      p_thumbnail_path: thumbnailPath,
+      p_byte_size:
+        source.full.byteLength +
+        source.thumbnail.byteLength +
+        framed.full.byteLength +
+        framed.thumbnail.byteLength,
+      p_display_width: framed.width,
+      p_display_height: framed.height,
+    });
+    for (const previous of [result?.previous_full_path, result?.previous_thumbnail_path]) {
+      if (typeof previous === 'string' && previous.includes('/framing/')) {
+        await removeStorageObject(
+          api.url,
+          api.serviceHeaders,
+          `/storage/v1/object/recipe-media/${previous}`,
+        );
+      }
+    }
+    return result;
+  } catch (error) {
+    for (const objectPath of uploaded) {
+      await removeStorageObject(
+        api.url,
+        api.serviceHeaders,
+        `/storage/v1/object/recipe-media/${objectPath}`,
+      ).catch(() => {});
+    }
+    throw error;
+  }
 }
 
 function storageObjectPath(accountId, assetId, filename) {
@@ -903,16 +1011,19 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
   const existing = await api.table(
     'recipes',
     formatApiFilters({
-      select: 'id,version',
+      select: 'id,version,score,is_starred,is_hearted',
       account_id: `eq.${accountId}`,
       publication_id: `eq.${publicationId}`,
       recipe_url: `eq.${recipeUrl}`,
     }),
   );
   if (existing.length > 1) throw new Error(`The local recipe URL is ambiguous for ${recipe.slug}.`);
+  const signals = personalSignals(recipe);
   let recipeId;
   let recipeVersion;
   let created = false;
+  let currentMarkers = { star: false, heart: false };
+  let scoreMatches = true;
 
   if (existing.length === 0) {
     const initialPayload = recipePayload(
@@ -925,7 +1036,7 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
       null,
       [],
     );
-    const [saved] = await api.rpc('save_recipe_with_ingredient_sets', initialPayload);
+    const [saved] = await api.rpc('save_recipe_with_score', initialPayload);
     if (!saved?.id || !Number.isSafeInteger(saved.version)) {
       throw new Error(`Local recipe creation returned no version for ${recipe.slug}.`);
     }
@@ -935,6 +1046,8 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
   } else {
     recipeId = existing[0].id;
     recipeVersion = existing[0].version;
+    currentMarkers = { star: existing[0].is_starred, heart: existing[0].is_hearted };
+    scoreMatches = sameNumericValue(existing[0].score, signals.score);
   }
 
   const mediaRows = await api.table(
@@ -968,11 +1081,7 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
       asset.crop?.height !== photo.crop.height ||
       asset.crop?.rotation !== photo.crop.rotation
     ) {
-      const [framed] = await api.rpc('update_media_crop', {
-        p_asset_id: asset.id,
-        p_expected_version: recipeVersion,
-        p_crop: photo.crop,
-      });
+      const framed = await frameMediaAsset(api, accountId, recipe, photo, asset.id, recipeVersion);
       if (!Number.isSafeInteger(framed?.version)) {
         throw new Error(`Local photo framing returned no recipe version for ${recipe.slug}.`);
       }
@@ -1016,6 +1125,7 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
     steps,
   );
   if (
+    !scoreMatches ||
     !sameSteps(currentSteps, steps) ||
     !(await sameIngredientData(
       api,
@@ -1025,7 +1135,7 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
       payload.p_ingredient_sets,
     ))
   ) {
-    const [saved] = await api.rpc('save_recipe_with_ingredient_sets', payload);
+    const [saved] = await api.rpc('save_recipe_with_score', payload);
     if (!saved?.id || !Number.isSafeInteger(saved.version)) {
       throw new Error(`Local recipe update returned no version for ${recipe.slug}.`);
     }
@@ -1033,7 +1143,77 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
     updated = true;
   }
 
+  for (const [marker, enabled] of [
+    ['star', signals.starred],
+    ['heart', signals.hearted],
+  ]) {
+    if (currentMarkers[marker] === enabled) continue;
+    const [marked] = await api.rpc('set_recipe_marker', {
+      p_recipe_id: recipeId,
+      p_expected_version: recipeVersion,
+      p_marker: marker,
+      p_enabled: enabled,
+    });
+    if (!Number.isSafeInteger(marked?.version)) {
+      throw new Error(`Local recipe marker returned no version for ${recipe.slug}.`);
+    }
+    recipeVersion = marked.version;
+    updated = true;
+  }
+
   return { created, updated, uploadedPhotos, reusedPhotos };
+}
+
+function sameNutritionProfile(existing, requested) {
+  if (
+    Number(existing.serving_size_amount) !== requested.servingSize.amount ||
+    existing.serving_size_dimension !== requested.servingSize.dimension ||
+    existing.serving_size_unit_code !== requested.servingSize.unitCode
+  ) {
+    return false;
+  }
+  const saved = existing.nutrients ?? {};
+  const keys = new Set([...Object.keys(saved), ...Object.keys(requested.nutrients)]);
+  return [...keys].every((key) => Number(saved[key]) === requested.nutrients[key]);
+}
+
+async function seedIngredientNutrition(api, accountId) {
+  const [ingredients, profiles, revisions] = await Promise.all([
+    api.table('ingredients', { account_id: `eq.${accountId}`, select: 'id,name' }),
+    api.table('ingredient_nutrition_profiles', {
+      account_id: `eq.${accountId}`,
+      select:
+        'ingredient_id,serving_size_amount,serving_size_dimension,serving_size_unit_code,nutrients',
+    }),
+    api.table('ingredient_catalog_revisions', {
+      account_id: `eq.${accountId}`,
+      select: 'revision',
+    }),
+  ]);
+  let revision = revisions[0]?.revision;
+  const profilesById = new Map(profiles.map((profile) => [profile.ingredient_id, profile]));
+  const totals = { nutritionProfilesSet: 0, nutritionProfilesUnchanged: 0 };
+  for (const ingredient of ingredients) {
+    const requested = SYNTHETIC_INGREDIENT_NUTRITION.get(ingredient.name.toLocaleLowerCase());
+    if (!requested) continue;
+    const existing = profilesById.get(ingredient.id);
+    if (existing && sameNutritionProfile(existing, requested)) {
+      totals.nutritionProfilesUnchanged += 1;
+      continue;
+    }
+    if (!Number.isInteger(revision)) {
+      throw new Error('The ingredient catalog revision is unavailable for nutrition seeding.');
+    }
+    revision = await api.rpc('manage_ingredient_nutrition', {
+      p_action: 'profile_set',
+      p_expected_revision: revision,
+      p_ingredient_id: ingredient.id,
+      p_profile: requested,
+      p_equivalent: null,
+    });
+    totals.nutritionProfilesSet += 1;
+  }
+  return totals;
 }
 
 async function main() {
@@ -1045,6 +1225,20 @@ async function main() {
 
   const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
   validateFixture(fixture);
+  const missingNutrition = [
+    ...new Set(
+      fixture.publications.flatMap((publication) =>
+        publication.recipes.flatMap((recipe) =>
+          recipe.ingredients
+            .map((ingredient) => ingredient.name)
+            .filter((name) => !SYNTHETIC_INGREDIENT_NUTRITION.has(name.toLocaleLowerCase())),
+        ),
+      ),
+    ),
+  ];
+  if (missingNutrition.length > 0) {
+    throw new Error(`Synthetic nutrition is missing for: ${missingNutrition.join(', ')}.`);
+  }
   const environment = readLocalEnvironment();
   const api = {
     url: environment.apiUrl,
@@ -1144,6 +1338,8 @@ async function main() {
     }
   }
 
+  const ownerNutrition = await seedIngredientNutrition(api, accountId);
+
   api.ownerHeaders = headersFor(
     environment.anonKey,
     createOwnerToken(neighborAccount.user.id, environment.jwtSecret),
@@ -1188,6 +1384,7 @@ async function main() {
     neighborTotals.photosUploaded += result.uploadedPhotos;
     neighborTotals.photosReused += result.reusedPhotos;
   }
+  const neighborNutrition = await seedIngredientNutrition(api, neighborAccount.user.id);
 
   console.log(
     JSON.stringify({
@@ -1213,6 +1410,10 @@ async function main() {
       neighborRecipesUnchanged: neighborTotals.recipesUnchanged,
       neighborPhotosUploaded: neighborTotals.photosUploaded,
       neighborPhotosReused: neighborTotals.photosReused,
+      ingredientNutritionSet: ownerNutrition.nutritionProfilesSet,
+      ingredientNutritionUnchanged: ownerNutrition.nutritionProfilesUnchanged,
+      neighborIngredientNutritionSet: neighborNutrition.nutritionProfilesSet,
+      neighborIngredientNutritionUnchanged: neighborNutrition.nutritionProfilesUnchanged,
       emptyAccountRecipes: 0,
     }),
   );

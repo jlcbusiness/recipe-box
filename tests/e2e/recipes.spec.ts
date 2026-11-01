@@ -197,6 +197,13 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
     await expect(page.getByText('No recipes in this publication yet.')).toBeVisible();
     const addRecipeLink = page.getByRole('link', { name: 'Add Recipe' });
+    const recipeTinId = new URL(
+      (await addRecipeLink.getAttribute('href')) ?? '',
+      page.url(),
+    ).searchParams.get('publication');
+    if (!recipeTinId) {
+      throw new Error('The Recipe Tin route must identify its publication.');
+    }
     const isMobile = (page.viewportSize()?.width ?? 1280) <= 720;
     await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(96, 76, 56)');
     await addRecipeLink.hover();
@@ -698,12 +705,13 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       Authorization: `Bearer ${user.accessToken}`,
     };
     const recipeResponse = await request.get(
-      `${config.apiUrl}/rest/v1/recipes?select=id,version,total_time_minutes,serves,makes_quantity,makes_thing&id=eq.${recipeId}`,
+      `${config.apiUrl}/rest/v1/recipes?select=id,publication_id,version,total_time_minutes,serves,makes_quantity,makes_thing&id=eq.${recipeId}`,
       { headers },
     );
     expect(await recipeResponse.json()).toEqual([
       {
         id: recipeId,
+        publication_id: recipeTinId,
         version: 1,
         total_time_minutes: 1056,
         serves: 1200,
@@ -732,7 +740,13 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole('columnheader', { name: 'Food Type' })).toBeHidden();
     await expect(page.getByRole('columnheader', { name: 'State' })).toBeHidden();
-    await expect(recipeRow.locator('td:visible')).toHaveCount(6);
+    await expect(recipeRow.locator('td[data-explorer-column="publication"]')).toHaveCount(0);
+    for (const column of ['name', 'visibility', 'opinion']) {
+      await expect(recipeRow.locator(`td[data-explorer-column="${column}"]`)).toBeVisible();
+    }
+    await expect(
+      recipeRow.locator('td[data-explorer-column="total_time_minutes"]'),
+    ).toBeHidden();
     await recipeRow.getByRole('link', { name: 'Sunday tomato soup' }).click();
 
     await expect(
@@ -1124,7 +1138,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const desktopStar = page.getByRole('button', { name: 'Star recipe' });
     const desktopHeart = page.getByRole('button', { name: 'Heart recipe' });
     const desktopActionSelectors = [
-      ':scope > button[aria-label="Copy share link"]',
+      ':scope > .recipe-share-copy-action > button[aria-label="Copy share link"]',
       ':scope > .recipe-sharing-action-form',
       ':scope > .recipe-output-menu-action',
       ':scope > .recipe-detail-export-action > .recipe-detail-export-trigger',
@@ -1223,7 +1237,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const editBounds = await editButton.boundingBox();
     const pageSettingsBounds = await pageSettingsButton.boundingBox();
     const toolbarActionSelectors = [
-      ':scope > button[aria-label="Copy share link"]',
+      ':scope > .recipe-share-copy-action > button[aria-label="Copy share link"]',
       ':scope > .recipe-sharing-action-form',
       ':scope > .recipe-output-menu-action',
       ':scope > .recipe-detail-export-action > .recipe-detail-export-trigger',
@@ -1234,9 +1248,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       toolbarActionSelectors.map((selector) => actionToolbar.locator(selector).boundingBox()),
     );
     const otherActionBottoms = await actionToolbar
-      .locator(
-        ':scope > :not(.recipe-marker-actions):not(.recipe-marker-action-status):not(.recipe-share-copy-status)',
-      )
+      .locator(':scope > :not(.recipe-marker-actions):not(.recipe-marker-action-status)')
       .evaluateAll((elements) =>
         elements
           .map((element) => element.getBoundingClientRect())
@@ -1651,7 +1663,7 @@ test('recipes and history are isolated to their owning account @e2e', async ({ r
       enthusiasm: 6,
       equipment: 10,
       food_type: 12,
-      informal_unit: 11,
+      informal_unit: 10,
       meal_type: 10,
       unmeasured_phrase: 5,
       verdict: 12,
@@ -1674,7 +1686,7 @@ test('recipes and history are isolated to their owning account @e2e', async ({ r
           `${left.category}:${left.value}`.localeCompare(`${right.category}:${right.value}`),
         );
     expect(seedEntries(ownerPicklists)).toEqual(seedEntries(otherPicklists));
-    expect(ownerPicklists).toHaveLength(74);
+    expect(ownerPicklists).toHaveLength(73);
     expect(ownerPicklists.every(({ id }) => !otherPicklists.some((value) => value.id === id))).toBe(
       true,
     );
@@ -2129,9 +2141,7 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
     for (const width of [1280, 1600, 390]) {
       await page.setViewportSize({ width, height: 844 });
       const isMobileOutput = width <= 640;
-      const outputAction = page.getByRole('button', {
-        name: isMobileOutput ? 'Download' : 'Print & Download',
-      });
+      const outputAction = page.getByRole('button', { name: 'Print & Download' });
       await expect(outputAction).toHaveAttribute(
         'title',
         isMobileOutput ? 'Download' : 'Print & Download',
@@ -3847,7 +3857,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
     const presentationButton = page.getByRole('button', { name: /^Ingredient view:/ });
     const initialPresentation =
-      testInfo.project.name === 'Fold 6' ? 'Ingredient-first' : 'Standard';
+      (page.viewportSize()?.width ?? 1280) <= 760 ? 'Ingredient-first' : 'Standard';
     await expect(presentationButton).toHaveAttribute(
       'title',
       `Ingredient view: ${initialPresentation}; next ${initialPresentation === 'Standard' ? 'Ingredient-first' : 'Standard'}`,
@@ -4856,8 +4866,8 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     await expect(page.getByRole('heading', { name: 'A recipe for reader views' })).toBeVisible();
 
     const presentation = page.getByRole('button', { name: /^Ingredient view:/ });
-    const isMobileProject = testInfo.project.name === 'Fold 6';
-    const initialPresentation = isMobileProject ? 'Ingredient-first' : 'Standard';
+    const initialPresentation =
+      (page.viewportSize()?.width ?? 1280) <= 760 ? 'Ingredient-first' : 'Standard';
     await expect(presentation).toHaveAttribute(
       'title',
       `Ingredient view: ${initialPresentation}; next ${initialPresentation === 'Standard' ? 'Ingredient-first' : 'Standard'}`,
@@ -4891,17 +4901,19 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
 
     await presentation.focus();
     await page.keyboard.press('Enter');
+    const afterTogglePresentation =
+      initialPresentation === 'Standard' ? 'Ingredient-first' : 'Standard';
     await expect(presentation).toHaveAttribute(
       'title',
-      `Ingredient view: ${isMobileProject ? 'Standard' : 'Ingredient-first'}; next ${initialPresentation}`,
+      `Ingredient view: ${afterTogglePresentation}; next ${initialPresentation}`,
     );
     await expect(presentation.locator('svg')).not.toHaveClass(initialPresentationIcon ?? '');
     await expect(page.locator('.recipe-reader-subtitle')).toHaveText(
-      `${isMobileProject ? 'standard' : 'first'}, order entered`,
+      `${afterTogglePresentation === 'Standard' ? 'standard' : 'first'}, order entered`,
     );
     const readerSummary = page.locator('.recipe-reader-title > h2 + .recipe-reader-subtitle');
     await expect(readerSummary).toHaveText(
-      `${isMobileProject ? 'standard' : 'first'}, order entered`,
+      `${afterTogglePresentation === 'Standard' ? 'standard' : 'first'}, order entered`,
     );
 
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -5008,7 +5020,9 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     }
     await expect(readerSummary).toHaveCSS('margin-top', '0px');
     await expect(readerSummary).toHaveCSS('margin-bottom', '0px');
-    if (isMobileProject) await presentation.click();
+    if ((await presentation.getAttribute('title'))?.startsWith('Ingredient view: Standard;')) {
+      await presentation.click();
+    }
     await expect(page.locator('.recipe-reading-ingredient_first')).toHaveCSS('display', 'grid');
     const ingredientColumnBounds = await page
       .getByRole('region', { name: 'Ingredients', exact: true })

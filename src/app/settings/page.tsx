@@ -8,12 +8,15 @@ import {
 } from '../../lib/recipes/instruction-emphasis';
 import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
+import type { NutritionEquivalent, NutritionProfile } from '../../lib/recipes/nutrition-rules';
 import { createClient } from '../../lib/supabase/server';
 import { ExportAction } from '../export-action';
 import { DatabaseImportAction } from './database-import-action';
 import {
   type IngredientCatalogEntry,
   IngredientCatalogManager,
+  type IngredientEquivalentEntry,
+  type IngredientNutritionEntry,
 } from './ingredient-catalog-manager';
 import {
   type IngredientDensityEntry,
@@ -53,6 +56,8 @@ export default async function SettingsPage() {
     recipeIngredientsResult,
     ingredientCatalogResult,
     ingredientDensitiesResult,
+    ingredientNutritionResult,
+    ingredientEquivalentsResult,
     ingredientCatalogRevisionResult,
     tagsResult,
     tagCatalogRevisionResult,
@@ -76,6 +81,16 @@ export default async function SettingsPage() {
     supabase
       .from('ingredient_densities')
       .select('ingredient_id, volume_amount, volume_unit_code, weight_amount, weight_unit_code'),
+    supabase
+      .from('ingredient_nutrition_profiles')
+      .select(
+        'ingredient_id, serving_size_amount, serving_size_dimension, serving_size_unit_code, nutrients',
+      ),
+    supabase
+      .from('ingredient_measure_equivalents')
+      .select(
+        'ingredient_id, measurement_type, picklist_value_id, picklist_value, volume_amount, volume_unit_code, weight_amount, weight_unit_code',
+      ),
     supabase.from('ingredient_catalog_revisions').select('revision').maybeSingle(),
     supabase.from('tags').select('id, name, color_key').order('name'),
     supabase.from('tag_catalog_revisions').select('revision').maybeSingle(),
@@ -92,6 +107,8 @@ export default async function SettingsPage() {
     recipeIngredientsResult.error ||
     ingredientCatalogResult.error ||
     ingredientDensitiesResult.error ||
+    ingredientNutritionResult.error ||
+    ingredientEquivalentsResult.error ||
     ingredientCatalogRevisionResult.error ||
     !ingredientCatalogRevisionResult.data ||
     tagsResult.error ||
@@ -171,6 +188,46 @@ export default async function SettingsPage() {
       },
     ];
   }) as IngredientDensityEntry[];
+  const nutritionEntries = (ingredientNutritionResult.data ?? []).map(
+    (profile): IngredientNutritionEntry => ({
+      ingredient_id: profile.ingredient_id,
+      profile: {
+        servingSize: {
+          amount: Number(profile.serving_size_amount),
+          dimension: profile.serving_size_dimension as 'volume' | 'weight',
+          unitCode: profile.serving_size_unit_code,
+        },
+        nutrients: profile.nutrients as NutritionProfile['nutrients'],
+      },
+    }),
+  );
+  const equivalentEntries = (ingredientEquivalentsResult.data ?? []).map(
+    (equivalent): IngredientEquivalentEntry => ({
+      ingredient_id: equivalent.ingredient_id,
+      equivalent: {
+        measurementType: equivalent.measurement_type as NutritionEquivalent['measurementType'],
+        picklistValueId: equivalent.picklist_value_id,
+        picklistValue: equivalent.picklist_value,
+        volume:
+          equivalent.volume_amount === null
+            ? null
+            : {
+                amount: Number(equivalent.volume_amount),
+                unitCode: equivalent.volume_unit_code,
+              },
+        weight:
+          equivalent.weight_amount === null
+            ? null
+            : {
+                amount: Number(equivalent.weight_amount),
+                unitCode: equivalent.weight_unit_code,
+              },
+      },
+    }),
+  );
+  const thingsOptions = (picklistsResult.data ?? [])
+    .filter((value) => value.category === 'informal_unit')
+    .map((value) => ({ id: value.id, label: value.display_value }));
   const tagReferenceCounts = Object.fromEntries(
     (tagsResult.data ?? []).map((tag) => [
       tag.id,
@@ -240,16 +297,19 @@ export default async function SettingsPage() {
         initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
         initialRevision={ingredientCatalogRevisionResult.data.revision}
         referenceCounts={ingredientReferenceCounts}
-      />
-      <TagCatalogManager
-        initialTags={(tagsResult.data ?? []) as TagOption[]}
-        initialRevision={tagCatalogRevisionResult.data.revision}
-        referenceCounts={tagReferenceCounts}
+        initialNutrition={nutritionEntries}
+        initialEquivalents={equivalentEntries}
+        thingOptions={thingsOptions}
       />
       <IngredientDensityManager
         initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
         initialDensities={densityEntries}
         initialRevision={ingredientCatalogRevisionResult.data.revision}
+      />
+      <TagCatalogManager
+        initialTags={(tagsResult.data ?? []) as TagOption[]}
+        initialRevision={tagCatalogRevisionResult.data.revision}
+        referenceCounts={tagReferenceCounts}
       />
       <section
         aria-labelledby="data-management-title"

@@ -84,7 +84,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Food Type** | Single-select picklist | Casserole, roast, pie, galette, pasta, soup, sauce, cake, cocktail, bread, stew, salad, etc. | "What kind of dish is this?" Settings-managed picklist; use a compact custom dropdown aligned with the other picklist triggers. |
 | **Meal Type** | Multi-select picklist | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc. | "When or how do I serve this?" Settings-managed multi-select dropdown. Multiple values are toggled with buttons; selected values show a checkmark, leaf-green text, and a pale green background. |
 | **Cuisine** | Multi-select picklist | American, Italian, Chinese, Mexican, French, Thai, Indian, Fusion, etc. | Settings-managed multi-select dropdown to cleanly support fusion cooking. |
-| **Main Ingredients** | Derived index | Derived from ingredient rows | Not an independent metadata input. Automatically compiled from ingredient rows marked with the `Main` checkbox. |
+| **Main Ingredients** | Derived index | Derived from ingredient rows | Not an independent metadata input. Automatically compiled from ingredient rows marked with the `Main` checkbox. Queryable as the **Main Ingredient** multi-select field and used by Search's **Main ingredients only** option. |
 | **State** | Single-select enum | `Want to try`, `Tried`, `Will not try` | New recipes default to `Want to try`. Place State immediately after Name; its active Enthusiasm, Verdict and optional Score, or Reason, Serves, and Equipment share its row. Food Type, Meal Type, and Cuisine follow on the next wrapping row. Changing State clears stale conditional values, including Score. |
 | **Verdict** | Single-select picklist | Favorite, delicious, staple, practice, try again, occasionally, specific occasion, once-a-year-rich, so-so, no, hell no, MISTAKE | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. Existing values, including Favorite, are preserved and are not mapped to Score, Star, or Heart. |
 | **Score** | Optional signed integer | `-5`, `-3`, `-1`, `0`, `1`, `2`, `3`, `4`, `5` | Visible only when `State == Tried`; changing State away from Tried clears it. The negative descriptions (`-1` Needs work, `-3` No, `-5` DO NOT TRY) and neutral `0` explain intended meaning only; the UI and accessible names remain numeric. Negative numeric values use tomato red as a supplementary cue wherever Rating appears in private detail and list views. |
@@ -96,6 +96,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Settings-managed multi-select dropdown; follows Serves on the State row. |
 | **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling. |
 | **Makes** | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes` | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged. |
+| **Nutrition** | Optional estimated nutrient values | FDA label nutrients and approved optional vitamins/minerals | Shown as an italic sans-serif “Nutrition Per Serving” Nutrition Facts-style list after Notes (left of Notes on desktop) when Serves and nutrition values are available; print and downloads use one compact string. Values are estimates from owner-entered ingredient profiles and/or whole-recipe overrides, never an external lookup. |
 | **Tags** | Multi-select account-owned tags | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17. |
 | **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
 
@@ -276,6 +277,33 @@ time is broken down into specific categories:
 - The desktop Recipe Tin list is up to 1172px wide and its detail metadata
   section is up to 1012px wide.
 
+### 2.5 Nutrition Presentation
+
+- Private and public recipe detail show **Nutrition Per Serving** after Notes
+  (left of Notes on desktop) when at least Calories and a positive Serves count
+  are available. On screen it is a Nutrition Facts-style list; print and
+  downloads use the compact string. The text is italic,
+  uses the body font, and orders values from Calories through the FDA label
+  nutrients and then approved optional vitamins/minerals. Omit unknown values;
+  include explicit zeros. Include %DV only for nutrients with an FDA label
+  %DV. Label values as estimates.
+- Nutrition is calculated from whole-recipe totals divided by Serves. With
+  target-servings scaling, ingredient amounts and servings scale together and
+  per-serving values remain invariant. Multiply/Divide scale ingredient
+  amounts while saved Serves stays fixed, so the displayed per-serving values
+  scale with the amounts. Reading never mutates saved nutrition.
+- Recipe edit shows a matching estimate under Ingredients and offers an
+  **Edit** action with the Nutrition icon. Ingredient Nutrition actions open
+  the shared pane and save recipe-specific overrides only with Save recipe.
+  Settings values remain defaults and are never edited from recipe context.
+  In the recipe-level Nutrition pane, the calculator control for a calculated
+  nutrient opens an accessible ingredient breakdown with one row per
+  ingredient and columns for its listed amount, recipe-amount multiplier, and
+  contribution total. The breakdown is available on hover and keyboard focus;
+  Escape dismisses it without closing the pane.
+- Public projections expose only recipe-level displayed values; ingredient
+  Settings profiles, row overrides, and measure equivalents remain private.
+
 ---
 
 ## 3. Ingredient Rows, Measurements, and Density
@@ -289,7 +317,8 @@ sit in a narrow control rail outside the table. The table always has one
 trailing empty row.
 
 1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon
-   in lemon bars). Populates the recipe's `Main Ingredients` query index. The checkbox sits outside the table in the row
+   in lemon bars). Populates the recipe's `Main Ingredients` index used by the Query **Main Ingredient** field and
+   Search's **Main ingredients only** option. The checkbox sits outside the table in the row
    control rail and is edit-only.
 2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user
    can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside
@@ -312,8 +341,9 @@ trailing empty row.
    - **Count:** A count has no unit. The quantity is simply how many of the ingredient (`2` eggs, `1` cucumber).
      Packaging and portion words such as can or bag are not units: a 14 oz can is entered as 14 oz under Units.
    - **Things Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk,
-     sheet, stick, slice, pinch, dash, handful. Amounts in this category scale but never convert and never take part in
-     density; display pluralizes the unit when the amount (or range maximum) exceeds one. Packaging words (can, bag,
+     sheet, stick, slice, handful. Amounts in this category scale but never convert by default and never take part in
+     density; display pluralizes the unit when the amount (or range maximum) exceeds one. An explicit DLC 12 measure
+     equivalent is required before Count/Things can contribute to nutrition. Packaging words (can, bag,
      package) are not seeded.
    - **Feel Picker:** Approved culinary phrases: `to taste` , `as needed` , `for garnish` , `to serve` , `divided` .
      Feel is stored using the existing Unmeasured measurement type and phrase list.
@@ -463,6 +493,75 @@ Preparation is `cubed`. Readers and print format the value using the recipe
 quantity formatter and display `cubed` before the Size value. Selecting
 `cubed` in the editor reveals the Size field and underlined unit toggle in the
 Preparation section.
+
+### 3.8 Nutrition and Measure Equivalents
+
+- No nutrition data is fetched from outside Recipe Box. Settings contains one
+  optional user-entered nutrition profile per canonical ingredient. The profile
+  uses a positive scalar serving size in one fixed Volume or Weight unit and
+  requires Calories. Nutrient amounts are finite and nonnegative; zero is
+  known and blank is unknown.
+- The fixed core fields are Calories; Total Fat, Saturated Fat, Trans Fat,
+  Cholesterol, Sodium, Total Carbohydrate, Dietary Fiber, Total Sugars, Added
+  Sugars, Protein, Vitamin D, Calcium, Iron, and Potassium. Amount units are
+  fixed per nutrient. **Add vitamin/mineral** exposes only FDA-recognized
+  optional label nutrients: Vitamins A, C, E, and K; Thiamin, Riboflavin,
+  Niacin, Vitamins B6 and B12, Folate, Biotin, Pantothenic Acid, Choline,
+  Phosphorus, Iodine, Magnesium, Zinc, Selenium, Copper, Manganese, Chromium,
+  Molybdenum, and Chloride. Values are stored as amounts; %DV is derived from
+  FDA adult reference values. No %DV is shown for Trans Fat or Total Sugars,
+  and Protein follows FDA label conditions.
+- A recipe ingredient uses current Settings nutrition fields as per-field
+  defaults. Its serving-size basis may inherit the Settings basis or be
+  overridden for that recipe ingredient only. Without a Settings profile, the
+  owner can enter a recipe-only basis and nutrient values. Settings defaults
+  scale to a recipe-only basis when dimensions match. A manually entered field
+  overrides only that field and is stored on the recipe ingredient. Clearing
+  the override releases it to the current Settings value. Derived/default
+  values have a subtle tint and accessible status; manual values do not.
+- Each manual recipe-ingredient nutrient override stores its own serving-size
+  basis. If the row inherits its basis from Settings and that Settings basis
+  changes, affected values are marked stale and automatic recipe calculation
+  stops. Recipe-only serving-size bases are independent of Settings. Editing a
+  stale field assigns the current effective serving-size basis. Saving without edits opens a
+  **Serving changed** confirmation dialog with filled **Keep stale** and
+  **Update as-is** buttons plus **Cancel**; updating acknowledges the old basis without changing its
+  value or basis. A later basis change makes it stale again. Stale values are
+  red-tinted with a “serving changed” tag; color is never the only cue.
+- Settings may define one average equivalent per canonical ingredient: either
+  one Count or one selected Things unit, mapping an amount of one to optional
+  Volume and/or Weight amounts. Owners may enter estimates even for
+  non-countable Things such as bunch, handful, or head; the app never supplies
+  defaults or infers equivalency. This mapping is separate from Trusted
+  Density. Count/Things-to-other-dimension conversion may use only the selected
+  ingredient's explicit mapping and trusted density.
+- Remove Pinch and Dash from the default Things picklist and migrate existing
+  recipe uses to fixed Volume values (`1 pinch = 1/16 tsp`; `1 dash = 1/8
+  tsp`). Reader display may continue aliasing the scalar 1/16 tsp amount to
+  “pinch”; Pinch is not a stored unit.
+- Calculate each populated ingredient row once. Select the saved dimension
+  matching the nutrition profile basis; when both Volume and Weight exist,
+  never add both. Convert within dimensions with fixed factors, and cross
+  dimensions only through the ingredient's trusted density. A Count or Things
+  amount requires its explicit equivalent. Same canonical ingredients in
+  different sets remain independent contributions.
+- Ranges, Feel, missing/unsupported amounts, missing Calories, incompatible
+  dimensions, and unacknowledged stale overrides make that row ineligible.
+  Do not average ranges or silently use an endpoint. A recipe automatically
+  calculates only when every populated ingredient row is eligible and has
+  serving-count semantics; no Serves means no per-serving display. For each
+  nutrient, calculate a total only when every ingredient has a known value for
+  it; explicit zero counts as known.
+- Divide the full-recipe totals by positive Serves to show per-serving values.
+  Recipe-level manual values are whole-recipe totals and override only their
+  matching calculated nutrient. Clearing a manual value releases it back to
+  calculation. Unedited nutrients stay calculated. Values are not adjusted for
+  cooking loss and are labeled estimates, not laboratory results or nutrition
+  advice.
+- Ingredient Settings profiles and measure equivalents are owner-only. Public
+  pages, print, offline snapshots, history, and versioned bundles preserve the
+  recipe-level outputs and required data without exposing Settings profiles in
+  public projections. See [DLC 12](slices/dlc/dlc-12-recipe-nutrition.md).
 
 ---
 
@@ -941,6 +1040,27 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
 - **Score search:** Score is available as a recipe filter and sort field.
   Rating comparisons accept signed values from -5 through 5 and support
   Exists/Doesn't Exist checks.
+- **Nutrition Query and sorting:** Calories and the other fourteen standard
+  FDA label nutrients through Potassium are numeric Query fields and become
+  sort choices when their corresponding List columns are visible.
+  Their values are the same rounded per-serving estimates shown in the recipe
+  editor and reader, including ingredient-derived values and per-nutrient
+  recipe overrides. Whole-recipe manual totals are divided by Serves. Unknown
+  values remain unavailable rather than becoming zero. Optional vitamins and
+  minerals are not Query fields or sort keys. Apply nutrition filters in the
+  database before pagination so result counts and pages remain correct.
+- **Query columns and Details sorting:** Applying Query automatically selects
+  visible List columns corresponding to its fields unless the user checks
+  **Don't auto-select columns** for that application. The resulting visibility
+  choice is persisted normally and can be changed afterward; place the opt-out
+  checkbox below the Clear all and apply button row. Details renders current-page
+  values for hidden columns so revealing one adds populated cells without blank
+  tracks. In Details, click a column header to sort ascending; click the active
+  header again to toggle direction. Choosing another header starts ascending,
+  preserves active filters,
+  and resets pagination. Details omits the separate Sort and Sort Order
+  controls. Keep headers vertically centered without changing their horizontal
+  alignment.
 - **Last-used explorer state:** Each explorer restores its owner's last-used
   filters, sort key, sort direction, and List/Grid choice. A valid shareable
   URL takes precedence over remembered search state. Publication recipe scope
@@ -950,8 +1070,9 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   publication recipe explorer. A small settings icon opens the column chooser.
   Star and Heart columns are visible by default in each recipe-list explorer
   and may be hidden or shown independently. An owner's saved visibility choice
-  overrides the default for that exact account and explorer context. Active
-  custom stamp indicators align right in List and stack at the top-right of
+  overrides the default for that exact account and explorer context. Makes and
+  nutrition columns are hidden by default. Active custom stamp indicators
+  align right in List and stack at the top-right of
   Grid cards; show an available numeric Rating below the Grid marker icons.
   Inactive markers are not drawn. These preferences are not part of
   a saved view or search URL. Column visibility applies immediately; widths are
@@ -961,12 +1082,17 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   recipe-title row at the right, vertically centered on the title; the
   remaining metadata continues below. Search and Query Details place the
   numeric Rating beside those stamps without a visible label, with equal
-  visible spacing from Rating to Star and Star to Heart. Grid Ratings appear
+  visible spacing from Rating to Star and Star to Heart; do not repeat Rating
+  in a metadata cell. Grid Ratings appear
   below the markers in an opaque pill matching the card surface. Vertically
   center the complete stack in a pill sized to its contents: one Rating or
   marker forms a 32px circle, and additional signals extend the pill vertically
   with equal visual spacing. Negative values remain tomato red. Center numeric Rating
   choices in the recipe-edit picklist on desktop and mobile.
+- **Nutrition columns:** Each of the fifteen standard nutrients is available
+  as an optional recipe List column, hidden by default. Display the per-serving
+  estimate in the nutrient's fixed unit; load these values only when at least
+  one nutrition column is visible.
 
 ### 7.2 Full-Text Search
 
@@ -1032,10 +1158,10 @@ and a single-line mobile list:
 
 Settings is a section-based workspace, not a compact menu or a grid of cards.
 Show implemented management domains as full-width, unframed sections. Personal
-preferences, configurable picklists, ingredient catalog, tags, trusted density,
-and later data tools can grow into distinct sections as their slices ship. Do
-not render empty placeholder sections or links for work that is not yet
-implemented.
+preferences, configurable picklists, ingredient catalog, trusted density, tags,
+nutrition and measure equivalents, and later data tools can grow into distinct
+sections as their slices ship. Do not render empty placeholder sections or
+links for work that is not yet implemented.
 
 ### 8.1 Centralized Picklist Management
 
@@ -1067,7 +1193,7 @@ The managed catalogs are:
   - Equipment (multi-select)
   - Verdicts (single-select)
   - Enthusiasms (single-select)
-  - Informal Units (extensible non-standard units)
+  - Informal Units (extensible non-standard units; Pinch and Dash are not seeded)
   - Unmeasured Phrases (extensible approved phrases)
   - Tags (general categorization)
 - **Picklists Actions:**
@@ -1171,7 +1297,7 @@ search belong to Slice 17.
 ### 8.2 Trusted Densities
 
 Located in Settings as a separate, collapsed-by-default **Trusted densities**
-section after Tags, with matching disclosure spacing and no divider:
+section after Ingredients and before Tags, with matching disclosure spacing and no divider:
 
 - Searchable, alphabetized list of canonical ingredients with configured
   densities, with an inline editor and confirmed removal.
@@ -1186,7 +1312,33 @@ section after Tags, with matching disclosure spacing and no divider:
   [Slice 15 brief](slices/15-trusted-density.md) for the data, concurrency, and
   interaction contract.
 
-### 8.3 Personal Preferences
+### 8.3 Nutrition and Measure Equivalents
+
+Settings' Ingredient catalog offers a compact **Nutrition** action per
+canonical ingredient. Its shared Nutrition pane has serving size, Calories,
+core label nutrients, and an **Add vitamin/mineral** chooser. Saving updates
+the owner's ingredient Settings profile; Cancel discards the pane draft;
+Clear removes the profile. No external nutrition service is contacted.
+
+A separate **Measure equivalents** action records an owner-entered average
+Volume and/or Weight for one Count or one selected Things unit of that
+ingredient. Its one-unit basis is explicit. Only one Count-or-Things mapping
+is allowed per ingredient. Settings shows explanatory copy that nonstandard
+amounts are estimates supplied by the owner. It does not replace the
+volume/weight Trusted Density feature.
+
+In the recipe editor, each ingredient's Nutrition action opens the same pane.
+The current Settings profile and equivalent are loaded when the editor opens
+and populate untouched fields; refresh an open editor after changing Settings
+elsewhere. Edits are recipe-only and apply when the recipe is saved. Clearing a
+recipe override releases it to the current Settings default. Basis changes mark
+affected manual values stale; the Nutrition section explains when stale values
+block automatic calculation.
+The recipe-level Nutrition pane requires positive Serves and edits per-serving
+values. It scales manual edits to full-recipe totals when saved; untouched
+fields remain derived.
+
+### 8.4 Personal Preferences
 
 Located in Settings, per account:
 
@@ -1247,6 +1399,11 @@ component times, and follows the shared duration format in 2.2. Public
 ingredients use the same transient scalar
 teaspoon `pinch` display rule; saved account unit preferences are never read or
 exposed.
+
+When available, public recipe detail and print show the italic
+**Nutrition Per Serving** section after Steps (public recipes have no Notes). It contains only recipe-level
+estimated values; the public payload never contains ingredient Settings
+profiles, recipe-ingredient overrides, or measure equivalents.
 
 The public title and Print action share a row. When a base serving count exists,
 show `- serves n` inline after the title, separated by a space, in regular 16px
@@ -1364,7 +1521,7 @@ Print requests landscape while leaving the browser dialog authoritative.
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 8 archives
+user-facing backup mechanism; Supabase backups are not used. Version 9 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
@@ -1525,6 +1682,10 @@ History events are recorded on save (never on individual keystrokes):
 - Tag recoloring, including affected recipe/publication IDs and before/after
   catalog snapshots with color keys
 - Ingredient additions, removals, and quantity modifications
+- Ingredient nutrition profile and measure-equivalent changes, with before and
+  after snapshots
+- Recipe ingredient nutrition override and recipe-level nutrition changes,
+  captured with the ordinary versioned recipe save
 - Before/after ingredient snapshots include portion ratios and Size value/units;
   instruction mention snapshots include nullable portion ordinals.
 - Step reordering and edits

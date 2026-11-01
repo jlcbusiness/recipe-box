@@ -779,14 +779,27 @@ test('Settings, publication detail, and recipe detail expose accessible export a
           bounds.push({ x, width: itemWidth });
           toolbarActionRows.set(row, bounds);
         }
-        for (const row of toolbarActionRows.values()) {
-          const sorted = [...row].sort((first, second) => first.x - second.x);
-          const gaps = sorted.slice(0, -1).map((item, index) => {
-            const next = sorted[index + 1]!;
-            return next.x - item.x - item.width;
-          });
-          expect(gaps.every((gap) => gap >= -8 && gap <= 16)).toBe(true);
-        }
+        const mobileActionBounds = await page
+          .locator(
+            '.publication-mobile-actions button:visible, .publication-mobile-actions a:visible, .publication-mobile-actions select:visible',
+          )
+          .evaluateAll((elements) =>
+            elements.map((element) => {
+              const { x, width: itemWidth } = element.getBoundingClientRect();
+              return { x, width: itemWidth };
+            }),
+          );
+        const sortedMobileActions = [...mobileActionBounds].sort(
+          (first, second) => first.x - second.x,
+        );
+        const mobileActionGaps = sortedMobileActions.slice(0, -1).map((item, index) => {
+          const next = sortedMobileActions[index + 1]!;
+          return next.x - item.x - item.width;
+        });
+        expect(
+          mobileActionGaps.every((gap) => gap >= -8 && gap <= 16),
+          JSON.stringify({ width, sortedMobileActions, mobileActionGaps }),
+        ).toBe(true);
       }
       await page.setViewportSize({ width: 352, height: 864 });
     } else {

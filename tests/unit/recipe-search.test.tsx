@@ -32,14 +32,10 @@ describe('recipe search URL contract', () => {
 
     expect(searchOptions.map(({ value }) => value)).toEqual([
       'relevance',
-      ...searchColumns
-        .filter(({ key }) => key !== 'starred' && key !== 'hearted')
-        .map(({ key }) => key),
+      ...searchColumns.map(({ key }) => key),
     ]);
     expect(publicationOptions.map(({ value }) => value)).toEqual(
-      publicationColumns
-        .filter(({ key }) => key !== 'starred' && key !== 'hearted')
-        .map(({ key }) => key),
+      publicationColumns.map(({ key }) => key),
     );
     expect(searchOptions.some(({ value }) => value === 'opinion')).toBe(false);
   });

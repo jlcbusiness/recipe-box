@@ -101,7 +101,7 @@ Excluded:
 ## Settings and editor interaction contract
 
 - Add a separate full-width, unframed **Trusted densities** section to Settings
-  after Tags. It follows the established Settings disclosure spacing without a
+  after Ingredients and before Tags. It follows the established Settings disclosure spacing without a
   divider, is collapsed by default, and has no navigation shortcut, card grid,
   or explanatory feature copy.
 - Show configured densities in a searchable, alphabetized table with

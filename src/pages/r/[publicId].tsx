@@ -8,6 +8,7 @@ import { RecipeOutputActions } from '../../app/recipes/recipe-output-actions';
 import {
   RecipeInstructionMention,
   RecipeMakesInlineValue,
+  RecipeNutritionSection,
   RecipeReader,
   RecipeReaderProvider,
 } from '../../app/recipes/recipe-reader';
@@ -371,6 +372,11 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
           />
         ) : (
           instructions
+        )}
+        {recipe.nutrition_per_serving?.calories !== undefined && (
+          <div className="recipe-notes-nutrition">
+            <RecipeNutritionSection perServing={recipe.nutrition_per_serving} />
+          </div>
         )}
         {recipe.pairings.length > 0 && (
           <section className="recipe-detail-section" aria-labelledby="pairs-with-title">

@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, Merge, Plus, Search, Trash2, X } from 'lucide-react';
+import { ChevronRight, Merge, Plus, Salad, Search, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
@@ -11,8 +11,13 @@ import {
   useState,
   useTransition,
 } from 'react';
+import { volumeUnits, weightUnits } from '../../lib/recipes/measurement-rules';
+import type { NutritionEquivalent, NutritionProfile } from '../../lib/recipes/nutrition-rules';
 import { manageIngredientCatalog } from '../actions/ingredient-catalog';
-import { Picklist } from '../picklist';
+import { manageIngredientNutrition } from '../actions/ingredient-nutrition';
+import { MeasuringCup } from '../measuring-cup-icon';
+import { NutritionPane, type NutritionPaneSave } from '../nutrition/nutrition-pane';
+import { Picklist, type PicklistOption } from '../picklist';
 import styles from './ingredient-catalog-manager.module.css';
 
 export type IngredientCatalogEntry = {
@@ -20,17 +25,251 @@ export type IngredientCatalogEntry = {
   name: string;
 };
 
+export type IngredientNutritionEntry = {
+  ingredient_id: string;
+  profile: NutritionProfile | null;
+};
+
+export type IngredientEquivalentEntry = {
+  ingredient_id: string;
+  equivalent: NutritionEquivalent;
+};
+
+type ThingOption = { id: string; label: string };
+
+const MEASUREMENT_TYPE_OPTIONS: PicklistOption[] = [
+  { value: 'count', label: 'Count' },
+  { value: 'informal', label: 'Things' },
+];
+const VOLUME_UNIT_OPTIONS: PicklistOption[] = volumeUnits.map((unit) => ({
+  value: unit.code,
+  label: unit.abbreviation,
+}));
+const WEIGHT_UNIT_OPTIONS: PicklistOption[] = weightUnits.map((unit) => ({
+  value: unit.code,
+  label: unit.abbreviation,
+}));
+
 type CatalogAction = 'add' | 'rename' | 'merge' | 'delete';
 type ManagerMode = 'merge' | 'delete';
+
+function IngredientEquivalentPane({
+  ingredientName,
+  equivalent,
+  thingOptions,
+  isPending,
+  onCancel,
+  onClear,
+  onSave,
+}: {
+  ingredientName: string;
+  equivalent: NutritionEquivalent | null;
+  thingOptions: ThingOption[];
+  isPending: boolean;
+  onCancel: () => void;
+  onClear: () => void;
+  onSave: (value: NutritionEquivalent) => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [measurementType, setMeasurementType] = useState<'count' | 'informal'>(
+    equivalent?.measurementType ?? 'count',
+  );
+  const [picklistValueId, setPicklistValueId] = useState(equivalent?.picklistValueId ?? '');
+  const [volumeAmount, setVolumeAmount] = useState(
+    equivalent?.volume ? String(equivalent.volume.amount) : '',
+  );
+  const [volumeUnitCode, setVolumeUnitCode] = useState(equivalent?.volume?.unitCode ?? 'cup');
+  const [weightAmount, setWeightAmount] = useState(
+    equivalent?.weight ? String(equivalent.weight.amount) : '',
+  );
+  const [weightUnitCode, setWeightUnitCode] = useState(equivalent?.weight?.unitCode ?? 'g');
+  const [error, setError] = useState('');
+  const selectedThing = thingOptions.find((option) => option.id === picklistValueId);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    dialog.querySelector<HTMLButtonElement>('[role="combobox"]')?.focus();
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, []);
+
+  function save() {
+    const volume = volumeAmount.trim()
+      ? { amount: Number(volumeAmount), unitCode: volumeUnitCode }
+      : null;
+    const weight = weightAmount.trim()
+      ? { amount: Number(weightAmount), unitCode: weightUnitCode }
+      : null;
+    if (
+      (!volume && !weight) ||
+      (volume && (!Number.isFinite(volume.amount) || volume.amount <= 0)) ||
+      (weight && (!Number.isFinite(weight.amount) || weight.amount <= 0)) ||
+      (measurementType === 'informal' && !selectedThing)
+    ) {
+      setError(
+        'Enter at least one positive average volume or weight, and choose a Thing when needed.',
+      );
+      return;
+    }
+    setError('');
+    onSave({
+      measurementType,
+      picklistValueId: measurementType === 'informal' ? (selectedThing?.id ?? null) : null,
+      picklistValue: measurementType === 'informal' ? (selectedThing?.label ?? null) : null,
+      volume,
+      weight,
+    });
+  }
+
+  return (
+    <dialog
+      aria-labelledby="ingredient-equivalent-title"
+      className={styles.equivalentDialog}
+      ref={dialogRef}
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onCancel();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onCancel();
+      }}
+    >
+      <form
+        className={styles.equivalentForm}
+        onSubmit={(event) => {
+          event.preventDefault();
+          save();
+        }}
+      >
+        <div className={styles.paneHeading}>
+          <div className={styles.equivalentHeadingText}>
+            <h2 className={styles.equivalentTitle} id="ingredient-equivalent-title">
+              <MeasuringCup className={styles.equivalentTitleIcon} size={22} />
+              <span className="visually-hidden">Measure equivalent for </span>
+              <span className={styles.equivalentTitleText}>{ingredientName}</span>
+            </h2>
+            <p className={styles.equivalentSubtitle}>Average measures</p>
+          </div>
+          <button aria-label="Close" className={styles.iconButton} type="button" onClick={onCancel}>
+            <X aria-hidden="true" size={18} />
+          </button>
+        </div>
+        <p className={styles.note}>
+          Enter the average volume and/or weight for one Count or Things unit. This mapping is
+          separate from Trusted Density.
+        </p>
+        <div className={styles.equivalentField}>
+          <span>Recipe measurement</span>
+          <Picklist
+            className={styles.equivalentPicklist}
+            label="Recipe measurement"
+            options={MEASUREMENT_TYPE_OPTIONS}
+            scope="ingredient-equivalent"
+            value={measurementType}
+            onSelect={(value) => setMeasurementType(value as 'count' | 'informal')}
+          />
+        </div>
+        {measurementType === 'informal' && (
+          <div className={styles.equivalentField}>
+            <span>Things unit</span>
+            <Picklist
+              className={styles.equivalentPicklist}
+              invalid={Boolean(error) && !selectedThing}
+              label="Things unit"
+              measureLabel="Choose a Things unit"
+              options={thingOptions.map((option) => ({ value: option.id, label: option.label }))}
+              scope="ingredient-equivalent"
+              value={picklistValueId}
+              onSelect={setPicklistValueId}
+            >
+              {selectedThing?.label ?? 'Choose a Things unit'}
+            </Picklist>
+          </div>
+        )}
+        <fieldset className={styles.equivalentGroup}>
+          <legend>Average volume for one unit</legend>
+          <input
+            aria-label="Average volume amount"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            type="number"
+            value={volumeAmount}
+            onChange={(event) => setVolumeAmount(event.currentTarget.value)}
+          />
+          <Picklist
+            className={styles.equivalentPicklist}
+            label="Average volume unit"
+            options={VOLUME_UNIT_OPTIONS}
+            scope="ingredient-equivalent"
+            value={volumeUnitCode}
+            onSelect={setVolumeUnitCode}
+          />
+        </fieldset>
+        <fieldset className={styles.equivalentGroup}>
+          <legend>Average weight for one unit</legend>
+          <input
+            aria-label="Average weight amount"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            type="number"
+            value={weightAmount}
+            onChange={(event) => setWeightAmount(event.currentTarget.value)}
+          />
+          <Picklist
+            className={styles.equivalentPicklist}
+            label="Average weight unit"
+            options={WEIGHT_UNIT_OPTIONS}
+            scope="ingredient-equivalent"
+            value={weightUnitCode}
+            onSelect={setWeightUnitCode}
+          />
+        </fieldset>
+        {error && (
+          <p className={styles.equivalentError} role="alert">
+            {error}
+          </p>
+        )}
+        <div className={styles.equivalentActions}>
+          {equivalent && (
+            <button disabled={isPending} type="button" onClick={onClear}>
+              Clear
+            </button>
+          )}
+          <span />
+          <button disabled={isPending} type="button" onClick={onCancel}>
+            Cancel
+          </button>
+          <button disabled={isPending} type="submit">
+            Save
+          </button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
 
 export function IngredientCatalogManager({
   initialIngredients,
   initialRevision,
   referenceCounts,
+  initialNutrition,
+  initialEquivalents,
+  thingOptions,
 }: {
   initialIngredients: IngredientCatalogEntry[];
   initialRevision: number;
   referenceCounts: Record<string, number>;
+  initialNutrition: IngredientNutritionEntry[];
+  initialEquivalents: IngredientEquivalentEntry[];
+  thingOptions: ThingOption[];
 }) {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -52,10 +291,14 @@ export function IngredientCatalogManager({
     maxHeight: number;
   } | null>(null);
   const [status, setStatus] = useState('');
+  const [nutritionIngredientId, setNutritionIngredientId] = useState<string | null>(null);
+  const [equivalentIngredientId, setEquivalentIngredientId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const listRef = useRef<HTMLOListElement>(null);
   const paneRef = useRef<HTMLElement>(null);
   const paneTriggerRef = useRef<HTMLButtonElement>(null);
+  const nutritionTriggerRef = useRef<HTMLButtonElement>(null);
+  const equivalentTriggerRef = useRef<HTMLButtonElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,6 +344,16 @@ export function IngredientCatalogManager({
   const canAddSearch = normalizedSearch !== '' && filteredRows.length === 0;
   const searchAddName = search.replace(/\s+$/, '');
   const selectedIngredient = rows.find((ingredient) => ingredient.id === selectedId) ?? null;
+  const nutritionIngredient =
+    rows.find((ingredient) => ingredient.id === nutritionIngredientId) ?? null;
+  const equivalentIngredient =
+    rows.find((ingredient) => ingredient.id === equivalentIngredientId) ?? null;
+  const nutritionByIngredient = new Map(
+    initialNutrition.map((entry) => [entry.ingredient_id, entry.profile]),
+  );
+  const equivalentByIngredient = new Map(
+    initialEquivalents.map((entry) => [entry.ingredient_id, entry.equivalent]),
+  );
   const selectedRecipeCount = selectedIngredient
     ? (referenceCounts[selectedIngredient.id] ?? 0)
     : 0;
@@ -267,6 +520,117 @@ export function IngredientCatalogManager({
     setMergeKeepId('');
   }
 
+  function closeNutritionPane(restoreFocus = true) {
+    setNutritionIngredientId(null);
+    if (restoreFocus) requestAnimationFrame(() => nutritionTriggerRef.current?.focus());
+  }
+
+  function closeEquivalentPane(restoreFocus = true) {
+    setEquivalentIngredientId(null);
+    if (restoreFocus) requestAnimationFrame(() => equivalentTriggerRef.current?.focus());
+  }
+
+  function saveNutrition(value: NutritionPaneSave) {
+    if (!value.basis || value.values.calories === undefined) {
+      setStatus('Enter a serving size and Calories before saving.');
+      return;
+    }
+    const formData = new FormData();
+    formData.set('action', 'profile_set');
+    formData.set('revision', String(revision));
+    formData.set('ingredient_id', nutritionIngredientId ?? '');
+    formData.set(
+      'profile',
+      JSON.stringify({
+        servingSize: value.basis,
+        nutrients: value.values,
+      }),
+    );
+    startTransition(async () => {
+      const result = await manageIngredientNutrition({}, formData);
+      setStatus(
+        result.status === 'saved'
+          ? (result.message ?? 'Nutrition saved.')
+          : (result.message ?? 'Nutrition could not be saved.'),
+      );
+      if (result.status === 'saved') {
+        setRevision(result.revision ?? revision + 1);
+        closeNutritionPane(false);
+        router.refresh();
+      }
+    });
+  }
+
+  function clearNutrition() {
+    if (!nutritionIngredient || !nutritionByIngredient.get(nutritionIngredient.id)) {
+      closeNutritionPane();
+      return;
+    }
+    const formData = new FormData();
+    formData.set('action', 'profile_remove');
+    formData.set('revision', String(revision));
+    formData.set('ingredient_id', nutritionIngredient.id);
+    startTransition(async () => {
+      const result = await manageIngredientNutrition({}, formData);
+      setStatus(
+        result.status === 'saved'
+          ? (result.message ?? 'Nutrition removed.')
+          : (result.message ?? 'Nutrition could not be removed.'),
+      );
+      if (result.status === 'saved') {
+        setRevision(result.revision ?? revision + 1);
+        closeNutritionPane(false);
+        router.refresh();
+      }
+    });
+  }
+
+  function saveEquivalent(value: NutritionEquivalent) {
+    if (!equivalentIngredientId) return;
+    const formData = new FormData();
+    formData.set('action', 'equivalent_set');
+    formData.set('revision', String(revision));
+    formData.set('ingredient_id', equivalentIngredientId);
+    formData.set('equivalent', JSON.stringify(value));
+    startTransition(async () => {
+      const result = await manageIngredientNutrition({}, formData);
+      setStatus(
+        result.status === 'saved'
+          ? (result.message ?? 'Measure equivalent saved.')
+          : (result.message ?? 'Measure equivalent could not be saved.'),
+      );
+      if (result.status === 'saved') {
+        setRevision(result.revision ?? revision + 1);
+        closeEquivalentPane(false);
+        router.refresh();
+      }
+    });
+  }
+
+  function clearEquivalent() {
+    if (!equivalentIngredient) {
+      closeEquivalentPane();
+      return;
+    }
+    const formData = new FormData();
+    formData.set('action', 'equivalent_remove');
+    formData.set('revision', String(revision));
+    formData.set('ingredient_id', equivalentIngredient.id);
+    startTransition(async () => {
+      const result = await manageIngredientNutrition({}, formData);
+      setStatus(
+        result.status === 'saved'
+          ? (result.message ?? 'Measure equivalent removed.')
+          : (result.message ?? 'Measure equivalent could not be removed.'),
+      );
+      if (result.status === 'saved') {
+        setRevision(result.revision ?? revision + 1);
+        closeEquivalentPane(false);
+        router.refresh();
+      }
+    });
+  }
+
   function renderRow(ingredient: IngredientCatalogEntry) {
     return (
       <li className={styles.row} data-ingredient-row={ingredient.id} key={ingredient.id}>
@@ -300,6 +664,42 @@ export function IngredientCatalogManager({
           </button>
         )}
         <div className={styles.rowActions}>
+          <button
+            aria-label={`Nutrition for ${ingredient.name}`}
+            className={styles.iconButton}
+            disabled={
+              isPending ||
+              Boolean(editingId) ||
+              Boolean(selectedId) ||
+              Boolean(equivalentIngredientId)
+            }
+            title="Nutrition"
+            type="button"
+            onClick={(event) => {
+              nutritionTriggerRef.current = event.currentTarget;
+              setNutritionIngredientId(ingredient.id);
+            }}
+          >
+            <Salad aria-hidden="true" size={18} />
+          </button>
+          <button
+            aria-label={`Measure equivalent for ${ingredient.name}`}
+            className={styles.iconButton}
+            disabled={
+              isPending ||
+              Boolean(editingId) ||
+              Boolean(selectedId) ||
+              Boolean(nutritionIngredientId)
+            }
+            title="Measure equivalent"
+            type="button"
+            onClick={(event) => {
+              equivalentTriggerRef.current = event.currentTarget;
+              setEquivalentIngredientId(ingredient.id);
+            }}
+          >
+            <MeasuringCup size={18} />
+          </button>
           <button
             aria-label={`Merge ${ingredient.name}`}
             className={styles.iconButton}
@@ -588,6 +988,27 @@ export function IngredientCatalogManager({
               )}
             </div>
             {renderPane()}
+            {nutritionIngredient && (
+              <NutritionPane
+                mode="settings"
+                title={nutritionIngredient.name}
+                profile={nutritionByIngredient.get(nutritionIngredient.id) ?? null}
+                onCancel={() => closeNutritionPane()}
+                onClear={clearNutrition}
+                onSave={saveNutrition}
+              />
+            )}
+            {equivalentIngredient && (
+              <IngredientEquivalentPane
+                ingredientName={equivalentIngredient.name}
+                equivalent={equivalentByIngredient.get(equivalentIngredient.id) ?? null}
+                thingOptions={thingOptions}
+                isPending={isPending}
+                onCancel={() => closeEquivalentPane()}
+                onClear={clearEquivalent}
+                onSave={saveEquivalent}
+              />
+            )}
           </div>
           {(isPending || status) && (
             <p aria-live="polite" className={styles.status} role="status">

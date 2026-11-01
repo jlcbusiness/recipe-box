@@ -23,7 +23,14 @@ function createDatabaseArchive(
     account_preferences: accountPreferences,
     records: Object.fromEntries(
       exportTableNames
-        .filter((table) => schemaVersion !== 1 || table !== 'recipe_ingredient_sets')
+        .filter(
+          (table) =>
+            !(schemaVersion === 1 && table === 'recipe_ingredient_sets') &&
+            !(
+              schemaVersion < 9 &&
+              ['ingredient_nutrition_profiles', 'ingredient_measure_equivalents'].includes(table)
+            ),
+        )
         .map((table) => [table, []]),
     ) as unknown as PortableData['records'],
   };
@@ -259,7 +266,7 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
         .getByRole('button', { name: 'Set ingredient color to Dark Yellow' }),
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByLabel('Omit instruction emphasis when printing')).toBeChecked();
-    await expect(page.getByLabel('Omit instruction photos when printing')).toBeChecked();
+    await expect(page.getByLabel('Omit instruction photos in print and downloads')).toBeChecked();
   } finally {
     await deleteTestUser(request, user);
   }

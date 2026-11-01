@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 8 archive contains:
+A version 9 archive contains:
 
 ```text
 manifest.json
@@ -31,7 +31,7 @@ already the official image.
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 8,
+  "schema_version": 9,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "0.1.0",
   "scope": {
@@ -70,7 +70,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 8,
+  "schema_version": 9,
   "scope": {
     "type": "database"
   },
@@ -81,6 +81,8 @@ backslashes, and unexpected ZIP entries.
     "recipe_picklist_values": [],
     "recipe_picklist_assignments": [],
     "ingredients": [],
+    "ingredient_nutrition_profiles": [],
+    "ingredient_measure_equivalents": [],
     "recipe_ingredient_sets": [],
     "recipe_ingredients": [],
     "recipe_ingredient_measurements": [],
@@ -100,7 +102,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v8; future
+array contains only the normalized product fields selected for v9; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -156,9 +158,11 @@ divided-portion ratios, Size values and units, and mention ordinals. Version 4
 adds nullable media crop framing with 0-degree rotation. Version 5 adds
 quarter-turn rotation. Version 6 adds recipe ratings and independent star and
 heart markers. Version 7 preserves distinct official display images and
-retained source images so future framing edits remain reversible. Version 8 is
-current and adds the optional paired Makes quantity and thing. Versions 1
-through 7 import with their existing compatibility rules; older
+retained source images so future framing edits remain reversible. Version 8
+adds the optional paired Makes quantity and thing. Version 9 is current and
+adds ingredient nutrition profiles and measure equivalents plus recipe-level
+and recipe-ingredient nutrition overrides. Versions 1 through 8 import with
+their existing compatibility rules; older
 media rows treat their full and thumbnail files as the retained source.
 
 A v1 import synthesizes one `Main` set per recipe and assigns that recipe's
@@ -171,8 +175,18 @@ The import planner does not include `public_id` in recipe records. Version
 upgrades never reinterpret a missing field as permission to expose private
 content.
 
+Version 9 adds ingredient nutrition profile and measure-equivalent records,
+recipe-level `nutrition_overrides`, and per-nutrient recipe-ingredient
+overrides with their serving-basis and acknowledgement metadata, plus an
+optional recipe-only serving-size basis on each ingredient row. Profile and
+equivalent records are included only for ingredients in the exported record
+graph; recipe and row overrides remain attached to their corresponding recipe
+records. The fixed allow-list excludes owner IDs and unrecognized nutrient
+keys. Versions 1 through 8 import without profiles, equivalents, or nutrition
+overrides.
+
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 8, verify all file sizes and checksums before
+accept only versions 1 through 9, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

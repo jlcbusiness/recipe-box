@@ -2,6 +2,10 @@
 
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import {
+  STANDARD_NUTRIENT_FIELDS,
+  STANDARD_NUTRIENT_KEYS,
+} from '../../../lib/recipes/nutrition-rules';
 import type { RecipeSearchFilter, RecipeSearchFilterField } from '../../../lib/recipes/search';
 import { createUuid } from '../../../lib/uuid';
 import { Picklist } from '../../picklist';
@@ -16,6 +20,7 @@ type RecipeFilterOptions = {
   cuisine: FilterOption[];
   equipment: FilterOption[];
   ingredient: FilterOption[];
+  main_ingredient: FilterOption[];
   verdict: FilterOption[];
   enthusiasm: FilterOption[];
   publication_id: FilterOption[];
@@ -42,6 +47,7 @@ const filterDefinitions: FilterDefinition[] = [
   { field: 'occasion_details', label: 'Occasion Details', kind: 'text' },
   { field: 'publication_author', label: 'Publication Author', kind: 'text' },
   { field: 'ingredient', label: 'Ingredient', kind: 'multi' },
+  { field: 'main_ingredient', label: 'Main Ingredient', kind: 'multi' },
   { field: 'state', label: 'State', kind: 'enum' },
   { field: 'visibility', label: 'Visibility', kind: 'enum' },
   { field: 'food_type', label: 'Food Type', kind: 'enum' },
@@ -52,6 +58,11 @@ const filterDefinitions: FilterDefinition[] = [
   { field: 'cuisine', label: 'Cuisine', kind: 'multi' },
   { field: 'equipment', label: 'Equipment', kind: 'multi' },
   { field: 'tag', label: 'Tags', kind: 'multi' },
+  ...STANDARD_NUTRIENT_FIELDS.map(({ key: field, label }) => ({
+    field,
+    label,
+    kind: 'number' as const,
+  })),
   { field: 'serves', label: 'Serves', kind: 'number' },
   { field: 'prep_time_minutes', label: 'Prep Time', kind: 'number' },
   { field: 'mixing_time_minutes', label: 'Mixing Time', kind: 'number' },
@@ -69,6 +80,8 @@ const filterDefinitions: FilterDefinition[] = [
   { field: 'created_at', label: 'Date Added', kind: 'date' },
   { field: 'updated_at', label: 'Date Changed', kind: 'date' },
 ];
+
+const standardNutrientFilterFields = new Set<string>(STANDARD_NUTRIENT_KEYS);
 
 const markerOptions: FilterOption[] = [
   { value: 'true', label: 'Yes' },
@@ -119,16 +132,35 @@ const operators: Record<FilterKind, { value: string; label: string }[]> = {
   ],
 };
 
+const compactOperatorLabels: Record<string, string> = {
+  'text:contains': 'Has',
+  'text:does_not_contain': 'No',
+  'text:equals': 'Is',
+  'text:starts_with': 'Beg.',
+  'text:is_empty': 'None',
+  'text:is_not_empty': 'Set',
+  'enum:not_in': 'Not',
+  'multi:is_not': 'Not',
+  'multi:contains_all': 'All',
+  'multi:contains_any': 'Any',
+  'multi:does_not_contain': 'No',
+  'marker:is_not': 'Not',
+  'number:between': 'Rng',
+  'number:is_empty': 'None',
+  'number:is_not_empty': 'Set',
+  'date:not_equals': 'Not',
+  'date:greater_than': 'Aft.',
+  'date:less_than': 'Bef.',
+  'date:at_least': 'On+',
+  'date:at_most': 'On-',
+  'date:between': 'Rng',
+};
+
 const stateOptions: FilterOption[] = [
   { value: 'want_to_try', label: 'Want to Try' },
   { value: 'tried', label: 'Tried' },
   { value: 'will_not_try', label: 'Will Not Try' },
 ];
-const visibilityOptions: FilterOption[] = [
-  { value: 'private', label: 'Private' },
-  { value: 'linkable', label: 'Linkable' },
-];
-
 function definitionFor(field: RecipeSearchFilterField | '') {
   return filterDefinitions.find((definition) => definition.field === field);
 }
@@ -143,6 +175,7 @@ function optionsFor(field: RecipeSearchFilterField | '', options: RecipeFilterOp
     field === 'cuisine' ||
     field === 'equipment' ||
     field === 'ingredient' ||
+    field === 'main_ingredient' ||
     field === 'verdict' ||
     field === 'enthusiasm' ||
     field === 'publication_id' ||
@@ -201,11 +234,13 @@ function createDraft(filter: RecipeSearchFilter, index: number): DraftFilter {
 }
 
 export function RecipeFilterBuilder({
+  disableAutoSelectColumns = false,
   filters,
   options,
   title = 'Filters',
   maxFilters = 10,
 }: {
+  disableAutoSelectColumns?: boolean;
   filters: RecipeSearchFilter[];
   options: RecipeFilterOptions;
   title?: string;
@@ -213,6 +248,7 @@ export function RecipeFilterBuilder({
 }) {
   const [drafts, setDrafts] = useState(() => filters.map(createDraft));
   const draftsRef = useRef(drafts);
+  const [disableColumnAutoSelect, setDisableColumnAutoSelect] = useState(disableAutoSelectColumns);
   const [focusRuleId, setFocusRuleId] = useState<string | null>(null);
   const [openPicklistId, setOpenPicklistId] = useState<string | null>(null);
   const builderRef = useRef<HTMLFieldSetElement | null>(null);
@@ -286,6 +322,7 @@ export function RecipeFilterBuilder({
       {drafts.map((draft, index) => {
         const definition = definitionFor(draft.field);
         const kind = definition?.kind;
+        const isNumberValue = kind === 'number';
         const availableOperators =
           kind === 'number' && draft.field === 'score'
             ? [
@@ -304,6 +341,10 @@ export function RecipeFilterBuilder({
         const normalizedFilter = kind ? filterValue(draft, kind) : null;
         const isEmptyOperator = draft.operator === 'is_empty' || draft.operator === 'is_not_empty';
         const isBetween = draft.operator === 'between';
+        const selectedOperatorLabel =
+          availableOperators.find(({ value }) => value === draft.operator)?.label ?? '—';
+        const compactOperatorLabel =
+          compactOperatorLabels[`${kind}:${draft.operator}`] ?? selectedOperatorLabel;
         const fieldControlId = `${draft.id}-field`;
         const operatorControlId = `${draft.id}-operator`;
         const valueControlId = `${draft.id}-value`;
@@ -314,7 +355,7 @@ export function RecipeFilterBuilder({
         return (
           <fieldset
             aria-label={`Filter ${index + 1}`}
-            className="recipe-filter-row"
+            className={`recipe-filter-row${isNumberValue ? ' recipe-filter-number-row' : ''}`}
             data-filter-rule-id={draft.id}
             key={draft.id}
           >
@@ -365,11 +406,12 @@ export function RecipeFilterBuilder({
               open={openPicklistId === operatorControlId}
               options={availableOperators}
               scope="recipe-filter-builder"
+              showArrow={false}
+              sizeToContent={false}
+              title={selectedOperatorLabel}
               value={draft.operator}
             >
-              <span className="recipe-filter-picklist-label">
-                {availableOperators.find(({ value }) => value === draft.operator)?.label ?? '—'}
-              </span>
+              <span className="recipe-filter-picklist-label">{compactOperatorLabel}</span>
             </Picklist>
 
             {!isEmptyOperator && (
@@ -383,7 +425,7 @@ export function RecipeFilterBuilder({
                 {kind === 'enum' || kind === 'multi' ? (
                   <MultiPicklist
                     controlId={valueControlId}
-                    emptyLabel="Select values"
+                    emptyLabel="Select"
                     filterMode
                     includeHiddenInputs={false}
                     isOpen={openPicklistId === valueControlId}
@@ -424,14 +466,20 @@ export function RecipeFilterBuilder({
                   </Picklist>
                 ) : (
                   <input
-                    className="recipe-filter-value-control"
+                    className={`recipe-filter-value-control${isNumberValue ? ' recipe-filter-number-value-control' : ''}`}
                     disabled={!kind}
                     id={valueControlId}
                     maxLength={kind === 'text' ? 500 : undefined}
                     min={draft.field === 'score' ? -5 : kind === 'number' ? 0 : undefined}
                     max={draft.field === 'score' ? 5 : undefined}
                     required={Boolean(kind)}
-                    step={draft.field === 'serves' ? 'any' : kind === 'number' ? 1 : undefined}
+                    step={
+                      draft.field === 'serves' || standardNutrientFilterFields.has(draft.field)
+                        ? 'any'
+                        : kind === 'number'
+                          ? 1
+                          : undefined
+                    }
                     type={kind === 'number' ? 'number' : kind === 'date' ? 'date' : 'text'}
                     value={Array.isArray(draft.value) ? '' : draft.value}
                     onChange={(event) => updateDraft(draft.id, { value: event.target.value })}
@@ -449,7 +497,7 @@ export function RecipeFilterBuilder({
                       Through
                     </label>
                     <input
-                      className="recipe-filter-value-to-control"
+                      className={`recipe-filter-value-to-control${isNumberValue ? ' recipe-filter-number-value-to-control' : ''}`}
                       id={valueToControlId}
                       min={draft.field === 'score' ? -5 : kind === 'number' ? 0 : undefined}
                       max={draft.field === 'score' ? 5 : undefined}
@@ -479,6 +527,7 @@ export function RecipeFilterBuilder({
           </fieldset>
         );
       })}
+      <input name="auto_select_columns" type="hidden" value="1" />
       <div className="recipe-filter-actions">
         <button
           className="recipe-filter-add"
@@ -489,18 +538,30 @@ export function RecipeFilterBuilder({
           <span className="recipe-ingredient-empty-prompt">add rule</span>
         </button>
         <div className="recipe-filter-action-buttons">
-          {drafts.length > 0 && (
-            <button className="recipe-filter-clear-all" onClick={clearRules} type="button">
-              <span className="recipe-ingredient-empty-prompt">clear all</span>
+          <div className="recipe-filter-button-row">
+            {drafts.length > 0 && (
+              <button className="recipe-filter-clear-all" onClick={clearRules} type="button">
+                <span className="recipe-ingredient-empty-prompt">clear all</span>
+              </button>
+            )}
+            <button
+              className="recipe-filter-apply"
+              disabled={!drafts.every(isCompleteDraft)}
+              type="submit"
+            >
+              apply
             </button>
-          )}
-          <button
-            className="recipe-filter-apply"
-            disabled={!drafts.every(isCompleteDraft)}
-            type="submit"
-          >
-            apply
-          </button>
+          </div>
+          <label className="recipe-filter-auto-select">
+            <span>Don't auto-select columns</span>
+            <input
+              checked={disableColumnAutoSelect}
+              name="no_auto_select_columns"
+              onChange={(event) => setDisableColumnAutoSelect(event.currentTarget.checked)}
+              type="checkbox"
+              value="1"
+            />
+          </label>
         </div>
       </div>
     </fieldset>

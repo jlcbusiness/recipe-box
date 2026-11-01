@@ -400,7 +400,7 @@ export function RecipeOutputActions({
           aria-controls={openPanel === 'output' ? outputMenuId : undefined}
           aria-expanded={openPanel === 'output'}
           aria-haspopup="menu"
-          aria-label={isMobileViewport ? 'Download' : 'Print & Download'}
+          aria-label="Print & Download"
           aria-busy={feedback?.kind === 'working'}
           aria-describedby={
             feedback && recipeActionFeedback

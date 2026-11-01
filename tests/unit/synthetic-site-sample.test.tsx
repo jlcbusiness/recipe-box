@@ -19,6 +19,7 @@ type SyntheticRecipe = {
     preparation?: string;
     sizeValue?: number;
     sizeUnit?: string;
+    unitCode?: string;
   }>;
   instructions: string[];
   instructionDetails: Array<{
@@ -109,6 +110,18 @@ describe('synthetic site sample fixture', () => {
       expect(recipe.opinion.verdict !== null).toBe(recipe.state === 'tried');
       expect(recipe.opinion.enthusiasm !== null).toBe(recipe.state === 'want_to_try');
       expect(recipe.opinion.reason !== null).toBe(recipe.state === 'will_not_try');
+    }
+  });
+
+  it('measures Sea Salt in teaspoons instead of the default cups', () => {
+    const saltRows = fixture.publications.flatMap((publication) =>
+      publication.recipes.flatMap((recipe) =>
+        recipe.ingredients.filter((ingredient) => ingredient.name === 'Sea Salt'),
+      ),
+    );
+    expect(saltRows.length).toBeGreaterThan(0);
+    for (const ingredient of saltRows) {
+      expect(ingredient.unitCode).toBe('tsp');
     }
   });
 

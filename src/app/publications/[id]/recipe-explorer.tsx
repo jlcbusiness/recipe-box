@@ -16,10 +16,13 @@ import {
   recipeStateLabels,
 } from '../../../lib/recipes/data';
 import {
+  getRecipeSearchColumnFacetValues,
   getRecipeSearchFacetValues,
   getRecipeSearchSortOptions,
+  isRecipeSearchGenericColumnKey,
   parseRecipeSearchColumnFilters,
   parseRecipeSearchFilters,
+  type RecipeSearchColumnKey,
   type RecipeSearchColumnSelections,
   type RecipeSearchFacetOption,
   type RecipeSearchFilter,
@@ -33,8 +36,12 @@ import {
 } from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
 import { FramedMediaImage } from '../../media/framed-media-image';
+import { RecipeListScroll } from '../../recipe-list-scroll';
 import { AlternatingRecipeGrid } from '../../recipes/find/alternating-recipe-grid';
-import { RecipeColumnFilter } from '../../recipes/find/recipe-column-filter';
+import {
+  MobileRecipeColumnFilters,
+  RecipeColumnFilter,
+} from '../../recipes/find/recipe-column-filter';
 import { RecipeSearchToolbar } from '../../recipes/find/recipe-search-toolbar';
 import { RecipeMarkerFilters } from '../../recipes/recipe-marker-filters';
 import {
@@ -56,23 +63,12 @@ const recipeViewOptions = [
   { value: 'list', label: 'List' },
   { value: 'grid', label: 'Grid' },
 ] as const;
-type RecipeExplorerSearchParams = {
+type RecipeExplorerSearchParams = Record<string, string | string[] | undefined> & {
   filter?: string | string[];
   sort?: string;
   direction?: string;
   page?: string;
   view?: string;
-  column_name?: string | string[];
-  column_state?: string | string[];
-  column_visibility?: string | string[];
-  column_total_time_minutes?: string | string[];
-  column_opinion?: string | string[];
-  column_meal_type?: string | string[];
-  column_food_type?: string | string[];
-  column_publication_page?: string | string[];
-  column_recipe_url?: string | string[];
-  column_citation?: string | string[];
-  column_publication_source?: string | string[];
 };
 
 function searchHref({
@@ -148,6 +144,9 @@ export async function PublicationRecipeExplorer({
     rememberedState?.display_preferences ??
     defaultExplorerDisplayPreferences(context, recipeColumns);
   const visibleColumnKeys = new Set(displayPreferences.visible_columns);
+  const visibleMobileColumnFacetKeys = recipeColumns.flatMap(({ key }) =>
+    visibleColumnKeys.has(key) && isRecipeSearchGenericColumnKey(key) ? [key] : [],
+  );
   const visibleSortColumns = recipeColumns.filter(
     ({ key, required }) => required || visibleColumnKeys.has(key),
   );
@@ -267,6 +266,16 @@ export async function PublicationRecipeExplorer({
       { value: 'linkable', label: 'Linkable' },
     ],
   };
+  const mobileColumnFacets =
+    view === 'details' && visibleMobileColumnFacetKeys.length > 0
+      ? await getRecipeSearchColumnFacetValues(
+          supabase,
+          '',
+          [...filters, ...columnFilters],
+          visibleMobileColumnFacetKeys,
+          publicationId,
+        )
+      : {};
 
   const countLabel = `${matchingCount} ${matchingCount === 1 ? 'recipe' : 'recipes'} found`;
   const columnFilter = (field: keyof typeof columnFacetOptions) => (
@@ -285,6 +294,21 @@ export async function PublicationRecipeExplorer({
   );
   const isFilterColumn = (key: string): key is keyof typeof columnFacetOptions =>
     key in columnFacetOptions;
+  const mobileColumnFilterFields = recipeColumns.map(({ key, label }) => ({
+    field: key as RecipeSearchColumnKey,
+    label,
+    options:
+      (isFilterColumn(key) ? columnFacetOptions[key] : undefined) ??
+      mobileColumnFacets[key as RecipeSearchColumnKey] ??
+      [],
+  }));
+  const mobileClearParams = [
+    ...filters.map((filter) => ({ name: 'filter', value: JSON.stringify(filter) })),
+    { name: 'sort', value: sortKey },
+    { name: 'direction', value: sortDirection },
+    { name: 'view', value: view },
+  ];
+  const hasColumnFilters = Object.values(columnSelections).some((values) => values !== undefined);
   const resultsHref = (nextPage: number) =>
     searchHref({
       path,
@@ -347,24 +371,18 @@ export async function PublicationRecipeExplorer({
             aria-label="Filter publication recipe columns"
             className="find-recipes-mobile-filters"
           >
-            {(
-              [
-                'name',
-                'state',
-                'visibility',
-                'opinion',
-                'meal_type',
-                'food_type',
-                'total_time_minutes',
-                'publication_page',
-                'recipe_url',
-                'citation',
-              ] as const
-            ).map((field) => (
-              <span data-explorer-column={field} key={field}>
-                {columnFilter(field)}
-              </span>
-            ))}
+            <MobileRecipeColumnFilters
+              action={path}
+              baseFilters={filters}
+              baseQuery=""
+              clearParams={mobileClearParams}
+              columnSelections={columnSelections}
+              direction={sortDirection}
+              fields={mobileColumnFilterFields}
+              hasActiveFilters={hasColumnFilters}
+              sort={sortKey}
+              view={view}
+            />
           </nav>
         )}
 
@@ -380,12 +398,17 @@ export async function PublicationRecipeExplorer({
             )}
           </p>
         ) : view === 'details' ? (
-          <div className="recipe-list-scroll publication-recipe-scroll">
+          <RecipeListScroll className="publication-recipe-scroll">
             <table className="recipe-list publication-recipe-list">
               <thead>
                 <tr>
-                  {recipeColumns.map(({ key, label }) => (
-                    <th data-explorer-column={key} key={key} scope="col">
+                  {recipeColumns.map(({ key, label, minWidth }) => (
+                    <th
+                      data-explorer-column={key}
+                      key={key}
+                      scope="col"
+                      style={{ minWidth: `${minWidth}px` }}
+                    >
                       {isFilterColumn(key) ? (
                         columnFilter(key)
                       ) : key === 'starred' ? (
@@ -475,7 +498,7 @@ export async function PublicationRecipeExplorer({
                 })}
               </tbody>
             </table>
-          </div>
+          </RecipeListScroll>
         ) : view === 'list' ? (
           <ul className="publication-recipe-simple-list">
             {recipes.map((recipe) => {

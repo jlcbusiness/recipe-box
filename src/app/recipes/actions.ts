@@ -16,6 +16,11 @@ import {
   serializeInstructionSteps,
 } from '../../lib/recipes/instruction-rules';
 import { parseGroupedInteger } from '../../lib/recipes/measurement-rules';
+import {
+  isNutritionBasis,
+  validateNutritionFieldOverrides,
+  validateNutritionValues,
+} from '../../lib/recipes/nutrition-rules';
 import { isRecipeScore, parseMakesInput } from '../../lib/recipes/recipe-rules';
 import { createClient } from '../../lib/supabase/server';
 
@@ -167,20 +172,41 @@ function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null 
       return null;
     }
 
-    return rows.every(
-      (row) =>
-        row !== null &&
-        typeof row === 'object' &&
-        typeof row.recipe_ingredient_id === 'string' &&
-        typeof row.ingredient_set_id === 'string' &&
-        (row.ingredient_id === null || typeof row.ingredient_id === 'string') &&
-        (row.ingredient_name === null || typeof row.ingredient_name === 'string') &&
-        typeof row.is_main === 'boolean' &&
-        typeof row.detail === 'string' &&
-        typeof row.preparation === 'string',
-    )
+    return rows.every((row) => {
+      if (
+        row === null ||
+        typeof row !== 'object' ||
+        typeof row.recipe_ingredient_id !== 'string' ||
+        typeof row.ingredient_set_id !== 'string' ||
+        (row.ingredient_id !== null && typeof row.ingredient_id !== 'string') ||
+        (row.ingredient_name !== null && typeof row.ingredient_name !== 'string') ||
+        typeof row.is_main !== 'boolean' ||
+        typeof row.detail !== 'string' ||
+        typeof row.preparation !== 'string' ||
+        !(
+          row.nutrition_serving_size_override === null ||
+          isNutritionBasis(row.nutrition_serving_size_override)
+        ) ||
+        validateNutritionFieldOverrides(row.nutrition_overrides) !== null
+      ) {
+        return false;
+      }
+      return true;
+    })
       ? (rows as IngredientRowPayload[])
       : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseRecipeNutritionOverrides(formData: FormData): Record<string, number> | null {
+  const raw = formData.get('nutrition_overrides');
+  if (typeof raw !== 'string') return null;
+  try {
+    const values: unknown = JSON.parse(raw);
+    if (validateNutritionValues(values)) return null;
+    return values as Record<string, number>;
   } catch {
     return null;
   }
@@ -290,7 +316,8 @@ export async function saveRecipe(
   }
   const ingredientRows = parseIngredientRows(formData);
   const ingredientSets = parseIngredientSets(formData);
-  if (!ingredientRows || !ingredientSets) {
+  const nutritionOverrides = parseRecipeNutritionOverrides(formData);
+  if (!ingredientRows || !ingredientSets || !nutritionOverrides) {
     return { error: 'Check the ingredient rows before saving.' };
   }
   const ingredientSetIds = new Set(ingredientSets.map((set) => set.id));
@@ -368,7 +395,7 @@ export async function saveRecipe(
     return { error: 'Enter a valid HTTP(S) URL.' };
   }
 
-  const { data, error } = await supabase.rpc('save_recipe_with_makes', {
+  const { data, error } = await supabase.rpc('save_recipe_with_nutrition', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_name: name,
@@ -381,6 +408,7 @@ export async function saveRecipe(
     p_serves: serves,
     p_makes_quantity: makes.quantity,
     p_makes_thing: makes.thing,
+    p_nutrition_overrides: nutritionOverrides,
     p_prep_time_minutes: times.prep_time_minutes,
     p_mixing_time_minutes: times.mixing_time_minutes,
     p_marinate_time_minutes: times.marinate_time_minutes,

@@ -1,6 +1,14 @@
 'use client';
 
-import { ArrowDown, ArrowDownWideNarrow, ArrowUp, LayoutGrid, List, Rows3 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowDownWideNarrow,
+  ArrowUp,
+  FilterX,
+  LayoutGrid,
+  List,
+  Rows3,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type {
@@ -33,6 +41,7 @@ function controlHref({
   view,
   tab,
   page = 1,
+  mainIngredientsOnly = false,
 }: {
   path: string;
   query: string;
@@ -43,9 +52,11 @@ function controlHref({
   view: RecipeExplorerView;
   tab?: 'search' | 'query';
   page?: number;
+  mainIngredientsOnly?: boolean;
 }) {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
+  if (mainIngredientsOnly) params.set('main', '1');
   for (const filter of filters) params.append('filter', JSON.stringify(filter));
   for (const [key, values] of Object.entries(columnSelections)) {
     if (values === undefined) continue;
@@ -65,6 +76,7 @@ export function RecipeSearchToolbar({
   columnSelections,
   direction,
   filters,
+  mainIngredientsOnly = false,
   options,
   path,
   query,
@@ -75,6 +87,7 @@ export function RecipeSearchToolbar({
   columnSelections: RecipeSearchColumnSelections;
   direction: 'asc' | 'desc';
   filters: RecipeSearchFilter[];
+  mainIngredientsOnly?: boolean;
   options: SortOption[];
   path: string;
   query: string;
@@ -93,6 +106,7 @@ export function RecipeSearchToolbar({
     controlHref({
       path,
       query: searchMode?.mode === 'search' ? query : '',
+      mainIngredientsOnly: searchMode?.mode === 'search' && mainIngredientsOnly,
       filters: preservedFilters(searchMode?.mode, filters),
       columnSelections,
       sort: next.sort ?? sort,
@@ -111,35 +125,12 @@ export function RecipeSearchToolbar({
   return (
     <fieldset className="recipe-explorer-toolbar">
       <legend className="sr-only">Recipe result controls</legend>
-      <fieldset className="recipe-explorer-view-controls">
-        <legend className="sr-only">Sort and view controls</legend>
-        <div className="recipe-explorer-control recipe-explorer-control-sort">
-          <Picklist
-            className="recipe-explorer-sort-picklist"
-            label={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
-            menuClassName="recipe-explorer-sort-menu"
-            onSelect={(value) => router.push(hrefFor({ sort: value as RecipeSearchSortKey }))}
-            options={options}
-            showArrow={false}
-            sizeToContent={false}
-            title={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
-            value={sort}
-          >
-            <ArrowDownWideNarrow aria-hidden="true" size={19} />
-          </Picklist>
-        </div>
-        <Link
-          aria-label={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
-          className="recipe-explorer-trigger recipe-explorer-icon-trigger"
-          href={hrefFor({ direction: direction === 'asc' ? 'desc' : 'asc' })}
-          title={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
-        >
-          {direction === 'asc' ? (
-            <ArrowUp aria-hidden="true" size={19} />
-          ) : (
-            <ArrowDown aria-hidden="true" size={19} />
-          )}
-        </Link>
+      <fieldset
+        className={`recipe-explorer-view-controls${view === 'details' ? ' recipe-explorer-view-controls-details' : ''}`}
+      >
+        <legend className="sr-only">
+          {view === 'details' ? 'View controls' : 'View and sort controls'}
+        </legend>
         <button
           aria-label={`Switch to ${nextViewLabel} view`}
           aria-pressed={view === 'grid'}
@@ -158,8 +149,92 @@ export function RecipeSearchToolbar({
             <LayoutGrid aria-hidden="true" size={19} />
           )}
         </button>
+        {view !== 'details' && (
+          <>
+            <div className="recipe-explorer-control recipe-explorer-control-sort">
+              <Picklist
+                className="recipe-explorer-sort-picklist"
+                label={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
+                menuClassName="recipe-explorer-sort-menu"
+                onSelect={(value) => router.push(hrefFor({ sort: value as RecipeSearchSortKey }))}
+                options={options}
+                showArrow={false}
+                sizeToContent={false}
+                title={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
+                value={sort}
+              >
+                <ArrowDownWideNarrow aria-hidden="true" size={19} />
+              </Picklist>
+            </div>
+            <Link
+              aria-label={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
+              className="recipe-explorer-trigger recipe-explorer-icon-trigger"
+              href={hrefFor({ direction: direction === 'asc' ? 'desc' : 'asc' })}
+              title={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
+            >
+              {direction === 'asc' ? (
+                <ArrowUp aria-hidden="true" size={19} />
+              ) : (
+                <ArrowDown aria-hidden="true" size={19} />
+              )}
+            </Link>
+          </>
+        )}
       </fieldset>
     </fieldset>
+  );
+}
+
+export function RecipeSearchClearFilters({
+  direction,
+  path,
+  query,
+  sort,
+  view,
+  placement = 'toolbar',
+}: {
+  direction: 'asc' | 'desc';
+  path: string;
+  query: string;
+  sort: RecipeSearchSortKey;
+  view: RecipeExplorerView;
+  placement?: 'toolbar' | 'mobile-details';
+}) {
+  const router = useRouter();
+  const searchMode = useRecipeSearchMode();
+  const clearHref = controlHref({
+    path,
+    query: searchMode?.mode === 'search' ? query : '',
+    mainIngredientsOnly: false,
+    filters: [],
+    columnSelections: {},
+    sort,
+    direction,
+    view,
+    tab: searchMode?.mode,
+  });
+  const placementClass = [
+    `recipe-explorer-clear-filters-${placement}`,
+    placement === 'toolbar' && view === 'details'
+      ? 'recipe-explorer-clear-filters-for-details'
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <div className={`recipe-explorer-clear-filters-container ${placementClass}`}>
+      <button
+        aria-label="Clear all filters"
+        className="recipe-explorer-trigger recipe-explorer-clear-filters"
+        onClick={() => router.push(clearHref)}
+        title="Clear all filters"
+        type="button"
+      >
+        <FilterX aria-hidden="true" size={17} />
+        <span>Clear all</span>
+      </button>
+    </div>
   );
 }
 
@@ -167,6 +242,7 @@ export function RecipeSearchPagination({
   columnSelections,
   direction,
   filters,
+  mainIngredientsOnly = false,
   page,
   pageCount,
   path,
@@ -177,6 +253,7 @@ export function RecipeSearchPagination({
   columnSelections: RecipeSearchColumnSelections;
   direction: 'asc' | 'desc';
   filters: RecipeSearchFilter[];
+  mainIngredientsOnly?: boolean;
   page: number;
   pageCount: number;
   path: string;
@@ -189,6 +266,7 @@ export function RecipeSearchPagination({
     controlHref({
       path,
       query: searchMode?.mode === 'search' ? query : '',
+      mainIngredientsOnly: searchMode?.mode === 'search' && mainIngredientsOnly,
       filters: preservedFilters(searchMode?.mode, filters),
       columnSelections,
       sort,

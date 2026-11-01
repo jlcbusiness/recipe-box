@@ -738,6 +738,7 @@
 }
 
 .publication-explorer-table {
+  box-sizing: border-box;
   display: grid;
   width: 100%;
   max-width: 100%;
@@ -752,10 +753,11 @@
 }
 
 .publication-explorer-table tr {
+  box-sizing: border-box;
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  padding-left: 3mm;
+  min-width: 0;
 }
 
 .private-content .recipe-list.publication-explorer-table tr th,
@@ -774,6 +776,11 @@
   overflow-wrap: anywhere;
   text-overflow: ellipsis;
   white-space: normal;
+}
+
+.publication-explorer-table th .explorer-column-resize-handle {
+  right: 0;
+  width: 10px;
 }
 
 .publication-explorer-table th {
@@ -836,6 +843,43 @@
 .publication-explorer-table th:last-child,
 .publication-explorer-table td:last-child {
   text-align: center;
+}
+
+.private-content
+  .recipe-list.find-recipes-list
+  tr
+  th[data-explorer-column="score"]
+  .recipe-list-column-heading,
+.private-content
+  .recipe-list.find-recipes-list
+  tr
+  th[data-explorer-column="starred"]
+  .recipe-list-column-heading,
+.private-content
+  .recipe-list.find-recipes-list
+  tr
+  th[data-explorer-column="hearted"]
+  .recipe-list-column-heading {
+  justify-content: center;
+}
+
+.private-content
+  .recipe-list.find-recipes-list
+  tr
+  th[data-explorer-column="score"]
+  .recipe-list-sort-header,
+.private-content
+  .recipe-list.find-recipes-list
+  tr
+  th[data-explorer-column="starred"]
+  .recipe-list-sort-header,
+.private-content
+  .recipe-list.find-recipes-list
+  tr
+  th[data-explorer-column="hearted"]
+  .recipe-list-sort-header {
+  flex: 0 1 auto;
+  justify-content: center;
 }
 
 .publication-explorer-table .publication-explorer-table-recipe-count {
@@ -1019,22 +1063,73 @@
 @media (max-width: 720px) {
   .find-recipes-mobile-filters {
     display: flex;
+    align-items: center;
     gap: 6px;
-    overflow-x: auto;
+    overflow: visible;
     margin: 0 0 12px;
-    padding-bottom: 4px;
+    padding: 0;
   }
 
-  .find-recipes-mobile-filters > span,
   .find-recipes-mobile-filters .recipe-column-filter {
     width: auto;
     flex: 0 0 auto;
   }
 
   .find-recipes-mobile-filters .recipe-column-filter-trigger {
-    width: auto;
+    box-sizing: border-box;
+    width: 40px;
+    min-width: 40px;
     min-height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .find-recipes-mobile-filter-controls {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .find-recipes-mobile-filter-picklist {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    flex: 1 1 auto;
+  }
+
+  .find-recipes-mobile-clear-form {
+    display: flex;
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  .find-recipes-mobile-filters .find-recipes-mobile-clear-button {
+    box-sizing: border-box;
+    min-height: 40px;
+    height: 40px;
+    gap: 4px;
+    padding: 0 8px;
     white-space: nowrap;
+  }
+
+  .recipe-explorer-trigger.recipe-explorer-clear-filters {
+    height: 40px;
+    min-height: 40px;
+    gap: 4px;
+    padding: 0 8px;
+    white-space: nowrap;
+  }
+
+  .recipe-explorer-clear-filters-toolbar.recipe-explorer-clear-filters-for-details {
+    display: none;
+  }
+
+  .recipe-explorer-clear-filters-mobile-details.recipe-explorer-clear-filters-container {
+    display: block;
+    flex: 0 0 auto;
   }
 
   .recipe-explorer-toolbar {
@@ -1110,25 +1205,72 @@
     min-height: 44px;
   }
 
+  .find-recipes-form .find-recipes-main-toggle {
+    min-height: 44px;
+    margin-top: 2px;
+  }
+
   .find-recipes-form-controls .recipe-secondary-link {
     grid-column: 1 / -1;
   }
 
   .recipe-filter-row {
     grid-template-areas:
-      "field-control operator-control value-control remove"
-      "through-label through-control through-control remove";
-    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr) 32px;
+      "field-control . operator-control . value-control . remove"
+      "through-label through-control through-control through-control through-control through-control through-control";
+    grid-template-columns: minmax(0, 1.2fr) 1mm 4ch 1mm minmax(0, 1fr) 1mm 16px;
     align-items: center;
-    gap: 6px 4px;
-    padding: 8px 0 2px 1mm;
+    gap: 4px 0;
+    padding: 8px 0 2px;
+  }
+
+  .recipe-filter-row .recipe-filter-operator-control {
+    justify-content: center;
+    gap: 0;
+    padding-inline: 1px;
+    text-align: center;
+  }
+
+  .recipe-filter-row.recipe-filter-number-row {
+    grid-template-columns: minmax(0, 1fr) 1mm 3ch 1mm calc(4ch + 24px) 1mm 16px;
+  }
+
+  .recipe-filter-row .recipe-filter-number-value-control {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .recipe-filter-row .recipe-filter-number-value-control::-webkit-inner-spin-button,
+  .recipe-filter-row .recipe-filter-number-value-control::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+  }
+
+  .recipe-filter-row .recipe-filter-number-value-to-control {
+    width: calc(4ch + 24px);
+    justify-self: start;
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .recipe-filter-row .recipe-filter-number-value-to-control::-webkit-inner-spin-button,
+  .recipe-filter-row .recipe-filter-number-value-to-control::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
   }
 
   .recipe-filter-row .recipe-filter-remove {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
+    width: 16px;
+    height: 16px;
+    min-height: 16px;
     align-self: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .recipe-filter-row .recipe-filter-remove svg {
+    width: 15px;
+    height: 15px;
   }
 
   .recipe-filter-row .recipe-filter-field-control,
@@ -1169,7 +1311,9 @@
   }
 
   .find-recipes-list tbody tr {
+    box-sizing: border-box;
     display: flex;
+    flex-wrap: wrap;
     min-height: 48px;
     align-items: center;
     gap: 10px;
@@ -1246,7 +1390,8 @@
   .private-content .recipe-list.publication-recipe-list tr td[data-explorer-column="starred"],
   .private-content .recipe-list.publication-recipe-list tr td[data-explorer-column="hearted"],
   .private-content .recipe-list.find-recipes-list tbody tr td[data-explorer-column="starred"],
-  .private-content .recipe-list.find-recipes-list tbody tr td[data-explorer-column="hearted"] {
+  .private-content .recipe-list.find-recipes-list tbody tr td[data-explorer-column="hearted"],
+  .private-content .recipe-list.find-recipes-list tbody tr td[data-explorer-column="score"] {
     display: none;
   }
 
@@ -1324,7 +1469,7 @@
   }
 
   .recipe-filter-row {
-    gap: 4px 8px;
+    gap: 4px 0;
     padding: 8px 0 2px;
   }
 
@@ -1333,7 +1478,7 @@
   }
 
   .recipe-filter-add {
-    min-height: 34px;
+    min-height: 38px;
     padding: 2px;
   }
 
@@ -2526,6 +2671,13 @@
     margin-left: 0;
   }
 
+  .explorer-list-preferences-toolbar:has(.recipe-marker-filters)
+    .recipe-explorer-clear-filters-container {
+    grid-area: actions;
+    justify-self: end;
+    margin-left: 0;
+  }
+
   .image-crop-editor-actions > button {
     min-height: 34px;
     padding: 4px;
@@ -2688,7 +2840,7 @@
     width: auto;
     min-width: 0;
     flex: 1 1 auto;
-    align-items: flex-start;
+    align-items: center;
     justify-content: flex-end;
     gap: 8px;
     margin-left: 0;
@@ -2768,19 +2920,73 @@
 
   .explorer-list-preferences-toolbar:has(.publication-mobile-add) {
     position: relative;
-    display: flex;
+    display: grid;
     width: 100%;
     min-width: 0;
-    flex-wrap: nowrap;
-    align-items: flex-start;
-    justify-content: start;
-    gap: 8px;
+    grid-template-columns: max-content 40px minmax(0, 1fr);
+    grid-template-areas:
+      "toolbar controls actions"
+      "filters filters filters";
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 6px;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add):has(
+    .recipe-explorer-view-controls-details
+  ) {
+    grid-template-columns: 40px 40px minmax(0, 1fr);
+    column-gap: 0;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add):has(
+      .recipe-explorer-view-controls-details
+    ):has(.recipe-marker-filters)
+    > .explorer-list-preferences-controls {
+    margin-left: 0;
   }
 
   .explorer-list-preferences-toolbar:has(.publication-mobile-add)
     .explorer-list-preferences-toolbar-content {
-    min-width: 120px;
-    flex: 0 0 120px;
+    grid-area: toolbar;
+    min-width: max-content;
+    flex: 0 0 auto;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add):has(
+      .recipe-explorer-view-controls-details
+    )
+    .explorer-list-preferences-toolbar-content {
+    width: 40px;
+    min-width: 40px;
+    flex-basis: 40px;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add):has(
+      .recipe-explorer-view-controls-details
+    )
+    .recipe-explorer-toolbar {
+    width: 40px;
+    justify-content: flex-start;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add)
+    > .explorer-list-preferences-controls {
+    grid-area: controls;
+    justify-self: center;
+    margin-left: 0;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add) .publication-mobile-actions {
+    grid-area: actions;
+    justify-self: end;
+    margin-left: 0;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add) .recipe-marker-filters {
+    grid-area: filters;
+    justify-self: start;
+    margin: 0;
   }
 
   .explorer-list-preferences-toolbar:has(.publication-mobile-add) .recipe-explorer-toolbar {
@@ -2860,6 +3066,7 @@
   }
 
   .publication-recipe-list tr {
+    box-sizing: border-box;
     display: flex;
     width: 100%;
     min-width: 0;
@@ -3050,19 +3257,29 @@
   }
 
   .explorer-list-preferences-toolbar:has(.publication-mobile-add) {
-    flex-wrap: wrap;
-    gap: 2px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "toolbar controls"
+      "actions actions"
+      "filters filters";
+    row-gap: 6px;
   }
 
   .explorer-list-preferences-toolbar:has(.publication-mobile-add)
     .explorer-list-preferences-controls {
-    margin-left: -2px;
+    justify-self: end;
+    margin-left: 0;
+  }
+
+  .explorer-list-preferences-toolbar:has(.publication-mobile-add) .publication-mobile-actions {
+    grid-area: actions;
+    justify-self: end;
+    margin-left: 0;
   }
 
   .publication-mobile-actions {
     gap: 4px;
     flex: 0 0 auto;
-    margin-left: auto;
   }
 }
 
@@ -3131,7 +3348,7 @@
     :has(.publication-mobile-add)
   ) {
     grid-template-columns: max-content max-content 40px minmax(0, 1fr);
-    grid-template-areas: "filters toolbar controls .";
+    grid-template-areas: "filters toolbar controls actions";
     column-gap: 0;
   }
 
@@ -3237,6 +3454,13 @@
     box-sizing: border-box;
     width: min(300px, calc(100vw - 16px));
     transform: translateY(-50%);
+  }
+}
+
+@media (min-width: 641px) {
+  .explorer-list-preferences-popover.opens-above {
+    top: auto;
+    bottom: calc(100% + 5px);
   }
 }
 
@@ -3447,6 +3671,50 @@
 .explorer-list-preferences:not([data-visible-columns~="cuisine"]) [data-explorer-column="cuisine"],
 .explorer-list-preferences:not([data-visible-columns~="main_ingredients"])
   [data-explorer-column="main_ingredients"],
+.explorer-list-preferences:not([data-visible-columns~="calories"])
+  [data-explorer-column="calories"],
+.explorer-list-preferences:not([data-visible-columns~="total_fat"])
+  [data-explorer-column="total_fat"],
+.explorer-list-preferences:not([data-visible-columns~="saturated_fat"])
+  [data-explorer-column="saturated_fat"],
+.explorer-list-preferences:not([data-visible-columns~="trans_fat"])
+  [data-explorer-column="trans_fat"],
+.explorer-list-preferences:not([data-visible-columns~="cholesterol"])
+  [data-explorer-column="cholesterol"],
+.explorer-list-preferences:not([data-visible-columns~="sodium"]) [data-explorer-column="sodium"],
+.explorer-list-preferences:not([data-visible-columns~="total_carbohydrate"])
+  [data-explorer-column="total_carbohydrate"],
+.explorer-list-preferences:not([data-visible-columns~="dietary_fiber"])
+  [data-explorer-column="dietary_fiber"],
+.explorer-list-preferences:not([data-visible-columns~="total_sugars"])
+  [data-explorer-column="total_sugars"],
+.explorer-list-preferences:not([data-visible-columns~="added_sugars"])
+  [data-explorer-column="added_sugars"],
+.explorer-list-preferences:not([data-visible-columns~="protein"]) [data-explorer-column="protein"],
+.explorer-list-preferences:not([data-visible-columns~="vitamin_d"])
+  [data-explorer-column="vitamin_d"],
+.explorer-list-preferences:not([data-visible-columns~="calcium"]) [data-explorer-column="calcium"],
+.explorer-list-preferences:not([data-visible-columns~="iron"]) [data-explorer-column="iron"],
+.explorer-list-preferences:not([data-visible-columns~="potassium"])
+  [data-explorer-column="potassium"],
+.explorer-list-preferences:not([data-visible-columns~="score"])
+  .find-recipes-list
+  th[data-explorer-column="score"],
+.explorer-list-preferences:not([data-visible-columns~="score"])
+  .find-recipes-list
+  td[data-explorer-column="score"],
+.explorer-list-preferences:not([data-visible-columns~="starred"])
+  .find-recipes-list
+  th[data-explorer-column="starred"],
+.explorer-list-preferences:not([data-visible-columns~="starred"])
+  .find-recipes-list
+  td[data-explorer-column="starred"],
+.explorer-list-preferences:not([data-visible-columns~="hearted"])
+  .find-recipes-list
+  th[data-explorer-column="hearted"],
+.explorer-list-preferences:not([data-visible-columns~="hearted"])
+  .find-recipes-list
+  td[data-explorer-column="hearted"],
 .explorer-list-preferences:not([data-visible-columns~="prep_time_minutes"])
   [data-explorer-column="prep_time_minutes"],
 .explorer-list-preferences:not([data-visible-columns~="mixing_time_minutes"])

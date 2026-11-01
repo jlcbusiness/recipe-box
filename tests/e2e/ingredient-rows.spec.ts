@@ -900,7 +900,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
       (amountHeader?.x ?? 0) + 1,
     );
     const emptyPlaceholder = grid.getByRole('cell', { name: 'Add ingredient row' });
-    await expect(emptyPlaceholder).toHaveAttribute('colspan', '6');
+    await expect(emptyPlaceholder).toHaveAttribute('colspan', '7');
     await expect(ingredientRows.first().getByRole('cell')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Add ingredient row' })).toHaveCount(0);
     await expect(
@@ -920,7 +920,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(grid.getByRole('combobox', { name: 'Ingredient, row 1' })).toHaveCount(0);
 
     await emptyPlaceholder.click();
-    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(6);
+    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(7);
     const firstIngredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
     await expect(firstIngredient).toHaveAttribute('type', 'text');
     await expect(firstIngredient).not.toHaveAttribute('list', /.+/);
@@ -947,13 +947,18 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.keyboard.press('Tab');
     const firstDetailCell = grid.locator('[aria-label="Specifics, row 1"]');
     await expect(firstDetailCell).toBeFocused();
+    const firstTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
+    const firstNutrition = grid.getByRole('button', { name: /^Nutrition for Basil/ });
+    await page.keyboard.press('Tab');
+    await expect(firstTypePicker).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(firstDetailCell).toBeFocused();
     await page.keyboard.press('f');
     const firstDetail = page.getByRole('textbox', { name: 'Specifics, row 1' });
     await expect(firstDetail).toBeFocused();
     await expect(firstDetail).toHaveValue('f');
     await firstDetail.pressSequentially('resh');
     await page.keyboard.press('Tab');
-    const firstTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
     await expect(firstTypePicker).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toBeFocused();
@@ -965,6 +970,11 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(page.getByRole('combobox', { name: 'Weight unit, row 1' })).toBeFocused();
     await page.keyboard.press('Tab');
     const firstPreparationCell = grid.locator('[aria-label="Preparation, row 1"]');
+    await expect(firstPreparationCell).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(firstNutrition).toBeFocused();
+    await expect(firstNutrition).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Shift+Tab');
     await expect(firstPreparationCell).toBeFocused();
     await page.keyboard.press('c');
     const keyboardPreparation = page.getByRole('combobox', { name: 'Preparation, row 1' });
@@ -1394,6 +1404,8 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await editor.getByRole('textbox', { name: 'Weight amount, row 1' }).fill('1 1/2');
     await editor.getByRole('textbox', { name: 'Specifics' }).fill('Yellow');
     const preparation = editor.getByRole('combobox', { name: 'Preparation' });
+    const preparationBounds = await preparation.boundingBox();
+    expect(preparationBounds?.width).toBeGreaterThan(200);
     await expect(preparation).not.toHaveAttribute('list', /.+/);
     await preparation.focus();
     await expect(page.getByRole('listbox')).toBeVisible();

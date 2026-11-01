@@ -189,7 +189,10 @@ need combobox semantics.
   remain deferred.
 - Recipe List and Grid modes with a compact toolbar, search/result summary,
   sort key, and direction. The global and publication-scoped recipe explorers
-  use the same controls and semantics.
+  use the same controls and semantics. Put View first, followed by Sort and
+  direction, in visual and keyboard order; Details contains only View. Keep
+  View's left border and outer left corners, with Choose List columns attached
+  at the group's right edge.
 - A publication detail recipe explorer scoped to that active publication.
   The scope is fixed by the route and cannot be removed by its ordinary
   filters. Grid displays a recipe's default photo when one exists.
@@ -245,14 +248,78 @@ need combobox semantics.
   `Not In`. Rating comparisons accept signed values from -5 through 5 and also
   support `Exists` and `Doesn't Exist`. Validate filter field, operator, and
   value types against an allowlist on the server.
+- Multi-select Query Value controls visibly list every selected label,
+  comma-separated, and wrap rather than truncating; an empty Value control
+  says **Select**. On mobile, keep Field, Operator, Value, and the half-size
+  remove button on one row. Give numeric filters a three-character Operator
+  and a Value sized for four digits; give text filters a four-character
+  Operator. Abbreviate the selected Operator label to fit, while retaining
+  the full label in the option menu and title. Let Field and Value use the
+  remaining space, leave 1mm between adjacent controls, and keep the remove
+  button vertically centered with 1mm clearance after Value. For **Between**,
+  place Through on its own row below; numeric Through values also fit four
+  digits. Bound multi-select menus to the viewport and scroll long option
+  lists inside the menu.
+- **Main ingredients only** (Search) and the **Main Ingredient** Query field
+  use ingredient rows flagged `Main`. The Search option sends an internal
+  `main_ingredient_text`/`matches` filter alongside the text query, so the
+  same full-text dictionary and stemming apply to the concatenated main
+  ingredient names; it never enters saved Query criteria or remembered
+  explorer state.
+- The fifteen standard nutrients from Calories through Potassium are numeric
+  Query fields, optional recipe List columns hidden by default, and sort
+  choices when their columns are visible.
+  Their values use the same rounded per-serving calculation as recipe
+  nutrition. Missing values remain unknown; optional vitamins and minerals
+  are excluded. Details loads nutrient values for its current result page even
+  when nutrient columns start hidden, so revealing a column shows populated
+  cells without leaving an empty grid track.
+- Applying Query automatically shows matching List columns when a field has a
+  corresponding column. The **Don't auto-select columns** checkbox opts out for
+  that application only; selected columns remain ordinary saved display
+  preferences, so users can later hide them without them reappearing on reload.
+  Vertically center **Add rule** with the **Clear all** and **apply** buttons on
+  desktop and mobile, and keep the checkbox below their row.
+- In Details view, each visible column header sorts its column. A newly chosen
+  column starts ascending; clicking it again alternates ascending and
+  descending. Header sorting preserves the active query and filters, resets
+  pagination, and replaces the separate Sort and Sort Order controls in
+  Details. Keep all header contents vertically centered; horizontally center
+  Rating, Star, and Heart labels within their visible columns while preserving
+  other headers' horizontal alignment. Keep Visibility at least 136px wide and
+  Main Ingredients at least 152px wide so their labels fit beside filter
+  controls. On desktop, when visible columns overflow the table viewport, show
+  an italic hint above the table explaining Shift+scroll or a sideways trackpad
+  swipe; hide the hint when it fits and keep overflow within the table instead
+  of the page. On mobile, keep the responsive Details rows wrapped and
+  overflow-free; do not show the table-scroll hint.
+- On mobile Details, replace the horizontal per-column filter bar with a field
+  picker and Filter button. The picker contains every currently visible recipe
+  column and updates immediately when column visibility changes. Exact-value
+  options use the same rendered values as the column cells. Place **Clear
+  all** at the opposite end of the mobile Details column-filter row; in mobile
+  List/Grid and all desktop views, right-align it in the shared result-controls
+  toolbar. Show it whenever any filter is active and use a consistent 40px
+  height. Clearing removes Query, main-ingredient, marker, and column-value
+  filters while preserving Search text, current mode, sort, and view; reset
+  pagination.
+  Use a pale-green hover treatment for the clear control and retain its visible
+  gold keyboard-focus outline. In Details view, match the Clear all border
+  color to the column picklist border. In the column-value popover, keep
+  values independently scrollable and place Select all/Deselect all beside
+  Apply in a shared footer so both
+  actions fit on short screens. Keep desktop header filters unchanged.
+- Keep the desktop column chooser clamped to the viewport when opened or
+  resized. Scrolling the page moves it with its trigger without recalculating
+  its horizontal position.
 - Slice 17 initially rendered fixed recipe fields for each explorer context.
   Slice 19 subsequently added List-column visibility without changing filter
   or sort semantics.
 - Simple List rows show Rating as a number only while retaining a visually
   hidden “Rating” label for assistive technology. Recipe titles shrink and
   truncate before the non-shrinking score and marker group without causing
-  horizontal page overflow. Center Rating values in mobile Details cells as
-  well as desktop columns.
+  horizontal page overflow. In mobile Details, show Rating only beside the
+  title-side markers; do not duplicate it in a metadata cell.
 - In mobile Details views, active Star and Heart stamps share the recipe-title
   row at the right, vertically centered on the title. Search and Query also
   show the numeric Rating beside them without a visible label; the visible

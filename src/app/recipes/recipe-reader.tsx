@@ -48,6 +48,7 @@ import {
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
+import { formatNutritionString, type NutrientValues } from '../../lib/recipes/nutrition-rules';
 import {
   getScaleMultiplier,
   type IngredientPresentation,
@@ -60,6 +61,7 @@ import {
   transformIngredientForDisplay,
 } from '../../lib/recipes/recipe-reader-rules';
 import { formatRecipeMakes } from '../../lib/recipes/recipe-rules';
+import { NutritionEstimate } from '../nutrition/nutrition-estimate';
 import {
   Picklist as ReaderPicklist,
   type PicklistOption as ReaderPicklistOption,
@@ -327,6 +329,25 @@ export function RecipeReaderProvider({
   };
 
   return <RecipeScaleContext.Provider value={value}>{children}</RecipeScaleContext.Provider>;
+}
+
+export function RecipeNutritionSection({ perServing }: { perServing: NutrientValues | null }) {
+  const { scale, multiplier } = useRecipeScale();
+  if (!perServing || perServing.calories === undefined) return null;
+  const factor = scale.mode === 'servings' ? 1 : multiplier;
+  const scaledValues = Object.fromEntries(
+    Object.entries(perServing).map(([key, value]) => [key, value * factor]),
+  ) as NutrientValues;
+  if (!formatNutritionString(scaledValues)) return null;
+  return (
+    <section
+      aria-labelledby="nutrition-per-serving-title"
+      className="recipe-detail-section recipe-nutrition-section"
+    >
+      <h2 id="nutrition-per-serving-title">Nutrition Per Serving</h2>
+      <NutritionEstimate label="Estimated" values={scaledValues} />
+    </section>
+  );
 }
 
 function selectedScaleDraft(scale: RecipeScale): { mode: ScaleMode; to: string } {
@@ -710,7 +731,7 @@ export function RecipeReader({
   const [wakeStatus, setWakeStatus] = useState('');
   const previousRecipeIdRef = useRef(recipeId);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(max-width: 760px)').matches

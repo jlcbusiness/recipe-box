@@ -22,6 +22,8 @@
     "test:migration:recipe-tin": "node scripts/test-recipe-tin-migration.mjs",
     "test:migration:public-links": "node scripts/test-public-links-migration.mjs",
     "test:migration:ingredient-portions": "node scripts/test-ingredient-portions-migration.mjs",
+    "test:migration:nutrition": "node scripts/test-dlc12-nutrition-migration.mjs",
+    "test:dlc12:acceptance": "node scripts/test-dlc12-nutrition-migration.mjs --full-browser",
     "test:bootstrap-admin": "node --test scripts/bootstrap-first-admin.test.mjs",
     "seed:synthetic": "node scripts/seed-synthetic-site-sample.mjs",
     "bootstrap:admin": "node scripts/bootstrap-first-admin.mjs",

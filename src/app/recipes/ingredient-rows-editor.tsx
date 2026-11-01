@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Salad, X } from 'lucide-react';
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { IngredientOption, RecipePicklistValue } from '../../lib/recipes/data';
@@ -28,7 +28,20 @@ import {
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
+import {
+  calculateRecipeNutrition,
+  getNutritionBasisSignature,
+  isNutritionFieldOverrideStale,
+  type NutrientKey,
+  type NutritionFieldOverride,
+  type NutritionIngredientInput,
+} from '../../lib/recipes/nutrition-rules';
 import { createUuid } from '../../lib/uuid';
+import {
+  NutritionPane,
+  type NutritionPaneSave,
+  nutritionFieldOverridesToValues,
+} from '../nutrition/nutrition-pane';
 import { MeasurementEditor } from './measurement-editor';
 import { type ReorderDragBound, useReorderDrag } from './use-reorder-drag';
 
@@ -204,6 +217,44 @@ function formatDraftIngredient(
       ];
     }),
   });
+}
+
+function getNutritionInputForRow(
+  row: IngredientRowDraft,
+  ingredients: IngredientOption[],
+  picklists: RecipePicklistValue[],
+): NutritionIngredientInput {
+  const ingredient =
+    ingredients.find((candidate) => candidate.id === row.ingredientId) ??
+    ingredients.find(
+      (candidate) =>
+        candidate.name.toLocaleLowerCase() === row.ingredientName.trim().toLocaleLowerCase(),
+    );
+  return {
+    measurements: row.measurements.flatMap((measurement) => {
+      if (!measurement.type) return [];
+      const parsed =
+        measurement.type === 'unmeasured' ? null : parseQuantityInput(measurement.quantity);
+      return [
+        {
+          type: measurement.type,
+          amount: parsed?.minimum ?? null,
+          maximum: parsed?.maximum ?? null,
+          unitCode: measurement.unitCode || null,
+          picklistValueId: measurement.picklistValueId || null,
+          picklistValue: measurement.picklistValueId
+            ? (picklists.find((value) => value.id === measurement.picklistValueId)?.display_value ??
+              null)
+            : null,
+        },
+      ];
+    }),
+    profile: ingredient?.nutritionProfile ?? null,
+    servingSizeOverride: row.nutritionServingSizeOverride ?? null,
+    nutrientOverrides: row.nutritionOverrides ?? {},
+    density: ingredient?.density ?? null,
+    equivalent: ingredient?.nutritionEquivalent ?? null,
+  };
 }
 
 function firstDivisibleMeasurement(row: IngredientRowDraft): MeasurementType | undefined {
@@ -1134,6 +1185,8 @@ export function IngredientRowsEditor({
   } | null>(null);
   const [mobileEditingRowId, setMobileEditingRowId] = useState<string | null>(null);
   const [mobileAnchorElement, setMobileAnchorElement] = useState<HTMLButtonElement | null>(null);
+  const [nutritionRowId, setNutritionRowId] = useState<string | null>(null);
+  const nutritionTriggerRef = useRef<HTMLButtonElement>(null);
   const [announcement, setAnnouncement] = useState('');
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
   const [setLabelDraft, setSetLabelDraft] = useState('');
@@ -1156,6 +1209,16 @@ export function IngredientRowsEditor({
   const reorderDrag = useReorderDrag();
   const dragPreview = reorderDrag.preview;
   const editorEntries = buildIngredientEditorEntries(ingredientSets, draftRows);
+  const nutritionRow = draftRows.find((row) => row.id === nutritionRowId) ?? null;
+  const nutritionIngredient = nutritionRow
+    ? (ingredients.find((ingredient) => ingredient.id === nutritionRow.ingredientId) ??
+      ingredients.find(
+        (ingredient) =>
+          ingredient.name.toLocaleLowerCase() ===
+          nutritionRow.ingredientName.trim().toLocaleLowerCase(),
+      ) ??
+      null)
+    : null;
 
   useEffect(() => {
     const normalized = ensureTrailingIngredientRowPerSet(rows, ingredientSets, (setId) =>
@@ -1580,6 +1643,99 @@ export function IngredientRowsEditor({
     ...preparationOptions,
     ...draftRows.map((row) => row.preparation),
   ]);
+  function nutritionStatus(row: IngredientRowDraft) {
+    const result = calculateRecipeNutrition(
+      [getNutritionInputForRow(row, ingredients, picklists)],
+      1,
+    );
+    return result.complete ? 'complete' : result.hasData ? 'incomplete' : 'empty';
+  }
+
+  function saveRowNutrition(value: NutritionPaneSave) {
+    if (!nutritionRow) return;
+    const basis =
+      value.basis ??
+      nutritionIngredient?.nutritionProfile?.servingSize ??
+      nutritionRow.nutritionServingSizeOverride ??
+      null;
+    const existing = nutritionRow.nutritionOverrides ?? {};
+    const editedKeys = new Set(value.editedKeys);
+    const nextOverrides: Partial<Record<NutrientKey, NutritionFieldOverride>> = {};
+    for (const key of value.manualKeys) {
+      const amount = value.values[key];
+      if (amount === undefined) continue;
+      const prior = existing[key];
+      nextOverrides[key] =
+        editedKeys.has(key) && basis
+          ? {
+              value: amount,
+              basisSignature: getNutritionBasisSignature(basis),
+              acknowledgedBasisSignature: null,
+            }
+          : prior &&
+              value.staleResolution === 'accept' &&
+              basis &&
+              isNutritionFieldOverrideStale(prior, basis)
+            ? {
+                ...prior,
+                acknowledgedBasisSignature: getNutritionBasisSignature(basis),
+              }
+            : (prior ?? {
+                value: amount,
+                basisSignature: basis ? getNutritionBasisSignature(basis) : '',
+                acknowledgedBasisSignature: null,
+              });
+    }
+    commitRows(
+      updateIngredientRow(rowsRef.current, nutritionRow.id, {
+        nutritionServingSizeOverride: value.basisOverride ? value.basis : null,
+        nutritionOverrides: nextOverrides,
+      }),
+    );
+    closeRowNutrition();
+  }
+
+  function closeRowNutrition() {
+    setNutritionRowId(null);
+    requestAnimationFrame(() => nutritionTriggerRef.current?.focus());
+  }
+
+  function openRowNutrition(row: IngredientRowDraft, trigger: HTMLButtonElement) {
+    nutritionTriggerRef.current = trigger;
+    setNutritionRowId(row.id);
+  }
+
+  function clearRowNutrition() {
+    if (!nutritionRow) return;
+    commitRows(
+      updateIngredientRow(rowsRef.current, nutritionRow.id, {
+        nutritionServingSizeOverride: null,
+        nutritionOverrides: {},
+      }),
+    );
+    closeRowNutrition();
+  }
+
+  function renderNutritionButton(row: IngredientRowDraft, className: string) {
+    const status = nutritionStatus(row);
+    const statusText =
+      status === 'complete' ? 'complete' : status === 'incomplete' ? 'incomplete' : 'not entered';
+    return (
+      <button
+        aria-label={`Nutrition for ${row.ingredientName}: ${statusText}`}
+        className={`recipe-ingredient-nutrition-button recipe-ingredient-nutrition-${status} ${className}`}
+        title="Nutrition"
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          openRowNutrition(row, event.currentTarget);
+        }}
+      >
+        <Salad aria-hidden="true" size={18} />
+      </button>
+    );
+  }
+
   function renderDesktopCell(row: IngredientRowDraft, rowIndex: number, field: IngredientField) {
     const fieldLabel =
       field === 'ingredientName' ? 'Ingredient' : field === 'detail' ? 'Specifics' : 'Preparation';
@@ -2095,6 +2251,7 @@ export function IngredientRowsEditor({
               <col className="recipe-ingredient-type-col" />
               <col className="recipe-ingredient-measurements-col" />
               <col className="recipe-ingredient-preparation-col" />
+              <col className="recipe-ingredient-nutrition-col" />
               <col className="recipe-ingredient-actions-col" />
             </colgroup>
             <thead>
@@ -2107,6 +2264,10 @@ export function IngredientRowsEditor({
                   Amount
                 </th>
                 <th scope="col">Preparation</th>
+                <th className="recipe-ingredient-nutrition-header" scope="col" title="Nutrition">
+                  <Salad aria-hidden="true" size={16} />
+                  <span className="visually-hidden">Nutrition</span>
+                </th>
                 <th
                   aria-label="Row actions"
                   className="recipe-ingredient-delete-header"
@@ -2135,7 +2296,7 @@ export function IngredientRowsEditor({
                               : undefined,
                       }}
                     >
-                      <th colSpan={6} scope="rowgroup">
+                      <th colSpan={7} scope="rowgroup">
                         {renderSectionHeading(entry.section, entry.sectionIndex)}
                       </th>
                     </tr>
@@ -2178,7 +2339,7 @@ export function IngredientRowsEditor({
                       <td
                         aria-label="Add ingredient row"
                         className="recipe-ingredient-value-cell is-empty"
-                        colSpan={6}
+                        colSpan={7}
                         data-field="ingredientName"
                         data-row-id={row.id}
                         tabIndex={activeCell?.rowId === row.id ? -1 : 0}
@@ -2202,6 +2363,10 @@ export function IngredientRowsEditor({
                         {renderDesktopCell(row, index, 'detail')}
                         {renderMeasurementCell(row, index)}
                         {renderDesktopCell(row, index, 'preparation')}
+                        <td className="recipe-ingredient-nutrition-cell">
+                          {!isEmptyIngredientRow(row) &&
+                            renderNutritionButton(row, 'recipe-ingredient-desktop-nutrition')}
+                        </td>
                         <td className="recipe-ingredient-delete-cell">
                           {!isEmptyIngredientRow(row) && (
                             <button
@@ -2233,7 +2398,7 @@ export function IngredientRowsEditor({
                         : undefined,
                 }}
               >
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <button
                     className="recipe-ingredient-set-add"
                     type="button"
@@ -2333,15 +2498,18 @@ export function IngredientRowsEditor({
                       )}
                     </button>
                     {!isEmptyIngredientRow(row) && (
-                      <button
-                        aria-label={`Delete ingredient row ${index + 1}`}
-                        className="recipe-ingredient-delete-button recipe-ingredient-mobile-delete"
-                        title="Delete ingredient row"
-                        type="button"
-                        onClick={() => deleteIngredientRow(row.id)}
-                      >
-                        ×
-                      </button>
+                      <>
+                        {renderNutritionButton(row, 'recipe-ingredient-mobile-nutrition')}
+                        <button
+                          aria-label={`Delete ingredient row ${index + 1}`}
+                          className="recipe-ingredient-delete-button recipe-ingredient-mobile-delete"
+                          title="Delete ingredient row"
+                          type="button"
+                          onClick={() => deleteIngredientRow(row.id)}
+                        >
+                          ×
+                        </button>
+                      </>
                     )}
                     {mobileEditingRowId === row.id && mobileAnchorElement && (
                       <MobileIngredientEditor
@@ -2389,6 +2557,20 @@ export function IngredientRowsEditor({
       <p aria-live="polite" className="visually-hidden">
         {announcement}
       </p>
+      {nutritionRow && (
+        <NutritionPane
+          mode="ingredient"
+          title={nutritionRow.ingredientName}
+          profile={nutritionIngredient?.nutritionProfile ?? null}
+          density={nutritionIngredient?.density ?? null}
+          basisOverride={nutritionRow.nutritionServingSizeOverride ?? null}
+          manualValues={nutritionFieldOverridesToValues(nutritionRow.nutritionOverrides ?? {})}
+          fieldOverrides={nutritionRow.nutritionOverrides ?? {}}
+          onCancel={closeRowNutrition}
+          onClear={clearRowNutrition}
+          onSave={saveRowNutrition}
+        />
+      )}
     </div>
   );
 }

@@ -923,7 +923,7 @@ test('image management panes stage covers and immediately manage decorative reci
       const columnsButton = page.getByRole('button', { name: 'Choose List columns' }).first();
       const columnsBounds = await columnsButton.boundingBox();
       const firstActionBounds = await page
-        .locator('.publication-mobile-actions > *')
+        .locator('.publication-mobile-actions .publication-transfer-menu-trigger')
         .first()
         .boundingBox();
       expect(viewControls).not.toBeNull();

@@ -1442,7 +1442,11 @@ $trash_display_fixture$;`);
       0,
     );
     const mobileControls = page.locator(
-      '.explorer-list-preferences-toolbar:has(.publication-mobile-add) > *',
+      [
+        '.explorer-list-preferences-toolbar:has(.publication-mobile-add) .recipe-explorer-view-controls',
+        '.explorer-list-preferences-toolbar:has(.publication-mobile-add) .explorer-list-preferences-controls',
+        '.explorer-list-preferences-toolbar:has(.publication-mobile-add) .publication-mobile-actions',
+      ].join(', '),
     );
     await expect(mobileControls).toHaveCount(3);
     const mobileControlRows = await mobileControls.evaluateAll((controls) =>
@@ -1487,7 +1491,7 @@ $trash_display_fixture$;`);
     expect(Math.max(...publicationRecipeVisibleCellRights)).toBeLessThanOrEqual(
       publicationRecipeTableRight + 1,
     );
-    await expect(publicationRecipeTable.locator('tbody tr:last-child td').last()).toHaveCSS(
+    await expect(publicationRecipeTable.locator('tbody tr:last-child')).toHaveCSS(
       'border-bottom-width',
       '1px',
     );

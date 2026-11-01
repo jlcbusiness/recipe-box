@@ -20,7 +20,7 @@ const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -32,8 +32,19 @@ function createBundleEntries(options: {
   const schemaVersion = options.schemaVersion ?? 2;
   const tables =
     schemaVersion === 1
-      ? exportTableNames.filter((table) => table !== 'recipe_ingredient_sets')
-      : exportTableNames;
+      ? exportTableNames.filter(
+          (table) =>
+            table !== 'recipe_ingredient_sets' &&
+            table !== 'ingredient_nutrition_profiles' &&
+            table !== 'ingredient_measure_equivalents',
+        )
+      : schemaVersion < 9
+        ? exportTableNames.filter(
+            (table) =>
+              table !== 'ingredient_nutrition_profiles' &&
+              table !== 'ingredient_measure_equivalents',
+          )
+        : exportTableNames;
   const data = {
     format: 'recipe-box-data',
     schema_version: schemaVersion,
@@ -433,6 +444,7 @@ describe('import bundle validation', () => {
         is_hearted: false,
         makes_quantity: null,
         makes_thing: null,
+        nutrition_overrides: {},
       },
     ]);
     expect(bundle.data.records.recipe_ingredient_sets).toHaveLength(1);
@@ -935,5 +947,64 @@ describe('import bundle validation', () => {
       { incomingId: assetId, existingIds: ['local-book'], kind: 'publication' },
       { incomingId: recipeId, existingIds: ['local-recipe'], kind: 'recipe' },
     ]);
+  });
+
+  it('validates version 9 nutrition profiles and measure-equivalent references', () => {
+    const ingredientId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const thingId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const entries = createBundleEntries({
+      schemaVersion: 9,
+      records: {
+        ingredients: [{ id: ingredientId, name: 'Spinach' }],
+        recipe_picklist_values: [
+          { id: thingId, category: 'informal_unit', value: 'bunch', display_value: 'bunch' },
+        ],
+        ingredient_nutrition_profiles: [
+          {
+            ingredient_id: ingredientId,
+            serving_size_amount: 1,
+            serving_size_dimension: 'weight',
+            serving_size_unit_code: 'oz',
+            nutrients: { calories: 12, protein: 1 },
+          },
+        ],
+        ingredient_measure_equivalents: [
+          {
+            ingredient_id: ingredientId,
+            measurement_type: 'informal',
+            picklist_value_id: thingId,
+            picklist_value: 'bunch',
+            volume_amount: 1,
+            volume_unit_code: 'cup',
+            weight_amount: null,
+            weight_unit_code: null,
+          },
+        ],
+      },
+    });
+
+    const bundle = validateImportBundleFiles(entries);
+    expect(bundle.data.records.ingredient_nutrition_profiles[0].nutrients).toEqual({
+      calories: 12,
+      protein: 1,
+    });
+    expect(bundle.data.records.ingredient_measure_equivalents[0].picklist_value_id).toBe(thingId);
+
+    const invalidEntries = createBundleEntries({
+      schemaVersion: 9,
+      records: {
+        ingredients: [{ id: ingredientId, name: 'Spinach' }],
+        ingredient_nutrition_profiles: [
+          {
+            ingredient_id: ingredientId,
+            serving_size_amount: 1,
+            serving_size_dimension: 'weight',
+            serving_size_unit_code: 'oz',
+            nutrients: { calories: 12, unknown_nutrient: 1 },
+          },
+        ],
+      },
+    });
+    expect(() => validateImportBundleFiles(invalidEntries)).toThrow(/nutrition profile/i);
   });
 });

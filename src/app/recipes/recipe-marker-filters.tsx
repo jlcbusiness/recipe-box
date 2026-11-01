@@ -15,6 +15,7 @@ export function RecipeMarkerFilters({
   columnSelections,
   direction,
   filters,
+  mainIngredientsOnly = false,
   query,
   sort,
   tab,
@@ -24,6 +25,7 @@ export function RecipeMarkerFilters({
   columnSelections: RecipeSearchColumnSelections;
   direction: 'asc' | 'desc';
   filters: RecipeSearchFilter[];
+  mainIngredientsOnly?: boolean;
   query?: string;
   sort: RecipeSearchSortKey;
   tab?: string;
@@ -61,6 +63,7 @@ export function RecipeMarkerFilters({
       {keyedFilters.map(({ active, field, label, marker, serializedFilters }) => (
         <form action={action} key={field} method="get">
           {query !== undefined && query && <input name="q" type="hidden" value={query} />}
+          {mainIngredientsOnly && <input name="main" type="hidden" value="1" />}
           {tab && <input name="tab" type="hidden" value={tab} />}
           <input name="sort" type="hidden" value={sort} />
           <input name="direction" type="hidden" value={direction} />

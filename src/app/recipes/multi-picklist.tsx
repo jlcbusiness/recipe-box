@@ -58,7 +58,9 @@ export function MultiPicklist({
     '',
   );
   const triggerMeasure = `✓ ${longestOption}`;
-  const summaryText = selectedValues[0]?.display_value ?? emptyLabel;
+  const summaryText = filterMode
+    ? selectedValues.map((value) => value.display_value).join(', ') || emptyLabel
+    : (selectedValues[0]?.display_value ?? emptyLabel);
   const accessibleSelection = selectedValues.map((value) => value.display_value).join(', ');
   const optionsId = controlId ? `${controlId}-options` : `${category}-options`;
 
@@ -210,6 +212,7 @@ export function MultiPicklist({
           aria-expanded={isOpen}
           aria-label={`${label}: ${accessibleSelection || 'Select'}`}
           className={`recipe-picklist-trigger${filterMode ? ' recipe-filter-value-trigger' : ''}`}
+          data-query-multi-select={filterMode ? 'true' : undefined}
           id={controlId}
           ref={triggerRef}
           style={

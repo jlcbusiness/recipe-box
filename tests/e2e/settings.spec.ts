@@ -328,7 +328,7 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       expect(handButtonBounds[1].left - handButtonBounds[0].right).toBeCloseTo(48, 0);
 
       const disclosureCenters = await Promise.all(
-        ['Picklists', 'Ingredients', 'Edit tags', 'Trusted densities'].map((name) =>
+        ['Picklists', 'Ingredients', 'Trusted densities', 'Edit tags'].map((name) =>
           page
             .getByRole('button', { name, exact: true })
             .locator('svg')
@@ -420,6 +420,16 @@ test('Settings can turn off and restore all instruction emphasis @e2e', async ({
     }
     if ((page.viewportSize()?.width ?? 0) > 900) {
       expect(printOptionsBounds.x).toBeGreaterThanOrEqual(emphasisBounds.x + emphasisBounds.width);
+      const [emphasisHeadingBounds, printOptionsHeadingBounds] = await Promise.all([
+        emphasisColumn.getByRole('heading', { name: 'Instruction emphasis' }).boundingBox(),
+        printOptions.getByRole('heading', { name: 'Print options' }).boundingBox(),
+      ]);
+      if (!emphasisHeadingBounds || !printOptionsHeadingBounds) {
+        throw new Error('Expected both settings column headings to be visible.');
+      }
+      expect(Math.abs(printOptionsHeadingBounds.y - emphasisHeadingBounds.y)).toBeLessThanOrEqual(
+        1,
+      );
     } else {
       expect(printOptionsBounds.y).toBeGreaterThanOrEqual(emphasisBounds.y + emphasisBounds.height);
       await expect
@@ -483,7 +493,7 @@ test('Settings can omit inline instruction photos from private print @e2e', asyn
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
     const omitPhotos = page.getByRole('checkbox', {
-      name: 'Omit instruction photos when printing',
+      name: 'Omit instruction photos in print and downloads',
     });
     await expect(omitPhotos).toBeVisible();
     await expect(omitPhotos).not.toBeChecked();
@@ -868,7 +878,7 @@ test('Settings recipe column order is saved and used by the Find column chooser 
     await page.goto('/recipes/find');
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name publication state visibility',
+      'name publication state visibility score starred hearted',
     );
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.waitForLoadState('networkidle');

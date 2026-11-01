@@ -1,9 +1,11 @@
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   createExplorerState,
   defaultExplorerDisplayPreferences,
   getExplorerColumns,
+  getQueryAutoSelectColumns,
   hasPersistedExplorerUrlState,
   serializeExplorerState,
 } from '../../../lib/explorer-state';
@@ -19,11 +21,17 @@ import {
   recipeStateLabels,
 } from '../../../lib/recipes/data';
 import {
+  getRecipeSearchColumnFacetValues,
   getRecipeSearchFacetValues,
   getRecipeSearchSortOptions,
+  isRecipeSearchGenericColumnKey,
+  mainIngredientTextFilters,
   parseRecipeSearchColumnFilters,
   parseRecipeSearchFilters,
+  type RecipeSearchColumnKey,
+  type RecipeSearchFacetOption,
   type RecipeSearchFilter,
+  type RecipeSearchGenericColumnKey,
   type RecipeSearchSortKey,
   searchRecipes,
 } from '../../../lib/recipes/search';
@@ -34,6 +42,7 @@ import {
 } from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
 import { FramedMediaImage } from '../../media/framed-media-image';
+import { RecipeListScroll } from '../../recipe-list-scroll';
 import { RecipeMarkerFilters } from '../recipe-marker-filters';
 import {
   RecipeGridMarkerIndicators,
@@ -42,14 +51,23 @@ import {
   RecipeMarkerStamp,
 } from '../recipe-marker-icons';
 import { AlternatingRecipeGrid } from './alternating-recipe-grid';
-import { RecipeColumnFilter } from './recipe-column-filter';
+import {
+  MobileRecipeColumnFilters,
+  RecipeColumnFilter,
+  type RecipeColumnFilterKey,
+} from './recipe-column-filter';
 import { RecipeFilterBuilder } from './recipe-filter-builder';
 import {
+  RecipeMainIngredientsToggle,
   RecipeSearchInput,
   RecipeSearchModeProvider,
   RecipeSearchTabs,
 } from './recipe-search-tabs';
-import { RecipeSearchPagination, RecipeSearchToolbar } from './recipe-search-toolbar';
+import {
+  RecipeSearchClearFilters,
+  RecipeSearchPagination,
+  RecipeSearchToolbar,
+} from './recipe-search-toolbar';
 
 const pageSize = 50;
 const dateFormatter = new Intl.DateTimeFormat('en', {
@@ -58,29 +76,47 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
   timeZone: 'UTC',
   year: 'numeric',
 });
+type FindRecipesSearchParams = Record<string, string | string[] | undefined> & {
+  q?: string | string[];
+  main?: string | string[];
+  filter?: string | string[];
+  sort?: string;
+  direction?: string;
+  auto_select_columns?: string;
+  no_auto_select_columns?: string;
+  page?: string;
+  tab?: string;
+  view?: string;
+};
 type FindRecipesPageProps = {
-  searchParams: Promise<{
-    q?: string | string[];
-    filter?: string | string[];
-    sort?: string;
-    direction?: string;
-    page?: string;
-    tab?: string;
-    view?: string;
-    column_name?: string | string[];
-    column_publication?: string | string[];
-    column_state?: string | string[];
-    column_visibility?: string | string[];
-    column_total_time_minutes?: string | string[];
-    column_publication_page?: string | string[];
-    column_recipe_url?: string | string[];
-    column_citation?: string | string[];
-    column_publication_source?: string | string[];
-  }>;
+  searchParams: Promise<FindRecipesSearchParams>;
 };
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+}
+
+function recipeSortHref(
+  params: FindRecipesSearchParams,
+  currentSort: RecipeSearchSortKey,
+  currentDirection: 'asc' | 'desc',
+  targetSort: RecipeSearchSortKey,
+) {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key === 'auto_select_columns' || key === 'no_auto_select_columns' || value === undefined) {
+      continue;
+    }
+    for (const item of Array.isArray(value) ? value : [value]) searchParams.append(key, item);
+  }
+  searchParams.set('sort', targetSort);
+  searchParams.set(
+    'direction',
+    currentSort === targetSort ? (currentDirection === 'asc' ? 'desc' : 'asc') : 'asc',
+  );
+  searchParams.set('page', '1');
+  searchParams.set('view', 'details');
+  return `/recipes/find?${searchParams.toString()}`;
 }
 
 export default async function FindRecipesPage({ searchParams }: FindRecipesPageProps) {
@@ -104,33 +140,16 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     rememberedState?.display_preferences ??
     defaultExplorerDisplayPreferences('recipes-find', recipeColumns);
   const visibleColumnKeys = new Set(displayPreferences.visible_columns);
-  const visibleSortColumns = recipeColumns.filter(
-    ({ key, required }) => required || visibleColumnKeys.has(key),
-  );
-  const sortOptions = getRecipeSearchSortOptions(
-    [
-      ...visibleSortColumns,
-      ...(visibleSortColumns.some(({ key }) => key === 'score')
-        ? []
-        : [{ key: 'score', label: 'Rating' }]),
-    ],
-    true,
-  );
   const q = firstValue(params.q);
   const searchMode = params.tab === 'query' ? 'query' : 'search';
   const query = searchMode === 'search' ? q.slice(0, 500) : '';
+  const mainIngredientsOnly = searchMode === 'search' && firstValue(params.main) === '1';
+  const textFilters = mainIngredientTextFilters(query, mainIngredientsOnly);
   const parsedFilters = parseRecipeSearchFilters(params.filter);
   const isMarkerFilter = (filter: RecipeSearchFilter) =>
     filter.field === 'starred' || filter.field === 'hearted';
   const parsedColumnFilters = parseRecipeSearchColumnFilters(params);
   const requestedPage = Math.max(1, Math.min(20_001, Number.parseInt(params.page ?? '1', 10) || 1));
-  const sortKey = sortOptions.some(({ value }) => value === params.sort)
-    ? (params.sort as RecipeSearchSortKey)
-    : query.trim()
-      ? 'relevance'
-      : 'name';
-  const sortDirection = params.direction === 'desc' ? 'desc' : 'asc';
-  const view = params.view === 'grid' ? 'grid' : params.view === 'list' ? 'list' : 'details';
   const [picklists, ingredients, publications, tags, activeRecipes] = await Promise.all([
     getRecipePicklists(supabase),
     getIngredients(supabase),
@@ -177,9 +196,49 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   };
   const columnFilters = parsedColumnFilters.filters.map(normalizeTinFilter);
   const combinedFilters = [...filters, ...columnFilters];
-
+  const consumeAutoSelectRequest =
+    searchMode === 'query' && firstValue(params.auto_select_columns) === '1';
+  const autoSelectRequestKey = JSON.stringify(
+    params.filter === undefined
+      ? []
+      : Array.isArray(params.filter)
+        ? params.filter
+        : [params.filter],
+  );
+  const queryAutoSelectColumns =
+    consumeAutoSelectRequest && firstValue(params.no_auto_select_columns) !== '1'
+      ? getQueryAutoSelectColumns(filters, recipeColumns)
+      : [];
+  const queryVisibleColumnKeys = new Set([...visibleColumnKeys, ...queryAutoSelectColumns]);
+  const visibleSortColumns = recipeColumns.filter(
+    ({ key, required }) => required || queryVisibleColumnKeys.has(key),
+  );
+  const allSortColumns = recipeColumns.some(({ key }) => key === 'score')
+    ? recipeColumns
+    : [...recipeColumns, { key: 'score', label: 'Rating' }];
+  const allSortOptions = getRecipeSearchSortOptions(allSortColumns, true);
+  const sortOptions = getRecipeSearchSortOptions(
+    [
+      ...visibleSortColumns,
+      ...(visibleSortColumns.some(({ key }) => key === 'score')
+        ? []
+        : [{ key: 'score', label: 'Rating' }]),
+    ],
+    true,
+  );
+  const sortKey = sortOptions.some(({ value }) => value === params.sort)
+    ? (params.sort as RecipeSearchSortKey)
+    : query.trim()
+      ? 'relevance'
+      : 'name';
+  const sortDirection = params.direction === 'desc' ? 'desc' : 'asc';
+  const view = params.view === 'grid' ? 'grid' : params.view === 'list' ? 'list' : 'details';
+  const searchFilters = [...textFilters, ...combinedFilters];
+  const visibleMobileColumnFacetKeys = recipeColumns
+    .filter(({ key }) => visibleColumnKeys.has(key) && isRecipeSearchGenericColumnKey(key))
+    .map(({ key }) => key as RecipeSearchGenericColumnKey);
   const searchOptions = {
-    filters: combinedFilters,
+    filters: searchFilters,
     sortKey,
     sortDirection,
     limit: pageSize,
@@ -193,9 +252,13 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   let publicationFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
   let stateFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
   let totalTimeFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let opinionFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let mealTypeFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let foodTypeFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
   let pageFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
   let urlFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
   let citationFacets: Awaited<ReturnType<typeof getRecipeSearchFacetValues>> = [];
+  let mobileColumnFacets: Partial<Record<RecipeSearchColumnKey, RecipeSearchFacetOption[]>> = {};
   let recipeColumnValues = new Map<string, Record<string, string | null>>();
   let recipeMarkerStates: Awaited<ReturnType<typeof getRecipeMarkerStates>> = new Map();
   let searchError: string | null = null;
@@ -232,9 +295,13 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       publicationFacets,
       stateFacets,
       totalTimeFacets,
+      opinionFacets,
+      mealTypeFacets,
+      foodTypeFacets,
       pageFacets,
       urlFacets,
       citationFacets,
+      mobileColumnFacets,
       recipeColumnValues,
       recipeMarkerStates,
     ] = await Promise.all([
@@ -247,49 +314,92 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       getRecipeSearchFacetValues(
         supabase,
         query,
-        [...filters, ...columnFilters.filter(({ field }) => field !== 'name')],
+        [...textFilters, ...filters, ...columnFilters.filter(({ field }) => field !== 'name')],
         'name',
       ),
       getRecipeSearchFacetValues(
         supabase,
         query,
-        [...filters, ...columnFilters.filter(({ field }) => field !== 'publication_id')],
+        [
+          ...textFilters,
+          ...filters,
+          ...columnFilters.filter(({ field }) => field !== 'publication_id'),
+        ],
         'publication_id',
       ),
       getRecipeSearchFacetValues(
         supabase,
         query,
-        [...filters, ...columnFilters.filter(({ field }) => field !== 'state')],
+        [...textFilters, ...filters, ...columnFilters.filter(({ field }) => field !== 'state')],
         'state',
       ),
       getRecipeSearchFacetValues(
         supabase,
         query,
-        [...filters, ...columnFilters.filter(({ field }) => field !== 'total_time_minutes')],
+        [
+          ...textFilters,
+          ...filters,
+          ...columnFilters.filter(({ field }) => field !== 'total_time_minutes'),
+        ],
         'total_time_minutes',
       ),
       getRecipeSearchFacetValues(
         supabase,
         query,
-        [...filters, ...columnFilters.filter(({ field }) => field !== 'publication_page')],
+        [...textFilters, ...filters, ...columnFilters.filter(({ field }) => field !== 'opinion')],
+        'opinion',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...textFilters, ...filters, ...columnFilters.filter(({ field }) => field !== 'meal_type')],
+        'meal_type',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [...textFilters, ...filters, ...columnFilters.filter(({ field }) => field !== 'food_type')],
+        'food_type',
+      ),
+      getRecipeSearchFacetValues(
+        supabase,
+        query,
+        [
+          ...textFilters,
+          ...filters,
+          ...columnFilters.filter(({ field }) => field !== 'publication_page'),
+        ],
         'publication_page',
       ),
       getRecipeSearchFacetValues(
         supabase,
         query,
-        [...filters, ...columnFilters.filter(({ field }) => field !== 'recipe_url')],
+        [
+          ...textFilters,
+          ...filters,
+          ...columnFilters.filter(({ field }) => field !== 'recipe_url'),
+        ],
         'recipe_url',
       ),
       getRecipeSearchFacetValues(
         supabase,
         query,
-        [...filters, ...columnFilters.filter(({ field }) => field !== 'citation')],
+        [...textFilters, ...filters, ...columnFilters.filter(({ field }) => field !== 'citation')],
         'citation',
       ),
+      view === 'details' && visibleMobileColumnFacetKeys.length > 0
+        ? getRecipeSearchColumnFacetValues(
+            supabase,
+            query,
+            searchFilters,
+            visibleMobileColumnFacetKeys,
+          )
+        : Promise.resolve({}),
       view === 'details'
         ? getRecipeExplorerColumnValues(
             supabase,
             results.map(({ recipe_id }) => recipe_id),
+            true,
           )
         : Promise.resolve(new Map<string, Record<string, string | null>>()),
       view !== 'details'
@@ -327,6 +437,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       .filter(({ category }) => category === 'equipment')
       .map(({ id, display_value }) => ({ value: id, label: display_value })),
     ingredient: ingredients.map(({ id, name }) => ({ value: id, label: name })),
+    main_ingredient: ingredients.map(({ id, name }) => ({ value: id, label: name })),
     verdict: picklists
       .filter(({ category }) => category === 'verdict')
       .map(({ id, display_value }) => ({ value: id, label: display_value })),
@@ -352,16 +463,35 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     recipe_url: urlFacets,
     citation: citationFacets,
   };
+  const mobileColumnFilterOptions = {
+    ...columnFilterOptions,
+    opinion: opinionFacets,
+    meal_type: mealTypeFacets,
+    food_type: foodTypeFacets,
+  };
   const isFilterColumn = (key: string): key is keyof typeof columnFilterOptions =>
     key in columnFilterOptions;
-  const columnFilter = (field: keyof typeof columnFilterOptions) => (
+  const isMobileFilterColumn = (key: string): key is keyof typeof mobileColumnFilterOptions =>
+    key in mobileColumnFilterOptions;
+  const mobileColumnFilterFields = recipeColumns.map(({ key, label }) => ({
+    field: key as RecipeColumnFilterKey,
+    label,
+    options:
+      (isMobileFilterColumn(key) ? mobileColumnFilterOptions[key] : undefined) ??
+      mobileColumnFacets[key as RecipeSearchColumnKey] ??
+      [],
+  }));
+  const hasActiveFilters = Boolean(mainIngredientsOnly || combinedFilters.length > 0);
+  const columnFilter = (field: keyof typeof columnFilterOptions, compact = false) => (
     <RecipeColumnFilter
       action="/recipes/find"
       baseFilters={filters}
       baseQuery={query}
       columnSelections={columnSelections}
+      compact={compact}
       direction={sortDirection}
       field={field}
+      mainIngredientsOnly={mainIngredientsOnly}
       options={columnFilterOptions[field]}
       selectedValues={columnSelections[field]}
       sort={sortKey}
@@ -415,11 +545,13 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                       Search
                     </button>
                   </div>
+                  <RecipeMainIngredientsToggle defaultChecked={mainIngredientsOnly} />
                 </div>
               }
               queryPanel={
                 <RecipeFilterBuilder
                   key={JSON.stringify(builderFilters)}
+                  disableAutoSelectColumns={firstValue(params.no_auto_select_columns) === '1'}
                   filters={builderFilters}
                   maxFilters={10 - columnFilters.length}
                   options={filterOptions}
@@ -445,7 +577,10 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
         </search>
 
         <ExplorerListPreferences
+          autoSelectColumns={queryAutoSelectColumns}
+          autoSelectRequestKey={consumeAutoSelectRequest ? autoSelectRequestKey : null}
           columnDefinitions={recipeColumns}
+          consumeAutoSelectRequest={consumeAutoSelectRequest}
           context="recipes-find"
           initialPreferences={displayPreferences}
           showControl={view === 'details' && explorerState !== null}
@@ -463,6 +598,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
               columnSelections={columnSelections}
               direction={sortDirection}
               filters={filters}
+              mainIngredientsOnly={mainIngredientsOnly}
               options={sortOptions}
               path="/recipes/find"
               query={query}
@@ -482,9 +618,22 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                 columnSelections={columnSelections}
                 direction={sortDirection}
                 filters={filters}
+                mainIngredientsOnly={mainIngredientsOnly}
                 query={query}
                 sort={sortKey}
                 view={view}
+              />
+            ) : null
+          }
+          toolbarAction={
+            hasActiveFilters ? (
+              <RecipeSearchClearFilters
+                direction={sortDirection}
+                path="/recipes/find"
+                query={query}
+                sort={sortKey}
+                view={view}
+                placement="toolbar"
               />
             ) : null
           }
@@ -495,20 +644,30 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
 
           {view === 'details' && (
             <nav aria-label="Filter recipe columns" className="find-recipes-mobile-filters">
-              {(
-                [
-                  'name',
-                  'publication',
-                  'state',
-                  'visibility',
-                  'total_time_minutes',
-                  'publication_page',
-                  'recipe_url',
-                  'citation',
-                ] as const
-              ).map((field) => (
-                <span key={field}>{columnFilter(field)}</span>
-              ))}
+              <MobileRecipeColumnFilters
+                action="/recipes/find"
+                baseFilters={filters}
+                baseQuery={query}
+                columnSelections={columnSelections}
+                direction={sortDirection}
+                fields={mobileColumnFilterFields}
+                mainIngredientsOnly={mainIngredientsOnly}
+                sort={sortKey}
+                view={view}
+                clearAction={
+                  hasActiveFilters ? (
+                    <RecipeSearchClearFilters
+                      direction={sortDirection}
+                      path="/recipes/find"
+                      query={query}
+                      sort={sortKey}
+                      view={view}
+                      placement="mobile-details"
+                    />
+                  ) : null
+                }
+                showClearButton={false}
+              />
             </nav>
           )}
 
@@ -519,26 +678,66 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                 : 'Your collection has no active recipes.'}
             </p>
           ) : view === 'details' ? (
-            <div className="recipe-list-scroll">
+            <RecipeListScroll>
               <table className="recipe-list find-recipes-list">
                 <thead>
                   <tr>
-                    {recipeColumns.map(({ key, label }) => (
-                      <th data-explorer-column={key} key={key} scope="col">
-                        {isFilterColumn(key) ? (
-                          columnFilter(key)
-                        ) : key === 'starred' ? (
+                    {recipeColumns.map(({ key, label, minWidth }) => {
+                      const sortableOption = allSortOptions.find((option) => option.value === key);
+                      const markerHeader =
+                        key === 'starred' ? (
                           <RecipeMarkerColumnHeader label={label} marker="star" />
                         ) : key === 'hearted' ? (
                           <RecipeMarkerColumnHeader label={label} marker="heart" />
-                        ) : key === 'score' ? (
-                          <abbr title="Rating">Rtg</abbr>
-                        ) : (
-                          label
-                        )}
-                        <ExplorerColumnResizeHandle column={key} />
-                      </th>
-                    ))}
+                        ) : null;
+                      return (
+                        <th
+                          aria-sort={
+                            sortKey === key
+                              ? sortDirection === 'asc'
+                                ? 'ascending'
+                                : 'descending'
+                              : undefined
+                          }
+                          data-explorer-column={key}
+                          key={key}
+                          style={{ minWidth: `${minWidth}px` }}
+                          scope="col"
+                        >
+                          <div className="recipe-list-column-heading">
+                            {sortableOption ? (
+                              <Link
+                                aria-label={`Sort by ${label} ${
+                                  sortKey === key && sortDirection === 'asc'
+                                    ? 'descending'
+                                    : 'ascending'
+                                }`}
+                                className="recipe-list-sort-header"
+                                href={recipeSortHref(
+                                  params,
+                                  sortKey,
+                                  sortDirection,
+                                  sortableOption.value,
+                                )}
+                              >
+                                {markerHeader ??
+                                  (key === 'score' ? <abbr title="Rating">Rtg</abbr> : label)}
+                                {sortKey === key &&
+                                  (sortDirection === 'asc' ? (
+                                    <ArrowUp aria-hidden="true" size={14} />
+                                  ) : (
+                                    <ArrowDown aria-hidden="true" size={14} />
+                                  ))}
+                              </Link>
+                            ) : (
+                              (markerHeader ?? label)
+                            )}
+                            {isFilterColumn(key) && columnFilter(key, true)}
+                            <ExplorerColumnResizeHandle column={key} />
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -672,7 +871,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                   })}
                 </tbody>
               </table>
-            </div>
+            </RecipeListScroll>
           ) : view === 'list' ? (
             <ul className="recipe-explorer-simple-list">
               {results.map((recipe) => {
@@ -755,6 +954,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
               columnSelections={columnSelections}
               direction={sortDirection}
               filters={filters}
+              mainIngredientsOnly={mainIngredientsOnly}
               page={page}
               pageCount={pageCount}
               path="/recipes/find"

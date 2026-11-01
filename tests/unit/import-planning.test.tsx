@@ -499,6 +499,74 @@ describe('database import planning', () => {
     expect(plan.reusedDensityIngredientIds).toEqual([localIngredientId]);
     expect(plan.reusedCatalogRecords).toHaveLength(3);
   });
+
+  it('preserves local nutrition profiles and maps imported Things equivalents', () => {
+    const { data, existing } = createInput();
+    const sourceIngredientId = '77777777-7777-4777-8777-777777777777';
+    const localIngredientId = '88888888-8888-4888-8888-888888888888';
+    const sourceThingId = '99999999-9999-4999-8999-999999999999';
+    const localThingId = 'abababab-abab-4bab-8bab-abababababab';
+    data.records.ingredients = [{ id: sourceIngredientId, name: 'Spinach' }];
+    data.records.recipe_picklist_values = [
+      {
+        id: sourceThingId,
+        category: 'informal_unit',
+        value: 'bunch',
+        display_value: 'bunch',
+      },
+    ];
+    data.records.ingredient_nutrition_profiles = [
+      {
+        ingredient_id: sourceIngredientId,
+        serving_size_amount: 1,
+        serving_size_dimension: 'weight',
+        serving_size_unit_code: 'oz',
+        nutrients: { calories: 12 },
+      },
+    ];
+    data.records.ingredient_measure_equivalents = [
+      {
+        ingredient_id: sourceIngredientId,
+        measurement_type: 'informal',
+        picklist_value_id: sourceThingId,
+        picklist_value: 'bunch',
+        volume_amount: 1,
+        volume_unit_code: 'cup',
+        weight_amount: null,
+        weight_unit_code: null,
+      },
+    ];
+    const existingWithNutrition = {
+      ...existing,
+      ingredients: [{ id: localIngredientId, name: 'Spinach' }],
+      recipe_picklist_values: [
+        { id: localThingId, category: 'informal_unit', value: 'bunch', display_value: 'bunch' },
+      ],
+      ingredient_nutrition_profiles: [{ ingredient_id: localIngredientId }],
+      ingredient_measure_equivalents: [],
+    };
+
+    const plan = planDatabaseImport(
+      data,
+      existingWithNutrition,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'replace',
+          targetId: destinationPublicationId,
+        },
+        [`recipe:${sourceRecipeId}`]: { action: 'replace', targetId: destinationRecipeId },
+      },
+      () => 'cccccccc-dddd-4ccc-8ccc-cccccccccccc',
+    );
+
+    expect(plan.records.ingredient_nutrition_profiles).toEqual([]);
+    expect(plan.records.ingredient_measure_equivalents).toEqual([
+      expect.objectContaining({
+        ingredient_id: localIngredientId,
+        picklist_value_id: localThingId,
+      }),
+    ]);
+  });
 });
 
 describe('scoped import planning', () => {

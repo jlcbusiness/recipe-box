@@ -1,5 +1,7 @@
 'use client';
 
+import { Filter, FilterX } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type {
   RecipeSearchColumnKey,
@@ -7,10 +9,18 @@ import type {
   RecipeSearchFilter,
   RecipeSearchSortKey,
 } from '../../../lib/recipes/search';
+import { useExplorerVisibleColumns } from '../../explorer-list-preferences';
+import { Picklist } from '../../picklist';
 import { useRecipeSearchMode } from './recipe-search-tabs';
 
 export type RecipeColumnFilterKey = RecipeSearchColumnKey;
 export type RecipeColumnFilterOption = { value: string; label: string };
+export type MobileRecipeColumnFilterField = {
+  field: RecipeColumnFilterKey;
+  label: string;
+  options: RecipeColumnFilterOption[];
+};
+export type MobileRecipeColumnFilterParam = { name: string; value: string };
 
 export function RecipeColumnFilter({
   action,
@@ -19,6 +29,9 @@ export function RecipeColumnFilter({
   columnSelections,
   direction,
   field,
+  fieldLabel,
+  mainIngredientsOnly = false,
+  compact = false,
   options,
   selectedValues,
   sort,
@@ -30,6 +43,9 @@ export function RecipeColumnFilter({
   columnSelections: RecipeSearchColumnSelections;
   direction: 'asc' | 'desc';
   field: RecipeColumnFilterKey;
+  fieldLabel?: string;
+  mainIngredientsOnly?: boolean;
+  compact?: boolean;
   options: RecipeColumnFilterOption[];
   selectedValues?: string[];
   sort: RecipeSearchSortKey;
@@ -56,7 +72,7 @@ export function RecipeColumnFilter({
     label.toLocaleLowerCase().includes(valueQuery.trim().toLocaleLowerCase()),
   );
   const parameterName = `column_${field}`;
-  const labels: Record<RecipeColumnFilterKey, string> = {
+  const labels: Partial<Record<RecipeColumnFilterKey, string>> = {
     name: 'Name',
     publication: 'Publication',
     state: 'State',
@@ -70,7 +86,7 @@ export function RecipeColumnFilter({
     citation: 'Citation',
     publication_source: 'Page or URL',
   };
-  const label = labels[field];
+  const label = fieldLabel ?? labels[field] ?? field;
 
   useEffect(() => {
     setSelected(selectedValues ?? options.map(({ value }) => value));
@@ -120,7 +136,8 @@ export function RecipeColumnFilter({
       }
     }
 
-    function closeOnPageScroll() {
+    function closeOnPageScroll(event: Event) {
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
       setOpen(false);
     }
 
@@ -150,12 +167,13 @@ export function RecipeColumnFilter({
       <button
         aria-label={`Filter ${label}`}
         aria-expanded={open}
-        className="recipe-column-filter-trigger"
+        className={`recipe-column-filter-trigger${compact ? ' recipe-column-filter-trigger-compact' : ''}`}
         onClick={toggleMenu}
         ref={triggerRef}
+        title={`Filter ${label}`}
         type="button"
       >
-        {label}
+        {compact ? <Filter aria-hidden="true" size={14} /> : label}
       </button>
       {open && (
         <div className="recipe-column-filter-popover" ref={menuRef} style={menuPosition}>
@@ -163,6 +181,9 @@ export function RecipeColumnFilter({
             {searchMode && <input name="tab" type="hidden" value={searchMode.mode} />}
             {searchMode?.mode === 'search' && baseQuery && (
               <input name="q" type="hidden" value={baseQuery} />
+            )}
+            {searchMode?.mode === 'search' && mainIngredientsOnly && (
+              <input name="main" type="hidden" value="1" />
             )}
             {(searchMode?.mode === 'query' ? baseFilters : []).map((filter) => (
               <input
@@ -186,7 +207,7 @@ export function RecipeColumnFilter({
             <input name="direction" type="hidden" value={direction} />
             <input name="view" type="hidden" value={view} />
             <label className="recipe-column-filter-search-label">
-              <span className="sr-only">Search {field} values</span>
+              <span className="sr-only">Search {label} values</span>
               <input
                 autoComplete="off"
                 onChange={(event) => setValueQuery(event.target.value)}
@@ -195,15 +216,6 @@ export function RecipeColumnFilter({
                 value={valueQuery}
               />
             </label>
-            <button
-              className="recipe-column-filter-select-all"
-              onClick={() =>
-                setSelected(selected.length === 0 ? availableOptions.map(({ value }) => value) : [])
-              }
-              type="button"
-            >
-              {selected.length === 0 ? 'Select all' : 'Deselect all'}
-            </button>
             <fieldset aria-label={`${label} values`} className="recipe-column-filter-values">
               <legend className="sr-only">{label} values</legend>
               {visibleOptions.length > 0 ? (
@@ -237,11 +249,129 @@ export function RecipeColumnFilter({
                 <input key={value} name={parameterName} type="hidden" value={value} />
               ))
             )}
-            <button className="recipe-column-filter-apply" type="submit">
-              Apply
-            </button>
+            <div className="recipe-column-filter-actions">
+              <button
+                className="recipe-column-filter-select-all"
+                onClick={() =>
+                  setSelected(
+                    selected.length === 0 ? availableOptions.map(({ value }) => value) : [],
+                  )
+                }
+                type="button"
+              >
+                {selected.length === 0 ? 'Select all' : 'Deselect all'}
+              </button>
+              <button className="recipe-column-filter-apply" type="submit">
+                Apply
+              </button>
+            </div>
           </form>
         </div>
+      )}
+    </div>
+  );
+}
+
+export function MobileRecipeColumnFilters({
+  action,
+  baseFilters,
+  baseQuery,
+  clearParams = [],
+  columnSelections,
+  direction,
+  fields,
+  hasActiveFilters = false,
+  mainIngredientsOnly = false,
+  sort,
+  view,
+  clearAction,
+  showClearButton = true,
+}: {
+  action: string;
+  baseFilters: RecipeSearchFilter[];
+  baseQuery: string;
+  clearParams?: MobileRecipeColumnFilterParam[];
+  columnSelections: RecipeSearchColumnSelections;
+  direction: 'asc' | 'desc';
+  fields: MobileRecipeColumnFilterField[];
+  hasActiveFilters?: boolean;
+  mainIngredientsOnly?: boolean;
+  sort: RecipeSearchSortKey;
+  view: 'details' | 'list' | 'grid';
+  clearAction?: ReactNode;
+  showClearButton?: boolean;
+}) {
+  const visibleColumns = useExplorerVisibleColumns();
+  const availableFields = fields.filter(({ field }) => visibleColumns.includes(field));
+  const [selectedFieldKeyState, setSelectedFieldKey] = useState<string>(fields[0]?.field ?? '');
+  const selectedFieldKey = availableFields.some(({ field }) => field === selectedFieldKeyState)
+    ? selectedFieldKeyState
+    : availableFields[0]?.field;
+  const selectedField = availableFields.find(({ field }) => field === selectedFieldKey);
+
+  useEffect(() => {
+    if (selectedFieldKey && selectedFieldKey !== selectedFieldKeyState) {
+      setSelectedFieldKey(selectedFieldKey);
+    }
+  }, [selectedFieldKey, selectedFieldKeyState]);
+
+  if (!selectedField) return null;
+
+  const fieldOptions = availableFields.map(({ field, label }) => ({ value: field, label }));
+  const clearParamCounts = new Map<string, number>();
+
+  return (
+    <div className="find-recipes-mobile-filter-controls">
+      <RecipeColumnFilter
+        action={action}
+        baseFilters={baseFilters}
+        baseQuery={baseQuery}
+        columnSelections={columnSelections}
+        compact
+        direction={direction}
+        field={selectedField.field}
+        fieldLabel={selectedField.label}
+        mainIngredientsOnly={mainIngredientsOnly}
+        options={selectedField.options}
+        selectedValues={columnSelections[selectedField.field]}
+        sort={sort}
+        view={view}
+      />
+      <Picklist
+        className="find-recipes-mobile-filter-picklist"
+        label="Column to filter"
+        options={fieldOptions}
+        sizeToContent={false}
+        value={selectedField.field}
+        onSelect={setSelectedFieldKey}
+      />
+      {clearAction}
+      {showClearButton && (
+        <form action={action} className="find-recipes-mobile-clear-form" method="get">
+          {clearParams.map(({ name, value }) => {
+            const paramKey = `${name}-${value}`;
+            const duplicateCount = clearParamCounts.get(paramKey) ?? 0;
+            clearParamCounts.set(paramKey, duplicateCount + 1);
+            return (
+              <input
+                key={`${paramKey}-${duplicateCount}`}
+                name={name}
+                type="hidden"
+                value={value}
+              />
+            );
+          })}
+          <button
+            aria-label="Clear all column filters"
+            className="recipe-explorer-trigger find-recipes-mobile-clear-button"
+            disabled={!hasActiveFilters}
+            title="Clear all column filters"
+            type="submit"
+          >
+            <FilterX aria-hidden="true" size={16} />
+            <span>Clear all</span>
+          </button>
+        </form>
       )}
     </div>
   );

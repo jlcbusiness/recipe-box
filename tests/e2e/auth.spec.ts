@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { createTestUser, deleteTestUser } from '../support/local-supabase';
+import { createTestUser, deleteTestUser, getLocalMailpitUrl } from '../support/local-supabase';
 
 test('rejected credentials produce an accessible sign-in error @e2e', async ({ page }) => {
   await page.goto('/');
@@ -49,7 +49,7 @@ test('a user can reset their password through the local recovery email @e2e', as
       .poll(
         async () => {
           const searchResponse = await request.get(
-            `http://127.0.0.1:55425/api/v1/search?query=${encodeURIComponent(`to:${user.email}`)}`,
+            `${getLocalMailpitUrl()}/api/v1/search?query=${encodeURIComponent(`to:${user.email}`)}`,
           );
           if (!searchResponse.ok()) {
             return null;
@@ -66,7 +66,9 @@ test('a user can reset their password through the local recovery email @e2e', as
       )
       .not.toBeNull();
 
-    const messageResponse = await request.get(`http://127.0.0.1:55425/api/v1/message/${messageId}`);
+    const messageResponse = await request.get(
+      `${getLocalMailpitUrl()}/api/v1/message/${messageId}`,
+    );
     expect(messageResponse.ok()).toBeTruthy();
     const message = await messageResponse.json();
     const emailContent = `${message.HTML ?? ''}\n${message.Text ?? ''}`;

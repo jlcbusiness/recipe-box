@@ -327,6 +327,16 @@ export function planImport(
       .map((record) => record.ingredient_id)
       .filter((id): id is string => typeof id === 'string'),
   );
+  const reusedNutritionProfiles = new Set(
+    rowsFrom(existing, 'ingredient_nutrition_profiles')
+      .map((record) => record.ingredient_id)
+      .filter((id): id is string => typeof id === 'string'),
+  );
+  const reusedMeasureEquivalents = new Set(
+    rowsFrom(existing, 'ingredient_measure_equivalents')
+      .map((record) => record.ingredient_id)
+      .filter((id): id is string => typeof id === 'string'),
+  );
   const reusedDensityIngredientIds: string[] = [];
 
   for (const table of exportTableNames) {
@@ -432,6 +442,29 @@ export function planImport(
     }
     return [{ ...record, ingredient_id: ingredientId }];
   });
+  records.ingredient_nutrition_profiles = incoming.records.ingredient_nutrition_profiles.flatMap(
+    (record) => {
+      const ingredientId = mappedId('ingredients', record.ingredient_id, 'ingredient');
+      if (typeof ingredientId === 'string' && reusedNutritionProfiles.has(ingredientId)) return [];
+      return [{ ...record, ingredient_id: ingredientId }];
+    },
+  );
+  records.ingredient_measure_equivalents = incoming.records.ingredient_measure_equivalents.flatMap(
+    (record) => {
+      const ingredientId = mappedId('ingredients', record.ingredient_id, 'ingredient');
+      if (typeof ingredientId === 'string' && reusedMeasureEquivalents.has(ingredientId)) return [];
+      return [
+        {
+          ...record,
+          ingredient_id: ingredientId,
+          picklist_value_id:
+            record.picklist_value_id === null
+              ? null
+              : mappedId('recipe_picklist_values', record.picklist_value_id, 'Things unit'),
+        },
+      ];
+    },
+  );
   records.recipe_picklist_assignments = incoming.records.recipe_picklist_assignments
     .filter((record) => recipeIncluded(record.recipe_id))
     .map((record) => ({

@@ -460,6 +460,12 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       await expect(ingredientRegion.getByText('tomatoes', { exact: true })).toBeVisible();
       await expect(ingredientRegion.getByText('onion', { exact: true })).toBeVisible();
       const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
+      if ((page.viewportSize()?.width ?? 1280) <= 760) {
+        await expect(presentationToggle).toHaveAttribute(
+          'aria-label',
+          'Ingredient view: Ingredient-first. Activate for Standard.',
+        );
+      }
       const currentPresentation = await presentationToggle.getAttribute('aria-label');
       if (currentPresentation?.startsWith('Ingredient view: Ingredient-first.')) {
         await presentationToggle.click();
@@ -572,6 +578,12 @@ test('ingredient sections stay simple across reader, editor, and public views @e
 
     await test.step('switch private reader to ingredient-first', async () => {
       const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
+      if ((page.viewportSize()?.width ?? 1280) <= 760) {
+        await expect(presentationToggle).toHaveAttribute(
+          'aria-label',
+          'Ingredient view: Ingredient-first. Activate for Standard.',
+        );
+      }
       const currentPresentation = await presentationToggle.getAttribute('aria-label');
       if (currentPresentation?.startsWith('Ingredient view: Ingredient-first.')) {
         await presentationToggle.click();
@@ -589,7 +601,15 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       const ingredientFirstTable = page.getByRole('table', { name: 'Recipe ingredients' });
       await expect(ingredientFirstTable).toBeVisible();
       await expect(ingredientFirstTable.locator('thead')).toHaveClass(/visually-hidden/u);
-      await expect(ingredientFirstTable.getByRole('columnheader')).toHaveCount(4);
+      const ingredientHeaders = ingredientFirstTable.getByRole('columnheader');
+      const isMobile = (page.viewportSize()?.width ?? 1280) <= 760;
+      await expect(ingredientHeaders).toHaveCount(isMobile ? 1 : 4);
+      if (!isMobile) {
+        await expect(ingredientHeaders.nth(0)).toHaveText('Ingredient');
+        await expect(ingredientHeaders.nth(1)).toContainText('Volume');
+        await expect(ingredientHeaders.nth(2)).toContainText('Weight');
+        await expect(ingredientHeaders.nth(3)).toContainText('Preparation');
+      }
       await expect(page.getByRole('heading', { name: 'For the sauce', level: 3 })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'For the filling', level: 3 })).toBeVisible();
       const tableSection = page

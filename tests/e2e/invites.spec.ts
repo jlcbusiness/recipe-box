@@ -6,6 +6,7 @@ import {
   deletePendingInviteTestUsers,
   deleteTestUser,
   deleteTestUserByEmail,
+  getLocalMailpitUrl,
   getLocalSupabaseConfig,
 } from '../support/local-supabase';
 
@@ -167,7 +168,7 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
       .poll(
         async () => {
           const response = await request.get(
-            `http://127.0.0.1:55425/api/v1/search?query=${encodeURIComponent(`to:${recipient}`)}`,
+            `${getLocalMailpitUrl()}/api/v1/search?query=${encodeURIComponent(`to:${recipient}`)}`,
           );
           if (!response.ok()) return null;
 
@@ -182,7 +183,9 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
       )
       .not.toBeNull();
 
-    const messageResponse = await request.get(`http://127.0.0.1:55425/api/v1/message/${messageId}`);
+    const messageResponse = await request.get(
+      `${getLocalMailpitUrl()}/api/v1/message/${messageId}`,
+    );
     expect(messageResponse.ok()).toBeTruthy();
     const message = await messageResponse.json();
     const emailContent = `${message.HTML ?? ''}\n${message.Text ?? ''}`;
@@ -310,7 +313,7 @@ test('an admin can invite a Google-only account @e2e', async ({ page, request })
       .poll(
         async () => {
           const response = await request.get(
-            `http://127.0.0.1:55425/api/v1/search?query=${encodeURIComponent(`to:${recipient}`)}`,
+            `${getLocalMailpitUrl()}/api/v1/search?query=${encodeURIComponent(`to:${recipient}`)}`,
           );
           if (!response.ok()) return null;
           const search = await response.json();
@@ -324,7 +327,9 @@ test('an admin can invite a Google-only account @e2e', async ({ page, request })
       )
       .not.toBeNull();
 
-    const messageResponse = await request.get(`http://127.0.0.1:55425/api/v1/message/${messageId}`);
+    const messageResponse = await request.get(
+      `${getLocalMailpitUrl()}/api/v1/message/${messageId}`,
+    );
     const message = await messageResponse.json();
     const emailContent = `${message.HTML ?? ''}\n${message.Text ?? ''}`;
     const rawLink = emailContent.match(/href="([^"]+)"/)?.[1];

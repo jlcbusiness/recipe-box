@@ -154,6 +154,14 @@ divide. Scaling changes numeric amounts but does not invent precision for
 unmeasured values. Unit conversion works within volume or weight dimensions;
 cross-dimension conversion requires trusted density.
 
+Nutrition is owner-entered; the app never imports nutrition automatically from
+external sources. DLC 12 adds per-ingredient Settings profiles, explicit
+Count-or-Things average-measure equivalents, recipe-specific field overrides,
+and per-serving recipe estimates. Recipe-level manual values are stored as
+whole-recipe totals. Public and print views may show recipe-level estimates,
+but never expose the ingredient Settings profiles or equivalents. See the
+[DLC 12 brief](slices/dlc/dlc-12-recipe-nutrition.md).
+
 Settings holds a default unit system for volume and a separate one for weight
 (US customary or metric). While viewing a recipe, the reader can switch an
 individual ingredient to a specific unit, such as teaspoons instead of
@@ -360,7 +368,9 @@ See [comprehensive-reference.md § 15](comprehensive-reference.md#15-deferred-fe
 
 - URL, text, photo, and OCR import.
 - Ingredient aliases and normalization.
-- Diet, allergen, substitution, and nutrition features.
+- Diet, allergen, and substitution features. User-entered nutrition estimates
+  are defined by [DLC 12](slices/dlc/dlc-12-recipe-nutrition.md); automatic
+  external nutrition lookup remains excluded.
 - Cooking history, favorites, and per-cook notes.
 - Collaboration and household sharing.
 - Native mobile clients.

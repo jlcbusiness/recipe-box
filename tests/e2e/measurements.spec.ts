@@ -799,8 +799,15 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
         .locator('thead tr')
         .first()
         .locator('th')
-        .evaluateAll((headers) => headers.slice(0, 4).map((header) => header.textContent?.trim())),
-    ).resolves.toEqual(['Ingredient', 'Specifics', 'Amount', 'Preparation']);
+        .evaluateAll((headers) => headers.map((header) => header.textContent?.trim())),
+    ).resolves.toEqual([
+      'Ingredient',
+      'Specifics',
+      'Amount',
+      'Preparation',
+      'Nutrition',
+      'Row actions',
+    ]);
     async function chooseMeasurementOption(label: string, value: string) {
       await page.getByRole('combobox', { name: label }).click();
       await page.getByRole('listbox').getByRole('option', { name: value, exact: true }).click();
@@ -875,7 +882,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     }
 
     await addIngredientRow(1, 'Flour', 'units', '1 1/2', 'cup');
-    await expect(grid.locator('tbody tr[data-row-id]').first().locator('td')).toHaveCount(6);
+    await expect(grid.locator('tbody tr[data-row-id]').first().locator('td')).toHaveCount(7);
     await expect(grid.locator('tbody tr[data-row-id]').first().locator('td').nth(0)).toHaveCSS(
       'height',
       '48px',

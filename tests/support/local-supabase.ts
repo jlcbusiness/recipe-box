@@ -17,6 +17,10 @@ export type TestUser = {
   accessToken: string;
 };
 
+export function getLocalMailpitUrl(): string {
+  return process.env.LOCAL_SUPABASE_MAILPIT_URL ?? 'http://127.0.0.1:55425';
+}
+
 export async function getLocalSupabaseConfig(): Promise<LocalSupabaseConfig> {
   const configuredApiUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const configuredAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

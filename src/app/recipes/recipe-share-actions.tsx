@@ -43,16 +43,26 @@ export function RecipeShareActions({
 
   return (
     <>
-      <button
-        aria-label="Copy share link"
-        className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
-        title="Copy share link"
-        type="button"
-        ref={shareButtonRef}
-        onClick={copyShareLink}
-      >
-        <Share2 aria-hidden="true" size={16} strokeWidth={2} />
-      </button>
+      <div className="recipe-share-copy-action">
+        <button
+          aria-label="Copy share link"
+          className="recipe-primary-link recipe-edit-link recipe-detail-action recipe-icon-action"
+          title="Copy share link"
+          type="button"
+          ref={shareButtonRef}
+          onClick={copyShareLink}
+        >
+          <Share2 aria-hidden="true" size={16} strokeWidth={2} />
+        </button>
+        <span
+          aria-live="polite"
+          className="recipe-share-copy-status"
+          data-status={copyStatus.startsWith('Unable') ? 'error' : undefined}
+          role="status"
+        >
+          {copyStatus}
+        </span>
+      </div>
       <form
         action={setRecipePrivacy}
         className={
@@ -87,14 +97,6 @@ export function RecipeShareActions({
           </span>
         </button>
       </form>
-      <span
-        aria-live="polite"
-        className="recipe-share-copy-status"
-        data-status={copyStatus.startsWith('Unable') ? 'error' : undefined}
-        role="status"
-      >
-        {copyStatus}
-      </span>
     </>
   );
 }

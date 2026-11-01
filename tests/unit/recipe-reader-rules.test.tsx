@@ -845,8 +845,12 @@ describe('recipe reader views', () => {
     const saltRow = renderedRows.find((row) =>
       row.querySelector('th')?.textContent?.includes('salt'),
     );
-    expect(sugarRow?.querySelector('td')?.getAttribute('colspan')).toBe('2');
-    expect(saltRow?.querySelector('td')?.getAttribute('colspan')).toBe('2');
+    expect(sugarRow?.querySelector('.recipe-ingredient-column-volume')?.textContent).toContain('2');
+    expect(sugarRow?.querySelector('.recipe-ingredient-column-weight')?.textContent).toBe('');
+    expect(saltRow?.querySelector('.recipe-ingredient-column-volume')?.textContent).toContain(
+      'to taste',
+    );
+    expect(saltRow?.querySelector('.recipe-ingredient-column-weight')?.textContent).toBe('');
     const sort = screen.getByRole('button', {
       name: 'Sort ingredients: Order Entered. Activate for Appears in Instructions.',
     });

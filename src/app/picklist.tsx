@@ -421,10 +421,24 @@ export function Picklist({
     if (!showArrow || !sizeToContent) {
       return;
     }
-    const measuredWidth = measureRef.current?.getBoundingClientRect().width;
-    if (measuredWidth) {
-      setTriggerWidth(Math.ceil(measuredWidth + (compact ? 16 : 40)));
+    const measure = measureRef.current;
+    if (!measure) {
+      return;
     }
+    const update = () => {
+      const measuredWidth = measure.getBoundingClientRect().width;
+      if (measuredWidth) {
+        setTriggerWidth(Math.ceil(measuredWidth + (compact ? 16 : 40)));
+      }
+    };
+    update();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    // A picklist in a closed dialog measures 0 until the dialog opens.
+    const observer = new ResizeObserver(update);
+    observer.observe(measure);
+    return () => observer.disconnect();
   }, [compact, showArrow, sizeToContent]);
 
   useEffect(() => {

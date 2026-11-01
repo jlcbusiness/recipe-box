@@ -43,6 +43,7 @@ const privateRecipe = {
   rest_time_minutes: null,
   total_time_minutes: 70,
   notes_markdown: 'Private notes',
+  nutrition_overrides: {},
   version: 12,
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-02T00:00:00.000Z',
@@ -230,6 +231,7 @@ describe('public recipe projection', () => {
         },
       ],
       attribution: { publication_name: 'Baking Quarterly', page: '75' },
+      nutrition_per_serving: null,
       pairings: ['Roast chicken'],
       references: [
         { display_text: 'Lemon curd', href: null },

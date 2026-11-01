@@ -1198,6 +1198,7 @@ test('Find Recipes exposes all recipe columns beside the view controls @e2e', as
     expect(viewButtonBox).not.toBeNull();
     expect(Math.abs((columnButtonBox?.y ?? 0) - (viewButtonBox?.y ?? 0))).toBeLessThanOrEqual(4);
     expect(columnButtonBox?.x).toBeGreaterThan(viewButtonBox?.x ?? 0);
+    await expect(viewButton).toHaveCSS('border-left-width', '1px');
 
     await columnButton.click();
     for (const field of [
@@ -1207,9 +1208,9 @@ test('Find Recipes exposes all recipe columns beside the view controls @e2e', as
       'Cook Time',
       'Pairs With',
     ]) {
-      await expect(page.getByRole('checkbox', { name: field })).toBeVisible();
+      await expect(page.getByRole('checkbox', { name: field, exact: true })).toBeVisible();
     }
-    await page.getByRole('checkbox', { name: 'Pairs With' }).check();
+    await page.getByRole('checkbox', { name: 'Pairs With', exact: true }).check();
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
       /pairs_with/,
@@ -1232,6 +1233,19 @@ test('Find Recipes exposes all recipe columns beside the view controls @e2e', as
         return rows[0]?.state.display_preferences?.visible_columns;
       })
       .toContain('pairs_with');
+
+    await page.goto('/recipes/find?view=list');
+    const viewAndSortControls = page.getByRole('group', { name: 'View and sort controls' });
+    const controlLabels = await viewAndSortControls
+      .locator('button, a')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-label')));
+    expect(controlLabels[0]).toBe('Switch to Grid view');
+    expect(controlLabels[1]).toMatch(/^Sort by /u);
+    expect(controlLabels[2]).toMatch(/^Sort (ascending|descending)$/u);
+    await expect(viewAndSortControls.locator('button, a').first()).toHaveCSS(
+      'border-left-width',
+      '1px',
+    );
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1304,6 +1318,52 @@ test('Library publications remain visible in mobile list view @e2e', async ({ pa
   }
 });
 
+test('publication explorer loads generic visible-column facets @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const publicationId = await createPublication(
+      request,
+      config,
+      user,
+      'Publication column facet values',
+    );
+    await saveExplorerState(request, config, user, `publication-recipes:${publicationId}`, {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['serves'],
+        column_widths: {},
+      },
+      column_filters: {},
+      filters: [],
+      sort: 'name',
+      direction: 'asc',
+      view: 'details',
+    });
+
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/publications/${publicationId}?view=details`);
+
+    await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
+      'data-visible-columns',
+      'name serves',
+    );
+    const mobileFilters = page.locator('.find-recipes-mobile-filters');
+    await expect(mobileFilters).toBeVisible();
+    const columnPicker = mobileFilters.getByRole('combobox', { name: 'Column to filter' });
+    await columnPicker.click();
+    await page.getByRole('option', { name: 'Serves', exact: true }).click();
+    const servesFilter = mobileFilters.getByRole('button', { name: 'Filter Serves' });
+    await expect(servesFilter).toBeVisible();
+    await servesFilter.click();
+    await expect(page.locator('.recipe-column-filter-popover')).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('publication recipe mobile filters follow visible columns @e2e', async ({ page, request }) => {
   test.skip((page.viewportSize()?.width ?? 1280) > 720, 'Mobile explorer layout only.');
   const user = await createTestUser(request);
@@ -1370,6 +1430,7 @@ test('publication recipe mobile filters follow visible columns @e2e', async ({ p
     );
     expect(
       Math.abs(columnControlsBounds.x - (viewControlsBounds.x + viewControlsBounds.width)),
+      JSON.stringify({ toolbarContentBounds, viewControlsBounds, columnControlsBounds }),
     ).toBeLessThanOrEqual(1);
     expect(
       Math.abs(
@@ -1458,14 +1519,29 @@ test('publication recipe mobile filters follow visible columns @e2e', async ({ p
     const mobileColumnFilters = page.getByRole('navigation', {
       name: 'Filter publication recipe columns',
     });
-    const opinionFilter = mobileColumnFilters.getByRole('button', { name: 'Filter Opinion' });
-    await expect(opinionFilter).toBeHidden();
+    const columnPicker = mobileColumnFilters.getByRole('combobox', {
+      name: 'Column to filter',
+    });
+    await columnPicker.click();
+    const opinionOption = page.getByRole('option', {
+      name: 'Opinion',
+      exact: true,
+    });
+    await expect(opinionOption).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Choose List columns' }).click();
     const opinionColumn = page.getByRole('checkbox', { name: 'Opinion', exact: true });
     await opinionColumn.check();
-    await expect(opinionFilter).toBeVisible();
+    await page.keyboard.press('Escape');
+    await columnPicker.click();
+    await expect(opinionOption).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
     await opinionColumn.uncheck();
-    await expect(opinionFilter).toBeHidden();
+    await page.keyboard.press('Escape');
+    await columnPicker.click();
+    await expect(opinionOption).toHaveCount(0);
+    await page.keyboard.press('Escape');
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1511,11 +1587,11 @@ test('publication recipe explorers restore only their route-owned state @e2e', a
     await expect(page).toHaveURL(
       new RegExp(`/publications/${firstPublicationId}\\?sort=updated_at&direction=desc&view=grid$`),
     );
-    const viewControls = page.getByRole('group', { name: 'Sort and view controls' });
+    const viewControls = page.getByRole('group', { name: 'View and sort controls' });
     const viewControlBounds = await viewControls.locator('button, a').evaluateAll((elements) =>
       elements.map((element) => {
         const { x, y, width, height, right } = element.getBoundingClientRect();
-        return { x, y, width, height, right };
+        return { x, y, width, height, right, label: element.getAttribute('aria-label') };
       }),
     );
     expect(viewControlBounds).toHaveLength(3);
@@ -1523,6 +1599,14 @@ test('publication recipe explorers restore only their route-owned state @e2e', a
       expect(bounds.width).toBe(40);
       expect(bounds.height).toBe(40);
     }
+    expect(viewControlBounds.map(({ label }) => label)).toEqual([
+      'Switch to Details view',
+      'Sort by Name',
+      'Sort ascending',
+    ]);
+    expect(viewControlBounds[0].x).toBeLessThan(viewControlBounds[1].x);
+    expect(viewControlBounds[1].x).toBeLessThan(viewControlBounds[2].x);
+    await expect(viewControls.locator('button, a').first()).toHaveCSS('border-left-width', '1px');
     expect(viewControlBounds[1].x - viewControlBounds[0].right).toBe(0);
     expect(viewControlBounds[2].x - viewControlBounds[1].right).toBe(0);
     const mobileActions = page.locator('.publication-mobile-actions');
@@ -1542,6 +1626,15 @@ test('publication recipe explorers restore only their route-owned state @e2e', a
       new RegExp(`/publications/${secondPublicationId}\\?sort=name&direction=asc&view=list$`),
     );
     await expect(page.getByRole('button', { name: 'Switch to Grid view' })).toBeVisible();
+    const listViewControls = page.getByRole('group', { name: 'View and sort controls' });
+    const listControlLabels = await listViewControls
+      .locator('button, a')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-label')));
+    expect(listControlLabels[0]).toBe('Switch to Grid view');
+    await expect(listViewControls.locator('button, a').first()).toHaveCSS(
+      'border-left-width',
+      '1px',
+    );
   } finally {
     await deleteTestUser(request, user);
   }

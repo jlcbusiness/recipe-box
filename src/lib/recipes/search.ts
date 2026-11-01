@@ -1,5 +1,7 @@
 import 'server-only';
 import type { RecipeSupabaseClient } from './data';
+import type { StandardNutrientKey } from './nutrition-rules';
+import { STANDARD_NUTRIENT_KEYS } from './nutrition-rules';
 
 export type RecipeSearchResult = {
   recipe_id: string;
@@ -22,6 +24,8 @@ export type RecipeSearchFilterField =
   | 'recipe_url'
   | 'citation'
   | 'ingredient'
+  | 'main_ingredient'
+  | 'main_ingredient_text'
   | 'state'
   | 'visibility'
   | 'food_type'
@@ -37,6 +41,7 @@ export type RecipeSearchFilterField =
   | 'score'
   | 'starred'
   | 'hearted'
+  | RecipeSearchColumnFilterField
   | 'serves'
   | 'prep_time_minutes'
   | 'mixing_time_minutes'
@@ -49,7 +54,8 @@ export type RecipeSearchFilterField =
   | 'rest_time_minutes'
   | 'total_time_minutes'
   | 'created_at'
-  | 'updated_at';
+  | 'updated_at'
+  | StandardNutrientKey;
 
 export type RecipeSearchFilter = {
   field: RecipeSearchFilterField;
@@ -59,19 +65,40 @@ export type RecipeSearchFilter = {
 };
 
 export type RecipeSearchColumnKey =
-  | 'name'
-  | 'publication'
-  | 'state'
+  | Exclude<RecipeSearchSortKey, 'relevance'>
   | 'visibility'
-  | 'total_time_minutes'
-  | 'opinion'
-  | 'meal_type'
-  | 'food_type'
-  | 'publication_page'
-  | 'recipe_url'
-  | 'citation'
   | 'publication_source';
+export type RecipeSearchColumnFilterField = `column_${RecipeSearchColumnKey}`;
 export type RecipeSearchColumnSelections = Partial<Record<RecipeSearchColumnKey, string[]>>;
+export const recipeSearchGenericColumnKeys = [
+  'occasion_details',
+  'serves',
+  'makes',
+  'equipment',
+  'cuisine',
+  'tags',
+  'main_ingredients',
+  ...STANDARD_NUTRIENT_KEYS,
+  'prep_time_minutes',
+  'mixing_time_minutes',
+  'marinate_time_minutes',
+  'chill_time_minutes',
+  'freeze_time_minutes',
+  'cook_time_minutes',
+  'bake_time_minutes',
+  'cooling_time_minutes',
+  'rest_time_minutes',
+  'created_at',
+  'updated_at',
+  'pairs_with',
+  'score',
+  'starred',
+  'hearted',
+] as const satisfies readonly RecipeSearchColumnKey[];
+export type RecipeSearchGenericColumnKey = (typeof recipeSearchGenericColumnKeys)[number];
+export function isRecipeSearchGenericColumnKey(key: string): key is RecipeSearchGenericColumnKey {
+  return (recipeSearchGenericColumnKeys as readonly string[]).includes(key);
+}
 export type RecipeSearchFacetField =
   | 'name'
   | 'publication_id'
@@ -118,7 +145,10 @@ export type RecipeSearchSortKey =
   | 'opinion'
   | 'citation'
   | 'score'
-  | 'makes';
+  | 'makes'
+  | 'starred'
+  | 'hearted'
+  | StandardNutrientKey;
 
 export type RecipeSearchSortOption = { value: RecipeSearchSortKey; label: string };
 
@@ -128,9 +158,7 @@ export function getRecipeSearchSortOptions(
 ): RecipeSearchSortOption[] {
   return [
     ...(includeRelevance ? [{ value: 'relevance' as const, label: 'Relevance' }] : []),
-    ...columns
-      .filter(({ key }) => key !== 'starred' && key !== 'hearted')
-      .map(({ key, label }) => ({ value: key as RecipeSearchSortKey, label })),
+    ...columns.map(({ key, label }) => ({ value: key as RecipeSearchSortKey, label })),
   ];
 }
 
@@ -167,20 +195,9 @@ export function parseRecipeSearchFilters(
   });
 }
 
-export function parseRecipeSearchColumnFilters(params: {
-  column_name?: string | string[];
-  column_publication?: string | string[];
-  column_state?: string | string[];
-  column_visibility?: string | string[];
-  column_total_time_minutes?: string | string[];
-  column_opinion?: string | string[];
-  column_meal_type?: string | string[];
-  column_food_type?: string | string[];
-  column_publication_page?: string | string[];
-  column_recipe_url?: string | string[];
-  column_citation?: string | string[];
-  column_publication_source?: string | string[];
-}): { filters: RecipeSearchFilter[]; selections: RecipeSearchColumnSelections } {
+export function parseRecipeSearchColumnFilters(
+  params: Record<string, string | string[] | undefined>,
+): { filters: RecipeSearchFilter[]; selections: RecipeSearchColumnSelections } {
   const definitions: {
     key: RecipeSearchColumnKey;
     parameter: string;
@@ -233,6 +250,21 @@ export function parseRecipeSearchColumnFilters(params: {
     });
   }
 
+  for (const key of recipeSearchGenericColumnKeys) {
+    const raw = params[`column_${key}`];
+    if (raw === undefined) continue;
+    const values = Array.isArray(raw) ? raw : [raw];
+    if (values.includes('__all__')) continue;
+
+    const selected = values.includes('__none__') ? [] : values.slice(0, 500);
+    selections[key] = selected;
+    filters.push({
+      field: `column_${key}`,
+      operator: 'in',
+      value: selected,
+    });
+  }
+
   return { filters, selections };
 }
 
@@ -261,6 +293,82 @@ export async function getRecipeSearchFacetValues(
       count: option.recipe_count,
     }),
   );
+}
+
+export async function getRecipeSearchColumnFacetValues(
+  supabase: RecipeSupabaseClient,
+  query: string,
+  filters: RecipeSearchFilter[],
+  columnKeys: readonly RecipeSearchGenericColumnKey[],
+  publicationId?: string,
+): Promise<Partial<Record<RecipeSearchColumnKey, RecipeSearchFacetOption[]>>> {
+  const { data, error } = await supabase.rpc('recipe_search_column_facet_values', {
+    p_query: query.trim().replace(/\s+/g, ' ').slice(0, 500) || null,
+    p_filters: filters,
+    p_column_keys: [...columnKeys],
+    p_publication_id: publicationId ?? null,
+  });
+
+  if (error) {
+    throw new Error('Unable to load recipe filter values.');
+  }
+
+  const dateFormatter = new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+    year: 'numeric',
+  });
+  const numericColumnKeys = new Set<RecipeSearchColumnKey>([
+    'serves',
+    'score',
+    ...STANDARD_NUTRIENT_KEYS,
+  ]);
+  const optionsByColumn: Partial<Record<RecipeSearchColumnKey, RecipeSearchFacetOption[]>> = {};
+  for (const key of columnKeys) optionsByColumn[key] = [];
+  for (const option of (data ?? []) as {
+    column_key: RecipeSearchColumnKey;
+    facet_value: string;
+    recipe_count: number;
+  }[]) {
+    const options = optionsByColumn[option.column_key] ?? [];
+    const isBlank = option.facet_value === '__blank__';
+    const label = isBlank
+      ? option.column_key === 'starred'
+        ? 'Not starred'
+        : option.column_key === 'hearted'
+          ? 'Not hearted'
+          : 'Blank'
+      : option.column_key === 'starred'
+        ? 'Starred'
+        : option.column_key === 'hearted'
+          ? 'Hearted'
+          : option.column_key === 'created_at' || option.column_key === 'updated_at'
+            ? dateFormatter.format(new Date(option.facet_value))
+            : option.column_key.endsWith('_time_minutes')
+              ? `${option.facet_value} min`
+              : numericColumnKeys.has(option.column_key)
+                ? String(Number(option.facet_value))
+                : option.facet_value;
+    options.push({
+      value: option.facet_value,
+      label,
+      count: option.recipe_count,
+    });
+    optionsByColumn[option.column_key] = options;
+  }
+
+  return optionsByColumn;
+}
+
+export function mainIngredientTextFilters(
+  query: string,
+  mainIngredientsOnly: boolean,
+): RecipeSearchFilter[] {
+  const normalizedQuery = query.trim().replace(/\s+/g, ' ').slice(0, 500);
+  return mainIngredientsOnly && normalizedQuery
+    ? [{ field: 'main_ingredient_text', operator: 'matches', value: normalizedQuery }]
+    : [];
 }
 
 export async function searchRecipes(

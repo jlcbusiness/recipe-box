@@ -20,6 +20,7 @@ import {
   formatGroupedInteger,
   type MeasurementSystem,
 } from '../../../lib/recipes/measurement-rules';
+import { calculateRecipeNutrition } from '../../../lib/recipes/nutrition-rules';
 import { formatRecipeDuration } from '../../../lib/recipes/recipe-rules';
 import { createClient } from '../../../lib/supabase/server';
 import { ExportAction } from '../../export-action';
@@ -33,6 +34,7 @@ import { RecipeOutputActions } from '../recipe-output-actions';
 import {
   RecipeInstructionMention,
   RecipeMakesValue,
+  RecipeNutritionSection,
   RecipeReader,
   RecipeReaderProvider,
   RecipeServesControl,
@@ -318,6 +320,25 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   if (!recipe) {
     notFound();
   }
+  const nutritionPerServing = calculateRecipeNutrition(
+    recipe.ingredients.map((ingredient) => ({
+      measurements: ingredient.measurements.map((measurement) => ({
+        type: measurement.measurement_type,
+        amount: measurement.amount_min,
+        maximum: measurement.amount_max,
+        unitCode: measurement.unit_code,
+        picklistValueId: measurement.picklist_value_id,
+        picklistValue: measurement.picklist_value,
+      })),
+      profile: ingredient.nutrition_profile ?? null,
+      servingSizeOverride: ingredient.nutrition_serving_size_override ?? null,
+      nutrientOverrides: ingredient.nutrition_overrides ?? {},
+      density: ingredient.density ?? null,
+      equivalent: ingredient.nutrition_equivalent ?? null,
+    })),
+    recipe.serves,
+    recipe.nutrition_overrides,
+  ).perServing;
 
   const valueFor = (valueId: string | null) =>
     picklists.find((value) => value.id === valueId)?.value;
@@ -562,60 +583,65 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             weightSystem={weightSystem}
           />
         )}
-      </RecipeReaderProvider>
-      {recipe.ingredients.length === 0 && instructions}
-      {(recipe.pairings.length > 0 || recipe.incoming_pairings.length > 0) && (
-        <section
-          className="recipe-detail-section"
-          aria-labelledby="pairs-with-title"
-          data-private-output-only
-        >
-          <h2 id="pairs-with-title">Pairs With</h2>
-          {recipe.pairings.length > 0 && (
-            <ul className="recipe-relationship-list">
-              {recipe.pairings.map((pairing) => (
-                <li key={pairing.id}>
-                  {pairing.linked_recipe_id && pairing.linked_recipe_is_active ? (
-                    <Link href={`/recipes/${pairing.linked_recipe_id}`}>
-                      {pairing.display_text}
-                    </Link>
-                  ) : (
-                    pairing.display_text
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-          {recipe.incoming_pairings.length > 0 && (
-            <div className="recipe-incoming-pairings">
-              <h3>Paired with this recipe</h3>
+        {recipe.ingredients.length === 0 && instructions}
+        {(recipe.pairings.length > 0 || recipe.incoming_pairings.length > 0) && (
+          <section
+            className="recipe-detail-section"
+            aria-labelledby="pairs-with-title"
+            data-private-output-only
+          >
+            <h2 id="pairs-with-title">Pairs With</h2>
+            {recipe.pairings.length > 0 && (
               <ul className="recipe-relationship-list">
-                {recipe.incoming_pairings.map((pairing) => (
-                  <li key={pairing.source_recipe_id}>
-                    {pairing.source_recipe_is_active ? (
-                      <Link href={`/recipes/${pairing.source_recipe_id}`}>
-                        {pairing.source_recipe_name}
+                {recipe.pairings.map((pairing) => (
+                  <li key={pairing.id}>
+                    {pairing.linked_recipe_id && pairing.linked_recipe_is_active ? (
+                      <Link href={`/recipes/${pairing.linked_recipe_id}`}>
+                        {pairing.display_text}
                       </Link>
                     ) : (
-                      pairing.source_recipe_name
+                      pairing.display_text
                     )}
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-        </section>
-      )}
-      {recipe.notes_markdown && (
-        <section
-          className="recipe-detail-section"
-          aria-labelledby="notes-title"
-          data-private-output-only
-        >
-          <h2 id="notes-title">Notes</h2>
-          <p className="recipe-notes">{renderMarkdown(recipe.notes_markdown)}</p>
-        </section>
-      )}
+            )}
+            {recipe.incoming_pairings.length > 0 && (
+              <div className="recipe-incoming-pairings">
+                <h3>Paired with this recipe</h3>
+                <ul className="recipe-relationship-list">
+                  {recipe.incoming_pairings.map((pairing) => (
+                    <li key={pairing.source_recipe_id}>
+                      {pairing.source_recipe_is_active ? (
+                        <Link href={`/recipes/${pairing.source_recipe_id}`}>
+                          {pairing.source_recipe_name}
+                        </Link>
+                      ) : (
+                        pairing.source_recipe_name
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+        {(recipe.notes_markdown || nutritionPerServing?.calories !== undefined) && (
+          <div className="recipe-notes-nutrition">
+            {recipe.notes_markdown && (
+              <section
+                className="recipe-detail-section"
+                aria-labelledby="notes-title"
+                data-private-output-only
+              >
+                <h2 id="notes-title">Notes</h2>
+                <p className="recipe-notes">{renderMarkdown(recipe.notes_markdown)}</p>
+              </section>
+            )}
+            <RecipeNutritionSection perServing={nutritionPerServing} />
+          </div>
+        )}
+      </RecipeReaderProvider>
       {recipe.references.length > 0 && (
         <section
           className="recipe-detail-section"

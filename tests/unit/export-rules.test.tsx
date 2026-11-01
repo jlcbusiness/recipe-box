@@ -97,6 +97,7 @@ function createSnapshot() {
       recipe_picklist_values: [
         { id: 'food-type-cake', account_id: ownerId, category: 'food_type' },
         { id: 'food-type-soup', account_id: ownerId, category: 'food_type' },
+        { id: 'thing-bunch', account_id: ownerId, category: 'informal_unit', value: 'bunch' },
       ],
       recipe_picklist_assignments: [
         { recipe_id: firstRecipeId, picklist_value_id: 'meal-dessert' },
@@ -139,6 +140,29 @@ function createSnapshot() {
       recipe_pairings: [{ id: 'pairing-cake', source_recipe_id: firstRecipeId }],
       recipe_references: [{ id: 'reference-cake', recipe_id: firstRecipeId }],
       ingredient_densities: [{ ingredient_id: firstIngredientId, volume_amount: 1 }],
+      ingredient_nutrition_profiles: [
+        {
+          account_id: ownerId,
+          ingredient_id: firstIngredientId,
+          serving_size_amount: 1,
+          serving_size_dimension: 'weight',
+          serving_size_unit_code: 'oz',
+          nutrients: { calories: 12 },
+        },
+      ],
+      ingredient_measure_equivalents: [
+        {
+          account_id: ownerId,
+          ingredient_id: firstIngredientId,
+          measurement_type: 'informal',
+          picklist_value_id: 'thing-bunch',
+          picklist_value: 'bunch',
+          volume_amount: 1,
+          volume_unit_code: 'cup',
+          weight_amount: null,
+          weight_unit_code: null,
+        },
+      ],
       tags: [{ id: 'tag-cake', account_id: ownerId, name: 'Baking' }],
       recipe_tags: [{ recipe_id: firstRecipeId, tag_id: 'tag-cake' }],
       publication_tags: [{ publication_id: firstPublicationId, tag_id: 'tag-cake' }],
@@ -234,6 +258,18 @@ describe('export rules', () => {
     expect(output.records.recipe_step_mentions.map((record) => record.id)).toEqual([
       'mention-cake',
     ]);
+    expect(output.records.ingredient_nutrition_profiles[0]).toMatchObject({
+      ingredient_id: firstIngredientId,
+      serving_size_unit_code: 'oz',
+      nutrients: { calories: 12 },
+    });
+    expect(output.records.ingredient_nutrition_profiles[0]).not.toHaveProperty('account_id');
+    expect(output.records.ingredient_measure_equivalents[0]).toMatchObject({
+      ingredient_id: firstIngredientId,
+      measurement_type: 'informal',
+      picklist_value_id: 'thing-bunch',
+      picklist_value: 'bunch',
+    });
     expect(output.records.recipe_pairings.map((record) => record.id)).toEqual(['pairing-cake']);
     expect(output.records.recipe_references.map((record) => record.id)).toEqual(['reference-cake']);
     expect(output.records.media_assets.map((record) => record.id)).toEqual([
@@ -251,6 +287,11 @@ describe('export rules', () => {
     expect(output.records.publications.map((record) => record.id)).toEqual([firstPublicationId]);
     expect(output.records.recipe_pairings.map((record) => record.id)).toEqual(['pairing-cake']);
     expect(output.records.media_assets.map((record) => record.id)).toEqual([firstAssetId]);
+    expect(output.records.ingredient_nutrition_profiles).toHaveLength(1);
+    expect(output.records.ingredient_measure_equivalents).toHaveLength(1);
+    expect(output.records.recipe_picklist_values.map((record) => record.id)).toContain(
+      'thing-bunch',
+    );
     expect(output.records.explorer_state).toEqual([]);
   });
 
@@ -326,7 +367,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(8);
+    expect(manifest.schema_version).toBe(9);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

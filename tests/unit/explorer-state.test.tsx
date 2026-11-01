@@ -5,6 +5,7 @@ import {
   defaultRecipeColumnOrder,
   explorerColumnDefinitions,
   getExplorerColumns,
+  getQueryAutoSelectColumns,
   hasPersistedExplorerUrlState,
   isExplorerStateContext,
   serializeExplorerState,
@@ -30,6 +31,7 @@ describe('explorer state contract', () => {
 
   it('uses shared hidden columns as defaults and omits Publication from publication recipes', () => {
     const hiddenColumns = ['name', 'publication', 'unknown', 'publication'];
+    const defaultRecipeFindColumns = getExplorerColumns('recipes-find');
     const recipeFindColumns = getExplorerColumns(
       'recipes-find',
       defaultRecipeColumnOrder,
@@ -50,10 +52,14 @@ describe('explorer state contract', () => {
       true,
     );
     expect(recipeFindColumns.find(({ key }) => key === 'publication')?.defaultVisible).toBe(false);
+    expect(defaultRecipeFindColumns.find(({ key }) => key === 'makes')?.defaultVisible).toBe(false);
     expect(publicationRecipeColumns.find(({ key }) => key === 'publication')).toBeUndefined();
     expect(
       defaultExplorerDisplayPreferences('recipes-find', recipeFindColumns).visible_columns,
     ).not.toContain('publication');
+    expect(
+      defaultExplorerDisplayPreferences('recipes-find', defaultRecipeFindColumns).visible_columns,
+    ).not.toContain('makes');
     expect(
       defaultExplorerDisplayPreferences(
         'publication-recipes:cf1130fe-6225-4fd7-b6fc-3711ae656315',
@@ -83,6 +89,21 @@ describe('explorer state contract', () => {
         'cuisine',
         'tags',
         'main_ingredients',
+        'calories',
+        'total_fat',
+        'saturated_fat',
+        'trans_fat',
+        'cholesterol',
+        'sodium',
+        'total_carbohydrate',
+        'dietary_fiber',
+        'total_sugars',
+        'added_sugars',
+        'protein',
+        'vitamin_d',
+        'calcium',
+        'iron',
+        'potassium',
         'prep_time_minutes',
         'mixing_time_minutes',
         'marinate_time_minutes',
@@ -97,6 +118,23 @@ describe('explorer state contract', () => {
         'pairs_with',
       ]),
     );
+  });
+
+  it('maps query fields to available columns without selecting unrelated columns', () => {
+    const columns = explorerColumnDefinitions['recipes-find'];
+
+    expect(
+      getQueryAutoSelectColumns(
+        [
+          { field: 'calories', operator: 'greater_than', value: 100 },
+          { field: 'publication_id', operator: 'in', value: ['publication-id'] },
+          { field: 'main_ingredient', operator: 'contains_any', value: ['ingredient-id'] },
+          { field: 'ingredient', operator: 'contains_any', value: ['ingredient-id'] },
+          { field: 'notes_markdown', operator: 'contains', value: 'garlic' },
+        ],
+        columns,
+      ),
+    ).toEqual(['calories', 'publication', 'main_ingredients']);
   });
 
   it('accepts supported recipe explorer state and excludes transient search and pagination', () => {
@@ -134,6 +172,19 @@ describe('explorer state contract', () => {
     ).toBe('opinion');
   });
 
+  it('accepts Star and Heart columns as persisted sort keys', () => {
+    for (const sort of ['starred', 'hearted']) {
+      expect(
+        createExplorerState('recipes-find', {
+          direction: 'asc',
+          filters: [],
+          sort,
+          view: 'details',
+        })?.sort,
+      ).toBe(sort);
+    }
+  });
+
   it('preserves supported recipe column-filter selections without treating them as List columns', () => {
     const state = createExplorerState('recipes-find', {
       column_filters: { state: ['tried'] },
@@ -150,6 +201,40 @@ describe('explorer state contract', () => {
     expect(serializeExplorerState('/recipes/find', state)).toBe(
       '/recipes/find?column_state=tried&sort=name&direction=asc&view=list',
     );
+  });
+
+  it('persists filters for all recipe display columns in both recipe explorer contexts', () => {
+    const columnFilters = { main_ingredients: ['Fresh basil'], calories: ['__blank__'] };
+
+    for (const context of [
+      'recipes-find',
+      'publication-recipes:cf1130fe-6225-4fd7-b6fc-3711ae656315',
+    ] as const) {
+      const state = createExplorerState(context, {
+        column_filters: columnFilters,
+        direction: 'asc',
+        filters: [],
+        sort: 'name',
+        view: 'details',
+      });
+
+      expect(state?.column_filters).toEqual(columnFilters);
+      expect(
+        hasPersistedExplorerUrlState(context, {
+          column_main_ingredients: 'Fresh basil',
+        }),
+      ).toBe(true);
+    }
+
+    expect(
+      createExplorerState('publication-recipes:cf1130fe-6225-4fd7-b6fc-3711ae656315', {
+        column_filters: { publication: ['Cookbook'] },
+        direction: 'asc',
+        filters: [],
+        sort: 'name',
+        view: 'details',
+      }),
+    ).toBeNull();
   });
 
   it('persists visibility filters and column selections', () => {

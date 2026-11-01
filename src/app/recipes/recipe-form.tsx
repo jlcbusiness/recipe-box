@@ -1,7 +1,8 @@
 'use client';
 
+import { Salad } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useActionState, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import type {
   IngredientOption,
@@ -43,6 +44,11 @@ import {
   serializeMeasurements,
 } from '../../lib/recipes/measurement-rules';
 import {
+  calculateRecipeNutrition,
+  type NutrientValues,
+  roundNutrientValues,
+} from '../../lib/recipes/nutrition-rules';
+import {
   calculateTotalMinutes,
   clearConditionalValuesForStateChange,
   recipeScoreValues,
@@ -56,6 +62,8 @@ import {
 import { MediaManager } from '../media/media-manager';
 import { RecipePhotoDraftPicker } from '../media/recipe-photo-draft-picker';
 import { uploadMediaFiles } from '../media/upload-files';
+import { NutritionEstimate } from '../nutrition/nutrition-estimate';
+import { NutritionPane, type NutritionPaneSave } from '../nutrition/nutrition-pane';
 import { Picklist } from '../picklist';
 import { TagMultiSelect } from '../tags/tag-controls';
 import { saveRecipe } from './actions';
@@ -229,8 +237,14 @@ export function RecipeForm({
           unitCode: measurement.unit_code ?? '',
           picklistValueId: measurement.picklist_value_id ?? '',
         })),
+        nutritionServingSizeOverride: row.nutrition_serving_size_override,
+        nutritionOverrides: row.nutrition_overrides,
       })) ?? [],
   );
+  const [nutritionOverrides, setNutritionOverrides] = useState<NutrientValues>(
+    () => recipe?.nutrition_overrides ?? {},
+  );
+  const [isNutritionPaneOpen, setIsNutritionPaneOpen] = useState(false);
   const [ingredientRowsError, setIngredientRowsError] = useState('');
   const [ingredientSetsError, setIngredientSetsError] = useState('');
   const [instructionSteps, setInstructionSteps] = useState<InstructionStepDraft[]>(
@@ -281,6 +295,62 @@ export function RecipeForm({
   const [occasionDetails, setOccasionDetails] = useState(recipe?.occasion_details ?? '');
   const [reason, setReason] = useState(recipe?.reason ?? '');
   const [openPicklist, setOpenPicklist] = useState<RecipePicklistKey | null>(null);
+
+  const parsedServes = serves ? parseGroupedInteger(serves) : null;
+  const effectiveServes = parsedServes && parsedServes > 0 ? parsedServes : null;
+  const nutritionState = useMemo(() => {
+    const ingredientInputs = ingredientRows
+      .filter((row) => !isEmptyIngredientRow(row))
+      .map((row) => {
+        const ingredient =
+          ingredients.find((option) => option.id === row.ingredientId) ??
+          ingredients.find(
+            (option) =>
+              option.name.toLocaleLowerCase() === row.ingredientName.trim().toLocaleLowerCase(),
+          );
+        return {
+          ingredientId: row.id,
+          ingredientName: row.ingredientName.trim() || ingredient?.name || 'Ingredient',
+          measurements: row.measurements.flatMap((measurement) => {
+            if (!measurement.type) return [];
+            const parsed =
+              measurement.type === 'unmeasured' ? null : parseQuantityInput(measurement.quantity);
+            return [
+              {
+                type: measurement.type,
+                amount: parsed?.minimum ?? null,
+                maximum: parsed?.maximum ?? null,
+                unitCode: measurement.unitCode || null,
+                picklistValueId: measurement.picklistValueId || null,
+                picklistValue: measurement.picklistValueId
+                  ? (availablePicklists.find((value) => value.id === measurement.picklistValueId)
+                      ?.display_value ?? null)
+                  : null,
+              },
+            ];
+          }),
+          profile: ingredient?.nutritionProfile ?? null,
+          servingSizeOverride: row.nutritionServingSizeOverride ?? null,
+          nutrientOverrides: row.nutritionOverrides ?? {},
+          density: ingredient?.density ?? null,
+          equivalent: ingredient?.nutritionEquivalent ?? null,
+        };
+      });
+    const calculated = calculateRecipeNutrition(ingredientInputs, effectiveServes);
+    const manualValues: NutrientValues =
+      effectiveServes === null
+        ? {}
+        : (Object.fromEntries(
+            Object.entries(nutritionOverrides).flatMap(([key, value]) =>
+              typeof value === 'number' ? [[key, value / effectiveServes]] : [],
+            ),
+          ) as NutrientValues);
+    return {
+      result: calculateRecipeNutrition(ingredientInputs, effectiveServes, nutritionOverrides),
+      calculatedValues: roundNutrientValues(calculated.perServing ?? {}),
+      manualValues,
+    };
+  }, [availablePicklists, effectiveServes, ingredientRows, ingredients, nutritionOverrides]);
 
   useEffect(() => {
     setAvailablePicklists(picklists);
@@ -645,6 +715,7 @@ export function RecipeForm({
     const ingredientInput = event.currentTarget.elements.namedItem('ingredient_rows');
     const ingredientSetsInput = event.currentTarget.elements.namedItem('ingredient_sets');
     const instructionInput = event.currentTarget.elements.namedItem('instruction_steps');
+    const nutritionInput = event.currentTarget.elements.namedItem('nutrition_overrides');
     if (ingredientInput instanceof HTMLInputElement) {
       ingredientInput.value = JSON.stringify(ingredientPayload);
     }
@@ -653,6 +724,9 @@ export function RecipeForm({
     }
     if (instructionInput instanceof HTMLInputElement) {
       instructionInput.value = JSON.stringify(instructionPayload);
+    }
+    if (nutritionInput instanceof HTMLInputElement) {
+      nutritionInput.value = JSON.stringify(nutritionOverrides);
     }
     setIngredientRowsError('');
     setIngredientSetsError('');
@@ -679,6 +753,7 @@ export function RecipeForm({
       <input name="ingredient_rows" type="hidden" defaultValue="[]" />
       <input name="ingredient_sets" type="hidden" defaultValue="[]" />
       <input name="instruction_steps" type="hidden" defaultValue="[]" />
+      <input name="nutrition_overrides" type="hidden" defaultValue="{}" />
       {recipe && (
         <>
           <input name="recipe_id" type="hidden" value={recipe.id} />
@@ -935,6 +1010,75 @@ export function RecipeForm({
           onDeleteRequested={requestIngredientDeletion}
           onRowsChange={setIngredientRows}
         />
+        <div className="recipe-nutrition-editor">
+          <div className="recipe-nutrition-editor-heading">
+            <h3>Nutrition</h3>
+            <button
+              aria-label="Edit recipe nutrition"
+              aria-describedby={
+                effectiveServes === null ? 'recipe-nutrition-serves-required' : undefined
+              }
+              className="recipe-nutrition-edit-button"
+              disabled={effectiveServes === null}
+              type="button"
+              onClick={() => setIsNutritionPaneOpen(true)}
+            >
+              <Salad aria-hidden="true" size={18} />
+              <span>Edit</span>
+            </button>
+          </div>
+          {effectiveServes === null ? (
+            <p
+              className="recipe-nutrition-incomplete"
+              id="recipe-nutrition-serves-required"
+              role="status"
+            >
+              Enter a positive Serves value to calculate or edit nutrition per serving.
+            </p>
+          ) : nutritionState.result.perServing?.calories !== undefined ? (
+            <NutritionEstimate
+              label="Estimated per serving"
+              values={nutritionState.result.perServing}
+            />
+          ) : nutritionState.result.hasData ? (
+            <p className="recipe-nutrition-incomplete" role="status">
+              Nutrition is incomplete. {nutritionState.result.reasons.join(' ')}
+            </p>
+          ) : (
+            <p className="recipe-nutrition-empty">
+              Add nutrition facts to ingredients or the recipe.
+            </p>
+          )}
+        </div>
+        {isNutritionPaneOpen && effectiveServes !== null && (
+          <NutritionPane
+            mode="recipe"
+            title={recipe?.name.trim() || 'This recipe'}
+            calculatedValues={nutritionState.calculatedValues}
+            contributions={nutritionState.result.contributions}
+            manualValues={nutritionState.manualValues}
+            onCancel={() => setIsNutritionPaneOpen(false)}
+            onClear={() => {
+              setNutritionOverrides({});
+              setIsNutritionPaneOpen(false);
+            }}
+            onSave={(value: NutritionPaneSave) => {
+              const nextOverrides: NutrientValues = {};
+              const editedKeys = new Set(value.editedKeys);
+              for (const key of value.manualKeys) {
+                const amount = value.values[key];
+                if (amount === undefined) continue;
+                const existing = nutritionOverrides[key];
+                nextOverrides[key] =
+                  existing !== undefined && !editedKeys.has(key)
+                    ? existing
+                    : amount * effectiveServes;
+              }
+              setNutritionOverrides(nextOverrides);
+              setIsNutritionPaneOpen(false);
+            }}
+          />
+        )}
         {ingredientRowsError && (
           <p className="recipe-form-error" role="alert">
             {ingredientRowsError}
@@ -979,6 +1123,7 @@ export function RecipeForm({
           </p>
           <div className="recipe-confirmation-actions">
             <button
+              className="recipe-secondary-button"
               type="button"
               onClick={() => {
                 ingredientDeletionDialogRef.current?.close();
@@ -987,7 +1132,11 @@ export function RecipeForm({
             >
               Cancel
             </button>
-            <button type="button" onClick={confirmIngredientDeletion}>
+            <button
+              className="recipe-primary-button"
+              type="button"
+              onClick={confirmIngredientDeletion}
+            >
               Remove ingredient
             </button>
           </div>

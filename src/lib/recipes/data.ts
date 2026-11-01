@@ -1,6 +1,14 @@
 import type { createClient } from '../supabase/server';
 import type { IngredientDensity } from './density-rules';
 import type { MeasurementType } from './measurement-rules';
+import type {
+  NutrientValues,
+  NutritionBasis,
+  NutritionEquivalent,
+  NutritionFieldOverrides,
+  NutritionProfile,
+} from './nutrition-rules';
+import { STANDARD_NUTRIENT_KEYS } from './nutrition-rules';
 import type { RecipeScore } from './recipe-rules';
 import type { TagColorKey } from './tag-colors';
 
@@ -43,6 +51,8 @@ export type IngredientOption = {
   id: string;
   name: string;
   density?: IngredientDensity | null;
+  nutritionProfile?: NutritionProfile | null;
+  nutritionEquivalent?: NutritionEquivalent | null;
 };
 
 export type TagOption = {
@@ -72,6 +82,11 @@ export type RecipeIngredient = {
   portion_one_ratio: number | null;
   size_value: number | null;
   size_unit: 'in' | 'cm' | null;
+  nutrition_serving_size_override?: NutritionBasis | null;
+  nutrition_overrides?: NutritionFieldOverrides;
+  nutrition_profile?: NutritionProfile | null;
+  nutrition_equivalent?: NutritionEquivalent | null;
+  density?: IngredientDensity | null;
   measurements: RecipeMeasurement[];
 };
 
@@ -160,6 +175,7 @@ export type RecipeRecord = {
   rest_time_minutes: number | null;
   total_time_minutes: number | null;
   notes_markdown: string;
+  nutrition_overrides: NutrientValues;
   version: number;
   created_at: string;
   updated_at: string;
@@ -191,6 +207,111 @@ export type TrashedPublicationRecord = {
 };
 
 export type RecipeSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+type IngredientNutritionSettings = {
+  profile: NutritionProfile | null;
+  equivalent: NutritionEquivalent | null;
+  density: IngredientDensity | null;
+};
+
+async function getIngredientNutritionSettings(
+  supabase: RecipeSupabaseClient,
+  ingredientIds?: string[],
+): Promise<Map<string, IngredientNutritionSettings>> {
+  if (ingredientIds?.length === 0) return new Map();
+  let profilesQuery = supabase
+    .from('ingredient_nutrition_profiles')
+    .select(
+      'ingredient_id, serving_size_amount, serving_size_dimension, serving_size_unit_code, nutrients',
+    );
+  let equivalentsQuery = supabase
+    .from('ingredient_measure_equivalents')
+    .select(
+      'ingredient_id, measurement_type, picklist_value_id, picklist_value, volume_amount, volume_unit_code, weight_amount, weight_unit_code',
+    );
+  let densitiesQuery = supabase
+    .from('ingredient_densities')
+    .select('ingredient_id, volume_amount, volume_unit_code, weight_amount, weight_unit_code');
+  if (ingredientIds) {
+    profilesQuery = profilesQuery.in('ingredient_id', ingredientIds);
+    equivalentsQuery = equivalentsQuery.in('ingredient_id', ingredientIds);
+    densitiesQuery = densitiesQuery.in('ingredient_id', ingredientIds);
+  }
+  const [profilesResult, equivalentsResult, densitiesResult] = await Promise.all([
+    profilesQuery,
+    equivalentsQuery,
+    densitiesQuery,
+  ]);
+  if (profilesResult.error || equivalentsResult.error || densitiesResult.error) {
+    throw new Error('Unable to load ingredient nutrition settings.');
+  }
+
+  const settings = new Map<string, IngredientNutritionSettings>();
+  for (const id of ingredientIds ?? []) {
+    settings.set(id, { profile: null, equivalent: null, density: null });
+  }
+  for (const profile of profilesResult.data ?? []) {
+    settings.set(profile.ingredient_id, {
+      ...(settings.get(profile.ingredient_id) ?? {
+        profile: null,
+        equivalent: null,
+        density: null,
+      }),
+      profile: {
+        servingSize: {
+          amount: Number(profile.serving_size_amount),
+          dimension: profile.serving_size_dimension as NutritionBasis['dimension'],
+          unitCode: profile.serving_size_unit_code,
+        },
+        nutrients: profile.nutrients as NutritionProfile['nutrients'],
+      },
+    });
+  }
+  for (const equivalent of equivalentsResult.data ?? []) {
+    settings.set(equivalent.ingredient_id, {
+      ...(settings.get(equivalent.ingredient_id) ?? {
+        profile: null,
+        equivalent: null,
+        density: null,
+      }),
+      equivalent: {
+        measurementType: equivalent.measurement_type as NutritionEquivalent['measurementType'],
+        picklistValueId: equivalent.picklist_value_id,
+        picklistValue: equivalent.picklist_value,
+        volume:
+          equivalent.volume_amount === null
+            ? null
+            : {
+                amount: Number(equivalent.volume_amount),
+                unitCode: equivalent.volume_unit_code,
+              },
+        weight:
+          equivalent.weight_amount === null
+            ? null
+            : {
+                amount: Number(equivalent.weight_amount),
+                unitCode: equivalent.weight_unit_code,
+              },
+      },
+    });
+  }
+  for (const density of densitiesResult.data ?? []) {
+    settings.set(density.ingredient_id, {
+      ...(settings.get(density.ingredient_id) ?? {
+        profile: null,
+        equivalent: null,
+        density: null,
+      }),
+      density: {
+        volumeAmount: Number(density.volume_amount),
+        volumeUnitCode: density.volume_unit_code,
+        weightAmount: Number(density.weight_amount),
+        weightUnitCode: density.weight_unit_code,
+      },
+    });
+  }
+  return settings;
+}
 
 export async function getPublications(
   supabase: RecipeSupabaseClient,
@@ -229,32 +350,22 @@ export async function getRecipePicklists(
 }
 
 export async function getIngredients(supabase: RecipeSupabaseClient): Promise<IngredientOption[]> {
-  const [ingredientsResult, densitiesResult] = await Promise.all([
+  const [ingredientsResult, nutritionSettings] = await Promise.all([
     supabase.from('ingredients').select('id, name').order('name'),
-    supabase
-      .from('ingredient_densities')
-      .select('ingredient_id, volume_amount, volume_unit_code, weight_amount, weight_unit_code'),
+    getIngredientNutritionSettings(supabase),
   ]);
 
-  if (ingredientsResult.error || densitiesResult.error) {
+  if (ingredientsResult.error) {
     throw new Error('Unable to load ingredients.');
   }
 
-  const densitiesByIngredient = new Map(
-    (densitiesResult.data ?? []).map((density) => [density.ingredient_id, density]),
-  );
   return (ingredientsResult.data ?? []).map((ingredient) => {
-    const density = densitiesByIngredient.get(ingredient.id);
+    const settings = nutritionSettings.get(ingredient.id);
     return {
       ...ingredient,
-      density: density
-        ? {
-            volumeAmount: Number(density.volume_amount),
-            volumeUnitCode: density.volume_unit_code,
-            weightAmount: Number(density.weight_amount),
-            weightUnitCode: density.weight_unit_code,
-          }
-        : null,
+      density: settings?.density ?? null,
+      nutritionProfile: settings?.profile ?? null,
+      nutritionEquivalent: settings?.equivalent ?? null,
     };
   });
 }
@@ -306,7 +417,7 @@ export async function getRecipe(
   const { data, error } = await supabase
     .from('recipes')
     .select(
-      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, version, created_at, updated_at',
+      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, nutrition_overrides, version, created_at, updated_at',
     )
     .eq('id', recipeId)
     .is('trashed_at', null)
@@ -377,7 +488,7 @@ export async function getRecipe(
   const { data: recipeIngredients, error: recipeIngredientsError } = await supabase
     .from('recipe_ingredients')
     .select(
-      'id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation, portion_one_ratio, size_value, size_unit',
+      'id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation, portion_one_ratio, size_value, size_unit, nutrition_serving_size_override, nutrition_overrides',
     )
     .eq('recipe_id', recipeId)
     .order('position');
@@ -430,19 +541,21 @@ export async function getRecipe(
   const ingredientIds = [...new Set((recipeIngredients ?? []).map((row) => row.ingredient_id))];
   const recipeIngredientIds = (recipeIngredients ?? []).map((row) => row.id);
   let ingredientNames = new Map<string, string>();
+  let nutritionSettings = new Map<string, IngredientNutritionSettings>();
   if (ingredientIds.length > 0) {
-    const { data: canonicalIngredients, error: ingredientsError } = await supabase
-      .from('ingredients')
-      .select('id, name')
-      .in('id', ingredientIds);
+    const [canonicalResult, nutritionResult] = await Promise.all([
+      supabase.from('ingredients').select('id, name').in('id', ingredientIds),
+      getIngredientNutritionSettings(supabase, ingredientIds),
+    ]);
 
-    if (ingredientsError) {
+    if (canonicalResult.error) {
       throw new Error('Unable to load this recipe.');
     }
 
     ingredientNames = new Map(
-      (canonicalIngredients ?? []).map((ingredient) => [ingredient.id, ingredient.name]),
+      (canonicalResult.data ?? []).map((ingredient) => [ingredient.id, ingredient.name]),
     );
+    nutritionSettings = nutritionResult;
   }
 
   let recipeMeasurements: RecipeMeasurementRecord[] = [];
@@ -503,6 +616,7 @@ export async function getRecipe(
 
   return {
     ...data,
+    nutrition_overrides: (data.nutrition_overrides ?? {}) as NutrientValues,
     publication,
     meal_type_ids: idsFor('meal_type'),
     cuisine_ids: idsFor('cuisine'),
@@ -512,6 +626,11 @@ export async function getRecipe(
     ingredients: (recipeIngredients ?? []).map((row) => ({
       ...row,
       ingredient_name: ingredientNames.get(row.ingredient_id) ?? '',
+      nutrition_serving_size_override: row.nutrition_serving_size_override as NutritionBasis | null,
+      nutrition_overrides: (row.nutrition_overrides ?? {}) as NutritionFieldOverrides,
+      nutrition_profile: nutritionSettings.get(row.ingredient_id)?.profile ?? null,
+      nutrition_equivalent: nutritionSettings.get(row.ingredient_id)?.equivalent ?? null,
+      density: nutritionSettings.get(row.ingredient_id)?.density ?? null,
       measurements: measurementsByIngredient.get(row.id) ?? [],
     })),
     steps: (recipeSteps ?? []) as RecipeInstructionStep[],
@@ -539,6 +658,7 @@ export async function getRecipe(
 export async function getRecipeExplorerColumnValues(
   supabase: RecipeSupabaseClient,
   recipeIds: string[],
+  includeNutrition = false,
 ): Promise<Map<string, Record<string, string | null>>> {
   if (recipeIds.length === 0) return new Map();
 
@@ -549,6 +669,7 @@ export async function getRecipeExplorerColumnValues(
     tagsResult,
     pairingsResult,
     citationsResult,
+    nutritionResult,
   ] = await Promise.all([
     supabase
       .from('recipes')
@@ -578,6 +699,9 @@ export async function getRecipeExplorerColumnValues(
       .in('recipe_id', recipeIds)
       .eq('reference_type', 'printed_citation')
       .order('position'),
+    includeNutrition
+      ? supabase.rpc('recipe_explorer_nutrition', { p_recipe_ids: recipeIds })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (
@@ -586,11 +710,20 @@ export async function getRecipeExplorerColumnValues(
     assignmentsResult.error ||
     tagsResult.error ||
     pairingsResult.error ||
-    citationsResult.error
+    citationsResult.error ||
+    nutritionResult.error
   ) {
     throw new Error('Unable to load recipe list details.');
   }
 
+  const nutritionValuesByRecipe = new Map(
+    (
+      (nutritionResult.data ?? []) as {
+        recipe_id: string;
+        nutrition_values: Partial<Record<(typeof STANDARD_NUTRIENT_KEYS)[number], number>>;
+      }[]
+    ).map(({ recipe_id, nutrition_values }) => [recipe_id, nutrition_values]),
+  );
   const mainIngredients = ingredientsResult.data ?? [];
   const tagAssignments = tagsResult.data ?? [];
   const ingredientIds = [...new Set(mainIngredients.map(({ ingredient_id }) => ingredient_id))];
@@ -688,6 +821,8 @@ export async function getRecipeExplorerColumnValues(
   }
 
   const optionalValue = (value: number | null) => (value === null ? null : String(value));
+  const sortedDisplayValues = (values: string[] | undefined) =>
+    [...(values ?? [])].sort((left, right) => left.localeCompare(right)).join(', ') || null;
   return new Map(
     recipes.map((recipe) => {
       const assignments = assignmentsByRecipe.get(recipe.id);
@@ -719,11 +854,11 @@ export async function getRecipeExplorerColumnValues(
           recipe.makes_quantity !== null && recipe.makes_thing !== null
             ? `${recipe.makes_quantity} ${recipe.makes_thing}`
             : null,
-        equipment: assignments?.get('equipment')?.join(', ') ?? null,
+        equipment: sortedDisplayValues(assignments?.get('equipment')),
         food_type: recipe.food_type_id ? (picklistById.get(recipe.food_type_id) ?? null) : null,
-        meal_type: assignments?.get('meal_type')?.join(', ') ?? null,
-        cuisine: assignments?.get('cuisine')?.join(', ') ?? null,
-        tags: tagsByRecipe.get(recipe.id)?.join(', ') ?? null,
+        meal_type: sortedDisplayValues(assignments?.get('meal_type')),
+        cuisine: sortedDisplayValues(assignments?.get('cuisine')),
+        tags: sortedDisplayValues(tagsByRecipe.get(recipe.id)),
         main_ingredients: ingredientsByRecipe.get(recipe.id)?.join(', ') ?? null,
         prep_time_minutes: optionalValue(recipe.prep_time_minutes),
         mixing_time_minutes: optionalValue(recipe.mixing_time_minutes),
@@ -743,6 +878,11 @@ export async function getRecipeExplorerColumnValues(
         pairs_with: pairingsByRecipe.get(recipe.id)?.join(', ') ?? null,
         opinion,
       };
+      const nutritionValues = nutritionValuesByRecipe.get(recipe.id);
+      for (const key of STANDARD_NUTRIENT_KEYS) {
+        const value = nutritionValues?.[key];
+        values[key] = typeof value === 'number' ? String(value) : null;
+      }
       return [recipe.id, values];
     }),
   );

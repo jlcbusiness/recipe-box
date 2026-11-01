@@ -38,9 +38,9 @@ security without prematurely creating recipe or other domain tables.
 | ------ | -------------- |
 | Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
-| Ingredient | A canonical account-owned ingredient and optional trusted density. |
+| Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
-| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, measurements, optional two-portion ratio, and optional cubed Size. |
+| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, measurements, optional two-portion ratio, optional cubed Size, an optional recipe-only nutrition serving-size basis, and per-field nutrition overrides with their serving-size basis. |
 | Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to one recipe ingredient row and optionally one of its two portions. |
@@ -54,6 +54,9 @@ security without prematurely creating recipe or other domain tables.
 | Account | The account record linked to the sign-in identity; it owns private data, volume, weight, and temperature display-system defaults, print preferences, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. A recipe photo has a unique, persisted two-digit reference code within its recipe; covers have no code. |
+| Recipe nutrition | Per-whole-recipe manual nutrient overrides; absent fields remain derived from ingredient rows. |
+| Ingredient nutrition profile | One canonical-ingredient Settings record with a Volume or Weight serving-size basis, required Calories, optional core and approved micronutrients. |
+| Ingredient measure equivalent | One explicit average Volume and/or Weight for a quantity of one Count or one selected Things unit on a canonical ingredient. |
 | History event | An append-only forensic record of a saved change. |
 
 Publications retain `created_at` and `updated_at` timestamps. `updated_at`
@@ -90,6 +93,33 @@ columns.
   value.
 - Main ingredients are derived from recipe-ingredient flags, not duplicated
   recipe metadata.
+- Ingredient nutrition profiles and measure equivalents belong to the
+  canonical ingredient. A profile has one positive scalar Volume or Weight
+  basis and requires Calories; values are finite and nonnegative, with blank
+  distinct from zero. A measure equivalent maps exactly one Count or one
+  selected Things unit to one or both physical dimensions and is never inferred
+  for other ingredients or units.
+- Recipe-ingredient nutrition overrides are per nutrient and retain the exact
+  basis on which each manual value was entered. A row can inherit the current
+  Settings serving-size basis or own a recipe-only basis; the latter also
+  permits complete recipe-row nutrition when no Settings profile exists. A
+  Settings basis change marks affected inherited-basis overrides stale until
+  edited or explicitly accepted as-is; stale values prevent automatic recipe
+  calculation.
+- Recipe-level nutrition stores only manual whole-recipe nutrient overrides.
+  Calculated fields are derived from ingredient rows. A null/absent field
+  releases it to calculation; zero is an explicit value.
+- Automatic nutrition counts each populated recipe ingredient row once,
+  including independent rows in different ingredient sets. When both Volume
+  and Weight are present, use only the dimension matching the nutrition basis.
+  Convert between dimensions only through the ingredient's trusted density;
+  Count and Things require that ingredient's explicit equivalent. Ranges,
+  Feel, and unsupported or missing amounts are not calculable.
+- Recipe nutrition is per-serving presentation derived by dividing full
+  recipe totals by positive `Serves`. If Serves is absent, per-serving
+  nutrition is not displayed. Public recipe projections may expose only the
+  resulting recipe-level values, never Settings profiles, row overrides, or
+  equivalents.
 - Makes is an optional recipe-level pair: a positive integer quantity and
   non-empty authored thing text. Both are present or absent together; reader
   scaling changes only the displayed quantity.
@@ -166,12 +196,19 @@ columns.
 Volume and weight units are fixed recognized definitions. Count has no unit.
 Things units and Feel phrases are account-managed configuration. Their storage
 categories remain `informal_unit` and `unmeasured_phrase`.
-Ingredients, food types,
-meal types, cuisines, equipment, verdicts, enthusiasm options, and tags are
-account-managed.
+Ingredients, food types, meal types, cuisines, equipment, verdicts, enthusiasm
+options, tags, ingredient nutrition profiles, and ingredient measure
+equivalents are account-managed.
 
 Trusted density belongs to the canonical ingredient, not a recipe row. The first
 release permits one trusted density per ingredient.
+
+DLC 12 adds one optional nutrition profile and one optional Count-or-Things
+measure equivalent per canonical ingredient. Recipe ingredient overrides keep
+their own basis and stale acknowledgement; recipe-level overrides are
+whole-recipe totals. These records participate in owner-scoped RLS, catalog
+revision/history, recipe version/history, Trash/restore, bundles, and
+offline snapshots as defined by the [DLC 12 brief](slices/dlc/dlc-12-recipe-nutrition.md).
 
 Slice 13 stores `volume_system` and `weight_system` on Account as non-null
 `us_customary` or `metric` values, both defaulting to `us_customary`. Existing

@@ -55,7 +55,7 @@
   gap: 0;
   box-sizing: border-box;
   width: max-content;
-  min-width: 100%;
+  min-width: min(100%, 320px, calc(100vw - 24px));
   max-width: min(320px, calc(100vw - 24px));
   max-height: min(58vh, 320px);
   overflow: auto;
@@ -75,6 +75,12 @@
 .filterGroup .option {
   min-height: 36px;
   font-size: 16px;
+}
+
+.filterGroup .option > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .filterGroup .check {
@@ -235,6 +241,7 @@
   .filterGroup .menu {
     right: 0;
     left: auto;
+    max-height: min(45vh, 280px);
   }
 
   .option {

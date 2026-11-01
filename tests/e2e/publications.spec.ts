@@ -464,7 +464,7 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     const expectViewAfterSortDirection = async () => {
       if ((page.viewportSize()?.width ?? 1024) <= 720) return;
       const controlBounds = await page
-        .locator('.publication-explorer-toolbar > .publication-explorer-control')
+        .locator('.publication-explorer-toolbar .publication-explorer-control')
         .evaluateAll((controls) =>
           controls.map((control) => {
             const bounds = control.getBoundingClientRect();
@@ -642,7 +642,7 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
     await expect(page.locator('.publication-explorer-mobile-list')).toBeVisible();
     await expect(page.locator('.publication-explorer-table')).toBeHidden();
     const mobileControlRows = await page
-      .locator('.publication-explorer-toolbar > .publication-explorer-control')
+      .locator('.publication-explorer-toolbar .publication-explorer-control')
       .evaluateAll((controls) => controls.map((control) => control.getBoundingClientRect().y));
     expect(mobileControlRows.every((row) => row === mobileControlRows[0])).toBe(true);
     const triggerSizes = await page
@@ -878,6 +878,18 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
         containerScrollWidth: element.scrollWidth,
         tableWidth: table?.clientWidth,
         tableScrollWidth: table?.scrollWidth,
+        tableGridColumns: table ? getComputedStyle(table).gridTemplateColumns : null,
+        tablePaddingLeft: table ? getComputedStyle(table).paddingLeft : null,
+        rows: Array.from(table?.querySelectorAll('tr') ?? []).map((row) => ({
+          width: row.getBoundingClientRect().width,
+          scrollWidth: (row as HTMLElement).scrollWidth,
+          paddingLeft: getComputedStyle(row).paddingLeft,
+          gridTemplateColumns: getComputedStyle(row).gridTemplateColumns,
+          cells: Array.from(row.querySelectorAll('th, td')).map((cell) => ({
+            width: cell.getBoundingClientRect().width,
+            paddingLeft: getComputedStyle(cell).paddingLeft,
+          })),
+        })),
         columns: Array.from(table?.querySelectorAll('thead th') ?? []).map((header) => ({
           label: header.textContent,
           width: header.getBoundingClientRect().width,
@@ -1275,7 +1287,7 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     await expect(page.getByRole('link', { name: 'Roasted tomato soup' })).toBeVisible();
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      'name state visibility',
+      'name state visibility score starred hearted',
     );
     await page.getByRole('button', { name: 'Choose List columns' }).click();
     const requiredNameOption = page.locator('.explorer-list-preferences-required');
@@ -1305,7 +1317,13 @@ test('an owner can create a publication, assign a recipe, and return it to the R
         'URL',
         'State',
         'Visibility',
+        'Rtg',
+        'Star',
+        'Heart',
       ]);
+      await expect(
+        page.locator('.publication-recipe-list thead th[data-explorer-column="score"] abbr'),
+      ).toHaveAttribute('title', 'Rating');
     }
     await page.getByRole('button', { name: 'Reset columns' }).click();
     await expect(urlColumn).not.toBeChecked();
@@ -1316,6 +1334,9 @@ test('an owner can create a publication, assign a recipe, and return it to the R
         'Name',
         'State',
         'Visibility',
+        'Rtg',
+        'Star',
+        'Heart',
       ]);
     }
     await urlColumn.check();
@@ -1345,9 +1366,26 @@ test('an owner can create a publication, assign a recipe, and return it to the R
         'font-weight',
         '400',
       );
+      const publicationScrollMetrics = await publicationScroll.evaluate((element) => {
+        const table = element.querySelector('table');
+        return {
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+          tableWidth: table?.getBoundingClientRect().width ?? null,
+          tableScrollWidth: table?.scrollWidth ?? null,
+          rows: Array.from(table?.rows ?? []).map((row) => ({
+            scrollWidth: row.scrollWidth,
+            width: row.getBoundingClientRect().width,
+          })),
+        };
+      });
       expect(
-        await publicationScroll.evaluate((element) => element.scrollWidth <= element.clientWidth),
+        publicationScrollMetrics.scrollWidth > publicationScrollMetrics.clientWidth,
+        JSON.stringify(publicationScrollMetrics),
       ).toBe(true);
+      await expect(publicationScroll).toHaveCSS('overflow-x', 'auto');
+      await expect(page.locator('.recipe-list-scroll-hint')).toBeVisible();
+      await expectNoHorizontalOverflow(page);
     }
     const mobilePublicationRow = page.locator('.publication-recipe-list tbody tr').first();
     for (const width of [352, 390]) {
@@ -1356,17 +1394,27 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await expect(mobilePublicationRow).toHaveCSS('display', 'flex');
       await expect(mobilePublicationRow).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
       await expect(mobilePublicationRow).toHaveCSS('flex-wrap', 'wrap');
-      await expect(mobilePublicationRow.locator('[data-label="Name"]')).toHaveCSS(
-        'flex-basis',
-        '100%',
-      );
-      await expect(mobilePublicationRow.locator('[data-label]:visible')).toHaveCount(4);
+      const mobileNameBounds = await mobilePublicationRow
+        .locator('[data-explorer-column="name"]')
+        .boundingBox();
+      const mobileStateBounds = await mobilePublicationRow
+        .locator('[data-explorer-column="state"]')
+        .boundingBox();
+      expect(mobileNameBounds).not.toBeNull();
+      expect(mobileStateBounds).not.toBeNull();
+      if (!mobileNameBounds || !mobileStateBounds) {
+        throw new Error('The publication recipe title and state must be visible on mobile.');
+      }
+      expect(mobileNameBounds.y + mobileNameBounds.height).toBeLessThanOrEqual(mobileStateBounds.y);
+      expect(mobileNameBounds.width).toBeGreaterThan(mobileStateBounds.width);
+      await expect(mobilePublicationRow.locator('[data-label]:visible')).toHaveCount(5);
+      await expect(mobilePublicationRow.locator('[data-label="Rating"]')).toBeVisible();
       await expect(mobilePublicationRow.locator('[data-label="Publication"]')).toHaveCount(0);
-      await expect(mobilePublicationRow.locator('[data-label="Name"] a')).toHaveCSS(
+      await expect(mobilePublicationRow.locator('[data-explorer-column="name"] a')).toHaveCSS(
         'font-weight',
         '400',
       );
-      await expect(mobilePublicationRow.locator('[data-label="State"]')).toBeVisible();
+      await expect(mobilePublicationRow.locator('[data-explorer-column="state"]')).toBeVisible();
       await expect(mobilePublicationRow.locator('[data-label="Visibility"]')).toBeVisible();
       await expect(mobilePublicationRow.locator('[data-label="URL"]')).toBeVisible();
       await expect(mobilePublicationRow.locator('[data-label="Total Time"]')).toBeHidden();

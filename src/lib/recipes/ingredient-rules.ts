@@ -9,6 +9,7 @@ import {
   volumeUnits,
   weightUnits,
 } from './measurement-rules';
+import type { NutritionBasis, NutritionFieldOverrides } from './nutrition-rules';
 
 export type IngredientRowDraft = {
   id: string;
@@ -24,6 +25,8 @@ export type IngredientRowDraft = {
   portionMeasurementType?: MeasurementType;
   sizeValue?: string;
   sizeUnit?: string;
+  nutritionServingSizeOverride?: NutritionBasis | null;
+  nutritionOverrides?: NutritionFieldOverrides;
 };
 
 export type IngredientRowPayload = {
@@ -37,6 +40,8 @@ export type IngredientRowPayload = {
   portion_one_ratio: number | null;
   size_value: number | null;
   size_unit: 'in' | 'cm' | null;
+  nutrition_serving_size_override: NutritionBasis | null;
+  nutrition_overrides: NutritionFieldOverrides;
   measurements: MeasurementPayload[];
 };
 
@@ -510,6 +515,8 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
       portion_one_ratio: portionOneRatio,
       size_value: sizeValue ? Number(sizeValue) : null,
       size_unit: sizeUnit ? (sizeUnit as 'in' | 'cm') : null,
+      nutrition_serving_size_override: row.nutritionServingSizeOverride ?? null,
+      nutrition_overrides: row.nutritionOverrides ?? {},
       measurements,
     });
   }

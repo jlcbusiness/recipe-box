@@ -1,9 +1,32 @@
+import { STANDARD_NUTRIENT_FIELDS, STANDARD_NUTRIENT_KEYS } from './recipes/nutrition-rules';
+
 export type ExplorerFilter = {
   field: string;
   operator: string;
   value?: string | number | (string | number)[];
   value_to?: string | number;
 };
+
+const queryColumnAliases: Record<string, string> = {
+  main_ingredient: 'main_ingredients',
+  main_ingredient_text: 'main_ingredients',
+  publication_id: 'publication',
+};
+
+export function getQueryAutoSelectColumns(
+  filters: readonly ExplorerFilter[],
+  columns: readonly ExplorerColumnDefinition[],
+): string[] {
+  const allowedColumns = new Set(columns.map(({ key }) => key));
+  return [
+    ...new Set(
+      filters.flatMap(({ field }) => {
+        const key = queryColumnAliases[field] ?? field;
+        return allowedColumns.has(key) ? [key] : [];
+      }),
+    ),
+  ];
+}
 
 export type ExplorerStateContext =
   | 'recipes-find'
@@ -34,7 +57,7 @@ const nameColumn: ExplorerColumnDefinition = {
 };
 
 const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
-  { key: 'publication', label: 'Publication', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'publication', label: 'Publication', defaultVisible: false, minWidth: 152, maxWidth: 600 },
   {
     key: 'publication_page',
     label: 'Page',
@@ -44,7 +67,7 @@ const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
   },
   { key: 'recipe_url', label: 'URL', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   { key: 'state', label: 'State', defaultVisible: false, minWidth: 96, maxWidth: 600 },
-  { key: 'visibility', label: 'Visibility', defaultVisible: false, minWidth: 96, maxWidth: 600 },
+  { key: 'visibility', label: 'Visibility', defaultVisible: false, minWidth: 136, maxWidth: 600 },
   {
     key: 'occasion_details',
     label: 'Occasion Details',
@@ -53,7 +76,7 @@ const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
     maxWidth: 600,
   },
   { key: 'serves', label: 'Serves', defaultVisible: false, minWidth: 96, maxWidth: 600 },
-  { key: 'makes', label: 'Makes', defaultVisible: false, minWidth: 120, maxWidth: 600 },
+  { key: 'makes', label: 'Makes', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   { key: 'equipment', label: 'Equipment', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   { key: 'food_type', label: 'Food Type', defaultVisible: false, minWidth: 96, maxWidth: 600 },
   { key: 'meal_type', label: 'Meal Type', defaultVisible: false, minWidth: 96, maxWidth: 600 },
@@ -63,9 +86,16 @@ const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
     key: 'main_ingredients',
     label: 'Main Ingredients',
     defaultVisible: false,
-    minWidth: 96,
+    minWidth: 152,
     maxWidth: 600,
   },
+  ...STANDARD_NUTRIENT_FIELDS.map(({ key, label, unit }) => ({
+    key,
+    label: unit ? `${label} (${unit})` : label,
+    defaultVisible: false,
+    minWidth: 88,
+    maxWidth: 160,
+  })),
   {
     key: 'prep_time_minutes',
     label: 'Prep Time',
@@ -268,10 +298,7 @@ export type ExplorerState = {
   type?: 'all' | 'book' | 'magazine' | 'site';
 };
 
-const recipeSortKeys = new Set([
-  'relevance',
-  ...defaultRecipeColumnOrder.filter((key) => key !== 'starred' && key !== 'hearted'),
-]);
+const recipeSortKeys = new Set(['relevance', ...defaultRecipeColumnOrder]);
 const publicationSortKeys = new Set([
   'relevance',
   'name',
@@ -292,6 +319,7 @@ const recipeFilterFields = new Set([
   'recipe_url',
   'citation',
   'ingredient',
+  'main_ingredient',
   'state',
   'visibility',
   'food_type',
@@ -318,6 +346,7 @@ const recipeFilterFields = new Set([
   'hearted',
   'created_at',
   'updated_at',
+  ...STANDARD_NUTRIENT_KEYS,
 ]);
 const publicationFilterFields = new Set([
   'name',
@@ -352,28 +381,9 @@ const filterOperators = new Set([
   'at_most',
   'between',
 ]);
-const recipeFinderColumnFilterFields = new Set([
-  'name',
-  'publication',
-  'state',
-  'visibility',
-  'total_time_minutes',
-  'publication_page',
-  'recipe_url',
-  'citation',
-  'publication_source',
-]);
+const recipeFinderColumnFilterFields = new Set([...defaultRecipeColumnOrder, 'publication_source']);
 const publicationRecipeColumnFilterFields = new Set([
-  'name',
-  'state',
-  'visibility',
-  'total_time_minutes',
-  'opinion',
-  'meal_type',
-  'food_type',
-  'publication_page',
-  'recipe_url',
-  'citation',
+  ...defaultRecipeColumnOrder.filter((key) => key !== 'publication'),
   'publication_source',
 ]);
 const stateKeys = new Set([

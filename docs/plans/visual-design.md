@@ -23,6 +23,8 @@
     - [Design contract](#design-contract)
   - [Trusted Densities (Slice 15)](#trusted-densities-slice-15)
     - [Settings and editor behavior](#settings-and-editor-behavior)
+  - [Nutrition (DLC 12)](#nutrition-dlc-12)
+    - [Settings and recipe editor behavior](#settings-and-recipe-editor-behavior)
   - [Data Management, Export, and Import (Slices 20 and 21B)](#data-management-export-and-import-slices-20-and-21b)
   - [Desktop](#desktop)
     - [Current implementation](#current-implementation-3)
@@ -229,8 +231,8 @@ with an ellipsis before the stamps, with at least 8px of trailing space after
 the rightmost stamp. In simple List rows, show a Rating as its number only while
 retaining a visually hidden “Rating” label for assistive technology. Keep the
 title link shrinkable and truncate it before the non-shrinking score and marker
-group, without horizontal page overflow. Center Rating values in mobile Details
-cells as well as within desktop column tracks.
+group, without horizontal page overflow. In mobile Details, show Rating only
+beside the title-side markers; do not duplicate it in a metadata cell.
 On narrow desktop recipe details, let the featured image shrink only as needed
 to keep the action bar within the available heading width.
 Recipe detail follows the edit-form order but uses a distinct view
@@ -395,7 +397,8 @@ ingredient field uses a compact icon-only submit button, not a duplicate text
 button. When a search has no match, it offers to add the searched text with
 trailing whitespace removed. Successful changes show a right-aligned status.
 
-Ingredient names support inline rename and compact Merge and Delete actions.
+Ingredient names support inline rename and compact Nutrition, Measure
+equivalent (measuring-cup icon), Merge, and Delete actions.
 The Merge pane follows the recipe picklist pane's warm autumn-orange design.
 It requires a counterpart and an explicit `Keep as` choice for either
 ingredient; changing the counterpart clears that choice. Before a counterpart
@@ -427,8 +430,9 @@ the text readable. A **Turn off all emphasis** checkbox sits below the
 color rows; checking it sets all three categories to None, and unchecking it
 restores their default blue, red, and orange colors. The print-only omission
 choices are grouped under **Print options** in a column beside Instruction
-emphasis on desktop and stack below it on narrower screens. Both are off by
-default and leave the private on-screen reader unchanged.
+emphasis on desktop, with both headings aligned at the top, and stack below it
+on narrower screens. Both are off by default and leave the private on-screen
+reader unchanged.
 
 Tags use a separate full-width, unframed Settings section after Ingredient
 catalog. It is collapsed by default, uses the same left-side disclosure chevron
@@ -462,7 +466,7 @@ stays within its content width and remains operable without horizontal overflow.
 
 ### Settings and editor behavior
 
-Trusted densities is a separate full-width Settings disclosure after Tags,
+Trusted densities is a separate full-width Settings disclosure after Ingredients and before Tags,
 collapsed by default, with matching disclosure spacing and no divider.
 Configured densities appear in a searchable, alphabetized
 table with understated alternating rows and a scroll limit of about eight
@@ -498,6 +502,114 @@ ingredient and equation; inline amount/unit groups reflow without page-level
 horizontal overflow. The mobile recipe row popover uses the same derivation
 behavior and accessible status.
 
+## Nutrition (DLC 12)
+
+### Settings and recipe editor behavior
+
+The Ingredient catalog keeps its existing searchable list and row actions.
+Each ingredient adds a compact Nutrition icon action and a separately named
+Measure equivalents action. The existing inline Settings manager pattern is a
+good precedent for search, staged drafts, focus return, and recoverable errors;
+nutrition uses one shared, viewport-bounded pane rather than expanding into a
+field wall on the catalog page.
+
+The shared Nutrition pane is titled with the Nutrition icon and the
+ingredient or recipe name on one truncating line. Its body reads like a US
+Nutrition Facts label: a bold **Nutrition Facts** heading, serving size, a
+thick rule, large Calories, macronutrients with indented sub-items and bold
+primary rows, another thick rule, and vitamins/minerals. Each row is label
+left, compact right-aligned input and unit right. It uses fixed labels and
+units, no arbitrary field names, one app picklist of serving units grouped
+by Volume and Weight, and an **Add vitamin/mineral** app picklist. Added
+optional nutrients have a hover `x` right-aligned in the label area (always
+shown on touch devices). A secondary **Zero Empty Fields** button sits in the
+footer beside **Clear** and fills visible blank nutrients with user-entered
+zeroes; it is disabled when nothing is blank. On narrow screens the footer
+wraps to Clear and Zero Empty Fields above right-aligned Cancel and Save.
+Native selects are not used. Save, Cancel, and Clear have distinct meanings
+and labels. Escape, outside click, and the top-right
+close action cancel staged edits. A Settings Save commits immediately; a
+recipe-ingredient Save stages field overrides in the recipe draft until Save
+recipe. A recipe-level Save likewise stages whole-recipe overrides.
+The recipe-level pane shows values per serving, requires positive Serves, and
+scales manual edits back to whole-recipe totals when saved.
+
+Auto-populated (Settings-derived or calculated) values are subtly tinted,
+show the leaf calculator icon at the left inside the field (as density-derived
+amounts do); nutrient fields fit three digits 3px from the icon and widen as
+the value grows, and have an accessible
+“from ingredient Settings” name; a legend explains the tint. User overrides are uncolored. When the
+Settings serving-size basis changes, affected manual recipe-ingredient values
+are stale: show a pale red field, a “serving changed” tag, and an explanatory recipe-level
+status. Saving unchanged stale values opens a **Serving changed** modal
+confirmation over the pane, using the shared confirmation dialog, with
+**Cancel**, filled **Keep stale**, and filled **Update as-is** buttons.
+Escape, backdrop click, or Cancel returns to the pane. Neither choice silently changes
+the user-entered amount. Editing a stale field uses the current Settings basis.
+
+Ingredient rows show the same Nutrition action in desktop and mobile editing.
+On desktop it occupies its own narrow column between Specifics and Amount, with
+1mm side padding, the button centered, and the Nutrition icon as the column
+header (labeled "Nutrition" for assistive technology). Tab order follows the
+visual order: Specifics, Nutrition, then the Amount controls.
+Its status is green only when the row has a calculable serving basis and a
+value (including 0) for every standard label nutrient, red when nutrition data
+exists but any standard field is blank or the basis cannot be matched, and
+unlit when no profile exists. On desktop, green and red icons stay visible;
+unlit icons appear on row hover or focus. Always pair color with accessible
+text. The recipe Nutrition section sits below Ingredients, uses the same
+italic sans-serif single-string presentation as the detail view, and has a
+Nutrition-icon **Edit** action.
+
+In the recipe-level Nutrition pane, each calculated nutrient's calculator
+control reveals a compact ingredient breakdown on hover or keyboard focus.
+Use aligned Ingredient, Listed, Multiplier, and Total columns; Escape closes
+the breakdown without closing the pane.
+
+In private and public detail, **Nutrition Per Serving** appears after Notes
+only when positive Serves and values are available. On desktop (761px and
+wider) Notes and Nutrition Per Serving share one row under a single divider:
+Nutrition takes a left column up to 340px wide and Notes takes the flexible
+right column. On mobile they stack, Notes first. Without Notes, Nutrition
+stands alone at the same width. Text is italic sans-serif in the
+DM Sans body font (never the serif heading face), and is one compact string in label order: ` | ` between major
+sections, ` ~ ` between minor groups, ` - ` between items in a group, and no
+space between amounts and units. On screen, detail replaces the string with
+a Nutrition Facts-style list at every width: Calories large and bold
+between heavy rules, a right-aligned `% Daily Value` header, each nutrient on
+its own thin-ruled row with its label followed by its amount and its %DV
+right-aligned, label indentation and bold for macronutrients, and a heavy rule
+before vitamins/minerals. The recipe editor's Nutrition section keeps the
+string on desktop and uses the list at 640px or narrower. Print and downloads
+always use the compact string. An estimate label explains
+that these are owner-entered/calculated estimates. Public output receives only
+the recipe-level result. Print places the same section after Notes and keeps it
+with the instruction content during pagination; offline snapshots preserve the
+same read-only presentation.
+
+The pane is horizontally centered, at least 4mm below the viewport top, at
+most 480px wide, and scrolls internally with a sticky title and action bar.
+The Measure equivalent pane uses the same placement at most 460px wide. Its
+title is the measuring-cup icon plus the ingredient name (truncated, not
+wrapped), with an italic muted "Average measures" subtitle on the next line
+(no extra gap). Title icons in both panes are sized in em so browser text scaling keeps
+them proportional to the title. On mobile, the Nutrition pane's "Serving size"
+is a heading on its own line, with the amount and unit together below it.
+Serving fields are left-aligned (on desktop, directly after the "Serving
+size" label). Its unit and measurement choices use the app Picklist, sized to
+the longest option plus 1mm, and its amount fields are three digits wide.
+Initial focus goes to the Recipe measurement picklist. Both panes use a thin
+internal scrollbar.
+Pane width is measured from the visible viewport, excluding any classic page
+scrollbar. On mobile it uses that width less a small margin, inputs narrow so
+no field leaves the screen, nutrient labels wrap only between words (the
+`required` hint drops below the label when needed), footer actions retain 48px touch targets, and the
+pane remains within the visual viewport. In mobile ingredient lists, section
+headings take the space they need on one line and truncate with an ellipsis
+before the move and delete controls. Verify keyboard focus containment/return, Escape and outside
+dismissal, stale confirmation, visible status, and non-overflow at representative
+widths.
+
 ## Data Management, Export, and Import (Slices 20 and 21B)
 
 Settings places a full-width, unframed Data management section after the
@@ -517,10 +629,11 @@ On standard recipe detail, Print & Download and Export use the filled leaf
 treatment with a pale green edge, while Page Settings and Edit use light
 backgrounds with green borders; the Recipe Tin keeps its brown palette.
 Export actions use the supplied square-arrow-out icon.
-On mobile publication detail, Sort, direction, view, and List columns form one
-connected 40px group, with a visible divider between View and List columns.
-Keep the group separated from the publication actions; the disconnected
-controls have equal 8px gaps above 340px and compact uniformly to 4px at 340px
+On mobile publication detail, View, Sort, direction, and List columns form one
+connected 40px group, with a visible divider between the View-and-sort group
+and List columns. Keep the group separated from the publication actions; the
+disconnected controls have equal 8px gaps above 340px and compact uniformly to
+4px at 340px.
 and below, without horizontal overflow.
 
 On desktop, publication Export and Import recipe remain separate actions. On
@@ -1057,6 +1170,10 @@ focus. On mobile, the table header is hidden, the recipe name occupies its own
 first line, and the remaining labeled fields wrap without horizontal page
 scrolling.
 
+Vertically center all Details header contents within their cells, including
+optional columns and headers with filter or sort controls. This does not change
+their horizontal alignment.
+
 Find's Search mode and each publication's recipe list include immediate Star
 and Heart filter controls beside their explorer controls. Query has no quick
 marker filters; it provides staged Starred and Hearted fields instead. Reuse
@@ -1070,18 +1187,76 @@ filters to the left of the view controls on the same row, and keep publication
 filters below the view and column controls. Keep Choose columns attached to the
 view controls and publication actions beside them, without overlap.
 Marker-column headers use the same artwork with screen-reader labels.
+On mobile Details, replace the horizontal per-column filter bar with a field
+picker and Filter button. Offer only filterable columns that are currently
+visible; every visible recipe column is filterable, and changing column
+visibility updates the picker immediately. Show **Clear all** at the opposite
+end of the mobile Details column-filter row; in mobile List/Grid and all
+desktop views, right-align it in the shared result-controls toolbar. Show it
+whenever any filter is active. Use a consistent 40px height for every
+Clear all control. Clearing removes Query, main-ingredient, marker, and
+column-value filters while preserving the Search text, current mode, sort, and
+view; reset pagination. Use a pale-green hover treatment and retain the visible
+gold keyboard-focus outline. In Details view, match the Clear all border color
+to the column picklist border. Desktop header filters remain unchanged. In the
+mobile column-value popover, keep the values
+independently scrollable and place Select all/Deselect all beside Apply in a
+shared footer so both actions fit on short screens.
+
+The shared View-and-sort control group puts View first, then Sort and direction,
+in its visual and keyboard order. Give View the group's left border and outer
+left corners; Details contains only View. Keep Choose List columns attached to
+the group's right edge.
 
 Find's Query mode includes **Starred** and **Hearted** boolean fields. Each uses
 single-value **Is**/**Isn't** operators with **Yes** and **No** choices, and
 query criteria remain visible and editable after submission.
 Query rules stay staged while their values are edited, removed, or cleared.
+Multi-select Value buttons visibly list every selected value, comma-separated,
+and wrap instead of truncating the selection. An empty multi-select Value
+button says **Select**. On mobile, keep Field, Operator, Value, and the
+half-size remove button on one row. Give numeric filters a three-character
+Operator and a Value sized for four digits; give text filters a four-character
+Operator. Abbreviate the selected Operator label to fit, while retaining the
+full label in the option menu and title. Let Field and Value use the remaining
+space,
+leave 1mm between adjacent controls, and keep the remove button vertically
+centered with 1mm clearance after Value. For **Between**, place Through on its
+own row below; numeric Through values also fit four digits. Bound multi-select
+menus to the viewport and scroll long option lists inside the menu.
 Switching between Search and Query clears the criteria from the mode being left
 and refreshes the results without those criteria. The right-aligned **apply**
 button uses italic serif type, submits complete criteria, and is disabled while
-any rule is incomplete. **Clear all** is a matching outlined button with
+any rule is incomplete. Vertically center **Add rule** with the **Clear all**
+and **apply** buttons on desktop and mobile; keep **Don't auto-select columns**
+on its own row below them. **Clear all** is a matching outlined button with
 inverted colors and clears only the staged rules. Enter in a complete rule
 applies the same query, and applying an empty rule set clears the current query
 refinements.
+
+Below the Search field, a left-aligned **Main ingredients only** checkbox
+(18px leaf-accented box, 14px regular label, 44px tap target on mobile) limits
+the text query to recipes whose `Main` ingredient names match it. When the
+search field has text, toggling it reruns the search immediately; otherwise it
+applies on the next search. The option is URL-backed (`main=1`) and carried
+through sort, view, pagination, marker, and column filters, but it is not part
+of remembered explorer state and clears when switching to Query. Query offers a
+matching **Main Ingredient** multi-select field after **Ingredient**, with the
+same **Is**, **Isn't**, **Has**, **Has Any**, and **Doesn't Have** operators.
+It also offers numeric fields for Calories and the other fourteen standard
+label nutrients through Potassium. Filters and sort choices use the rounded
+per-serving estimate; a nutrient becomes a sort choice when its column is
+visible. Optional vitamins and minerals are excluded. The fifteen values are
+optional List columns, hidden by default.
+
+Applying Query automatically shows matching List columns when available,
+unless the user checks **Don't auto-select columns** for that application.
+Keep that checkbox below the shared **Clear all** and **apply** button row.
+Header clicks in Details sort the corresponding column, starting a new sort
+ascending and alternating direction on subsequent clicks; the separate Sort
+and Sort Order controls are omitted in Details. Center Rating, Star, and Heart
+headers horizontally within their visible columns while keeping all headers
+vertically centered.
 
 On desktop, the private recipe-detail toolbar places Star and Heart to the left
 of its share, privacy, print, export, settings, and edit actions. On mobile,
@@ -1120,16 +1295,27 @@ change its filters. The chooser remains available when switching to Grid, but
 only affects List presentation.
 On mobile, keep the chooser within the viewport and allow its options to scroll
 vertically when they exceed the available height.
+On desktop, clamp the chooser to the viewport when it opens or resizes; page
+scrolling moves it with its trigger without changing its horizontal position.
 When the chooser is omitted in List or Grid, keep the View group’s outer
 right border and radius; when it is rendered, retain the divider between View
 and Choose List columns while keeping both groups connected.
 
-On table layouts, drag a visible column divider to resize. Center Rating, Star,
-and Heart values and headers in both axes, accounting for the visible divider
-spacing; retain 64px as Rating's minimum and 56px for each marker column so
-labels, icons, and the resize hit area fit.
-On desktop, table row separators span the full row across column gaps instead
-of breaking at each cell.
+On recipe Details tables, drag a visible column divider to resize. Center
+Rating, Star, and Heart values and headers in both axes, accounting for the
+visible divider spacing; retain 64px as Rating's minimum and 56px for each
+marker column so labels, icons, and the resize hit area fit.
+Set other minimums from the header text and its controls rather than using a
+blanket width: Publication needs 152px for its label and filter control, while
+Visibility needs 136px and Main Ingredients needs 152px for their labels and
+filter controls; Makes needs 96px for its label and sort indicator. Keep every
+column at least its configured minimum. When the recipe table exceeds its
+viewport, scroll horizontally within the table instead of compressing headers
+or values, and show a small italic hint above the table explaining that
+Shift+scroll or a sideways trackpad swipe reveals more columns. Hide the hint
+when the table fits, and keep the page itself from scrolling horizontally. On
+desktop, table row separators span the full row across column gaps instead of
+breaking at each cell.
 Show the
 column-resize cursor at the divider and support mouse, pen, and touch pointer
 input. Use a touch hit area centered on the visible divider. Width changes apply

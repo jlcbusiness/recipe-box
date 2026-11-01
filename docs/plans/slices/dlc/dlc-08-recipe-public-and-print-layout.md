@@ -174,7 +174,8 @@ leaving browser print-dialog overrides available.
   toggles sit below without overlap, confirm usable touch targets and
   accessible naming, and assert no horizontal overflow. Settings tests verify
   the private print choices sit beside Instruction emphasis on desktop and
-  stack below it on narrow screens.
+  stack below it on narrow screens. On desktop, both section headings align at
+  the top.
 - Browser tests cover private Settings choices affecting print only, public
   print matching the visible public page apart from controls, and gallery
   omission in all print outputs. Assert inline instruction images appear or

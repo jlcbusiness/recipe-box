@@ -791,7 +791,10 @@ test('public recipe output actions create standalone files and keep settings tra
     ).toBeVisible();
     await expect(page.locator('.recipe-instruction-list')).toContainText('Fold flour into batter.');
     const outputButton = page.getByRole('button', { name: 'Print & Download' });
-    await expect(outputButton.locator('svg.lucide-printer')).toBeVisible();
+    const isMobileOutput = (page.viewportSize()?.width ?? 1280) <= 640;
+    await expect(
+      outputButton.locator(`svg.lucide-${isMobileOutput ? 'download' : 'printer'}`),
+    ).toBeVisible();
     const settingsButton = page.getByRole('button', { name: 'Page settings' });
     await expect(page.getByRole('button', { name: 'Export recipe' })).toHaveCount(0);
 
@@ -804,7 +807,7 @@ test('public recipe output actions create standalone files and keep settings tra
     await expect(outputButton).toBeFocused();
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const mobileOutputButton = page.getByRole('button', { name: 'Download' });
+    const mobileOutputButton = page.getByRole('button', { name: 'Print & Download' });
     const mobileSettingsButton = page.getByRole('button', { name: 'Page settings' });
     await expect(mobileOutputButton).toHaveAttribute('title', 'Download');
     await expect(mobileOutputButton.locator('svg.lucide-download')).toBeVisible();
@@ -2645,7 +2648,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       await Promise.all([
         longTitle.boundingBox(),
         page.locator('.recipe-detail-title-row').boundingBox(),
-        page.getByRole('button', { name: /^(?:Print & )?Download$/u }).boundingBox(),
+        page.getByRole('button', { name: 'Print & Download' }).boundingBox(),
         page.getByRole('button', { name: 'Page settings' }).boundingBox(),
       ]);
     if (!longTitleBox || !longTitleRowBox || !longTitlePrintBox || !longTitleSettingsBox) {

@@ -3,7 +3,7 @@
 import { Settings2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   defaultExplorerDisplayPreferences,
   type ExplorerColumnDefinition,
@@ -15,6 +15,12 @@ import {
 import { saveExplorerState } from './actions/explorer-state';
 
 type ColumnContext = 'recipes-find' | 'publications' | 'publication-recipes';
+
+const ExplorerVisibleColumnsContext = createContext<readonly string[]>([]);
+
+export function useExplorerVisibleColumns() {
+  return useContext(ExplorerVisibleColumnsContext);
+}
 
 type ActiveColumnDrag = {
   column: string;
@@ -81,7 +87,10 @@ export function ExplorerColumnResizeHandle({ column }: { column: string }) {
 }
 
 export function ExplorerListPreferences({
+  autoSelectColumns = [],
+  autoSelectRequestKey = null,
   context,
+  consumeAutoSelectRequest = false,
   state,
   initialPreferences,
   toolbar,
@@ -91,7 +100,10 @@ export function ExplorerListPreferences({
   showControl = true,
   children,
 }: {
+  autoSelectColumns?: string[];
+  autoSelectRequestKey?: string | null;
   context: ExplorerStateContext;
+  consumeAutoSelectRequest?: boolean;
   state: ExplorerState;
   initialPreferences?: ExplorerDisplayPreferences;
   toolbar?: ReactNode;
@@ -105,7 +117,9 @@ export function ExplorerListPreferences({
     ...column,
     maxWidth: columnMaxWidth(column),
   }));
-  const maximumWidthByColumn = new Map(definitions.map(({ key, maxWidth }) => [key, maxWidth]));
+  const widthBoundsByColumn = new Map(
+    definitions.map(({ key, minWidth, maxWidth }) => [key, { minWidth, maxWidth }]),
+  );
   const router = useRouter();
   const defaultPreferences = defaultExplorerDisplayPreferences(context, definitions);
   const [preferences, setPreferences] = useState(() => initialPreferences ?? defaultPreferences);
@@ -119,11 +133,43 @@ export function ExplorerListPreferences({
   const preferencesRef = useRef(preferences);
   const saveQueueRef = useRef(Promise.resolve());
   const saveSequenceRef = useRef(0);
+  const autoSelectRequestHandledRef = useRef<string | null>(null);
   stateRef.current = state;
   preferencesRef.current = preferences;
 
   useEffect(() => {
     if (!isOpen) return;
+    function positionPopover() {
+      if (window.innerWidth <= 640) return;
+      const trigger = triggerRef.current?.getBoundingClientRect();
+      const popover = popoverRef.current;
+      if (!trigger || !popover) return;
+      const popoverBounds = popover.getBoundingClientRect();
+      if (popoverBounds.left < 8 || popoverBounds.right > window.innerWidth - 8) {
+        const parentBounds = popover.parentElement?.getBoundingClientRect();
+        if (parentBounds) {
+          const left = Math.max(
+            8,
+            Math.min(trigger.left, window.innerWidth - popoverBounds.width - 8),
+          );
+          popover.style.left = `${left - parentBounds.left}px`;
+          popover.style.right = 'auto';
+        }
+      } else {
+        popover.style.left = '';
+        popover.style.right = '';
+      }
+      const maxHeight = Math.min(window.innerHeight * 0.7, 420);
+      const spaceBelow = window.innerHeight - trigger.bottom - 8;
+      const spaceAbove = trigger.top - 8;
+      const opensAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
+      const availableSpace = opensAbove ? spaceAbove : spaceBelow;
+      popover.classList.toggle('opens-above', opensAbove);
+      popover.style.maxHeight = `${Math.max(0, Math.min(maxHeight, availableSpace))}px`;
+    }
+
+    positionPopover();
+    window.addEventListener('resize', positionPopover);
     function closeOnOutsidePointer(event: globalThis.PointerEvent) {
       if (!(event.target instanceof Node)) return;
       if (
@@ -143,6 +189,7 @@ export function ExplorerListPreferences({
     document.addEventListener('pointerdown', closeOnOutsidePointer);
     document.addEventListener('keydown', closeOnEscape);
     return () => {
+      window.removeEventListener('resize', positionPopover);
       document.removeEventListener('pointerdown', closeOnOutsidePointer);
       document.removeEventListener('keydown', closeOnEscape);
     };
@@ -155,52 +202,110 @@ export function ExplorerListPreferences({
   const gridTemplate = displayedDefinitions
     .map(({ key, minWidth, maxWidth }) => {
       const width = preferences.column_widths[key];
-      if (width !== undefined) return `${Math.min(width, maxWidth)}px`;
+      if (width !== undefined) {
+        return `${Math.min(maxWidth, Math.max(minWidth, width))}px`;
+      }
       if (key === 'score' || key === 'starred' || key === 'hearted') {
         return `${minWidth}px`;
       }
-      return key === 'name' ? `minmax(0, min(45%, ${maxWidth}px))` : `fit-content(${maxWidth}px)`;
+      return key === 'name'
+        ? `minmax(${minWidth}px, min(45%, ${maxWidth}px))`
+        : `fit-content(${maxWidth}px)`;
     })
     .join(' ');
   const widthStyles = Object.fromEntries(
-    Object.entries(preferences.column_widths).map(([key, width]) => [
-      `--explorer-column-width-${key}`,
-      `${Math.min(width, maximumWidthByColumn.get(key) ?? width)}px`,
-    ]),
+    Object.entries(preferences.column_widths).map(([key, width]) => {
+      const bounds = widthBoundsByColumn.get(key);
+      const clampedWidth = bounds
+        ? Math.min(bounds.maxWidth, Math.max(bounds.minWidth, width))
+        : width;
+      return [`--explorer-column-width-${key}`, `${clampedWidth}px`];
+    }),
   );
   const wrapperStyle = {
     '--explorer-list-grid-template-columns': gridTemplate,
     ...widthStyles,
   } as CSSProperties;
   const visibleColumnAttribute = displayedDefinitions.map(({ key }) => key).join(' ');
+  const displayedColumnKeys = displayedDefinitions.map(({ key }) => key);
 
-  function updatePreferences(next: ExplorerDisplayPreferences) {
+  const updatePreferences = useCallback((next: ExplorerDisplayPreferences) => {
     preferencesRef.current = next;
     setPreferences(next);
-  }
+  }, []);
 
-  function persistPreferences(next: ExplorerDisplayPreferences, refreshRoute = false) {
-    const sequence = ++saveSequenceRef.current;
-    setSaveError(null);
-    const save = async () => {
-      try {
-        const result = await saveExplorerState(context, {
-          ...stateRef.current,
-          schema_version: 2,
-          display_preferences: next,
-        });
-        if (saveSequenceRef.current === sequence) {
-          setSaveError(result.error ?? null);
-          if (refreshRoute && !result.error) router.refresh();
+  const persistPreferences = useCallback(
+    (next: ExplorerDisplayPreferences, refreshRoute = false, onSuccess?: () => void) => {
+      const sequence = ++saveSequenceRef.current;
+      setSaveError(null);
+      const save = async () => {
+        try {
+          const result = await saveExplorerState(context, {
+            ...stateRef.current,
+            schema_version: 2,
+            display_preferences: next,
+          });
+          if (saveSequenceRef.current === sequence) {
+            setSaveError(result.error ?? null);
+            if (!result.error) {
+              if (refreshRoute) router.refresh();
+              onSuccess?.();
+            }
+          }
+        } catch {
+          if (saveSequenceRef.current === sequence) {
+            setSaveError('Explorer display preferences could not be saved.');
+          }
         }
-      } catch {
-        if (saveSequenceRef.current === sequence) {
-          setSaveError('Explorer display preferences could not be saved.');
-        }
+      };
+      saveQueueRef.current = saveQueueRef.current.then(save, save);
+    },
+    [context, router],
+  );
+
+  useEffect(() => {
+    if (!consumeAutoSelectRequest) {
+      autoSelectRequestHandledRef.current = null;
+      return;
+    }
+    const requestKey = autoSelectRequestKey ?? JSON.stringify(autoSelectColumns);
+    if (autoSelectRequestHandledRef.current === requestKey) return;
+    autoSelectRequestHandledRef.current = requestKey;
+
+    const clearRequest = () => {
+      const url = new URL(window.location.href);
+      if (
+        autoSelectRequestKey !== null &&
+        JSON.stringify(url.searchParams.getAll('filter')) !== autoSelectRequestKey
+      ) {
+        return;
       }
+      url.searchParams.delete('auto_select_columns');
+      url.searchParams.delete('no_auto_select_columns');
+      router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
     };
-    saveQueueRef.current = saveQueueRef.current.then(save, save);
-  }
+    const additions = autoSelectColumns.filter(
+      (column) => !preferencesRef.current.visible_columns.includes(column),
+    );
+    if (additions.length === 0) {
+      clearRequest();
+      return;
+    }
+
+    const next = {
+      ...preferencesRef.current,
+      visible_columns: [...preferencesRef.current.visible_columns, ...additions],
+    };
+    updatePreferences(next);
+    persistPreferences(next, false, clearRequest);
+  }, [
+    autoSelectColumns,
+    autoSelectRequestKey,
+    consumeAutoSelectRequest,
+    persistPreferences,
+    router,
+    updatePreferences,
+  ]);
 
   function changeVisibility(column: string, checked: boolean) {
     const next = {
@@ -236,7 +341,10 @@ export function ExplorerListPreferences({
       column,
       pointerId: event.pointerId,
       startX: event.clientX,
-      startWidth: savedWidth ?? Math.round(header.getBoundingClientRect().width + rowPadding),
+      startWidth:
+        savedWidth !== undefined
+          ? Math.min(definition.maxWidth, Math.max(definition.minWidth, savedWidth))
+          : Math.round(header.getBoundingClientRect().width + rowPadding),
       initialPreferences: preferencesRef.current,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -323,34 +431,36 @@ export function ExplorerListPreferences({
   ) : null;
 
   return (
-    <div
-      className="explorer-list-preferences"
-      data-visible-columns={visibleColumnAttribute}
-      onPointerCancel={handlePointerCancel}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      ref={rootRef}
-      style={wrapperStyle}
-    >
-      {toolbar ? (
-        <div className="explorer-list-preferences-toolbar">
-          <div className="explorer-list-preferences-toolbar-content">{toolbar}</div>
-          {controls}
-          {toolbarTrailing}
-          {toolbarAction}
+    <ExplorerVisibleColumnsContext.Provider value={displayedColumnKeys}>
+      <div
+        className="explorer-list-preferences"
+        data-visible-columns={visibleColumnAttribute}
+        onPointerCancel={handlePointerCancel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        ref={rootRef}
+        style={wrapperStyle}
+      >
+        {toolbar ? (
+          <div className="explorer-list-preferences-toolbar">
+            <div className="explorer-list-preferences-toolbar-content">{toolbar}</div>
+            {controls}
+            {toolbarTrailing}
+            {toolbarAction}
+          </div>
+        ) : (
+          controls
+        )}
+        <div className="explorer-list-preferences-content" style={wrapperStyle}>
+          {children}
         </div>
-      ) : (
-        controls
-      )}
-      <div className="explorer-list-preferences-content" style={wrapperStyle}>
-        {children}
+        {saveError && (
+          <p className="explorer-list-preferences-error" role="alert">
+            {saveError}
+          </p>
+        )}
       </div>
-      {saveError && (
-        <p className="explorer-list-preferences-error" role="alert">
-          {saveError}
-        </p>
-      )}
-    </div>
+    </ExplorerVisibleColumnsContext.Provider>
   );
 }

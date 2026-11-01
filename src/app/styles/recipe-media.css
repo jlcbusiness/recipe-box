@@ -2948,7 +2948,7 @@ section.recipe-detail-section .recipe-relationship-list a {
     grid-template-columns: 36px minmax(36px, 1fr) repeat(4, 36px);
   }
 
-  .recipe-detail-heading-actions > button[aria-label="Copy share link"] {
+  .recipe-detail-heading-actions > .recipe-share-copy-action {
     grid-column: 1;
     grid-row: 1;
     justify-self: center;

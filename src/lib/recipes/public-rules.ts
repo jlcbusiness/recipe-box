@@ -1,4 +1,14 @@
 import type { RecipeIngredientSet, RecipeRecord } from './data';
+import type { NutrientValues } from './nutrition-rules';
+
+type PublicRecipeIngredient = Omit<
+  RecipeRecord['ingredients'][number],
+  | 'nutrition_serving_size_override'
+  | 'nutrition_overrides'
+  | 'nutrition_profile'
+  | 'nutrition_equivalent'
+  | 'density'
+>;
 
 export type PublicRecipeSource = {
   name: string;
@@ -18,8 +28,9 @@ export type PublicRecipeSource = {
   publication_page: string | null;
   publication: { name: string } | null;
   ingredient_sets: RecipeIngredientSet[];
-  ingredients: RecipeRecord['ingredients'];
+  ingredients: PublicRecipeIngredient[];
   steps: RecipeRecord['steps'];
+  nutrition_per_serving?: NutrientValues | null;
   pairings: Array<Pick<RecipeRecord['pairings'][number], 'display_text'>>;
   references: Array<
     Pick<RecipeRecord['references'][number], 'reference_type' | 'display_text' | 'url'>
@@ -50,8 +61,9 @@ export type PublicRecipePayload = {
   };
   equipment: string[];
   ingredient_sets: RecipeIngredientSet[];
-  ingredients: RecipeRecord['ingredients'];
+  ingredients: PublicRecipeIngredient[];
   steps: Array<Pick<RecipeRecord['steps'][number], 'position' | 'content_markdown'>>;
+  nutrition_per_serving: NutrientValues | null;
   attribution: { publication_name: string; page: string | null } | null;
   pairings: string[];
   references: PublicRecipeReference[];
@@ -187,6 +199,7 @@ export function buildPublicRecipePayload(
         photoIds,
       ),
     })),
+    nutrition_per_serving: recipe.nutrition_per_serving ?? null,
     attribution: recipe.publication
       ? {
           publication_name: recipe.publication.name,

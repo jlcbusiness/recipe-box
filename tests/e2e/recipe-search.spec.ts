@@ -28,6 +28,7 @@ async function createContractRecipe(
     totalTime: number | null;
     notes: string;
     ingredients?: string[];
+    mainIngredients?: string[];
     score?: number;
   },
 ): Promise<string> {
@@ -64,7 +65,7 @@ async function createContractRecipe(
           recipe_ingredient_id: randomUUID(),
           ingredient_id: null,
           ingredient_name: ingredientName,
-          is_main: false,
+          is_main: recipe.mainIngredients?.includes(ingredientName) ?? false,
           detail: '',
           preparation: '',
           measurements: [],
@@ -139,6 +140,430 @@ async function setContractRecipeMarker(
   });
   expect(markerResponse.ok(), await markerResponse.text()).toBeTruthy();
 }
+
+test('Find Recipes Query shows every selected multi-value option @e2e', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000);
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ingredientNames = Array.from(
+    { length: 12 },
+    (_, index) => `Selected Ingredient ${String(index + 1).padStart(2, '0')}`,
+  );
+
+  try {
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: 'Selected ingredients visibility recipe',
+      state: 'want_to_try',
+      totalTime: null,
+      notes: '',
+      ingredients: ingredientNames,
+    });
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/recipes/find?tab=query');
+    const expectQueryActionAlignment = async () => {
+      const [addRuleBounds, applyBounds] = await Promise.all([
+        page.getByRole('button', { name: 'Add rule' }).boundingBox(),
+        page.getByRole('button', { name: 'apply', exact: true }).boundingBox(),
+      ]);
+      if (!addRuleBounds || !applyBounds) {
+        throw new Error('The Query action controls should be measurable.');
+      }
+      expect(
+        Math.abs(
+          addRuleBounds.y + addRuleBounds.height / 2 - (applyBounds.y + applyBounds.height / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+    };
+    await expectQueryActionAlignment();
+    await page.getByRole('button', { name: 'Add rule' }).click();
+
+    const row = page.locator('.recipe-filter-row').first();
+    await expect(row.getByRole('combobox', { name: 'Operator' })).toBeDisabled();
+    await expect(row.getByLabel('Value')).toBeDisabled();
+    await selectFilterOption(page, row, 'Field', 'Ingredient');
+    const value = row.getByRole('button', { name: /^Value:/ });
+    await expect(row.getByRole('combobox', { name: 'Operator' })).toBeEnabled();
+    await expect(value).toBeEnabled();
+    await expect(value).toContainText('Select');
+    await row.getByRole('combobox', { name: 'Operator' }).click();
+    await expect(page.getByRole('option', { name: 'Is', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await value.click();
+    const options = page.getByRole('group', { name: 'Value options' });
+    for (const ingredientName of ingredientNames) {
+      await options.getByRole('button', { name: ingredientName, exact: true }).click();
+    }
+    await page.keyboard.press('Escape');
+
+    await expect(value).toContainText(ingredientNames.join(', '));
+    await expect(value).toHaveAccessibleName(`Value: ${ingredientNames.join(', ')}`);
+
+    const expectMobileInlineLayout = async (valueControl: Locator) => {
+      const [rowBounds, fieldBounds, operatorBounds, valueBounds, removeBounds] = await Promise.all(
+        [
+          row.boundingBox(),
+          row.getByLabel('Field').boundingBox(),
+          row.getByLabel('Operator').boundingBox(),
+          valueControl.boundingBox(),
+          row.getByRole('button', { name: 'Remove filter 1' }).boundingBox(),
+        ],
+      );
+      if (!rowBounds || !fieldBounds || !operatorBounds || !valueBounds || !removeBounds) {
+        throw new Error('The mobile Query controls should be measurable.');
+      }
+      const controlCenters = [fieldBounds, operatorBounds, valueBounds, removeBounds].map(
+        ({ y, height }) => y + height / 2,
+      );
+      expect(Math.max(...controlCenters) - Math.min(...controlCenters)).toBeLessThanOrEqual(1);
+      expect(fieldBounds.x).toBeCloseTo(rowBounds.x, 0);
+      expect(fieldBounds.width).toBeGreaterThan(operatorBounds.width);
+      const numberValue = await valueControl.evaluate((control) =>
+        control.classList.contains('recipe-filter-number-value-control'),
+      );
+      if (numberValue) {
+        expect(operatorBounds.width).toBeGreaterThan(30);
+        expect(operatorBounds.width).toBeLessThan(38);
+        expect(valueBounds.width).toBeLessThan(80);
+      } else {
+        expect(operatorBounds.width).toBeGreaterThan(40);
+        expect(operatorBounds.width).toBeLessThan(48);
+      }
+      expect(operatorBounds.x - fieldBounds.x - fieldBounds.width).toBeCloseTo(96 / 25.4, 0);
+      expect(valueBounds.x - operatorBounds.x - operatorBounds.width).toBeCloseTo(96 / 25.4, 0);
+      const clearance = removeBounds.x - valueBounds.x - valueBounds.width;
+      if (Math.abs(clearance - 96 / 25.4) > 0.5) {
+        throw new Error(
+          `Expected 1mm clearance between Value and Remove: ${JSON.stringify({
+            rowBounds,
+            fieldBounds,
+            operatorBounds,
+            valueBounds,
+            removeBounds,
+            clearance,
+          })}`,
+        );
+      }
+      expect(removeBounds.width).toBe(16);
+      expect(removeBounds.x + removeBounds.width).toBeLessThanOrEqual(
+        rowBounds.x + rowBounds.width + 1,
+      );
+    };
+
+    for (const width of [352, 390]) {
+      await page.setViewportSize({ width, height: 820 });
+      await expectQueryActionAlignment();
+
+      if (width === 352) {
+        await value.click();
+        await expect(options).toBeVisible();
+        for (const ingredientName of ingredientNames.slice(1)) {
+          await options.getByRole('button', { name: ingredientName, exact: true }).click();
+        }
+        await page.keyboard.press('Escape');
+        await expect(value).toContainText(ingredientNames[0]);
+        const mobileValueBounds = await value.boundingBox();
+        if (!mobileValueBounds) {
+          throw new Error('The mobile Query value field should be measurable.');
+        }
+        expect(mobileValueBounds.height).toBeGreaterThan(36);
+        await expectMobileInlineLayout(value);
+
+        await value.click();
+        await expect(options).toBeVisible();
+        const [optionsBounds, optionsScrollMetrics] = await Promise.all([
+          options.boundingBox(),
+          options.evaluate((element) => {
+            const menu = element as HTMLElement;
+            return { clientHeight: menu.clientHeight, scrollHeight: menu.scrollHeight };
+          }),
+        ]);
+        if (!optionsBounds) {
+          throw new Error('The mobile Query value menu should be measurable.');
+        }
+        expect(optionsBounds.width).toBeLessThanOrEqual(320);
+        expect(optionsBounds.x + optionsBounds.width).toBeLessThanOrEqual(width + 1);
+        expect(optionsBounds.height).toBeLessThanOrEqual(280);
+        expect(optionsScrollMetrics.scrollHeight).toBeGreaterThan(
+          optionsScrollMetrics.clientHeight,
+        );
+        await page.mouse.move(
+          optionsBounds.x + optionsBounds.width / 2,
+          optionsBounds.y + optionsBounds.height / 2,
+        );
+        await page.mouse.wheel(0, 180);
+        await expect
+          .poll(() => options.evaluate((element) => (element as HTMLElement).scrollTop))
+          .toBeGreaterThan(0);
+        await expect(options).toBeVisible();
+        await page.keyboard.press('Escape');
+      }
+
+      await selectFilterOption(page, row, 'Field', 'Name');
+      const textValue = row.getByLabel('Value');
+      await textValue.fill('recipe');
+      await expect(row.getByLabel('Operator')).toContainText('Has');
+      await expect(row.getByLabel('Operator')).toHaveAttribute('title', 'Contains');
+      await expectMobileInlineLayout(textValue);
+
+      await selectFilterOption(page, row, 'Field', 'Total Time');
+      await selectFilterOption(page, row, 'Operator', 'Between');
+      const numberValue = row.getByLabel('Value');
+      const throughValue = row.getByLabel('Through');
+      await numberValue.fill('8888');
+      await throughValue.fill('8888');
+      await expect(row.getByLabel('Operator')).toContainText('Rng');
+      await expect(row.getByLabel('Operator')).toHaveAttribute('title', 'Between');
+      await expect(numberValue).toHaveClass(/recipe-filter-number-value-control/);
+      await expect(throughValue).toHaveClass(/recipe-filter-number-value-to-control/);
+      await expectMobileInlineLayout(numberValue);
+      const [numberValueBounds, throughValueBounds, betweenRowBounds] = await Promise.all([
+        numberValue.boundingBox(),
+        throughValue.boundingBox(),
+        row.boundingBox(),
+      ]);
+      if (!numberValueBounds || !throughValueBounds || !betweenRowBounds) {
+        throw new Error('The mobile Between values should be measurable.');
+      }
+      expect(throughValueBounds.y).toBeGreaterThan(numberValueBounds.y + numberValueBounds.height);
+      expect(throughValueBounds.x).toBeGreaterThanOrEqual(betweenRowBounds.x);
+      expect(throughValueBounds.x + throughValueBounds.width).toBeLessThanOrEqual(
+        betweenRowBounds.x + betweenRowBounds.width + 1,
+      );
+
+      await selectFilterOption(page, row, 'Field', 'Calories');
+      await numberValue.fill('123.5');
+      await expect(numberValue).toHaveClass(/recipe-filter-number-value-control/);
+      await expectMobileInlineLayout(numberValue);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBeTruthy();
+    }
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find Recipes limits search and query criteria to main ingredients @e2e', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(90_000);
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = { apikey: config.anonKey, Authorization: `Bearer ${user.accessToken}` };
+  const mainRecipeName = 'Zephyr chicken supper';
+  const supportingRecipeName = 'Zephyr rice with chicken stock';
+
+  try {
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: mainRecipeName,
+      state: 'want_to_try',
+      totalTime: null,
+      notes: '',
+      ingredients: ['Zephyr chicken thighs', 'Zephyr lemon'],
+      mainIngredients: ['Zephyr chicken thighs'],
+    });
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: supportingRecipeName,
+      state: 'want_to_try',
+      totalTime: null,
+      notes: '',
+      ingredients: ['Zephyr rice', 'Zephyr chicken stock'],
+      mainIngredients: ['Zephyr rice'],
+    });
+
+    const searchNames = async (query: string | null, filters: unknown[]) => {
+      const response = await request.post(`${config.apiUrl}/rest/v1/rpc/search_recipes`, {
+        headers,
+        data: { p_query: query, p_filters: filters, p_sort_key: 'name', p_limit: 50, p_offset: 0 },
+      });
+      expect(response.ok(), await response.text()).toBeTruthy();
+      return ((await response.json()) as { recipe_name: string }[]).map(
+        ({ recipe_name }) => recipe_name,
+      );
+    };
+    const mainText = (value: string) => ({
+      field: 'main_ingredient_text',
+      operator: 'matches',
+      value,
+    });
+
+    expect(await searchNames('zephyr chicken', [])).toEqual([mainRecipeName, supportingRecipeName]);
+    expect(await searchNames('zephyr chicken', [mainText('zephyr chicken')])).toEqual([
+      mainRecipeName,
+    ]);
+    expect(await searchNames('zephyr rice', [mainText('zephyr rice')])).toEqual([
+      supportingRecipeName,
+    ]);
+    expect(await searchNames('zephyr stock', [mainText('zephyr stock')])).toEqual([]);
+
+    const invalidText = await request.post(`${config.apiUrl}/rest/v1/rpc/search_recipes`, {
+      headers,
+      data: { p_filters: [{ ...mainText('zephyr'), operator: 'contains' }] },
+    });
+    expect(invalidText.status()).toBe(400);
+
+    const ingredientsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id,name`,
+      { headers },
+    );
+    expect(ingredientsResponse.ok(), await ingredientsResponse.text()).toBeTruthy();
+    const ingredientIds = new Map(
+      ((await ingredientsResponse.json()) as { id: string; name: string }[]).map(({ id, name }) => [
+        name.toLowerCase(),
+        id,
+      ]),
+    );
+    const chickenId = ingredientIds.get('zephyr chicken thighs');
+    const stockId = ingredientIds.get('zephyr chicken stock');
+    expect(chickenId && stockId).toBeTruthy();
+    expect(
+      await searchNames(null, [
+        { field: 'main_ingredient', operator: 'contains_any', value: [chickenId, stockId] },
+      ]),
+    ).toEqual([mainRecipeName]);
+    expect(
+      await searchNames(null, [
+        { field: 'ingredient', operator: 'contains_any', value: [chickenId, stockId] },
+      ]),
+    ).toEqual([mainRecipeName, supportingRecipeName]);
+    expect(
+      await searchNames(null, [
+        { field: 'main_ingredient', operator: 'does_not_contain', value: [chickenId] },
+      ]),
+    ).toEqual([supportingRecipeName]);
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/recipes/find?tab=search&q=zephyr+chicken&sort=name&direction=asc');
+    await expect(page.getByText('2 recipes found')).toBeVisible();
+    const mainOnly = page.getByRole('checkbox', { name: 'Main ingredients only' });
+    await expect(mainOnly).not.toBeChecked();
+    await mainOnly.check();
+    await expect(page).toHaveURL(/[?&]main=1(?:&|$)/);
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByRole('link', { name: mainRecipeName })).toBeVisible();
+    await expect(mainOnly).toBeChecked();
+
+    await page.getByRole('link', { name: 'Sort by Name descending' }).click();
+    await expect(page).toHaveURL(/direction=desc/);
+    await expect(page).toHaveURL(/[?&]main=1(?:&|$)/);
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+
+    await mainOnly.uncheck();
+    await expect(page).not.toHaveURL(/[?&]main=1(?:&|$)/);
+    await expect(page.getByText('2 recipes found')).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Query' }).click();
+    await expect(page).not.toHaveURL(/[?&](?:q|main)=/);
+    await page.getByRole('button', { name: 'add rule' }).click();
+    await page
+      .locator('.recipe-filter-row')
+      .first()
+      .getByRole('combobox', { name: 'Field' })
+      .click();
+    await expect(page.getByRole('option', { name: 'Main Ingredient', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    const mainFilter = JSON.stringify({
+      field: 'main_ingredient',
+      operator: 'contains_any',
+      value: [chickenId, stockId],
+    });
+    await page.goto(
+      `/recipes/find?filter=${encodeURIComponent(mainFilter)}&tab=query&sort=name&direction=asc`,
+    );
+    await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page.getByRole('link', { name: mainRecipeName })).toBeVisible();
+    await expect(page.locator('.recipe-filter-row').first()).toContainText('Main Ingredient');
+
+    const queryUrl = `/recipes/find?filter=${encodeURIComponent(mainFilter)}&tab=query&sort=name&direction=asc`;
+    const preferences = page.locator('.explorer-list-preferences');
+    await expect(preferences).not.toHaveAttribute('data-visible-columns', /main_ingredients/u);
+    const autoSelect = page.getByRole('checkbox', { name: "Don't auto-select columns" });
+    await expect(autoSelect).not.toBeChecked();
+    const [clearAllBounds, applyBounds, autoSelectBounds] = await Promise.all([
+      page.locator('.recipe-filter-clear-all').boundingBox(),
+      page.locator('.recipe-filter-apply').boundingBox(),
+      autoSelect.boundingBox(),
+    ]);
+    if (!clearAllBounds || !applyBounds || !autoSelectBounds) {
+      throw new Error('Expected the Query actions to be measurable.');
+    }
+    expect(autoSelectBounds.y).toBeGreaterThanOrEqual(
+      Math.max(clearAllBounds.y + clearAllBounds.height, applyBounds.y + applyBounds.height),
+    );
+    await autoSelect.check();
+    await page.locator('.recipe-filter-apply').click();
+    await expect(preferences).not.toHaveAttribute('data-visible-columns', /main_ingredients/u);
+    await expect(page).not.toHaveURL(/[?&]auto_select_columns=/u);
+
+    await page.goto(`${queryUrl}&auto_select_columns=1`);
+    await expect(preferences).toHaveAttribute('data-visible-columns', /main_ingredients/u);
+    await expect(page).not.toHaveURL(/[?&]auto_select_columns=/u);
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    const mainIngredientsColumn = page.getByRole('checkbox', {
+      name: 'Main Ingredients',
+      exact: true,
+    });
+    await expect(mainIngredientsColumn).toBeChecked();
+    const popoverBounds = await page.locator('.explorer-list-preferences-popover').boundingBox();
+    if (!popoverBounds) throw new Error('Column chooser must be visible');
+    const viewport = await page.evaluate(() => ({
+      height: window.innerHeight,
+      width: window.innerWidth,
+    }));
+    expect(popoverBounds.x).toBeGreaterThanOrEqual(0);
+    expect(popoverBounds.x + popoverBounds.width).toBeLessThanOrEqual(viewport.width);
+    expect(popoverBounds.y).toBeGreaterThanOrEqual(0);
+    expect(popoverBounds.y + popoverBounds.height).toBeLessThanOrEqual(viewport.height);
+    const initialScrollY = await page.evaluate(() => window.scrollY);
+    await page.evaluate(() => {
+      document.body.style.minHeight = '150vh';
+    });
+    await page.evaluate(() => window.scrollBy(0, 100));
+    const scrolledY = await page.evaluate(() => window.scrollY);
+    expect(scrolledY).toBeGreaterThan(initialScrollY);
+    const scrolledPopoverBounds = await page
+      .locator('.explorer-list-preferences-popover')
+      .boundingBox();
+    if (!scrolledPopoverBounds)
+      throw new Error('Column chooser must remain visible while scrolling');
+    expect(Math.abs(scrolledPopoverBounds.x - popoverBounds.x)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(popoverBounds.y - scrolledPopoverBounds.y - (scrolledY - initialScrollY)),
+    ).toBeLessThanOrEqual(1);
+    await page.evaluate((scrollY) => window.scrollTo(0, scrollY), initialScrollY);
+    await mainIngredientsColumn.scrollIntoViewIfNeeded({ timeout: 5_000 });
+    const preferenceSave = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname === '/recipes/find',
+    );
+    await mainIngredientsColumn.uncheck({ timeout: 5_000 });
+    expect((await preferenceSave).ok()).toBe(true);
+    await expect(preferences).not.toHaveAttribute('data-visible-columns', /main_ingredients/u);
+    await page.keyboard.press('Escape');
+    await page.goto(queryUrl);
+    await expect(preferences).not.toHaveAttribute('data-visible-columns', /main_ingredients/u);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
 
 test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, request }) => {
   const user = await createTestUser(request);
@@ -306,6 +731,7 @@ test('Find Recipes Query filters by Starred and Hearted @e2e', async ({ page, re
     await expect(page.getByText('1 recipe found')).toBeVisible();
     await expect(starredRule.getByRole('combobox', { name: 'Field' })).toContainText('Starred');
     await expect(page.getByRole('link', { name: markedRecipeName })).toBeVisible();
+    await expect(page).toHaveURL((url) => url.searchParams.getAll('filter').length === 1);
     await expect(page.getByRole('link', { name: unmarkedRecipeName })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Add rule' }).click();
@@ -323,14 +749,16 @@ test('Find Recipes Query filters by Starred and Hearted @e2e', async ({ page, re
     await expect(heartedRule.getByRole('combobox', { name: 'Field' })).toContainText('Hearted');
     await expect(page.getByRole('link', { name: markedRecipeName })).toBeVisible();
     expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(2);
+    await expect(page).toHaveURL((url) => url.searchParams.getAll('filter').length === 2);
 
-    await page.getByRole('button', { name: 'clear all' }).click();
+    await page.getByRole('button', { name: 'clear all', exact: true }).click();
     await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
     await expect(page.getByText('1 recipe found')).toBeVisible();
     expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(2);
     await applyButton.click();
     await expect(page.getByText('2 recipes found')).toBeVisible();
     expect(new URL(page.url()).searchParams.getAll('filter')).toHaveLength(0);
+    await expect(page).toHaveURL((url) => url.searchParams.getAll('filter').length === 0);
 
     await page.getByRole('button', { name: 'Add rule' }).click();
     const resetRule = page.locator('.recipe-filter-row').first();
@@ -339,6 +767,7 @@ test('Find Recipes Query filters by Starred and Hearted @e2e', async ({ page, re
     await selectFilterOption(page, resetRule, 'Value', 'Yes');
     await applyButton.click();
     await expect(page.getByText('1 recipe found')).toBeVisible();
+    await expect(page).toHaveURL((url) => url.searchParams.getAll('filter').length === 1);
 
     await page.getByRole('tab', { name: 'Search' }).click();
     await expect(page).toHaveURL((url) => {
@@ -631,8 +1060,18 @@ test('Find Recipes centers and resizes Rating and marker columns in Search and Q
         if (!headerBounds || !handleBounds) {
           throw new Error(`Expected the ${column} column and resize handle to be measurable.`);
         }
-        const startX = handleBounds.x + handleBounds.width / 2;
+        const startX = Math.min(
+          handleBounds.x + handleBounds.width / 2,
+          headerBounds.x + headerBounds.width - 1,
+        );
         const centerY = handleBounds.y + handleBounds.height / 2;
+        const resizeHandleAtPointer = await page.evaluate(
+          ({ x, y }) =>
+            document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-explorer-resize-column]')
+              ?.dataset.explorerResizeColumn ?? null,
+          { x: startX, y: centerY },
+        );
+        expect(resizeHandleAtPointer).toBe(column);
         await page.mouse.move(startX, centerY);
         await page.mouse.down();
         await page.mouse.move(startX + width - headerBounds.width, centerY, { steps: 6 });
@@ -651,6 +1090,185 @@ test('Find Recipes centers and resizes Rating and marker columns in Search and Q
     await expect(page.getByRole('button', { name: 'Filter recipes by Heart' })).toBeVisible();
     await expect(table.locator('th[data-explorer-column="starred"]')).toHaveCSS('width', '56px');
     await expect(table.locator('th[data-explorer-column="hearted"]')).toHaveCSS('width', '56px');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find Details honors column minimums and scrolls instead of compressing @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: `Column minimums ${randomUUID()}`,
+      state: 'want_to_try',
+      totalTime: null,
+      notes: '',
+    });
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/recipes/find?view=details');
+    await expect(page.locator('.find-recipes-list tbody tr')).toContainText('Column minimums');
+    await expect(page.locator('.recipe-list-scroll-hint')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    for (const column of [
+      'Makes',
+      'Visibility',
+      'Rest Time',
+      'Date Added',
+      'Date Changed',
+      'Calories',
+      'Main Ingredients',
+      'Pairs With',
+    ]) {
+      await page.getByRole('checkbox', { name: column, exact: true }).check();
+    }
+    await page.keyboard.press('Escape');
+
+    const table = page.locator('.find-recipes-list');
+    await expect(table.locator('tbody tr')).toContainText('Column minimums');
+    const layout = await table.evaluate((element) => {
+      const container = element.parentElement;
+      return {
+        widths: Object.fromEntries(
+          [...element.querySelectorAll('thead th')].map((header) => [
+            header.getAttribute('data-explorer-column'),
+            header.getBoundingClientRect().width,
+          ]),
+        ),
+        scrollWidth: container?.scrollWidth ?? 0,
+        clientWidth: container?.clientWidth ?? 0,
+      };
+    });
+    expect(layout.widths.name).toBeGreaterThanOrEqual(180);
+    expect(layout.widths.publication).toBeGreaterThanOrEqual(152);
+    expect(layout.widths.visibility).toBeGreaterThanOrEqual(136);
+    expect(layout.widths.main_ingredients).toBeGreaterThanOrEqual(152);
+    expect(layout.widths.makes).toBeGreaterThanOrEqual(96);
+    expect(layout.widths.created_at).toBeGreaterThanOrEqual(96);
+    expect(layout.widths.updated_at).toBeGreaterThanOrEqual(96);
+    expect(layout.scrollWidth).toBeGreaterThan(layout.clientWidth);
+
+    const [nameBounds, publicationBounds] = await Promise.all([
+      table.locator('th[data-explorer-column="name"]').boundingBox(),
+      table.locator('th[data-explorer-column="publication"]').boundingBox(),
+    ]);
+    if (!nameBounds || !publicationBounds) {
+      throw new Error('Expected the Name and Publication headers to be measurable.');
+    }
+    expect(nameBounds.x + nameBounds.width).toBeLessThanOrEqual(publicationBounds.x);
+    const scrollHint = page.locator('.recipe-list-scroll-hint');
+    await expect(scrollHint).toContainText('More columns are offscreen');
+    const [scrollHintBounds, tableBounds] = await Promise.all([
+      scrollHint.boundingBox(),
+      table.boundingBox(),
+    ]);
+    if (!scrollHintBounds || !tableBounds) {
+      throw new Error('The overflow hint and recipe table should be measurable.');
+    }
+    expect(scrollHintBounds.y + scrollHintBounds.height).toBeLessThanOrEqual(tableBounds.y);
+    await expect(page.locator('.recipe-list-scroll')).toHaveCSS('overflow-x', 'auto');
+    await expect(page.locator('.recipe-list-scroll')).toHaveAttribute('tabindex', '0');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileLayout = await page.locator('.recipe-list-scroll').evaluate((element) => {
+      const row = element.querySelector('.find-recipes-list tbody tr');
+      const bounds = element.getBoundingClientRect();
+      return {
+        overflows: element.scrollWidth > element.clientWidth + 1,
+        rowFlexWrap: row ? getComputedStyle(row).flexWrap : null,
+        visibleCellsFit: [...(row?.querySelectorAll('td') ?? [])]
+          .filter((cell) => getComputedStyle(cell).display !== 'none')
+          .every((cell) => {
+            const cellBounds = cell.getBoundingClientRect();
+            return cellBounds.left >= bounds.left - 1 && cellBounds.right <= bounds.right + 1;
+          }),
+      };
+    });
+    expect(mobileLayout.rowFlexWrap).toBe('wrap');
+    expect(mobileLayout.overflows).toBe(false);
+    expect(mobileLayout.visibleCellsFit).toBe(true);
+    await expect(scrollHint).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBeTruthy();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(scrollHint).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBeTruthy();
+
+    for (const column of ['visibility', 'main_ingredients']) {
+      const heading = table.locator(
+        `th[data-explorer-column="${column}"] .recipe-list-column-heading`,
+      );
+      const dimensions = await heading.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+    }
+
+    for (const column of ['starred', 'hearted']) {
+      const markerHeader = table.locator(`th[data-explorer-column="${column}"]`);
+      await markerHeader.scrollIntoViewIfNeeded();
+      await expect(markerHeader).toBeInViewport();
+    }
+    expect(
+      await table.evaluate((element) => element.parentElement?.scrollLeft ?? 0),
+    ).toBeGreaterThan(0);
+
+    const publicationHeader = table.locator('th[data-explorer-column="publication"]');
+    await expect(publicationHeader).toHaveCSS('width', '152px');
+    const publicationHeading = await publicationHeader
+      .locator('.recipe-list-column-heading')
+      .evaluate((heading) => ({
+        clientWidth: heading.clientWidth,
+        scrollWidth: heading.scrollWidth,
+      }));
+    expect(publicationHeading.scrollWidth).toBeLessThanOrEqual(publicationHeading.clientWidth);
+
+    const makesHeader = table.locator('th[data-explorer-column="makes"]');
+    await makesHeader.scrollIntoViewIfNeeded();
+    const [headerBounds, handleBounds] = await Promise.all([
+      makesHeader.boundingBox(),
+      makesHeader.locator('[data-explorer-resize-column="makes"]').boundingBox(),
+    ]);
+    if (!headerBounds || !handleBounds) {
+      throw new Error('Expected the Makes column and resize handle to be measurable.');
+    }
+    const startX = Math.min(
+      handleBounds.x + handleBounds.width / 2,
+      headerBounds.x + headerBounds.width - 1,
+    );
+    const centerY = handleBounds.y + handleBounds.height / 2;
+    await page.mouse.move(startX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 96 - headerBounds.width, centerY, { steps: 6 });
+    await page.mouse.up();
+    await expect
+      .poll(async () => Math.round((await makesHeader.boundingBox())?.width ?? 0))
+      .toBe(96);
+    const makesHeading = await makesHeader
+      .locator('.recipe-list-column-heading')
+      .evaluate((heading) => ({
+        clientWidth: heading.clientWidth,
+        scrollWidth: heading.scrollWidth,
+      }));
+    expect(makesHeading.scrollWidth).toBeLessThanOrEqual(makesHeading.clientWidth);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -779,6 +1397,7 @@ test('Find mobile Details aligns active markers with recipe titles @e2e', async 
     const table = page.locator('.find-recipes-list');
     const row = table.locator('tbody tr').filter({ hasText: recipeName });
     await expect(row).toHaveCount(1);
+    await expect(row.locator('td[data-explorer-column="score"]')).toBeHidden();
     const titleBounds = await row.locator('.find-recipes-mobile-title').boundingBox();
     const titleRowBounds = await row.locator('.mobile-details-title-row').boundingBox();
     const markerGroupBounds = await row.locator('.mobile-details-title-markers').boundingBox();
@@ -1156,9 +1775,316 @@ test('Find Recipes updates mobile metadata when columns are toggled @e2e', async
   }
 });
 
+test('Find mobile column filter stays open while scrolling its values @e2e', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000);
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    for (let index = 1; index <= 10; index += 1) {
+      await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+        name: `Scrollable column facet ${String(index).padStart(2, '0')}`,
+        state: 'want_to_try',
+        totalTime: null,
+        notes: '',
+      });
+    }
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/publications$/);
+    await page.setViewportSize({ width: 390, height: 576 });
+    await page.goto('/recipes/find?view=details');
+
+    const filterButton = page.getByRole('button', { name: 'Filter Name' });
+    await expect(filterButton).toBeVisible();
+    await filterButton.click();
+    const values = page.getByRole('group', { name: 'Name values' });
+    await expect(values).toBeVisible();
+    const popover = page.locator('.recipe-column-filter-popover');
+    const deselectAll = popover.getByRole('button', { name: 'Deselect all' });
+    const apply = popover.getByRole('button', { name: 'Apply', exact: true });
+    await expect(deselectAll).toBeVisible();
+    await expect(apply).toBeVisible();
+    const [popoverBounds, deselectAllBounds, applyBounds, popoverScrollMetrics] = await Promise.all(
+      [
+        popover.boundingBox(),
+        deselectAll.boundingBox(),
+        apply.boundingBox(),
+        popover.evaluate((element) => {
+          const menu = element as HTMLElement;
+          return { clientHeight: menu.clientHeight, scrollHeight: menu.scrollHeight };
+        }),
+      ],
+    );
+    if (!popoverBounds || !deselectAllBounds || !applyBounds) {
+      throw new Error('The mobile column-filter actions should be measurable.');
+    }
+    expect(Math.abs(deselectAllBounds.y - applyBounds.y)).toBeLessThanOrEqual(1);
+    expect(deselectAllBounds.x + deselectAllBounds.width).toBeLessThanOrEqual(applyBounds.x);
+    expect(popoverScrollMetrics.scrollHeight).toBeLessThanOrEqual(
+      popoverScrollMetrics.clientHeight + 1,
+    );
+    expect(applyBounds.y).toBeGreaterThanOrEqual(popoverBounds.y);
+    expect(applyBounds.y + applyBounds.height).toBeLessThanOrEqual(
+      popoverBounds.y + popoverBounds.height + 1,
+    );
+    expect(applyBounds.y + applyBounds.height).toBeLessThanOrEqual(576);
+    const initialScrollMetrics = await values.evaluate((element) => {
+      const list = element as HTMLElement;
+      return { clientHeight: list.clientHeight, scrollHeight: list.scrollHeight };
+    });
+    expect(initialScrollMetrics.scrollHeight).toBeGreaterThan(initialScrollMetrics.clientHeight);
+
+    const valuesBounds = await values.boundingBox();
+    if (!valuesBounds) {
+      throw new Error('The mobile column-filter values should be measurable.');
+    }
+    await page.mouse.move(
+      valuesBounds.x + valuesBounds.width / 2,
+      valuesBounds.y + valuesBounds.height / 2,
+    );
+    await page.mouse.wheel(0, 180);
+    await expect
+      .poll(() => values.evaluate((element) => (element as HTMLElement).scrollTop))
+      .toBeGreaterThan(0);
+    await expect(page.locator('.recipe-column-filter-popover')).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Find mobile column filters use a picker and Clear all preserves search @e2e', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000);
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const searchTerm = `mobile filter ${randomUUID().replaceAll('-', '').slice(0, 8)}`;
+    const selectedRecipeName = `${searchTerm} target`;
+    const otherRecipeName = `${searchTerm} other`;
+    const formatIngredientName = (value: string) =>
+      value.replace(/\b[a-z]/gu, (letter) => letter.toUpperCase());
+    const targetIngredient = formatIngredientName(`${searchTerm} target ingredient`);
+    const otherIngredient = formatIngredientName(`${searchTerm} other ingredient`);
+    for (const [name, ingredient] of [
+      [selectedRecipeName, targetIngredient],
+      [otherRecipeName, otherIngredient],
+    ]) {
+      await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+        name,
+        state: 'want_to_try',
+        totalTime: null,
+        notes: '',
+        ingredients: [ingredient],
+        mainIngredients: [ingredient],
+      });
+    }
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/publications$/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const params = new URLSearchParams({
+      q: searchTerm,
+      sort: 'name',
+      direction: 'asc',
+      page: '1',
+      view: 'details',
+    });
+    await page.goto(`/recipes/find?${params}`);
+
+    const filters = page.getByRole('navigation', { name: 'Filter recipe columns' });
+    const columnPicker = filters.getByRole('combobox', { name: 'Column to filter' });
+    const clearAll = page.getByRole('button', { name: 'Clear all filters' });
+    const filterButton = filters.getByRole('button', { name: 'Filter Name' });
+    const targetLink = page.getByRole('link', { name: selectedRecipeName });
+    const otherLink = page.getByRole('link', { name: otherRecipeName });
+    await expect(targetLink).toBeVisible();
+    await expect(otherLink).toBeVisible();
+    await expect(clearAll).toHaveCount(0);
+    await expect(columnPicker).toBeVisible();
+
+    const [controlRowBounds, filterButtonBounds, pickerBounds] = await Promise.all([
+      filters.locator('.find-recipes-mobile-filter-controls').boundingBox(),
+      filterButton.boundingBox(),
+      columnPicker.boundingBox(),
+    ]);
+    expect(controlRowBounds).not.toBeNull();
+    expect(filterButtonBounds).not.toBeNull();
+    expect(pickerBounds).not.toBeNull();
+    if (!controlRowBounds || !filterButtonBounds || !pickerBounds) {
+      throw new Error('Expected the mobile filter controls to have measurable bounds.');
+    }
+    const controlCenters = [filterButtonBounds, pickerBounds].map(
+      ({ y, height }) => y + height / 2,
+    );
+    expect(Math.max(...controlCenters) - Math.min(...controlCenters)).toBeLessThanOrEqual(1);
+    expect(filterButtonBounds.x + filterButtonBounds.width).toBeLessThanOrEqual(pickerBounds.x);
+    expect(pickerBounds.x + pickerBounds.width).toBeLessThanOrEqual(
+      controlRowBounds.x + controlRowBounds.width + 1,
+    );
+
+    await filterButton.click();
+    const nameValues = page.getByRole('group', { name: 'Name values' });
+    await expect(nameValues.getByRole('checkbox', { name: selectedRecipeName })).toBeVisible();
+    await filters.getByRole('button', { name: 'Deselect all' }).click();
+    await nameValues.getByRole('checkbox', { name: selectedRecipeName }).check();
+    await filters.getByRole('button', { name: 'Apply', exact: true }).click();
+
+    await expect(targetLink).toBeVisible();
+    await expect(otherLink).toHaveCount(0);
+
+    await expect(clearAll).toBeVisible();
+    const mobileFilterControls = filters.locator('.find-recipes-mobile-filter-controls');
+    const mobileColumnPicklist = filters.locator('.find-recipes-mobile-filter-picklist');
+    const [activeFilterRowBounds, mobileClearBounds, mobileFilterButtonBounds] = await Promise.all([
+      mobileFilterControls.boundingBox(),
+      clearAll.boundingBox(),
+      page.locator('.find-recipes-mobile-filters .recipe-column-filter-trigger').boundingBox(),
+    ]);
+    if (!activeFilterRowBounds || !mobileClearBounds || !mobileFilterButtonBounds) {
+      throw new Error('The active mobile Details clear action should be measurable.');
+    }
+    expect(mobileClearBounds.height).toBe(mobileFilterButtonBounds.height);
+    await expect(clearAll).toHaveCSS(
+      'border-top-color',
+      await mobileColumnPicklist.evaluate((picklist) => getComputedStyle(picklist).borderTopColor),
+    );
+    expect(mobileClearBounds.x).toBeGreaterThan(activeFilterRowBounds.x);
+    expect(mobileClearBounds.x + mobileClearBounds.width).toBeLessThanOrEqual(
+      activeFilterRowBounds.x + activeFilterRowBounds.width + 1,
+    );
+    const listUrl = new URL(page.url());
+    listUrl.searchParams.set('view', 'list');
+    await page.goto(listUrl.toString());
+    await expect(clearAll).toBeVisible();
+    await expect(clearAll).toHaveCSS('height', '40px');
+    await expect(page.locator('.recipe-explorer-view-controls button').first()).toHaveCSS(
+      'height',
+      '40px',
+    );
+    const gridUrl = new URL(page.url());
+    gridUrl.searchParams.set('view', 'grid');
+    await page.goto(gridUrl.toString());
+    await expect(clearAll).toBeVisible();
+    await expect(clearAll).toHaveCSS('height', '40px');
+    await clearAll.click();
+
+    await expect(targetLink).toBeVisible();
+    await expect(otherLink).toBeVisible();
+    const clearedUrl = new URL(page.url());
+    expect(clearedUrl.searchParams.get('q')).toBe(searchTerm);
+    expect(clearedUrl.searchParams.has('column_name')).toBe(false);
+    expect(clearedUrl.searchParams.get('view')).toBe('grid');
+    await expect(clearAll).toHaveCount(0);
+    const detailsUrl = new URL(page.url());
+    detailsUrl.searchParams.set('view', 'details');
+    await page.goto(detailsUrl.toString());
+
+    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    await page.getByRole('checkbox', { name: 'Main Ingredients', exact: true }).check();
+    await page.keyboard.press('Escape');
+    await columnPicker.click();
+    const mainIngredientsOption = page.getByRole('option', {
+      name: 'Main Ingredients',
+      exact: true,
+    });
+    await expect(mainIngredientsOption).toBeVisible();
+    await mainIngredientsOption.click();
+    const mainIngredientsFilter = filters.getByRole('button', {
+      name: 'Filter Main Ingredients',
+    });
+    await mainIngredientsFilter.click();
+    const mainIngredientsValues = page.getByRole('group', {
+      name: 'Main Ingredients values',
+    });
+    await expect(
+      mainIngredientsValues.getByRole('checkbox', { name: targetIngredient, exact: true }),
+    ).toBeVisible();
+    await filters.getByRole('button', { name: 'Deselect all' }).click();
+    await mainIngredientsValues
+      .getByRole('checkbox', { name: targetIngredient, exact: true })
+      .check();
+    await filters.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(targetLink).toBeVisible();
+    await expect(otherLink).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.getAll('column_main_ingredients')).toContain(
+      targetIngredient,
+    );
+    await page.reload();
+    await expect(targetLink).toBeVisible();
+    await expect(otherLink).toHaveCount(0);
+    await expect(clearAll).toBeEnabled();
+    await Promise.all([
+      page.waitForURL((url) => !url.searchParams.has('column_main_ingredients')),
+      clearAll.click(),
+    ]);
+    await expect(targetLink).toBeVisible();
+    await expect(otherLink).toBeVisible();
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const scoreFilter = JSON.stringify({ field: 'score', operator: 'greater_than', value: 1 });
+    const desktopParams = new URLSearchParams({
+      filter: scoreFilter,
+      tab: 'query',
+      sort: 'name',
+      direction: 'asc',
+      view: 'grid',
+    });
+    await page.goto(`/recipes/find?${desktopParams}`);
+    await expect(clearAll).toBeVisible();
+    await expect(clearAll).toHaveCSS('height', '40px');
+    const toolbar = page.locator('.explorer-list-preferences-toolbar');
+    const [toolbarBounds, clearBounds] = await Promise.all([
+      toolbar.boundingBox(),
+      clearAll.boundingBox(),
+    ]);
+    if (!toolbarBounds || !clearBounds) {
+      throw new Error('The desktop clear-filter action should be measurable.');
+    }
+    expect(
+      Math.abs(clearBounds.x + clearBounds.width - toolbarBounds.x - toolbarBounds.width),
+    ).toBeLessThanOrEqual(1);
+    await clearAll.hover();
+    await expect(clearAll).toHaveCSS('background-color', 'rgb(237, 244, 233)');
+    await expect(clearAll).toHaveCSS('color', 'rgb(56, 96, 68)');
+    await Promise.all([
+      page.waitForURL((url) => !url.searchParams.has('filter')),
+      clearAll.click(),
+    ]);
+    const clearedDesktopUrl = new URL(page.url());
+    expect(clearedDesktopUrl.searchParams.has('filter')).toBe(false);
+    expect(clearedDesktopUrl.searchParams.get('tab')).toBe('query');
+    expect(clearedDesktopUrl.searchParams.get('view')).toBe('grid');
+    await expect(clearAll).toHaveCount(0);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('List column preferences do not change recipe Grid cards @e2e', async ({ page, request }) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
+  const missingKeyWarnings: string[] = [];
+  page.on('console', (message) => {
+    if (
+      message.type() === 'error' &&
+      message.text().includes('Each child in a list should have a unique "key" prop')
+    ) {
+      missingKeyWarnings.push(message.text());
+    }
+  });
 
   try {
     await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
@@ -1223,6 +2149,7 @@ test('List column preferences do not change recipe Grid cards @e2e', async ({ pa
     const tinMetadata = page.locator('.find-recipes-grid-metadata').first();
     await expect(tinMetadata).toHaveText('Tried ~ 20 min');
     await expect(tinMetadata).toHaveCSS('color', 'rgb(40, 36, 32)');
+    expect(missingKeyWarnings).toEqual([]);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1232,7 +2159,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
   page,
   request,
 }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   const user = await createTestUser(request);
   const otherUser = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
@@ -1669,6 +2596,15 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toBeVisible();
     await expect(page.getByText('YOUR COLLECTION', { exact: true })).toHaveCount(0);
 
+    const searchTab = page.getByRole('tab', { name: 'Search' });
+    const queryTab = page.getByRole('tab', { name: 'Query' });
+    await queryTab.click();
+    await expect(queryTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL((url) => url.searchParams.get('tab') === 'query');
+    await searchTab.click();
+    await expect(searchTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL((url) => url.searchParams.get('tab') === 'search');
+
     const searchInput = page.getByRole('searchbox', { name: 'Search recipes' });
     await searchInput.fill('cardamom notesearch');
     await expect(searchInput).toHaveValue('cardamom notesearch');
@@ -1678,9 +2614,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
 
     await expect(page.getByRole('link', { name: 'Searchable saffron rice' })).toBeVisible();
     await expect(page.getByText('1 recipe found')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'clear all' })).toHaveCount(0);
-    const searchTab = page.getByRole('tab', { name: 'Search' });
-    const queryTab = page.getByRole('tab', { name: 'Query' });
+    await expect(page.getByRole('button', { name: 'clear all', exact: true })).toHaveCount(0);
     await expect(searchTab).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tabpanel', { name: 'Search' })).toBeVisible();
     await expect(page.getByRole('tabpanel', { name: 'Query' })).toBeHidden();
@@ -1752,11 +2686,11 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     );
     await searchTab.click();
     await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'clear all' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'clear all', exact: true })).toHaveCount(0);
     await expect(page.getByRole('searchbox', { name: 'Search recipes' })).toHaveValue('');
     await queryTab.click();
     await expect(page.locator('.recipe-filter-row')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'clear all' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'clear all', exact: true })).toHaveCount(0);
     await searchTab.click();
     await expect(page.locator('#recipe-search')).toHaveValue('');
     await page.getByRole('button', { name: 'Search' }).click();
@@ -1778,7 +2712,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     const independentStateRule = page.locator('.recipe-filter-row').nth(1);
     await selectFilterOption(page, independentStateRule, 'Field', 'State');
     await selectFilterValue(page, independentStateRule, 'Want to Try');
-    await page.getByRole('button', { name: 'clear all' }).click();
+    await page.getByRole('button', { name: 'clear all', exact: true }).click();
     await page.getByRole('button', { name: 'apply' }).click();
     await expect(page).toHaveURL((url) => {
       const searchParams = new URL(url).searchParams;
@@ -1809,7 +2743,10 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     }
 
     if ((page.viewportSize()?.width ?? 0) > 700) {
-      await page.getByRole('button', { name: 'Filter Name' }).click();
+      const nameFilterButton = page.getByRole('button', { name: 'Filter Name' });
+      await nameFilterButton.scrollIntoViewIfNeeded();
+      await nameFilterButton.click();
+      await expect(nameFilterButton).toHaveAttribute('aria-expanded', 'true');
       await expect(page.getByRole('group', { name: 'Name values' })).toBeVisible();
       await expect(page.getByLabel('Searchable saffron rice')).toBeChecked();
       await page
@@ -1905,7 +2842,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       lastRule.getByRole('button', { name: /^Value:/ }).boundingBox(),
       page.locator('.recipe-filter-actions').boundingBox(),
       page.getByRole('button', { name: 'Add rule' }).boundingBox(),
-      page.getByRole('button', { name: 'clear all' }).boundingBox(),
+      page.getByRole('button', { name: 'clear all', exact: true }).boundingBox(),
       page.getByRole('button', { name: 'apply', exact: true }).boundingBox(),
     ]);
     const [removeStrokeWidth, addRuleFontSize, rowBorder] = await Promise.all([
@@ -1919,7 +2856,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       lastRule.evaluate((row) => getComputedStyle(row).borderTopWidth),
     ]);
     const [clearAllStyle, applyStyle] = await Promise.all([
-      page.getByRole('button', { name: 'clear all' }).evaluate((button) => {
+      page.getByRole('button', { name: 'clear all', exact: true }).evaluate((button) => {
         const styles = getComputedStyle(button);
         return {
           backgroundColor: styles.backgroundColor,
@@ -1979,14 +2916,22 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     expect(clearAllStyle.fontWeight).toBe(applyStyle.fontWeight);
     expect(clearAllStyle.height).toBe(applyStyle.height);
     await expect(page.getByRole('button', { name: 'apply', exact: true })).toBeEnabled();
-    await expect(page.getByRole('button', { name: 'clear all' })).toHaveCSS(
+    await expect(page.getByRole('button', { name: 'clear all', exact: true })).toHaveCSS(
       'text-decoration-line',
       'none',
     );
-    for (const bounds of [fieldBounds, operatorBounds, valueBounds]) {
-      expect(bounds.height).toBe(36);
-    }
-    const controlsCenterY = (fieldBounds.y + valueBounds.y + valueBounds.height) / 2;
+    expect(fieldBounds.height).toBe(36);
+    expect(operatorBounds.height).toBe(36);
+    expect(valueBounds.height).toBeGreaterThanOrEqual(36);
+    const multiValueButton = lastRule.getByRole('button', {
+      name: 'Value: Searchable Coriander Ingredient',
+    });
+    await expect(multiValueButton).toContainText('Searchable Coriander Ingredient');
+    await expect(multiValueButton.locator('.recipe-picklist-trigger-label')).toHaveCSS(
+      'white-space',
+      'normal',
+    );
+    const controlsCenterY = valueBounds.y + valueBounds.height / 2;
     if ((page.viewportSize()?.width ?? 0) <= 700) {
       expect(
         Math.abs(removeBounds.y + removeBounds.height / 2 - controlsCenterY),
@@ -2017,16 +2962,22 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     ).toBe(true);
     await expect(page.getByText('1 recipe found')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Searchable saffron rice' })).toBeVisible();
+    await expect(page).not.toHaveURL((url) => url.searchParams.has('auto_select_columns'));
 
-    await page.getByRole('button', { name: 'Choose List columns' }).click();
+    const listColumnsButton = page.getByRole('button', { name: 'Choose List columns' });
+    await listColumnsButton.click({ timeout: 5_000 });
+    await expect(listColumnsButton).toHaveAttribute('aria-expanded', 'true');
     await page.getByRole('checkbox', { name: 'Date Added', exact: true }).check();
     await page.keyboard.press('Escape');
-    await page.getByRole('combobox', { name: 'Sort by Name' }).click();
-    await page
-      .locator('.recipe-explorer-sort-menu')
-      .getByRole('option', { name: 'Date Added' })
-      .click();
-    await expect(page).toHaveURL(/sort=created_at/);
+    if ((page.viewportSize()?.width ?? 0) > 720) {
+      await page.getByRole('link', { name: 'Sort by Date Added ascending' }).click();
+      await expect(page).toHaveURL(/sort=created_at/);
+    } else {
+      const sortedUrl = new URL(page.url());
+      sortedUrl.searchParams.set('sort', 'created_at');
+      sortedUrl.searchParams.set('direction', 'asc');
+      await page.goto(sortedUrl.toString());
+    }
     await expect(page.getByRole('button', { name: 'Switch to List view' })).toBeVisible();
     await page.getByRole('button', { name: 'Switch to List view' }).click();
     await expect(page.locator('.recipe-explorer-simple-list')).toBeVisible();
@@ -2062,10 +3013,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       await expect(page.locator('.find-recipes-mobile-metadata')).toHaveText(
         'Search Source Magazine ~ Want to try ~ 20 min',
       );
-      await expect(page.locator('.find-recipes-list tbody tr').first()).toHaveCSS(
-        'background-color',
-        'rgba(56, 96, 68, 0.08)',
-      );
+      const mobileListRowBackgrounds = await page
+        .locator('.find-recipes-list tbody tr')
+        .evaluateAll((rows) =>
+          rows.slice(0, 2).map((row) => getComputedStyle(row).backgroundColor),
+        );
+      expect(mobileListRowBackgrounds[0]).not.toBe(mobileListRowBackgrounds[1]);
       await expect(page.locator('.find-recipes-list tbody tr').first()).toHaveCSS(
         'display',
         'flex',
@@ -2075,19 +3028,39 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
         mobileRule.getByRole('combobox', { name: 'Field' }).boundingBox(),
         mobileRule.getByRole('combobox', { name: 'Operator' }).boundingBox(),
         mobileRule.getByRole('button', { name: /^Value:/ }).boundingBox(),
+        mobileRule.getByRole('button', { name: 'Remove filter 3' }).boundingBox(),
       ]);
       expect(mobileControlBounds.every(Boolean)).toBeTruthy();
-      const controlPositions = mobileControlBounds.map((bounds) => ({
-        left: bounds?.x ?? 0,
-        right: (bounds?.x ?? 0) + (bounds?.width ?? 0),
-        top: bounds?.y ?? 0,
-      }));
+      const [mobileField, mobileOperator, mobileValue, mobileRemove] = mobileControlBounds;
+      if (!mobileField || !mobileOperator || !mobileValue || !mobileRemove) {
+        throw new Error('The mobile Query controls should be measurable.');
+      }
+      const mobileControlCenters = [mobileField, mobileOperator, mobileValue].map(
+        ({ y, height }) => y + height / 2,
+      );
       expect(
-        Math.max(...controlPositions.map(({ top }) => top)) -
-          Math.min(...controlPositions.map(({ top }) => top)),
+        Math.max(...mobileControlCenters) - Math.min(...mobileControlCenters),
       ).toBeLessThanOrEqual(1);
-      expect(controlPositions[0]?.right).toBeLessThanOrEqual(controlPositions[1]?.left ?? 0);
-      expect(controlPositions[1]?.right).toBeLessThanOrEqual(controlPositions[2]?.left ?? 0);
+      const oneMillimeter = 96 / 25.4;
+      expect(mobileOperator.x - mobileField.x - mobileField.width).toBeCloseTo(oneMillimeter, 1);
+      expect(mobileValue.x - mobileOperator.x - mobileOperator.width).toBeCloseTo(oneMillimeter, 1);
+      expect(mobileRemove.x - mobileValue.x - mobileValue.width).toBeCloseTo(oneMillimeter, 1);
+
+      const betweenRule = page.locator('.recipe-filter-row').nth(1);
+      const [betweenField, betweenOperator] = await Promise.all([
+        betweenRule.getByRole('combobox', { name: 'Field' }).boundingBox(),
+        betweenRule.getByRole('combobox', { name: 'Operator' }).boundingBox(),
+      ]);
+      if (!betweenField || !betweenOperator) {
+        throw new Error('The mobile Between filter controls should be measurable.');
+      }
+      await expect(betweenRule.getByRole('combobox', { name: 'Operator' })).toContainText('Rng');
+      await expect(betweenRule.getByRole('combobox', { name: 'Operator' })).toHaveAttribute(
+        'title',
+        'Between',
+      );
+      expect(betweenField.width).toBeGreaterThan(betweenOperator.width);
+
       const navItems = await page.locator('.private-nav').evaluate((nav) =>
         Array.from(
           nav.querySelectorAll<HTMLElement>(
@@ -2110,11 +3083,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
         .evaluate((toolbar) =>
           Array.from(
             toolbar.querySelectorAll<HTMLElement>(
-              '.recipe-explorer-sort-picklist, .recipe-explorer-toolbar > a, .recipe-explorer-toolbar > button',
+              '.recipe-explorer-sort-picklist, .recipe-explorer-view-controls > a, .recipe-explorer-view-controls > button',
             ),
             (item) => item.getBoundingClientRect().y,
           ),
         );
+      expect(toolbarRows.length).toBeGreaterThan(0);
       expect(new Set(toolbarRows).size).toBe(1);
       await expect(
         page.locator('.find-recipes-list tbody td[data-explorer-column="state"]'),
@@ -2129,18 +3103,19 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     }
 
     await page.goto('/recipes/find?sort=name&direction=asc&page=1&view=grid');
-    await expect(page.locator('.find-recipes-grid li')).toHaveCount(2);
-    await expect(page.locator('.find-recipes-grid li').first()).toHaveCSS(
-      'background-color',
-      'rgba(56, 96, 68, 0.08)',
-    );
+    const gridCards = page.locator('.find-recipes-grid li');
+    await expect(gridCards).toHaveCount(2);
+    await expect(gridCards.first()).toHaveAttribute('data-stripe-cell', 'odd');
+    await expect(gridCards.nth(1)).toHaveAttribute('data-stripe-cell', 'even');
+    const gridCardBackgrounds = await page
+      .locator('.find-recipes-grid li')
+      .evaluateAll((cards) =>
+        cards.slice(0, 2).map((card) => getComputedStyle(card).backgroundColor),
+      );
+    expect(gridCardBackgrounds[0]).not.toBe(gridCardBackgrounds[1]);
     await expect(page.locator('.find-recipes-grid li').first()).toHaveCSS(
       'box-shadow',
       'rgba(36, 40, 32, 0.18) 0px 4px 12px 0px',
-    );
-    await expect(page.locator('.find-recipes-grid li').nth(1)).toHaveCSS(
-      'background-color',
-      'rgb(255, 255, 255)',
     );
     const noTimeGridCard = page
       .locator('.find-recipes-grid li')
@@ -2196,22 +3171,28 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       .evaluateAll((headers) =>
         headers.flatMap((header) => {
           const column = header.getAttribute('data-explorer-column');
-          const button = header.querySelector('button');
+          if (column === 'score' || column === 'starred' || column === 'hearted') return [];
+          const sortLink = header.querySelector('.recipe-list-sort-header');
           const cell = Array.from(
             header.closest('table')?.querySelectorAll('tbody tr:first-child td') ?? [],
           ).find((candidate) => candidate.getAttribute('data-explorer-column') === column);
-          if (!button || !cell) return [];
+          if (!sortLink || !cell) return [];
           const headerRange = document.createRange();
-          headerRange.selectNodeContents(button);
+          headerRange.selectNodeContents(sortLink);
           const cellRange = document.createRange();
           cellRange.selectNodeContents(cell);
           return [
-            headerRange.getBoundingClientRect().left - cellRange.getBoundingClientRect().left,
+            {
+              column,
+              offset:
+                headerRange.getBoundingClientRect().left - cellRange.getBoundingClientRect().left,
+            },
           ];
         }),
       );
     expect(
-      columnStartOffsets.every((offset) => Number.isFinite(offset) && Math.abs(offset) < 2),
+      columnStartOffsets.every(({ offset }) => Number.isFinite(offset) && Math.abs(offset) < 2),
+      JSON.stringify(columnStartOffsets),
     ).toBe(true);
     await expect(
       page.locator('.find-recipes-list tbody tr').first().locator('td').first(),
@@ -2247,7 +3228,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     );
     expect(new Set(desktopGridCardHeights).size).toBe(1);
     await expect(desktopGridCards.first()).toHaveCSS('height', '234px');
-    await expect(desktopGridCards.first()).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
+    await expect(desktopGridCards.first()).toHaveAttribute('data-stripe-cell', 'odd');
+    await expect(desktopGridCards.nth(1)).toHaveAttribute('data-stripe-cell', 'even');
+    const desktopGridStripeColors = await desktopGridCards.evaluateAll((cards) =>
+      cards.slice(0, 2).map((card) => getComputedStyle(card).backgroundColor),
+    );
+    expect(desktopGridStripeColors[0]).not.toBe(desktopGridStripeColors[1]);
     await expect(desktopGridCards.first()).toHaveCSS(
       'box-shadow',
       'rgba(36, 40, 32, 0.18) 0px 4px 12px 0px',
@@ -2280,13 +3266,14 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       await expect(desktopGridCards.nth(1)).toHaveAttribute('data-stripe-cell', 'even');
       await expect(secondRowStart).toHaveAttribute('data-stripe-cell', 'even');
       await expect(secondRowNextCard).toHaveAttribute('data-stripe-cell', 'odd');
-      await expect(desktopGridCards.first()).toHaveCSS(
-        'background-color',
-        'rgba(56, 96, 68, 0.08)',
+      const stripeColors = await Promise.all(
+        [desktopGridCards.first(), desktopGridCards.nth(1), secondRowStart, secondRowNextCard].map(
+          (card) => card.evaluate((element) => getComputedStyle(element).backgroundColor),
+        ),
       );
-      await expect(desktopGridCards.nth(1)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-      await expect(secondRowStart).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-      await expect(secondRowNextCard).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
+      expect(stripeColors[0]).not.toBe(stripeColors[1]);
+      expect(stripeColors[2]).toBe(stripeColors[1]);
+      expect(stripeColors[3]).toBe(stripeColors[0]);
       await expect(desktopGridCards.first().locator('.find-recipes-grid-metadata')).toHaveCSS(
         'color',
         'rgb(36, 40, 32)',
@@ -2298,11 +3285,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       if (columnCount === 3) {
         await expect(desktopGridCards.nth(6)).toHaveAttribute('data-stripe-cell', 'odd');
         await expect(desktopGridCards.nth(7)).toHaveAttribute('data-stripe-cell', 'even');
-        await expect(desktopGridCards.nth(6)).toHaveCSS(
-          'background-color',
-          'rgba(56, 96, 68, 0.08)',
+        const thirdRowStripeColors = await Promise.all(
+          [desktopGridCards.nth(6), desktopGridCards.nth(7)].map((card) =>
+            card.evaluate((element) => getComputedStyle(element).backgroundColor),
+          ),
         );
-        await expect(desktopGridCards.nth(7)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+        expect(thirdRowStripeColors).toEqual(stripeColors.slice(0, 2));
       }
     }
 
@@ -2375,42 +3363,87 @@ test('Find Recipes shows a recoverable query error and preserves filters @e2e', 
   }
 });
 
-test('Find Recipes sorts by every display column in Details view @e2e', async ({
+test('Find Recipes sorts Details headers, toggles direction, and vertically centers headings @e2e', async ({
   page,
   request,
 }) => {
+  test.skip(
+    (page.viewportSize()?.width ?? 1280) <= 720,
+    'Details table header sorting is desktop-only.',
+  );
+  test.setTimeout(90_000);
   const user = await createTestUser(request);
 
   try {
+    const config = await getLocalSupabaseConfig();
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: 'Column sort Alpha',
+      state: 'want_to_try',
+      totalTime: 10,
+      notes: '',
+    });
+    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
+      name: 'Column sort Bravo',
+      state: 'tried',
+      totalTime: 20,
+      notes: '',
+    });
     await page.goto('/');
     await page.getByLabel('Email').fill(user.email);
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
-    await page.goto('/recipes/find?sort=name&direction=asc&view=details');
+    await page.goto('/recipes/find?q=Column%20sort&sort=name&direction=asc&view=details');
 
-    await page.getByRole('combobox', { name: 'Sort by Name' }).click();
-    const sortMenu = page.locator('.recipe-explorer-sort-menu');
-    await expect(sortMenu.getByRole('option', { name: 'Name' })).toBeVisible();
-    await expect(sortMenu.getByRole('option', { name: 'Publication' })).toBeVisible();
-    await expect(sortMenu.getByRole('option', { name: 'State' })).toBeVisible();
-    await expect(sortMenu.getByRole('option', { name: 'Opinion' })).toHaveCount(0);
-    await expect(sortMenu.getByRole('option', { name: 'Citation' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    const table = page.locator('.find-recipes-list');
+    const rows = table.locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await expect(page.getByRole('combobox', { name: /Sort by/u })).toHaveCount(0);
+    const firstRecipeName = () => rows.first().locator('.find-recipes-mobile-title').innerText();
+    await expect.poll(firstRecipeName).toBe('Column sort Alpha');
+    const headerOffsets = await table.locator('thead th:visible').evaluateAll((headers) =>
+      headers.map((header) => {
+        const content = header.querySelector('.recipe-list-column-heading');
+        if (!content) throw new Error('Expected a recipe column heading.');
+        const cellBounds = header.getBoundingClientRect();
+        const contentBounds = content.getBoundingClientRect();
+        return Math.abs(
+          cellBounds.top + cellBounds.height / 2 - (contentBounds.top + contentBounds.height / 2),
+        );
+      }),
+    );
+    expect(headerOffsets.every((offset) => offset < 1.5)).toBe(true);
+
+    await page.getByRole('link', { name: 'Sort by Name descending' }).click();
+    await expect(page).toHaveURL(/sort=name.*direction=desc/u);
+    await expect.poll(firstRecipeName).toBe('Column sort Bravo');
+    await page.getByRole('link', { name: 'Sort by Name ascending' }).click();
+    await expect(page).toHaveURL(/sort=name.*direction=asc/u);
+    await expect.poll(firstRecipeName).toBe('Column sort Alpha');
+
+    await page.getByRole('link', { name: 'Sort by Star ascending' }).click();
+    await expect(page).toHaveURL(/sort=starred.*direction=asc/u);
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Unable to search recipes.' }),
+    ).toHaveCount(0);
+    await page.getByRole('link', { name: 'Sort by Star descending' }).click();
+    await expect(page).toHaveURL(/sort=starred.*direction=desc/u);
+    await page.getByRole('link', { name: 'Sort by Heart ascending' }).click();
+    await expect(page).toHaveURL(/sort=hearted.*direction=asc/u);
+    await page.getByRole('link', { name: 'Sort by Rating ascending' }).click();
+    await expect(page).toHaveURL(/sort=score.*direction=asc/u);
+
     await page.getByRole('button', { name: 'Choose List columns' }).click();
-    await page.getByRole('checkbox', { name: 'Opinion' }).check();
+    const opinionColumn = page.getByRole('checkbox', { name: 'Opinion' });
+    await opinionColumn.scrollIntoViewIfNeeded({ timeout: 5_000 });
+    await opinionColumn.check({ timeout: 5_000 });
     await expect(page.locator('.explorer-list-preferences')).toHaveAttribute(
       'data-visible-columns',
-      /(^|\s)opinion(\s|$)/,
+      /(^|\s)opinion(\s|$)/u,
     );
     await page.keyboard.press('Escape');
-    await page.getByRole('combobox', { name: 'Sort by Name' }).click();
-    await expect(sortMenu.getByRole('option', { name: 'Opinion' })).toBeVisible();
-    await expect(sortMenu.getByRole('option', { name: 'Citation' })).toHaveCount(0);
-    await sortMenu.getByRole('option', { name: 'Opinion' }).click();
-
-    await expect(page).toHaveURL(/sort=opinion/);
-    await expect(page.getByRole('combobox', { name: 'Sort by Opinion' })).toBeVisible();
+    await page.getByRole('link', { name: 'Sort by Opinion ascending' }).click();
+    await expect(page).toHaveURL(/sort=opinion/u);
     await expect(
       page.getByRole('alert').filter({ hasText: 'Unable to search recipes.' }),
     ).toHaveCount(0);

@@ -258,11 +258,7 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       : page.locator('.publication-detail-heading .publication-new-recipe');
     await expect(addRecipeLink).toBeVisible();
     const sortButton = page.locator('.recipe-explorer-sort-picklist');
-    await sortButton.click();
-    const selectedSortOption = page.locator('.single-picklist-option[aria-selected="true"]');
-    await expect(selectedSortOption).toHaveCSS('background-color', 'rgb(244, 239, 233)');
-    await expect(selectedSortOption).toHaveCSS('color', 'rgb(96, 76, 56)');
-    await sortButton.click();
+    await expect(sortButton).toHaveCount(0);
     if (isMobile) {
       await expect(addRecipeLink).toHaveAttribute('aria-label', 'Add Recipe');
       const toolbarControlStyles = await page
@@ -281,7 +277,7 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
           }),
         );
       expect(toolbarControlStyles).toEqual(
-        Array(4).fill({
+        Array(2).fill({
           backgroundColor: 'rgb(255, 252, 241)',
           borderTopColor: 'rgb(154, 107, 63)',
           borderRightColor: 'rgb(154, 107, 63)',
@@ -324,30 +320,17 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
         page.viewportSize()?.width ?? 0,
       );
 
-      const toolbarItemBounds = await page
-        .locator('.explorer-list-preferences-toolbar:has(.publication-mobile-add) > *')
-        .evaluateAll((elements) =>
-          elements.map((element) => {
-            const bounds = element.getBoundingClientRect();
-            return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
-          }),
-        );
-      expect(toolbarItemBounds).toHaveLength(4);
-      const toolbarContent = toolbarItemBounds[0];
-      const toolbarControls = toolbarItemBounds[1];
-      const toolbarFilters = toolbarItemBounds[2];
-      const toolbarActions = toolbarItemBounds[3];
+      const [toolbarContent, toolbarControls, toolbarFilters, toolbarActions] = await Promise.all([
+        page.locator('.explorer-list-preferences-toolbar-content').boundingBox(),
+        page.locator('.explorer-list-preferences-controls').boundingBox(),
+        page.locator('.recipe-marker-filters').boundingBox(),
+        page.locator('.publication-mobile-actions').boundingBox(),
+      ]);
       if (!toolbarContent || !toolbarControls || !toolbarFilters || !toolbarActions) {
         throw new Error('Expected toolbar item bounds');
       }
       expect(toolbarFilters.y).toBeGreaterThanOrEqual(toolbarContent.y + toolbarContent.height);
-      if ((page.viewportSize()?.width ?? 1280) <= 380) {
-        expect(toolbarActions.y).toBeGreaterThanOrEqual(
-          toolbarControls.y + toolbarControls.height,
-        );
-      } else {
-        expect(toolbarActions.y).toBeCloseTo(toolbarControls.y, 0);
-      }
+      expect(toolbarActions.y).toBeCloseTo(toolbarControls.y, 0);
 
       const toolbarBounds = await page
         .locator('.explorer-list-preferences-toolbar:has(.publication-mobile-add)')

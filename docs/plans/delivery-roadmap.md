@@ -36,6 +36,21 @@ first-admin command are documented; hosted provider, deployment, email, import,
 Firewall, and physical-device acceptance remain outstanding. Do not mark the
 slice complete based on local tests alone.
 
+DLC 12 is implemented and locally accepted. The focused closure pass verifies
+496 unit tests, isolated database/API security, revision/history,
+rollback, merge/delete, and export-snapshot behavior. The nutrition browser
+suite passes all six Chromium/Fold 6 runs, with two desktop-only Fold 6 skips;
+it covers stale-basis acknowledgement, recipe history and version-conflict
+preservation, and nutrition in public, print, offline, and downloaded HTML
+output. The nutrition bundle export/import round-trip and the legacy
+database-import regression also pass in isolated Chromium/Fold 6 runs. The
+complete isolated DLC 12 browser acceptance suite passed with 378 tests
+passing, 8 skipped, and none failing. Desktop and mobile Settings screenshots
+were reviewed. TypeScript, unit tests, and targeted Biome checks pass. The
+active local database and synthetic fixture were not reset. The Pinch
+migration is already proven; Dash remains unchanged and is outside this
+slice's scope.
+
 DLC 08 is implemented and locally accepted, with its behavior recorded in the
 [comprehensive reference](comprehensive-reference.md) and
 [visual design guide](visual-design.md). Unit, database, accessibility, and
@@ -125,6 +140,7 @@ question. Its output is a decision-log entry, not shipped code.
 | 14C. Ingredient catalog management — implemented | A person can add, rename, search, merge, and delete canonical ingredients in Settings. Names are normalized and displayed alphabetically; a merge explicitly chooses which name survives. | Delivered with owner-derived revisions and catalog history, case-folded per-account uniqueness, case-insensitive live search with trailing-space whole-word matching, and responsive Settings controls. Merge preserves separate recipe rows, measurements, Main flags, details, preparation, and instruction mentions while updating affected recipe history. See [Slice 14C brief](slices/14c-ingredient-catalog-management.md). Slice 15's density registry depends on this catalog workflow. |
 | 14D. Tags and assignment — complete | A person can create or reuse flat tags inline on recipes and publications, remove an assignment from one entity, and manage shared names and pastel colors in Settings. | Delivered with account-owned catalog revisions and history, a searchable inline picker, 16 shared translucent pastel colors, transactional pairwise merge/replacement and recoloring, version-checked entity assignment/history, owner isolation, and responsive accessible controls. Chromium and Fold 6 acceptance, API/history, and axe checks pass. See [Slice 14D brief](slices/14d-tags-and-assignment.md). |
 | 15. Trusted densities — complete | A person can define an ingredient's density and see volume and weight auto-fill with a tinted amount field and calculator icon, override it, and have it re-fill when cleared. | Delivered with normalized density storage and history, a collapsed Trusted densities Settings section, bidirectional editor derivation, transient derived/manual state, and responsive accessible UI. Density browser/accessibility tests passed 6/6 on Chromium and Fold 6; density unit tests passed 8/8; the recipe E2E file passed 37 tests with 1 skipped. TypeScript and Biome passed; Biome reports 13 existing CSS specificity warnings. See [Slice 15 brief](slices/15-trusted-density.md). |
+| DLC 12. Recipe nutrition — acceptance in progress | Owners enter ingredient nutrition and explicit Count/Things equivalents, see calculated or manually overridden per-serving estimates, and retain the same privacy and formatting rules across private, public, print, offline, and bundle workflows. | Implemented against the [DLC 12 brief](slices/dlc/dlc-12-recipe-nutrition.md); finish its documented acceptance coverage and local-data preservation checks before marking complete. |
 | 16. Cooking views — complete | A person can switch Standard and Ingredient-first, sort ingredients four ways, and use mobile cook mode with check-off and wake lock. | Delivered with the saved presentation preference, four transient sort modes, temporary check-off, best-effort wake lock, and active-view printing. Verified with 145 unit tests, 160 E2E passes and 2 skips, 61 accessibility passes and 1 skip on Chromium and Fold 6, TypeScript, Biome, and an isolated production build. Biome exits successfully with 22 non-blocking CSS specificity warnings. See [Slice 16 brief](slices/16-cooking-views.md). |
 | 17. Find recipes — implemented | A person can search full text, filter, and sort recipes and publications. Recipes within a publication have the same recipe filters and List/Grid views, with default recipe photos shown in Grid when available. | Delivered with indexed search, typed filters, fixed recipe List fields, sorting and pagination, and a publication-scoped recipe explorer. Responsive List/Grid presentation, row striping, and image-backed card titles have browser regression coverage. See [Slice 17 brief](slices/17-find-recipes.md). |
 | 18. Explorer state — complete | A person returns to each explorer with their last-used filters, sort, direction, and List/Grid choice restored; a publication recipe explorer retains its publication scope. | Delivered with per-account `explorer_state` records, validated owner-derived writes, URL precedence, stale or missing scope recovery, blank free-text search restoration, and Chromium/Fold 6, unit, and RLS coverage. See [Slice 18 brief](slices/18-explorer-state.md). |

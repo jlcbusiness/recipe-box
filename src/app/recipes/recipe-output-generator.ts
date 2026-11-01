@@ -102,6 +102,8 @@ const outputStyles = `
   .recipe-output-columns.is-instruction-only { grid-template-columns: minmax(0, 1fr); }
   .recipe-output-column { min-width: 0; min-height: 0; overflow: hidden; }
   .recipe-output-column > .recipe-detail-section { margin: 0; border: 0; padding: 0; }
+  .recipe-output-column .recipe-nutrition-section .recipe-nutrition-string { display: block; }
+  .recipe-output-column .recipe-nutrition-section .recipe-nutrition-facts { display: none; }
   .recipe-output-column h2 { margin: 0 0 7px; font-size: 15px; line-height: 1.2; }
   .recipe-output-column h3 { margin: 6px 0 3px; font-size: 12px; }
   .recipe-output-column h4, .recipe-output-column h5, .recipe-output-column h6 {

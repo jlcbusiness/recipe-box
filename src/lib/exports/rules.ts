@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-export const EXPORT_SCHEMA_VERSION = 8;
+export const EXPORT_SCHEMA_VERSION = 9;
 export const EXPORT_DATA_BYTES_LIMIT = 64 * 1024 * 1024;
 export const EXPORT_MEDIA_BYTES_LIMIT = 1024 * 1024 * 1024;
 export const DATABASE_EXPORT_REMINDER_DAYS = 30;
@@ -40,6 +40,8 @@ export const exportTableNames = [
   'recipe_pairings',
   'recipe_references',
   'ingredient_densities',
+  'ingredient_nutrition_profiles',
+  'ingredient_measure_equivalents',
   'tags',
   'recipe_tags',
   'publication_tags',
@@ -237,6 +239,7 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'publication_id',
     'publication_page',
     'recipe_url',
+    'nutrition_overrides',
   ],
   publications: [
     'id',
@@ -276,6 +279,8 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'portion_one_ratio',
     'size_value',
     'size_unit',
+    'nutrition_serving_size_override',
+    'nutrition_overrides',
   ],
   recipe_ingredient_measurements: [
     'id',
@@ -310,6 +315,27 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
   ],
   ingredient_densities: [
     'ingredient_id',
+    'volume_amount',
+    'volume_unit_code',
+    'weight_amount',
+    'weight_unit_code',
+    'created_at',
+    'updated_at',
+  ],
+  ingredient_nutrition_profiles: [
+    'ingredient_id',
+    'serving_size_amount',
+    'serving_size_dimension',
+    'serving_size_unit_code',
+    'nutrients',
+    'created_at',
+    'updated_at',
+  ],
+  ingredient_measure_equivalents: [
+    'ingredient_id',
+    'measurement_type',
+    'picklist_value_id',
+    'picklist_value',
     'volume_amount',
     'volume_unit_code',
     'weight_amount',
@@ -464,6 +490,12 @@ function makeRecordSet(
     const id = relationId(measurement, 'picklist_value_id');
     if (id) picklistIds.add(id);
   }
+  for (const equivalent of rows.ingredient_measure_equivalents) {
+    if (ingredientIds.has(relationId(equivalent, 'ingredient_id') ?? '')) {
+      const id = relationId(equivalent, 'picklist_value_id');
+      if (id) picklistIds.add(id);
+    }
+  }
 
   const selected: Record<ExportTableName, ExportRecord[]> = {
     recipes: rows.recipes.filter((row) => recipeIds.has(recordId(row) ?? '')),
@@ -497,6 +529,18 @@ function makeRecordSet(
       scope.type === 'database'
         ? rows.ingredient_densities
         : rows.ingredient_densities.filter((row) =>
+            ingredientIds.has(relationId(row, 'ingredient_id') ?? ''),
+          ),
+    ingredient_nutrition_profiles:
+      scope.type === 'database'
+        ? rows.ingredient_nutrition_profiles
+        : rows.ingredient_nutrition_profiles.filter((row) =>
+            ingredientIds.has(relationId(row, 'ingredient_id') ?? ''),
+          ),
+    ingredient_measure_equivalents:
+      scope.type === 'database'
+        ? rows.ingredient_measure_equivalents
+        : rows.ingredient_measure_equivalents.filter((row) =>
             ingredientIds.has(relationId(row, 'ingredient_id') ?? ''),
           ),
     tags:

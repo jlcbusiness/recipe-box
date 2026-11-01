@@ -438,6 +438,8 @@ describe('ingredient row rules', () => {
         portion_one_ratio: null,
         size_value: null,
         size_unit: null,
+        nutrition_serving_size_override: null,
+        nutrition_overrides: {},
         measurements: [],
       },
       {
@@ -451,6 +453,8 @@ describe('ingredient row rules', () => {
         portion_one_ratio: null,
         size_value: null,
         size_unit: null,
+        nutrition_serving_size_override: null,
+        nutrition_overrides: {},
         measurements: [],
       },
     ]);
@@ -488,6 +492,8 @@ describe('ingredient row rules', () => {
         portion_one_ratio: 0.25,
         size_value: 1.25,
         size_unit: 'cm',
+        nutrition_serving_size_override: null,
+        nutrition_overrides: {},
         measurements: [
           {
             measurement_type: 'volume',
@@ -557,6 +563,8 @@ describe('ingredient row rules', () => {
         portion_one_ratio: null,
         size_value: null,
         size_unit: null,
+        nutrition_serving_size_override: null,
+        nutrition_overrides: {},
         measurements: [
           {
             measurement_type: 'volume',

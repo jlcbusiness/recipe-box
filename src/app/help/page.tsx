@@ -90,6 +90,33 @@ export default async function HelpPage() {
             </div>
           </dl>
         </section>
+        <section aria-labelledby="nutrition-title">
+          <h2 id="nutrition-title">Recipe nutrition</h2>
+          <p>
+            Ingredient Settings provide default nutrition values and the average measures used to
+            match Count or Things amounts. The recipe editor loads these values when it opens;
+            refresh an open editor after changing Settings elsewhere. Changes made from an
+            ingredient row are saved to that recipe only and do not change the Settings profile.
+            Recipe nutrition is an estimate based on entered values and compatible ingredient
+            amounts; no nutrition data is fetched from outside Recipe Box.
+          </p>
+          <p>
+            An ingredient&apos;s nutrition icon turns green when its serving size matches the recipe
+            amount and every standard field has a value. Enter 0 for nutrients the ingredient does
+            not contain, or use Zero Empty Fields to fill every blank field with 0. A red icon means
+            some fields are still blank or the recipe amount cannot be matched to the serving size.
+            For Count or Things amounts, set a matching average measure in Ingredient Settings. The
+            recipe estimate is calculated only when every ingredient is green. Shaded fields come
+            from Settings or the calculation; typing your own value replaces them, and clearing it
+            restores the shaded value.
+          </p>
+          <p>
+            Recipe nutrition is edited per serving. Enter a positive Serves value to enable Edit.
+            Calculated values are divided by Serves, and values entered in the recipe nutrition pane
+            are scaled to the full recipe when saved. Changing Serves changes the displayed
+            per-serving value of a saved recipe override.
+          </p>
+        </section>
         <section aria-labelledby="keyboard-shortcuts-title">
           <h2 id="keyboard-shortcuts-title">Keyboard shortcuts</h2>
           <p>
