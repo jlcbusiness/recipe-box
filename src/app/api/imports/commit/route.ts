@@ -195,8 +195,13 @@ export async function POST(request: Request) {
     ) {
       return jsonResponse({ error: 'Choose how to handle the archive account settings.' }, 400);
     }
+    const snapshotStartedAt = Date.now();
+    console.info('[import-commit] account snapshot started');
     const { data: snapshotData, error: snapshotError } = await admin.rpc('read_export_snapshot', {
       p_account_id: authData.user.id,
+    });
+    console.info('[import-commit] account snapshot completed', {
+      elapsedMs: Date.now() - snapshotStartedAt,
     });
     if (snapshotError || !snapshotData) {
       return jsonResponse({ error: 'Unable to compare this archive with your account.' }, 503);
@@ -218,6 +223,8 @@ export async function POST(request: Request) {
     ) {
       return jsonResponse({ error: 'Preview this archive again before importing.' }, 409);
     }
+    const matchDiscoveryStartedAt = Date.now();
+    console.info('[import-commit] import match discovery started');
     const publicationMatches = findImportMatches(bundle.data, {
       recipes: [],
       publications: existing.publications,
@@ -278,6 +285,11 @@ export async function POST(request: Request) {
     const recipeMatches = findImportMatches(bundle.data, existing, publicationResolutions).filter(
       (match) => match.kind === 'recipe',
     );
+    console.info('[import-commit] import match discovery completed', {
+      elapsedMs: Date.now() - matchDiscoveryStartedAt,
+      publicationMatchCount: publicationMatches.length,
+      recipeMatchCount: recipeMatches.length,
+    });
     const matches =
       scope.type === 'recipe'
         ? recipeMatches
@@ -362,6 +374,8 @@ export async function POST(request: Request) {
 
     let plan: ReturnType<typeof planImport>;
     try {
+      const planStartedAt = Date.now();
+      console.info('[import-commit] import plan started');
       plan = planImport(
         bundle.data as PortableData,
         snapshot.records,
@@ -373,6 +387,9 @@ export async function POST(request: Request) {
           omitRecipeIds: omittedRecipeIds,
         },
       );
+      console.info('[import-commit] import plan completed', {
+        elapsedMs: Date.now() - planStartedAt,
+      });
     } catch (error) {
       return jsonResponse(
         { error: error instanceof Error ? error.message : 'The import choices are invalid.' },
