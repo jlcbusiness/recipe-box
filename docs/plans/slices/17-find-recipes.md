@@ -274,12 +274,13 @@ need combobox semantics.
   are excluded. Details loads nutrient values for its current result page even
   when nutrient columns start hidden, so revealing a column shows populated
   cells without leaving an empty grid track.
-- Applying Query automatically shows matching List columns when a field has a
-  corresponding column. The **Don't auto-select columns** checkbox opts out for
-  that application only; selected columns remain ordinary saved display
-  preferences, so users can later hide them without them reappearing on reload.
+- In Details, applying Query automatically shows matching List columns when a
+  field has a corresponding column. The **Don't auto-select columns** checkbox
+  opts out for that application only; selected columns remain ordinary saved
+  display preferences, so users can later hide them without them reappearing on
+  reload. List and Grid do not auto-select columns and do not show the checkbox.
   Vertically center **Add rule** with the **Clear all** and **apply** buttons on
-  desktop and mobile, and keep the checkbox below their row.
+  desktop and mobile, and keep the Details checkbox below their row.
 - In Details view, each visible column header sorts its column. A newly chosen
   column starts ascending; clicking it again alternates ascending and
   descending. Header sorting preserves the active query and filters, resets

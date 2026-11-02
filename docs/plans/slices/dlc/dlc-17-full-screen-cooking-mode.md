@@ -1,5 +1,7 @@
 # DLC 17: Full-screen cooking mode
 
+**Status:** Canceled.
+
 This brief revisits Slice 16's temporary cook mode and proposes a dedicated
 cooking experience. Build only after interaction and device constraints are
 verified.

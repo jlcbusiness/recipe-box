@@ -149,6 +149,12 @@ Supabase under **Project Settings > General**, or copy the segment after
 `abcdefghijklmnop`. It is an identifier, not the project name or database
 password. The CLI asks for the database password when it links the project.
 
+Pushing code to GitHub deploys the app through Vercel, but does not apply
+Supabase migrations. Apply migrations separately to the intended Supabase
+project before deploying app code that depends on them. If the CLI reports a
+local migration older than the latest remote migration, stop and verify the
+remote schema and migration history before proceeding.
+
 Preview and apply the versioned migrations:
 
 ```bash

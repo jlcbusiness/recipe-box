@@ -11,6 +11,7 @@ import {
 } from '../../../lib/explorer-state';
 import { getExplorerState, getRecipeColumnSettings } from '../../../lib/explorer-state-data';
 import { getPrimaryRecipePhotos } from '../../../lib/media/data';
+import { decodeAdvancedRules, QueryLogicError } from '../../../lib/query-logic';
 import {
   getIngredients,
   getPublications,
@@ -84,6 +85,7 @@ type FindRecipesSearchParams = Record<string, string | string[] | undefined> & {
   direction?: string;
   auto_select_columns?: string;
   no_auto_select_columns?: string;
+  query_submitted?: string | string[];
   page?: string;
   tab?: string;
   view?: string;
@@ -146,6 +148,15 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   const mainIngredientsOnly = searchMode === 'search' && firstValue(params.main) === '1';
   const textFilters = mainIngredientTextFilters(query, mainIngredientsOnly);
   const parsedFilters = parseRecipeSearchFilters(params.filter);
+  let advancedInputError: string | null = null;
+  for (const filter of parsedFilters.filter(({ field }) => field === 'advanced_rules')) {
+    try {
+      decodeAdvancedRules(filter);
+    } catch (failure) {
+      if (!(failure instanceof Error)) throw failure;
+      advancedInputError = failure.message;
+    }
+  }
   const isMarkerFilter = (filter: RecipeSearchFilter) =>
     filter.field === 'starred' || filter.field === 'hearted';
   const parsedColumnFilters = parseRecipeSearchColumnFilters(params);
@@ -166,6 +177,25 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     ({ publication_type }) => publication_type === 'collection',
   )?.id;
   const normalizeTinFilter = (filter: RecipeSearchFilter): RecipeSearchFilter => {
+    if (filter.field === 'advanced_rules' && !advancedInputError && recipeTinId) {
+      const advanced = decodeAdvancedRules(filter);
+      return {
+        ...filter,
+        value: JSON.stringify({
+          ...advanced,
+          rules: advanced.rules.map((rule) =>
+            rule.field === 'publication_id' && Array.isArray(rule.value)
+              ? {
+                  ...rule,
+                  value: rule.value.map((value) =>
+                    value === '__recipe_tin__' ? recipeTinId : value,
+                  ),
+                }
+              : rule,
+          ),
+        }),
+      };
+    }
     if (filter.field !== 'publication_id' || !recipeTinId) return filter;
     const values = Array.isArray(filter.value)
       ? filter.value.filter((value): value is string | number => value !== undefined)
@@ -184,6 +214,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   ].map(normalizeTinFilter);
   const markerFilters = filters.filter(isMarkerFilter);
   const builderFilters = searchMode === 'query' ? filters : [];
+  const querySubmitted = firstValue(params.query_submitted) === '1' || builderFilters.length > 0;
   const columnSelections = {
     ...parsedColumnFilters.selections,
     ...(recipeTinId && parsedColumnFilters.selections.publication
@@ -196,6 +227,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   };
   const columnFilters = parsedColumnFilters.filters.map(normalizeTinFilter);
   const combinedFilters = [...filters, ...columnFilters];
+  const view = params.view === 'grid' ? 'grid' : params.view === 'list' ? 'list' : 'details';
   const consumeAutoSelectRequest =
     searchMode === 'query' && firstValue(params.auto_select_columns) === '1';
   const autoSelectRequestKey = JSON.stringify(
@@ -205,11 +237,14 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
         ? params.filter
         : [params.filter],
   );
-  const queryAutoSelectColumns =
-    consumeAutoSelectRequest && firstValue(params.no_auto_select_columns) !== '1'
+  const queryFilterColumns =
+    consumeAutoSelectRequest &&
+    !advancedInputError &&
+    firstValue(params.no_auto_select_columns) !== '1'
       ? getQueryAutoSelectColumns(filters, recipeColumns)
       : [];
-  const queryVisibleColumnKeys = new Set([...visibleColumnKeys, ...queryAutoSelectColumns]);
+  const queryAutoSelectColumns = view === 'details' ? queryFilterColumns : [];
+  const queryVisibleColumnKeys = new Set([...visibleColumnKeys, ...queryFilterColumns]);
   const visibleSortColumns = recipeColumns.filter(
     ({ key, required }) => required || queryVisibleColumnKeys.has(key),
   );
@@ -232,7 +267,6 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       ? 'relevance'
       : 'name';
   const sortDirection = params.direction === 'desc' ? 'desc' : 'asc';
-  const view = params.view === 'grid' ? 'grid' : params.view === 'list' ? 'list' : 'details';
   const searchFilters = [...textFilters, ...combinedFilters];
   const visibleMobileColumnFacetKeys = recipeColumns
     .filter(({ key }) => visibleColumnKeys.has(key) && isRecipeSearchGenericColumnKey(key))
@@ -264,6 +298,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   let searchError: string | null = null;
 
   try {
+    if (advancedInputError) throw new QueryLogicError(advancedInputError);
     results = await searchRecipes(supabase, query, {
       ...searchOptions,
     });
@@ -409,11 +444,13 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
           )
         : Promise.resolve(new Map()),
     ]);
-  } catch {
+  } catch (failure) {
     searchError =
-      searchMode === 'query'
-        ? 'Unable to search recipes. Your query refinements are preserved. Try again.'
-        : 'Unable to search recipes. Your search is preserved. Try again.';
+      failure instanceof QueryLogicError
+        ? `Invalid Advanced Rules: ${failure.message}`
+        : searchMode === 'query'
+          ? 'Unable to search recipes. Your query refinements are preserved. Try again.'
+          : 'Unable to search recipes. Your search is preserved. Try again.';
     results = [];
     matchingCount = 0;
     pageCount = 1;
@@ -493,6 +530,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
       field={field}
       mainIngredientsOnly={mainIngredientsOnly}
       options={columnFilterOptions[field]}
+      querySubmitted={querySubmitted}
       selectedValues={columnSelections[field]}
       sort={sortKey}
       view={view}
@@ -555,11 +593,19 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                   filters={builderFilters}
                   maxFilters={10 - columnFilters.length}
                   options={filterOptions}
+                  querySubmitted={querySubmitted}
+                  showAutoSelectColumns={view === 'details'}
                   title="Query refinements"
                 />
               }
             />
 
+            <input
+              disabled={searchMode !== 'query' && !querySubmitted}
+              name="query_submitted"
+              type="hidden"
+              value="1"
+            />
             <input name="sort" type="hidden" value={sortKey} />
             <input name="direction" type="hidden" value={sortDirection} />
             <input name="view" type="hidden" value={view} />
@@ -602,6 +648,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
               options={sortOptions}
               path="/recipes/find"
               query={query}
+              querySubmitted={querySubmitted}
               sort={sortKey}
               view={view}
               viewOptions={[
@@ -614,6 +661,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
           toolbarTrailing={
             searchMode === 'search' ? (
               <RecipeMarkerFilters
+                key="marker-filters"
                 action="/recipes/find"
                 columnSelections={columnSelections}
                 direction={sortDirection}
@@ -628,8 +676,10 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
           toolbarAction={
             hasActiveFilters ? (
               <RecipeSearchClearFilters
+                key="clear-filters"
                 direction={sortDirection}
                 path="/recipes/find"
+                querySubmitted={querySubmitted}
                 query={query}
                 sort={sortKey}
                 view={view}
@@ -652,6 +702,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                 direction={sortDirection}
                 fields={mobileColumnFilterFields}
                 mainIngredientsOnly={mainIngredientsOnly}
+                querySubmitted={querySubmitted}
                 sort={sortKey}
                 view={view}
                 clearAction={
@@ -659,6 +710,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                     <RecipeSearchClearFilters
                       direction={sortDirection}
                       path="/recipes/find"
+                      querySubmitted={querySubmitted}
                       query={query}
                       sort={sortKey}
                       view={view}
@@ -959,6 +1011,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
               pageCount={pageCount}
               path="/recipes/find"
               query={query}
+              querySubmitted={querySubmitted}
               sort={sortKey}
               view={view}
             />

@@ -1,5 +1,7 @@
 # DLC 20: Expanded offline use
 
+**Status:** Deferred indefinitely; revisit only if a need arises.
+
 This brief proposes expanding Slice 24's bounded read-only recipe cache. Offline
 writes are a high-risk change and require a technical proof before product
 implementation is approved.

@@ -1,5 +1,7 @@
 # DLC 22: Configurable Trash retention
 
+**Status:** Deferred indefinitely; revisit only if a need arises.
+
 This brief makes the existing fixed Trash retention period configurable without
 weakening restore, purge, or media-cleanup guarantees.
 

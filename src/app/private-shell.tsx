@@ -2,9 +2,26 @@
 
 import { Archive, CircleHelp, LibraryBig, Search, Settings, Trash2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useSyncExternalStore } from 'react';
 import { AccountMenu } from './account-menu';
 import { EscapeDeselect } from './escape-deselect';
+
+const HandPreferenceContext = createContext<'left' | 'right'>('left');
+const mobileQuery = '(max-width: 720px)';
+function subscribeMobile(onChange: () => void) {
+  const query = window.matchMedia(mobileQuery);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+export function useMobileHand() {
+  const hand = useContext(HandPreferenceContext);
+  const mobile = useSyncExternalStore(
+    subscribeMobile,
+    () => window.matchMedia(mobileQuery).matches,
+    () => false,
+  );
+  return mobile ? hand : 'left';
+}
 
 export type PrivateNavItem = {
   href: string;
@@ -83,74 +100,76 @@ export function PrivateShell({
   };
 
   return (
-    <div className="private-shell" data-hand={handPreference}>
-      <EscapeDeselect />
-      <nav aria-label="Main navigation" className="private-nav">
-        <div className="private-nav-links">
-          {mainNavigation.map(({ href, label }) => (
+    <HandPreferenceContext.Provider value={handPreference}>
+      <div className="private-shell" data-hand={handPreference}>
+        <EscapeDeselect />
+        <nav aria-label="Main navigation" className="private-nav">
+          <div className="private-nav-links">
+            {mainNavigation.map(({ href, label }) => (
+              <a
+                aria-label={label}
+                aria-current={isCurrent(href) ? 'page' : undefined}
+                href={href}
+                key={href}
+                title={label}
+              >
+                {href === '/recipes' && (
+                  <Archive aria-hidden="true" className="private-nav-mobile-icon" size={20} />
+                )}
+                {href === '/publications' && (
+                  <LibraryBig aria-hidden="true" className="private-nav-mobile-icon" size={20} />
+                )}
+                {href === '/recipes/find' && (
+                  <Search aria-hidden="true" className="private-nav-mobile-icon" size={20} />
+                )}
+                {href === '/recipes/trash' && (
+                  <Trash2 aria-hidden="true" className="private-nav-mobile-icon" size={20} />
+                )}
+                <span className="private-nav-link-label">{label}</span>
+              </a>
+            ))}
+          </div>
+          <div className="private-nav-bottom">
             <a
-              aria-label={label}
-              aria-current={isCurrent(href) ? 'page' : undefined}
-              href={href}
-              key={href}
-              title={label}
-            >
-              {href === '/recipes' && (
-                <Archive aria-hidden="true" className="private-nav-mobile-icon" size={20} />
-              )}
-              {href === '/publications' && (
-                <LibraryBig aria-hidden="true" className="private-nav-mobile-icon" size={20} />
-              )}
-              {href === '/recipes/find' && (
-                <Search aria-hidden="true" className="private-nav-mobile-icon" size={20} />
-              )}
-              {href === '/recipes/trash' && (
-                <Trash2 aria-hidden="true" className="private-nav-mobile-icon" size={20} />
-              )}
-              <span className="private-nav-link-label">{label}</span>
-            </a>
-          ))}
-        </div>
-        <div className="private-nav-bottom">
-          <a
-            aria-current={isCurrent(helpNavigation.href) ? 'page' : undefined}
-            aria-label={helpNavigation.label}
-            className="private-nav-utility-link"
-            href={helpNavigation.href}
-            title={helpNavigation.label}
-          >
-            <CircleHelp
-              aria-hidden="true"
-              className="private-nav-help-icon"
-              size={17}
-              strokeWidth={1.8}
-            />
-            <span className="private-nav-utility-label">{helpNavigation.label}</span>
-          </a>
-          {settingsNavigation && (
-            <a
-              aria-label={settingsNavigation.label}
-              aria-current={isCurrent(settingsNavigation.href) ? 'page' : undefined}
+              aria-current={isCurrent(helpNavigation.href) ? 'page' : undefined}
+              aria-label={helpNavigation.label}
               className="private-nav-utility-link"
-              href={settingsNavigation.href}
-              title={settingsNavigation.label}
+              href={helpNavigation.href}
+              title={helpNavigation.label}
             >
-              <Settings aria-hidden="true" size={17} strokeWidth={1.8} />
-              <span className="private-nav-utility-label">{settingsNavigation.label}</span>
+              <CircleHelp
+                aria-hidden="true"
+                className="private-nav-help-icon"
+                size={17}
+                strokeWidth={1.8}
+              />
+              <span className="private-nav-utility-label">{helpNavigation.label}</span>
             </a>
-          )}
-          <AccountMenu
-            adminCurrent={Boolean(adminNavigation && isCurrent(adminNavigation.href))}
-            avatarUrl={profileImageUrl}
-            email={email}
-            initials={initials}
-            isAdmin={Boolean(adminNavigation)}
-          />
+            {settingsNavigation && (
+              <a
+                aria-label={settingsNavigation.label}
+                aria-current={isCurrent(settingsNavigation.href) ? 'page' : undefined}
+                className="private-nav-utility-link"
+                href={settingsNavigation.href}
+                title={settingsNavigation.label}
+              >
+                <Settings aria-hidden="true" size={17} strokeWidth={1.8} />
+                <span className="private-nav-utility-label">{settingsNavigation.label}</span>
+              </a>
+            )}
+            <AccountMenu
+              adminCurrent={Boolean(adminNavigation && isCurrent(adminNavigation.href))}
+              avatarUrl={profileImageUrl}
+              email={email}
+              initials={initials}
+              isAdmin={Boolean(adminNavigation)}
+            />
+          </div>
+        </nav>
+        <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>
+          {children}
         </div>
-      </nav>
-      <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>
-        {children}
       </div>
-    </div>
+    </HandPreferenceContext.Provider>
   );
 }

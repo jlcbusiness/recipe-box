@@ -1,5 +1,7 @@
 # DLC 18: Recipe and catalog history
 
+**Status:** Deferred indefinitely; revisit only if a need arises.
+
 This brief expands the read-only recipe/publication history viewer from Slice 23
 with restoration, search, and catalog history.
 

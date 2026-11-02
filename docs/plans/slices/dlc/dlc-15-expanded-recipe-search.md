@@ -1,5 +1,7 @@
 # DLC 15: Expanded recipe search
 
+**Status:** Deferred indefinitely; revisit only if a need arises.
+
 This brief extends recipe discovery beyond current full-text and structured
 filters. Search behavior must remain private and owner-scoped by default.
 

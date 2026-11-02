@@ -33,6 +33,7 @@ export function RecipeColumnFilter({
   mainIngredientsOnly = false,
   compact = false,
   options,
+  querySubmitted = false,
   selectedValues,
   sort,
   view,
@@ -47,6 +48,7 @@ export function RecipeColumnFilter({
   mainIngredientsOnly?: boolean;
   compact?: boolean;
   options: RecipeColumnFilterOption[];
+  querySubmitted?: boolean;
   selectedValues?: string[];
   sort: RecipeSearchSortKey;
   view: 'details' | 'list' | 'grid';
@@ -206,6 +208,7 @@ export function RecipeColumnFilter({
             <input name="sort" type="hidden" value={sort} />
             <input name="direction" type="hidden" value={direction} />
             <input name="view" type="hidden" value={view} />
+            {querySubmitted && <input name="query_submitted" type="hidden" value="1" />}
             <label className="recipe-column-filter-search-label">
               <span className="sr-only">Search {label} values</span>
               <input
@@ -284,6 +287,7 @@ export function MobileRecipeColumnFilters({
   mainIngredientsOnly = false,
   sort,
   view,
+  querySubmitted = false,
   clearAction,
   showClearButton = true,
 }: {
@@ -296,6 +300,7 @@ export function MobileRecipeColumnFilters({
   fields: MobileRecipeColumnFilterField[];
   hasActiveFilters?: boolean;
   mainIngredientsOnly?: boolean;
+  querySubmitted?: boolean;
   sort: RecipeSearchSortKey;
   view: 'details' | 'list' | 'grid';
   clearAction?: ReactNode;
@@ -333,6 +338,7 @@ export function MobileRecipeColumnFilters({
         fieldLabel={selectedField.label}
         mainIngredientsOnly={mainIngredientsOnly}
         options={selectedField.options}
+        querySubmitted={querySubmitted}
         selectedValues={columnSelections[selectedField.field]}
         sort={sort}
         view={view}
@@ -361,6 +367,7 @@ export function MobileRecipeColumnFilters({
               />
             );
           })}
+          {querySubmitted && <input name="query_submitted" type="hidden" value="1" />}
           <button
             aria-label="Clear all column filters"
             className="recipe-explorer-trigger find-recipes-mobile-clear-button"

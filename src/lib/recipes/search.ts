@@ -1,4 +1,5 @@
 import 'server-only';
+import { QueryLogicError } from '../query-logic';
 import type { RecipeSupabaseClient } from './data';
 import type { StandardNutrientKey } from './nutrition-rules';
 import { STANDARD_NUTRIENT_KEYS } from './nutrition-rules';
@@ -14,6 +15,7 @@ export type RecipeSearchResult = {
 };
 
 export type RecipeSearchFilterField =
+  | 'advanced_rules'
   | 'name'
   | 'notes_markdown'
   | 'reason'
@@ -388,6 +390,12 @@ export async function searchRecipes(
   });
 
   if (error) {
+    if (
+      error.code === '22023' &&
+      options.filters?.some(({ field }) => field === 'advanced_rules')
+    ) {
+      throw new QueryLogicError(error.message);
+    }
     throw new Error('Unable to search recipes.');
   }
 

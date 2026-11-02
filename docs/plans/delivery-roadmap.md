@@ -63,6 +63,17 @@ produced a two-page letter PDF measuring 612 x 792 points. The default
 two-worker test-suite flakiness remains a general test-reliability caveat, not
 a reproducible DLC 08 failure.
 
+DLC 13 is implemented and locally accepted as Advanced Rules expressions,
+replacing the proposed nested-group builder. Numbered rules support AND, OR,
+NOT, parentheses, and the requested aliases through a staged Add pane; the
+main query apply runs the logic. UUID-bound references survive renumbering;
+deletions retain their numbered slots until apply, and URL/remembered state
+retains the expression. Mobile Find controls honor both hand settings. Parser,
+database, browser, responsive, accessibility, type, lint, and production-build
+checks cover the revised contract. The migration was applied locally without reset;
+hosted deployment and physical mobile-keyboard acceptance remain unverified.
+See the [DLC 13 brief](slices/dlc/dlc-13-advanced-query-groups.md).
+
 ## Mandatory Slice Preparation
 
 Before implementing any roadmap slice:

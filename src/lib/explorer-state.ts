@@ -1,3 +1,4 @@
+import { decodeAdvancedRules } from './query-logic';
 import { STANDARD_NUTRIENT_FIELDS, STANDARD_NUTRIENT_KEYS } from './recipes/nutrition-rules';
 
 export type ExplorerFilter = {
@@ -17,13 +18,17 @@ export function getQueryAutoSelectColumns(
   filters: readonly ExplorerFilter[],
   columns: readonly ExplorerColumnDefinition[],
 ): string[] {
-  const allowedColumns = new Set(columns.map(({ key }) => key));
+  const allowedColumns = new Set(columns.filter(({ required }) => !required).map(({ key }) => key));
   return [
     ...new Set(
-      filters.flatMap(({ field }) => {
-        const key = queryColumnAliases[field] ?? field;
-        return allowedColumns.has(key) ? [key] : [];
-      }),
+      filters
+        .flatMap((filter) =>
+          filter.field === 'advanced_rules' ? decodeAdvancedRules(filter).rules : [filter],
+        )
+        .flatMap(({ field }) => {
+          const key = queryColumnAliases[field] ?? field;
+          return allowedColumns.has(key) ? [key] : [];
+        }),
     ),
   ];
 }
@@ -425,6 +430,16 @@ function isExplorerFilter(value: unknown): value is ExplorerFilter {
 }
 
 function isSupportedExplorerFilter(context: ExplorerStateContext, filter: ExplorerFilter): boolean {
+  if (filter.field === 'advanced_rules') {
+    if (context !== 'recipes-find') return false;
+    try {
+      return decodeAdvancedRules(filter).rules.every(
+        (rule) => recipeFilterFields.has(rule.field) && filterOperators.has(rule.operator),
+      );
+    } catch {
+      return false;
+    }
+  }
   const fields = context === 'publications' ? publicationFilterFields : recipeFilterFields;
   return fields.has(filter.field) && filterOperators.has(filter.operator);
 }
@@ -624,6 +639,8 @@ export function hasPersistedExplorerUrlState(
       if (typeof filter !== 'string') return false;
       try {
         const parsed = JSON.parse(filter);
+        if (context === 'recipes-find' && isRecord(parsed) && parsed.field === 'advanced_rules')
+          return true;
         return isExplorerFilter(parsed) && isSupportedExplorerFilter(context, parsed);
       } catch {
         return false;

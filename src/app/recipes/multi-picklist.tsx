@@ -20,8 +20,10 @@ type MultiPicklistProps = {
   onFocusLeave?: (relatedTarget: EventTarget | null) => void;
   onEnter?: () => boolean;
   emptyLabel?: string;
+  describedBy?: string;
   filterMode?: boolean;
   includeHiddenInputs?: boolean;
+  stagedChange?: boolean;
 };
 
 export function MultiPicklist({
@@ -38,8 +40,10 @@ export function MultiPicklist({
   onFocusLeave,
   onEnter,
   emptyLabel = 'Select',
+  describedBy,
   filterMode = false,
   includeHiddenInputs = true,
+  stagedChange = false,
 }: MultiPicklistProps) {
   const [localSelectedOptionIds, setLocalSelectedOptionIds] = useState(selectedIds);
   const selectedOptionIds = onSelectionChange ? selectedIds : localSelectedOptionIds;
@@ -209,9 +213,10 @@ export function MultiPicklist({
         )}
         <button
           aria-controls={optionsId}
+          aria-describedby={describedBy}
           aria-expanded={isOpen}
           aria-label={`${label}: ${accessibleSelection || 'Select'}`}
-          className={`recipe-picklist-trigger${filterMode ? ' recipe-filter-value-trigger' : ''}`}
+          className={`recipe-picklist-trigger${filterMode ? ' recipe-filter-value-trigger' : ''}${stagedChange ? ' is-staged-changed' : ''}`}
           data-query-multi-select={filterMode ? 'true' : undefined}
           id={controlId}
           ref={triggerRef}
@@ -225,7 +230,7 @@ export function MultiPicklist({
           onKeyDown={handleTriggerKeyDown}
         >
           <span className="recipe-picklist-trigger-label">
-            {selectedValues.length > 0 && (
+            {selectedValues.length > 0 && !filterMode && (
               <span aria-hidden="true" className={styles.triggerCheck}>
                 ✓
               </span>

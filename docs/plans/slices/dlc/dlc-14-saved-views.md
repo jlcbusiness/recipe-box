@@ -1,7 +1,8 @@
 # DLC 14: Saved views
 
-This brief makes explorer queries reusable. It depends on the versioned query
-model and validation contract in DLC 13.
+This brief makes explorer queries reusable. It depends on the versioned
+Advanced Rules envelope and validation contract in DLC 13, not a visual
+nested-group builder.
 
 ## Outcome
 
@@ -37,4 +38,4 @@ it without losing publication scope or personal display preferences.
 
 - [Explorer state](../18-explorer-state.md)
 - [Explorer preferences](../19-advanced-queries-and-saved-views.md)
-- [Advanced query groups](dlc-13-advanced-query-groups.md)
+- [Advanced Rules expressions](dlc-13-advanced-query-groups.md)

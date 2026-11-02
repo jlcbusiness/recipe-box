@@ -1206,15 +1206,27 @@ shared footer so both actions fit on short screens.
 The shared View-and-sort control group puts View first, then Sort and direction,
 in its visual and keyboard order. Give View the group's left border and outer
 left corners; Details contains only View. Keep Choose List columns attached to
-the group's right edge.
+the group's right edge. In Find's mobile Search and Query, this is the Left-hand
+order. Right hand mirrors the complete group to Choose columns, direction,
+Sort, View and aligns it right. Swap DOM order as well as visual placement,
+retain attached borders and outer corners, and keep menus within the viewport.
+Do not flip text or directional icons. Other explorers and desktop retain
+their established order.
 
 Find's Query mode includes **Starred** and **Hearted** boolean fields. Each uses
 single-value **Is**/**Isn't** operators with **Yes** and **No** choices, and
 query criteria remain visible and editable after submission.
 Query rules stay staged while their values are edited, removed, or cleared.
-Multi-select Value buttons visibly list every selected value, comma-separated,
-and wrap instead of truncating the selection. An empty multi-select Value
-button says **Select**. On mobile, keep Field, Operator, Value, and the
+Multi-select Value buttons list every selected value, comma-separated. In the
+compact mobile row, keep the trigger on one line and truncate overflowing text;
+retain the full selection in its accessible name, without a checkmark in the
+closed trigger. Keep selected-option checks in the open menu. Expanded rows show
+the full selection and wrap it within the available width; keep the remove
+control after Value at the end of the row, wrapping Value content as needed to
+keep them together.
+An empty multi-select Value button says **Select**. Number Query rows in a
+compact leading rail. On mobile,
+keep the number, Field, Operator, Value, and the
 half-size remove button on one row. Give numeric filters a three-character
 Operator and a Value sized for four digits; give text filters a four-character
 Operator. Abbreviate the selected Operator label to fit, while retaining the
@@ -1224,6 +1236,12 @@ leave 1mm between adjacent controls, and keep the remove button vertically
 centered with 1mm clearance after Value. For **Between**, place Through on its
 own row below; numeric Through values also fit four digits. Bound multi-select
 menus to the viewport and scroll long option lists inside the menu.
+On mobile, show each rule number beside a right-pointing caret; tap it to rotate
+the caret downward and let the row controls size to their labels/current values
+and wrap as needed.
+Keep at least 1mm of internal horizontal padding on each side of the Operator.
+Tap again to restore the compact single-line row. Keep 1mm between the number
+and caret control and Field.
 Switching between Search and Query clears the criteria from the mode being left
 and refreshes the results without those criteria. The right-aligned **apply**
 button uses italic serif type, submits complete criteria, and is disabled while
@@ -1233,6 +1251,54 @@ on its own row below them. **Clear all** is a matching outlined button with
 inverted colors and clears only the staged rules. Enter in a complete rule
 applies the same query, and applying an empty rule set clears the current query
 refinements.
+
+The **Advanced Rules** link is left-aligned below the query action row on
+desktop. Only in Details, show the auto-column checkbox opposite it and apply the query's
+matching List columns when available. List and Grid neither auto-select
+columns nor show the checkbox. On mobile, abbreviate the Details checkbox to
+**Don't add cols.** The pane uses the paper surface, a numbered read-only
+rule list, and a labeled expression field; Add stages its expression, Clear
+empties only the pane draft, and Cancel, X, Escape, or outside-click discard
+pane edits. Keep initial input focus, cyclic keyboard focus, and focus return
+to the link. Bound the pane to the visual viewport, including keyboard-driven
+resizing and scrolling.
+
+Show the entered logic in italics to the right of the Advanced Rules link on
+the same row on desktop, with matching font size. Align both text bottoms with
+the **Don't auto-select columns** label, and vertically center the expression's
+remove X and checkbox with their respective text. On mobile, right-align the
+link on the same row as the expression above the rule rows. If
+the expression does not fit beside the link, place it below and wrap it as
+needed. Use the full row width for a wrapped expression, right-align its text
+against the remove X, and align the X with the ordinary rule remove controls.
+In Details, keep the shortened **Don't add cols.** checkbox opposite Advanced
+Rules on the mobile row.
+When the link and expression share a mobile row, vertically center the link
+text, expression text, and remove X together without shrinking their touch
+targets. Keep its remove X 2mm after the expression. Removing it clears staged logic
+without removing rules or changing results; return focus to the link.
+After the first Query submission, use a pale yellow background to identify
+changed field controls and highlight only changed expression text. Attach
+visually hidden “changed, not yet applied” descriptions to changed controls and
+the expression group. Keep the entered expression unchanged while edits are
+staged. Keep rule numbers stable; place **Rule deleted** in the deleted rule's
+numbered slot in both the builder and Advanced Rules pane. New rules append
+after the highest slot. Include a visually hidden description that the deletion
+is pending and references may need repair. After the first Query submission,
+highlight the deletion and retain it after an empty query as well. Clear staged
+indicators and compact active rule numbers only when the main Query is applied.
+On mobile, preserve the ordinary rule-number column and row height for deleted
+slots, and vertically center **Rule deleted** in the reserved slot.
+List unused active rule numbers explicitly in validation errors, reject
+references to deleted slots, and update surviving expression references by
+stable rule ID on apply. Show “Remove or replace the deleted rule.” beneath
+the Advanced Rules link and immediately in the pane. On mobile, center the
+message and keep it at next-line spacing. Use one size smaller than the link,
+regular weight, and do not repeat the rule number. Color each deleted number
+token red in both the builder summary and editable expression until it is
+corrected.
+Disable query apply while logic is invalid, preserving the draft for repair.
+Clear all clears both staged rules and staged logic.
 
 Below the Search field, a left-aligned **Main ingredients only** checkbox
 (18px leaf-accented box, 14px regular label, 44px tap target on mobile) limits
@@ -1249,9 +1315,11 @@ per-serving estimate; a nutrient becomes a sort choice when its column is
 visible. Optional vitamins and minerals are excluded. The fifteen values are
 optional List columns, hidden by default.
 
-Applying Query automatically shows matching List columns when available,
-unless the user checks **Don't auto-select columns** for that application.
-Keep that checkbox below the shared **Clear all** and **apply** button row.
+In Details, applying Query automatically shows matching List columns when
+available, unless the user checks **Don't auto-select columns** for that
+application. List and Grid do not auto-select columns and do not show the
+checkbox. Keep the Details checkbox below the shared **Clear all** and **apply**
+button row.
 Header clicks in Details sort the corresponding column, starting a new sort
 ascending and alternating direction on subsequent clicks; the separate Sort
 and Sort Order controls are omitted in Details. Center Rating, Star, and Heart

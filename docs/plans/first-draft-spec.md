@@ -266,9 +266,11 @@ prompts to delete recipes, move to Recipe Tin, or move to another publication.
 
 Recipes and publications support full-text search, straightforward
 field-appropriate filters, sorting, and last-used state per explorer. Slice 19
-adds per-explorer List-column visibility and desktop widths. Nested query
-groups and named or pinned saved views are deferred; ordinary filters remain
-available for on-the-fly lookup. See
+adds per-explorer List-column visibility and desktop widths. Find's Query
+supports optional Advanced Rules logic over numbered rules, staged through
+an Add pane and executed by the main apply action. A visual nested-group
+builder is excluded; named or pinned saved views remain deferred. Ordinary
+all-rules-AND filters remain available for on-the-fly lookup. See
 [comprehensive-reference.md § 7](comprehensive-reference.md#7-queries-search-and-library-explorer).
 Full-text search covers names, notes, ingredients, instructions, publications,
 and authors.

@@ -1,5 +1,7 @@
 # DLC 16: Ingredient density profiles
 
+**Status:** Deferred indefinitely; revisit only if a need arises.
+
 This brief extends the single trusted density from Slice 15 to contexts where
 one ingredient has multiple valid conversions.
 

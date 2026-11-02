@@ -1,5 +1,7 @@
 # DLC 21: App-controlled installation prompt
 
+**Status:** Canceled.
+
 This brief evaluates an app-controlled installation prompt beyond the browser's
 current installation UI. Browser policy determines whether this feature is
 possible.

@@ -1,5 +1,7 @@
 # DLC 19: History bundle support
 
+**Status:** Canceled.
+
 This brief considers forensic history portability for the versioned ZIP formats
 from Slices 20 and 21. It depends on the history model in DLC 18.
 

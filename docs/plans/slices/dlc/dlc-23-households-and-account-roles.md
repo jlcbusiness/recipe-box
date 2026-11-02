@@ -1,5 +1,7 @@
 # DLC 23: Households and account roles
 
+**Status:** Deferred indefinitely; revisit only if a need arises.
+
 This brief explores multi-person ownership and collaboration beyond the current
 single-owner account model. It requires a security and data-ownership design
 before implementation.

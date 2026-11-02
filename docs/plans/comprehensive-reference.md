@@ -1025,8 +1025,42 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   described in § 7.2 and narrow results with field-appropriate filters. Text,
   multi-select, number/time/date, and enum fields expose only their applicable
   operators, including blank checks where supported. Multiple filters combine
-  with `AND`; nested `AND`/`OR` query groups and named-query lifecycle are
-  deferred.
+  with `AND` by default. Find's Query mode optionally combines numbered rules
+  with an **Advanced Rules** expression; a visual nested-group builder and
+  named-query lifecycle are not included.
+- **Advanced Rules:** A pane lists the current numbered Query rules and accepts
+  their numbers with parentheses and case-insensitive `AND`, `OR`, and `NOT`.
+  Aliases `&&`, `&`, `||`, `|`, `!`, `-and`, `-or`, and `-not` have the same
+  Boolean meaning. Precedence is parentheses, NOT, AND, OR. Every rule must
+  appear at least once; errors explicitly list unused or missing references.
+  **Add** stages the logic without running the Query; main **apply** runs the
+  staged rules and logic together. Clear empties only the pane draft, and Add
+  commits that removal. Cancel, X, Escape, and outside-click discard pane edits.
+  A floating X beside the italic expression clears staged logic without
+  removing rules or changing current results. Query Clear all clears staged
+  rules and logic; switching away from Query clears both. Rule IDs remain
+  stable while edits are staged: a deleted rule keeps its numbered slot as
+  **Rule deleted**, later rules do not shift, and new rules append after the
+  highest slot. Deleted references are invalid and never bind to another rule.
+  On Apply, compact active rules and update expression numbers by stable rule
+  ID while preserving entered text and aliases. Show “Remove or replace the
+  deleted rule.” beneath the Advanced Rules link and in the pane for deleted
+  references; center it on mobile with next-line spacing and do not repeat the
+  deleted rule number. Highlight the invalid number token red in both the
+  builder summary and pane until corrected.
+  On desktop, place the italic expression to the right of the Advanced Rules
+  link and align both text bottoms with the **Don't auto-select columns**
+  label; center the expression's remove X and checkbox vertically on their
+  respective text. On mobile, right-align the link above the rules and wrap a
+  long expression below it, using the full row width and aligning its right
+  edge and remove X with the ordinary rule remove controls.
+  URL and last-used state retain the versioned expression and rule IDs.
+  Owner, active-record, and publication-scope constraints remain outside the
+  expression. Independent column filters AND the complete expression; the
+  database evaluates it before counts, facets, sorting, and pagination.
+  NOT complements each rule's Boolean match, including a nonmatch caused by
+  an unavailable value. Bounds are ten rules, 1,024 expression characters,
+  256 tokens, 16 parenthesis levels, and 65,536 UTF-8 bytes per envelope.
 - **Marker quick filters:** Find's Search mode and each publication's recipe
   list provide immediate, URL-backed toggle buttons visually labeled only ⭐
   and ❤️. Query has no quick marker filters; it provides staged Starred and
@@ -1049,11 +1083,14 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   values remain unavailable rather than becoming zero. Optional vitamins and
   minerals are not Query fields or sort keys. Apply nutrition filters in the
   database before pagination so result counts and pages remain correct.
-- **Query columns and Details sorting:** Applying Query automatically selects
-  visible List columns corresponding to its fields unless the user checks
-  **Don't auto-select columns** for that application. The resulting visibility
-  choice is persisted normally and can be changed afterward; place the opt-out
-  checkbox below the Clear all and apply button row. Details renders current-page
+- **Query columns and Details sorting:** In Details only, applying Query
+  automatically selects visible List columns corresponding to its fields
+  unless the user checks **Don't auto-select columns** for that application.
+  List and Grid never auto-select columns and do not show the opt-out checkbox.
+  The resulting Details visibility choice is persisted normally and can be
+  changed afterward; place the checkbox below the Clear all and apply button
+  row, opposite Advanced Rules. On mobile its label is **Don't add cols.**
+  Details renders current-page
   values for hidden columns so revealing one adds populated cells without blank
   tracks. In Details, click a column header to sort ascending; click the active
   header again to toggle direction. Choosing another header starts ascending,
@@ -1352,7 +1389,12 @@ a Units heading. View selects Standard or Ingredient-first presentation. Volume,
 Weight, and View use the shared portal `Picklist`; the private navigation has
 no Units shortcut. On mobile, a Hand preference selects Left or Right and
 reverses the compact navigation icon order for Right-handed use; it is not
-shown on desktop. Visible preference controls are 36px high; Picklist hit areas
+shown on desktop. Find's mobile Search and Query result group uses View, Sort,
+direction, Choose columns for Left hand, and mirrors it to Choose columns,
+direction, Sort, View at the right for Right hand. Details omits Sort and
+direction. Visual and keyboard order agree; text and icons are not flipped.
+Desktop and other explorer toolbars are unchanged.
+Visible preference controls are 36px high; Picklist hit areas
 expand to at least 48px on mobile. The controls are keyboard operable, display
 save status, and never offer public or cross-account preference changes.
 

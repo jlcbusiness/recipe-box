@@ -33,8 +33,10 @@ receiving a truthful result for asynchronous media cleanup.
 - Decide whether history is deleted or retained as a compliance/audit record.
 - Define authorization, recent-authentication requirements, confirmation
   wording, retries, and partial-failure recovery.
-- If households exist, define whether one person can reset shared content or
-  only leave the household; DLC 23 must resolve this first.
+- Household support (DLC 23) is deferred indefinitely and should be revisited
+  only if a need arises. If it is resumed before this reset, resolve whether
+  reset affects shared content or only the requesting account's own data before
+  implementation.
 
 ## Acceptance
 
@@ -44,8 +46,8 @@ receiving a truthful result for asynchronous media cleanup.
   public-link, or cached content within the approved boundary.
 - Cleanup failures remain durably retryable and are reported as incomplete,
   never as a fully successful reset.
-- Repeated requests are safe; authorization prevents cross-account or
-  cross-household deletion.
+- Repeated requests are safe; authorization prevents cross-account deletion and,
+  if household support is later introduced, cross-household deletion.
 - Database/RLS, public access, media cleanup, offline cache, audit, browser,
   and accessibility tests pass.
 

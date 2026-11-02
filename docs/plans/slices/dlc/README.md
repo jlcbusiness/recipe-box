@@ -11,6 +11,10 @@ stable even when a later-numbered repair belongs earlier. Each brief is a
 planning boundary; expand and verify its product decisions before
 implementation.
 
+**Status:** Deferred items are indefinitely out of active plans and are
+revisited only if a need arises. Canceled items are not active work unless
+explicitly reopened.
+
 ## Delivered items excluded from new work
 
 Equipment and managed recipe picklist values already exist in Settings, and
@@ -48,20 +52,20 @@ while retaining the existing single-image viewer without gallery navigation.
 - **DLC 10:** [Recipe score, stars, and hearts](dlc-10-ratings-and-favorites.md)
 - **DLC 11:** [Yield and servings](dlc-11-yield-and-servings.md)
 - **DLC 12:** [Recipe nutrition](dlc-12-recipe-nutrition.md)
-- **DLC 13:** [Advanced query groups](dlc-13-advanced-query-groups.md)
+- **DLC 13 (locally delivered):** [Advanced Rules expressions](dlc-13-advanced-query-groups.md)
 - **DLC 14:** [Saved views](dlc-14-saved-views.md)
-- **DLC 15:** [Expanded recipe search](dlc-15-expanded-recipe-search.md)
-- **DLC 16:** [Ingredient density profiles](dlc-16-ingredient-density-profiles.md)
+- **DLC 15 (deferred):** [Expanded recipe search](dlc-15-expanded-recipe-search.md)
+- **DLC 16 (deferred):** [Ingredient density profiles](dlc-16-ingredient-density-profiles.md)
 
 ### Phase 4: Cooking, history, and operations
 
-- **DLC 17:** [Full-screen cooking mode](dlc-17-full-screen-cooking-mode.md)
-- **DLC 18:** [Recipe and catalog history](dlc-18-recipe-and-catalog-history.md)
-- **DLC 19:** [History bundle support](dlc-19-history-bundle-support.md)
-- **DLC 20:** [Expanded offline use](dlc-20-expanded-offline-use.md)
-- **DLC 21:** [App-controlled installation prompt](dlc-21-installation-prompt.md)
-- **DLC 22:** [Configurable Trash retention](dlc-22-configurable-trash-retention.md)
-- **DLC 23:** [Households and account roles](dlc-23-households-and-account-roles.md)
+- **DLC 17 (canceled):** [Full-screen cooking mode](dlc-17-full-screen-cooking-mode.md)
+- **DLC 18 (deferred):** [Recipe and catalog history](dlc-18-recipe-and-catalog-history.md)
+- **DLC 19 (canceled):** [History bundle support](dlc-19-history-bundle-support.md)
+- **DLC 20 (deferred):** [Expanded offline use](dlc-20-expanded-offline-use.md)
+- **DLC 21 (canceled):** [App-controlled installation prompt](dlc-21-installation-prompt.md)
+- **DLC 22 (deferred):** [Configurable Trash retention](dlc-22-configurable-trash-retention.md)
+- **DLC 23 (deferred):** [Households and account roles](dlc-23-households-and-account-roles.md)
 - **DLC 24:** [Account content reset](dlc-24-account-content-reset.md)
 
 ### Phase 5: Recipe and document-output follow-up
@@ -82,13 +86,13 @@ while retaining the existing single-image viewer without gallery navigation.
   (DLC 04), then add structured instruction references (DLC 05).
 - Extend media (DLC 06–07) before setting the shared reading, public, and print
   contract (DLC 08), then implement portable exports (DLC 09).
-- Define query groups (DLC 13) before saved views (DLC 14); reuse that query
+- Define Advanced Rules expressions (DLC 13) before saved views (DLC 14); reuse that query
   model for expanded search (DLC 15) where appropriate.
 - Define richer serving semantics (DLC 11) before nutrition calculations
   (DLC 12). Density profiles (DLC 16) are independent.
-- History portability follows history restoration and browsing. Offline editing
-  and household collaboration require focused architecture proofs before
-  implementation planning is complete.
+- DLC 19 history bundle support is canceled. If DLC 20 offline use or DLC 23
+  household collaboration is rescheduled, each requires a focused architecture
+  proof first.
 - DLC 27 depends on ingredient sets (DLC 03), instruction authoring (DLC 05),
   and the paginated document-output contract (DLC 09); its relationship and
   editor behavior must be resolved in its brief before implementation.

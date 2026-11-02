@@ -13,6 +13,7 @@ import {
   explorerColumnDefinitions,
 } from '../lib/explorer-state';
 import { saveExplorerState } from './actions/explorer-state';
+import { useMobileHand } from './private-shell';
 
 type ColumnContext = 'recipes-find' | 'publications' | 'publication-recipes';
 
@@ -121,6 +122,7 @@ export function ExplorerListPreferences({
     definitions.map(({ key, minWidth, maxWidth }) => [key, { minWidth, maxWidth }]),
   );
   const router = useRouter();
+  const mobileRight = useMobileHand() === 'right' && context === 'recipes-find';
   const defaultPreferences = defaultExplorerDisplayPreferences(context, definitions);
   const [preferences, setPreferences] = useState(() => initialPreferences ?? defaultPreferences);
   const [isOpen, setIsOpen] = useState(false);
@@ -282,7 +284,7 @@ export function ExplorerListPreferences({
       }
       url.searchParams.delete('auto_select_columns');
       url.searchParams.delete('no_auto_select_columns');
-      router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     };
     const additions = autoSelectColumns.filter(
       (column) => !preferencesRef.current.visible_columns.includes(column),
@@ -303,7 +305,6 @@ export function ExplorerListPreferences({
     autoSelectRequestKey,
     consumeAutoSelectRequest,
     persistPreferences,
-    router,
     updatePreferences,
   ]);
 
@@ -443,9 +444,15 @@ export function ExplorerListPreferences({
         style={wrapperStyle}
       >
         {toolbar ? (
-          <div className="explorer-list-preferences-toolbar">
+          <div
+            className="explorer-list-preferences-toolbar"
+            data-find-hand={
+              context === 'recipes-find' ? (mobileRight ? 'right' : 'left') : undefined
+            }
+          >
+            {mobileRight && controls}
             <div className="explorer-list-preferences-toolbar-content">{toolbar}</div>
-            {controls}
+            {!mobileRight && controls}
             {toolbarTrailing}
             {toolbarAction}
           </div>

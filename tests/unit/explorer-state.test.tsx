@@ -126,6 +126,7 @@ describe('explorer state contract', () => {
     expect(
       getQueryAutoSelectColumns(
         [
+          { field: 'name', operator: 'contains', value: 'garlic' },
           { field: 'calories', operator: 'greater_than', value: 100 },
           { field: 'publication_id', operator: 'in', value: ['publication-id'] },
           { field: 'main_ingredient', operator: 'contains_any', value: ['ingredient-id'] },

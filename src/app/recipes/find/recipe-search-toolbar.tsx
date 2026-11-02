@@ -17,6 +17,7 @@ import type {
   RecipeSearchSortKey,
 } from '../../../lib/recipes/search';
 import { Picklist } from '../../picklist';
+import { useMobileHand } from '../../private-shell';
 import { useRecipeSearchMode } from './recipe-search-tabs';
 
 type SortOption = { value: RecipeSearchSortKey; label: string };
@@ -40,6 +41,7 @@ function controlHref({
   direction,
   view,
   tab,
+  querySubmitted = false,
   page = 1,
   mainIngredientsOnly = false,
 }: {
@@ -51,6 +53,7 @@ function controlHref({
   direction: 'asc' | 'desc';
   view: RecipeExplorerView;
   tab?: 'search' | 'query';
+  querySubmitted?: boolean;
   page?: number;
   mainIngredientsOnly?: boolean;
 }) {
@@ -69,6 +72,7 @@ function controlHref({
   params.set('page', String(page));
   params.set('view', view);
   if (tab) params.set('tab', tab);
+  if (querySubmitted) params.set('query_submitted', '1');
   return `${path}?${params.toString()}`;
 }
 
@@ -80,6 +84,7 @@ export function RecipeSearchToolbar({
   options,
   path,
   query,
+  querySubmitted = false,
   sort,
   view,
   viewOptions,
@@ -91,12 +96,14 @@ export function RecipeSearchToolbar({
   options: SortOption[];
   path: string;
   query: string;
+  querySubmitted?: boolean;
   sort: RecipeSearchSortKey;
   view: RecipeExplorerView;
   viewOptions?: { value: RecipeExplorerView; label: string }[];
 }) {
   const router = useRouter();
   const searchMode = useRecipeSearchMode();
+  const hand = useMobileHand();
 
   const hrefFor = (next: {
     sort?: RecipeSearchSortKey;
@@ -113,6 +120,7 @@ export function RecipeSearchToolbar({
       direction: next.direction ?? direction,
       view: next.view ?? view,
       tab: searchMode?.mode,
+      querySubmitted,
     });
   const nextViewOption = viewOptions
     ? viewOptions[
@@ -122,6 +130,61 @@ export function RecipeSearchToolbar({
   const nextView = nextViewOption?.value ?? (view === 'list' ? 'grid' : 'list');
   const nextViewLabel = nextViewOption?.label ?? (nextView === 'grid' ? 'Grid' : 'List');
 
+  const viewControl = (
+    <button
+      key="view"
+      aria-label={`Switch to ${nextViewLabel} view`}
+      aria-pressed={view === 'grid'}
+      className="recipe-explorer-trigger recipe-explorer-icon-trigger"
+      onClick={() => {
+        router.push(hrefFor({ view: nextView }));
+      }}
+      title={`Switch to ${nextViewLabel} view`}
+      type="button"
+    >
+      {view === 'details' ? (
+        <Rows3 aria-hidden="true" size={19} />
+      ) : view === 'list' ? (
+        <List aria-hidden="true" size={19} />
+      ) : (
+        <LayoutGrid aria-hidden="true" size={19} />
+      )}
+    </button>
+  );
+  const sortControl = (
+    <div key="sort" className="recipe-explorer-control recipe-explorer-control-sort">
+      <Picklist
+        className="recipe-explorer-sort-picklist"
+        label={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
+        menuClassName="recipe-explorer-sort-menu"
+        onSelect={(value) => router.push(hrefFor({ sort: value as RecipeSearchSortKey }))}
+        options={options}
+        showArrow={false}
+        sizeToContent={false}
+        title={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
+        value={sort}
+      >
+        <ArrowDownWideNarrow aria-hidden="true" size={19} />
+      </Picklist>
+    </div>
+  );
+  const directionControl = (
+    <Link
+      key="direction"
+      aria-label={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
+      className="recipe-explorer-trigger recipe-explorer-icon-trigger"
+      href={hrefFor({ direction: direction === 'asc' ? 'desc' : 'asc' })}
+      title={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
+    >
+      {direction === 'asc' ? (
+        <ArrowUp aria-hidden="true" size={19} />
+      ) : (
+        <ArrowDown aria-hidden="true" size={19} />
+      )}
+    </Link>
+  );
+  const controls =
+    view === 'details' ? [viewControl] : [viewControl, sortControl, directionControl];
   return (
     <fieldset className="recipe-explorer-toolbar">
       <legend className="sr-only">Recipe result controls</legend>
@@ -131,55 +194,7 @@ export function RecipeSearchToolbar({
         <legend className="sr-only">
           {view === 'details' ? 'View controls' : 'View and sort controls'}
         </legend>
-        <button
-          aria-label={`Switch to ${nextViewLabel} view`}
-          aria-pressed={view === 'grid'}
-          className="recipe-explorer-trigger recipe-explorer-icon-trigger"
-          onClick={() => {
-            router.push(hrefFor({ view: nextView }));
-          }}
-          title={`Switch to ${nextViewLabel} view`}
-          type="button"
-        >
-          {view === 'details' ? (
-            <Rows3 aria-hidden="true" size={19} />
-          ) : view === 'list' ? (
-            <List aria-hidden="true" size={19} />
-          ) : (
-            <LayoutGrid aria-hidden="true" size={19} />
-          )}
-        </button>
-        {view !== 'details' && (
-          <>
-            <div className="recipe-explorer-control recipe-explorer-control-sort">
-              <Picklist
-                className="recipe-explorer-sort-picklist"
-                label={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
-                menuClassName="recipe-explorer-sort-menu"
-                onSelect={(value) => router.push(hrefFor({ sort: value as RecipeSearchSortKey }))}
-                options={options}
-                showArrow={false}
-                sizeToContent={false}
-                title={`Sort by ${options.find(({ value }) => value === sort)?.label ?? 'Name'}`}
-                value={sort}
-              >
-                <ArrowDownWideNarrow aria-hidden="true" size={19} />
-              </Picklist>
-            </div>
-            <Link
-              aria-label={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
-              className="recipe-explorer-trigger recipe-explorer-icon-trigger"
-              href={hrefFor({ direction: direction === 'asc' ? 'desc' : 'asc' })}
-              title={direction === 'asc' ? 'Sort descending' : 'Sort ascending'}
-            >
-              {direction === 'asc' ? (
-                <ArrowUp aria-hidden="true" size={19} />
-              ) : (
-                <ArrowDown aria-hidden="true" size={19} />
-              )}
-            </Link>
-          </>
-        )}
+        {path === '/recipes/find' && hand === 'right' ? [...controls].reverse() : controls}
       </fieldset>
     </fieldset>
   );
@@ -189,6 +204,7 @@ export function RecipeSearchClearFilters({
   direction,
   path,
   query,
+  querySubmitted = false,
   sort,
   view,
   placement = 'toolbar',
@@ -196,6 +212,7 @@ export function RecipeSearchClearFilters({
   direction: 'asc' | 'desc';
   path: string;
   query: string;
+  querySubmitted?: boolean;
   sort: RecipeSearchSortKey;
   view: RecipeExplorerView;
   placement?: 'toolbar' | 'mobile-details';
@@ -212,6 +229,7 @@ export function RecipeSearchClearFilters({
     direction,
     view,
     tab: searchMode?.mode,
+    querySubmitted,
   });
   const placementClass = [
     `recipe-explorer-clear-filters-${placement}`,
@@ -247,6 +265,7 @@ export function RecipeSearchPagination({
   pageCount,
   path,
   query,
+  querySubmitted = false,
   sort,
   view,
 }: {
@@ -258,6 +277,7 @@ export function RecipeSearchPagination({
   pageCount: number;
   path: string;
   query: string;
+  querySubmitted?: boolean;
   sort: RecipeSearchSortKey;
   view: RecipeExplorerView;
 }) {
@@ -273,6 +293,7 @@ export function RecipeSearchPagination({
       direction,
       view,
       tab: searchMode?.mode,
+      querySubmitted,
       page: nextPage,
     });
 

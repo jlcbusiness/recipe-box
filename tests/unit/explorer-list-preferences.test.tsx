@@ -8,6 +8,7 @@ const { routerRefresh, saveExplorerState } = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
 vi.mock('../../src/app/actions/explorer-state', () => ({ saveExplorerState }));
+vi.mock('../../src/app/private-shell', () => ({ useMobileHand: () => 'left' }));
 
 import {
   ExplorerColumnResizeHandle,

@@ -18,8 +18,8 @@
   - (and possible, start from the recipe details?) #5
 🗸 include recipe images in instructions #5
   🗸 as references! Like the ingredient sizes! #5
-- add nutrition information (calc per serving) #12
-  - add known nutrition values per ingredient...? #12
+🗸 add nutrition information (calc per serving) #12
+  🗸 add known nutrition values per ingredient...? #12
 🗸 if ingredient used more then once, use [ingred][n] in ref names #4
   🗸 if ingredient sets are involved, tag per set...? #4
 🗸 the ability to color temperatures and times #5

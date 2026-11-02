@@ -187,6 +187,8 @@ test('Find Recipes Query shows every selected multi-value option @e2e', async ({
     await page.getByRole('button', { name: 'Add rule' }).click();
 
     const row = page.locator('.recipe-filter-row').first();
+    await expect(row.locator('.recipe-filter-rule-number')).toHaveText('1.');
+    await expect(row.locator('.recipe-filter-mobile-toggle')).toBeHidden();
     await expect(row.getByRole('combobox', { name: 'Operator' })).toBeDisabled();
     await expect(row.getByLabel('Value')).toBeDisabled();
     await selectFilterOption(page, row, 'Field', 'Ingredient');
@@ -206,25 +208,36 @@ test('Find Recipes Query shows every selected multi-value option @e2e', async ({
 
     await expect(value).toContainText(ingredientNames.join(', '));
     await expect(value).toHaveAccessibleName(`Value: ${ingredientNames.join(', ')}`);
+    await expect(value.locator('.recipe-picklist-trigger-label [aria-hidden="true"]')).toHaveCount(
+      0,
+    );
 
     const expectMobileInlineLayout = async (valueControl: Locator) => {
-      const [rowBounds, fieldBounds, operatorBounds, valueBounds, removeBounds] = await Promise.all(
-        [
+      const [rowBounds, numberBounds, fieldBounds, operatorBounds, valueBounds, removeBounds] =
+        await Promise.all([
           row.boundingBox(),
+          row.locator('.recipe-filter-mobile-toggle').boundingBox(),
           row.getByLabel('Field').boundingBox(),
           row.getByLabel('Operator').boundingBox(),
           valueControl.boundingBox(),
           row.getByRole('button', { name: 'Remove filter 1' }).boundingBox(),
-        ],
-      );
-      if (!rowBounds || !fieldBounds || !operatorBounds || !valueBounds || !removeBounds) {
+        ]);
+      if (
+        !rowBounds ||
+        !numberBounds ||
+        !fieldBounds ||
+        !operatorBounds ||
+        !valueBounds ||
+        !removeBounds
+      ) {
         throw new Error('The mobile Query controls should be measurable.');
       }
       const controlCenters = [fieldBounds, operatorBounds, valueBounds, removeBounds].map(
         ({ y, height }) => y + height / 2,
       );
       expect(Math.max(...controlCenters) - Math.min(...controlCenters)).toBeLessThanOrEqual(1);
-      expect(fieldBounds.x).toBeCloseTo(rowBounds.x, 0);
+      expect(numberBounds.x).toBeCloseTo(rowBounds.x, 0);
+      expect(fieldBounds.x - numberBounds.x - numberBounds.width).toBeCloseTo(96 / 25.4, 0);
       expect(fieldBounds.width).toBeGreaterThan(operatorBounds.width);
       const numberValue = await valueControl.evaluate((control) =>
         control.classList.contains('recipe-filter-number-value-control'),
@@ -265,16 +278,83 @@ test('Find Recipes Query shows every selected multi-value option @e2e', async ({
       if (width === 352) {
         await value.click();
         await expect(options).toBeVisible();
-        for (const ingredientName of ingredientNames.slice(1)) {
-          await options.getByRole('button', { name: ingredientName, exact: true }).click();
-        }
         await page.keyboard.press('Escape');
         await expect(value).toContainText(ingredientNames[0]);
         const mobileValueBounds = await value.boundingBox();
         if (!mobileValueBounds) {
           throw new Error('The mobile Query value field should be measurable.');
         }
-        expect(mobileValueBounds.height).toBeGreaterThan(36);
+        expect(mobileValueBounds.height).toBeLessThanOrEqual(40);
+        await expectMobileInlineLayout(value);
+        const expandRule = row.getByRole('button', { name: 'Expand filter 1' });
+        await expect(expandRule).toHaveText('1');
+        await expect(expandRule.locator('svg')).toHaveAttribute('aria-hidden', 'true');
+        await expect(expandRule.locator('svg')).toHaveCSS('transform', 'none');
+        await expandRule.click();
+        await expect(row).toHaveAttribute('data-mobile-expanded', 'true');
+        const collapseRule = row.getByRole('button', { name: 'Collapse filter 1' });
+        await expect(collapseRule).toHaveText('1');
+        await expect(collapseRule.locator('svg')).toHaveCSS(
+          'transform',
+          'matrix(0, 1, -1, 0, 0, 0)',
+        );
+        const [
+          expandedValueBounds,
+          expandedOperatorBounds,
+          expandedRemoveBounds,
+          expandedRowMetrics,
+        ] = await Promise.all([
+          value.boundingBox(),
+          row.getByLabel('Operator').boundingBox(),
+          row.getByRole('button', { name: 'Remove filter 1' }).boundingBox(),
+          row.evaluate((element) => {
+            const rowElement = element as HTMLElement;
+            return { clientWidth: rowElement.clientWidth, scrollWidth: rowElement.scrollWidth };
+          }),
+        ]);
+        if (!expandedValueBounds || !expandedOperatorBounds || !expandedRemoveBounds) {
+          throw new Error('The expanded mobile Query controls should be measurable.');
+        }
+        await expect(value).toHaveAccessibleName(`Value: ${ingredientNames.join(', ')}`);
+        expect(expandedValueBounds.width).toBeGreaterThan(mobileValueBounds.width);
+        const expandedOperatorPadding = await row.getByLabel('Operator').evaluate((control) => {
+          const style = getComputedStyle(control);
+          return [Number.parseFloat(style.paddingLeft), Number.parseFloat(style.paddingRight)];
+        });
+        for (const padding of expandedOperatorPadding) {
+          expect(padding).toBeGreaterThanOrEqual(96 / 25.4);
+        }
+        const expandedValueMetrics = await value.evaluate((trigger) => {
+          const label = trigger.querySelector('.recipe-picklist-trigger-label');
+          const summary = label?.querySelector('span:last-child');
+          return {
+            text: summary?.textContent,
+            width: summary?.clientWidth,
+            scrollWidth: summary?.scrollWidth,
+            whiteSpace: summary ? getComputedStyle(summary).whiteSpace : null,
+            height: trigger.getBoundingClientRect().height,
+          };
+        });
+        expect(expandedValueBounds.height, JSON.stringify(expandedValueMetrics)).toBeGreaterThan(
+          mobileValueBounds.height,
+        );
+        expect(expandedValueBounds.y).toBeGreaterThan(
+          expandedOperatorBounds.y + expandedOperatorBounds.height,
+        );
+        expect(
+          expandedRemoveBounds.x - expandedValueBounds.x - expandedValueBounds.width,
+        ).toBeCloseTo(96 / 25.4, 0);
+        expect(
+          Math.abs(
+            expandedRemoveBounds.y +
+              expandedRemoveBounds.height / 2 -
+              (expandedValueBounds.y + expandedValueBounds.height / 2),
+          ),
+        ).toBeLessThanOrEqual(1);
+        expect(expandedRowMetrics.scrollWidth).toBeLessThanOrEqual(expandedRowMetrics.clientWidth);
+        await collapseRule.click();
+        await expect(row).toHaveAttribute('data-mobile-expanded', 'false');
+        expect((await value.boundingBox())?.height).toBeLessThanOrEqual(40);
         await expectMobileInlineLayout(value);
 
         await value.click();
@@ -307,12 +387,51 @@ test('Find Recipes Query shows every selected multi-value option @e2e', async ({
         await page.keyboard.press('Escape');
       }
 
-      await selectFilterOption(page, row, 'Field', 'Name');
+      await selectFilterOption(page, row, 'Field', 'Publication Author');
+      if (width === 352) {
+        const fieldControl = row.getByLabel('Field');
+        const collapsedFieldBounds = await fieldControl.boundingBox();
+        if (!collapsedFieldBounds)
+          throw new Error('The mobile Field control should be measurable.');
+        await row.getByRole('button', { name: 'Expand filter 1' }).click();
+        const [expandedFieldBounds, expandedOperatorBounds, expandedRowBounds] = await Promise.all([
+          fieldControl.boundingBox(),
+          row.getByLabel('Operator').boundingBox(),
+          row.boundingBox(),
+        ]);
+        if (!expandedFieldBounds || !expandedOperatorBounds || !expandedRowBounds)
+          throw new Error('The expanded Field and Operator controls should be measurable.');
+        expect(expandedFieldBounds.width).toBeGreaterThan(collapsedFieldBounds.width);
+        expect(expandedFieldBounds.width).toBeLessThan(expandedRowBounds.width * 0.6);
+        expect(expandedOperatorBounds.width).toBeLessThan(expandedRowBounds.width * 0.3);
+        await row.getByRole('button', { name: 'Collapse filter 1' }).click();
+      }
       const textValue = row.getByLabel('Value');
-      await textValue.fill('recipe');
+      await textValue.fill('representative mobile query value');
       await expect(row.getByLabel('Operator')).toContainText('Has');
       await expect(row.getByLabel('Operator')).toHaveAttribute('title', 'Contains');
       await expectMobileInlineLayout(textValue);
+      if (width === 352) {
+        const collapsedTextBounds = await textValue.boundingBox();
+        if (!collapsedTextBounds) throw new Error('The mobile text Value should be measurable.');
+        await row.getByRole('button', { name: 'Expand filter 1' }).click();
+        const expandedTextBounds = await textValue.boundingBox();
+        const expandedTextRowMetrics = await row.evaluate((element) => {
+          const rowElement = element as HTMLElement;
+          return { clientWidth: rowElement.clientWidth, scrollWidth: rowElement.scrollWidth };
+        });
+        if (!expandedTextBounds) throw new Error('The expanded text Value should be measurable.');
+        expect(expandedTextBounds.width).toBeGreaterThan(collapsedTextBounds.width);
+        expect(expandedTextBounds.y).toBeGreaterThan(collapsedTextBounds.y);
+        expect(expandedTextRowMetrics.scrollWidth).toBeLessThanOrEqual(
+          expandedTextRowMetrics.clientWidth,
+        );
+        await row.getByRole('button', { name: 'Collapse filter 1' }).click();
+        await textValue.fill('e');
+        await row.getByRole('button', { name: 'Expand filter 1' }).click();
+        expect((await textValue.boundingBox())?.width).toBeLessThan(48);
+        await row.getByRole('button', { name: 'Collapse filter 1' }).click();
+      }
 
       await selectFilterOption(page, row, 'Field', 'Total Time');
       await selectFilterOption(page, row, 'Operator', 'Between');
@@ -493,6 +612,24 @@ test('Find Recipes limits search and query criteria to main ingredients @e2e', a
 
     const queryUrl = `/recipes/find?filter=${encodeURIComponent(mainFilter)}&tab=query&sort=name&direction=asc`;
     const preferences = page.locator('.explorer-list-preferences');
+    await page.setViewportSize({ width: 346, height: 547 });
+    const valueTrigger = page.locator('.recipe-filter-value-trigger');
+    await expect(valueTrigger).toHaveAttribute(
+      'aria-label',
+      /zephyr chicken stock, zephyr chicken thighs/i,
+    );
+    expect(
+      await valueTrigger.evaluate((trigger) => {
+        const label = trigger.querySelector('.recipe-picklist-trigger-label');
+        const value = label?.querySelector('span:last-child');
+        return {
+          whiteSpace: label ? getComputedStyle(label).whiteSpace : null,
+          textOverflow: value ? getComputedStyle(value).textOverflow : null,
+        };
+      }),
+    ).toEqual({ whiteSpace: 'nowrap', textOverflow: 'ellipsis' });
+    expect((await valueTrigger.boundingBox())?.height).toBeLessThanOrEqual(40);
+    await page.setViewportSize({ width: 1280, height: 900 });
     await expect(preferences).not.toHaveAttribute('data-visible-columns', /main_ingredients/u);
     const autoSelect = page.getByRole('checkbox', { name: "Don't auto-select columns" });
     await expect(autoSelect).not.toBeChecked();

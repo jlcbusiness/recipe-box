@@ -59,6 +59,15 @@ security without prematurely creating recipe or other domain tables.
 | Ingredient measure equivalent | One explicit average Volume and/or Weight for a quantity of one Count or one selected Things unit on a canonical ingredient. |
 | History event | An append-only forensic record of a saved change. |
 
+Find's Advanced Rules uses one version-1 filter envelope rather than a new
+table. Its JSON value retains expression text and ordered rule records with
+unique UUID identities. The editor keeps numbered slots stable while changes
+are staged, represents deleted slots explicitly, and compacts active rules on
+Apply while updating expression references by ID. The same envelope travels
+through URLs, search/facet RPCs, and owner-scoped remembered explorer state.
+Legacy flat filters retain AND semantics. See the
+[DLC 13 brief](slices/dlc/dlc-13-advanced-query-groups.md).
+
 Publications retain `created_at` and `updated_at` timestamps. `updated_at`
 advances on each publication update and supports Date Changed sorting in the
 Library Explorer; Date Added and Date Changed are not displayed as List
