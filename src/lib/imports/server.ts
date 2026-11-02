@@ -35,7 +35,7 @@ export async function readStoredImportBundle(
 
   const { data: signedDownload, error: signedDownloadError } = await admin.storage
     .from(exportBucket)
-    .createSignedUrl(objectPath, 60);
+    .createSignedUrl(objectPath, 300);
   if (signedDownloadError || !signedDownload?.signedUrl) {
     throw new ImportBundleError('The selected import archive is unavailable.', 404);
   }

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { PassThrough, Readable, Transform } from 'node:stream';
-import { finished, pipeline } from 'node:stream/promises';
+import { Readable, Transform } from 'node:stream';
+import { finished } from 'node:stream/promises';
 import { type File, Open } from 'unzipper';
 import { EXPORT_DATA_BYTES_LIMIT, EXPORT_MEDIA_BYTES_LIMIT } from '../exports/rules';
 
@@ -9,6 +9,8 @@ const imagePathPattern =
   /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
 const manifestLimit = 1024 * 1024;
 const entryCountLimit = 20_000;
+const rangeBlockSize = 4 * 1024 * 1024;
+const rangeCacheBlockLimit = 4;
 
 export type ImportImageMetadata = { size_bytes: number; sha256: string };
 export type ImportImageSink = (path: string, stream: Readable) => Promise<void>;
@@ -113,6 +115,7 @@ async function readArchiveEntryCount(source: ImportArchiveSource, size: number) 
 
 export function createRangeArchiveSource(url: string): ImportArchiveSource {
   let archiveSize: number | null = null;
+  const rangeCache = new Map<number, Buffer>();
 
   async function requestRange(start: number, end: number, expectedSize?: number) {
     const response = await fetch(url, {
@@ -146,6 +149,31 @@ export function createRangeArchiveSource(url: string): ImportArchiveSource {
     return { response, totalSize };
   }
 
+  async function readBlock(offset: number) {
+    const cached = rangeCache.get(offset);
+    if (cached) {
+      rangeCache.delete(offset);
+      rangeCache.set(offset, cached);
+      return cached;
+    }
+    if (archiveSize === null) {
+      throw new Error('The selected import archive has an invalid byte range.');
+    }
+
+    const end = Math.min(archiveSize - 1, offset + rangeBlockSize - 1);
+    const { response } = await requestRange(offset, end, archiveSize);
+    const block = Buffer.from(await response.arrayBuffer());
+    if (block.byteLength !== end - offset + 1) {
+      throw new Error('The selected import archive returned an incomplete byte range.');
+    }
+    rangeCache.set(offset, block);
+    if (rangeCache.size > rangeCacheBlockLimit) {
+      const oldestBlock = rangeCache.keys().next().value;
+      if (oldestBlock !== undefined) rangeCache.delete(oldestBlock);
+    }
+    return block;
+  }
+
   return {
     async size() {
       const { response, totalSize } = await requestRange(0, 0);
@@ -154,57 +182,41 @@ export function createRangeArchiveSource(url: string): ImportArchiveSource {
       return totalSize;
     },
     stream(offset: number, length?: number) {
-      const output = new PassThrough();
-      void (async () => {
-        if (archiveSize === null || !Number.isSafeInteger(offset) || offset < 0) {
-          throw new Error('The selected import archive has an invalid byte range.');
-        }
-        if (length === 0) {
-          output.end();
-          return;
-        }
+      if (length === 0) return Readable.from([]);
+      return Readable.from(
+        (async function* () {
+          if (archiveSize === null || !Number.isSafeInteger(offset) || offset < 0) {
+            throw new Error('The selected import archive has an invalid byte range.');
+          }
+          if (
+            length !== undefined &&
+            (!Number.isSafeInteger(length) ||
+              length < 0 ||
+              !Number.isSafeInteger(offset + length - 1))
+          ) {
+            throw new Error('The selected import archive has an invalid byte range.');
+          }
 
-        const end =
-          length === undefined ? archiveSize - 1 : Math.min(archiveSize - 1, offset + length - 1);
-        if (!Number.isSafeInteger(end) || offset >= archiveSize || end < offset) {
-          throw new Error('The selected import archive has an invalid byte range.');
-        }
+          const end =
+            length === undefined ? archiveSize - 1 : Math.min(archiveSize - 1, offset + length - 1);
+          if (!Number.isSafeInteger(end) || offset >= archiveSize || end < offset) {
+            throw new Error('The selected import archive has an invalid byte range.');
+          }
 
-        const { response } = await requestRange(offset, end, archiveSize);
-        const expectedBytes = end - offset + 1;
-        let receivedBytes = 0;
-        const lengthGuard = new Transform({
-          transform(chunk: Buffer, _encoding, callback) {
-            receivedBytes += chunk.byteLength;
-            if (receivedBytes > expectedBytes) {
-              callback(new Error('The selected import archive returned an invalid byte range.'));
-              return;
+          let currentOffset = offset;
+          while (currentOffset <= end) {
+            const blockOffset = Math.floor(currentOffset / rangeBlockSize) * rangeBlockSize;
+            const block = await readBlock(blockOffset);
+            const startInBlock = currentOffset - blockOffset;
+            const endInBlock = Math.min(block.byteLength, end - blockOffset + 1);
+            if (endInBlock <= startInBlock) {
+              throw new Error('The selected import archive returned an incomplete byte range.');
             }
-            callback(null, chunk);
-          },
-          flush(callback) {
-            if (receivedBytes !== expectedBytes) {
-              callback(new Error('The selected import archive returned an incomplete byte range.'));
-              return;
-            }
-            callback();
-          },
-        });
-        await pipeline(
-          Readable.fromWeb(
-            response.body as unknown as import('node:stream/web').ReadableStream<Uint8Array>,
-          ),
-          lengthGuard,
-          output,
-        );
-      })().catch((error: unknown) => {
-        if (!output.destroyed) {
-          output.destroy(
-            error instanceof Error ? error : new Error('The archive range is invalid.'),
-          );
-        }
-      });
-      return output;
+            yield block.subarray(startInBlock, endInBlock);
+            currentOffset = blockOffset + endInBlock;
+          }
+        })(),
+      );
     },
   };
 }

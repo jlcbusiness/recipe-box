@@ -406,6 +406,10 @@ describe('import bundle validation', () => {
     data.set(descriptorSignature, 100_000);
     archive.append(data, { name: 'data.json' });
     archive.append(Buffer.from('{}'), { name: 'manifest.json' });
+    for (let index = 0; index < 20; index += 1) {
+      const imageId = `${index.toString(16).padStart(8, '0')}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`;
+      archive.append(Buffer.from(`image-${index}`), { name: `images/${imageId}/full.webp` });
+    }
     await archive.finalize();
     await archiveFinished;
     const archiveBytes = Buffer.concat(archiveParts);
@@ -434,7 +438,7 @@ describe('import bundle validation', () => {
 
       expect([...result.entries.keys()].sort()).toEqual(['data.json', 'manifest.json']);
       expect(Buffer.from(result.entries.get('data.json') ?? [])).toEqual(data);
-      expect(rangeFetch).toHaveBeenCalled();
+      expect(rangeFetch).toHaveBeenCalledTimes(2);
     } finally {
       vi.unstubAllGlobals();
     }
