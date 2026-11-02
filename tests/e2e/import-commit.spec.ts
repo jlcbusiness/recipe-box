@@ -75,6 +75,7 @@ test('database import commit is privileged, versioned, history-aware, and atomic
   const latePublicationId = randomUUID();
   const trashedPublicationId = randomUUID();
   const trashedRecipeId = randomUUID();
+  const activeRecipeId = randomUUID();
   const createdAt = new Date().toISOString();
   const mediaAssetId = randomUUID();
   const records = {
@@ -400,11 +401,23 @@ test('database import commit is privileged, versioned, history-aware, and atomic
             publication_id: trashedPublicationId,
             trashed_at: createdAt,
           },
+          {
+            ...records.recipes[0],
+            id: activeRecipeId,
+            name: 'Imported active recipe',
+            publication_id: null,
+          },
         ],
         recipe_ingredient_sets: [
           {
             id: randomUUID(),
             recipe_id: trashedRecipeId,
+            label: 'Main',
+            position: 0,
+          },
+          {
+            id: randomUUID(),
+            recipe_id: activeRecipeId,
             label: 'Main',
             position: 0,
           },
@@ -420,6 +433,14 @@ test('database import commit is privileged, versioned, history-aware, and atomic
     expect(await trashedRecipes.json()).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: trashedRecipeId })]),
     );
+    const activeRecipeRows = await selectRows(
+      request,
+      config,
+      'recipes',
+      `select=id,trashed_at&id=eq.${activeRecipeId}`,
+      ownerHeaders(config, owner),
+    );
+    expect(activeRecipeRows).toEqual([{ id: activeRecipeId, trashed_at: null }]);
     const trashedPublications = await request.post(
       `${config.apiUrl}/rest/v1/rpc/list_trashed_publications`,
       { headers: ownerHeaders(config, owner), data: {} },
