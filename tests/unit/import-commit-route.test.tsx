@@ -744,6 +744,8 @@ describe('import commit route', () => {
       message: 'duplicate key value violates unique constraint [redacted] for key ([redacted]).',
       duplicateRecipeIdMatchesPlan: null,
       duplicateRecipeIdMatchesArchive: null,
+      duplicateRecipeExistsAfterRollback: null,
+      duplicateRecipeBelongsToAccount: null,
     });
     expect(queueMediaDeletions).toHaveBeenCalledWith(
       expect.anything(),
@@ -759,20 +761,27 @@ describe('import commit route', () => {
 
   it('correlates a recipe primary-key collision without logging the ID', async () => {
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const rpc = vi.fn(async (name: string, _args: Record<string, unknown>) => {
+    let plannedRecipeId: string | null = null;
+    const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
       if (name === 'read_export_snapshot') {
         return { data: { records: {}, accountPreferences: {} }, error: null };
       }
+      const records = args.p_records as { recipes: Array<{ id: string }> };
+      plannedRecipeId = records.recipes[0]?.id ?? null;
       return {
         data: null,
         error: {
           code: '23505',
           message: 'duplicate key value violates unique constraint "recipes_pkey"',
-          details: `Key (id)=(${importedRecipeId}) already exists.`,
+          details: `Key (id)=(${plannedRecipeId}) already exists.`,
         },
       };
     });
-    createAdminClient.mockReturnValue({ rpc });
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const eq = vi.fn().mockReturnValue({ maybeSingle });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    createAdminClient.mockReturnValue({ rpc, from });
 
     const response = await POST(request({ path: importPath, choices: {}, rootVersions: [] }));
 
@@ -781,9 +790,14 @@ describe('import commit route', () => {
       code: '23505',
       constraint: 'recipes_pkey',
       message: 'duplicate key value violates unique constraint [redacted]',
-      duplicateRecipeIdMatchesPlan: false,
-      duplicateRecipeIdMatchesArchive: true,
+      duplicateRecipeIdMatchesPlan: true,
+      duplicateRecipeIdMatchesArchive: false,
+      duplicateRecipeExistsAfterRollback: false,
+      duplicateRecipeBelongsToAccount: null,
     });
+    expect(from).toHaveBeenCalledWith('recipes');
+    expect(select).toHaveBeenCalledWith('account_id');
+    expect(eq).toHaveBeenCalledWith('id', plannedRecipeId);
     errorLog.mockRestore();
   });
 

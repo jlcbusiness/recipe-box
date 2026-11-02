@@ -479,6 +479,31 @@ export async function POST(request: Request) {
       const archiveRecipeIds = new Set(
         bundle.data.records.recipes.map((recipe) => String(recipe.id).toLowerCase()),
       );
+      let duplicateRecipeExistsAfterRollback: boolean | null = null;
+      let duplicateRecipeBelongsToAccount: boolean | null = null;
+      if (duplicateRecipeId) {
+        try {
+          const { data: existingRecipe, error: lookupError } = await admin
+            .from('recipes')
+            .select('account_id')
+            .eq('id', duplicateRecipeId)
+            .maybeSingle();
+          if (lookupError) {
+            console.error('[import-commit] duplicate recipe lookup failed', {
+              code: lookupError.code,
+            });
+          } else {
+            duplicateRecipeExistsAfterRollback = Boolean(existingRecipe);
+            duplicateRecipeBelongsToAccount = existingRecipe
+              ? existingRecipe.account_id === authData.user.id
+              : null;
+          }
+        } catch (lookupError) {
+          console.error('[import-commit] duplicate recipe lookup threw', {
+            errorName: lookupError instanceof Error ? lookupError.name : 'unknown',
+          });
+        }
+      }
       console.error('[import-commit] database transaction failed', {
         code: error.code,
         constraint,
@@ -487,6 +512,8 @@ export async function POST(request: Request) {
           duplicateRecipeId === null ? null : plannedRecipeIds.has(duplicateRecipeId),
         duplicateRecipeIdMatchesArchive:
           duplicateRecipeId === null ? null : archiveRecipeIds.has(duplicateRecipeId),
+        duplicateRecipeExistsAfterRollback,
+        duplicateRecipeBelongsToAccount,
       });
       if (!(await cleanupStagedMedia(admin, authData.user.id, stagedPaths))) {
         return jsonResponse(
