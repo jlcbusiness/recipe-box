@@ -36,6 +36,13 @@ function databaseConstraintName(message: unknown) {
   return /violates unique constraint "([^"]+)"/.exec(message)?.[1] ?? null;
 }
 
+function duplicateRecipePrimaryKey(details: unknown) {
+  if (typeof details !== 'string') return null;
+  const match =
+    /Key \(id\)=\(([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\) already exists\./i.exec(details);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
 function parseChoices(value: unknown): Record<string, ImportChoice> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
   const result: Record<string, ImportChoice> = {};
@@ -461,10 +468,25 @@ export async function POST(request: Request) {
       p_media_sources: mediaSources,
     });
     if (error) {
+      const constraint = databaseConstraintName(error.message);
+      const duplicateRecipeId =
+        error.code === '23505' && constraint === 'recipes_pkey'
+          ? duplicateRecipePrimaryKey(error.details)
+          : null;
+      const plannedRecipeIds = new Set(
+        plan.records.recipes.map((recipe) => String(recipe.id).toLowerCase()),
+      );
+      const archiveRecipeIds = new Set(
+        bundle.data.records.recipes.map((recipe) => String(recipe.id).toLowerCase()),
+      );
       console.error('[import-commit] database transaction failed', {
         code: error.code,
-        constraint: databaseConstraintName(error.message),
+        constraint,
         message: safeDatabaseErrorMessage(error.message),
+        duplicateRecipeIdMatchesPlan:
+          duplicateRecipeId === null ? null : plannedRecipeIds.has(duplicateRecipeId),
+        duplicateRecipeIdMatchesArchive:
+          duplicateRecipeId === null ? null : archiveRecipeIds.has(duplicateRecipeId),
       });
       if (!(await cleanupStagedMedia(admin, authData.user.id, stagedPaths))) {
         return jsonResponse(

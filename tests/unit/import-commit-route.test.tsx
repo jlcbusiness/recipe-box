@@ -742,6 +742,8 @@ describe('import commit route', () => {
       code: '23505',
       constraint: 'recipe_unique_idx',
       message: 'duplicate key value violates unique constraint [redacted] for key ([redacted]).',
+      duplicateRecipeIdMatchesPlan: null,
+      duplicateRecipeIdMatchesArchive: null,
     });
     expect(queueMediaDeletions).toHaveBeenCalledWith(
       expect.anything(),
@@ -752,6 +754,36 @@ describe('import commit route', () => {
       expect.anything(),
       expect.arrayContaining(stagedObjects),
     );
+    errorLog.mockRestore();
+  });
+
+  it('correlates a recipe primary-key collision without logging the ID', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const rpc = vi.fn(async (name: string, _args: Record<string, unknown>) => {
+      if (name === 'read_export_snapshot') {
+        return { data: { records: {}, accountPreferences: {} }, error: null };
+      }
+      return {
+        data: null,
+        error: {
+          code: '23505',
+          message: 'duplicate key value violates unique constraint "recipes_pkey"',
+          details: `Key (id)=(${importedRecipeId}) already exists.`,
+        },
+      };
+    });
+    createAdminClient.mockReturnValue({ rpc });
+
+    const response = await POST(request({ path: importPath, choices: {}, rootVersions: [] }));
+
+    expect(response.status).toBe(422);
+    expect(errorLog).toHaveBeenCalledWith('[import-commit] database transaction failed', {
+      code: '23505',
+      constraint: 'recipes_pkey',
+      message: 'duplicate key value violates unique constraint [redacted]',
+      duplicateRecipeIdMatchesPlan: false,
+      duplicateRecipeIdMatchesArchive: true,
+    });
     errorLog.mockRestore();
   });
 
