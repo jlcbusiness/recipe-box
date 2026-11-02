@@ -33,20 +33,34 @@ export async function readStoredImportBundle(
     throw new ImportBundleError('The selected import archive is unavailable.', 404);
   }
 
+  console.info('[import-preview] signed download URL request started');
   const { data: signedDownload, error: signedDownloadError } = await admin.storage
     .from(exportBucket)
     .createSignedUrl(objectPath, 300);
   if (signedDownloadError || !signedDownload?.signedUrl) {
+    console.error('[import-preview] signed download URL request failed');
     throw new ImportBundleError('The selected import archive is unavailable.', 404);
   }
+  console.info('[import-preview] signed download URL ready');
 
   try {
+    console.info('[import-preview] archive parsing started');
     const archive = await readImportArchive(
       createRangeArchiveSource(signedDownload.signedUrl),
       imageSink,
     );
-    return validateImportBundleFiles(archive.entries, archive.images);
+    console.info('[import-preview] archive parsing completed', {
+      entryCount: archive.entries.size,
+      imageCount: archive.images.size,
+    });
+    console.info('[import-preview] bundle validation started');
+    const bundle = validateImportBundleFiles(archive.entries, archive.images);
+    console.info('[import-preview] bundle validation completed');
+    return bundle;
   } catch (error) {
+    console.error('[import-preview] archive processing failed', {
+      errorName: error instanceof Error ? error.name : 'unknown',
+    });
     if (error instanceof ImportBundleError) throw error;
     if (error instanceof Error) {
       throw new ImportBundleError(error.message, 422);

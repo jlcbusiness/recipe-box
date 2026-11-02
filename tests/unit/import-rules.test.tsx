@@ -439,6 +439,9 @@ describe('import bundle validation', () => {
       expect([...result.entries.keys()].sort()).toEqual(['data.json', 'manifest.json']);
       expect(Buffer.from(result.entries.get('data.json') ?? [])).toEqual(data);
       expect(rangeFetch).toHaveBeenCalledTimes(2);
+      expect(rangeFetch.mock.calls.every(([, init]) => init?.signal instanceof AbortSignal)).toBe(
+        true,
+      );
     } finally {
       vi.unstubAllGlobals();
     }

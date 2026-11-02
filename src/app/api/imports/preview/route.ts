@@ -56,8 +56,14 @@ export async function POST(request: Request) {
         422,
       );
     }
+    const snapshotStartedAt = Date.now();
+    console.info('[import-preview] account snapshot request started');
     const { data: snapshotData, error: snapshotError } = await admin.rpc('read_export_snapshot', {
       p_account_id: authData.user.id,
+    });
+    console.info('[import-preview] account snapshot request completed', {
+      elapsedMs: Date.now() - snapshotStartedAt,
+      succeeded: !snapshotError && Boolean(snapshotData),
     });
     if (snapshotError || !snapshotData) {
       return jsonResponse({ error: 'Unable to compare this archive with your account.' }, 503);

@@ -11,6 +11,7 @@ const manifestLimit = 1024 * 1024;
 const entryCountLimit = 20_000;
 const rangeBlockSize = 4 * 1024 * 1024;
 const rangeCacheBlockLimit = 4;
+const rangeRequestTimeoutMs = 30_000;
 
 export type ImportImageMetadata = { size_bytes: number; sha256: string };
 export type ImportImageSink = (path: string, stream: Readable) => Promise<void>;
@@ -118,12 +119,38 @@ export function createRangeArchiveSource(url: string): ImportArchiveSource {
   const rangeCache = new Map<number, Buffer>();
 
   async function requestRange(start: number, end: number, expectedSize?: number) {
-    const response = await fetch(url, {
-      cache: 'no-store',
-      headers: {
-        'Accept-Encoding': 'identity',
-        Range: `bytes=${start}-${end}`,
-      },
+    const startedAt = Date.now();
+    console.info('[import-archive] range request started', { start, end });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Accept-Encoding': 'identity',
+          Range: `bytes=${start}-${end}`,
+        },
+        signal: AbortSignal.timeout(rangeRequestTimeoutMs),
+      });
+    } catch (error) {
+      const errorName = error instanceof Error ? error.name : 'unknown';
+      console.error('[import-archive] range request failed', {
+        start,
+        end,
+        elapsedMs: Date.now() - startedAt,
+        errorName,
+      });
+      if (errorName === 'TimeoutError') {
+        throw new Error(
+          'The selected import archive could not be read before the request timed out.',
+        );
+      }
+      throw error;
+    }
+    console.info('[import-archive] range response received', {
+      start,
+      end,
+      status: response.status,
+      elapsedMs: Date.now() - startedAt,
     });
     const contentRange = /^bytes (\d+)-(\d+)\/(\d+)$/i.exec(
       response.headers.get('content-range') ?? '',
@@ -162,7 +189,30 @@ export function createRangeArchiveSource(url: string): ImportArchiveSource {
 
     const end = Math.min(archiveSize - 1, offset + rangeBlockSize - 1);
     const { response } = await requestRange(offset, end, archiveSize);
-    const block = Buffer.from(await response.arrayBuffer());
+    const bodyStartedAt = Date.now();
+    let block: Buffer;
+    try {
+      block = Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      const errorName = error instanceof Error ? error.name : 'unknown';
+      console.error('[import-archive] range response body failed', {
+        start: offset,
+        end,
+        elapsedMs: Date.now() - bodyStartedAt,
+        errorName,
+      });
+      if (errorName === 'TimeoutError') {
+        throw new Error(
+          'The selected import archive could not be read before the request timed out.',
+        );
+      }
+      throw error;
+    }
+    console.info('[import-archive] range response body read', {
+      start: offset,
+      bytes: block.byteLength,
+      elapsedMs: Date.now() - bodyStartedAt,
+    });
     if (block.byteLength !== end - offset + 1) {
       throw new Error('The selected import archive returned an incomplete byte range.');
     }
@@ -248,13 +298,18 @@ export async function readImportArchive(
   let totalImageBytes = 0;
   const seenPaths = new Set<string>();
   const archiveSize = await source.size();
+  console.info('[import-archive] archive size read', { archiveSize });
   if (!Number.isSafeInteger(archiveSize) || archiveSize <= 0) {
     throw new Error('The selected import archive is invalid.');
   }
   if (archiveSize > compressedArchiveLimit) {
     throw new Error('The ZIP archive exceeds the supported upload size limit.');
   }
-  if ((await readArchiveEntryCount(source, archiveSize)) > BigInt(entryCountLimit)) {
+  const declaredEntryCount = await readArchiveEntryCount(source, archiveSize);
+  console.info('[import-archive] archive entry preflight completed', {
+    entryCount: declaredEntryCount.toString(),
+  });
+  if (declaredEntryCount > BigInt(entryCountLimit)) {
     throw new Error('The archive contains an unsafe, duplicate, or unsupported file entry.');
   }
 
@@ -262,6 +317,7 @@ export async function readImportArchive(
     size: async () => archiveSize,
     stream: source.stream,
   });
+  console.info('[import-archive] archive directory opened', { entryCount: directory.files.length });
   if (directory.files.length > entryCountLimit) {
     throw new Error('The archive contains an unsafe, duplicate, or unsupported file entry.');
   }
@@ -302,5 +358,9 @@ export async function readImportArchive(
     entries.set(entry.path, await readSmallEntry(entry, fileLimit(entry.path)));
   }
 
+  console.info('[import-archive] archive entries read', {
+    entryCount: seenPaths.size,
+    imageCount: images.size,
+  });
   return { entries, images };
 }
