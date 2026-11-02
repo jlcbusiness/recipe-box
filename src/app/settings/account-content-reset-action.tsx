@@ -71,6 +71,7 @@ export function AccountContentResetAction({
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(initialOpen);
   const [dialogKey, setDialogKey] = useState(0);
+  const [dialogReauthReady, setDialogReauthReady] = useState(initialReauthReady);
   const [completedReset, setCompletedReset] = useState<CompletedReset | null>(null);
   const initialError = resetErrorMessage(redirectError);
 
@@ -78,10 +79,19 @@ export function AccountContentResetAction({
     if (initialOpen) router.replace('/settings', { scroll: false });
   }, [initialOpen, router]);
 
+  useEffect(() => {
+    if (initialReauthReady) setDialogReauthReady(true);
+  }, [initialReauthReady]);
+
   const openDialog = () => {
     setCompletedReset(null);
+    setDialogReauthReady(false);
     setDialogKey((current) => current + 1);
     setDialogOpen(true);
+  };
+  const closeDialog = () => {
+    setDialogReauthReady(false);
+    setDialogOpen(false);
   };
   const onCompleted = useCallback((result: CompletedReset) => {
     setCompletedReset(result);
@@ -119,10 +129,10 @@ export function AccountContentResetAction({
       {dialogOpen && (
         <AccountContentResetDialog
           key={dialogKey}
-          initialReauthReady={initialReauthReady}
+          initialReauthReady={dialogReauthReady}
           provider={provider}
           redirectError={initialError}
-          onClose={() => setDialogOpen(false)}
+          onClose={closeDialog}
           onCompleted={onCompleted}
         />
       )}
@@ -337,7 +347,9 @@ function AccountContentResetDialog({
               </form>
             ) : (
               <form action={beginGoogleAccountContentResetReauth}>
-                <p>Re-authenticate with the same Google account to continue.</p>
+                <p className="account-content-reset-google-instruction">
+                  <strong>Re-authenticate with the same Google account to continue.</strong>
+                </p>
                 <div className="recipe-confirmation-actions">
                   <button
                     className="recipe-secondary-button"

@@ -79,6 +79,36 @@ test('account content reset warning is accessible and Escape cancels @e2e @a11y'
   }
 });
 
+test('account content reset keeps OAuth re-authentication after URL cleanup @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/settings?content_reset_reauthenticated=1');
+
+    const dialog = page.getByRole('dialog', { name: 'Reset all account content?' });
+    const phrase = dialog.getByLabel(/Type RESET ALL CONTENT to confirm/);
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(phrase).toBeVisible();
+    await expect(dialog.getByLabel('Current password')).toBeHidden();
+
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await page.getByRole('button', { name: 'Reset account content' }).click();
+    await expect(
+      page
+        .getByRole('dialog', { name: 'Reset all account content?' })
+        .getByLabel('Current password'),
+    ).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('account content reset requires exact confirmation and clears offline snapshots @e2e @a11y', async ({
   page,
   request,

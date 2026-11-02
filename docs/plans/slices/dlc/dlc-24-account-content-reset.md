@@ -153,11 +153,13 @@ authorization or treat an unverified OTP as recent authentication.
   assignments.
 - The reset browser tests pass on Chromium and Fold 6, covering the warning,
   exact confirmation phrase, email/password re-authentication, cancellation,
-  cache clearing, accessibility, and desktop/mobile dialog bounds.
+  cache clearing, accessibility, desktop/mobile dialog bounds, and preserving
+  callback-provided re-authentication state while the URL is cleaned up.
 - Focused export and offline-cache unit tests, TypeScript, and targeted Biome
   checks pass. The local migration was applied without resetting local data.
 - Google OAuth requires configured provider credentials and was not exercised
-  end to end. Hosted Storage cleanup and physical-device behavior remain open.
+  end to end; callback-state retention is covered with a simulated return URL.
+  Hosted Storage cleanup and physical-device behavior remain open.
 
 ## References
 

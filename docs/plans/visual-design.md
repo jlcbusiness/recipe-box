@@ -670,10 +670,12 @@ unframed Data management section. The action uses the existing destructive
 button treatment and opens the shared native confirmation dialog, centered at
 up to 28rem wide with an internal scrollbar when its content exceeds the
 viewport. Keep its confirmation copy, provider re-authentication, exact-phrase
-input, and completion/error status in that dialog; primary and cancel actions
-retain visible focus and 48px hit areas. Distinguish database completion from
-pending Storage cleanup or failed local-cache clearing. Verify the dialog fits
-desktop and narrow mobile viewports without horizontal page overflow.
+input, and completion/error status in that dialog; emphasize the provider
+re-authentication instruction in bold leaf-green text. Primary and cancel
+actions retain visible focus and 48px hit areas. Distinguish database
+completion from pending Storage cleanup or failed local-cache clearing. Verify
+the dialog fits desktop and narrow mobile viewports without horizontal page
+overflow.
 
 ## Desktop
 
