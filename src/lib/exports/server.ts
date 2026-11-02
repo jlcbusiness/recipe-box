@@ -83,6 +83,27 @@ function appendEntry(archive: Archiver, path: string, bytes: Buffer) {
   });
 }
 
+function toWebByteStream(source: AsyncIterable<Uint8Array>): ReadableStream<Uint8Array> {
+  const iterator = source[Symbol.asyncIterator]();
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await iterator.next();
+        if (done) {
+          controller.close();
+        } else {
+          controller.enqueue(value);
+        }
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    async cancel() {
+      await iterator.return?.();
+    },
+  });
+}
+
 function assertLimits(dataBytes: number, mediaBytes: number): void {
   try {
     assertExportLimits(dataBytes, mediaBytes);
@@ -178,9 +199,10 @@ export async function createExportDownload(
   const abortArchive = () => archive.destroy(new Error('The export request was canceled.'));
   signal?.addEventListener('abort', abortArchive, { once: true });
 
+  const archiveBody = toWebByteStream(archive);
   const uploadPromise = admin.storage
     .from(exportBucket)
-    .upload(objectPath, archive, {
+    .upload(objectPath, archiveBody, {
       cacheControl: '0',
       contentType: 'application/zip',
       duplex: 'half',

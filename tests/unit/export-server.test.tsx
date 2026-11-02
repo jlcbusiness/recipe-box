@@ -1,3 +1,4 @@
+import { Open } from 'unzipper';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
@@ -22,13 +23,14 @@ function createAdmin(options: {
   staleGenerationOnRegistration?: number;
   afterUploadChunk?: () => void;
 }) {
+  const uploadedChunks: Buffer[] = [];
   const upload = vi.fn(async (path: string, archive: AsyncIterable<Uint8Array>) => {
     if (options.failUpload) {
       return { data: null, error: new Error('storage upload failed') };
     }
 
-    for await (const _chunk of archive) {
-      void _chunk;
+    for await (const chunk of archive) {
+      uploadedChunks.push(Buffer.from(chunk));
       options.afterUploadChunk?.();
     }
     return { data: { path }, error: null };
@@ -68,6 +70,7 @@ function createAdmin(options: {
       rpc: register,
     } as unknown as SupabaseClient,
     upload,
+    uploadedChunks,
     remove,
     createSignedUrl,
     register,
@@ -125,6 +128,12 @@ describe('export archive failure cleanup', () => {
       expiresAt: expect.any(String),
     });
 
+    expect(mock.upload.mock.calls[0]?.[1]).toHaveProperty('getReader');
+    const uploadedArchive = await Open.buffer(Buffer.concat(mock.uploadedChunks));
+    expect(uploadedArchive.files.map((entry) => entry.path).sort()).toEqual([
+      'data.json',
+      'manifest.json',
+    ]);
     expect(mock.register).toHaveBeenCalledTimes(2);
     expect(mock.register).toHaveBeenNthCalledWith(
       1,
