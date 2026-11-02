@@ -176,6 +176,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   let stagedPaths = new Set<string>();
+  let finishStagedImages: (() => Promise<void>) | null = null;
   try {
     const bundle = await readStoredImportBundle(admin, authData.user.id, requestBody.path);
     if (expectedScope && bundle.data.scope.type !== expectedScope) {
@@ -394,20 +395,32 @@ export async function POST(request: Request) {
       if (destinationId) destinationAssetIds.set(sourceId, destinationId);
     }
     if (destinationAssetIds.size > 0) {
+      const imageStagingStartedAt = Date.now();
       const stager = createImportImageStager(admin, authData.user.id, destinationAssetIds);
       stagedPaths = stager.stagedPaths;
+      finishStagedImages = stager.finish;
       const stagedBundle = await readStoredImportBundle(
         admin,
         authData.user.id,
         requestBody.path,
         stager.imageSink,
       );
+      try {
+        await stager.finish();
+      } finally {
+        finishStagedImages = null;
+      }
       if (
         !isDeepStrictEqual(bundle.manifest, stagedBundle.manifest) ||
         !isDeepStrictEqual(bundle.data, stagedBundle.data)
       ) {
         throw new ImportBundleError('The archive changed during import. Preview it again.', 409);
       }
+      console.info('[import-commit] image staging completed', {
+        assetCount: destinationAssetIds.size,
+        objectCount: stager.stagedPaths.size,
+        elapsedMs: Date.now() - imageStagingStartedAt,
+      });
       for (const [sourceId, destinationId] of destinationAssetIds) {
         const paths = stager.pathsBySourceAsset.get(sourceId);
         if (!paths?.fullPath || !paths.thumbnailPath) {
@@ -455,6 +468,7 @@ export async function POST(request: Request) {
       }
     }
 
+    const databaseCommitStartedAt = Date.now();
     const { data, error } = await admin.rpc('commit_database_import_with_media_sources', {
       p_account_id: authData.user.id,
       p_account_preferences:
@@ -514,6 +528,7 @@ export async function POST(request: Request) {
           duplicateRecipeId === null ? null : archiveRecipeIds.has(duplicateRecipeId),
         duplicateRecipeExistsAfterRollback,
         duplicateRecipeBelongsToAccount,
+        elapsedMs: Date.now() - databaseCommitStartedAt,
       });
       if (!(await cleanupStagedMedia(admin, authData.user.id, stagedPaths))) {
         return jsonResponse(
@@ -543,6 +558,9 @@ export async function POST(request: Request) {
       );
     }
 
+    console.info('[import-commit] database transaction completed', {
+      elapsedMs: Date.now() - databaseCommitStartedAt,
+    });
     stagedPaths.clear();
     const destination =
       scope.type === 'database'
@@ -553,6 +571,15 @@ export async function POST(request: Request) {
           };
     return jsonResponse({ imported: true, result: data, destination });
   } catch (error) {
+    if (finishStagedImages) {
+      try {
+        await finishStagedImages();
+      } catch (stagingError) {
+        console.error('[import-commit] pending image uploads failed', {
+          errorName: stagingError instanceof Error ? stagingError.name : 'unknown',
+        });
+      }
+    }
     if (!(await cleanupStagedMedia(admin, authData.user.id, stagedPaths))) {
       return jsonResponse(
         { error: 'The import failed and staged image cleanup could not be confirmed.' },

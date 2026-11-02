@@ -35,6 +35,7 @@ describe('import image staging', () => {
 
     await stager.imageSink(`images/${sourceAssetId}/full.webp`, Readable.from([fullImage]));
     await stager.imageSink(`images/${sourceAssetId}/thumbnail.webp`, Readable.from([thumbnail]));
+    await stager.finish();
 
     expect(upload).toHaveBeenNthCalledWith(
       1,
@@ -82,6 +83,7 @@ describe('import image staging', () => {
       `images/${sourceAssetId}/source-thumbnail.webp`,
       Readable.from([sourceThumbnail]),
     );
+    await stager.finish();
 
     expect(stager.pathsBySourceAsset.get(sourceAssetId)).toEqual({
       fullPath: `${accountId}/assets/${destinationAssetId}/full.webp`,
@@ -136,6 +138,61 @@ describe('import image staging', () => {
 
     expect(upload).not.toHaveBeenCalled();
     expect(stager.stagedPaths.size).toBe(0);
+  });
+
+  it('limits concurrent Storage uploads and waits for them before finishing', async () => {
+    const secondSourceAssetId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const secondDestinationAssetId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const releases: Array<() => void> = [];
+    const upload = vi.fn(
+      () =>
+        new Promise<{ error: null }>((resolve) => {
+          releases.push(() => resolve({ error: null }));
+        }),
+    );
+    const image = await createWebp(2, 2);
+    const stager = createImportImageStager(
+      createAdmin(upload),
+      accountId,
+      new Map([
+        [sourceAssetId, destinationAssetId],
+        [secondSourceAssetId, secondDestinationAssetId],
+      ]),
+    );
+
+    await stager.imageSink(`images/${sourceAssetId}/full.webp`, Readable.from([image]));
+    await stager.imageSink(`images/${sourceAssetId}/thumbnail.webp`, Readable.from([image]));
+    await stager.imageSink(`images/${sourceAssetId}/source-full.webp`, Readable.from([image]));
+    await stager.imageSink(`images/${sourceAssetId}/source-thumbnail.webp`, Readable.from([image]));
+    const fifthUpload = stager.imageSink(
+      `images/${secondSourceAssetId}/full.webp`,
+      Readable.from([image]),
+    );
+
+    expect(upload).toHaveBeenCalledTimes(4);
+    releases[0]();
+    await fifthUpload;
+    expect(upload).toHaveBeenCalledTimes(5);
+
+    for (const release of releases) release();
+    await stager.finish();
+  });
+
+  it('surfaces Storage upload failures when staging is finished', async () => {
+    const upload = vi.fn().mockResolvedValue({ error: new Error('private storage detail') });
+    const image = await createWebp(2, 2);
+    const stager = createImportImageStager(
+      createAdmin(upload),
+      accountId,
+      new Map([[sourceAssetId, destinationAssetId]]),
+    );
+
+    await stager.imageSink(`images/${sourceAssetId}/full.webp`, Readable.from([image]));
+
+    await expect(stager.finish()).rejects.toThrow('Unable to stage an imported image.');
+    expect(stager.stagedPaths).toEqual(
+      new Set([`${accountId}/assets/${destinationAssetId}/full.webp`]),
+    );
   });
 
   it('rejects an image variant larger than the Storage object limit', async () => {

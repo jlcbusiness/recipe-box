@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { FULL_IMAGE_MAX_EDGE, THUMBNAIL_MAX_EDGE } from '../media/rules';
 
 export const MAX_IMPORT_MEDIA_OBJECT_BYTES = 20 * 1024 * 1024;
+const importImageUploadConcurrency = 4;
 
 const imagePathPattern =
   /^images\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
@@ -36,6 +37,15 @@ export function createImportImageStager(
   const stagedPaths = new Set<string>();
   const pathsBySourceAsset = new Map<string, Partial<StagedImportImagePaths>>();
   const metadataBySourceAsset = new Map<string, StagedImportImageMetadata>();
+  const pendingUploads = new Set<Promise<void>>();
+  let uploadFailure: Error | null = null;
+
+  async function waitForUploadSlot() {
+    while (pendingUploads.size >= importImageUploadConcurrency) {
+      await Promise.race(pendingUploads);
+    }
+    if (uploadFailure) throw uploadFailure;
+  }
 
   async function imageSink(path: string, stream: Readable) {
     const match = imagePathPattern.exec(path);
@@ -48,6 +58,14 @@ export function createImportImageStager(
       return;
     }
 
+    try {
+      await waitForUploadSlot();
+    } catch (error) {
+      for await (const _chunk of stream) {
+        // Drain the archive entry before surfacing a prior upload failure.
+      }
+      throw error;
+    }
     const chunks: Buffer[] = [];
     let byteSize = 0;
     for await (const chunk of stream) {
@@ -86,6 +104,7 @@ export function createImportImageStager(
     ) {
       throw new Error('An imported image variant is invalid.');
     }
+    if (uploadFailure) throw uploadFailure;
     const fileName =
       variant === 'thumbnail'
         ? 'thumb.webp'
@@ -96,14 +115,22 @@ export function createImportImageStager(
             : 'full.webp';
     const objectPath = `${accountId}/assets/${destinationAssetId}/${fileName}`;
     stagedPaths.add(objectPath);
-    const { error } = await admin.storage.from('recipe-media').upload(objectPath, image, {
-      cacheControl: '3600',
-      contentType: 'image/webp',
-      upsert: false,
-    });
-    if (error) {
-      throw new Error('Unable to stage an imported image.');
-    }
+    let pendingUpload: Promise<void>;
+    pendingUpload = admin.storage
+      .from('recipe-media')
+      .upload(objectPath, image, {
+        cacheControl: '3600',
+        contentType: 'image/webp',
+        upsert: false,
+      })
+      .then(({ error }) => {
+        if (error) throw new Error('Unable to stage an imported image.');
+      })
+      .catch(() => {
+        uploadFailure ??= new Error('Unable to stage an imported image.');
+      })
+      .finally(() => pendingUploads.delete(pendingUpload));
+    pendingUploads.add(pendingUpload);
 
     const currentPaths = pathsBySourceAsset.get(sourceAssetId) ?? {};
     if (variant === 'thumbnail') {
@@ -133,5 +160,10 @@ export function createImportImageStager(
     metadataBySourceAsset.set(sourceAssetId, currentMetadata);
   }
 
-  return { imageSink, pathsBySourceAsset, metadataBySourceAsset, stagedPaths };
+  async function finish() {
+    await Promise.all(pendingUploads);
+    if (uploadFailure) throw uploadFailure;
+  }
+
+  return { imageSink, pathsBySourceAsset, metadataBySourceAsset, stagedPaths, finish };
 }

@@ -110,6 +110,7 @@ function mockStagedImages() {
       stagedPaths.add(thumbnailPath);
       return {
         imageSink: vi.fn(),
+        finish: vi.fn().mockResolvedValue(undefined),
         stagedPaths,
         pathsBySourceAsset: new Map([[sourceAssetId, { fullPath, thumbnailPath }]]),
         metadataBySourceAsset: new Map([
@@ -746,6 +747,7 @@ describe('import commit route', () => {
       duplicateRecipeIdMatchesArchive: null,
       duplicateRecipeExistsAfterRollback: null,
       duplicateRecipeBelongsToAccount: null,
+      elapsedMs: expect.any(Number),
     });
     expect(queueMediaDeletions).toHaveBeenCalledWith(
       expect.anything(),
@@ -794,6 +796,7 @@ describe('import commit route', () => {
       duplicateRecipeIdMatchesArchive: false,
       duplicateRecipeExistsAfterRollback: false,
       duplicateRecipeBelongsToAccount: null,
+      elapsedMs: expect.any(Number),
     });
     expect(from).toHaveBeenCalledWith('recipes');
     expect(select).toHaveBeenCalledWith('account_id');
