@@ -31,6 +31,11 @@ function safeDatabaseErrorMessage(message: unknown) {
   return message.replace(/"[^"]*"|'[^']*'/g, '[redacted]').slice(0, 240);
 }
 
+function databaseConstraintName(message: unknown) {
+  if (typeof message !== 'string') return null;
+  return /violates unique constraint "([^"]+)"/.exec(message)?.[1] ?? null;
+}
+
 function parseChoices(value: unknown): Record<string, ImportChoice> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
   const result: Record<string, ImportChoice> = {};
@@ -458,6 +463,7 @@ export async function POST(request: Request) {
     if (error) {
       console.error('[import-commit] database transaction failed', {
         code: error.code,
+        constraint: databaseConstraintName(error.message),
         message: safeDatabaseErrorMessage(error.message),
       });
       if (!(await cleanupStagedMedia(admin, authData.user.id, stagedPaths))) {

@@ -722,8 +722,9 @@ describe('import commit route', () => {
       return {
         data: null,
         error: {
-          code: '23514',
-          message: 'A row violated constraint "recipe_content_check" for value \'private data\'.',
+          code: '23505',
+          message:
+            'duplicate key value violates unique constraint "recipe_unique_idx" for key (\'private data\').',
           details: 'Do not log database details.',
         },
       };
@@ -738,8 +739,9 @@ describe('import commit route', () => {
     expect(response.status).toBe(422);
     expect(body.error).toBe('Unable to import this archive. No changes were committed.');
     expect(errorLog).toHaveBeenCalledWith('[import-commit] database transaction failed', {
-      code: '23514',
-      message: 'A row violated constraint [redacted] for value [redacted].',
+      code: '23505',
+      constraint: 'recipe_unique_idx',
+      message: 'duplicate key value violates unique constraint [redacted] for key ([redacted]).',
     });
     expect(queueMediaDeletions).toHaveBeenCalledWith(
       expect.anything(),
