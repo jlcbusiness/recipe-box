@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": "26.x"
   },
   "scripts": {
     "dev": "node scripts/run-local.mjs",
@@ -61,7 +61,7 @@
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/react": "16.3.3",
     "@types/archiver": "^8.0.0",
-    "@types/node": "24.19.0",
+    "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/unzipper": "^0.10.11",
@@ -80,6 +80,9 @@
   "overrides": {
     "markdownlint": {
       "markdown-it": "14.3.3"
+    },
+    "readdir-glob": {
+      "minimatch": "^11.0.1"
     }
   }
 }

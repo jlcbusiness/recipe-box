@@ -665,17 +665,21 @@ mobile action rows fit without page-level horizontal overflow.
 
 ### Account content reset (DLC 24)
 
-Place Reset account content after the export and import actions in the existing
-unframed Data management section. The action uses the existing destructive
-button treatment and opens the shared native confirmation dialog, centered at
-up to 28rem wide with an internal scrollbar when its content exceeds the
-viewport. Keep its confirmation copy, provider re-authentication, exact-phrase
-input, and completion/error status in that dialog; emphasize the provider
-re-authentication instruction in bold leaf-green text. Primary and cancel
-actions retain visible focus and 48px hit areas. Distinguish database
-completion from pending Storage cleanup or failed local-cache clearing. Verify
-the dialog fits desktop and narrow mobile viewports without horizontal page
-overflow.
+Place Wipe all account data at the left of the existing unframed Data
+management action row, with Export database and Import database grouped and
+right-aligned. On narrow screens, allow the groups to wrap while keeping the
+transfer actions right-aligned. Use the existing destructive button treatment
+and shared native confirmation dialog, centered at up to 28rem wide with an
+internal scrollbar when its content exceeds the viewport. Keep its
+confirmation copy, provider re-authentication, exact-phrase input, and
+completion/error status in that dialog; disable the destructive submit until
+the exact phrase is entered. Emphasize the provider re-authentication
+instruction in bold leaf-green text. Primary and cancel actions retain visible
+focus and 48px hit areas. Distinguish wiped account records from pending
+Storage cleanup or failed local-cache clearing. Explain that queued Storage
+deletions retry daily, that the displayed counts are a snapshot, and provide a
+status check to refresh them. Verify the dialog and action row fit desktop and
+narrow mobile viewports without horizontal page overflow.
 
 ## Desktop
 

@@ -9,6 +9,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useTransition,
 } from 'react';
 import {
   ACCOUNT_CONTENT_RESET_PHRASE,
@@ -16,10 +17,12 @@ import {
 } from '../../lib/account-content-reset-shared';
 import { clearPrivateOfflineCaches } from '../../lib/offline/cache-client';
 import {
+  type AccountContentResetCleanupCheckResult,
   type AccountContentResetCompletion,
   type AccountContentResetState,
   beginGoogleAccountContentResetReauth,
   cancelAccountContentReset,
+  checkAccountContentResetCleanup,
   reauthenticateForAccountContentReset,
   resetAccountContent,
 } from './account-content-reset-actions';
@@ -37,16 +40,75 @@ type AccountContentResetActionProps = {
 };
 
 function completionMessage({ completion, localCacheCleared }: CompletedReset): string {
+  const messages = ['Account records were wiped.'];
   if (!localCacheCleared) {
-    return 'Account records were reset, but this browser’s offline copies could not be cleared. The reset is not fully complete.';
+    messages.push('This browser’s offline copies could not be cleared.');
   }
-  if (completion.cleanupStatus === 'unknown') {
-    return 'Account records were reset, but managed media and export cleanup could not be verified. The reset is not fully complete.';
+
+  switch (completion.cleanupStatus) {
+    case 'unknown':
+      messages.push('Deletion of managed media and export archives could not be verified.');
+      break;
+    case 'pending': {
+      const mediaCount = completion.pendingMedia ?? 0;
+      const exportCount = completion.pendingExports ?? 0;
+      messages.push(
+        `Storage deletion remains queued for ${mediaCount} managed media ${mediaCount === 1 ? 'item' : 'items'} and ${exportCount} export ${exportCount === 1 ? 'archive' : 'archives'}.`,
+      );
+      break;
+    }
+    case 'complete':
+      messages.push('Managed media and export archives have been deleted.');
+      break;
   }
-  if (completion.cleanupStatus === 'pending') {
-    return `Account records were reset, but storage cleanup is still pending (${completion.pendingMedia ?? 0} media item(s), ${completion.pendingExports ?? 0} export archive(s)). The reset is not fully complete.`;
+
+  return messages.join(' ');
+}
+
+function cleanupFollowupMessage(cleanupStatus: AccountContentResetCompletion['cleanupStatus']) {
+  if (cleanupStatus === 'pending') {
+    return 'A background job retries storage deletion daily. This is a snapshot and will not update automatically; check the status again later to confirm deletion.';
   }
-  return 'Account content reset is complete.';
+  if (cleanupStatus === 'unknown') {
+    return 'The cleanup status could not be verified. Check again later for an updated status; any queued deletions are retried daily.';
+  }
+  return null;
+}
+
+function AccountContentResetCompletionDetails({
+  completedReset,
+  cleanupCheck,
+  isChecking,
+  onCheck,
+}: {
+  completedReset: CompletedReset;
+  cleanupCheck: AccountContentResetCleanupCheckResult | null;
+  isChecking: boolean;
+  onCheck: () => void;
+}) {
+  const followupMessage = cleanupFollowupMessage(completedReset.completion.cleanupStatus);
+
+  return (
+    <>
+      <p>{completionMessage(completedReset)}</p>
+      {followupMessage && <p>{followupMessage}</p>}
+      {cleanupCheck && 'error' in cleanupCheck && (
+        <p aria-live="assertive" className="account-content-reset-error" role="alert">
+          {cleanupCheck.error}
+        </p>
+      )}
+      {followupMessage && (
+        <button
+          className="recipe-secondary-button"
+          disabled={isChecking}
+          onClick={onCheck}
+          type="button"
+        >
+          {isChecking ? 'Checking cleanup…' : 'Check cleanup status'}
+        </button>
+      )}
+    </>
+  );
 }
 
 function resetErrorMessage(error: string | undefined): string | undefined {
@@ -73,7 +135,18 @@ export function AccountContentResetAction({
   const [dialogKey, setDialogKey] = useState(0);
   const [dialogReauthReady, setDialogReauthReady] = useState(initialReauthReady);
   const [completedReset, setCompletedReset] = useState<CompletedReset | null>(null);
+  const [cleanupCheck, setCleanupCheck] = useState<AccountContentResetCleanupCheckResult | null>(
+    null,
+  );
+  const [isCleanupCheckPending, startCleanupCheck] = useTransition();
   const initialError = resetErrorMessage(redirectError);
+  const displayedReset =
+    completedReset && cleanupCheck && 'status' in cleanupCheck
+      ? {
+          ...completedReset,
+          completion: { ...completedReset.completion, ...cleanupCheck.status },
+        }
+      : completedReset;
 
   useEffect(() => {
     if (initialOpen) router.replace('/settings', { scroll: false });
@@ -85,6 +158,7 @@ export function AccountContentResetAction({
 
   const openDialog = () => {
     setCompletedReset(null);
+    setCleanupCheck(null);
     setDialogReauthReady(false);
     setDialogKey((current) => current + 1);
     setDialogOpen(true);
@@ -94,19 +168,35 @@ export function AccountContentResetAction({
     setDialogOpen(false);
   };
   const onCompleted = useCallback((result: CompletedReset) => {
+    setCleanupCheck(null);
     setCompletedReset(result);
   }, []);
+  const checkCleanupStatus = () => {
+    setCleanupCheck(null);
+    startCleanupCheck(async () => {
+      try {
+        setCleanupCheck(await checkAccountContentResetCleanup());
+      } catch (error) {
+        console.error('Unable to request account reset cleanup status.', error);
+        setCleanupCheck({
+          error:
+            'Storage cleanup status could not be refreshed. Your last reported status is unchanged.',
+        });
+      }
+    });
+  };
 
   return (
     <div className="account-content-reset-action">
       <button
         aria-haspopup="dialog"
         className="recipe-secondary-button recipe-delete-action account-content-reset-trigger"
+        disabled={isCleanupCheckPending}
         onClick={openDialog}
         type="button"
       >
         <Trash2 aria-hidden="true" size={16} />
-        Reset account content
+        Wipe all account data
       </button>
       {initialError && !dialogOpen && (
         <p
@@ -117,14 +207,19 @@ export function AccountContentResetAction({
           {initialError}
         </p>
       )}
-      {completedReset && (
-        <p
+      {displayedReset && !dialogOpen && (
+        <div
           aria-live="polite"
-          className={`account-content-reset-feedback${completedReset.localCacheCleared && completedReset.completion.cleanupStatus === 'complete' ? '' : ' account-content-reset-error'}`}
+          className={`account-content-reset-feedback${displayedReset.localCacheCleared && displayedReset.completion.cleanupStatus === 'complete' ? '' : ' account-content-reset-error'}`}
           role="status"
         >
-          {completionMessage(completedReset)}
-        </p>
+          <AccountContentResetCompletionDetails
+            completedReset={displayedReset}
+            cleanupCheck={cleanupCheck}
+            isChecking={isCleanupCheckPending}
+            onCheck={checkCleanupStatus}
+          />
+        </div>
       )}
       {dialogOpen && (
         <AccountContentResetDialog
@@ -132,6 +227,9 @@ export function AccountContentResetAction({
           initialReauthReady={dialogReauthReady}
           provider={provider}
           redirectError={initialError}
+          cleanupCheck={cleanupCheck}
+          isCleanupCheckPending={isCleanupCheckPending}
+          onCheckCleanupStatus={checkCleanupStatus}
           onClose={closeDialog}
           onCompleted={onCompleted}
         />
@@ -144,12 +242,18 @@ function AccountContentResetDialog({
   provider,
   initialReauthReady,
   redirectError,
+  cleanupCheck,
+  isCleanupCheckPending,
+  onCheckCleanupStatus,
   onClose,
   onCompleted,
 }: {
   provider: AccountContentResetProvider;
   initialReauthReady: boolean;
   redirectError?: string;
+  cleanupCheck: AccountContentResetCleanupCheckResult | null;
+  isCleanupCheckPending: boolean;
+  onCheckCleanupStatus: () => void;
   onClose: () => void;
   onCompleted: (result: CompletedReset) => void;
 }) {
@@ -171,6 +275,7 @@ function AccountContentResetDialog({
   const [cacheError, setCacheError] = useState('');
   const [cancelError, setCancelError] = useState('');
   const [cancelPending, setCancelPending] = useState(false);
+  const [confirmationPhrase, setConfirmationPhrase] = useState('');
   const reauthReady = initialReauthReady || reauthState?.verified === true;
   const isFinalizing =
     Boolean(resetState?.completion) && cacheStatus !== 'cleared' && cacheStatus !== 'failed';
@@ -180,6 +285,13 @@ function AccountContentResetDialog({
       : resetState?.completion && cacheStatus === 'failed'
         ? { completion: resetState.completion, localCacheCleared: false }
         : null;
+  const displayedCompletion =
+    completion && cleanupCheck && 'status' in cleanupCheck
+      ? {
+          ...completion,
+          completion: { ...completion.completion, ...cleanupCheck.status },
+        }
+      : completion;
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -245,7 +357,7 @@ function AccountContentResetDialog({
       onCancel={handleCancel}
       ref={dialogRef}
     >
-      <h2 id="account-content-reset-title">Reset all account content?</h2>
+      <h2 id="account-content-reset-title">Wipe all account data?</h2>
       <div className="account-content-reset-copy" id="account-content-reset-description">
         <p>This permanently removes:</p>
         <ul>
@@ -260,7 +372,8 @@ function AccountContentResetDialog({
         </p>
         <p>
           Public recipe links are revoked in the reset. Managed media and export archives are queued
-          for removal; cleanup may take time, and the reset remains incomplete until it succeeds.
+          for removal and retried daily; the wipe remains incomplete until they are deleted. The
+          completion counts are a snapshot, and you can check later whether cleanup succeeded.
         </p>
         <p>
           A disconnected device may keep its saved offline copies until it reconnects to Recipe Box.
@@ -276,15 +389,20 @@ function AccountContentResetDialog({
 
       {resetState?.completion && isFinalizing ? (
         <p aria-live="polite" className="account-content-reset-status" role="status">
-          Account records were reset. Clearing this browser’s offline copies…
+          Account records were wiped. Clearing this browser’s offline copies…
         </p>
-      ) : completion ? (
+      ) : displayedCompletion ? (
         <div
           aria-live="polite"
-          className={`account-content-reset-status${completion.localCacheCleared && completion.completion.cleanupStatus === 'complete' ? '' : ' account-content-reset-error'}`}
+          className={`account-content-reset-status${displayedCompletion.localCacheCleared && displayedCompletion.completion.cleanupStatus === 'complete' ? '' : ' account-content-reset-error'}`}
           role="status"
         >
-          <p>{completionMessage(completion)}</p>
+          <AccountContentResetCompletionDetails
+            completedReset={displayedCompletion}
+            cleanupCheck={cleanupCheck}
+            isChecking={isCleanupCheckPending}
+            onCheck={onCheckCleanupStatus}
+          />
           {cacheError && (
             <button
               className="recipe-secondary-button"
@@ -383,6 +501,7 @@ function AccountContentResetDialog({
                   autoComplete="off"
                   id="account-content-reset-phrase"
                   name="confirmation_phrase"
+                  onChange={(event) => setConfirmationPhrase(event.target.value)}
                   required
                   spellCheck={false}
                   type="text"
@@ -403,10 +522,14 @@ function AccountContentResetDialog({
                   </button>
                   <button
                     className="recipe-secondary-button recipe-delete-action"
-                    disabled={isResetPending || cancelPending}
+                    disabled={
+                      isResetPending ||
+                      cancelPending ||
+                      confirmationPhrase !== ACCOUNT_CONTENT_RESET_PHRASE
+                    }
                     type="submit"
                   >
-                    {isResetPending ? 'Resetting content…' : 'Reset all content'}
+                    {isResetPending ? 'Wiping account data…' : 'Wipe all account data'}
                   </button>
                 </div>
               </form>

@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(29);
+select plan(30);
 
 insert into auth.users (
   id,
@@ -429,6 +429,16 @@ select is(
      and id = (select tin_id from account_content_reset_fixture)),
   1,
   'the same permanent Recipe Tin remains'
+);
+
+select ok(
+  exists (
+    select 1
+    from public.publication_search_documents
+    where account_id = '24000000-0000-4000-8000-000000000001'
+      and publication_id = (select tin_id from account_content_reset_fixture)
+  ),
+  'the permanent Recipe Tin remains in the Library search index'
 );
 
 select is(

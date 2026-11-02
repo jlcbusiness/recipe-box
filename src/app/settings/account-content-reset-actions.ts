@@ -27,10 +27,66 @@ export type AccountContentResetCompletion = {
   pendingExports: number | null;
 };
 
+export type AccountContentResetCleanupStatus = Pick<
+  AccountContentResetCompletion,
+  'cleanupStatus' | 'pendingMedia' | 'pendingExports'
+>;
+
+export type AccountContentResetCleanupCheckResult =
+  | { status: AccountContentResetCleanupStatus }
+  | { error: string };
+
 export type AccountContentResetState = {
   error?: string;
   completion?: AccountContentResetCompletion;
 };
+
+async function readAccountContentResetCleanupStatus(
+  accountId: string,
+): Promise<AccountContentResetCleanupStatus> {
+  const admin = createAdminClient();
+  const [mediaQueue, exportQueue] = await Promise.all([
+    admin
+      .from('media_deletion_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId),
+    admin
+      .from('export_deletion_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId),
+  ]);
+  if (mediaQueue.error || exportQueue.error) {
+    throw new Error('Unable to check the reset cleanup queues.');
+  }
+
+  const pendingMedia = mediaQueue.count ?? 0;
+  const pendingExports = exportQueue.count ?? 0;
+  return {
+    cleanupStatus: pendingMedia === 0 && pendingExports === 0 ? 'complete' : 'pending',
+    pendingMedia,
+    pendingExports,
+  };
+}
+
+export async function checkAccountContentResetCleanup(): Promise<AccountContentResetCleanupCheckResult> {
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { error: 'Sign in again before checking storage cleanup status.' };
+  }
+
+  try {
+    return {
+      status: await readAccountContentResetCleanupStatus(authData.user.id),
+    };
+  } catch (error) {
+    console.error('Unable to refresh account reset cleanup status.', error);
+    return {
+      error:
+        'Storage cleanup status could not be refreshed. Your last reported status is unchanged.',
+    };
+  }
+}
 
 function setChallengeCookieOptions() {
   return {
@@ -52,7 +108,7 @@ export async function reauthenticateForAccountContentReset(
   const supabase = await createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
-    return { error: 'Sign in again before resetting account content.' };
+    return { error: 'Sign in again before wiping account data.' };
   }
   if (!authData.user.email) {
     return { error: 'This account does not have a password sign-in address.' };
@@ -190,7 +246,7 @@ export async function resetAccountContent(
   const supabase = await createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
-    return { error: 'Sign in again before resetting account content.' };
+    return { error: 'Sign in again before wiping account data.' };
   }
 
   const cookieStore = await cookies();
@@ -204,7 +260,7 @@ export async function resetAccountContent(
     p_confirmation_phrase: confirmationPhrase,
   });
   if (error) {
-    return { error: 'The reset could not be completed. Your account content was not changed.' };
+    return { error: 'The wipe could not be completed. Your account data was not changed.' };
   }
 
   const resultRecord =
@@ -222,22 +278,9 @@ export async function resetAccountContent(
   let pendingMedia: number | null = null;
   let pendingExports: number | null = null;
   try {
-    const admin = createAdminClient();
-    const [mediaQueue, exportQueue] = await Promise.all([
-      admin
-        .from('media_deletion_queue')
-        .select('id', { count: 'exact', head: true })
-        .eq('account_id', authData.user.id),
-      admin
-        .from('export_deletion_queue')
-        .select('id', { count: 'exact', head: true })
-        .eq('account_id', authData.user.id),
-    ]);
-    if (mediaQueue.error || exportQueue.error) {
-      throw new Error('Unable to check the reset cleanup queues.');
-    }
-    pendingMedia = mediaQueue.count ?? 0;
-    pendingExports = exportQueue.count ?? 0;
+    const cleanupStatus = await readAccountContentResetCleanupStatus(authData.user.id);
+    pendingMedia = cleanupStatus.pendingMedia;
+    pendingExports = cleanupStatus.pendingExports;
   } catch (error) {
     console.error('Unable to verify account reset cleanup status.', error);
   }

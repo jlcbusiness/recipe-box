@@ -338,8 +338,6 @@ export default async function SettingsPage({
           </p>
         )}
         <div className="settings-data-management-content">
-          <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
-          <DatabaseImportAction />
           <AccountContentResetAction
             initialOpen={
               query.content_reset_reauthenticated === '1' ||
@@ -349,6 +347,10 @@ export default async function SettingsPage({
             provider={account.sign_in_method === 'google' ? 'google' : 'email_password'}
             redirectError={query.content_reset_error}
           />
+          <div className="settings-data-management-transfers">
+            <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
+            <DatabaseImportAction />
+          </div>
         </div>
       </section>
     </main>
