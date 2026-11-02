@@ -714,11 +714,19 @@ describe('import commit route', () => {
   it('cleans staged publication media when the atomic commit fails', async () => {
     readStoredImportBundle.mockResolvedValue(publicationMediaBundle());
     const { stagedObjects } = mockStagedImages();
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
     const rpc = vi.fn(async (name: string, _args: Record<string, unknown>) => {
       if (name === 'read_export_snapshot') {
         return { data: { records: {}, accountPreferences: {} }, error: null };
       }
-      return { data: null, error: { code: '23514' } };
+      return {
+        data: null,
+        error: {
+          code: '23514',
+          message: 'A row violated constraint "recipe_content_check" for value \'private data\'.',
+          details: 'Do not log database details.',
+        },
+      };
     });
     createAdminClient.mockReturnValue({ rpc });
 
@@ -729,6 +737,10 @@ describe('import commit route', () => {
 
     expect(response.status).toBe(422);
     expect(body.error).toBe('Unable to import this archive. No changes were committed.');
+    expect(errorLog).toHaveBeenCalledWith('[import-commit] database transaction failed', {
+      code: '23514',
+      message: 'A row violated constraint [redacted] for value [redacted].',
+    });
     expect(queueMediaDeletions).toHaveBeenCalledWith(
       expect.anything(),
       accountId,
@@ -738,6 +750,7 @@ describe('import commit route', () => {
       expect.anything(),
       expect.arrayContaining(stagedObjects),
     );
+    errorLog.mockRestore();
   });
 
   it('rejects a bundle whose scope does not match the requested import action', async () => {

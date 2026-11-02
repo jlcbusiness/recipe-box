@@ -26,6 +26,11 @@ function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
+function safeDatabaseErrorMessage(message: unknown) {
+  if (typeof message !== 'string') return 'unknown';
+  return message.replace(/"[^"]*"|'[^']*'/g, '[redacted]').slice(0, 240);
+}
+
 function parseChoices(value: unknown): Record<string, ImportChoice> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
   const result: Record<string, ImportChoice> = {};
@@ -451,6 +456,10 @@ export async function POST(request: Request) {
       p_media_sources: mediaSources,
     });
     if (error) {
+      console.error('[import-commit] database transaction failed', {
+        code: error.code,
+        message: safeDatabaseErrorMessage(error.message),
+      });
       if (!(await cleanupStagedMedia(admin, authData.user.id, stagedPaths))) {
         return jsonResponse(
           { error: 'The import failed and staged image cleanup could not be confirmed.' },
