@@ -57,6 +57,7 @@ export type ExportScope =
   | { type: 'recipe'; id: string };
 
 export type ExportSnapshot = {
+  content_generation?: string;
   accountPreferences: ExportRecord;
   records: Partial<Record<ExportTableName, ExportRecord[]>>;
 };

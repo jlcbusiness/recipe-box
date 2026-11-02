@@ -7,13 +7,19 @@ import type { ExportSnapshot } from '../../src/lib/exports/rules';
 import { createExportDownload, processExportCleanup } from '../../src/lib/exports/server';
 
 const accountId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const snapshot: ExportSnapshot = { accountPreferences: {}, records: {} };
+const contentGeneration = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const snapshot: ExportSnapshot = {
+  content_generation: contentGeneration,
+  accountPreferences: {},
+  records: {},
+};
 
 function createAdmin(options: {
   failUpload?: boolean;
   failCleanupQueue?: boolean;
   failSignedUrl?: boolean;
   failTimestampUpdate?: boolean;
+  staleGenerationOnRegistration?: number;
   afterUploadChunk?: () => void;
 }) {
   const upload = vi.fn(async (path: string, archive: AsyncIterable<Uint8Array>) => {
@@ -36,8 +42,10 @@ function createAdmin(options: {
           error: null,
         },
   );
-  const insert = vi.fn(async () => ({
-    data: null,
+  const register = vi.fn(async () => ({
+    data:
+      options.staleGenerationOnRegistration === undefined ||
+      register.mock.calls.length < options.staleGenerationOnRegistration,
     error: options.failCleanupQueue ? new Error('cleanup queue unavailable') : null,
   }));
   const maybeSingle = vi.fn(async () => ({
@@ -46,22 +54,23 @@ function createAdmin(options: {
   }));
   const accountUpdate = vi.fn(() => ({
     eq: vi.fn(() => ({
-      select: vi.fn(() => ({ maybeSingle })),
+      eq: vi.fn(() => ({
+        select: vi.fn(() => ({ maybeSingle })),
+      })),
     })),
   }));
-  const from = vi.fn((table: string) =>
-    table === 'accounts' ? { update: accountUpdate } : { insert },
-  );
+  const from = vi.fn((table: string) => (table === 'accounts' ? { update: accountUpdate } : {}));
 
   return {
     admin: {
       storage: { from: vi.fn(() => ({ upload, remove, createSignedUrl })) },
       from,
+      rpc: register,
     } as unknown as SupabaseClient,
     upload,
     remove,
     createSignedUrl,
-    insert,
+    register,
     accountUpdate,
     maybeSingle,
   };
@@ -106,6 +115,33 @@ function createCleanupAdmin(tasks: CleanupTask[], failRemoval = false) {
 }
 
 describe('export archive failure cleanup', () => {
+  it('registers archives against the source generation before and after signing', async () => {
+    const mock = createAdmin({});
+
+    await expect(
+      createExportDownload(mock.admin, accountId, snapshot, { type: 'database' }),
+    ).resolves.toEqual({
+      downloadUrl: 'https://exports.example.test/archive.zip',
+      expiresAt: expect.any(String),
+    });
+
+    expect(mock.register).toHaveBeenCalledTimes(2);
+    expect(mock.register).toHaveBeenNthCalledWith(
+      1,
+      'register_export_archive',
+      expect.objectContaining({
+        p_account_id: accountId,
+        p_content_generation: contentGeneration,
+        p_object_path: expect.stringMatching(new RegExp(`^${accountId}/exports/.+\\.zip$`)),
+      }),
+    );
+    expect(mock.register).toHaveBeenNthCalledWith(
+      2,
+      'register_export_archive',
+      expect.objectContaining({ p_content_generation: contentGeneration }),
+    );
+  });
+
   it('removes an incomplete archive after Storage upload fails', async () => {
     const mock = createAdmin({ failUpload: true });
 
@@ -115,7 +151,7 @@ describe('export archive failure cleanup', () => {
 
     expect(mock.upload).toHaveBeenCalledOnce();
     expect(mock.remove).toHaveBeenCalledOnce();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.register).not.toHaveBeenCalled();
     expect(mock.createSignedUrl).not.toHaveBeenCalled();
   });
 
@@ -127,7 +163,7 @@ describe('export archive failure cleanup', () => {
     ).rejects.toThrow('Unable to prepare the export. Please try again.');
 
     expect(mock.upload).toHaveBeenCalledOnce();
-    expect(mock.insert).toHaveBeenCalledOnce();
+    expect(mock.register).toHaveBeenCalledOnce();
     expect(mock.remove).toHaveBeenCalledOnce();
     expect(mock.createSignedUrl).not.toHaveBeenCalled();
   });
@@ -140,7 +176,7 @@ describe('export archive failure cleanup', () => {
     ).rejects.toThrow('Unable to prepare the export. Please try again.');
 
     expect(mock.upload).toHaveBeenCalledOnce();
-    expect(mock.insert).toHaveBeenCalledOnce();
+    expect(mock.register).toHaveBeenCalledOnce();
     expect(mock.createSignedUrl).toHaveBeenCalledOnce();
     expect(mock.accountUpdate).not.toHaveBeenCalled();
     expect(mock.remove).not.toHaveBeenCalled();
@@ -154,10 +190,36 @@ describe('export archive failure cleanup', () => {
     ).rejects.toThrow('Unable to prepare the export. Please try again.');
 
     expect(mock.upload).toHaveBeenCalledOnce();
-    expect(mock.insert).toHaveBeenCalledOnce();
+    expect(mock.register).toHaveBeenCalledTimes(2);
     expect(mock.createSignedUrl).toHaveBeenCalledOnce();
     expect(mock.accountUpdate).toHaveBeenCalledOnce();
     expect(mock.maybeSingle).toHaveBeenCalledOnce();
+    expect(mock.remove).not.toHaveBeenCalled();
+  });
+
+  it('does not offer an archive when reset invalidated its source generation', async () => {
+    const mock = createAdmin({ staleGenerationOnRegistration: 1 });
+
+    await expect(
+      createExportDownload(mock.admin, accountId, snapshot, { type: 'database' }),
+    ).rejects.toThrow('Unable to prepare the export. Please try again.');
+
+    expect(mock.register).toHaveBeenCalledOnce();
+    expect(mock.createSignedUrl).not.toHaveBeenCalled();
+    expect(mock.accountUpdate).not.toHaveBeenCalled();
+    expect(mock.remove).not.toHaveBeenCalled();
+  });
+
+  it('does not return an archive if reset races with signed URL creation', async () => {
+    const mock = createAdmin({ staleGenerationOnRegistration: 2 });
+
+    await expect(
+      createExportDownload(mock.admin, accountId, snapshot, { type: 'database' }),
+    ).rejects.toThrow('Unable to prepare the export. Please try again.');
+
+    expect(mock.register).toHaveBeenCalledTimes(2);
+    expect(mock.createSignedUrl).toHaveBeenCalledOnce();
+    expect(mock.accountUpdate).not.toHaveBeenCalled();
     expect(mock.remove).not.toHaveBeenCalled();
   });
 
@@ -177,7 +239,7 @@ describe('export archive failure cleanup', () => {
 
     expect(mock.upload).toHaveBeenCalledOnce();
     expect(mock.remove).toHaveBeenCalledOnce();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.register).not.toHaveBeenCalled();
     expect(mock.createSignedUrl).not.toHaveBeenCalled();
     expect(mock.accountUpdate).not.toHaveBeenCalled();
   });

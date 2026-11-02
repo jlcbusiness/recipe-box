@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { createContext, type ReactNode, useContext, useSyncExternalStore } from 'react';
 import { AccountMenu } from './account-menu';
 import { EscapeDeselect } from './escape-deselect';
+import { OfflineContentGenerationSync } from './offline-content-generation-sync';
 
 const HandPreferenceContext = createContext<'left' | 'right'>('left');
 const mobileQuery = '(max-width: 720px)';
@@ -52,6 +53,7 @@ export function PrivateShell({
   children,
   email,
   avatarUrl,
+  contentGeneration,
   handPreference = 'right',
   navigation,
   wideContent = false,
@@ -59,6 +61,7 @@ export function PrivateShell({
   children: ReactNode;
   email: string;
   avatarUrl?: unknown;
+  contentGeneration: string;
   handPreference?: 'left' | 'right';
   navigation: PrivateNavItem[];
   wideContent?: boolean;
@@ -167,6 +170,7 @@ export function PrivateShell({
           </div>
         </nav>
         <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>
+          <OfflineContentGenerationSync generation={contentGeneration} />
           {children}
         </div>
       </div>

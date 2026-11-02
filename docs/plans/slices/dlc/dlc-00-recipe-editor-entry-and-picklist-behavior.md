@@ -1,4 +1,4 @@
-# DLC 25: Recipe editor entry and picklist behavior
+# DLC 00 (formerly 25): Recipe editor entry and picklist behavior
 
 This repair slice addresses reported gaps in the existing recipe-edit workflow.
 It is first in execution order despite its identifier because DLC identifiers

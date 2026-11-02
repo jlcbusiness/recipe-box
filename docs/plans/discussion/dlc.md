@@ -2,14 +2,14 @@
 🗸 export png #9
 🗸 export html #9
 - "nuke all" button #24
-- add equipment in recipe (and for other picklists) #25
+🗸 add equipment in recipe (and for other picklists) #00
 🗸 allow for image cropping/sizing #6
 🗸 convert the verdicts into actual ratings #10
 🗸 add the ability to favorite? #10
-- look up all deferred stuff from the slices, have copilot assemble
+🗸 look up all deferred stuff from the slices, have copilot assemble
 🗸 color library icon to automatically draw you to it #1
 🗸 the ability to jump to a picklist item by typing the first letter when selected #1
-- the ability to enter an ingredient (second enter) #25
+🗸 the ability to enter an ingredient (second enter) #00
 🗸 the ability to add a second set of ingredients and label both sets #3
 🗸 a ratio field for "divided" and a size field for "cubed" #4
   🗸 might need to wrap this for mobile #4
@@ -28,7 +28,7 @@
   🗸 oof, haha, also fix public recipes! #8
     🗸 actually, public recipes and printed recipes should probably mirror each other #8
   🗸 default to landscape #8
-- add lists in steps #25
+🗸 add lists in steps #00
 🗸 grams don't have an underline to show you can change them #2
 🗸 use of hour in times (maybe auto-translate times over 60?) #2
   🗸 change "Times" to "Time Breakdown" #2

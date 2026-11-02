@@ -1,6 +1,7 @@
 export const PRIVATE_OFFLINE_CACHE_PREFIX = 'recipe-box-private-';
 export const PRIVATE_OFFLINE_CACHE_NAME = `${PRIVATE_OFFLINE_CACHE_PREFIX}v1`;
 export const OFFLINE_INDEX_PATH = '/__recipe-box/offline-index';
+export const OFFLINE_CONTENT_GENERATION_PATH = '/__recipe-box/offline-generation';
 export const MAX_OFFLINE_RECIPES = 10;
 
 export type OfflineRecipeEntry = {

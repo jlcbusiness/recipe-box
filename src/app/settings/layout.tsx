@@ -12,7 +12,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('is_admin, hand_preference')
+    .select('is_admin, hand_preference, content_generation')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -24,6 +24,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
     <PrivateShell
       avatarUrl={data.user.user_metadata.avatar_url ?? data.user.user_metadata.picture}
       email={data.user.email ?? 'Unknown email'}
+      contentGeneration={account.content_generation}
       handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
       wideContent
       navigation={[

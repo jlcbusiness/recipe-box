@@ -10,21 +10,26 @@ export default async function HelpPage() {
     redirect('/');
   }
 
-  const { data: account } = await supabase
+  const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('is_admin, hand_preference')
+    .select('is_admin, hand_preference, content_generation')
     .eq('id', data.user.id)
     .maybeSingle();
+
+  if (accountError || !account) {
+    throw new Error('Unable to load account settings.');
+  }
 
   return (
     <PrivateShell
       avatarUrl={data.user.user_metadata.avatar_url ?? data.user.user_metadata.picture}
       email={data.user.email ?? 'Unknown email'}
-      handPreference={account?.hand_preference === 'left' ? 'left' : 'right'}
+      contentGeneration={account.content_generation}
+      handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
       navigation={[
         { href: '/publications', label: 'Library' },
         { href: '/settings', label: 'Settings' },
-        ...(account?.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
+        ...(account.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}
     >
       <main aria-labelledby="page-title" className="help-main">

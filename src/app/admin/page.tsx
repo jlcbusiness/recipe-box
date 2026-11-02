@@ -47,7 +47,7 @@ export default async function AdminPage() {
 
   const { data: account } = await supabase
     .from('accounts')
-    .select('is_admin, is_owner, hand_preference')
+    .select('is_admin, is_owner, hand_preference, content_generation')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -97,6 +97,7 @@ export default async function AdminPage() {
     <PrivateShell
       avatarUrl={data.user.user_metadata.avatar_url ?? data.user.user_metadata.picture}
       email={data.user.email ?? 'Unknown email'}
+      contentGeneration={account.content_generation}
       handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
       navigation={[
         { href: '/publications', label: 'Library' },

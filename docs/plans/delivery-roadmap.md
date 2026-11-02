@@ -74,6 +74,13 @@ checks cover the revised contract. The migration was applied locally without res
 hosted deployment and physical mobile-keyboard acceptance remain unverified.
 See the [DLC 13 brief](slices/dlc/dlc-13-advanced-query-groups.md).
 
+DLC 24's account content reset is implemented and locally verified. The
+29-assertion database test and four Chromium/Fold 6 browser runs pass; focused
+unit tests, TypeScript, and targeted Biome checks also pass. The migration was
+applied locally without resetting data. Google OAuth provider configuration,
+hosted Storage cleanup, and physical-device acceptance remain unverified. See
+the [DLC 24 brief](slices/dlc/dlc-24-account-content-reset.md).
+
 ## Mandatory Slice Preparation
 
 Before implementing any roadmap slice:

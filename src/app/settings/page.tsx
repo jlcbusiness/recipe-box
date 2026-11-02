@@ -11,6 +11,7 @@ import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
 import type { NutritionEquivalent, NutritionProfile } from '../../lib/recipes/nutrition-rules';
 import { createClient } from '../../lib/supabase/server';
 import { ExportAction } from '../export-action';
+import { AccountContentResetAction } from './account-content-reset-action';
 import { DatabaseImportAction } from './database-import-action';
 import {
   type IngredientCatalogEntry,
@@ -27,7 +28,15 @@ import { RecipePicklistManager } from './recipe-picklist-manager';
 import { TagCatalogManager } from './tag-catalog-manager';
 import { UnitPreferences } from './unit-preferences';
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    content_reset_error?: string;
+    content_reset_reauthenticated?: string;
+  }>;
+}) {
+  const query = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
 
@@ -38,7 +47,7 @@ export default async function SettingsPage() {
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select(
-      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at',
+      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at, sign_in_method',
     )
     .eq('id', data.user.id)
     .maybeSingle();
@@ -331,6 +340,15 @@ export default async function SettingsPage() {
         <div className="settings-data-management-content">
           <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
           <DatabaseImportAction />
+          <AccountContentResetAction
+            initialOpen={
+              query.content_reset_reauthenticated === '1' ||
+              ['google', 'provider', 'unavailable'].includes(query.content_reset_error ?? '')
+            }
+            initialReauthReady={query.content_reset_reauthenticated === '1'}
+            provider={account.sign_in_method === 'google' ? 'google' : 'email_password'}
+            redirectError={query.content_reset_error}
+          />
         </div>
       </section>
     </main>

@@ -2,6 +2,7 @@
 
 import {
   MAX_OFFLINE_RECIPES,
+  OFFLINE_CONTENT_GENERATION_PATH,
   OFFLINE_INDEX_PATH,
   type OfflineRecipeEntry,
   PRIVATE_OFFLINE_CACHE_NAME,
@@ -83,6 +84,33 @@ export function clearPrivateOfflineCaches(): Promise<void> {
       cacheNames
         .filter((cacheName) => cacheName.startsWith(PRIVATE_OFFLINE_CACHE_PREFIX))
         .map((cacheName) => caches.delete(cacheName)),
+    );
+  });
+}
+
+export function reconcilePrivateOfflineCacheGeneration(generation: string): Promise<void> {
+  if (!generation.trim()) {
+    return Promise.reject(new Error('The account content generation is unavailable.'));
+  }
+
+  return serializeCacheOperation(async () => {
+    if (!('caches' in window)) return;
+
+    const privateCacheNames = (await caches.keys()).filter((cacheName) =>
+      cacheName.startsWith(PRIVATE_OFFLINE_CACHE_PREFIX),
+    );
+    const cache = await caches.open(PRIVATE_OFFLINE_CACHE_NAME);
+    const markerPath = new URL(OFFLINE_CONTENT_GENERATION_PATH, window.location.origin);
+    const marker = await cache.match(markerPath);
+    if (marker && (await marker.text()) === generation) return;
+
+    await Promise.all(privateCacheNames.map((cacheName) => caches.delete(cacheName)));
+    const freshCache = await caches.open(PRIVATE_OFFLINE_CACHE_NAME);
+    await freshCache.put(
+      markerPath,
+      new Response(generation, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      }),
     );
   });
 }

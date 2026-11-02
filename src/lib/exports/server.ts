@@ -116,19 +116,22 @@ async function removeExportObject(admin: SupabaseClient, objectPath: string): Pr
 async function queueExportCleanup(
   admin: SupabaseClient,
   accountId: string,
+  contentGeneration: string,
   objectPath: string,
-): Promise<void> {
+): Promise<boolean> {
   const deleteAfter = new Date(
     Date.now() + minimumExportLifetimeMilliseconds + 60_000,
   ).toISOString();
-  const { error } = await admin.from('export_deletion_queue').insert({
-    account_id: accountId,
-    object_path: objectPath,
-    delete_after: deleteAfter,
+  const { data: current, error } = await admin.rpc('register_export_archive', {
+    p_account_id: accountId,
+    p_content_generation: contentGeneration,
+    p_object_path: objectPath,
+    p_delete_after: deleteAfter,
   });
-  if (error) {
+  if (error || typeof current !== 'boolean') {
     throw new Error('Unable to schedule export archive cleanup.');
   }
+  return current;
 }
 
 export async function createExportDownload(
@@ -138,6 +141,11 @@ export async function createExportDownload(
   scope: ExportScope,
   signal?: AbortSignal,
 ): Promise<{ downloadUrl: string; expiresAt: string }> {
+  const contentGeneration = snapshot.content_generation;
+  if (typeof contentGeneration !== 'string' || !contentGeneration) {
+    throw new Error('The export account generation is unavailable.');
+  }
+
   const portableData = buildPortableData(snapshot, scope);
   const scopedRecord =
     scope.type === 'recipe'
@@ -258,8 +266,16 @@ export async function createExportDownload(
     }
     await uploadPromise;
 
-    await queueExportCleanup(admin, accountId, objectPath);
+    const currentGeneration = await queueExportCleanup(
+      admin,
+      accountId,
+      contentGeneration,
+      objectPath,
+    );
     cleanupQueued = true;
+    if (!currentGeneration) {
+      throw new Error('The account content changed while preparing this export.');
+    }
 
     const expiresAt = new Date(Date.now() + signedUrlLifetimeSeconds * 1000).toISOString();
     const { data: signedUrl, error: signedUrlError } = await admin.storage
@@ -267,6 +283,11 @@ export async function createExportDownload(
       .createSignedUrl(objectPath, signedUrlLifetimeSeconds, { download: downloadFilename });
     if (signedUrlError || !signedUrl?.signedUrl) {
       throw new Error('Unable to create a secure export download.');
+    }
+
+    const stillCurrent = await queueExportCleanup(admin, accountId, contentGeneration, objectPath);
+    if (!stillCurrent) {
+      throw new Error('The account content changed while preparing this export.');
     }
 
     if (scope.type === 'database') {
@@ -277,6 +298,7 @@ export async function createExportDownload(
         .from('accounts')
         .update({ last_database_export_at: createdAt.toISOString() })
         .eq('id', accountId)
+        .eq('content_generation', contentGeneration)
         .select('id')
         .maybeSingle();
       if (timestampError || !updatedAccount) {
@@ -292,7 +314,7 @@ export async function createExportDownload(
         await removeExportObject(admin, objectPath);
       } catch {
         try {
-          await queueExportCleanup(admin, accountId, objectPath);
+          await queueExportCleanup(admin, accountId, contentGeneration, objectPath);
           cleanupQueued = true;
         } catch {
           throw new Error('The export failed and its temporary archive could not be cleaned up.');
