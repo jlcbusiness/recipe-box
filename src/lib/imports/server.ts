@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { type ImportImageSink, readImportArchive } from './archive';
+import { createRangeArchiveSource, type ImportImageSink, readImportArchive } from './archive';
 import { validateImportBundleFiles } from './rules';
 
 const exportBucket = 'recipe-exports';
@@ -40,13 +40,11 @@ export async function readStoredImportBundle(
     throw new ImportBundleError('The selected import archive is unavailable.', 404);
   }
 
-  const response = await fetch(signedDownload.signedUrl, { cache: 'no-store' });
-  if (!response.ok || !response.body) {
-    throw new ImportBundleError('The selected import archive could not be read.', 422);
-  }
-
   try {
-    const archive = await readImportArchive(response.body, imageSink);
+    const archive = await readImportArchive(
+      createRangeArchiveSource(signedDownload.signedUrl),
+      imageSink,
+    );
     return validateImportBundleFiles(archive.entries, archive.images);
   } catch (error) {
     if (error instanceof ImportBundleError) throw error;

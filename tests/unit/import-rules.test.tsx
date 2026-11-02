@@ -1,13 +1,20 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { finished } from 'node:stream/promises';
+import { ZipArchive } from 'archiver';
 import { zipSync } from 'fflate';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   buildBundleManifest,
   type ExportScope,
   exportTableNames,
   type PortableData,
 } from '../../src/lib/exports/rules';
-import { readImportArchive } from '../../src/lib/imports/archive';
+import {
+  createRangeArchiveSource,
+  type ImportArchiveSource,
+  readImportArchive,
+} from '../../src/lib/imports/archive';
 import {
   findImportMatches,
   normalizeImportName,
@@ -16,6 +23,17 @@ import {
 
 const recipeId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const assetId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
+  return {
+    size: async () => archive.byteLength,
+    stream(offset: number, length?: number) {
+      return Readable.from([
+        archive.subarray(offset, length === undefined ? undefined : offset + length),
+      ]);
+    },
+  };
+}
 
 function createBundleEntries(options: {
   scope?: ExportScope;
@@ -357,28 +375,69 @@ describe('import bundle validation', () => {
   it('streams a ZIP archive and rejects duplicate or unsupported paths', async () => {
     const data = Buffer.from('portable data');
     const archive = zipSync({ 'data.json': data, 'manifest.json': Buffer.from('{}') });
-    const result = await readImportArchive(
-      new ReadableStream({
-        start(controller) {
-          controller.enqueue(archive);
-          controller.close();
-        },
-      }),
-    );
+    const result = await readImportArchive(createMemoryArchiveSource(Buffer.from(archive)));
     expect([...result.entries.keys()].sort()).toEqual(['data.json', 'manifest.json']);
     expect(Buffer.from(result.entries.get('data.json') ?? [])).toEqual(data);
 
     const unsupported = zipSync({ 'notes.txt': data });
     await expect(
-      readImportArchive(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(unsupported);
-            controller.close();
-          },
-        }),
-      ),
+      readImportArchive(createMemoryArchiveSource(Buffer.from(unsupported))),
     ).rejects.toThrow(/unsafe|unsupported/i);
+  });
+
+  it('rejects archives above the entry-count limit before parsing their directory', async () => {
+    const archive = Buffer.from(zipSync({ 'data.json': Buffer.from('{}') }));
+    const endRecordOffset = archive.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    archive.writeUInt16LE(20_001, endRecordOffset + 8);
+    archive.writeUInt16LE(20_001, endRecordOffset + 10);
+
+    await expect(readImportArchive(createMemoryArchiveSource(archive))).rejects.toThrow(
+      /unsupported file entry/i,
+    );
+  });
+
+  it('reads streamed ZIP archives when compressed data contains the descriptor signature', async () => {
+    const archive = new ZipArchive({ zlib: { level: 6 } });
+    const archiveParts: Buffer[] = [];
+    archive.on('data', (chunk: Buffer) => archiveParts.push(Buffer.from(chunk)));
+    const archiveFinished = finished(archive);
+    const data = randomBytes(2 * 1024 * 1024);
+    const descriptorSignature = Buffer.from([0x50, 0x4b, 0x07, 0x08]);
+    data.set(descriptorSignature, 100_000);
+    archive.append(data, { name: 'data.json' });
+    archive.append(Buffer.from('{}'), { name: 'manifest.json' });
+    await archive.finalize();
+    await archiveFinished;
+    const archiveBytes = Buffer.concat(archiveParts);
+    const embeddedSignatureOffset = archiveBytes.indexOf(descriptorSignature, 30);
+    const descriptorSignatureOffset = archiveBytes.lastIndexOf(descriptorSignature);
+    expect(embeddedSignatureOffset).toBeGreaterThan(30);
+    expect(embeddedSignatureOffset).toBeLessThan(descriptorSignatureOffset);
+
+    const rangeFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const requestedRange = new Headers(init?.headers).get('range') ?? '';
+      const match = /^bytes=(\d+)-(\d+)$/.exec(requestedRange);
+      if (!match) throw new Error('Expected a byte-range request.');
+      const start = Number(match[1]);
+      const end = Number(match[2]);
+      return new Response(archiveBytes.subarray(start, end + 1), {
+        status: 206,
+        headers: { 'content-range': `bytes ${start}-${end}/${archiveBytes.byteLength}` },
+      });
+    });
+    vi.stubGlobal('fetch', rangeFetch);
+
+    try {
+      const result = await readImportArchive(
+        createRangeArchiveSource('https://example.test/archive'),
+      );
+
+      expect([...result.entries.keys()].sort()).toEqual(['data.json', 'manifest.json']);
+      expect(Buffer.from(result.entries.get('data.json') ?? [])).toEqual(data);
+      expect(rangeFetch).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('streams image entries to a sink without retaining their bytes in the result', async () => {
@@ -389,12 +448,7 @@ describe('import bundle validation', () => {
       'manifest.json': Buffer.from('{}'),
     });
     const result = await readImportArchive(
-      new ReadableStream({
-        start(controller) {
-          controller.enqueue(archive);
-          controller.close();
-        },
-      }),
+      createMemoryArchiveSource(Buffer.from(archive)),
       async (_path, stream) => {
         for await (const _chunk of stream) {
         }
