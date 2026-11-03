@@ -138,7 +138,7 @@ test('recovery and reset screens are accessible @a11y', async ({ page, request }
 test('an account can sign in, use the private shell, and sign out @e2e @a11y', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   const user = await createTestUser(request);
 
   try {
@@ -178,9 +178,46 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
       throw new Error('Expected desktop Search and Trash navigation links.');
     }
     expect(trashBounds.y).toBeGreaterThan(searchBounds.y);
+    if (testInfo.project.name === 'Fold 6') {
+      await page.setViewportSize({ width: 307, height: 629 });
+    }
     await helpLink.click();
     await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Instruction encoding' })).toBeVisible();
+    const resetHelp = page.getByRole('region', { name: 'Backups and account reset' });
+    await expect(resetHelp).toContainText(
+      /Export database downloads a ZIP backup of your content and settings/u,
+    );
+    await expect(resetHelp).toContainText(/does not include recipe or publication history/u);
+    await expect(resetHelp).toContainText(
+      /active and trashed recipes and publications and their history/u,
+    );
+    await expect(resetHelp).toContainText(/tags, ingredients and nutrition data/u);
+    await expect(resetHelp).toContainText(
+      /Your sign-in identity, account, and admin or owner access remain/u,
+    );
+    await expect(resetHelp).toContainText(
+      /empty Recipe Tin and shipped picklist defaults are restored/u,
+    );
+    await expect(resetHelp).toContainText(/Reset revokes public recipe links/u);
+    await expect(resetHelp).toContainText(/does not reactivate old public links/u);
+    await expect(resetHelp).toContainText(
+      /ZIP files already downloaded to your devices are not deleted/u,
+    );
+    await expect(resetHelp).toContainText(/browser you used clears its private offline copies/u);
+    await expect(resetHelp).toContainText(
+      /Other signed-in devices clear old snapshots the next time they reconnect/u,
+    );
+    await expect(resetHelp).toContainText(
+      /device kept offline can continue showing its cached data/u,
+    );
+    await expect(resetHelp).toContainText(/queued for daily background cleanup/u);
+    await expect(resetHelp).toContainText(
+      /Settings shows whether deletion is pending and lets you check again later/u,
+    );
+    await expect(resetHelp).toContainText(
+      /reset remains incomplete until managed files are deleted/u,
+    );
     await expect(page.getByRole('heading', { name: 'Keyboard shortcuts' })).toBeVisible();
     await expect(page.getByText('+photo37-w240-left-steponly')).toBeVisible();
     await expect(page.getByText('#sugar-sauce-1', { exact: true })).toBeVisible();
@@ -198,6 +235,12 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
     expect(helpA11y.violations).toEqual([]);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBeTruthy();
+    if (testInfo.project.name === 'Fold 6') {
+      await page.setViewportSize({ width: 1280, height: 800 });
+    }
     await page.getByRole('link', { name: 'Library' }).click();
     const accountTrigger = page.locator('.account-menu-trigger');
     await expect(accountTrigger).toHaveAttribute('aria-label', `Account options for ${user.email}`);

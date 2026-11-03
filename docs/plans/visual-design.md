@@ -680,6 +680,13 @@ Storage cleanup or failed local-cache clearing. Explain that queued Storage
 deletions retry daily, that the displayed counts are a snapshot, and provide a
 status check to refresh them. Verify the dialog and action row fit desktop and
 narrow mobile viewports without horizontal page overflow.
+At the end of Settings, below Data management, show the current application
+version as a small muted line. Keep it informational rather than introducing a
+new Settings section or card.
+The Help page's **Backups and account reset** section explains that ZIP
+backups exclude recipe and publication history, what reset removes and
+preserves, the effect on public links and downloaded files, offline-device
+timing, and delayed managed-file cleanup.
 
 ## Desktop
 

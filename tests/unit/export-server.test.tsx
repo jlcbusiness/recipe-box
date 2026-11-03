@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { appVersion } from '../../src/lib/app-version';
 import type { ExportSnapshot } from '../../src/lib/exports/rules';
 import { createExportDownload, processExportCleanup } from '../../src/lib/exports/server';
 
@@ -134,6 +135,14 @@ describe('export archive failure cleanup', () => {
       'data.json',
       'manifest.json',
     ]);
+    const manifestEntry = uploadedArchive.files.find((entry) => entry.path === 'manifest.json');
+    if (!manifestEntry) {
+      throw new Error('Expected the export archive to include its manifest.');
+    }
+    const manifest = JSON.parse((await manifestEntry.buffer()).toString('utf8')) as {
+      app_version: string;
+    };
+    expect(manifest.app_version).toBe(appVersion);
     expect(mock.register).toHaveBeenCalledTimes(2);
     expect(mock.register).toHaveBeenNthCalledWith(
       1,

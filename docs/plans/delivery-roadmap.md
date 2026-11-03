@@ -3,6 +3,10 @@
 > **Reference Note:** For the complete catalog of all requirements, edge cases,
 > UI behaviors, and design discussions, see [comprehensive reference](comprehensive-reference.md).
 
+The current product baseline is **v1.0.0**. Unscheduled improvements and
+verification follow-ups remain in the [deferred-work inventory](discussion/later.md);
+they are not blockers to this release.
+
 ## Purpose
 
 This roadmap breaks Recipe Box into small, demonstrable delivery slices. It is
@@ -74,12 +78,17 @@ checks cover the revised contract. The migration was applied locally without res
 hosted deployment and physical mobile-keyboard acceptance remain unverified.
 See the [DLC 13 brief](slices/dlc/dlc-13-advanced-query-groups.md).
 
-DLC 24's account content reset is implemented and locally verified. The
-29-assertion database test and four Chromium/Fold 6 browser runs pass; focused
-unit tests, TypeScript, and targeted Biome checks also pass. The migration was
-applied locally without resetting data. Google OAuth provider configuration,
-hosted Storage cleanup, and physical-device acceptance remain unverified. See
-the [DLC 24 brief](slices/dlc/dlc-24-account-content-reset.md).
+DLC 24's account content reset is implemented and accepted locally and in
+production. The 29-assertion database test and four Chromium/Fold 6 browser
+runs pass; focused unit tests, TypeScript, and targeted Biome checks also pass.
+Production acceptance confirmed Google re-authentication, phone cache clearing,
+and archive restoration after reset. Settings displays the v1.0.0 package
+version, and Help explains backup, reset, public-link, offline-device, and
+delayed-cleanup behavior, including that ZIP backups omit recipe and
+publication history. Managed-object cleanup is intentionally queued for the
+daily job; confirming a successful hosted cleanup invocation remains an
+operational follow-up. See the
+[DLC 24 brief](slices/dlc/dlc-24-account-content-reset.md).
 
 ## Mandatory Slice Preparation
 

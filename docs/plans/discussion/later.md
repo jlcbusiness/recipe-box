@@ -27,6 +27,15 @@ This inventory consolidates work explicitly deferred by the 36 slice briefs (Sli
 - Add instruction-step sorting controls beyond manual reordering. ([Slices 7](../slices/7-instructions-and-mentions.md), [7.5](../slices/7.5-reorder-interaction-polish.md))
 - Add configurable Trash retention periods. ([Slices 8](../slices/8-trash-restore-and-print.md), [10B](../slices/10b-publication-deletion-and-restore.md))
 - Implement application-generated PDF export beyond browser-native Print-to-PDF. ([Slices 8](../slices/8-trash-restore-and-print.md), [20](../slices/20-export.md))
+- Revisit ingredient-set and instruction-group organization so matching recipe
+  sections can be arranged and presented independently. This remains an
+  unscheduled candidate; the [DLC 27 brief](../slices/dlc/dlc-27-ingredient-instruction-groups.md)
+  records the decisions required before implementation.
+- Revisit these recipe-editor and mobile-detail polish ideas from
+  [dlc2.md](dlc2.md): a Custom option with a standard 16-million-color picker
+  in place of a fixed color swatch; optional bold, italic, and underline
+  emphasis; and a resized primary-image thumbnail in mobile recipe details.
+  These are exploratory ideas, not committed scope.
 
 ### History, backup, and offline use
 

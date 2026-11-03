@@ -3,6 +3,7 @@ import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { type Archiver, ZipArchive } from 'archiver';
+import { appVersion } from '../app-version';
 import {
   assertExportLimits,
   type BundleManifestFile,
@@ -17,7 +18,6 @@ const exportBucket = 'recipe-exports';
 const mediaBucket = 'recipe-media';
 const signedUrlLifetimeSeconds = 15 * 60;
 const minimumExportLifetimeMilliseconds = 24 * 60 * 60 * 1000;
-const appVersion = process.env.npm_package_version ?? '0.1.0';
 
 type CleanupResult = {
   processed: number;

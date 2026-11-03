@@ -122,6 +122,33 @@ export default async function HelpPage() {
             per-serving value of a saved recipe override.
           </p>
         </section>
+        <section aria-labelledby="account-reset-title">
+          <h2 id="account-reset-title">Backups and account reset</h2>
+          <p>
+            Export database downloads a ZIP backup of your content and settings, but it does not
+            include recipe or publication history. Keep it somewhere safe if you may want to restore
+            your recipes. Wipe all account data in Settings removes active and trashed recipes and
+            publications and their history; tags, ingredients and nutrition data; custom picklists
+            and explorer state; personal preferences; and managed media and export archives. Your
+            sign-in identity, account, and admin or owner access remain. The empty Recipe Tin and
+            shipped picklist defaults are restored.
+          </p>
+          <p>
+            Reset revokes public recipe links, and importing a backup does not reactivate old public
+            links. ZIP files already downloaded to your devices are not deleted.
+          </p>
+          <p>
+            After reset, the browser you used clears its private offline copies. Settings reports if
+            this browser cannot clear them. Other signed-in devices clear old snapshots the next
+            time they reconnect; a device kept offline can continue showing its cached data until
+            then.
+          </p>
+          <p>
+            Database records are removed immediately, but managed media and export archives are
+            queued for daily background cleanup. Settings shows whether deletion is pending and lets
+            you check again later; reset remains incomplete until managed files are deleted.
+          </p>
+        </section>
         <section aria-labelledby="keyboard-shortcuts-title">
           <h2 id="keyboard-shortcuts-title">Keyboard shortcuts</h2>
           <p>

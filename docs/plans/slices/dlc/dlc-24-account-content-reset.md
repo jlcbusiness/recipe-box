@@ -2,8 +2,11 @@
 
 ## Review status
 
-Approved contract. Implementation is complete locally; hosted Google-provider
-and physical-device acceptance remain open.
+Approved and implemented. Local acceptance and production reset-and-restore
+acceptance are complete for v1.0.0: production Google re-authentication and
+phone cache clearing were confirmed. The daily managed-object cleanup job is
+configured; recording a successful hosted invocation remains an operational
+follow-up, not a blocker to the reset flow.
 
 ## Outcome
 
@@ -142,6 +145,11 @@ authorization or treat an unverified OTP as recent authentication.
   Data-management tests verify the wipe action stays left of the
   right-aligned transfer actions and the exact-phrase submit remains disabled
   until the phrase matches.
+- **Release information:** Settings displays the package version beneath Data
+  management. Help explains that ZIP backups exclude recipe and publication
+  history, backup preparation, reset scope and preserved account access,
+  restored defaults, public-link revocation, downloaded ZIPs, offline-device
+  timing, and delayed managed-file cleanup.
 
 ## Assumptions and implementation checks
 
@@ -168,9 +176,14 @@ authorization or treat an unverified OTP as recent authentication.
   retry schedule and offers a status check for later confirmation.
 - Focused export and offline-cache unit tests, TypeScript, and targeted Biome
   checks pass. The local migration was applied without resetting local data.
-- Google OAuth requires configured provider credentials and was not exercised
-  end to end; callback-state retention is covered with a simulated return URL.
-  Hosted Storage cleanup and physical-device behavior remain open.
+- Settings browser tests verify the package-version footer below Data
+  management on desktop and mobile. The authenticated Help browser test checks
+  the backup and reset guidance, including history exclusion, public links,
+  device caches, and delayed managed-file cleanup.
+- Production acceptance confirmed Google re-authentication, reset and archive
+  restoration, and private cache clearing on a phone. The daily cleanup job is
+  configured; recording a successful hosted invocation remains an operational
+  follow-up.
 
 ## References
 

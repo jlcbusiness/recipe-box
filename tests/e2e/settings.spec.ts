@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, test } from '@playwright/test';
+import { appVersion } from '../../src/lib/app-version';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
 
 async function expectListScrollWindow(list: Locator, maxHeight = 416) {
@@ -92,6 +93,19 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     await page.getByRole('link', { name: 'Settings' }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    const versionLabel = page.getByText(`Recipe Box v${appVersion}`, { exact: true });
+    await expect(versionLabel).toBeVisible();
+    const [dataManagementBounds, versionBounds] = await Promise.all([
+      dataManagement.boundingBox(),
+      versionLabel.boundingBox(),
+    ]);
+    expect(dataManagementBounds).not.toBeNull();
+    expect(versionBounds).not.toBeNull();
+    if (!dataManagementBounds || !versionBounds) {
+      throw new Error('Expected Data management and version footer bounds.');
+    }
+    expect(versionBounds.y).toBeGreaterThan(dataManagementBounds.y + dataManagementBounds.height);
     await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();
     await expect(page.locator('.units-menu-panel')).toHaveCount(0);
     const settingsWidth = (await page.locator('.settings-main').boundingBox())?.width ?? 0;
