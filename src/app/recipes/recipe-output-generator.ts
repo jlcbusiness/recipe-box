@@ -119,6 +119,7 @@ const outputStyles = `
   }
   .recipe-output-column .recipe-instruction-photo {
     display: block;
+    max-width: 100%;
     clear: both;
     float: none !important;
     margin: 12px 0;

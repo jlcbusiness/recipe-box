@@ -68,17 +68,52 @@ test('Site publication covers stay circular on the detail page @e2e', async ({ p
     await expect(siteCoverPreview).toBeVisible();
     await expect(siteCoverPreview).toHaveCSS('width', '140px');
     await expect(siteCoverPreview).toHaveCSS('height', '140px');
+    await coverEditor.evaluate((dialog) => {
+      const clipboardData = new DataTransfer();
+      clipboardData.setData('text/plain', 'not an image');
+      dialog.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData }));
+    });
+    await expect(coverEditor.getByRole('alert')).toContainText('does not contain an image');
+    const coverBytes = [
+      ...(await sharp({
+        create: { width: 40, height: 40, channels: 3, background: '#bfd8ab' },
+      })
+        .png()
+        .toBuffer()),
+    ];
+    const pasteCover = async () => {
+      await coverEditor.evaluate((dialog, bytes) => {
+        const clipboardData = new DataTransfer();
+        clipboardData.items.add(
+          new File([new Uint8Array(bytes)], 'pasted.png', { type: 'image/png' }),
+        );
+        dialog.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData }));
+      }, coverBytes);
+      await expect(coverEditor.locator('.publication-cover-editor-image')).toBeVisible();
+    };
+    await pasteCover();
     await coverEditor.getByRole('button', { name: 'Cancel' }).click();
+    await expect(editor.locator('.publication-cover-manager-image')).toHaveCount(0);
     await editor.getByRole('button', { name: 'Close publication editor' }).click();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole('button', { name: 'Edit publication' }).click();
+    await page.getByRole('button', { name: 'Manage Circular Site Cover cover' }).click();
+    await pasteCover();
+    await coverEditor.getByRole('button', { name: 'Submit' }).click();
+    await expect(coverEditor).toBeHidden();
+    await expect(editor.locator('.publication-cover-manager-image')).toBeVisible();
+    await editor.getByRole('button', { name: 'Close publication editor' }).click();
+    await page.reload();
+    await expect(siteCover.locator('.publication-cover-image-content')).toBeVisible();
   } finally {
     await deleteTestUser(request, user);
   }
 });
 
-test('publication actions switch to compact icons when the heading is constrained @e2e', async ({
+test('publication actions stay compact and share a keyboard-operable transfer menu @e2e', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   const user = await createTestUser(request);
   const { apiUrl, anonKey } = await getLocalSupabaseConfig();
 
@@ -110,25 +145,33 @@ test('publication actions switch to compact icons when the heading is constraine
     const actionButtons = [
       page.getByRole('button', { name: 'Edit publication' }),
       page.getByRole('link', { name: 'Add Recipe' }),
-      page.getByRole('button', { name: 'Import recipe' }),
-      page.getByRole('button', { name: 'Export publication' }),
+      page.getByRole('button', { name: 'Publication transfer options' }),
     ];
-    const fullLabelWidths = await Promise.all(
-      actionButtons.map(async (button) => (await button.boundingBox())?.width ?? 0),
-    );
-    expect(fullLabelWidths.every((width) => width > 48)).toBe(true);
-
-    await page.setViewportSize({ width: 800, height: 900 });
-    for (const button of actionButtons) {
-      await expect(button).toHaveCSS('width', '48px');
+    for (const width of [1920, 1024, 800, 761, 721]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const button of actionButtons) {
+        expect((await button.boundingBox())?.width).toBeLessThanOrEqual(48);
+      }
+      await expectNoHorizontalOverflow(page);
+      const titleBounds = await page.locator('.publication-detail-heading h1').boundingBox();
+      const actionBounds = await actions.boundingBox();
+      expect(titleBounds).not.toBeNull();
+      expect(actionBounds).not.toBeNull();
+      expect((titleBounds?.x ?? 0) + (titleBounds?.width ?? 0)).toBeLessThanOrEqual(
+        (actionBounds?.x ?? 0) + 1,
+      );
+      await page.screenshot({
+        path: testInfo.outputPath(`publication-${width}.png`),
+        fullPage: true,
+      });
     }
-    const titleBounds = await page.locator('.publication-detail-heading h1').boundingBox();
-    const actionBounds = await actions.boundingBox();
-    expect(titleBounds).not.toBeNull();
-    expect(actionBounds).not.toBeNull();
-    expect((titleBounds?.x ?? 0) + (titleBounds?.width ?? 0)).toBeLessThanOrEqual(
-      (actionBounds?.x ?? 0) + 1,
-    );
+    const transfer = actionButtons[2];
+    await transfer.click();
+    await expect(page.getByRole('menuitem', { name: 'Export publication' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitem', { name: 'Import recipe' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(transfer).toBeFocused();
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1394,6 +1437,8 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await expect(mobilePublicationRow).toHaveCSS('display', 'flex');
       await expect(mobilePublicationRow).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
       await expect(mobilePublicationRow).toHaveCSS('flex-wrap', 'wrap');
+      await expect(mobilePublicationRow.locator('[data-explorer-column="name"]')).toBeVisible();
+      await expect(mobilePublicationRow.locator('[data-explorer-column="state"]')).toBeVisible();
       const mobileNameBounds = await mobilePublicationRow
         .locator('[data-explorer-column="name"]')
         .boundingBox();

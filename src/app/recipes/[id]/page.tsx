@@ -29,6 +29,7 @@ import { RecipePhotoGallery } from '../../media/media-display';
 import { OfflineSnapshotCapture } from '../../offline-snapshot-capture';
 import { RecipeActionFeedbackProvider } from '../../recipe-action-feedback';
 import { TagChips } from '../../tags/tag-controls';
+import { InstructionList } from '../instruction-list';
 import { RecipeMarkerActions } from '../recipe-marker-actions';
 import { RecipeOutputActions } from '../recipe-output-actions';
 import {
@@ -95,6 +96,7 @@ function renderInstructionMarkdown(
                   displayWidth={photo.display_width}
                   key={`${prefix}-photo-${token.id}-${occurrence}`}
                   height={photo.height}
+                  minimumTextWidth={240}
                   src={photo.full_url}
                   triggerClassName={[
                     'recipe-instruction-photo',
@@ -208,40 +210,7 @@ function renderInstructionMarkdown(
       );
     }
     if (block.type === 'list') {
-      const List = block.ordered ? 'ol' : 'ul';
-      const occurrences = new Map<string, number>();
-      return (
-        <List key={key}>
-          {block.items.map((item) => {
-            const signature = item
-              .map((token) =>
-                token.type === 'mention'
-                  ? `${token.type}:${token.id}`
-                  : token.type === 'photo'
-                    ? `${token.type}:${token.id}:${token.width ?? ''}:${token.alignment ?? ''}:${token.stepOnly ?? false}:${token.noWrap ?? false}`
-                    : token.type === 'link'
-                      ? `${token.type}:${token.url}:${token.label}`
-                      : `${token.type}:${token.value}`,
-              )
-              .join('|');
-            const occurrence = occurrences.get(signature) ?? 0;
-            occurrences.set(signature, occurrence + 1);
-            const itemKey = `${key}-${signature}-${occurrence}`;
-            return (
-              <li
-                className={
-                  item.some((token) => token.type === 'photo')
-                    ? 'recipe-instruction-with-photo'
-                    : undefined
-                }
-                key={itemKey}
-              >
-                {renderInline(item, itemKey)}
-              </li>
-            );
-          })}
-        </List>
-      );
+      return <InstructionList key={key} list={block} prefix={key} renderInline={renderInline} />;
     }
     return (
       <p

@@ -2435,7 +2435,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 .recipe-instruction-photo {
   display: block;
   float: right;
-  max-width: min(55%, 20rem);
+  max-width: 100%;
   margin: 0 0 1mm 12px;
 }
 
@@ -2448,6 +2448,17 @@ section.recipe-detail-section .recipe-relationship-list a {
   clear: both;
   float: none;
   margin: 0 0 1mm auto;
+}
+
+.recipe-instruction-photo.is-width-constrained {
+  clear: both;
+  float: none;
+  margin-left: auto;
+}
+
+.recipe-instruction-photo.is-width-constrained.is-left {
+  margin-right: auto;
+  margin-left: 0;
 }
 
 .recipe-instruction-photo.is-nowrap.is-left {
@@ -2499,13 +2510,17 @@ section.recipe-detail-section .recipe-relationship-list a {
   .recipe-instruction-photo {
     clear: both;
     float: none;
-    max-width: min(100%, 20rem);
+    max-width: 100%;
     margin: 8px 0 1mm;
   }
 
   .recipe-instruction-photo.is-left {
     float: none;
     margin: 8px 0 1mm;
+  }
+
+  .recipe-instruction-photo.is-width-constrained {
+    margin-left: 0;
   }
 
   .recipe-instruction-photo.is-nowrap {
@@ -2945,7 +2960,7 @@ section.recipe-detail-section .recipe-relationship-list a {
   }
 
   .recipe-detail-heading-actions:has(> .recipe-sharing-action-form.is-linkable) {
-    grid-template-columns: 36px minmax(36px, 1fr) repeat(4, 36px);
+    grid-template-columns: 36px 60px repeat(4, 36px);
   }
 
   .recipe-detail-heading-actions > .recipe-share-copy-action {

@@ -170,6 +170,7 @@ function createRecipeArchive({
   recipeId = randomUUID(),
   recipeName,
   isPrivate = true,
+  recipeUrl = null,
 }: {
   createdAt: string;
   publicationId?: string;
@@ -178,16 +179,17 @@ function createRecipeArchive({
   recipeId?: string;
   recipeName: string;
   isPrivate?: boolean;
+  recipeUrl?: string | null;
 }) {
   const publication = {
     id: publicationId,
     publication_type: publicationType,
     name: publicationName,
-    author: 'Kitchen Archive',
+    author: publicationType === 'site' ? null : 'Kitchen Archive',
     edition: null,
     isbn: null,
     retailer_url: null,
-    site_url: null,
+    site_url: publicationType === 'site' ? 'https://example.test' : null,
     version: 1,
     created_at: createdAt,
     updated_at: createdAt,
@@ -197,6 +199,7 @@ function createRecipeArchive({
     id: recipeId,
     name: recipeName,
     publication_id: publicationId,
+    recipe_url: recipeUrl,
     state: 'want_to_try',
     score: null,
     is_starred: false,
@@ -240,15 +243,21 @@ async function activate(
 }
 
 async function openRecipeImport(page: import('@playwright/test').Page, isMobile: boolean) {
+  await activate(
+    page,
+    page.getByRole('button', { name: 'Publication transfer options' }),
+    isMobile,
+  );
+  const menu = page.getByRole('menu', { name: 'Publication transfer actions' });
+  await expect(menu).toBeVisible();
+  const importOption = menu.getByRole('menuitem', { name: 'Import recipe' });
   if (isMobile) {
-    await activate(page, page.getByRole('button', { name: 'Publication transfer options' }), true);
-    const menu = page.getByRole('menu', { name: 'Publication transfer actions' });
-    await expect(menu).toBeVisible();
-    await activate(page, menu.getByRole('menuitem', { name: 'Import recipe' }), true);
-    return;
+    await importOption.tap();
+  } else {
+    await page.keyboard.press('End');
+    await expect(importOption).toBeFocused();
+    await page.keyboard.press('Enter');
   }
-
-  await activate(page, page.getByRole('button', { name: 'Import recipe' }), false);
 }
 
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
@@ -1004,6 +1013,74 @@ test('an unmatched publication can route recipes without creating the publicatio
     await expect(page.getByRole('link', { name: skippedRecipe.name })).toHaveCount(0);
     await page.goto('/publications');
     await expect(page.getByRole('link', { name: sourcePublicationName })).toHaveCount(0);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('imports Site recipes into Recipe Tin and preserves their URL through Replace and Duplicate @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const recipeName = 'Synthetic source recipe';
+  const sourceUrl = 'https://example.test/source-recipe';
+  const archive = createRecipeArchive({
+    createdAt: new Date().toISOString(),
+    publicationType: 'site',
+    publicationName: 'Synthetic source Site',
+    recipeName,
+    recipeUrl: sourceUrl,
+  });
+  try {
+    await signIn(page, user.email, user.password);
+    const response = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=id&publication_type=eq.collection`,
+      {
+        headers: ownerHeaders(config.anonKey, user.accessToken),
+      },
+    );
+    expect(response.ok(), await response.text()).toBeTruthy();
+    const [tin] = (await response.json()) as Array<{ id: string }>;
+    if (!tin) throw new Error('Expected the destination Recipe Tin.');
+    for (const action of ['New', 'Replace', 'Duplicate']) {
+      await page.goto(`/publications/${tin.id}`);
+      await openRecipeImport(page, (page.viewportSize()?.width ?? 1280) <= 720);
+      const dialog = page.getByRole('dialog', { name: 'Import recipe' });
+      await dialog.getByLabel('Recipe archive').setInputFiles({
+        name: 'synthetic-site.zip',
+        mimeType: 'application/zip',
+        buffer: archive,
+      });
+      if (action !== 'New') {
+        await chooseRecipeAction(
+          dialog.getByRole('group', { name: `Import choice for ${recipeName}` }),
+          action,
+        );
+      }
+      await dialog.getByRole('button', { name: 'Import recipe' }).click();
+      await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+$/i);
+      const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+      const saved = await request.get(
+        `${config.apiUrl}/rest/v1/recipes?select=publication_id,recipe_url&id=eq.${recipeId}`,
+        {
+          headers: ownerHeaders(config.anonKey, user.accessToken),
+        },
+      );
+      expect(saved.ok(), await saved.text()).toBeTruthy();
+      expect(await saved.json()).toEqual([{ publication_id: tin.id, recipe_url: null }]);
+      const references = await request.get(
+        `${config.apiUrl}/rest/v1/recipe_references?select=url,reference_type&recipe_id=eq.${recipeId}`,
+        {
+          headers: ownerHeaders(config.anonKey, user.accessToken),
+        },
+      );
+      expect(references.ok(), await references.text()).toBeTruthy();
+      expect(await references.json()).toEqual([{ url: sourceUrl, reference_type: 'external_url' }]);
+      await page.reload();
+      await expect(page.getByRole('link', { name: sourceUrl, exact: true })).toBeVisible();
+    }
   } finally {
     await deleteTestUser(request, user);
   }

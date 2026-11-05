@@ -5,8 +5,6 @@ import { notFound } from 'next/navigation';
 import { getPublicationCover } from '../../../lib/media/data';
 import { getPublications, getTags, type PublicationOption } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
-import { ExportAction } from '../../export-action';
-import { ImportAction } from '../../settings/database-import-action';
 import { TagChips } from '../../tags/tag-controls';
 import { PublicationCover } from '../publication-cover';
 import { PublicationEditAction } from '../publication-edit-action';
@@ -149,19 +147,7 @@ export default async function PublicationPage({
             <Plus aria-hidden="true" size={18} />
             <span className="publication-new-recipe-label">Add Recipe</span>
           </Link>
-          <ImportAction
-            compact
-            scope={{ type: 'recipe' }}
-            targetPublicationId={publication.id}
-            triggerLabel="Import recipe"
-          />
-          <ExportAction
-            ariaLabel="Export publication"
-            buttonClassName="recipe-secondary-button publication-detail-export-button"
-            buttonLabel="Export"
-            className="publication-detail-export-action"
-            scope={{ type: 'publication', id: publication.id }}
-          />
+          <PublicationTransferMenu publicationId={publication.id} />
         </div>
       </div>
       {explorerSearchParams.status === 'trashed' && (

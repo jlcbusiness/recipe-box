@@ -25,10 +25,16 @@ export type InstructionInlineToken =
 
 export type TemperatureSystem = 'fahrenheit' | 'celsius';
 
+export type InstructionMarkdownList = {
+  type: 'list';
+  ordered: boolean;
+  items: Array<{ content: InstructionInlineToken[]; children: InstructionMarkdownList[] }>;
+};
+
 export type InstructionMarkdownBlock =
   | { type: 'paragraph'; content: InstructionInlineToken[] }
   | { type: 'heading'; level: number; content: InstructionInlineToken[] }
-  | { type: 'list'; ordered: boolean; items: InstructionInlineToken[][] };
+  | InstructionMarkdownList;
 
 const inlineTokenPattern =
   /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|(\[\[duration:([^\]\r\n]+)\]\])|(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b|(?<![\p{L}\p{N}_])!(?:[\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])|(\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-(?:left|center|steponly|nowrap|w?[1-9]\d{0,3})){0,5})|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
@@ -158,7 +164,7 @@ export function parseInstructionMarkdown(
   for (const block of source.split(/\n\s*\n/gu)) {
     const lines = block.split('\n');
     let paragraphLines: string[] = [];
-    let pendingList: { ordered: boolean; items: InstructionInlineToken[][] } | null = null;
+    const listStack: Array<{ indent: number; list: InstructionMarkdownList }> = [];
 
     const flushParagraph = () => {
       if (paragraphLines.length > 0) {
@@ -171,14 +177,7 @@ export function parseInstructionMarkdown(
     };
 
     const flushList = () => {
-      if (pendingList && pendingList.items.length > 0) {
-        blocks.push({
-          type: 'list',
-          ordered: pendingList.ordered,
-          items: pendingList.items,
-        });
-        pendingList = null;
-      }
+      listStack.length = 0;
     };
 
     for (const rawLine of lines) {
@@ -194,17 +193,33 @@ export function parseInstructionMarkdown(
         continue;
       }
 
-      const listItem = /^\s*(?:(\d+)[.)]|([-+*]))\s+(.+)$/u.exec(rawLine);
+      const listItem = /^([ \t]*)(?:(\d+)[.)]|([-+*]))\s+(.+)$/u.exec(rawLine);
       if (listItem) {
         flushParagraph();
-        const ordered = Boolean(listItem[1]);
-        if (pendingList && pendingList.ordered !== ordered) {
-          flushList();
+        const indent = listItem[1].replace(/\t/gu, '    ').length;
+        const ordered = Boolean(listItem[2]);
+        while (listStack.length && listStack[listStack.length - 1].indent > indent) {
+          listStack.pop();
         }
-        if (!pendingList) {
-          pendingList = { ordered, items: [] };
+        let current = listStack[listStack.length - 1];
+        if (current?.indent === indent && current.list.ordered !== ordered) {
+          listStack.pop();
+          current = listStack[listStack.length - 1];
         }
-        pendingList.items.push(parseInstructionInline(listItem[3] ?? '', temperatureSystem));
+        if (!current || current.indent < indent) {
+          const list: InstructionMarkdownList = { type: 'list', ordered, items: [] };
+          if (current) {
+            current.list.items[current.list.items.length - 1].children.push(list);
+          } else {
+            blocks.push(list);
+          }
+          current = { indent, list };
+          listStack.push(current);
+        }
+        current.list.items.push({
+          content: parseInstructionInline(listItem[4] ?? '', temperatureSystem),
+          children: [],
+        });
         continue;
       }
 

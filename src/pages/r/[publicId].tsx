@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ImageViewer } from '../../app/media/image-viewer';
 import { RecipePhotoGallery } from '../../app/media/media-display';
 import { RecipeActionFeedbackProvider } from '../../app/recipe-action-feedback';
+import { InstructionList } from '../../app/recipes/instruction-list';
 import { RecipeOutputActions } from '../../app/recipes/recipe-output-actions';
 import {
   RecipeInstructionMention,
@@ -80,6 +81,7 @@ function renderInstructionBlocks(
                   buttonLabel="View instruction photo full size"
                   crop={photo.crop}
                   height={photo.height}
+                  minimumTextWidth={240}
                   displayHeight={photo.display_height}
                   displayWidth={photo.display_width}
                   key={`${prefix}-photo-${token.id}-${occurrence}`}
@@ -183,25 +185,7 @@ function renderInstructionBlocks(
       );
     }
     if (block.type === 'list') {
-      const List = block.ordered ? 'ol' : 'ul';
-      return (
-        <List key={key}>
-          {withOccurrenceKeys(block.items, (item) => JSON.stringify(item) ?? '').map(
-            ({ item, key: itemKey }) => (
-              <li
-                className={
-                  item.some((token) => token.type === 'photo')
-                    ? 'recipe-instruction-with-photo'
-                    : undefined
-                }
-                key={`${key}-${itemKey}`}
-              >
-                {renderInline(item, `${key}-${itemKey}`)}
-              </li>
-            ),
-          )}
-        </List>
-      );
+      return <InstructionList key={key} list={block} prefix={key} renderInline={renderInline} />;
     }
     return (
       <p

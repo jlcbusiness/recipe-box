@@ -160,6 +160,12 @@ retain readable text and see the image in its recipe context.
   Image dimensions remain responsive, preserve aspect ratio, and never crop
   meaningful content; the default width is 200px, and custom pixel widths are
   capped by the available text area.
+  Explicit widths are not capped to thumbnail dimensions. On desktop, switch
+  to a bounded block when the requested width would leave less than 240px for
+  text; paginated output bounds photos to its usable column width.
+- Indented instruction lists retain semantic nesting and mixed ordered/unordered
+  child lists. Private and public readers reuse one recursive list renderer,
+  and standalone/print output preserves that DOM structure.
 - When a referenced photo is removed, one confirmation removes the photo and
   all its instruction references together. The confirmation identifies the
   affected steps; cancellation changes nothing. The operation must handle

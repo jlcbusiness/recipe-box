@@ -2695,8 +2695,9 @@
 .recipe-form-actions {
   display: flex;
   align-items: center;
-  justify-content: end;
+  justify-content: flex-start;
   gap: 12px;
+  margin-top: 18px;
   border-top: 1px solid var(--line);
   padding-top: 18px;
 }
@@ -2736,9 +2737,22 @@
 }
 
 .recipe-ingredient-rail-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   height: 36px;
   flex: 0 0 36px;
   border-bottom: 1px solid var(--line);
+  padding-right: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.recipe-main-ingredient-help {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .recipe-ingredient-rail-section-spacer {
@@ -3432,8 +3446,7 @@
 .recipe-form .recipe-preparation-editor .ingredient-cell-input.is-fit-content {
   width: auto;
   max-width: 100%;
-  padding-inline: 2px;
-  field-sizing: content;
+  padding-inline: 0.5mm;
 }
 
 .recipe-form .recipe-measurement-picklist-trigger {

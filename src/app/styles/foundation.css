@@ -532,6 +532,12 @@ a {
   }
 }
 
+@media screen and (min-width: 641px) {
+  .private-content.private-content-wide:has(.recipe-summary-layout) {
+    padding-inline: clamp(11px, calc((100% - 1198px) / 2), 1in);
+  }
+}
+
 .private-content section {
   width: 100%;
   min-width: 0;
@@ -2155,7 +2161,7 @@ h1 {
 .recipe-public-main {
   width: 100%;
   margin-inline: auto;
-  padding: 24px 24px 48px;
+  padding: 24px clamp(24px, calc((100% - 1012px) / 2), 1in) 48px;
 }
 
 .recipe-page-heading {
@@ -2591,6 +2597,18 @@ body:not(:has(.recipe-tin-theme))
 .recipe-notes-nutrition {
   width: min(100%, max(1012px, calc(100% - 2in)));
   margin: 30px auto 0;
+}
+
+@media screen {
+  .private-content .recipes-main .recipe-notes-nutrition,
+  .private-content .recipes-main > .recipe-detail-section,
+  .recipe-public-main .recipe-public-overview,
+  .recipe-public-main .recipe-reading-layout,
+  .recipe-public-main .recipe-notes-nutrition,
+  .recipe-public-main > .recipe-detail-section {
+    width: 100%;
+    margin-inline: 0;
+  }
 }
 
 .recipe-notes-nutrition > .recipe-detail-section {

@@ -15,6 +15,7 @@ type ImageViewerProps = {
   displayWidth?: number;
   height: number;
   imageClassName?: string;
+  minimumTextWidth?: number;
   src: string;
   triggerLoading?: 'eager' | 'lazy';
   triggerClassName?: string;
@@ -31,6 +32,7 @@ export function ImageViewer({
   displayWidth,
   height,
   imageClassName,
+  minimumTextWidth,
   src,
   triggerLoading = 'lazy',
   triggerClassName,
@@ -38,12 +40,28 @@ export function ImageViewer({
   width,
 }: ImageViewerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [useBlockLayout, setUseBlockLayout] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setPortalTarget(document.body);
   }, []);
+
+  useEffect(() => {
+    const trigger = triggerRef.current;
+    const container = trigger?.closest('li');
+    const requestedWidth = triggerStyle?.width;
+    if (!container || minimumTextWidth === undefined || typeof requestedWidth !== 'number') {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      setUseBlockLayout(container.clientWidth - requestedWidth < minimumTextWidth);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [minimumTextWidth, triggerStyle?.width]);
 
   function openViewer() {
     const dialog = dialogRef.current;
@@ -65,8 +83,9 @@ export function ImageViewer({
     <>
       <button
         aria-label={buttonLabel}
-        className={`image-viewer-trigger${triggerClassName ? ` ${triggerClassName}` : ''}`}
+        className={`image-viewer-trigger${triggerClassName ? ` ${triggerClassName}` : ''}${useBlockLayout ? ' is-width-constrained' : ''}`}
         onClick={openViewer}
+        ref={triggerRef}
         style={triggerStyle}
         type="button"
       >

@@ -67,6 +67,105 @@ function createInput() {
 }
 
 describe('database import planning', () => {
+  it.each(['create', 'duplicate', 'replace'] as const)(
+    'preserves the Site URL as a reference when %s imports target Recipe Tin',
+    (action) => {
+      const { data, existing } = createInput();
+      data.scope = { type: 'recipe', id: sourceRecipeId };
+      data.records.publications[0].publication_type = 'site';
+      data.records.recipes[0].recipe_url = 'https://example.test/recipe';
+      existing.publications[0].publication_type = 'site';
+      const tinId = externalSourcePublicationId;
+      existing.publications.push({ id: tinId, publication_type: 'collection', name: 'Recipe Tin' });
+      if (action === 'create') existing.recipes = [];
+      if (action === 'replace') existing.recipes[0].publication_id = tinId;
+      const plan = planImport(
+        data,
+        existing,
+        action === 'create'
+          ? {}
+          : {
+              [`recipe:${sourceRecipeId}`]: { action, targetId: destinationRecipeId },
+            },
+        () => newRecipeId,
+        { destinationPublicationIds: { [sourceRecipeId]: tinId } },
+      );
+      expect(plan.records.recipes[0].recipe_url).toBeNull();
+      expect(plan.records.recipe_references).toContainEqual(
+        expect.objectContaining({
+          recipe_id: plan.records.recipes[0].id,
+          reference_type: 'external_url',
+          url: 'https://example.test/recipe',
+        }),
+      );
+    },
+  );
+
+  it('preserves an incompatible printed location as a citation when assigning a Site', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipes[0].publication_page = '42';
+    existing.recipes = [];
+    existing.publications.push({
+      id: externalSourcePublicationId,
+      publication_type: 'site',
+      name: 'Destination',
+    });
+    const plan = planImport(data, existing, {}, () => newRecipeId, {
+      destinationPublicationIds: { [sourceRecipeId]: externalSourcePublicationId },
+    });
+    expect(plan.records.recipes[0].publication_page).toBeNull();
+    expect(plan.records.recipe_references).toContainEqual(
+      expect.objectContaining({
+        reference_type: 'printed_citation',
+        display_text: 'Baking Annual: 42',
+      }),
+    );
+  });
+
+  it('retains compatible source locations when assigning a Magazine', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.publications[0].publication_type = 'magazine';
+    data.records.recipes[0].publication_page = 'Issue 4, page 42';
+    data.records.recipes[0].recipe_url = 'https://example.test/recipe';
+    existing.recipes = [];
+    existing.publications[0].publication_type = 'magazine';
+    const plan = planImport(data, existing, {}, () => newRecipeId, {
+      destinationPublicationIds: { [sourceRecipeId]: destinationPublicationId },
+    });
+    expect(plan.records.recipes[0]).toMatchObject({
+      publication_page: 'Issue 4, page 42',
+      recipe_url: 'https://example.test/recipe',
+    });
+    expect(plan.records.recipe_references).toEqual([]);
+  });
+
+  it('does not duplicate an imported reference for an incompatible source URL', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.publications[0].publication_type = 'site';
+    data.records.recipes[0].recipe_url = 'https://example.test/recipe';
+    data.records.recipe_references = [
+      {
+        id: newReferenceId,
+        recipe_id: sourceRecipeId,
+        reference_type: 'external_url',
+        publication_id: null,
+        linked_recipe_id: null,
+        display_text: 'Original source',
+        url: 'https://example.test/recipe',
+        position: 0,
+      },
+    ];
+    existing.recipes = [];
+    existing.publications[0].publication_type = 'collection';
+    const plan = planImport(data, existing, {}, () => newRecipeId, {
+      destinationPublicationIds: { [sourceRecipeId]: destinationPublicationId },
+    });
+    expect(plan.records.recipe_references).toHaveLength(1);
+    expect(plan.records.recipe_references[0].display_text).toBe('Original source');
+  });
   it('requires an explicit choice for every matched root', () => {
     const { data, existing } = createInput();
 

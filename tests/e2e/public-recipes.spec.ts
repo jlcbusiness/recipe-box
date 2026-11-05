@@ -2301,9 +2301,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       throw new Error('Expected the public instruction image and block to have layout boxes.');
     }
     const viewportWidth = page.viewportSize()?.width ?? 0;
-    expect(embeddedPhotoBounds.width).toBeLessThanOrEqual(
-      Math.min(200, instructionBlockBounds.width * (viewportWidth <= 640 ? 1 : 0.55)) + 1,
-    );
+    expect(embeddedPhotoBounds.width).toBeCloseTo(Math.min(200, instructionBlockBounds.width), 0);
     const photoMarginBottom = await page
       .locator('.recipe-instruction-photo')
       .evaluate((element) => Number.parseFloat(getComputedStyle(element).marginBottom));
@@ -2319,8 +2317,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       expect(followingInstructionBounds.right).toBeLessThanOrEqual(embeddedPhotoBounds.x);
     }
     await expect(page.getByRole('navigation')).toHaveCount(0);
-    await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-left', '24px');
-    await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-right', '24px');
+    await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-left', '96px');
+    await expect(page.locator('.recipe-public-main')).toHaveCSS('padding-right', '96px');
     const settingsButton = page.getByRole('button', { name: 'Page settings' });
     await settingsButton.click();
     const noEmphasisToggle = page.getByRole('checkbox', { name: 'Use emphasis colors' });
@@ -2415,8 +2413,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       throw new Error('Expected the wide public recipe layout to have bounds.');
     }
     expect(widePublicMain.width).toBeCloseTo(1600, 0);
-    expect(widePublicReader.width).toBeCloseTo(1360, 0);
-    expect(widePublicReader.x).toBeCloseTo(120, 0);
+    expect(widePublicReader.width).toBeCloseTo(widePublicMain.width - 2 * 96, 0);
+    expect(widePublicReader.x - widePublicMain.x).toBeCloseTo(96, 0);
     if (originalViewport) await page.setViewportSize(originalViewport);
     const emphasisTokens = [
       page.locator('.recipe-instruction-mention').first(),

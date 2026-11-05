@@ -45,8 +45,10 @@ leaving browser print-dialog overrides available.
   attribution, and actions above the metadata in the column beside the gallery.
   On mobile, preserve the order title group, gallery, details, then reading
   content.
-  Preserve the public reader's existing centered 1-inch gutters above its
-  1012px measure. Prevent excessive prose line lengths, overlap, and mobile
+  Effective private/public screen gutters must never exceed 96 CSS pixels per
+  side, measured from the main-content area excluding navigation. Overview,
+  reading, nutrition, Notes, and other section groups share outer edges.
+  Prevent excessive prose line lengths, overlap, and mobile
   horizontal overflow. On desktop, keep the first summary divider 8px below
   the title/action/tag group, with desktop actions beside the title rather than
   in a separate row beneath it.
@@ -80,7 +82,7 @@ leaving browser print-dialog overrides available.
   selected, framed photo with compact selectable thumbnails for additional
   photos. Select the primary photo by default, fall back to display order, and
   keep the feature image within the public 420px-by-`min(280px, 60vh)` limit.
-- Request landscape print orientation with a consistent one-inch page margin
+- Request landscape print orientation with a consistent 1/4-inch page margin
   for the title, metadata, ingredients, and instructions. Remove screen-only
   reader gutters and the hidden gallery column from print layout, and allow
   the browser's print dialog to override orientation.
@@ -136,8 +138,9 @@ leaving browser print-dialog overrides available.
   public-page emphasis and instruction-photo toggles.
 - Use `@page` landscape as the requested default, not an in-app setting. The
   browser print dialog remains authoritative when the person chooses a
-  different orientation. Use a one-inch page margin shared by all recipe
-  content.
+  different orientation. Use a 1/4-inch page margin shared by all recipe
+  content, following the later DLC 09 output contract. Screen gutter limits
+  must not add padding inside that print margin.
 - Gallery images are excluded from print. Inline instruction images print
   when the private preference or public-page toggle is on; their existing
   responsive sizing and saved framing remain intact.
@@ -184,7 +187,7 @@ leaving browser print-dialog overrides available.
 - Public gallery tests verify one feature image, primary-photo default,
   selectable thumbnails for a twelve-photo recipe, responsive placement, and
   full-size viewing without gallery navigation.
-- Generate and inspect print PDFs for landscape page dimensions, one-inch
+- Generate and inspect print PDFs for landscape page dimensions, 1/4-inch
   margins around all printed text, matching left edges for the title,
   metadata, and Ingredients section, compact metadata layout and wrapping,
   expected text, no gallery images, image-toggle behavior, no clipped text,
@@ -198,8 +201,8 @@ leaving browser print-dialog overrides available.
   overflow on Chromium and Fold 6. Desktop geometry checks verify the narrowed
   navigation rail fits Settings, account and utility controls without clipping;
   private summary and reading geometry checks verify both share the title's
-  full main-content width, while public reader checks retain centered 1-inch
-  gutters above the 1012px measure. Axe checks cover changed controls and
+  full main-content width, while public/private reader checks cap effective
+  outer gutters at 96px per side and align section groups. Axe checks cover changed controls and
   semantics.
 - Time-summary tests verify that Total Time precedes component times, fills its
   own row above them on mobile, and is separated from the first component time
@@ -220,8 +223,8 @@ Confirmed decisions:
   private and public time breakdowns, above component times on mobile and
   separated by a fixed vertical rule on desktop.
 - Private recipe title, summary, and reader share the full width inside the
-  private page's outer gutters. Public recipe readers retain their separate
-  centered 1-inch gutter behavior above the 1012px measure.
+  private page's outer gutters. Private/public screen gutters never exceed
+  96px per side; print uses its independent page margins.
 - Public print mirrors the guest page's current visible recipe content and
   transient choices, not private recipe content. Controls are not printed.
 - Private print preferences are account-wide and print-only. Preserve the
@@ -240,8 +243,9 @@ Assumptions to verify during implementation:
 
 - Retain the existing 760px reader reflow threshold unless tested content
   demonstrates that the widened layout needs a different boundary.
-- Keep all printed recipe sections inside the same one-inch page margin; PDF
-  inspection confirms the prior 18mm margin was narrower than required.
+- Keep all printed recipe sections inside the same 1/4-inch page margin,
+  superseding the original one-inch target under DLC 09. Verify the title,
+  metadata, and ingredients start 18pt from the page edge without screen padding.
 - Keep existing public photo display and private/public image authorization
   unchanged on screen; the new photo choices affect printing on private pages
   and both screen and print on public pages, as specified above.

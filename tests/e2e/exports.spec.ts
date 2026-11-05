@@ -677,13 +677,10 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     await page.goto(`/publications/${publicationId}`);
     const isMobile = testInfo.project.name === 'Fold 6';
     const transferTrigger = page.getByRole('button', { name: 'Publication transfer options' });
-    const publicationExport = isMobile
-      ? transferTrigger
-      : page.getByRole('button', { name: 'Export publication' });
-    const publicationImport = page.getByRole('button', { name: 'Import recipe' });
+    const publicationExport = transferTrigger;
     const publicationEdit = page.getByRole('button', { name: 'Edit publication' });
     await expect(publicationExport).toBeVisible();
-    if (isMobile) {
+    {
       await expect(transferTrigger.locator('.export-action-icon')).toBeVisible();
       await transferTrigger.focus();
       await page.keyboard.press('Enter');
@@ -709,8 +706,6 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       await expect(importDialog).toBeVisible();
       await importDialog.getByRole('button', { name: 'Close import dialog' }).click();
       await expect(importDialog).not.toBeVisible();
-    } else {
-      await expect(publicationImport).toBeVisible();
     }
     await expect(publicationEdit).toBeVisible();
     const publicationActionTops = await page
@@ -728,7 +723,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       await expect(publicationEdit.locator('.publication-edit-label')).toBeHidden();
       await expect(page.locator('.publication-mobile-add-label')).toBeHidden();
       const exportBounds = await publicationExport.boundingBox();
-      const transferActions = page.locator('.publication-mobile-transfer-actions');
+      const transferActions = page.locator('.publication-mobile-transfer-actions:visible');
       const transferBounds = await transferActions.boundingBox();
       const editBounds = await publicationEdit.boundingBox();
       expect(Math.round(exportBounds?.width ?? 0)).toBe(40);
@@ -738,7 +733,9 @@ test('Settings, publication detail, and recipe detail expose accessible export a
         return [styles.borderColor, styles.backgroundColor, styles.color];
       });
       const actionColors = await page
-        .locator('.publication-transfer-export-source .export-action-button')
+        .locator(
+          '.publication-mobile-transfer-actions:visible .publication-transfer-export-source .export-action-button',
+        )
         .evaluate((element) => {
           const styles = getComputedStyle(element);
           return [styles.borderColor, styles.backgroundColor, styles.color];
@@ -803,8 +800,8 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       }
       await page.setViewportSize({ width: 352, height: 864 });
     } else {
-      await expect(publicationExport.locator('.export-action-label')).toHaveText('Export');
-      await expect(publicationEdit.locator('.publication-edit-label')).toBeVisible();
+      await expect(publicationExport).toHaveAttribute('aria-label', 'Publication transfer options');
+      await expect(publicationEdit.locator('.publication-edit-label')).toHaveCSS('width', '1px');
     }
     const publicationExportBackground = await publicationExport.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
@@ -842,20 +839,12 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       await expectNoHorizontalOverflow(page);
     }
     const activatePublicationExport = async () => {
-      if (isMobile) {
-        await activateExport(transferTrigger);
-        await activateExport(
-          page.getByRole('menuitem', { name: 'Export publication', exact: true }),
-        );
-      } else {
-        await activateExport(publicationExport);
-      }
+      await activateExport(transferTrigger);
+      await activateExport(page.getByRole('menuitem', { name: 'Export publication', exact: true }));
     };
     await activatePublicationExport();
     const publicationError = page.locator(
-      isMobile
-        ? '.publication-mobile-transfer-actions .export-action-feedback-error'
-        : '.publication-detail-export-action .export-action-feedback-error',
+      '.publication-mobile-transfer-actions .export-action-feedback-error:visible',
     );
     await expect(publicationError).toHaveText('Unable to prepare the export. Please try again.');
     const publicationErrorBox = await publicationError.boundingBox();
@@ -890,9 +879,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     );
     expect(new URL(page.url()).pathname).toBe(`/publications/${publicationId}`);
     const publicationFeedback = page.locator(
-      isMobile
-        ? '.publication-mobile-transfer-actions .export-action-feedback'
-        : '.publication-detail-export-action .export-action-feedback',
+      '.publication-mobile-transfer-actions .export-action-feedback:visible',
     );
     await expect(publicationFeedback).toHaveText('Publication export ready. Download started.');
     expect(

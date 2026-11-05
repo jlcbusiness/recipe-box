@@ -594,6 +594,9 @@ export function MediaManager({
       .filter((file): file is File => file !== null);
     if (files.length === 0) {
       event.preventDefault();
+      setError(
+        'The clipboard does not contain an image. Copy an image or choose one from your device.',
+      );
       return;
     }
     event.preventDefault();

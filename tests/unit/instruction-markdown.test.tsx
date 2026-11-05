@@ -12,6 +12,102 @@ const photoId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const ingredients = [{ id: ingredientId, name: 'Cake flour' }];
 
 describe('instruction Markdown', () => {
+  it('treats tab indentation as four spaces and switches nested list types at the same level', () => {
+    const [list] = parseInstructionMarkdown(
+      '- Parent\n\t- Bullet\n\t1. Ordered\n\t- Another bullet\n- Next',
+    );
+    expect(list).toMatchObject({
+      items: [
+        {
+          children: [
+            { ordered: false, items: [{ content: [{ value: 'Bullet' }] }] },
+            { ordered: true, items: [{ content: [{ value: 'Ordered' }] }] },
+            { ordered: false, items: [{ content: [{ value: 'Another bullet' }] }] },
+          ],
+        },
+        { content: [{ value: 'Next' }], children: [] },
+      ],
+    });
+  });
+  it('retains three semantic list levels and returns to the parent after dedenting', () => {
+    const blocks = parseInstructionMarkdown(
+      `[[photo:${photoId}]]-w800\n- fix title shrinkage\n- but also fix huge buttons\n  - at least, import/export can be one button\n    - also, this and the item above it should be indented.\n- also, that image to the right doesn't look 800px wide`,
+    );
+    expect(blocks[0]).toMatchObject({
+      type: 'paragraph',
+      content: [{ type: 'photo', id: photoId, width: 800 }],
+    });
+    expect(blocks[1]).toEqual({
+      type: 'list',
+      ordered: false,
+      items: [
+        { content: [{ type: 'text', value: 'fix title shrinkage' }], children: [] },
+        {
+          content: [{ type: 'text', value: 'but also fix huge buttons' }],
+          children: [
+            {
+              type: 'list',
+              ordered: false,
+              items: [
+                {
+                  content: [{ type: 'text', value: 'at least, import/export can be one button' }],
+                  children: [
+                    {
+                      type: 'list',
+                      ordered: false,
+                      items: [
+                        {
+                          content: [
+                            {
+                              type: 'text',
+                              value: 'also, this and the item above it should be indented.',
+                            },
+                          ],
+                          children: [],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          content: [
+            { type: 'text', value: "also, that image to the right doesn't look 800px wide" },
+          ],
+          children: [],
+        },
+      ],
+    });
+  });
+
+  it('preserves mixed ordered and unordered children', () => {
+    const [list] = parseInstructionMarkdown(
+      '- Parent\n  1. First\n    - Detail\n  2. Second\n- Next',
+    );
+    expect(list).toMatchObject({
+      items: [
+        {
+          children: [
+            {
+              ordered: true,
+              items: [
+                {
+                  content: [{ value: 'First' }],
+                  children: [{ ordered: false, items: [{ content: [{ value: 'Detail' }] }] }],
+                },
+                { content: [{ value: 'Second' }], children: [] },
+              ],
+            },
+          ],
+        },
+        { content: [{ value: 'Next' }], children: [] },
+      ],
+    });
+  });
+
   it('allows safe instruction links and rejects executable URL schemes', () => {
     expect(getSafeInstructionHref('https://example.test/guide')).toBe('https://example.test/guide');
     expect(getSafeInstructionHref('mailto:chef@example.test')).toBe('mailto:chef@example.test');
@@ -46,17 +142,23 @@ describe('instruction Markdown', () => {
         type: 'list',
         ordered: false,
         items: [
-          [{ type: 'text', value: 'Sift flour' }],
-          [
-            { type: 'text', value: 'Add ' },
-            { type: 'code', value: 'water' },
-          ],
+          { content: [{ type: 'text', value: 'Sift flour' }], children: [] },
+          {
+            content: [
+              { type: 'text', value: 'Add ' },
+              { type: 'code', value: 'water' },
+            ],
+            children: [],
+          },
         ],
       },
       {
         type: 'list',
         ordered: true,
-        items: [[{ type: 'text', value: 'Mix' }], [{ type: 'text', value: 'Bake' }]],
+        items: [
+          { content: [{ type: 'text', value: 'Mix' }], children: [] },
+          { content: [{ type: 'text', value: 'Bake' }], children: [] },
+        ],
       },
     ]);
   });
@@ -131,11 +233,14 @@ describe('instruction Markdown', () => {
         type: 'list',
         ordered: false,
         items: [
-          [
-            { type: 'text', value: 'Heat to ' },
-            { type: 'temperature', value: '205°C' },
-            { type: 'text', value: '.' },
-          ],
+          {
+            content: [
+              { type: 'text', value: 'Heat to ' },
+              { type: 'temperature', value: '205°C' },
+              { type: 'text', value: '.' },
+            ],
+            children: [],
+          },
         ],
       },
     ]);
@@ -288,15 +393,21 @@ describe('instruction Markdown', () => {
         type: 'list',
         ordered: false,
         items: [
-          [
-            { type: 'text', value: 'Mince ' },
-            { type: 'mention', id: ingredientId, slug: 'cake-flour' },
-          ],
-          [
-            { type: 'text', value: 'Add ' },
-            { type: 'strong', value: 'salt' },
-          ],
-          [{ type: 'text', value: 'Whisk well' }],
+          {
+            content: [
+              { type: 'text', value: 'Mince ' },
+              { type: 'mention', id: ingredientId, slug: 'cake-flour' },
+            ],
+            children: [],
+          },
+          {
+            content: [
+              { type: 'text', value: 'Add ' },
+              { type: 'strong', value: 'salt' },
+            ],
+            children: [],
+          },
+          { content: [{ type: 'text', value: 'Whisk well' }], children: [] },
         ],
       },
       {
@@ -306,7 +417,10 @@ describe('instruction Markdown', () => {
       {
         type: 'list',
         ordered: true,
-        items: [[{ type: 'text', value: 'Simmer' }], [{ type: 'text', value: 'Serve' }]],
+        items: [
+          { content: [{ type: 'text', value: 'Simmer' }], children: [] },
+          { content: [{ type: 'text', value: 'Serve' }], children: [] },
+        ],
       },
     ]);
   });

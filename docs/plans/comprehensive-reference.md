@@ -319,7 +319,8 @@ trailing empty row.
 1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon
    in lemon bars). Populates the recipe's `Main Ingredients` index used by the Query **Main Ingredient** field and
    Search's **Main ingredients only** option. The checkbox sits outside the table in the row
-   control rail and is edit-only.
+   control rail and is edit-only. The rail heading, visible help, and checkbox
+   description explain its main-ingredient search purpose.
 2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user
    can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside
    its row editor pane; menus remain within the viewport and use the available space above or below the field.
@@ -639,6 +640,15 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
   center the added checkbox column. The 21px checkbox rail gives the checkbox
   1mm clearance from the table edge and ingredient column, with a 48px-tall hit
   area.
+- Screen recipe content uses at most 96 CSS pixels of outer gutter on each
+  side of the main-content area, excluding navigation. Overview, reading,
+  nutrition, Notes, and other section groups share aligned outer edges; internal
+  column spacing is not an additional outer inset. Print retains its page margins.
+- Indented instruction lists preserve semantic nesting, sibling order, and mixed
+  ordered/unordered child lists. Explicit instruction-photo widths use the
+  requested CSS pixels up to available space; the default remains 200px.
+  Desktop photos become bounded blocks when the requested width would leave
+  less than 240px for adjacent text. Mobile photos remain blocks.
 
 ### 4.2 Ingredient Sorting Options
 
@@ -1642,13 +1652,18 @@ match exists, the publication is created automatically. Recipe Tin maps to the
 destination owner's existing collection and is never imported as a
 publication record. New and duplicate recipes default to the source publication
 and can be assigned to another active destination publication.
+When the retained or selected destination type forbids a source recipe URL or
+printed location, preserve it as an external-URL reference or printed citation
+and clear the incompatible primary location field. Compatible location fields
+remain unchanged. Do not duplicate an equivalent imported reference.
 
 Import database remains in Settings. Selecting a ZIP starts upload and
 comparison automatically; the compact file row shows the filename and
 record/media counts together without private/public recipe counts or an
 `Import preview` heading. Import publication is available in the Library, and
-Import recipe is a separate publication-detail action on desktop and an item in
-the shared Export publication/Import recipe transfer menu on mobile. Scoped
+Import recipe is an item in the shared Export publication/Import recipe transfer
+menu on desktop and mobile. Publication Edit, Add Recipe, and transfer actions
+use compact 40px icon-only controls with accessible names and tooltips. Scoped
 imports preserve recipe privacy, remap imported IDs, and resolve relationships
 using the bundle and destination data: an out-of-scope recipe link reconnects
 only to one unique active destination match, otherwise its display text remains

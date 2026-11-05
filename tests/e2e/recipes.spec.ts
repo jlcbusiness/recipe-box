@@ -744,9 +744,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     for (const column of ['name', 'visibility', 'opinion']) {
       await expect(recipeRow.locator(`td[data-explorer-column="${column}"]`)).toBeVisible();
     }
-    await expect(
-      recipeRow.locator('td[data-explorer-column="total_time_minutes"]'),
-    ).toBeHidden();
+    await expect(recipeRow.locator('td[data-explorer-column="total_time_minutes"]')).toBeHidden();
     await recipeRow.getByRole('link', { name: 'Sunday tomato soup' }).click();
 
     await expect(
@@ -1287,9 +1285,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       return bounds!.x - (previousBounds.x + previousBounds.width);
     });
     expect(toolbarActionBounds[1]!.width).toBeGreaterThan(36);
-    expect(
-      Math.abs(toolbarActionBounds[1]!.width - (toolbarBounds.width - 200)),
-    ).toBeLessThanOrEqual(1);
+    expect(toolbarActionBounds[1]!.width).toBe(60);
     for (const actionGap of actionGaps.slice(1)) {
       expect(Math.abs(actionGap - actionGaps[0])).toBeLessThanOrEqual(1);
     }
@@ -1417,9 +1413,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       return bounds!.x - (previousBounds.x + previousBounds.width);
     });
     expect(narrowActionBounds[1]!.width).toBeGreaterThan(36);
-    expect(
-      Math.abs(narrowActionBounds[1]!.width - (narrowToolbarBounds.width - 200)),
-    ).toBeLessThanOrEqual(1);
+    expect(narrowActionBounds[1]!.width).toBe(60);
     for (const actionGap of narrowActionGaps.slice(1)) {
       expect(Math.abs(actionGap - narrowActionGaps[0])).toBeLessThanOrEqual(1);
     }

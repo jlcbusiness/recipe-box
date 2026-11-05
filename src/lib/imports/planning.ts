@@ -238,6 +238,7 @@ export function planImport(
     sourcePublicationResolutions,
   ).filter((match) => match.kind === 'recipe');
   const importedRecipes: ExportRecord[] = [];
+  const locationReferences: ExportRecord[] = [];
   for (const recipe of incoming.records.recipes) {
     const sourceId = String(recipe.id);
     if (omittedRecipeIds.has(sourceId)) continue;
@@ -294,8 +295,47 @@ export function planImport(
         }
         publicationId = selectedPublicationId;
       }
+      const destinationPublication = [
+        ...importedPublications,
+        ...rowsFrom(existing, 'publications'),
+      ].find((item) => item.id === publicationId);
+      const destinationType = destinationPublication?.publication_type;
+      const location = { ...recipe };
+      if (
+        typeof recipe.recipe_url === 'string' &&
+        (destinationType === 'collection' || destinationType === 'book')
+      ) {
+        locationReferences.push({
+          recipe_id: result.id,
+          reference_type: 'external_url',
+          publication_id: null,
+          linked_recipe_id: null,
+          display_text: recipe.recipe_url,
+          url: recipe.recipe_url,
+        });
+        location.recipe_url = null;
+      }
+      if (
+        typeof recipe.publication_page === 'string' &&
+        (destinationType === 'collection' || destinationType === 'site')
+      ) {
+        const sourcePublication = incoming.records.publications.find(
+          (item) => item.id === recipe.publication_id,
+        );
+        locationReferences.push({
+          recipe_id: result.id,
+          reference_type: 'printed_citation',
+          publication_id: null,
+          linked_recipe_id: null,
+          display_text: sourcePublication
+            ? `${String(sourcePublication.name)}: ${recipe.publication_page}`
+            : recipe.publication_page,
+          url: null,
+        });
+        location.publication_page = null;
+      }
       importedRecipes.push({
-        ...recipe,
+        ...location,
         id: result.id,
         name: result.action === 'duplicate' ? `${String(recipe.name)} (Imported)` : recipe.name,
         publication_id: publicationId,
@@ -586,6 +626,23 @@ export function planImport(
       position,
       linked_recipe_id: null,
     });
+    nextReferencePosition.set(recipeId, position);
+  }
+  for (const reference of locationReferences) {
+    const recipeId = String(reference.recipe_id);
+    if (
+      records.recipe_references.some(
+        (existingReference) =>
+          existingReference.recipe_id === recipeId &&
+          existingReference.reference_type === reference.reference_type &&
+          (reference.reference_type === 'external_url'
+            ? existingReference.url === reference.url
+            : existingReference.display_text === reference.display_text),
+      )
+    )
+      continue;
+    const position = (nextReferencePosition.get(recipeId) ?? -1) + 1;
+    records.recipe_references.push({ ...reference, id: createId(), position });
     nextReferencePosition.set(recipeId, position);
   }
   records.recipe_tags = incoming.records.recipe_tags

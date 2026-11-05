@@ -25,6 +25,10 @@ matched recipe's destination publication; Duplicate and new recipes can use the
 source publication or another active destination publication. Recipe Tin maps
 to the destination owner's existing collection and is never imported as a
 publication record.
+If the destination type forbids the source recipe URL or printed location,
+preserve that value as an external-URL reference or printed citation instead
+of discarding it or sending invalid primary location fields to the database.
+This applies to new, Duplicate, and Replace imports.
 
 ## Scope
 
@@ -33,8 +37,8 @@ publication record.
   ingredient set; v2 preserves included set records and row membership.
 - Add `Import publication` beside `Add publication` in Library.
 - Add `Import recipe` beside `Add Recipe` in publication detail, including the
-  Recipe Tin view. Keep separate actions on desktop and expose both `Import
-  recipe` and `Export publication` through one transfer menu on mobile.
+  Recipe Tin view. Expose both `Import recipe` and `Export publication` through
+  one compact transfer menu on desktop and mobile.
 - Keep database import in Settings. It continues to apply the bundled account
   preferences and explorer state and remains on Settings after success.
 - Reuse owner-authenticated upload grants, archive validation, catalog reuse,
@@ -130,9 +134,8 @@ publication record.
   heading. After selecting an archive, offer `Choose another ZIP`; selecting a
   replacement removes the previous temporary archive before uploading it.
 - Keep `Import publication` beside the corresponding create action in Library.
-  Keep separate import/export actions in publication detail on desktop; on
-  mobile, use a 40px transfer-menu trigger for `Export publication` and `Import
-  recipe`.
+  Use a 40px transfer-menu trigger for `Export publication` and `Import recipe`
+  in publication detail on desktop and mobile.
 - Preserve existing action dimensions and layout stability. The Library import
   control retains its 48px mobile target; the publication-detail transfer
   trigger remains 40px and must not introduce horizontal overflow.

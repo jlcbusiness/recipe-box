@@ -265,8 +265,8 @@ either paper surface. Accessible names and pressed states describe the action
 and state, with visible focus and no reliance on color alone. Neither marker is
 shown on public recipe pages.
 Keep the desktop actions compact rather than pushing them to the far edge. On
-mobile, use even 4px gaps between the six first-row actions and let Can Link
-expand into the remaining width, with equal spacing around its label and switch.
+mobile, use even 4px gaps between the six first-row actions and keep Can Link
+60px wide, with equal spacing around its label and switch.
 Place the marker toggles on a second row with Star centered under Page Settings
 and Heart under Edit. Retain the toolbar when the recipe has no tags. Give the
 line vertical margins matching the action spacing. Show marker error feedback
@@ -621,7 +621,7 @@ The Export database action starts immediately. While preparing, only that
 action is disabled and a live status announces progress; success starts the
 download and announces completion. Errors remain visible and retryable without
 leaving Settings. The action has a 48px minimum hit area and a visible focus
-state. Publication Export appears before Edit on publication detail, while
+state. Publication Export is offered in the shared publication transfer menu, while
 recipe Export remains in the detail action toolbar; Library cards have no
 export action. Publication toolbar actions use 40px square controls on mobile;
 recipe detail actions use 36px square controls with 48px mobile hit areas.
@@ -636,11 +636,11 @@ disconnected controls have equal 8px gaps above 340px and compact uniformly to
 4px at 340px.
 and below, without horizontal overflow.
 
-On desktop, publication Export and Import recipe remain separate actions. On
-mobile, one 40px transfer-menu button offers `Export publication` and `Import
-recipe`; Edit and Add Recipe remain icon-only actions in the compact toolbar.
+On desktop and mobile, one 40px transfer-menu button offers `Export publication`
+and `Import recipe`; Edit and Add Recipe remain compact, icon-only actions so
+the publication title and source link retain priority.
 Use the same export-arrow icon as recipe Export, not a sort-direction icon, and
-keep the mobile publication actions 40px square.
+keep the publication actions 40px square.
 The menu supports keyboard navigation and returns focus to its trigger when
 closed. Export feedback overlays the page beneath its button without moving the
 action row or following content. Settings keeps its 48px mobile target while
@@ -650,8 +650,8 @@ modal or new card layout is introduced.
 
 Import database remains in Settings. Import publication sits beside Add
 publication in the Library; on mobile it uses a 48px square Upload control with
-an accessible name and tooltip. Import recipe is a separate publication-detail
-action on desktop and an item in the shared transfer menu on mobile.
+an accessible name and tooltip. Import recipe is an item in the shared
+publication-detail transfer menu on desktop and mobile.
 Selecting a ZIP starts upload and comparison automatically. The compact
 preview keeps the archive filename and record/media counts together; it omits
 private/public recipe counts and the `Import preview` heading. After selection,
@@ -703,7 +703,14 @@ amount controls; it does not introduce database-shaped subheaders.
 Ingredient rows open compact cell editors. Ingredient and Preparation open
 their full picklists on activation; typing filters options and offers an
 add-new suggestion when there is no exact match. The Main checkbox and 12px
-drag handle sit outside the table. Dragging reorders rows; keyboard users press
+drag handle sit outside the table. A compact Main rail heading and visible help
+explain its main-ingredient search purpose; each checkbox also has an accessible
+description. Empty Preparation editors retain a usable content-fit width based
+on their suggestions rather than collapsing to an empty character. Recipe-edit
+Cancel and Delete actions align to the left below the form. Keep an 18px gap
+above the footer divider, separate from its 18px padding below, so Add reference
+does not sit directly on the divider.
+Dragging reorders rows; keyboard users press
 `Ctrl+ArrowUp` or `Ctrl+ArrowDown`. A compact delete `x` appears on populated
 rows when hovered or keyboard-focused; on mobile it remains visible with a
 48px hit area.
@@ -955,7 +962,10 @@ button. Each thumbnail has a small, lower-right two-digit identifier that
 remains stable when the gallery is reordered. Selecting one replaces `+p` at
 the caret with `+photoNN`; typing a valid `+photoNN` directly also references
 that photo. Appending `-w<width>` sets its display width in pixels, with a
-200px default; `-left` aligns it left instead of the default right. Modifiers
+200px default; `-left` aligns it left instead of the default right. Explicit
+widths are bounded by available content space, not a separate thumbnail cap.
+If the requested width would leave less than 240px for text, render a bounded
+block instead of a float. Modifiers
 can appear in either order. Existing saved numeric widths remain readable,
 but new input uses `-w<width>`. In reader and print content, the image is
 aligned at the exact inline reference. Text before the reference uses the full
@@ -975,6 +985,15 @@ intrinsic size, constrained to the available viewport without enlarging a
 smaller image. The top-right close action, Escape, and clicking outside the
 image dismiss it. The viewer displays one image; it does not provide gallery
 navigation.
+
+Indented instruction lists retain semantic nesting, sibling order, and mixed
+ordered/unordered child lists in private/public readers and standalone output.
+
+On screen, effective outer recipe-content gutters never exceed 96 CSS pixels
+(one CSS inch) per side, measured from the available main-content area excluding
+navigation. Overview, reading, Nutrition Per Serving, Notes, and other section
+groups share their outer edges. Internal columns and nutrient indentation remain
+intentional; print and paginated downloads retain their own page margins.
 
 ### Trash and baseline print (Slice 8 current implementation)
 
@@ -997,7 +1016,8 @@ DLC 08 keeps recipe galleries visible on screen but omits gallery photos and an
 open image viewer from print. Private print applies the two account-wide
 print-only preferences; public print follows the current transient page
 controls. Metadata becomes a compact wrapping summary, and the title, metadata,
-ingredients, and instructions share a one-inch print-page margin. The reading
+ingredients, and instructions share a 1/4-inch print-page margin, following
+the later DLC 09 margin contract. Screen gutters add no print padding. The reading
 area keeps its active presentation and available-width layout, and `@page`
 requests landscape while allowing a browser print-dialog override.
 
@@ -1065,8 +1085,8 @@ and clicking outside the image dismiss it. The viewer does not provide gallery
 navigation.
 Print omits gallery photos and controls, reflects the visible inline-photo and
 emphasis states, and requests landscape. Public metadata and reading content
-use the available width with centered 1-inch reader gutters once the reader
-grows beyond its existing 1012px measure. See [Slice 22](slices/22-public-links-and-privacy.md)
+use the available width with outer gutters capped at 96 CSS pixels per side
+and aligned section-group edges. See [Slice 22](slices/22-public-links-and-privacy.md)
 for the public data and interaction contract and [DLC 08](slices/dlc/dlc-08-recipe-public-and-print-layout.md)
 for the print and responsive-width contract. The public Print & Download
 control uses the same filled leaf treatment as standard private recipe detail.
@@ -1353,8 +1373,8 @@ vertically centered.
 
 On desktop, the private recipe-detail toolbar places Star and Heart to the left
 of its share, privacy, print, export, settings, and edit actions. On mobile,
-use even 4px gaps between the six actions, let Can Link expand into the
-remaining row width with equal spacing around its label and switch, and place
+use even 4px gaps between the six actions, keep Can Link at a compact 60px
+width with equal spacing around its label and switch, and place
 the markers on a second row, with Star aligned under Page Settings and Heart
 under Edit.
 Marker feedback appears below the action row rather than overlapping adjacent

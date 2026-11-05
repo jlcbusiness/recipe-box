@@ -467,9 +467,7 @@ test('owners can insert an existing recipe photo into an instruction step @e2e',
       throw new Error('Expected the embedded photo and instruction to have layout boxes.');
     }
     expect(photoBounds.width).toBeGreaterThan(0);
-    expect(photoBounds.width).toBeLessThanOrEqual(
-      Math.min(200, instructionBounds.width * (viewportWidth <= 640 ? 1 : 0.55)) + 1,
-    );
+    expect(photoBounds.width).toBeCloseTo(Math.min(200, instructionBounds.width), 0);
     if (viewportWidth <= 640) {
       expect(leadingTextBounds.y).toBeLessThan(photoBounds.y);
       expect(followingTextBounds.y).toBeGreaterThanOrEqual(photoBounds.y + photoBounds.height - 1);

@@ -670,6 +670,11 @@ function SuggestionCellEditor({
         className={`ingredient-cell-input${fitContent ? ' is-fit-content' : ''}`}
         ref={inputRef}
         role="combobox"
+        size={
+          fitContent
+            ? Math.max(1, draft.length, ...normalizedOptions.map((option) => option.length))
+            : undefined
+        }
         type="text"
         value={draft}
         onFocus={() => {
@@ -2178,6 +2183,8 @@ export function IngredientRowsEditor({
         </button>
         <input
           aria-label={`Main, row ${index + 1}`}
+          aria-description="Mark as a main ingredient for recipe search."
+          title="Main ingredient: include this ingredient in main-ingredient searches."
           checked={row.isMain}
           disabled={isEmptyIngredientRow(row)}
           type="checkbox"
@@ -2198,7 +2205,9 @@ export function IngredientRowsEditor({
         ref={controlRailRef}
       >
         <legend className="visually-hidden">Ingredient row controls</legend>
-        <div aria-hidden="true" className="recipe-ingredient-rail-header" />
+        <div aria-hidden="true" className="recipe-ingredient-rail-header">
+          Main
+        </div>
         {editorEntries.map((entry) =>
           entry.kind === 'section' ? (
             <div
@@ -2556,6 +2565,9 @@ export function IngredientRowsEditor({
       </div>
       <p aria-live="polite" className="visually-hidden">
         {announcement}
+      </p>
+      <p className="recipe-main-ingredient-help">
+        Main marks an ingredient for main-ingredient searches.
       </p>
       {nutritionRow && (
         <NutritionPane

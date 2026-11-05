@@ -208,7 +208,7 @@ widths before completion.
 - Star and Heart detail controls and filters use shared custom marker artwork.
   On desktop, the detail toolbar places the toggles to the left of its other
   action buttons; on mobile, it uses even 4px gaps between the six first-row
-  actions, lets Can Link expand into the remaining row width with equal spacing
+  actions, keeps Can Link at a compact 60px width with equal spacing
   around its label and switch, and places markers on a second row with Star
   aligned under Page Settings and Heart under Edit.
 - Filter controls use the marker colors when active or hovered and match the
