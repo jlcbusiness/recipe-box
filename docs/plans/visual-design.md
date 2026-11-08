@@ -361,13 +361,18 @@ than appearing only on hover. Archived entries are hidden by default; the
 archive toggle reveals them alongside active entries with a subdued surface
 and an Archived label.
 
-Add and Edit replace the list with a focused Markdown editor. The required
-type picker is a compact **+ Add tag** control until Fix or Feature is chosen.
-On desktop, the plain-text editor and safe Markdown preview share a two-column
-layout; on narrow screens they stack. The preview renders an explicit safe
-element allow-list, treats raw HTML as text, makes unsafe links inert, and
-renders image syntax as alt text. No recipe-specific autocomplete or
-interpretation is present.
+**Add update** replaces the list with a focused Markdown editor and preview.
+Existing update text is a clickable pointer shortcut; the row's **Edit update**
+button provides keyboard access. Either action replaces the text in its row
+with an inline Markdown editor and the required type picker. Leaving both
+inline controls saves the valid draft; Escape discards it. Switching rows saves
+the current valid draft before opening the next one. Invalid or failed saves
+retain the draft and show an inline message. The required type picker is a compact
+**+ Add tag** control until Fix or Feature is chosen. On desktop, the add
+editor and safe Markdown preview share a two-column layout; on narrow screens
+they stack. The preview renders an explicit safe element allow-list, treats
+raw HTML as text, makes unsafe links inert, and renders image syntax as alt
+text. No recipe-specific autocomplete or interpretation is present.
 
 Completing an entry opens a titled native dialog. It accepts only a standard
 `major.minor.patch` version, preserves invalid input beside a red textual

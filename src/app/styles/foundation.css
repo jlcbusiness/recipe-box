@@ -672,7 +672,9 @@ a {
 .admin-updates button:focus-visible,
 .admin-update-completion-dialog button:focus-visible,
 .admin-update-completion-dialog input:focus-visible,
-.admin-update-editor textarea:focus-visible {
+.admin-update-editor textarea:focus-visible,
+.admin-update-inline-textarea:focus-visible,
+.admin-update-text-edit-target:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
@@ -842,6 +844,63 @@ a {
 
 .admin-update-text-cell {
   overflow-wrap: anywhere;
+}
+
+.admin-update-text-edit-target {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 2px;
+  cursor: text;
+}
+
+.admin-update-text-edit-target:hover {
+  outline: 1px dashed var(--line-strong);
+  outline-offset: 3px;
+}
+
+.admin-update-inline-editor {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.admin-update-inline-editor-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-update-inline-editor-heading > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-update-inline-textarea {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--control-border);
+  border-radius: 3px;
+  padding: 8px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.admin-update-inline-textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 
 .admin-update-markdown {

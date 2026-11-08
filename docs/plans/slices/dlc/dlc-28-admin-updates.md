@@ -1,6 +1,6 @@
 # DLC 28: Admin Updates
 
-**Status:** Implemented and verified locally; migration has not been pushed to a linked project.
+**Status:** Implemented and verified locally and on the linked Supabase project.
 
 ## Outcome
 
@@ -70,9 +70,17 @@ regular signed-in users or anonymous visitors.
 
 ## Editor and content behavior
 
-- Edit one entry at a time in a focused editor pane with explicit **Cancel**
-  and **Submit** actions. Do not autosave. Cancel discards that pane's draft;
-  successful submit returns to the Updates list and announces success.
+- **Add update** opens a focused editor pane with explicit **Cancel** and
+  **Submit** actions. Existing entries can be edited directly in the list:
+  clicking their text or choosing **Edit update** replaces that row's text
+  with an inline editor and the required type picker. Moving focus outside
+  both inline controls saves the body and type together; **Escape** discards
+  the inline draft. Switching to another entry saves the current valid draft
+  before opening the next one.
+- Validate the inline draft before saving. Keep invalid text or server errors
+  visible in the row with the draft intact, and report successful saves through
+  the Updates status message. Add-pane cancellation discards its draft;
+  successful submission returns to the list and announces success.
 - Reuse the instruction editor's plain-text Markdown authoring behavior:
   paragraphs, headings, emphasis, links, ordered and unordered lists, nested
   list continuation, and keyboard text editing. This is not a rich-text

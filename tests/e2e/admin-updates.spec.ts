@@ -27,6 +27,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     const runId = Date.now().toString();
     const initialText = `Restore keyboard focus after saving ${runId}.`;
     const editedText = `Improve saved update guidance ${runId}.`;
+    const switchText = `Switch edits directly ${runId}.`;
     await signInAs(page, admin);
     await page.goto('/admin');
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
@@ -52,14 +53,23 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
       await expect(page.getByRole('status')).toHaveText('Update archived.');
       await expect(partialRunRows).toHaveCount(previousCount - 1, { timeout: 15_000 });
     }
+    const partialSwitchRows = page
+      .getByRole('row')
+      .filter({ hasText: /Switch edits directly(?: \d+)?\./ });
+    while (await partialSwitchRows.count()) {
+      const previousCount = await partialSwitchRows.count();
+      await partialSwitchRows.first().getByRole('button', { name: 'Archive update' }).click();
+      await expect(page.getByRole('status')).toHaveText('Update archived.');
+      await expect(partialSwitchRows).toHaveCount(previousCount - 1, { timeout: 15_000 });
+    }
 
     await page.getByRole('button', { name: 'Add update' }).click();
     await page
-      .getByLabel('Update text')
+      .getByRole('textbox', { name: 'Update text' })
       .fill(
         `Restore keyboard focus after **saving** ${runId}.\n\n- Keep nested lists\n  - readable`,
       );
-    await page.getByLabel('Update text').press('Enter');
+    await page.getByRole('textbox', { name: 'Update text' }).press('Enter');
     await page.keyboard.type('keyboard item');
     const typePicker = page.getByRole('combobox', { name: '+ Add tag' });
     const fixOption = page.getByRole('option', { name: 'Fix', exact: true });
@@ -91,6 +101,21 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
       path: testInfo.outputPath('admin-updates-desktop.png'),
     });
 
+    await page.getByRole('button', { name: 'Add update' }).click();
+    await page.getByRole('textbox', { name: 'Update text' }).fill(switchText);
+    const secondTypePicker = page.getByRole('combobox', { name: '+ Add tag' });
+    const secondFixOption = page.getByRole('option', { name: 'Fix', exact: true });
+    if (testInfo.project.name === 'Fold 6') {
+      await secondTypePicker.tap();
+      await secondFixOption.tap();
+    } else {
+      await secondTypePicker.click();
+      await secondFixOption.click();
+    }
+    await page.getByRole('button', { name: 'Submit update' }).click();
+    const switchRow = page.getByRole('row').filter({ hasText: switchText });
+    await expect(switchRow).toBeVisible();
+
     await row.getByRole('checkbox', { name: /mark .* done/i }).click();
     const versionDialog = page.getByRole('dialog', { name: 'Complete update' });
     await expect(versionDialog).toBeVisible();
@@ -121,8 +146,46 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
       timeout: 15_000,
     });
 
+    await row.getByRole('button', { name: 'Edit update' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveCount(0);
+    await expect(row.getByRole('button', { name: 'Edit update' })).toBeFocused();
+    await row.locator('.admin-update-text-edit-target').click();
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
+    const inlineDesktopGeometry = await page.evaluate(() => {
+      const cell = document.querySelector('[data-column="update"]');
+      const textarea = document.querySelector('.admin-update-inline-textarea');
+      return {
+        cellWidth: cell?.getBoundingClientRect().width ?? 0,
+        textareaWidth: textarea?.getBoundingClientRect().width ?? 0,
+        textareaHeight: textarea?.getBoundingClientRect().height ?? 0,
+      };
+    });
+    expect(inlineDesktopGeometry.textareaWidth).toBeLessThanOrEqual(
+      inlineDesktopGeometry.cellWidth,
+    );
+    expect(inlineDesktopGeometry.textareaHeight).toBeGreaterThanOrEqual(48);
+    await page.screenshot({
+      path: testInfo.outputPath('admin-updates-inline-desktop.png'),
+    });
+    await page.getByRole('textbox', { name: 'Update text' }).fill(`Discard this draft ${runId}.`);
+    await page.keyboard.press('Escape');
+    await expect(page.getByText(initialText)).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Edit update' })).toBeFocused();
     await row.getByRole('button', { name: 'Edit update' }).click();
-    await page.getByLabel('Update text').fill(editedText);
+    await page.getByRole('textbox', { name: 'Update text' }).fill(' ');
+    await page.getByRole('button', { name: 'Show archived updates' }).focus();
+    await expect(page.locator('.admin-update-inline-editor').getByRole('alert')).toHaveText(
+      /enter update text/i,
+    );
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveValue(' ');
+    await page.getByRole('textbox', { name: 'Update text' }).focus();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveCount(0);
+    await row.getByRole('button', { name: 'Edit update' }).click();
+    await page.getByRole('textbox', { name: 'Update text' }).fill(editedText);
     const fixPicker = page.getByRole('combobox', { name: 'Fix' });
     const featureOption = page.getByRole('option', { name: 'Feature', exact: true });
     if (testInfo.project.name === 'Fold 6') {
@@ -132,14 +195,20 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
       await fixPicker.click();
       await featureOption.click();
     }
-    await page.getByRole('button', { name: 'Submit update' }).click();
+    await switchRow.locator('.admin-update-text-edit-target').click();
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveValue(switchText);
+    await expect(page.getByRole('status')).toHaveText('Update saved.');
+    await page.keyboard.press('Escape');
     const editedRow = page.getByRole('row').filter({ hasText: editedText });
     await expect(editedRow.getByText('Feature', { exact: true })).toBeVisible();
 
     await editedRow.getByRole('button', { name: 'Archive update' }).click();
+    await switchRow.getByRole('button', { name: 'Archive update' }).click();
     await page.getByRole('button', { name: 'Show archived updates' }).click();
     const archivedRow = page.getByRole('row').filter({ hasText: editedText });
     await expect(archivedRow).toBeVisible();
+    await expect(switchRow).toBeVisible();
     await archivedRow.getByRole('button', { name: 'Restore update' }).click();
     await expect(archivedRow).toBeVisible();
     await page.getByRole('button', { name: 'Hide archived updates' }).click();
@@ -182,6 +251,33 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await page.screenshot({
       path: testInfo.outputPath('admin-updates-mobile.png'),
     });
+    if (testInfo.project.name === 'Fold 6') {
+      await editedRow.locator('.admin-update-text-edit-target').tap();
+    } else {
+      await editedRow.locator('.admin-update-text-edit-target').click();
+    }
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
+    const inlineMobileGeometry = await page.evaluate(() => {
+      const cell = document.querySelector('[data-column="update"]');
+      const textarea = document.querySelector('.admin-update-inline-textarea');
+      const typePicker = document.querySelector('.admin-update-type-picker');
+      return {
+        cellWidth: cell?.getBoundingClientRect().width ?? 0,
+        textareaWidth: textarea?.getBoundingClientRect().width ?? 0,
+        textareaHeight: textarea?.getBoundingClientRect().height ?? 0,
+        typePickerHeight: typePicker?.getBoundingClientRect().height ?? 0,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+    expect(inlineMobileGeometry.textareaWidth).toBeLessThanOrEqual(inlineMobileGeometry.cellWidth);
+    expect(inlineMobileGeometry.textareaHeight).toBeGreaterThanOrEqual(48);
+    expect(inlineMobileGeometry.typePickerHeight).toBeGreaterThanOrEqual(48);
+    expect(inlineMobileGeometry.documentWidth).toBeLessThanOrEqual(390);
+    await page.screenshot({
+      path: testInfo.outputPath('admin-updates-inline-mobile.png'),
+    });
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveCount(0);
     const mobileA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();

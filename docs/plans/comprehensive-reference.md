@@ -1569,7 +1569,7 @@ Print requests landscape while leaving the browser dialog authoritative.
 
 ### 10.6 Administrator-managed Updates
 
-> **Current implementation (DLC 28).** The local migration, database tests,
+> **Current implementation (DLC 28).** Local and linked migrations, database tests,
 > administrator workflows, and responsive browser checks are recorded in the
 > [DLC 28 brief](slices/dlc/dlc-28-admin-updates.md).
 
@@ -1579,6 +1579,11 @@ Print requests landscape while leaving the browser dialog authoritative.
 - An administrator can add, edit, archive, and restore individual update
   entries. Entries are shared among admins, remain independent of any one
   account, and are excluded from account reset and database ZIP import/export.
+- **Add update** uses a focused editor pane with explicit submit/cancel. Existing
+  entries edit in place when their text is clicked or **Edit update** is
+  activated; moving focus outside the inline body and type controls saves the
+  draft, while Escape discards it. Invalid or failed saves retain the draft in
+  the row, and switching rows saves a valid draft before opening the next one.
 - Each saved entry has Markdown body text and exactly one required
   classification: **Fix** or **Feature**. No unclassified entry can be
   submitted, and an existing classification can be changed but not cleared.
