@@ -69,13 +69,17 @@ regular signed-in users or anonymous visitors.
   reordered and sort by completion timestamp descending, newest first,
   independent of version text. Correcting a completed version preserves its
   timestamp; reopening clears it. Archive state does not affect order or
-  visibility. Group the completion checkbox and reorder handle in a compact
-  leading rail with about 12 CSS pixels from list edge to checkbox, checkbox
-  to grip, and grip to text. Use the same compact dotted grip symbol as recipe
-  instructions; keep the dragged row attached to the pointer while neighboring
-  rows move into place. Successful pointer drops should not force a lingering
-  focus outline. Nearby rows should follow drag previews with responsive motion
-  that respects reduced-motion settings.
+  visibility. Group the completion checkbox and reorder handle in a leading
+  rail. Keep about 12 CSS pixels from list edge to the visible checkbox and
+  from the checkbox to the grip. After the 44px checkbox hit area, make the
+  remaining lane to the text field a drag target across the full row height;
+  use a 48px-wide lane on touch viewports. Keep the small dotted grip at the
+  checkbox-side edge of that lane, and do not overlap the checkbox or text
+  field hit areas. Use the same grip symbol as recipe instructions; keep the
+  dragged row attached to the pointer while neighboring rows move into place.
+  Successful pointer drops should not force a lingering focus outline. Nearby
+  rows should follow drag previews with responsive motion that respects
+  reduced-motion settings.
 - Use a semantic list with **Done** and **Type** headings. A persistent blank
   Markdown field at the top creates entries; each saved row keeps its
   completion control on the left, text in the center, and type pill at the far

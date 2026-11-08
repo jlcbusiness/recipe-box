@@ -78,9 +78,22 @@ async function dragUpdate(
   const checkboxBounds = await sourceRow
     .locator('.admin-update-checkbox-hit-area input')
     .boundingBox();
+  const checkboxHitAreaBounds = await sourceRow
+    .locator('.admin-update-checkbox-hit-area')
+    .boundingBox();
   const gripBounds = await sourceHandle.locator('.reorder-handle-grip').boundingBox();
+  const handleBounds = await sourceHandle.boundingBox();
   const textBounds = await sourceRow.locator('.admin-update-inline-textarea').boundingBox();
-  if (!listBounds || !checkboxBounds || !gripBounds || !textBounds) {
+  const sourceRowBounds = await sourceRow.boundingBox();
+  if (
+    !listBounds ||
+    !checkboxBounds ||
+    !checkboxHitAreaBounds ||
+    !gripBounds ||
+    !handleBounds ||
+    !textBounds ||
+    !sourceRowBounds
+  ) {
     throw new Error('Update controls must be visible for drag.');
   }
   const checkboxInset = checkboxBounds.x - listBounds.x;
@@ -90,17 +103,26 @@ async function dragUpdate(
   expect(checkboxInset).toBeLessThanOrEqual(14);
   expect(checkboxToGripGap).toBeGreaterThanOrEqual(12);
   expect(checkboxToGripGap).toBeLessThanOrEqual(14);
-  expect(gripToTextGap).toBe(12);
+  expect(gripToTextGap).toBeGreaterThanOrEqual(30);
+  expect(handleBounds.x).toBeCloseTo(checkboxHitAreaBounds.x + checkboxHitAreaBounds.width, 1);
+  expect(handleBounds.x + handleBounds.width).toBeCloseTo(textBounds.x, 1);
+  expect(handleBounds.width).toBeGreaterThanOrEqual(useTouch ? 48 : 44);
+  expect(Math.abs(handleBounds.y - sourceRowBounds.y)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(handleBounds.y + handleBounds.height - (sourceRowBounds.y + sourceRowBounds.height)),
+  ).toBeLessThanOrEqual(1);
   await expect(sourceRow).toHaveCSS('transform', 'none');
   await expect(targetRow).toHaveCSS('transform', 'none');
-  const sourceBounds = await sourceHandle.boundingBox();
-  const sourceRowBounds = await sourceRow.boundingBox();
   const targetBounds = await targetRow.boundingBox();
-  if (!sourceBounds || !sourceRowBounds || !targetBounds) {
+  if (!targetBounds) {
     throw new Error('Both update reorder targets must be visible.');
   }
-  const sourceX = sourceBounds.x + sourceBounds.width / 2;
-  const sourceY = sourceBounds.y + sourceBounds.height / 2;
+  const sourceX = handleBounds.x + handleBounds.width - 1;
+  const sourceY = sourceRowBounds.y + sourceRowBounds.height - 2;
+  const selectionBeforeDrag = await sourceRow
+    .locator('.admin-update-inline-textarea')
+    .evaluate((textarea: HTMLTextAreaElement) => [textarea.selectionStart, textarea.selectionEnd]);
+  expect(selectionBeforeDrag[0]).toBe(selectionBeforeDrag[1]);
   const targetX = targetBounds.x + targetBounds.width / 2;
   const targetY = targetBounds.y + targetBounds.height / 2;
 
@@ -136,6 +158,16 @@ async function dragUpdate(
     await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await expect(sourceRow).toHaveCSS('transform', 'none');
     await expect(targetRow).toHaveCSS('transform', 'none');
+    await expect
+      .poll(() =>
+        sourceRow
+          .locator('.admin-update-inline-textarea')
+          .evaluate((textarea: HTMLTextAreaElement) => [
+            textarea.selectionStart,
+            textarea.selectionEnd,
+          ]),
+      )
+      .toEqual(selectionBeforeDrag);
     await touch.detach();
     return;
   }
@@ -155,6 +187,16 @@ async function dragUpdate(
   await page.mouse.up();
   await expect(sourceRow).toHaveCSS('transform', 'none');
   await expect(targetRow).toHaveCSS('transform', 'none');
+  await expect
+    .poll(() =>
+      sourceRow
+        .locator('.admin-update-inline-textarea')
+        .evaluate((textarea: HTMLTextAreaElement) => [
+          textarea.selectionStart,
+          textarea.selectionEnd,
+        ]),
+    )
+    .toEqual(selectionBeforeDrag);
 }
 
 test('admins can manage classified updates and versioned completion @e2e @a11y', async ({
@@ -391,6 +433,22 @@ test('admins can reorder incomplete updates with pointer, touch, and keyboard @e
     await expect
       .poll(() => updateOrder(page, [first, second, third]))
       .toEqual([third, second, first]);
+    const thirdRow = updateRow(page, third);
+    const completionCheckbox = thirdRow.getByRole('checkbox', { name: /done/i });
+    if (useTouch) {
+      await completionCheckbox.tap();
+    } else {
+      await completionCheckbox.click();
+    }
+    const completionDialog = page.getByRole('dialog', { name: 'Complete update' });
+    await expect(completionDialog).toBeVisible();
+    if (useTouch) {
+      await completionDialog.getByRole('button', { name: 'Cancel' }).tap();
+    } else {
+      await completionDialog.getByRole('button', { name: 'Cancel' }).click();
+    }
+    await expect(completionCheckbox).toBeVisible();
+
     await updateRow(page, third)
       .getByRole('button', { name: 'Reorder update 1' })
       .press('Control+ArrowDown');
@@ -419,13 +477,14 @@ test('admins can reorder incomplete updates with pointer, touch, and keyboard @e
     const cancelHandle = cancelSource.getByRole('button', { name: 'Reorder update 1' });
     await cancelHandle.scrollIntoViewIfNeeded();
     const cancelSourceBounds = await cancelHandle.boundingBox();
+    const cancelSourceRowBounds = await cancelSource.boundingBox();
     const cancelTargetBounds = await cancelTarget.boundingBox();
-    if (!cancelSourceBounds || !cancelTargetBounds) {
+    if (!cancelSourceBounds || !cancelSourceRowBounds || !cancelTargetBounds) {
       throw new Error('Update rows must be visible for drag cancellation.');
     }
     await page.mouse.move(
-      cancelSourceBounds.x + cancelSourceBounds.width / 2,
-      cancelSourceBounds.y + cancelSourceBounds.height / 2,
+      cancelSourceBounds.x + cancelSourceBounds.width - 1,
+      cancelSourceRowBounds.y + 2,
     );
     await page.mouse.down();
     await page.mouse.move(

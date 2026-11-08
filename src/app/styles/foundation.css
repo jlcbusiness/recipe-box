@@ -776,7 +776,7 @@ a {
 .admin-update-list-header,
 .admin-update-row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) max-content;
+  grid-template-columns: 88px minmax(0, 1fr) max-content;
   align-items: start;
   column-gap: 0;
 }
@@ -795,6 +795,7 @@ a {
 }
 
 .admin-update-row {
+  --admin-update-row-block-padding: 6px;
   border-bottom: 1px solid var(--line);
   padding: 6px 8px 6px 0;
   transition: transform 80ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -824,9 +825,11 @@ a {
 }
 
 .admin-update-done {
+  position: relative;
   display: flex;
-  min-width: 64px;
+  min-width: 88px;
   min-height: 44px;
+  align-self: stretch;
   align-items: center;
   justify-content: flex-start;
 }
@@ -870,9 +873,13 @@ a {
 }
 
 .admin-update-reorder-handle {
+  position: absolute;
+  top: calc(-1 * var(--admin-update-row-block-padding));
+  bottom: calc(-1 * var(--admin-update-row-block-padding) - 1px);
+  left: 44px;
   display: inline-flex;
-  width: 20px;
-  min-width: 20px;
+  width: 44px;
+  min-width: 44px;
   min-height: 44px;
   align-items: center;
   justify-content: center;
@@ -887,6 +894,7 @@ a {
   color: var(--muted);
   cursor: grab;
   justify-content: flex-start;
+  padding-left: 0;
   touch-action: none;
   user-select: none;
 }
@@ -1178,11 +1186,12 @@ a {
 
   .admin-update-list-header,
   .admin-update-row {
-    grid-template-columns: 64px minmax(0, 1fr) max-content;
+    grid-template-columns: 92px minmax(0, 1fr) max-content;
     column-gap: 0;
   }
 
   .admin-update-row {
+    --admin-update-row-block-padding: 4px;
     padding: 4px 6px 4px 0;
   }
 
@@ -1192,7 +1201,13 @@ a {
     min-height: 48px;
   }
 
+  .admin-update-done {
+    min-width: 92px;
+  }
+
   .admin-updates button.admin-update-reorder-handle {
+    width: 48px;
+    min-width: 48px;
     min-height: 48px;
   }
 
