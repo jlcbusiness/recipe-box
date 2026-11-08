@@ -183,7 +183,7 @@ describe('import commit route', () => {
     readStoredImportBundle.mockResolvedValue({
       data: {
         scope: { type: 'database' },
-        account_preferences: { volume_system: 'metric' },
+        account_preferences: { volume_system: 'recipe' },
         records: emptyRecords(),
       },
       images: new Map(),
@@ -223,7 +223,7 @@ describe('import commit route', () => {
       ([name]) => name === 'commit_database_import_with_media_sources',
     );
     expect(commitCalls.map(([, args]) => args.p_account_preferences)).toEqual([
-      { volume_system: 'metric' },
+      { volume_system: 'recipe' },
       {},
     ]);
   });

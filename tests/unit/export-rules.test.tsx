@@ -354,6 +354,27 @@ describe('export rules', () => {
     );
   });
 
+  it('exports Recipe unit preferences without changing the bundle schema', () => {
+    const snapshot = createSnapshot();
+    const output = buildPortableData(
+      {
+        ...snapshot,
+        accountPreferences: {
+          ...snapshot.accountPreferences,
+          volume_system: 'recipe',
+          weight_system: 'recipe',
+        },
+      },
+      { type: 'database' },
+    );
+
+    expect(output.schema_version).toBe(9);
+    expect(output.account_preferences).toMatchObject({
+      volume_system: 'recipe',
+      weight_system: 'recipe',
+    });
+  });
+
   it('creates a checksummed manifest for every payload file', () => {
     const data = Buffer.from('{"ok":true}', 'utf8');
     const image = Buffer.from([1, 2, 3]);

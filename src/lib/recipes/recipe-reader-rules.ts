@@ -2,7 +2,9 @@ import type { RecipeIngredient, RecipeInstructionStep } from './data';
 import type { IngredientDisplayInput } from './ingredient-rules';
 import { parseIngredientMentions } from './instruction-rules';
 import {
+  isMeasurementSystemPreference,
   type MeasurementSystem,
+  type MeasurementSystemPreference,
   type MeasurementType,
   volumeUnits,
   weightUnits,
@@ -15,7 +17,7 @@ export type RecipeScale =
   | { mode: 'multiply'; factor: number }
   | { mode: 'divide'; divisor: number };
 
-export type MeasurementUnitSystems = Record<MeasurementDimension, MeasurementSystem>;
+export type MeasurementUnitSystems = Record<MeasurementDimension, MeasurementSystemPreference>;
 
 export type IngredientUnitOverrides = Partial<Record<MeasurementDimension, string>>;
 
@@ -77,10 +79,6 @@ const smallerUnitsByDimension: Record<MeasurementDimension, Record<string, strin
 
 function isPositiveFinite(value: number): boolean {
   return Number.isFinite(value) && value > 0;
-}
-
-function isMeasurementSystem(value: unknown): value is MeasurementSystem {
-  return value === 'us_customary' || value === 'metric';
 }
 
 function unitsFor(dimension: MeasurementDimension) {
@@ -344,8 +342,8 @@ export function transformIngredientForDisplay(
     throw new Error('The recipe multiplier must be a positive finite number.');
   }
   if (
-    !isMeasurementSystem(options.unitSystems.volume) ||
-    !isMeasurementSystem(options.unitSystems.weight)
+    !isMeasurementSystemPreference(options.unitSystems.volume) ||
+    !isMeasurementSystemPreference(options.unitSystems.weight)
   ) {
     throw new Error('Volume and weight systems must be supported measurement systems.');
   }
@@ -371,16 +369,14 @@ export function transformIngredientForDisplay(
       if (!sourceUnitCode) {
         throw new Error(`A ${dimension} measurement must have a unit.`);
       }
+      const selectedSystem = options.unitSystems[dimension];
+      const targetSystem =
+        selectedSystem === 'recipe' ? systemForUnit(dimension, sourceUnitCode) : selectedSystem;
       const targetUnitCode =
         options.unitOverrides?.[dimension] ??
         (options.preserveStoredUnits
           ? sourceUnitCode
-          : resolveDisplayUnit(
-              dimension,
-              sourceUnitCode,
-              options.unitSystems[dimension],
-              scaled.minimum,
-            ));
+          : resolveDisplayUnit(dimension, sourceUnitCode, targetSystem, scaled.minimum));
       const amountMin = convertUnitAmount(
         scaled.minimum,
         dimension,

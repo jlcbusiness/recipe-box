@@ -6,7 +6,7 @@ import {
   isInstructionEmphasisColor,
 } from '../../lib/recipes/instruction-emphasis';
 import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
-import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
+import { isMeasurementSystemPreference } from '../../lib/recipes/measurement-rules';
 import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
 import { createClient } from '../../lib/supabase/server';
 
@@ -16,10 +16,6 @@ export type UnitPreferenceActionState = {
 };
 
 type HandPreference = 'left' | 'right';
-
-function isMeasurementSystem(value: FormDataEntryValue | null): value is MeasurementSystem {
-  return value === 'us_customary' || value === 'metric';
-}
 
 function isIngredientPresentation(
   value: FormDataEntryValue | null,
@@ -241,7 +237,7 @@ export async function saveUnitPreferences(
       : { status: 'saved', message: 'Saved.' };
   }
 
-  if (changedDimension === 'volume' && isMeasurementSystem(volumeSystem)) {
+  if (changedDimension === 'volume' && isMeasurementSystemPreference(volumeSystem)) {
     const supabase = await createClient();
     const { data, error: authError } = await supabase.auth.getUser();
     if (authError || !data.user) {
@@ -256,7 +252,7 @@ export async function saveUnitPreferences(
       ? { status: 'error', message: 'Unit defaults could not be saved.' }
       : { status: 'saved', message: 'Saved.' };
   }
-  if (changedDimension === 'weight' && isMeasurementSystem(weightSystem)) {
+  if (changedDimension === 'weight' && isMeasurementSystemPreference(weightSystem)) {
     const supabase = await createClient();
     const { data, error: authError } = await supabase.auth.getUser();
     if (authError || !data.user) {

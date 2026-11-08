@@ -1,5 +1,12 @@
 export type MeasurementType = 'volume' | 'weight' | 'count' | 'informal' | 'unmeasured';
 export type MeasurementSystem = 'us_customary' | 'metric';
+export type MeasurementSystemPreference = MeasurementSystem | 'recipe';
+
+export function isMeasurementSystemPreference(
+  value: unknown,
+): value is MeasurementSystemPreference {
+  return value === 'us_customary' || value === 'metric' || value === 'recipe';
+}
 
 export type MeasurementInput = {
   type: MeasurementType;

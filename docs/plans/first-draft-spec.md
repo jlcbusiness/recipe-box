@@ -162,11 +162,12 @@ whole-recipe totals. Public and print views may show recipe-level estimates,
 but never expose the ingredient Settings profiles or equivalents. See the
 [DLC 12 brief](slices/dlc/dlc-12-recipe-nutrition.md).
 
-Settings holds a default unit system for volume and a separate one for weight
-(US customary or metric). While viewing a recipe, the reader can switch an
-individual ingredient to a specific unit, such as teaspoons instead of
-tablespoons or ounces instead of grams. Those recipe-level choices are not saved
-to the recipe.
+Settings holds independent defaults for volume and weight. Each can be US
+customary, Metric, or Recipe. Recipe keeps each measurement in its saved unit
+system and allows same-system simplification without cross-system conversion.
+While viewing a recipe, the reader can switch an individual ingredient to a
+specific unit, such as teaspoons instead of tablespoons or ounces instead of
+grams. Those recipe-level choices are not saved to the recipe.
 
 ### Instructions And Relationships
 

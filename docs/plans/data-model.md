@@ -230,14 +230,14 @@ revision/history, recipe version/history, Trash/restore, bundles, and
 offline snapshots as defined by the [DLC 12 brief](slices/dlc/dlc-12-recipe-nutrition.md).
 
 Slice 13 stores `volume_system` and `weight_system` on Account as non-null
-`us_customary` or `metric` values, both defaulting to `us_customary`. Existing
-accounts receive the same defaults when the migration is applied; the isolated
-migration harness verifies those defaults for both existing and newly created
-accounts. Authenticated owners retain their existing account read policy, but
-direct updates remain restricted. A narrow authenticated preference function
-derives the account from `auth.uid()` and updates only its explicit
-allow-listed preference columns; it accepts no account ID and is not
-executable by `public` or `anon`.
+preferences. Both default to `us_customary`; the values may be `us_customary`,
+`metric`, or `recipe`. DLC 29 adds `recipe` as a display preference, not an
+intrinsic measurement-unit system. Existing accounts keep their current
+defaults when the migration is applied. Authenticated owners retain their
+existing account read policy, but direct updates remain restricted. A narrow
+authenticated preference function derives the account from `auth.uid()` and
+updates only its explicit allow-listed preference columns; it accepts no
+account ID and is not executable by `public` or `anon`.
 
 DLC 08 adds the non-null Account field
 `include_instruction_photos_in_private_print`, defaulting to `true` for

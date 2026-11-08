@@ -271,6 +271,17 @@ describe('import bundle validation', () => {
     ]);
   });
 
+  it('preserves Recipe unit preferences in an imported database bundle', () => {
+    const entries = createBundleEntries({
+      accountPreferences: { volume_system: 'recipe', weight_system: 'metric' },
+    });
+
+    expect(validateImportBundleFiles(entries).data.account_preferences).toMatchObject({
+      volume_system: 'recipe',
+      weight_system: 'metric',
+    });
+  });
+
   it('validates version 6 personal recipe signals', () => {
     const valid = createBundleEntries({
       schemaVersion: 6,

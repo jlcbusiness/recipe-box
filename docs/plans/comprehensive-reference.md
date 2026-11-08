@@ -425,15 +425,21 @@ trailing empty row.
 
 ### 3.5 Unit Display Preferences
 
-- **Default unit systems:** The account stores independent US customary or metric defaults for volume and weight.
-  Signed-in users change these values in Settings' Personal preferences section using the shared portal `Picklist` ; the
-  shared navigation has no Units shortcut.
+- **Default unit systems:** The account stores independent US customary, Metric,
+  or Recipe preferences for volume and weight. Recipe mode keeps each saved
+  measurement in its intrinsic unit system. Signed-in users change these
+  values in Settings' Personal preferences section using the shared portal
+  `Picklist`; the shared navigation has no Units shortcut.
 - **Preference writes:** A narrow authenticated database function derives the account from `auth.uid()` , validates the
   requested systems, and updates only the preference fields. Direct authenticated account updates remain restricted;
   admin and sign-in-method fields are not writable through this function.
 - **Best-fit conversion:** When a stored unit differs from the selected system, choose the largest target-system unit
   whose converted lower amount is at least one; if none qualifies, use the target system's smallest unit. Both
   endpoints of a range use the same unit.
+- **Recipe preference:** Volume and Weight preferences are independent. For a
+  dimension set to Recipe, resolve each measurement using its saved unit's
+  system and allow existing same-system simplification. Never convert between
+  US customary and Metric or change saved recipe data.
 - **Automatic same-system display simplification:** In the private reader, preserve fractions at or above `1/4` unless
   the amount equals exactly one smaller unit (for example, `1/2 qt` becomes `1 pt`, and `1/4 qt` becomes `1 cup`),
   or the immediate smaller unit expresses it as a fraction from `1/4` up to but not including one (for example,
@@ -1393,7 +1399,8 @@ fields remain derived.
 Located in Settings, per account:
 
 - Default ingredient presentation: Standard or Ingredient-First (4.1).
-- Default unit system for volume and, separately, for weight (3.5).
+- Default unit system for volume and, separately, for weight: US customary,
+  Metric, or Recipe (3.5).
 - Ingredient mention style (5.1).
 - Mobile hand preference: Left or Right.
 

@@ -93,6 +93,38 @@ describe('unit preference action', () => {
     });
   });
 
+  it.each([
+    ['volume', 'volume_system', { p_volume_system: 'recipe', p_weight_system: null }],
+    ['weight', 'weight_system', { p_volume_system: null, p_weight_system: 'recipe' }],
+  ] as const)('saves the Recipe %s preference independently', async (dimension, field, args) => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const getUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
+    createClient.mockResolvedValue({ auth: { getUser }, rpc });
+    const formData = new FormData();
+    formData.set('changed_dimension', dimension);
+    formData.set(field, 'recipe');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'saved',
+      message: 'Saved.',
+    });
+    expect(rpc).toHaveBeenCalledWith('update_account_unit_preferences', args);
+  });
+
+  it('rejects an unsupported unit preference before calling Supabase', async () => {
+    const formData = new FormData();
+    formData.set('changed_dimension', 'volume');
+    formData.set('volume_system', 'imperial');
+
+    await expect(saveUnitPreferences({}, formData)).resolves.toEqual({
+      status: 'error',
+      message: 'Choose a valid system for Volume or Weight.',
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it('saves the ingredient presentation preference through the owner-derived RPC', async () => {
     const rpc = vi.fn().mockResolvedValue({ error: null });
     const getUser = vi

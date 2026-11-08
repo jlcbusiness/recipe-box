@@ -11,7 +11,11 @@ import {
   formatIngredientDisplay,
   type IngredientDisplayInput,
 } from '../../src/lib/recipes/ingredient-rules';
-import { formatQuantity, type MeasurementSystem } from '../../src/lib/recipes/measurement-rules';
+import {
+  formatQuantity,
+  type MeasurementSystem,
+  type MeasurementSystemPreference,
+} from '../../src/lib/recipes/measurement-rules';
 import {
   convertUnitAmount,
   getScaleMultiplier,
@@ -351,6 +355,32 @@ describe('recipe reader measurement rules', () => {
     });
   });
 
+  it('keeps Recipe-mode measurements within their saved systems and simplifies within them', () => {
+    const mixed = transformIngredientForDisplay(flour, {
+      multiplier: 2,
+      unitSystems: { volume: 'recipe', weight: 'recipe' },
+    });
+
+    expect(mixed.measurements).toMatchObject([
+      { amount_min: 2, amount_max: 4, unit_code: 'cup' },
+      { amount_min: 240, amount_max: null, unit_code: 'g' },
+    ]);
+
+    const simplifiedRange = transformIngredientForDisplay(
+      ingredientRow('butter', 'Butter', 0, [amount('weight', 1 / 8, 'lb', 1 / 4)]),
+      {
+        multiplier: 1,
+        unitSystems: { volume: 'recipe', weight: 'recipe' },
+      },
+    );
+
+    expect(simplifiedRange.measurements?.[0]).toMatchObject({
+      amount_min: 2,
+      amount_max: 4,
+      unit_code: 'oz',
+    });
+  });
+
   it('uses an exact per-ingredient unit override without changing the source', () => {
     const display = transformIngredientForDisplay(flour, {
       multiplier: 1,
@@ -361,12 +391,26 @@ describe('recipe reader measurement rules', () => {
     expect(formatIngredientDisplay(display)).toBe('16-32 TBSP / 120 g all-purpose flour, sifted');
   });
 
+  it('gives a per-ingredient unit override precedence over Recipe mode', () => {
+    const display = transformIngredientForDisplay(
+      ingredientRow('butter', 'Butter', 0, [amount('weight', 0.5, 'lb')]),
+      {
+        multiplier: 1,
+        unitSystems: { volume: 'recipe', weight: 'recipe' },
+        unitOverrides: { weight: 'g' },
+      },
+    );
+
+    expect(display.measurements?.[0]?.unit_code).toBe('g');
+    expect(display.measurements?.[0]?.amount_min).toBeCloseTo(0.5 * 453.59237, 10);
+  });
+
   it('rejects unsupported account measurement systems', () => {
     expect(() =>
       transformIngredientForDisplay(flour, {
         multiplier: 1,
         unitSystems: {
-          volume: 'imperial' as unknown as MeasurementSystem,
+          volume: 'imperial' as unknown as MeasurementSystemPreference,
           weight: 'us_customary',
         },
       }),

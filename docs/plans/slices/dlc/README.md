@@ -76,6 +76,10 @@ while retaining the existing single-image viewer without gallery navigation.
 - **DLC 27 (candidate):** [Ingredient sets and instruction groups](dlc-27-ingredient-instruction-groups.md)
   will define how ingredient sets pair with instruction groups and how those
   sections flow through print and standalone exports.
+- **DLC 29 (delivered):** [Recipe-specific unit display](dlc-29-recipe-specific-unit-display.md)
+  adds a `Recipe` choice to the independent Volume and Weight preferences so
+  private reading and printing preserve each saved measurement's unit system
+  while allowing same-system simplification.
 
 ### Phase 6: Administration and release operations
 

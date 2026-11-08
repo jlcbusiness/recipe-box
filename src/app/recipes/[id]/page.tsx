@@ -18,7 +18,8 @@ import {
 } from '../../../lib/recipes/instruction-markdown';
 import {
   formatGroupedInteger,
-  type MeasurementSystem,
+  isMeasurementSystemPreference,
+  type MeasurementSystemPreference,
 } from '../../../lib/recipes/measurement-rules';
 import { calculateRecipeNutrition } from '../../../lib/recipes/nutrition-rules';
 import { formatRecipeDuration } from '../../../lib/recipes/recipe-rules';
@@ -63,7 +64,10 @@ function renderMarkdown(value: string) {
 function renderInstructionMarkdown(
   value: string,
   ingredients: readonly RecipeIngredient[],
-  unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem },
+  unitSystems: {
+    volume: MeasurementSystemPreference;
+    weight: MeasurementSystemPreference;
+  },
   temperatureSystem: TemperatureSystem,
   emphasisColors: {
     ingredient: string | undefined;
@@ -236,8 +240,8 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     getRecipePicklists(supabase),
     getRecipePhotos(supabase, id),
   ]);
-  let volumeSystem: MeasurementSystem = 'us_customary';
-  let weightSystem: MeasurementSystem = 'us_customary';
+  let volumeSystem: MeasurementSystemPreference = 'us_customary';
+  let weightSystem: MeasurementSystemPreference = 'us_customary';
   let temperatureSystem: TemperatureSystem = 'fahrenheit';
   let ingredientPresentation: 'standard' | 'ingredient_first' = 'standard';
   let privatePrintUsesColors = true;
@@ -257,8 +261,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       )
       .eq('id', authData.user.id)
       .maybeSingle();
-    volumeSystem = account?.volume_system === 'metric' ? 'metric' : 'us_customary';
-    weightSystem = account?.weight_system === 'metric' ? 'metric' : 'us_customary';
+    volumeSystem = isMeasurementSystemPreference(account?.volume_system)
+      ? account.volume_system
+      : 'us_customary';
+    weightSystem = isMeasurementSystemPreference(account?.weight_system)
+      ? account.weight_system
+      : 'us_customary';
     temperatureSystem = account?.temperature_system === 'celsius' ? 'celsius' : 'fahrenheit';
     ingredientPresentation =
       account?.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard';

@@ -437,6 +437,26 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
 
     await expect(volumeSelect).toContainText('Metric');
     await expect(weightSelect).toContainText('Metric');
+    await weightSelect.click();
+    await page.getByRole('listbox').getByRole('option', { name: 'Recipe', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect(volumeSelect).toContainText('Metric');
+    await expect(weightSelect).toContainText('Recipe');
+    const recipeSaved = await request.get(
+      `${config.apiUrl}/rest/v1/accounts?select=volume_system,weight_system&id=eq.${user.id}`,
+      { headers },
+    );
+    expect(await recipeSaved.json()).toEqual([
+      { volume_system: 'metric', weight_system: 'recipe' },
+    ]);
+    await page.reload();
+    await expect(page.getByRole('combobox', { name: 'Volume', exact: true })).toContainText(
+      'Metric',
+    );
+    await expect(page.getByRole('combobox', { name: 'Weight', exact: true })).toContainText(
+      'Recipe',
+    );
+
     await temperatureSelect.click();
     await page.getByRole('listbox').getByRole('option', { name: 'Celsius', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('Saved.');
@@ -446,6 +466,51 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       { headers },
     );
     expect(await temperatureSaved.json()).toEqual([{ temperature_system: 'celsius' }]);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Settings saves Recipe units independently with keyboard @e2e @a11y', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/settings');
+    await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();
+    const volumeSelect = page.getByRole('combobox', { name: 'Volume', exact: true });
+    const weightSelect = page.getByRole('combobox', { name: 'Weight', exact: true });
+    await expect(volumeSelect).toContainText('US customary');
+    await expect(weightSelect).toContainText('US customary');
+
+    await weightSelect.focus();
+    await expect(weightSelect).toBeFocused();
+    await expect(weightSelect).toHaveCSS('outline-style', 'solid');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect(weightSelect).toContainText('Recipe');
+    await expect(volumeSelect).toContainText('US customary');
+
+    if (testInfo.project.name === 'Fold 6') {
+      const weightHitHeight = await weightSelect.evaluate((trigger) =>
+        Number.parseFloat(getComputedStyle(trigger, '::before').height),
+      );
+      expect(weightHitHeight).toBeGreaterThanOrEqual(48);
+    }
+
+    await page.reload();
+    await expect(weightSelect).toContainText('Recipe');
+    await expect(volumeSelect).toContainText('US customary');
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);

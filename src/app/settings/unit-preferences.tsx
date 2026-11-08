@@ -9,7 +9,7 @@ import {
   instructionEmphasisOptions,
 } from '../../lib/recipes/instruction-emphasis';
 import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
-import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
+import type { MeasurementSystemPreference } from '../../lib/recipes/measurement-rules';
 import type { IngredientPresentation } from '../../lib/recipes/recipe-reader-rules';
 import { saveUnitPreferences } from '../actions/unit-preferences';
 import { Picklist, type PicklistOption } from '../picklist';
@@ -17,6 +17,7 @@ import { Picklist, type PicklistOption } from '../picklist';
 const unitSystemOptions: PicklistOption[] = [
   { value: 'us_customary', label: 'US customary' },
   { value: 'metric', label: 'Metric' },
+  { value: 'recipe', label: 'Recipe' },
 ];
 
 const temperatureSystemOptions: PicklistOption[] = [
@@ -71,8 +72,8 @@ export function UnitPreferences({
   repeatIngredientsInPrivatePrint?: boolean;
   temperatureColor: InstructionEmphasisColor;
   temperatureSystem: TemperatureSystem;
-  volumeSystem: MeasurementSystem;
-  weightSystem: MeasurementSystem;
+  volumeSystem: MeasurementSystemPreference;
+  weightSystem: MeasurementSystemPreference;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const changedDimensionRef = useRef<HTMLInputElement>(null);
@@ -203,7 +204,7 @@ export function UnitPreferences({
   }, [openColorDimension]);
 
   function updateSystem(dimension: 'volume' | 'weight', value: string) {
-    const system = value as MeasurementSystem;
+    const system = value as MeasurementSystemPreference;
     setPreferences((current) => ({ ...current, [dimension]: system }));
     if (changedDimensionRef.current) {
       changedDimensionRef.current.value = dimension;

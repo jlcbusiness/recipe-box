@@ -3794,6 +3794,11 @@ test('recipe detail print matches the active presentation @e2e', async ({
       },
     });
     expect(saved.ok(), await saved.text()).toBeTruthy();
+    const [savedRecipe] = (await saved.json()) as { id: string }[];
+    if (!savedRecipe) {
+      throw new Error('Expected the saved print fixture to have an id.');
+    }
+    const recipePath = `/recipes/${savedRecipe.id}`;
 
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
@@ -3834,9 +3839,54 @@ test('recipe detail print matches the active presentation @e2e', async ({
       .toBe(false);
     await repeatIngredientsPreference.uncheck();
     await expect(page.getByRole('status')).toHaveText('Saved.');
+
+    await weightPicker.click();
+    const weightOptions = page.getByRole('listbox').getByRole('option');
+    await expect(weightOptions).toHaveCount(3);
+    await expect(weightOptions.nth(2)).toHaveAccessibleName('Recipe');
+    await weightOptions.nth(2).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+    await expect(weightPicker).toContainText('Recipe');
+    await page.reload();
+    await expect(volumePicker).toContainText('US customary');
+    await expect(weightPicker).toContainText('Recipe');
+    await page.goto(recipePath);
+    await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
+    const isMobileLayout = (page.viewportSize()?.width ?? 1280) <= 760;
+    if (isMobileLayout) {
+      const recipeModeRow = page.getByRole('row', { name: /flour all-purpose/ });
+      await expect(recipeModeRow).toContainText('1 ½');
+      await expect(recipeModeRow).toContainText('120');
+      await expect(
+        recipeModeRow.getByRole('combobox', { name: 'Change Flour volume unit' }),
+      ).toHaveText('cups');
+      await expect(
+        recipeModeRow.getByRole('combobox', { name: 'Change Flour weight unit' }),
+      ).toHaveText('g');
+    } else {
+      const recipeModeIngredient = page
+        .locator('.recipe-ingredient-list li')
+        .first()
+        .locator('.recipe-ingredient-name');
+      await expect(recipeModeIngredient).toHaveText('1 ½ cups / 120 g all-purpose flour, sifted');
+    }
+    await page.emulateMedia({ media: 'print' });
+    const recipeModePrintRow = isMobileLayout
+      ? page.locator('.recipe-ingredient-table tbody tr').first()
+      : page.locator('.recipe-ingredient-list li').first();
+    await expect(recipeModePrintRow).toContainText('1 ½ cups');
+    await expect(recipeModePrintRow).toContainText('120 g');
+    await page.emulateMedia({ media: 'screen' });
+
+    await page.goto('/settings');
+    await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();
+    await weightPicker.click();
+    await page.getByRole('listbox').getByRole('option', { name: 'US customary' }).click();
+    await expect(page.getByRole('status')).toHaveText('Saved.');
+
     await volumePicker.click();
     const volumeOptions = page.getByRole('listbox').getByRole('option');
-    await expect(volumeOptions).toHaveCount(2);
+    await expect(volumeOptions).toHaveCount(3);
     await expect(volumeOptions.nth(0)).toHaveAccessibleName('US customary');
     await expect(volumeOptions.nth(1)).toHaveAccessibleName('Metric');
     await page.getByRole('listbox').getByRole('option', { name: 'Metric', exact: true }).click();
@@ -3847,7 +3897,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
         window.top?.document.documentElement.setAttribute('data-print-requested', 'true');
       };
     });
-    await page.goto(`/recipes/${(await saved.json())[0].id}`);
+    await page.goto(recipePath);
     await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
     const presentationButton = page.getByRole('button', { name: /^Ingredient view:/ });
     const initialPresentation =

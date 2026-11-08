@@ -42,7 +42,7 @@ import {
 } from '../../lib/recipes/ingredient-rules';
 import {
   formatQuantity,
-  type MeasurementSystem,
+  type MeasurementSystemPreference,
   type MeasurementType,
   type MeasurementUnit,
   volumeUnits,
@@ -140,7 +140,10 @@ export function RecipeInstructionMention({
   emphasisEnabled?: boolean;
   portionOrdinal?: 1 | 2;
   preserveStoredUnits?: boolean;
-  unitSystems: { volume: MeasurementSystem; weight: MeasurementSystem };
+  unitSystems: {
+    volume: MeasurementSystemPreference;
+    weight: MeasurementSystemPreference;
+  };
 }) {
   const { multiplier, unitOverrides } = useRecipeScale();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -713,8 +716,8 @@ export function RecipeReader({
   recipeId: string;
   serves: number | null;
   steps: Array<Pick<RecipeInstructionStep, 'position' | 'content_markdown'>>;
-  volumeSystem: MeasurementSystem;
-  weightSystem: MeasurementSystem;
+  volumeSystem: MeasurementSystemPreference;
+  weightSystem: MeasurementSystemPreference;
 }) {
   const { multiplier, unitOverrides, setUnitOverrides } = useRecipeScale();
   const ingredientSets =

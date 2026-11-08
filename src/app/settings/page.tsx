@@ -7,7 +7,7 @@ import {
   isInstructionEmphasisColor,
 } from '../../lib/recipes/instruction-emphasis';
 import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
-import type { MeasurementSystem } from '../../lib/recipes/measurement-rules';
+import { isMeasurementSystemPreference } from '../../lib/recipes/measurement-rules';
 import type { NutritionEquivalent, NutritionProfile } from '../../lib/recipes/nutrition-rules';
 import { createClient } from '../../lib/supabase/server';
 import { ExportAction } from '../export-action';
@@ -289,8 +289,16 @@ export default async function SettingsPage({
               ? 'celsius'
               : 'fahrenheit') as TemperatureSystem
           }
-          volumeSystem={account.volume_system as MeasurementSystem}
-          weightSystem={account.weight_system as MeasurementSystem}
+          volumeSystem={
+            isMeasurementSystemPreference(account.volume_system)
+              ? account.volume_system
+              : 'us_customary'
+          }
+          weightSystem={
+            isMeasurementSystemPreference(account.weight_system)
+              ? account.weight_system
+              : 'us_customary'
+          }
         />
       </section>
       <RecipePicklistManager

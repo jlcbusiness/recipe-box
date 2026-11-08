@@ -417,7 +417,9 @@ Feature text/fill pairs exceed the 4.5:1 WCAG AA contrast threshold.
 Settings appears in the private navigation on Library, Find Recipes, and
 Administration routes. The page uses a wide, unframed Personal preferences
 section with labeled Volume, Weight, and View controls from the shared portal
-`Picklist`, without a Units subsection. The controls remain content-sized and
+`Picklist`, without a Units subsection. Volume and Weight independently offer
+US customary, Metric, and Recipe; Recipe preserves each saved unit system and
+permits same-system simplification. The controls remain content-sized and
 36px high; their mobile tap areas expand to 48px without changing their visible
 height. A centered Hand control is visible only on mobile; Right reverses the
 compact navigation order and Left preserves it. No compact panel, duplicate
