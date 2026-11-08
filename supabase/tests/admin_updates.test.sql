@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(29);
+select plan(46);
 
 insert into auth.users (
   id,
@@ -80,6 +80,12 @@ select throws_ok(
   null,
   'non-admin users cannot create application updates'
 );
+select throws_ok(
+  $$select public.admin_update_reorder(array[]::uuid[])$$,
+  '42501',
+  null,
+  'non-admin users cannot reorder application updates'
+);
 select is(
   (select count(*)::integer from public.admin_update_events),
   0,
@@ -100,6 +106,24 @@ select is(
   (select revision from public.app_updates where body_markdown = 'Fix the first issue'),
   1,
   'new update starts at revision one'
+);
+select ok(
+  (select sort_order
+   from public.app_updates
+   where body_markdown = 'Fix the first issue')
+    < coalesce(
+      (select min(sort_order)
+       from public.app_updates
+       where completed_version is null
+         and body_markdown <> 'Fix the first issue'),
+      0::bigint
+    ),
+  'new incomplete updates start at the top'
+);
+select is(
+  (select completed_at from public.app_updates where body_markdown = 'Fix the first issue'),
+  null::timestamptz,
+  'incomplete updates have no completion timestamp'
 );
 select is(
   (select count(*)::integer
@@ -182,10 +206,45 @@ select is(
   '1.10.0',
   'completed version is stored'
 );
+select is(
+  (select completed_at is not null
+   from public.app_updates
+   where body_markdown = 'Fix the first issue more clearly'),
+  true,
+  'completing an update records its timestamp'
+);
+select is(
+  (select sort_order from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
+  0::bigint,
+  'completed updates leave the incomplete order'
+);
 select lives_ok(
   $$select public.admin_update_set_completion(
     (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
     3,
+    '1.10.1'
+  )$$,
+  'an admin can correct a completed version'
+);
+select is(
+  (select completed_at
+   from public.app_updates
+   where body_markdown = 'Fix the first issue more clearly'),
+  (select (after_state ->> 'completed_at')::timestamptz
+   from public.admin_update_events
+   where update_id = (
+     select id from public.app_updates where body_markdown = 'Fix the first issue more clearly'
+   )
+     and event_type = 'completion_changed'
+     and after_state ->> 'completed_version' = '1.10.0'
+   order by id
+   limit 1),
+  'correcting a version preserves the original completion timestamp'
+);
+select lives_ok(
+  $$select public.admin_update_set_completion(
+    (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
+    4,
     null
   )$$,
   'an admin can reopen a completed update'
@@ -195,17 +254,35 @@ select is(
   null,
   'reopened update has no completion version'
 );
+select is(
+  (select completed_at from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
+  null::timestamptz,
+  'reopening clears the completion timestamp'
+);
+select ok(
+  (select sort_order
+   from public.app_updates
+   where body_markdown = 'Fix the first issue more clearly')
+    < coalesce(
+      (select min(sort_order)
+       from public.app_updates
+       where completed_version is null
+         and body_markdown <> 'Fix the first issue more clearly'),
+      0::bigint
+    ),
+  'reopened updates return to the top of the incomplete list'
+);
 select lives_ok(
   $$select public.admin_update_archive(
     (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
-    4
+    5
   )$$,
   'an admin can archive an update'
 );
 select lives_ok(
   $$select public.admin_update_restore(
     (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
-    5
+    6
   )$$,
   'an admin can restore an update'
 );
@@ -218,8 +295,71 @@ select is(
   (select count(*)::integer
    from public.admin_update_events
    where update_id = (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly')),
-  6,
+  7,
   'create, edit, completion, archive, and restore are audited atomically'
+);
+select lives_ok(
+  $$select public.admin_update_create('Review the second issue', 'feature')$$,
+  'an admin can create another incomplete update'
+);
+select ok(
+  (select sort_order
+   from public.app_updates
+   where body_markdown = 'Review the second issue')
+    < coalesce(
+      (select min(sort_order)
+       from public.app_updates
+       where completed_version is null
+         and body_markdown <> 'Review the second issue'),
+      0::bigint
+    ),
+  'new updates appear before the existing manual order'
+);
+select throws_ok(
+  $$select public.admin_update_reorder(array[
+    (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly')
+  ])$$,
+  'PT409',
+  null,
+  'reorder rejects a stale incomplete update set'
+);
+select lives_ok(
+  $$select public.admin_update_reorder(array(
+    select id
+    from public.app_updates
+    where completed_version is null
+    order by case
+      when body_markdown = 'Fix the first issue more clearly' then 0
+      when body_markdown = 'Review the second issue' then 1
+      else 2
+    end, sort_order, id
+  ))$$,
+  'an admin can reorder incomplete updates'
+);
+select is(
+  (select sort_order from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
+  1::bigint,
+  'reorder persists the requested first position'
+);
+select is(
+  (select sort_order from public.app_updates where body_markdown = 'Review the second issue'),
+  2::bigint,
+  'reorder persists the requested second position'
+);
+select is(
+  (select count(*)::integer
+   from public.admin_update_events
+   where update_id = (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly')),
+  8,
+  'manual reorder appends an audit event'
+);
+select is(
+  (select count(*)::integer
+   from public.admin_update_events
+   where update_id = (select id from public.app_updates where body_markdown = 'Fix the first issue more clearly')
+     and event_type = 'reordered'),
+  1,
+  'manual order changes use the reordered audit event'
 );
 select throws_ok(
   $$update public.admin_update_events set event_type = 'edited'$$,

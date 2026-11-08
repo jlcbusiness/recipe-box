@@ -796,6 +796,24 @@ a {
 .admin-update-row {
   border-bottom: 1px solid var(--line);
   padding: 6px 8px;
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.admin-update-row[data-reorder-state="dragging"] {
+  position: relative;
+  z-index: 10;
+  isolation: isolate;
+  background: white;
+  box-shadow: 0 4px 12px rgb(34 45 31 / 16%);
+  transition: none;
+  will-change: transform;
+}
+
+.admin-update-row[data-reorder-state="settling"] {
+  position: relative;
+  z-index: 10;
+  background: white;
+  box-shadow: 0 4px 12px rgb(34 45 31 / 16%);
 }
 
 .admin-update-row.is-new {
@@ -840,6 +858,47 @@ a {
 
 .admin-update-body {
   min-width: 0;
+}
+
+.admin-update-body-content {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 4px;
+}
+
+.admin-update-reorder-handle,
+.admin-update-reorder-spacer {
+  display: inline-flex;
+  width: 24px;
+  min-width: 24px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-update-reorder-handle {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.admin-update-reorder-handle:active {
+  cursor: grabbing;
+}
+
+.admin-update-reorder-handle:disabled {
+  cursor: not-allowed;
+}
+
+.admin-update-reorder-handle:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
 }
 
 .admin-update-inline-textarea {
@@ -1115,6 +1174,11 @@ a {
     min-height: 48px;
   }
 
+  .admin-update-reorder-handle,
+  .admin-update-reorder-spacer {
+    min-height: 48px;
+  }
+
   .admin-update-checkbox-hit-area {
     width: 48px;
   }
@@ -1280,11 +1344,22 @@ h1 {
   margin-top: 0;
 }
 
-.private-content .settings-version {
-  margin: 32px 0 0;
+.app-version-footer {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  padding: 8px 24px;
   color: var(--muted);
-  font-size: 13px;
-  text-align: center;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-update-row {
+    transition: none;
+  }
 }
 
 @media (min-width: 641px) {

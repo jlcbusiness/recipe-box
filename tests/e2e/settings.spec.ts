@@ -94,16 +94,17 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
     const dataManagement = page.getByRole('region', { name: 'Data management' });
-    const versionLabel = page.getByText(`Recipe Box v${appVersion}`, { exact: true });
-    await expect(versionLabel).toBeVisible();
+    const versionFooter = page.getByRole('contentinfo', { name: 'Application version' });
+    await expect(versionFooter).toHaveText(`Recipe Box v${appVersion}`);
+    await expect(versionFooter).toHaveCSS('justify-content', 'flex-end');
     const [dataManagementBounds, versionBounds] = await Promise.all([
       dataManagement.boundingBox(),
-      versionLabel.boundingBox(),
+      versionFooter.boundingBox(),
     ]);
     expect(dataManagementBounds).not.toBeNull();
     expect(versionBounds).not.toBeNull();
     if (!dataManagementBounds || !versionBounds) {
-      throw new Error('Expected Data management and version footer bounds.');
+      throw new Error('Expected Data management and application footer bounds.');
     }
     expect(versionBounds.y).toBeGreaterThan(dataManagementBounds.y + dataManagementBounds.height);
     await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();

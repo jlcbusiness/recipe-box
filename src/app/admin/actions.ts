@@ -505,6 +505,37 @@ export async function setAdminUpdateCompletion(
   return { message: completedVersion === null ? 'Update reopened.' : 'Update completed.' };
 }
 
+export async function reorderAdminUpdates(updateIds: unknown): Promise<AdminFormState> {
+  if (
+    !Array.isArray(updateIds) ||
+    !updateIds.every(
+      (updateId) => typeof updateId === 'string' && adminUpdateIdPattern.test(updateId),
+    ) ||
+    new Set(updateIds).size !== updateIds.length
+  ) {
+    return { error: 'Choose a valid update order.' };
+  }
+
+  const access = await getAdminUpdatesClient();
+  if ('error' in access) {
+    return access;
+  }
+
+  const { error } = await access.client.rpc('admin_update_reorder', {
+    p_ordered_ids: updateIds,
+  });
+  if (error) {
+    if (error.code === 'PT409') {
+      return { error: 'The update list changed in another session. Reload and try again.' };
+    }
+    console.error('Admin update reorder failed.', { code: error.code });
+    return { error: 'Unable to save the update order. Try again.' };
+  }
+
+  revalidatePath('/admin');
+  return { message: 'Update order saved.' };
+}
+
 async function setAdminUpdateArchived(
   updateId: unknown,
   revision: unknown,

@@ -1,11 +1,12 @@
 'use client';
 
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, GripVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
   type KeyboardEvent,
   type FocusEvent as ReactFocusEvent,
+  type PointerEvent as ReactPointerEvent,
   useEffect,
   useId,
   useLayoutEffect,
@@ -24,7 +25,13 @@ import {
 } from '../../lib/admin-updates/rules';
 import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
 import { Picklist, type PicklistOption } from '../picklist';
-import { createAdminUpdate, editAdminUpdate, setAdminUpdateCompletion } from './actions';
+import { useReorderDrag } from '../recipes/use-reorder-drag';
+import {
+  createAdminUpdate,
+  editAdminUpdate,
+  reorderAdminUpdates,
+  setAdminUpdateCompletion,
+} from './actions';
 
 const kindOptions: PicklistOption[] = [
   { value: 'fix', label: 'Fix' },
@@ -78,6 +85,14 @@ function resizeTextarea(textarea: HTMLTextAreaElement) {
   textarea.style.height = `${textarea.scrollHeight}px`;
 }
 
+function getReorderableRows(): HTMLElement[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '.admin-update-row[data-admin-update-reorderable="true"]',
+    ),
+  ).filter((row) => row.getBoundingClientRect().height > 0);
+}
+
 function UpdateKindTag({ kind }: { kind: AdminUpdateKind }) {
   return (
     <span className={`admin-update-kind-tag is-${kind}`}>{kind === 'fix' ? 'Fix' : 'Feature'}</span>
@@ -97,6 +112,10 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   const completionDialogRef = useRef<HTMLDialogElement>(null);
   const completionInputRef = useRef<HTMLInputElement>(null);
   const completionTriggerRef = useRef<HTMLElement | null>(null);
+  const dragPointerYRef = useRef<number | null>(null);
+  const autoScrollFrameRef = useRef<number | null>(null);
+  const isDragActiveRef = useRef(false);
+  const pendingReorder = useRef<{ sourceId: string; rowTops: Map<string, number> } | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [editor, setEditor] = useState<UpdateEditor | null>(null);
   const [completion, setCompletion] = useState<CompletionDialog | null>(null);
@@ -104,8 +123,25 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   const [error, setError] = useState('');
   const [versionError, setVersionError] = useState('');
   const [message, setMessage] = useState('');
+  const [manualOrder, setManualOrder] = useState(() =>
+    sortAdminUpdates(updates)
+      .filter((update) => update.completed_version === null)
+      .map((update) => update.id),
+  );
+  const [dropOffsets, setDropOffsets] = useState<Map<string, number>>(() => new Map());
+  const [dropCommitPending, setDropCommitPending] = useState(false);
+  const [settlingSourceId, setSettlingSourceId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const reorderDrag = useReorderDrag();
+  const dragPreview = reorderDrag.preview;
   const editorKey = editor ? (editor.id ?? 'new') : null;
+
+  useEffect(() => {
+    const nextOrder = sortAdminUpdates(updates)
+      .filter((update) => update.completed_version === null)
+      .map((update) => update.id);
+    setManualOrder(nextOrder);
+  }, [updates]);
 
   useEffect(() => {
     if (editorKey && !pending) {
@@ -128,6 +164,47 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     }
   }, [editorBody]);
 
+  useLayoutEffect(() => {
+    if (dragPreview) {
+      return;
+    }
+    const pending = pendingReorder.current;
+    if (!pending) {
+      return;
+    }
+    pendingReorder.current = null;
+
+    const offsets = new Map<string, number>();
+    for (const row of getReorderableRows()) {
+      const updateId = row.dataset.adminUpdateId;
+      const oldTop = updateId ? pending.rowTops.get(updateId) : undefined;
+      if (updateId && oldTop !== undefined && row.getBoundingClientRect().height > 0) {
+        offsets.set(updateId, oldTop - row.getBoundingClientRect().top);
+      }
+    }
+    if (!offsets.size) {
+      setDropCommitPending(false);
+      return;
+    }
+
+    setDropOffsets(offsets);
+    setDropCommitPending(false);
+    const canAnimate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setSettlingSourceId(
+      canAnimate && Math.abs(offsets.get(pending.sourceId) ?? 0) > 0.5 ? pending.sourceId : null,
+    );
+    window.requestAnimationFrame(() => setDropOffsets(new Map()));
+  }, [dragPreview]);
+
+  useEffect(
+    () => () => {
+      if (autoScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(autoScrollFrameRef.current);
+      }
+    },
+    [],
+  );
+
   const completionUpdateId = completion?.update.id;
   useEffect(() => {
     const dialog = completionDialogRef.current;
@@ -149,9 +226,170 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     };
   }, [completionUpdateId]);
 
-  const visibleUpdates = sortAdminUpdates(
-    updates.filter((update) => showDone || update.completed_version === null),
+  const sortedUpdates = sortAdminUpdates(updates);
+  const incompleteUpdates = sortedUpdates.filter((update) => update.completed_version === null);
+  const completedUpdates = sortedUpdates.filter((update) => update.completed_version !== null);
+  const incompleteById = new Map(incompleteUpdates.map((update) => [update.id, update]));
+  const orderedIncomplete = [
+    ...manualOrder.flatMap((id) => {
+      const update = incompleteById.get(id);
+      return update ? [update] : [];
+    }),
+    ...incompleteUpdates.filter((update) => !manualOrder.includes(update.id)),
+  ];
+  const incompletePositions = new Map(
+    orderedIncomplete.map((update, index) => [update.id, index + 1]),
   );
+  const visibleUpdates = [...orderedIncomplete, ...completedUpdates].filter(
+    (update) => showDone || update.completed_version === null,
+  );
+
+  function stopAutoScroll() {
+    isDragActiveRef.current = false;
+    dragPointerYRef.current = null;
+    if (autoScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(autoScrollFrameRef.current);
+      autoScrollFrameRef.current = null;
+    }
+  }
+
+  function autoScrollWhileDragging() {
+    const pointerY = dragPointerYRef.current;
+    if (pointerY === null || !isDragActiveRef.current) {
+      autoScrollFrameRef.current = null;
+      return;
+    }
+
+    const edgeSize = 64;
+    const distanceToTop = edgeSize - pointerY;
+    const distanceToBottom = pointerY - (window.innerHeight - edgeSize);
+    const scrollDelta =
+      distanceToTop > 0
+        ? -Math.min(16, Math.ceil(distanceToTop / 4))
+        : distanceToBottom > 0
+          ? Math.min(16, Math.ceil(distanceToBottom / 4))
+          : 0;
+    if (scrollDelta !== 0) {
+      window.scrollBy(0, scrollDelta);
+    }
+
+    reorderDrag.move(pointerY);
+    autoScrollFrameRef.current = window.requestAnimationFrame(autoScrollWhileDragging);
+  }
+
+  function trackDragPointer(clientY: number) {
+    if (!isDragActiveRef.current) {
+      return;
+    }
+    dragPointerYRef.current = clientY;
+    if (autoScrollFrameRef.current === null) {
+      autoScrollFrameRef.current = window.requestAnimationFrame(autoScrollWhileDragging);
+    }
+  }
+
+  function persistManualOrder(nextOrder: string[], sourceId: string) {
+    const previousOrder = manualOrder;
+    if (
+      nextOrder.length === previousOrder.length &&
+      nextOrder.every((updateId, index) => updateId === previousOrder[index])
+    ) {
+      return;
+    }
+
+    const rowTops = new Map(
+      getReorderableRows().flatMap((row) => {
+        const updateId = row.dataset.adminUpdateId;
+        return updateId ? [[updateId, row.getBoundingClientRect().top] as const] : [];
+      }),
+    );
+    pendingReorder.current = { sourceId, rowTops };
+    setDropCommitPending(true);
+    setManualOrder(nextOrder);
+    setError('');
+    setMessage('');
+
+    const movedUpdate = updates.find((update) => update.id === sourceId);
+    const label = normalizeAdminUpdateBody(movedUpdate?.body_markdown ?? 'Update')
+      .replace(/\s+/gu, ' ')
+      .slice(0, 80);
+    const newPosition = nextOrder.indexOf(sourceId) + 1;
+    startTransition(async () => {
+      const result = await reorderAdminUpdates(nextOrder);
+      if (result.error) {
+        setManualOrder(previousOrder);
+        pendingReorder.current = null;
+        setDropOffsets(new Map());
+        setDropCommitPending(false);
+        setSettlingSourceId(null);
+        setError(result.error);
+        return;
+      }
+      setMessage(`${label} moved to position ${newPosition}.`);
+      router.refresh();
+    });
+  }
+
+  function startUpdateDrag(update: AdminUpdate, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0 || pending || editor) {
+      return;
+    }
+    const rowElements = Array.from(
+      event.currentTarget
+        .closest('.admin-update-list-items')
+        ?.querySelectorAll<HTMLElement>(
+          '.admin-update-row[data-admin-update-reorderable="true"]',
+        ) ?? [],
+    );
+    const bounds = rowElements.flatMap((row) => {
+      const updateId = row.dataset.adminUpdateId;
+      if (!updateId) {
+        return [];
+      }
+      const rect = row.getBoundingClientRect();
+      return [
+        { id: updateId, top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY },
+      ];
+    });
+    const sourceRow = event.currentTarget.closest<HTMLElement>('.admin-update-row');
+    reorderDrag.start(
+      update.id,
+      event.clientY,
+      sourceRow?.getBoundingClientRect().height ?? 48,
+      bounds,
+    );
+    isDragActiveRef.current = true;
+    trackDragPointer(event.clientY);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function finishUpdateDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    const handle = event.currentTarget;
+    stopAutoScroll();
+    reorderDrag.move(event.clientY);
+    const targetId = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-admin-update-id]')?.dataset.adminUpdateId;
+    const drag = reorderDrag.finish(targetId);
+    if (drag) {
+      persistManualOrder(drag.order, drag.sourceId);
+    }
+    handle.focus();
+  }
+
+  function moveUpdateByKeyboard(updateId: string, direction: 'up' | 'down') {
+    if (pending || editor) {
+      return;
+    }
+    const currentOrder = manualOrder;
+    const index = currentOrder.indexOf(updateId);
+    const nextIndex = direction === 'up' ? index - 1 : index + 1;
+    if (index < 0 || nextIndex < 0 || nextIndex >= currentOrder.length) {
+      return;
+    }
+    const nextOrder = [...currentOrder];
+    [nextOrder[index], nextOrder[nextIndex]] = [nextOrder[nextIndex], nextOrder[index]];
+    persistManualOrder(nextOrder, updateId);
+  }
 
   function rememberFocus(target: HTMLElement | null = null) {
     editorTriggerRef.current =
@@ -445,11 +683,49 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     const scope = `${idPrefix}-kind-${updateId ?? 'new'}`;
     const rowError = isEditing ? error : '';
     const kind = isEditing ? (editor?.kind ?? null) : (update?.kind ?? null);
+    const reorderPosition = update ? (incompletePositions.get(update.id) ?? 0) : 0;
+    const reorderState =
+      update && update.completed_version === null
+        ? dragPreview?.sourceId === update.id
+          ? 'dragging'
+          : Math.abs(dragPreview?.offsets.get(update.id) ?? 0) > 0.5
+            ? 'displaced'
+            : settlingSourceId === update.id
+              ? 'settling'
+              : undefined
+        : undefined;
+    const rowTransform =
+      dragPreview && dragPreview.sourceId === update?.id
+        ? `translateY(${
+            dragPreview.targetId === dragPreview.sourceId
+              ? dragPreview.pointerOffset
+              : (dragPreview.offsets.get(update.id) ?? dragPreview.pointerOffset)
+          }px)`
+        : update && dragPreview?.offsets.has(update.id)
+          ? `translateY(${dragPreview.offsets.get(update.id)}px)`
+          : update && dropOffsets.has(update.id)
+            ? `translateY(${dropOffsets.get(update.id)}px)`
+            : undefined;
 
     return (
       <li
         className={`admin-update-row${isNew ? ' is-new' : ''}`}
+        data-admin-update-id={update?.id}
+        data-admin-update-reorderable={
+          update && update.completed_version === null ? 'true' : undefined
+        }
+        data-reorder-state={reorderState}
         key={update?.id ?? 'new'}
+        style={{
+          transform: rowTransform,
+          transition:
+            dropCommitPending || (update && dropOffsets.has(update.id)) ? 'none' : undefined,
+        }}
+        onTransitionEnd={(event) => {
+          if (event.propertyName === 'transform' && settlingSourceId === update?.id) {
+            setSettlingSourceId(null);
+          }
+        }}
         onBlur={isEditing ? (event) => saveInlineEditorOnBlur(event, updateId, scope) : undefined}
         onKeyDown={isEditing ? (event) => handleInlineKeyDown(event, updateId) : undefined}
       >
@@ -479,53 +755,95 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
           ) : null}
         </div>
         <div className="admin-update-body">
-          <textarea
-            aria-describedby={rowError ? editorErrorId : undefined}
-            aria-invalid={Boolean(rowError) || undefined}
-            aria-label={isNew ? 'Add update' : 'Update text'}
-            autoCapitalize="sentences"
-            className="admin-update-inline-textarea"
-            placeholder={isNew ? 'Add update...' : undefined}
-            readOnly={!isNew && !isEditing}
-            ref={(element) => {
-              if (isEditing) {
-                editorTextareaRef.current = element;
-              }
-              if (isNew) {
-                addTextareaRef.current = element;
-              }
-              if (element) {
-                resizeTextarea(element);
-              }
-            }}
-            rows={1}
-            value={isEditing ? (editor?.body ?? '') : (update?.body_markdown ?? '')}
-            onChange={(event) => setUpdateBody(update, event.currentTarget.value)}
-            onFocus={(event) => {
-              if (!isEditing) {
-                openEditor(update, event.currentTarget);
-              }
-            }}
-            onClick={(event) => {
-              if (!isEditing && update) {
-                openEditor(update, event.currentTarget);
-              }
-            }}
-            onKeyDown={(event) => {
-              if (isEditing) {
-                if (event.key === 'Escape' && !pending) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  cancelInlineEditor(updateId);
-                } else {
-                  handleEditorKeyDown(event);
+          <div className="admin-update-body-content">
+            {update && update.completed_version === null ? (
+              <button
+                aria-label={`Reorder update ${reorderPosition}`}
+                className="admin-update-reorder-handle"
+                disabled={pending || Boolean(editor) || incompleteUpdates.length < 2}
+                title="Drag to reorder. Use Ctrl+Up or Ctrl+Down to move by keyboard."
+                type="button"
+                onPointerDown={(event) => startUpdateDrag(update, event)}
+                onPointerMove={(event) => {
+                  if (isDragActiveRef.current) {
+                    reorderDrag.move(event.clientY);
+                    trackDragPointer(event.clientY);
+                  }
+                }}
+                onPointerUp={finishUpdateDrag}
+                onPointerCancel={(event) => {
+                  stopAutoScroll();
+                  reorderDrag.cancel();
+                  event.currentTarget.focus();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && dragPreview) {
+                    event.preventDefault();
+                    stopAutoScroll();
+                    reorderDrag.cancel();
+                    event.currentTarget.focus();
+                  } else if (event.ctrlKey && event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    moveUpdateByKeyboard(update.id, 'up');
+                  } else if (event.ctrlKey && event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    moveUpdateByKeyboard(update.id, 'down');
+                  }
+                }}
+              >
+                <GripVertical aria-hidden="true" size={16} />
+              </button>
+            ) : (
+              <span aria-hidden="true" className="admin-update-reorder-spacer" />
+            )}
+            <textarea
+              aria-describedby={rowError ? editorErrorId : undefined}
+              aria-invalid={Boolean(rowError) || undefined}
+              aria-label={isNew ? 'Add update' : 'Update text'}
+              autoCapitalize="sentences"
+              className="admin-update-inline-textarea"
+              placeholder={isNew ? 'Add update...' : undefined}
+              readOnly={!isNew && !isEditing}
+              ref={(element) => {
+                if (isEditing) {
+                  editorTextareaRef.current = element;
                 }
-              } else if (update && (event.key === 'Enter' || event.key === ' ')) {
-                event.preventDefault();
-                openEditor(update, event.currentTarget);
-              }
-            }}
-          />
+                if (isNew) {
+                  addTextareaRef.current = element;
+                }
+                if (element) {
+                  resizeTextarea(element);
+                }
+              }}
+              rows={1}
+              value={isEditing ? (editor?.body ?? '') : (update?.body_markdown ?? '')}
+              onChange={(event) => setUpdateBody(update, event.currentTarget.value)}
+              onFocus={(event) => {
+                if (!isEditing) {
+                  openEditor(update, event.currentTarget);
+                }
+              }}
+              onClick={(event) => {
+                if (!isEditing && update) {
+                  openEditor(update, event.currentTarget);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (isEditing) {
+                  if (event.key === 'Escape' && !pending) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    cancelInlineEditor(updateId);
+                  } else {
+                    handleEditorKeyDown(event);
+                  }
+                } else if (update && (event.key === 'Enter' || event.key === ' ')) {
+                  event.preventDefault();
+                  openEditor(update, event.currentTarget);
+                }
+              }}
+            />
+          </div>
           {rowError && (
             <p className="admin-updates-feedback" id={editorErrorId} role="alert">
               {rowError}

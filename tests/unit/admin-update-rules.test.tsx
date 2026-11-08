@@ -17,8 +17,10 @@ function update(
     id,
     body_markdown: id,
     kind: 'fix',
+    completed_at: completed_version === null ? null : created_at,
     is_archived: false,
     revision: 1,
+    sort_order: 1,
     created_at,
     updated_at: created_at,
     completed_version,
@@ -78,24 +80,41 @@ describe('admin update validation and ordering', () => {
     expect(isSemverCore('1.2.3\n')).toBe(false);
   });
 
-  it('sorts incomplete updates first and completed updates by semantic version', () => {
+  it('sorts incomplete updates manually and completed updates by completion time', () => {
     const updates = [
-      update('done-1-9', { created_at: '2026-01-03T00:00:00Z', completed_version: '1.9.0' }),
-      update('open-old', { created_at: '2026-01-01T00:00:00Z', completed_version: null }),
-      update('done-1-10', { created_at: '2026-01-01T00:00:00Z', completed_version: '1.10.0' }),
-      update('open-new', { created_at: '2026-01-02T00:00:00Z', completed_version: null }),
-      update('done-equal-new', {
-        created_at: '2026-01-04T00:00:00Z',
+      update('done-older', {
+        created_at: '2026-01-05T00:00:00Z',
+        completed_at: '2026-01-02T00:00:00Z',
+        completed_version: '1.10.0',
+      }),
+      update('open-last', {
+        created_at: '2026-01-05T00:00:00Z',
+        completed_version: null,
+        sort_order: 9,
+      }),
+      update('done-newest', {
+        created_at: '2026-01-01T00:00:00Z',
+        completed_at: '2026-01-04T00:00:00Z',
+        completed_version: '1.9.0',
+      }),
+      update('open-first', {
+        created_at: '2026-01-01T00:00:00Z',
+        completed_version: null,
+        sort_order: -2,
+      }),
+      update('done-middle', {
+        created_at: '2026-01-03T00:00:00Z',
+        completed_at: '2026-01-03T00:00:00Z',
         completed_version: '1.10.0',
       }),
     ];
 
     expect(sortAdminUpdates(updates).map(({ id }) => id)).toEqual([
-      'open-new',
-      'open-old',
-      'done-equal-new',
-      'done-1-10',
-      'done-1-9',
+      'open-first',
+      'open-last',
+      'done-newest',
+      'done-middle',
+      'done-older',
     ]);
   });
 });

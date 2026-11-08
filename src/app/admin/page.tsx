@@ -67,7 +67,7 @@ export default async function AdminPage() {
     supabase
       .from('app_updates')
       .select(
-        'id, body_markdown, kind, completed_version, is_archived, revision, created_at, updated_at',
+        'id, body_markdown, kind, completed_version, completed_at, sort_order, is_archived, revision, created_at, updated_at',
       )
       .order('created_at', { ascending: false }),
   ]);

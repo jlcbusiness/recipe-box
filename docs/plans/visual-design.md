@@ -339,6 +339,10 @@ continue to enforce admin authorization independently. The open account pane
 overlays the page without clipping at the sidebar edge or making the navigation
 scroll to reveal the pane; keep it above page menus.
 
+The app version appears once in a muted, right-aligned document footer after the
+page content on every route. It is not fixed to the viewport and reads from the
+application package version.
+
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
 compact, while labeled rows, picklist triggers, popup options, standalone
 actions, and compact inline action hit areas retain touch targets of at least
@@ -356,9 +360,10 @@ The Updates tab uses a compact list with **Done** and **Type** headings. A
 persistent blank Markdown field sits at the top for adding entries. Each row
 has a completion control on the left, a directly editable text field in the
 center, and the required type pill on the right. Incomplete entries have a
-checkbox; completed entries show their version in a small 8pt label. **Fix**
-uses a high-contrast olive treatment and **Feature** uses a high-contrast
-light-blue treatment.
+checkbox and a dedicated reorder handle beside the text; completed entries show
+their version in a small 8pt label and cannot be reordered. **Fix** uses a
+high-contrast olive treatment and **Feature** uses a high-contrast light-blue
+treatment.
 
 Clicking a text field edits it in place. Leaving the row saves a valid draft;
 Escape discards the draft. The top field promotes entered text into an update
@@ -372,6 +377,11 @@ eye/eye-off control hides or reveals completed entries; incomplete entries are
 always visible. Previously archived database entries appear as ordinary rows,
 without an Archived label or archive control. The authoring field uses plain
 Markdown and does not interpret recipe-specific autocomplete or tokens.
+Incomplete entries keep a persistent manual order, and newly created or
+reopened entries start at the top. Completed entries follow the incomplete
+entries and sort by completion time, newest first. The reorder handle supports
+pointer/touch dragging, Ctrl+ArrowUp/Down, Escape cancellation, and polite move
+announcements.
 
 Completing an entry opens a titled native dialog. It accepts only a standard
 `major.minor.patch` version, preserves invalid input beside a red textual

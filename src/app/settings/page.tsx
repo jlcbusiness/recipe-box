@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { appVersion } from '../../lib/app-version';
 import { normalizeHiddenRecipeColumns, normalizeRecipeColumnOrder } from '../../lib/explorer-state';
 import { isDatabaseExportReminderDue } from '../../lib/exports/rules';
 import type { PicklistCategory, TagOption } from '../../lib/recipes/data';
@@ -354,7 +353,6 @@ export default async function SettingsPage({
           </div>
         </div>
       </section>
-      <p className="settings-version">Recipe Box v{appVersion}</p>
     </main>
   );
 }

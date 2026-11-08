@@ -5,6 +5,8 @@ export type AdminUpdate = {
   body_markdown: string;
   kind: AdminUpdateKind;
   completed_version: string | null;
+  completed_at: string | null;
+  sort_order: number;
   is_archived: boolean;
   revision: number;
   created_at: string;
@@ -66,19 +68,14 @@ export function compareSemverCore(left: string, right: string): number {
   return 0;
 }
 
-function compareCreatedAtDescending(left: AdminUpdate, right: AdminUpdate): number {
-  const leftTime = Date.parse(left.created_at);
-  const rightTime = Date.parse(right.created_at);
+function compareTimestampDescending(leftValue: string, rightValue: string): number {
+  const leftTime = Date.parse(leftValue);
+  const rightTime = Date.parse(rightValue);
   if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
     return rightTime - leftTime;
   }
-  if (left.created_at !== right.created_at) {
-    return left.created_at < right.created_at ? 1 : -1;
-  }
-  if (left.id === right.id) {
-    return 0;
-  }
-  return left.id < right.id ? -1 : 1;
+  if (leftValue === rightValue) return 0;
+  return leftValue < rightValue ? 1 : -1;
 }
 
 export function sortAdminUpdates(updates: readonly AdminUpdate[]): AdminUpdate[] {
@@ -89,12 +86,20 @@ export function sortAdminUpdates(updates: readonly AdminUpdate[]): AdminUpdate[]
     if (left.completed_version !== null && right.completed_version === null) {
       return 1;
     }
-    if (left.completed_version !== null && right.completed_version !== null) {
-      const versionOrder = compareSemverCore(right.completed_version, left.completed_version);
-      if (versionOrder !== 0) {
-        return versionOrder;
+    if (left.completed_version === null && right.completed_version === null) {
+      if (left.sort_order !== right.sort_order) {
+        return left.sort_order < right.sort_order ? -1 : 1;
+      }
+    } else {
+      const completionOrder = compareTimestampDescending(
+        left.completed_at ?? '',
+        right.completed_at ?? '',
+      );
+      if (completionOrder !== 0) {
+        return completionOrder;
       }
     }
-    return compareCreatedAtDescending(left, right);
+    if (left.id === right.id) return 0;
+    return left.id < right.id ? -1 : 1;
   });
 }

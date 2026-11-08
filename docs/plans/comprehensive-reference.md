@@ -68,6 +68,8 @@ the owner has saved framing. Filter and sort
 - **Progressive Web App (PWA):** Installable, globally accessible via Vercel hosting, using Supabase for authentication,
   Postgres storage, and private media buckets. Native mobile apps (React Native / Expo) are deferred until native-only
   capabilities (offline camera scanner, local push notifications) are needed.
+- Every route ends with a muted, right-aligned document footer showing the application version from `package.json`; it
+  scrolls with the document rather than staying fixed to the viewport.
 
 ---
 
@@ -1603,9 +1605,13 @@ Print requests landscape while leaving the browser dialog authoritative.
   metadata. Invalid input stays in the dialog with a textual error and
   preserved value. Activating a completed version permits correction or
   reopening the entry.
-- Incomplete entries sort before completed entries. Incomplete entries sort by
-  creation time descending; completed entries sort by semantic version
-  descending, then creation time descending. Completed entries are hidden by
+- Incomplete entries sort before completed entries and keep a persistent manual
+  order. New and reopened incomplete entries start at the top. A dedicated
+  handle supports pointer/touch dragging and Ctrl+ArrowUp/Down keyboard moves;
+  Escape and pointer cancellation discard an active drag. Completed entries
+  cannot be reordered and sort by completion timestamp descending, newest
+  first, independent of version text. Correcting a version preserves its
+  completion timestamp; reopening clears it. Completed entries are hidden by
   default and a compact eye/eye-off control toggles their visibility. Archive
   state does not affect whether an entry appears.
 - Every operation independently checks the authenticated administrator on the

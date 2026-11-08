@@ -65,8 +65,8 @@ event. Updates and events are excluded from account reset and database bundles.
 | Recipe nutrition | Per-whole-recipe manual nutrient overrides; absent fields remain derived from ingredient rows. |
 | Ingredient nutrition profile | One canonical-ingredient Settings record with a Volume or Weight serving-size basis, required Calories, optional core and approved micronutrients. |
 | Ingredient measure equivalent | One explicit average Volume and/or Weight for a quantity of one Count or one selected Things unit on a canonical ingredient. |
-| Application update | A global administrator-managed Markdown entry with exactly one required Fix or Feature classification, an optional validated completed version, archive state, timestamps, actors, and an optimistic revision. It is not owned by an account or included in account reset or bundles. |
-| Admin update event | An append-only audit event recording an administrator's create, edit, classification, completion, archive, or restore action on an Application update, with allow-listed before/after state. |
+| Application update | A global administrator-managed Markdown entry with exactly one required Fix or Feature classification, persistent manual order while incomplete, an optional validated completed version and completion timestamp, archive state, timestamps, actors, and an optimistic revision. New or reopened incomplete entries start at the top; completed entries sort by completion time, newest first. It is not owned by an account or included in account reset or bundles. |
+| Admin update event | An append-only audit event recording an administrator's create, edit, classification, completion, reorder, archive, or restore action on an Application update, with allow-listed before/after state. |
 | History event | An append-only forensic record of a saved change. |
 
 Find's Advanced Rules uses one version-1 filter envelope rather than a new

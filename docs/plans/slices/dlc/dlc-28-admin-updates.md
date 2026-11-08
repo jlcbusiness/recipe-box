@@ -1,6 +1,8 @@
 # DLC 28: Admin Updates
 
-**Status:** Implemented and verified locally and on the linked Supabase project.
+**Status:** The original DLC 28 implementation was verified locally and on the
+linked Supabase project. Manual ordering and the global version footer are a
+local follow-up and have not been pushed to the linked project.
 
 ## Outcome
 
@@ -61,10 +63,12 @@ regular signed-in users or anonymous visitors.
 - A completed entry shows its version in the Done column at approximately
   8pt, with an accessible label such as `Done in 1.2.3`. Activating the version
   opens the same dialog to correct it or explicitly mark the entry incomplete.
-- Sort incomplete entries first, newest-created first. Sort completed entries
-  by semantic version descending (numeric components, not string order), then
-  creation time descending. Archive state does not affect order or visibility.
-  Manual row reordering is not part of this slice.
+- Sort incomplete entries first and preserve their manual order. New and
+  reopened incomplete entries start at the top. Completed entries cannot be
+  reordered and sort by completion timestamp descending, newest first,
+  independent of version text. Correcting a completed version preserves its
+  timestamp; reopening clears it. Archive state does not affect order or
+  visibility.
 - Use a semantic list with **Done** and **Type** headings. A persistent blank
   Markdown field at the top creates entries; each saved row keeps its
   completion control on the left, text in the center, and type pill at the far
@@ -110,14 +114,16 @@ regular signed-in users or anonymous visitors.
   administrator is recorded as actor metadata, not as the record owner.
 - The `app_updates` record includes a UUID, Markdown body, required
   constrained `kind`, nullable validated `completed_version`, archive state,
-  creation/update timestamps and actors, and a monotonically increasing
-  revision for optimistic concurrency.
+  persistent `sort_order`, nullable `completed_at`, creation/update timestamps
+  and actors, and a monotonically increasing revision for optimistic
+  concurrency. `completed_at` is set once on completion and retained when the
+  version is corrected.
 - Enforce the Fix/Feature domain, body length/non-emptiness, and completion
   version format in the database as well as in the UI. A null completion
   version means incomplete; a non-null version means done, avoiding duplicate
   status fields that can disagree.
-- Record create, edit, type change, completion/version change, archive, and
-  restore in a separate append-only admin-update history table in the same
+- Record create, edit, type change, completion/version change, reorder, archive,
+  and restore in a separate append-only admin-update history table in the same
   transaction. Include actor ID, timestamp, event type, and allow-listed
   before/after values. History is not editable through application actions.
   Account deletion must not cascade-delete shared updates or their history;
@@ -144,8 +150,8 @@ regular signed-in users or anonymous visitors.
 - DLC 26's save shortcut and DLC 27's ingredient/instruction grouping are
   independent and are not dependencies.
 - No public changelog, user notification, additional classification type,
-  custom tag color, image upload, recipe autocomplete, manual ordering,
-  package-version automation, or history browser is included.
+  custom tag color, image upload, recipe autocomplete, package-version
+  automation, or history browser is included.
 
 ## Acceptance criteria
 
@@ -186,8 +192,13 @@ regular signed-in users or anonymous visitors.
   prerelease, build suffix, whitespace, and empty input). Invalid submission
   shows a textual error, keeps the pane open, and preserves input.
 - A completed version can be corrected or explicitly cleared to reopen the
-  entry. Sorting uses numeric semantic-version order and deterministic
-  creation-time tie-breaks.
+  entry. Completion time is retained through version corrections and cleared
+  on reopen. Incomplete entries are manually reorderable and new or reopened
+  entries start at the top; completed entries sort newest-completed first.
+- Dragging uses a dedicated handle, supports pointer and touch previews, keeps
+  order unchanged on Escape or pointer cancellation, and provides Ctrl+Arrow
+  keyboard moves with polite announcements. Reordered state persists after
+  reload and is recorded in the audit history.
 
 ### Presentation, reliability, and accessibility
 
@@ -198,7 +209,8 @@ regular signed-in users or anonymous visitors.
 - Desktop and mobile browser checks cover representative content and widths
   around the existing 640px navigation breakpoint, with no page overflow.
   Fix/Feature pills meet text contrast requirements; the version label remains
-  legible at its compact target size.
+  legible at its compact target size and appears at the document end on every
+  route.
 - Automated accessibility checks cover tabs, inline editing, type selection,
   completion dialog, focus return, list headings, and error announcements in
   Chromium and Fold 6.
@@ -206,18 +218,21 @@ regular signed-in users or anonymous visitors.
 ## Implementation and verification
 
 - Unit and bootstrap tests pass: 554 Vitest tests and 8 Node tests.
-- Local pgTAP migration coverage passes all 29 assertions, including
-  constraints, audit events, revision conflicts, RLS, and actor deletion.
-- The Chromium and Fold 6 browser suite passes all four admin/non-admin cases.
-  It covers immediate creation from a populated draft on type selection,
-  nested-list keyboard continuation, inline editing and Escape cancellation,
-  required classification, completion validation/correction/reopen, role
-  isolation, Axe, responsive widths, overflow, and mobile hit targets.
+- Local pgTAP migration coverage passes all 46 assertions, including order
+  initialization, completion timestamps, reorder authorization and stale-list
+  conflicts, audit events, revision conflicts, RLS, and actor deletion.
+- Focused Chromium and Fold 6 browser coverage passes all eight cases: the
+  Admin Updates create/edit/complete flows, pointer/touch/keyboard reordering,
+  role isolation, and the shared version-footer check. It covers immediate
+  creation from a populated draft on type selection, nested-list keyboard
+  continuation, inline editing and Escape cancellation, completion
+  validation/correction/reopen, persisted order, drag cancellation, Axe,
+  responsive widths, overflow, and mobile hit targets.
 - `npm run typecheck`, `npm run build`, and `npm run lint:md` pass. Repository
   Biome lint exits successfully with warnings; focused checks for changed
-  TypeScript and CSS formatting pass.
-- Screenshots were inspected at desktop and Fold 6 widths. Browser assertions
-  verify the page and list do not overflow at 641px, 640px, and 390px.
+  TypeScript pass. Browser geometry assertions verify no page overflow at
+  641px, 640px, and 390px; desktop and mobile screenshots are captured by the
+  E2E flow.
 - The comprehensive reference, data model, DLC roadmap, and visual design
   guide now describe the implemented behavior. The migration and pgTAP tests
   were applied only to the local database; no reset or linked migration was

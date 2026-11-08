@@ -2,6 +2,7 @@ import '@fontsource-variable/dm-sans';
 import 'react-advanced-cropper/dist/style.css';
 import './globals.css';
 import type { Metadata } from 'next';
+import { appVersion } from '../lib/app-version';
 import { PwaRegistration } from './pwa-registration';
 
 export const metadata: Metadata = {
@@ -19,6 +20,9 @@ export default function RootLayout({
       <body>
         <PwaRegistration />
         {children}
+        <footer aria-label="Application version" className="app-version-footer" role="contentinfo">
+          Recipe Box v{appVersion}
+        </footer>
       </body>
     </html>
   );
