@@ -26,7 +26,10 @@ import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
   error?: string;
+  recipeVersion?: number;
   recipeId?: string;
+  saved?: boolean;
+  stayInEditor?: boolean;
 };
 
 export type RecipeMarkerActionState = {
@@ -300,6 +303,7 @@ export async function saveRecipe(
   _previousState: RecipeActionState | undefined,
   formData: FormData,
 ): Promise<RecipeActionState> {
+  const stayInEditor = formText(formData, 'save_mode') === 'shortcut';
   const supabase = await createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
@@ -451,6 +455,7 @@ export async function saveRecipe(
 
   revalidatePath('/recipes');
   revalidatePath(`/recipes/${savedRecipe.id}`);
+  revalidatePath(`/recipes/${savedRecipe.id}/edit`);
   revalidatePath('/publications');
   for (const pairing of relationships.pairings) {
     if (pairing.linked_recipe_id) {
@@ -458,9 +463,19 @@ export async function saveRecipe(
     }
   }
   if (recipeId) {
-    redirect(`/recipes/${savedRecipe.id}`);
+    if (!stayInEditor) {
+      redirect(`/recipes/${savedRecipe.id}`);
+    }
+    return { recipeVersion: savedRecipe.version, saved: true, stayInEditor: true };
   }
-  return { recipeId: savedRecipe.id };
+  return stayInEditor
+    ? {
+        recipeId: savedRecipe.id,
+        recipeVersion: savedRecipe.version,
+        saved: true,
+        stayInEditor: true,
+      }
+    : { recipeId: savedRecipe.id };
 }
 
 export async function setRecipePrivacy(formData: FormData): Promise<void> {

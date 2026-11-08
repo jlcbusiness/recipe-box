@@ -16,10 +16,11 @@ import { RecipeForm } from '../../recipe-form';
 
 type EditRecipePageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 };
 
-export default async function EditRecipePage({ params }: EditRecipePageProps) {
-  const { id } = await params;
+export default async function EditRecipePage({ params, searchParams }: EditRecipePageProps) {
+  const [{ id }, { saved }] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
   const [recipe, picklists, ingredients, preparationOptions, publications, photos, tags] =
     await Promise.all([
@@ -60,6 +61,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
         publications={publications}
         recipeOptions={recipeOptions}
         tags={tags}
+        initialSaveNotice={saved === 'shortcut'}
         recipe={recipe}
       />
     </main>

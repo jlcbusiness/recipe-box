@@ -796,8 +796,9 @@ trigger selects the next matching unit without opening the list. While open,
 type-ahead refines the prefix and repeated characters cycle matching options
 without selecting. Tab accepts an active option before advancing. Enter in an
 amount or Specifics input commits the row when no suggestion is open.
-Non-submit Enter does not submit the recipe form; only Save recipe saves the
-recipe. Committing focuses the trailing Add ingredient row cell on desktop and
+Non-submit Enter does not submit the recipe form. The visible Save recipe
+button keeps its current redirect; `Ctrl+S` (`Cmd+S` on macOS) saves and stays
+in the editor. Neither path introduces autosave. Committing focuses the trailing Add ingredient row cell on desktop and
 submits the row popover on mobile. Escape closes a listbox or cancels the active
 edit/popover.
 

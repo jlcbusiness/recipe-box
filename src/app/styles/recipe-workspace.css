@@ -2528,6 +2528,12 @@
   font-weight: 700;
 }
 
+.recipe-form-save-status {
+  margin: 0 0 12px;
+  color: var(--leaf);
+  font-weight: 700;
+}
+
 .recipe-ingredient-set-heading {
   display: flex;
   min-width: 0;

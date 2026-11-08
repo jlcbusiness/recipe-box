@@ -702,7 +702,8 @@ preserved.
   Non-submit Enter never submits the recipe form. On desktop, committing a row
   focuses the trailing Add ingredient row cell; on mobile, it submits the
   ingredient-details popover. Escape closes a listbox or cancels the active
-  edit/popover. Only the explicit Save recipe action saves the recipe.
+  edit/popover. The explicit Save recipe button or the `Ctrl+S`/`Cmd+S`
+  recipe-editor shortcut saves the recipe; see §13.1 for shortcut behavior.
 - Reordering changes only the canonical entered order. Temporary view sorts do
   not rewrite it.
 
@@ -1821,8 +1822,10 @@ History events are recorded on save (never on individual keystrokes):
 
 - **Keyboard Navigation:** Tab and arrow key traversal through the ingredient edit grid.
   - **Shortcut Actions:** Add ingredient rows with Enter in the last column,
-    trigger autocomplete with `#`, and insert a degree symbol in an instruction
-    with `Ctrl+.`. Only the explicit Save recipe action submits the recipe form.
+    trigger autocomplete with `#`, insert a degree symbol in an instruction
+    with `Ctrl+.`, and save with `Ctrl+S` (`Cmd+S` on macOS). Shortcut saves
+    stay in the editor; the visible Save button retains its current redirect.
+    No save path introduces autosave.
 - **No Drag-and-Drop Reliance:** Reordering ingredients and steps uses explicit keyboard-friendly up/down buttons or
   index input fields.
 
@@ -1855,7 +1858,8 @@ History events are recorded on save (never on individual keystrokes):
   option and the next Enter to commit. Tab accepts an active option before
   advancing, and ArrowUp/ArrowDown opens closed picklists and moves the active
   option. Quantity and Specifics inputs commit on Enter when no suggestion is
-  open. Enter never submits the recipe form; only Save recipe does. See
+  open. Enter never submits the recipe form. The visible Save recipe button
+  and `Ctrl+S`/`Cmd+S` shortcut are the explicit save actions. See
   [Ingredient editing](#43-manual-reordering) for row focus progression and
   mobile behavior.
 - Mobile uses a one-column ingredient list and a compact row editor popover.

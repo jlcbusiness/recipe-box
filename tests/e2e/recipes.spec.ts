@@ -120,6 +120,73 @@ test('recipe time controls do not overlap the Pairings or Notes sections @e2e', 
   }
 });
 
+test('recipe save shortcuts keep create and edit forms open @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    const nameField = page.getByLabel('Name');
+
+    await nameField.fill('');
+    await page.keyboard.press('Control+s');
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+    expect(
+      await nameField.evaluate(
+        (element) => element instanceof HTMLInputElement && !element.validity.valid,
+      ),
+    ).toBe(true);
+
+    await nameField.fill('Keyboard shortcut recipe');
+    await page.keyboard.press('Control+s');
+    await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit(?:\?[^#]*)?$/);
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    const saveStatus = page.locator('.recipe-form-save-status');
+    await expect(saveStatus).toHaveText('Saved.');
+    const statusBounds = await saveStatus.boundingBox();
+    const viewportWidth = page.viewportSize()?.width ?? 0;
+    expect(statusBounds).not.toBeNull();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewportWidth,
+    );
+    if (statusBounds) {
+      expect(statusBounds.x).toBeGreaterThanOrEqual(0);
+      expect(statusBounds.x + statusBounds.width).toBeLessThanOrEqual(viewportWidth);
+    }
+
+    const recipeId = new URL(page.url()).pathname.split('/').at(-2);
+    expect(recipeId).toBeTruthy();
+    await page.getByLabel('Name').fill('Keyboard shortcut recipe updated');
+    await page.keyboard.press('Meta+s');
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/edit(?:\\?[^#]*)?$`));
+    await expect(page.locator('.recipe-form-save-status')).toHaveText('Saved.');
+
+    const savedRecipes = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=id,name,version&id=eq.${recipeId}`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+      },
+    );
+    expect(savedRecipes.ok(), await savedRecipes.text()).toBeTruthy();
+    expect(await savedRecipes.json()).toEqual([
+      { id: recipeId, name: 'Keyboard shortcut recipe updated', version: 2 },
+    ]);
+
+    await page.getByLabel('Name').fill('Visible Save button keeps its redirect');
+    await page.getByRole('button', { name: 'Save recipe', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}$`));
+    await expect(
+      page.getByRole('heading', { name: 'Visible Save button keeps its redirect' }),
+    ).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('private navigation links to Settings and keeps Units out of the nav @e2e @a11y', async ({
   page,
   request,
@@ -2043,12 +2110,12 @@ test('stale recipe versions are rejected without overwriting the first save @e2e
     await expect(firstPage.getByRole('heading', { name: 'First writer wins' })).toBeVisible();
 
     await secondPage.getByLabel('Name').fill('Stale writer must not win');
-    await secondPage.getByRole('button', { name: 'Save recipe' }).click();
-    await expect(
-      secondPage.getByText('This recipe changed in another session. Reload before saving again.', {
-        exact: true,
-      }),
-    ).toBeVisible();
+    await secondPage.keyboard.press('Control+s');
+    await expect(secondPage.locator('.recipe-form-error')).toHaveText(
+      'This recipe changed in another session. Reload before saving again.',
+    );
+    await expect(secondPage).toHaveURL(new RegExp(`${detailPath}/edit$`));
+    await expect(secondPage.getByLabel('Name')).toHaveValue('Stale writer must not win');
     await secondPage.reload();
     await expect(secondPage.getByLabel('Name')).toHaveValue('First writer wins');
 

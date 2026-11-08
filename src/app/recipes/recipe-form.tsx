@@ -83,6 +83,7 @@ type RecipeFormProps = {
   publications: PublicationOption[];
   recipeOptions: IngredientOption[];
   tags: TagOption[];
+  initialSaveNotice?: boolean;
   recipe?: RecipeRecord;
 };
 
@@ -198,12 +199,17 @@ export function RecipeForm({
   publications,
   recipeOptions,
   tags,
+  initialSaveNotice = false,
   recipe,
 }: RecipeFormProps) {
   const [actionState, formAction, pending] = useActionState(saveRecipe, undefined);
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const shortcutSaveButtonRef = useRef<HTMLButtonElement>(null);
   const handledCreatedRecipeIdRef = useRef<string | null>(null);
+  const [savedRecipeVersion, setSavedRecipeVersion] = useState<number | undefined>();
+  const [saveNotice, setSaveNotice] = useState(initialSaveNotice ? 'Saved.' : '');
+  const currentRecipeVersion = actionState?.recipeVersion ?? savedRecipeVersion ?? recipe?.version;
   const [draftPhotoFiles, setDraftPhotoFiles] = useState<File[]>([]);
   const [uploadingDraftPhotos, setUploadingDraftPhotos] = useState(false);
   const [draftPhotoUploadError, setDraftPhotoUploadError] = useState('');
@@ -356,6 +362,23 @@ export function RecipeForm({
     setAvailablePicklists(picklists);
   }, [picklists]);
 
+  useEffect(() => {
+    if (actionState?.recipeVersion !== undefined) {
+      setSavedRecipeVersion(actionState.recipeVersion);
+    }
+    if (actionState?.saved) {
+      setSaveNotice('Saved.');
+    } else if (actionState?.error) {
+      setSaveNotice('');
+    }
+  }, [actionState?.error, actionState?.recipeVersion, actionState?.saved]);
+
+  useEffect(() => {
+    if (initialSaveNotice && recipe) {
+      router.replace(`/recipes/${recipe.id}/edit`, { scroll: false });
+    }
+  }, [initialSaveNotice, recipe, router]);
+
   const valuesFor = (category: RecipePicklistValue['category']) =>
     availablePicklists.filter((picklist) => picklist.category === category);
   const picklistValue = (id: string) =>
@@ -458,15 +481,18 @@ export function RecipeForm({
       return;
     }
     handledCreatedRecipeIdRef.current = createdRecipeId;
+    const destination = actionState.stayInEditor
+      ? `/recipes/${createdRecipeId}/edit?saved=shortcut`
+      : `/recipes/${createdRecipeId}`;
 
     if (draftPhotoFiles.length === 0) {
-      router.replace(`/recipes/${createdRecipeId}`);
+      router.replace(destination);
       return;
     }
 
     setUploadingDraftPhotos(true);
     void uploadMediaFiles('recipe', createdRecipeId, draftPhotoFiles)
-      .then(() => router.replace(`/recipes/${createdRecipeId}`))
+      .then(() => router.replace(destination))
       .catch((uploadError: unknown) => {
         const detail = uploadError instanceof Error ? ` ${uploadError.message}` : '';
         setDraftPhotoUploadError(
@@ -474,7 +500,7 @@ export function RecipeForm({
         );
       })
       .finally(() => setUploadingDraftPhotos(false));
-  }, [actionState?.recipeId, draftPhotoFiles, router]);
+  }, [actionState?.recipeId, actionState?.stayInEditor, draftPhotoFiles, router]);
 
   function togglePicklist(category: RecipePicklistKey) {
     setOpenPicklist((current) => (current === category ? null : category));
@@ -658,6 +684,7 @@ export function RecipeForm({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    setSaveNotice('');
     const normalizedSets = normalizeIngredientSets(ingredientSets);
     if (!normalizedSets) {
       event.preventDefault();
@@ -740,6 +767,28 @@ export function RecipeForm({
       id="recipe-form"
       onKeyDown={(event) => {
         if (
+          (event.ctrlKey || event.metaKey) &&
+          !event.altKey &&
+          !event.shiftKey &&
+          event.key.toLowerCase() === 's'
+        ) {
+          event.preventDefault();
+          if (
+            event.repeat ||
+            pending ||
+            uploadingDraftPhotos ||
+            actionState?.recipeId ||
+            (event.target instanceof HTMLElement && event.target.closest('dialog[open]'))
+          ) {
+            return;
+          }
+          const submitter = shortcutSaveButtonRef.current;
+          if (submitter) {
+            formRef.current?.requestSubmit(submitter);
+          }
+          return;
+        }
+        if (
           event.key === 'Enter' &&
           !(event.target instanceof HTMLButtonElement) &&
           !(event.target instanceof HTMLTextAreaElement)
@@ -748,16 +797,23 @@ export function RecipeForm({
         }
       }}
       onSubmit={handleSubmit}
+      onChangeCapture={() => setSaveNotice('')}
       ref={formRef}
     >
       <input name="ingredient_rows" type="hidden" defaultValue="[]" />
       <input name="ingredient_sets" type="hidden" defaultValue="[]" />
       <input name="instruction_steps" type="hidden" defaultValue="[]" />
       <input name="nutrition_overrides" type="hidden" defaultValue="{}" />
+      <button hidden name="save_mode" ref={shortcutSaveButtonRef} type="submit" value="shortcut" />
+      {saveNotice && (
+        <p aria-live="polite" className="recipe-form-save-status" role="status">
+          {saveNotice}
+        </p>
+      )}
       {recipe && (
         <>
           <input name="recipe_id" type="hidden" value={recipe.id} />
-          <input name="expected_version" type="hidden" value={recipe.version} />
+          <input name="expected_version" type="hidden" value={currentRecipeVersion} />
         </>
       )}
       <fieldset className="recipe-metadata-section">
@@ -767,7 +823,7 @@ export function RecipeForm({
             <RecipeNameField initialName={recipe.name} />
             <MediaManager
               assets={mediaAssets}
-              expectedVersion={recipe.version}
+              expectedVersion={currentRecipeVersion ?? recipe.version}
               onPhotoDeleted={(assetId) =>
                 setInstructionSteps((currentSteps) =>
                   currentSteps.map((step) => {
@@ -1329,7 +1385,7 @@ export function RecipeForm({
             buttonLabel="Delete"
             recipeId={recipe.id}
             recipeName={recipe.name}
-            version={recipe.version}
+            version={currentRecipeVersion ?? recipe.version}
           />
         )}
       </div>

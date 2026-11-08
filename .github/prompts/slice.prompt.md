@@ -109,3 +109,7 @@ more than one. Record accepted decisions and material deferrals in
 
 Report the outcome, changed files, check results, warnings, and any unverified
 criteria or deferred decisions.
+
+# Finish up 
+
+- Determine what the version number for this change should be and update it accordingly.

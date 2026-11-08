@@ -70,9 +70,9 @@ while retaining the existing single-image viewer without gallery navigation.
 
 ### Phase 5: Recipe and document-output follow-up
 
-- **DLC 26 (planned):** Add `Ctrl+S` (and `Cmd+S` on macOS) to invoke the
-  explicit Save recipe flow, reusing its validation and error handling without
-  introducing autosave. A focused brief is still needed.
+- **DLC 26 (delivered):** [Recipe-editor save shortcut](dlc-26-recipe-editor-save-shortcut.md)
+  adds `Ctrl+S` (and `Cmd+S` on macOS) for create and edit forms. Shortcut
+  saves stay in the editor; the visible Save button keeps its current behavior.
 - **DLC 27 (candidate):** [Ingredient sets and instruction groups](dlc-27-ingredient-instruction-groups.md)
   will define how ingredient sets pair with instruction groups and how those
   sections flow through print and standalone exports.
