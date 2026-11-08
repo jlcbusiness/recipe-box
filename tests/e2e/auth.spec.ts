@@ -261,9 +261,35 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await accountTrigger.click();
     await expect(page.locator('.account-menu-panel').getByText(user.email)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
-    await expect(
-      page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
-    ).toHaveCount(0);
+    const accountMenuPanel = page.locator('.account-menu-panel');
+    const desktopMenuGeometry = await page.evaluate(() => {
+      const nav = document.querySelector('.private-nav');
+      const trigger = document.querySelector('.account-menu-trigger');
+      const panel = document.querySelector('.account-menu-panel');
+      if (!nav || !trigger || !panel) {
+        throw new Error('Expected the open account menu and navigation.');
+      }
+      const panelBounds = panel.getBoundingClientRect();
+      const topElement = document.elementFromPoint(
+        panelBounds.right - 8,
+        panelBounds.top + panelBounds.height / 2,
+      );
+      return {
+        navOverflow: getComputedStyle(nav).overflow,
+        navZIndex: getComputedStyle(nav).zIndex,
+        panelRight: panelBounds.right,
+        panelLeft: panelBounds.left,
+        navScrollTop: nav.scrollTop,
+        topElementIsPanel: topElement === panel || panel.contains(topElement),
+      };
+    });
+    expect(desktopMenuGeometry.navOverflow).toBe('visible');
+    expect(desktopMenuGeometry.navZIndex).toBe('80');
+    expect(desktopMenuGeometry.panelLeft).toBeGreaterThanOrEqual(0);
+    expect(desktopMenuGeometry.panelRight).toBeLessThanOrEqual(1280);
+    expect(desktopMenuGeometry.navScrollTop).toBe(0);
+    expect(desktopMenuGeometry.topElementIsPanel).toBe(true);
+    await expect(accountMenuPanel.getByRole('link', { name: 'Administration' })).toHaveCount(0);
     await accountTrigger.click();
     await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
 
@@ -340,6 +366,10 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await accountTrigger.focus();
     await accountTrigger.press('Enter');
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCSS(
+      'z-index',
+      '80',
+    );
     const mobileA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();

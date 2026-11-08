@@ -350,6 +350,16 @@ a {
   background: white;
 }
 
+.private-nav:has(.account-menu[open]) {
+  z-index: 80;
+}
+
+@media (min-width: 641px) {
+  .private-nav:has(.account-menu[open]) {
+    overflow: visible;
+  }
+}
+
 .private-nav-links {
   display: flex;
   flex-direction: column;
@@ -634,6 +644,508 @@ a {
   white-space: nowrap;
 }
 
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 20px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.admin-tab {
+  min-height: 48px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 8px 14px 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-tab[aria-selected="true"] {
+  border-bottom-color: var(--leaf);
+  color: var(--ink);
+}
+
+.admin-tab:focus-visible,
+.admin-updates button:focus-visible,
+.admin-update-completion-dialog button:focus-visible,
+.admin-update-completion-dialog input:focus-visible,
+.admin-update-editor textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.admin-tab-panel {
+  min-width: 0;
+}
+
+.admin-tab-panel[hidden] {
+  display: none;
+}
+
+.admin-updates {
+  min-width: 0;
+}
+
+.admin-updates-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-updates-heading h2 {
+  margin: 0 0 4px;
+}
+
+.admin-updates-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.admin-updates button,
+.admin-update-completion-dialog button {
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 6px 10px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-updates button:disabled,
+.admin-update-completion-dialog button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.admin-updates .admin-updates-primary {
+  border-color: var(--leaf);
+  background: var(--leaf);
+  color: white;
+}
+
+.admin-updates .admin-updates-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--leaf) 88%, black);
+}
+
+.admin-updates .admin-updates-secondary {
+  background: transparent;
+}
+
+.admin-updates-feedback {
+  margin: 8px 0;
+  color: var(--tomato);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.admin-updates-feedback.is-success {
+  color: var(--leaf);
+}
+
+.admin-updates-list-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0 8px;
+}
+
+.admin-updates-table-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.admin-updates-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.admin-updates-table th,
+.admin-updates-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-updates-table th {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.admin-updates-table th:first-child,
+.admin-updates-table td[data-column="done"] {
+  width: 68px;
+  text-align: center;
+}
+
+.admin-updates-table th:nth-child(3),
+.admin-updates-table td[data-column="actions"] {
+  width: 168px;
+}
+
+.admin-updates-table th:last-child,
+.admin-updates-table td[data-column="type"] {
+  width: 94px;
+}
+
+.admin-updates-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-updates-table tbody tr.is-archived {
+  background: #f5f6f2;
+}
+
+.admin-updates-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--leaf);
+  cursor: pointer;
+}
+
+.admin-update-checkbox-hit-area {
+  display: inline-flex;
+  min-width: 48px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.admin-update-checkbox-hit-area input[type="checkbox"] {
+  margin: 0;
+}
+
+.admin-updates .admin-update-version {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px;
+  font-size: 10.67px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.admin-update-text-cell {
+  overflow-wrap: anywhere;
+}
+
+.admin-update-markdown {
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.admin-update-markdown > :first-child {
+  margin-top: 0;
+}
+
+.admin-update-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.admin-update-markdown p,
+.admin-update-markdown ul,
+.admin-update-markdown ol,
+.admin-update-markdown blockquote,
+.admin-update-markdown pre {
+  margin-block: 0 8px;
+}
+
+.admin-update-markdown ul,
+.admin-update-markdown ol {
+  padding-left: 1.5em;
+}
+
+.admin-update-markdown ul ul,
+.admin-update-markdown ol ol,
+.admin-update-markdown ul ol,
+.admin-update-markdown ol ul {
+  margin-block: 2px;
+}
+
+.admin-update-markdown h1,
+.admin-update-markdown h2,
+.admin-update-markdown h3,
+.admin-update-markdown h4,
+.admin-update-markdown h5,
+.admin-update-markdown h6 {
+  margin-block: 0 8px;
+  font-size: 1em;
+}
+
+.admin-update-markdown blockquote {
+  border-left: 3px solid var(--line-strong);
+  padding-left: 10px;
+  color: var(--muted);
+}
+
+.admin-update-markdown pre,
+.admin-update-markdown code {
+  border-radius: 3px;
+  background: var(--tin-wash);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.admin-update-markdown pre {
+  overflow-x: auto;
+  padding: 8px;
+}
+
+.admin-update-markdown code {
+  padding: 1px 3px;
+}
+
+.admin-update-markdown pre code {
+  padding: 0;
+}
+
+.admin-update-markdown a {
+  color: var(--source-link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.admin-update-kind-tag {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.admin-update-kind-tag.is-fix {
+  background: #e8eddd;
+  color: #35451f;
+}
+
+.admin-update-kind-tag.is-feature {
+  background: #deeff5;
+  color: #173d50;
+}
+
+.admin-updates .admin-update-type-picker {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.admin-update-type-picker .admin-update-kind-tag,
+.admin-update-add-tag {
+  min-height: 32px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+
+.admin-update-type-picker .admin-update-kind-tag {
+  border-style: solid;
+}
+
+.admin-update-add-tag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--leaf);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.admin-updates .admin-update-actions button {
+  min-height: 34px;
+  padding: 5px 7px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-update-archived-label {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-updates-empty {
+  margin: 14px 0 0;
+  border: 1px dashed var(--line-strong);
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.admin-update-editor {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  padding: 14px;
+  background: white;
+}
+
+.admin-update-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-update-editor-heading h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.admin-update-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.admin-update-editor-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.admin-update-editor-field > label,
+.admin-update-completion-dialog form > label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-update-editor textarea,
+.admin-update-completion-dialog input[type="text"] {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 3px;
+  padding: 9px 10px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.admin-update-editor textarea {
+  min-height: 220px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 14px;
+}
+
+.admin-update-editor textarea[aria-invalid="true"],
+.admin-update-completion-dialog input[aria-invalid="true"] {
+  border-color: var(--tomato);
+}
+
+.admin-update-editor-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-updates .admin-update-preview-panel {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  padding: 10px;
+  background: #fbfcf9;
+}
+
+.admin-update-preview-panel h4 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.admin-update-preview {
+  min-height: 180px;
+  overflow-wrap: anywhere;
+}
+
+.admin-update-preview-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-update-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.admin-update-completion-dialog {
+  width: min(390px, calc(100vw - 32px));
+  max-width: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 20px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
+}
+
+.admin-update-completion-dialog::backdrop {
+  background: rgb(20 24 19 / 45%);
+}
+
+.admin-update-completion-dialog h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+.admin-update-completion-dialog form {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-update-reopen-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.admin-update-reopen-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--leaf);
+}
+
 @media (max-width: 640px) {
   .admin-table-scroll {
     overflow: visible;
@@ -708,6 +1220,137 @@ a {
     min-height: 34px;
     padding: 5px 8px;
     font-size: 12px;
+  }
+
+  .admin-tabs {
+    margin-top: 16px;
+  }
+
+  .admin-tab {
+    flex: 1;
+    min-height: 48px;
+    padding-inline: 8px;
+  }
+
+  .admin-updates button {
+    min-height: 48px;
+  }
+
+  .admin-updates .admin-update-version,
+  .admin-updates .admin-update-type-picker {
+    min-height: 48px;
+  }
+
+  .admin-updates-heading {
+    align-items: center;
+  }
+
+  .admin-updates-heading .admin-updates-primary {
+    min-height: 44px;
+  }
+
+  .admin-updates-table-scroll {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .admin-updates-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .admin-updates-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 8px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--line);
+    padding: 10px;
+    background: white;
+  }
+
+  .admin-updates-table tbody tr.is-archived {
+    background: #f5f6f2;
+  }
+
+  .admin-updates .admin-updates-table tbody td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .admin-updates-table tbody td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted);
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .admin-updates-table td[data-column="done"] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .admin-updates-table td[data-column="type"] {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    text-align: right;
+  }
+
+  .admin-updates-table td[data-column="update"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .admin-updates-table td[data-column="actions"] {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .admin-update-actions {
+    gap: 6px;
+  }
+
+  .admin-updates .admin-update-actions button {
+    min-height: 48px;
+  }
+
+  .admin-update-editor {
+    padding: 10px;
+  }
+
+  .admin-update-editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .admin-update-editor textarea {
+    min-height: 170px;
+  }
+
+  .admin-update-preview {
+    min-height: 110px;
+  }
+
+  .admin-updates .admin-update-editor-actions button,
+  .admin-update-completion-dialog .admin-update-editor-actions button {
+    min-height: 48px;
+  }
+
+  .admin-update-completion-dialog {
+    padding: 16px;
   }
 }
 

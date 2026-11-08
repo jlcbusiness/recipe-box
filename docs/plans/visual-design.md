@@ -13,6 +13,7 @@
     - [Serves and times](#serves-and-times)
     - [Recipe list, detail, and headings](#recipe-list-detail-and-headings)
     - [Account menu](#account-menu)
+    - [Administration (DLC 28)](#administration-dlc-28)
   - [Settings (Slice 14A)](#settings-slice-14a)
     - [Current implementation](#current-implementation)
   - [Settings (Slice 14B)](#settings-slice-14b)
@@ -334,12 +335,49 @@ utility links. On mobile, show a 48px circular initials button at the right of
 the navigation. Both controls open the same account menu with the email and
 Sign out action. Admin accounts also find Administration in this menu;
 non-admin accounts do not see the link. The `/admin` page and its server actions
-continue to enforce admin authorization independently.
+continue to enforce admin authorization independently. The open account pane
+overlays the page without clipping at the sidebar edge or making the navigation
+scroll to reveal the pane; keep it above page menus.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
 compact, while labeled rows, picklist triggers, popup options, standalone
 actions, and compact inline action hit areas retain touch targets of at least
 48px.
+
+### Administration (DLC 28)
+
+The Administration page retains **Accounts** as the default tab, with the
+existing invitation and account-management workflows unchanged. The
+keyboard-operable **Accounts** and **Updates** tabs announce selection and
+support Arrow Left/Right and Home/End navigation. The page heading is
+Administration.
+
+The Updates tab presents a compact table with **Done** first, update text as
+the primary content, row actions, and the required type at the far right.
+Incomplete entries have a checkbox; completed entries show their version in a
+small 8pt label. **Fix** uses a high-contrast olive treatment and **Feature**
+uses a high-contrast light-blue treatment. Row actions stay visible rather
+than appearing only on hover. Archived entries are hidden by default; the
+archive toggle reveals them alongside active entries with a subdued surface
+and an Archived label.
+
+Add and Edit replace the list with a focused Markdown editor. The required
+type picker is a compact **+ Add tag** control until Fix or Feature is chosen.
+On desktop, the plain-text editor and safe Markdown preview share a two-column
+layout; on narrow screens they stack. The preview renders an explicit safe
+element allow-list, treats raw HTML as text, makes unsafe links inert, and
+renders image syntax as alt text. No recipe-specific autocomplete or
+interpretation is present.
+
+Completing an entry opens a titled native dialog. It accepts only a standard
+`major.minor.patch` version, preserves invalid input beside a red textual
+error, and lets an existing completion be corrected or explicitly reopened.
+The dialog and editor support Escape cancellation, move focus into the active
+control, and return focus to their trigger when canceled. Mobile rows reflow
+as labeled cards without page-level or table-level horizontal scrolling.
+Touch targets for tabs, checkboxes, type selection, and row actions are at
+least 48px while their visible controls remain compact. The Fix and Feature
+text/fill pairs exceed the 4.5:1 WCAG AA contrast threshold.
 
 ## Settings (Slice 14A)
 

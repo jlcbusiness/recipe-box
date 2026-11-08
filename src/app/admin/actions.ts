@@ -1,6 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import {
+  getAdminUpdateBodyError,
+  isAdminUpdateKind,
+  isSemverCore,
+  normalizeAdminUpdateBody,
+} from '../../lib/admin-updates/rules';
 import { processMediaDeletions } from '../../lib/media/server';
 import { createAdminClient } from '../../lib/supabase/admin';
 import { createClient } from '../../lib/supabase/server';
@@ -17,6 +23,54 @@ type AdminContext = {
 };
 
 const accountIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const adminUpdateIdPattern = accountIdPattern;
+
+type AdminUpdatesClient = Awaited<ReturnType<typeof createClient>>;
+
+async function getAdminUpdatesClient(): Promise<
+  { client: AdminUpdatesClient } | { error: string }
+> {
+  const client = await createClient();
+  const { data, error } = await client.auth.getUser();
+
+  if (error) {
+    console.error('Unable to verify administrator access for updates.', {
+      name: error.name,
+      status: error.status,
+      code: error.code,
+    });
+    return { error: 'Unable to verify administrator access. Try again.' };
+  }
+  if (!data.user) {
+    return { error: 'Sign in with an administrator account to manage updates.' };
+  }
+
+  const { data: account, error: accountError } = await client
+    .from('accounts')
+    .select('is_admin')
+    .eq('id', data.user.id)
+    .maybeSingle();
+
+  if (accountError) {
+    console.error('Unable to verify administrator access for updates.', {
+      code: accountError.code,
+    });
+    return { error: 'Unable to verify administrator access. Try again.' };
+  }
+  if (!account?.is_admin) {
+    return { error: 'Administrator access is required.' };
+  }
+
+  return { client };
+}
+
+function getAdminUpdateActionError(error: { code?: string }, fallback: string): AdminFormState {
+  if (error.code === 'PT409') {
+    return { error: 'This update changed in another session. Reload it and try again.' };
+  }
+  console.error('Admin update mutation failed.', { code: error.code });
+  return { error: fallback };
+}
 
 async function getAdminContext(): Promise<AdminContext | null> {
   const sessionClient = await createClient();
@@ -339,4 +393,162 @@ export async function deleteAccount(
       ? 'Account permanently deleted. Some photo files remain queued for cleanup.'
       : 'Account permanently deleted.',
   };
+}
+
+export async function createAdminUpdate(
+  bodyMarkdown: unknown,
+  kind: unknown,
+): Promise<AdminFormState> {
+  if (typeof bodyMarkdown !== 'string') {
+    return { error: 'Enter update text.' };
+  }
+  const bodyError = getAdminUpdateBodyError(bodyMarkdown);
+  if (bodyError) {
+    return { error: bodyError };
+  }
+  if (!isAdminUpdateKind(kind)) {
+    return { error: 'Choose Fix or Feature before submitting.' };
+  }
+
+  const access = await getAdminUpdatesClient();
+  if ('error' in access) {
+    return access;
+  }
+
+  const { error } = await access.client.rpc('admin_update_create', {
+    p_body_markdown: normalizeAdminUpdateBody(bodyMarkdown),
+    p_kind: kind,
+  });
+  if (error) {
+    return getAdminUpdateActionError(error, 'Unable to add this update. Try again.');
+  }
+
+  revalidatePath('/admin');
+  return { message: 'Update added.' };
+}
+
+export async function editAdminUpdate(
+  updateId: unknown,
+  revision: unknown,
+  bodyMarkdown: unknown,
+  kind: unknown,
+): Promise<AdminFormState> {
+  if (typeof updateId !== 'string' || !adminUpdateIdPattern.test(updateId)) {
+    return { error: 'Choose a valid update.' };
+  }
+  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
+    return { error: 'This update has an invalid revision. Reload it and try again.' };
+  }
+  if (typeof bodyMarkdown !== 'string') {
+    return { error: 'Enter update text.' };
+  }
+  const bodyError = getAdminUpdateBodyError(bodyMarkdown);
+  if (bodyError) {
+    return { error: bodyError };
+  }
+  if (!isAdminUpdateKind(kind)) {
+    return { error: 'Choose Fix or Feature before submitting.' };
+  }
+
+  const access = await getAdminUpdatesClient();
+  if ('error' in access) {
+    return access;
+  }
+
+  const { error } = await access.client.rpc('admin_update_update', {
+    p_id: updateId,
+    p_revision: revision,
+    p_body_markdown: normalizeAdminUpdateBody(bodyMarkdown),
+    p_kind: kind,
+  });
+  if (error) {
+    return getAdminUpdateActionError(error, 'Unable to save this update. Try again.');
+  }
+
+  revalidatePath('/admin');
+  return { message: 'Update saved.' };
+}
+
+export async function setAdminUpdateCompletion(
+  updateId: unknown,
+  revision: unknown,
+  completedVersion: unknown,
+): Promise<AdminFormState> {
+  if (typeof updateId !== 'string' || !adminUpdateIdPattern.test(updateId)) {
+    return { error: 'Choose a valid update.' };
+  }
+  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
+    return { error: 'This update has an invalid revision. Reload it and try again.' };
+  }
+  if (
+    completedVersion !== null &&
+    (typeof completedVersion !== 'string' || !isSemverCore(completedVersion))
+  ) {
+    return { error: 'Enter a standard major.minor.patch version.' };
+  }
+
+  const access = await getAdminUpdatesClient();
+  if ('error' in access) {
+    return access;
+  }
+
+  const { error } = await access.client.rpc('admin_update_set_completion', {
+    p_id: updateId,
+    p_revision: revision,
+    p_completed_version: completedVersion,
+  });
+  if (error) {
+    return getAdminUpdateActionError(error, 'Unable to update completion. Try again.');
+  }
+
+  revalidatePath('/admin');
+  return { message: completedVersion === null ? 'Update reopened.' : 'Update completed.' };
+}
+
+async function setAdminUpdateArchived(
+  updateId: unknown,
+  revision: unknown,
+  archived: boolean,
+): Promise<AdminFormState> {
+  if (typeof updateId !== 'string' || !adminUpdateIdPattern.test(updateId)) {
+    return { error: 'Choose a valid update.' };
+  }
+  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
+    return { error: 'This update has an invalid revision. Reload it and try again.' };
+  }
+
+  const access = await getAdminUpdatesClient();
+  if ('error' in access) {
+    return access;
+  }
+
+  const { error } = await access.client.rpc(
+    archived ? 'admin_update_archive' : 'admin_update_restore',
+    { p_id: updateId, p_revision: revision },
+  );
+  if (error) {
+    return getAdminUpdateActionError(
+      error,
+      archived
+        ? 'Unable to archive this update. Try again.'
+        : 'Unable to restore this update. Try again.',
+    );
+  }
+
+  revalidatePath('/admin');
+  return { message: archived ? 'Update archived.' : 'Update restored.' };
+}
+
+export async function archiveAdminUpdate(
+  updateId: unknown,
+  revision: unknown,
+): Promise<AdminFormState> {
+  return setAdminUpdateArchived(updateId, revision, true);
+}
+
+export async function restoreAdminUpdate(
+  updateId: unknown,
+  revision: unknown,
+): Promise<AdminFormState> {
+  return setAdminUpdateArchived(updateId, revision, false);
 }

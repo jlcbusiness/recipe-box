@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
+import { isAdminUpdateKind } from '../../lib/admin-updates/rules';
 import { createAdminClient } from '../../lib/supabase/admin';
 import { createClient } from '../../lib/supabase/server';
 import { PrivateShell } from '../private-shell';
 import { AdminAccountActions, InviteForm } from './admin-controls';
+import { AdminWorkspace } from './admin-workspace';
 
 function getAdminCredentialMetadata() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -56,15 +58,21 @@ export default async function AdminPage() {
   }
 
   const admin = createAdminClient();
-  const [authUsers, accountRows] = await Promise.all([
+  const [authUsers, accountRows, updateRows] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     admin
       .from('accounts')
       .select('id, is_admin, is_owner, sign_in_method, created_at')
       .order('created_at'),
+    supabase
+      .from('app_updates')
+      .select(
+        'id, body_markdown, kind, completed_version, is_archived, revision, created_at, updated_at',
+      )
+      .order('created_at', { ascending: false }),
   ]);
 
-  if (authUsers.error || accountRows.error) {
+  if (authUsers.error || accountRows.error || updateRows.error) {
     console.error('Unable to load account administration.', {
       adminCredential: getAdminCredentialMetadata(),
       authUsers: authUsers.error
@@ -80,10 +88,21 @@ export default async function AdminPage() {
             code: accountRows.error.code,
           }
         : null,
+      updates: updateRows.error
+        ? {
+            code: updateRows.error.code,
+          }
+        : null,
     });
     throw new Error('Unable to load account administration.');
   }
 
+  const updates = updateRows.data.map((update) => {
+    if (!isAdminUpdateKind(update.kind)) {
+      throw new Error('An application update has an unsupported classification.');
+    }
+    return { ...update, kind: update.kind };
+  });
   const accountById = new Map(accountRows.data.map((account) => [account.id, account]));
   const users = authUsers.data.users
     .map((authUser) => ({
@@ -106,54 +125,65 @@ export default async function AdminPage() {
       ]}
     >
       <main aria-labelledby="page-title" className="admin-main">
-        <p className="eyebrow">ACCOUNT ACCESS</p>
-        <h1 id="page-title">Account administration</h1>
-        <section aria-labelledby="invite-title">
-          <h2 id="invite-title">Send an invitation</h2>
-          <InviteForm />
-        </section>
-        <section aria-labelledby="accounts-title">
-          <h2 id="accounts-title">Accounts</h2>
-          <div className="admin-table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Email</th>
-                  <th scope="col">Sign-in method</th>
-                  <th scope="col">Role</th>
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(({ id, email, account: rowAccount }) => (
-                  <tr key={id}>
-                    <td className="admin-account-email">{email}</td>
-                    <td className="admin-account-sign-in">
-                      <span className="admin-account-mobile-label">Sign-in: </span>
-                      {rowAccount?.sign_in_method === 'google' ? 'Google' : 'Email'}
-                    </td>
-                    <td className="admin-account-role">
-                      <span className="admin-account-mobile-label">Role: </span>
-                      {rowAccount?.is_owner ? 'Owner' : rowAccount?.is_admin ? 'Admin' : 'Member'}
-                    </td>
-                    <td className="admin-account-actions-cell">
-                      {rowAccount && (
-                        <AdminAccountActions
-                          accountId={id}
-                          currentAccountId={data.user.id}
-                          currentIsOwner={account.is_owner}
-                          email={email}
-                          isAdmin={rowAccount.is_admin}
-                          isOwner={rowAccount.is_owner}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <p className="eyebrow">ADMINISTRATION</p>
+        <h1 id="page-title">Administration</h1>
+        <AdminWorkspace
+          accounts={
+            <>
+              <section aria-labelledby="invite-title">
+                <h2 id="invite-title">Send an invitation</h2>
+                <InviteForm />
+              </section>
+              <section aria-labelledby="accounts-title">
+                <h2 id="accounts-title">Account administration</h2>
+                <div className="admin-table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">Email</th>
+                        <th scope="col">Sign-in method</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(({ id, email, account: rowAccount }) => (
+                        <tr key={id}>
+                          <td className="admin-account-email">{email}</td>
+                          <td className="admin-account-sign-in">
+                            <span className="admin-account-mobile-label">Sign-in: </span>
+                            {rowAccount?.sign_in_method === 'google' ? 'Google' : 'Email'}
+                          </td>
+                          <td className="admin-account-role">
+                            <span className="admin-account-mobile-label">Role: </span>
+                            {rowAccount?.is_owner
+                              ? 'Owner'
+                              : rowAccount?.is_admin
+                                ? 'Admin'
+                                : 'Member'}
+                          </td>
+                          <td className="admin-account-actions-cell">
+                            {rowAccount && (
+                              <AdminAccountActions
+                                accountId={id}
+                                currentAccountId={data.user.id}
+                                currentIsOwner={account.is_owner}
+                                email={email}
+                                isAdmin={rowAccount.is_admin}
+                                isOwner={rowAccount.is_owner}
+                              />
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          }
+          updates={updates}
+        />
       </main>
     </PrivateShell>
   );

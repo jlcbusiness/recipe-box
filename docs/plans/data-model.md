@@ -32,6 +32,14 @@ to the authenticated user's identity. It is intentionally the only
 account-owned product record in that slice: it establishes and tests row-level
 security without prematurely creating recipe or other domain tables.
 
+Application updates are global internal records, not account-owned data. Only
+authenticated administrators can read them through row-level security;
+server actions independently verify the administrator and call
+authorization-checking RPCs through the session client. Each mutation appends
+an immutable audit event in the same transaction. Deleting an actor account
+sets its history actor reference to null without deleting the shared update or
+event. Updates and events are excluded from account reset and database bundles.
+
 ## Core Entities
 
 | Entity | Responsibility |
@@ -57,6 +65,8 @@ security without prematurely creating recipe or other domain tables.
 | Recipe nutrition | Per-whole-recipe manual nutrient overrides; absent fields remain derived from ingredient rows. |
 | Ingredient nutrition profile | One canonical-ingredient Settings record with a Volume or Weight serving-size basis, required Calories, optional core and approved micronutrients. |
 | Ingredient measure equivalent | One explicit average Volume and/or Weight for a quantity of one Count or one selected Things unit on a canonical ingredient. |
+| Application update | A global administrator-managed Markdown entry with exactly one required Fix or Feature classification, an optional validated completed version, archive state, timestamps, actors, and an optimistic revision. It is not owned by an account or included in account reset or bundles. |
+| Admin update event | An append-only audit event recording an administrator's create, edit, classification, completion, archive, or restore action on an Application update, with allow-listed before/after state. |
 | History event | An append-only forensic record of a saved change. |
 
 Find's Advanced Rules uses one version-1 filter envelope rather than a new

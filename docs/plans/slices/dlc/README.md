@@ -77,6 +77,13 @@ while retaining the existing single-image viewer without gallery navigation.
   will define how ingredient sets pair with instruction groups and how those
   sections flow through print and standalone exports.
 
+### Phase 6: Administration and release operations
+
+- **DLC 28 (implemented):** [Admin Updates](dlc-28-admin-updates.md) adds an
+  administrator-only Updates tab for globally shared, individually managed
+  Fix and Feature entries with versioned completion, archive/restore, and
+  append-only audit history.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for
@@ -96,6 +103,8 @@ while retaining the existing single-image viewer without gallery navigation.
 - DLC 27 depends on ingredient sets (DLC 03), instruction authoring (DLC 05),
   and the paginated document-output contract (DLC 09); its relationship and
   editor behavior must be resolved in its brief before implementation.
+- DLC 28 depends on the admin authorization boundary from Slice 2 and the
+  Markdown authoring behavior from DLC 05. It is independent of DLC 26 and 27.
 - DLC 24 means erasing account content while retaining authentication. Full
   account deletion is a separate, existing guarded administrative capability.
 

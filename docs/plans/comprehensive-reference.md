@@ -33,6 +33,7 @@ the owner has saved framing. Filter and sort
 8. [Settings, Taxonomies, and Picklists](#8-settings-taxonomies-and-picklists)
 9. [Sharing, Privacy, URLs, and Image Delivery](#9-sharing-privacy-urls-and-image-delivery)
 10. [Authentication and Account Setup](#10-authentication-and-account-setup)
+    - [Administrator-managed Updates](#106-administrator-managed-updates)
 11. [Import, Export, and Backup Bundles](#11-import-export-and-backup-bundles)
 12. [Change History and Forensic Audit](#12-change-history-and-forensic-audit)
 13. [Interaction, Keyboard-First Design, and Accessibility](#13-interaction-keyboard-first-design-and-accessibility)
@@ -1565,6 +1566,43 @@ Print requests landscape while leaving the browser dialog authoritative.
   `email_password`. Google sign-in and the same-email identity-linking conflict
   are verified before Google is enabled in Slice 25; accounts must not combine
   providers.
+
+### 10.6 Administrator-managed Updates
+
+> **Current implementation (DLC 28).** The local migration, database tests,
+> administrator workflows, and responsive browser checks are recorded in the
+> [DLC 28 brief](slices/dlc/dlc-28-admin-updates.md).
+
+- Administration has **Accounts** and **Updates** tabs. Accounts remains the
+  default and retains invitation and account management. Updates is a
+  global, admin-only internal tracker, not a public changelog.
+- An administrator can add, edit, archive, and restore individual update
+  entries. Entries are shared among admins, remain independent of any one
+  account, and are excluded from account reset and database ZIP import/export.
+- Each saved entry has Markdown body text and exactly one required
+  classification: **Fix** or **Feature**. No unclassified entry can be
+  submitted, and an existing classification can be changed but not cleared.
+  Additional classifications are not included.
+- Entry text supports safe common Markdown formatting and lists, but not raw
+  HTML, images, recipe-specific tokens, or recipe autocomplete behavior.
+- The **Done** column appears first. An incomplete entry is represented by a
+  checkbox; activating it opens a version dialog. A valid SemVer
+  `major.minor.patch` value marks the entry complete and replaces the checkbox.
+  Reject leading zeroes, a `v` prefix, prerelease identifiers, and build
+  metadata. Invalid input stays in the dialog with a textual error and
+  preserved value. Activating a completed version permits correction or
+  reopening the entry.
+- Incomplete entries sort before completed entries. Incomplete entries sort by
+  creation time descending; completed entries sort by semantic version
+  descending, then creation time descending. Archived entries are hidden by
+  default and retain the same ordering when shown.
+- Every operation independently checks the authenticated administrator on the
+  server and uses the authenticated session client to call an admin RPC. The
+  RPC repeats the admin check, and RLS denies anonymous and non-admin access.
+  Revision conflicts do not overwrite newer edits. Create, edit, type,
+  completion, archive, and restore changes append an immutable audit event;
+  actor references may become null if an account is deleted, but shared
+  updates and history remain.
 
 ---
 
