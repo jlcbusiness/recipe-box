@@ -1,11 +1,11 @@
 'use client';
 
+import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
   type KeyboardEvent,
   type FocusEvent as ReactFocusEvent,
-  type MouseEvent as ReactMouseEvent,
   useEffect,
   useId,
   useLayoutEffect,
@@ -13,7 +13,6 @@ import {
   useState,
   useTransition,
 } from 'react';
-import { renderAdminUpdateMarkdown } from '../../lib/admin-updates/markdown';
 import {
   type AdminUpdate,
   type AdminUpdateKind,
@@ -25,14 +24,7 @@ import {
 } from '../../lib/admin-updates/rules';
 import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
 import { Picklist, type PicklistOption } from '../picklist';
-import {
-  type AdminFormState,
-  archiveAdminUpdate,
-  createAdminUpdate,
-  editAdminUpdate,
-  restoreAdminUpdate,
-  setAdminUpdateCompletion,
-} from './actions';
+import { createAdminUpdate, editAdminUpdate, setAdminUpdateCompletion } from './actions';
 
 const kindOptions: PicklistOption[] = [
   { value: 'fix', label: 'Fix' },
@@ -48,25 +40,42 @@ type UpdateEditor = {
   originalKind: AdminUpdateKind | null;
 };
 
+type QueuedInlineEditor = {
+  update: AdminUpdate | null;
+  trigger: HTMLElement | null;
+  kind?: AdminUpdateKind;
+};
+
 type CompletionDialog = {
   update: AdminUpdate;
   version: string;
 };
 
-type QueuedInlineEditor = {
-  update: AdminUpdate;
-  trigger: HTMLElement | null;
-};
+function createDraftEditor(body = '', kind: AdminUpdateKind | null = null): UpdateEditor {
+  return {
+    id: null,
+    revision: null,
+    body,
+    kind,
+    originalBody: null,
+    originalKind: null,
+  };
+}
 
-function createUpdateEditor(update: AdminUpdate): UpdateEditor {
+function createUpdateEditor(update: AdminUpdate, kind = update.kind): UpdateEditor {
   return {
     id: update.id,
     revision: update.revision,
     body: update.body_markdown,
-    kind: update.kind,
+    kind,
     originalBody: update.body_markdown,
     originalKind: update.kind,
   };
+}
+
+function resizeTextarea(textarea: HTMLTextAreaElement) {
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
 }
 
 function UpdateKindTag({ kind }: { kind: AdminUpdateKind }) {
@@ -75,25 +84,20 @@ function UpdateKindTag({ kind }: { kind: AdminUpdateKind }) {
   );
 }
 
-function UpdateBody({ markdown }: { markdown: string }) {
-  return <div className="admin-update-markdown">{renderAdminUpdateMarkdown(markdown)}</div>;
-}
-
 export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   const router = useRouter();
   const idPrefix = `admin-updates-${useId().replace(/:/gu, '')}`;
-  const addButtonRef = useRef<HTMLButtonElement>(null);
-  const editButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const addTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editorTriggerRef = useRef<HTMLElement | null>(null);
   const editorTextareaRef = useRef<HTMLTextAreaElement>(null);
   const pendingCaretRef = useRef<number | null>(null);
   const inlineEditorSavingRef = useRef(false);
   const queuedInlineEditorRef = useRef<QueuedInlineEditor | null>(null);
-  const cancelledInlineEditorIdRef = useRef<string | null>(null);
+  const cancelledInlineEditorKeyRef = useRef<string | null>(null);
   const completionDialogRef = useRef<HTMLDialogElement>(null);
   const completionInputRef = useRef<HTMLInputElement>(null);
   const completionTriggerRef = useRef<HTMLElement | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showDone, setShowDone] = useState(false);
   const [editor, setEditor] = useState<UpdateEditor | null>(null);
   const [completion, setCompletion] = useState<CompletionDialog | null>(null);
   const [markIncomplete, setMarkIncomplete] = useState(false);
@@ -102,7 +106,6 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   const [message, setMessage] = useState('');
   const [pending, startTransition] = useTransition();
   const editorKey = editor ? (editor.id ?? 'new') : null;
-  const isAdding = editor?.id === null;
 
   useEffect(() => {
     if (editorKey && !pending) {
@@ -117,8 +120,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       return;
     }
 
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    resizeTextarea(textarea);
     const caret = pendingCaretRef.current;
     if (caret !== null) {
       textarea.setSelectionRange(caret, caret);
@@ -148,7 +150,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   }, [completionUpdateId]);
 
   const visibleUpdates = sortAdminUpdates(
-    updates.filter((update) => showArchived || !update.is_archived),
+    updates.filter((update) => showDone || update.completed_version === null),
   );
 
   function rememberFocus(target: HTMLElement | null = null) {
@@ -156,39 +158,44 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       target ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
   }
 
-  function openEditor(update?: AdminUpdate, trigger?: HTMLElement | null) {
-    if (update && editor && editor.id !== null && editor.id !== update.id) {
+  function openEditor(
+    update: AdminUpdate | null = null,
+    trigger?: HTMLElement | null,
+    kind?: AdminUpdateKind,
+  ) {
+    const targetId = update?.id ?? null;
+    if (pending || inlineEditorSavingRef.current) {
+      return;
+    }
+    if (editor && editor.id !== targetId) {
       queuedInlineEditorRef.current = {
         update,
         trigger:
           trigger ??
           (document.activeElement instanceof HTMLElement ? document.activeElement : null),
+        kind,
       };
       setError('');
       setMessage('');
       return;
     }
-    if (pending || inlineEditorSavingRef.current) {
+    if (editor?.id === targetId) {
+      if (kind) {
+        setEditor((current) => (current?.id === targetId ? { ...current, kind } : current));
+      }
       return;
     }
-    rememberFocus(trigger);
+
+    rememberFocus(trigger ?? null);
     setError('');
     setMessage('');
     setEditor(
-      update
-        ? createUpdateEditor(update)
-        : {
-            id: null,
-            revision: null,
-            body: '',
-            kind: null,
-            originalBody: null,
-            originalKind: null,
-          },
+      update ? createUpdateEditor(update, kind ?? update.kind) : createDraftEditor('', kind),
     );
   }
 
   function closeEditor() {
+    queuedInlineEditorRef.current = null;
     setEditor(null);
     setError('');
     const trigger = editorTriggerRef.current;
@@ -196,13 +203,13 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       if (trigger?.isConnected) {
         trigger.focus();
       } else {
-        addButtonRef.current?.focus();
+        addTextareaRef.current?.focus();
       }
     });
   }
 
   function openCompletion(update: AdminUpdate) {
-    if (pending || inlineEditorSavingRef.current || (editor && editor.id !== null)) {
+    if (pending || inlineEditorSavingRef.current || editor) {
       return;
     }
     completionTriggerRef.current =
@@ -218,72 +225,47 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     setVersionError('');
   }
 
-  function submitEditor(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!editor || editor.id !== null) {
-      return;
-    }
-    const bodyError = getAdminUpdateBodyError(editor.body);
-    if (bodyError) {
-      setError(bodyError);
-      return;
-    }
-    if (!editor.kind) {
-      setError('Choose Fix or Feature before submitting.');
-      return;
-    }
-
-    setError('');
-    setMessage('');
-    startTransition(async () => {
-      const result =
-        editor.id && editor.revision !== null
-          ? await editAdminUpdate(editor.id, editor.revision, editor.body, editor.kind)
-          : await createAdminUpdate(editor.body, editor.kind);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      setMessage(result.message ?? 'Update saved.');
-      closeEditor();
-      router.refresh();
-    });
-  }
-
-  function cancelInlineEditor(updateId: string) {
+  function cancelInlineEditor(updateId: string | null) {
     queuedInlineEditorRef.current = null;
-    cancelledInlineEditorIdRef.current = updateId;
+    const key = updateId ?? 'new';
+    cancelledInlineEditorKeyRef.current = key;
     closeEditor();
     window.requestAnimationFrame(() => {
-      if (cancelledInlineEditorIdRef.current === updateId) {
-        cancelledInlineEditorIdRef.current = null;
+      if (cancelledInlineEditorKeyRef.current === key) {
+        cancelledInlineEditorKeyRef.current = null;
       }
     });
   }
 
-  function leaveInlineEditor(updateId: string) {
+  function leaveInlineEditor(updateId: string | null) {
     const queuedEditor = queuedInlineEditorRef.current;
     queuedInlineEditorRef.current = null;
     if (queuedEditor) {
       rememberFocus(queuedEditor.trigger);
-      setEditor(createUpdateEditor(queuedEditor.update));
+      setEditor(
+        queuedEditor.update
+          ? createUpdateEditor(queuedEditor.update, queuedEditor.kind)
+          : createDraftEditor('', queuedEditor.kind ?? null),
+      );
       return;
     }
     setEditor((activeEditor) => (activeEditor?.id === updateId ? null : activeEditor));
+    setError('');
   }
 
   function saveInlineEditorOnBlur(
-    event: ReactFocusEvent<HTMLFieldSetElement>,
-    updateId: string,
+    event: ReactFocusEvent<HTMLLIElement>,
+    updateId: string | null,
     picklistScope: string,
   ) {
-    if (cancelledInlineEditorIdRef.current === updateId) {
-      cancelledInlineEditorIdRef.current = null;
+    const key = updateId ?? 'new';
+    if (cancelledInlineEditorKeyRef.current === key) {
+      cancelledInlineEditorKeyRef.current = null;
       return;
     }
 
     const relatedTarget = event.relatedTarget;
-    if (event.currentTarget.contains(relatedTarget as Node | null)) {
+    if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
       return;
     }
     if (
@@ -308,6 +290,10 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       if (!currentEditor || currentEditor.id !== updateId) {
         return;
       }
+      if (updateId === null && !currentEditor.body.trim() && !currentEditor.kind) {
+        leaveInlineEditor(updateId);
+        return;
+      }
 
       const bodyError = getAdminUpdateBodyError(currentEditor.body);
       if (bodyError) {
@@ -315,13 +301,19 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
         setError(bodyError);
         return;
       }
-      if (currentEditor.revision === null || currentEditor.kind === null) {
+      const kind = currentEditor.kind;
+      if (!kind) {
+        queuedInlineEditorRef.current = null;
+        setError('Choose Fix or Feature before saving.');
+        return;
+      }
+      if (updateId !== null && currentEditor.revision === null) {
         queuedInlineEditorRef.current = null;
         setError('This update cannot be saved. Reload the page and try again.');
         return;
       }
-
       if (
+        updateId !== null &&
         normalizeAdminUpdateBody(currentEditor.body) === currentEditor.originalBody &&
         currentEditor.kind === currentEditor.originalKind
       ) {
@@ -333,12 +325,10 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       inlineEditorSavingRef.current = true;
       setError('');
       startTransition(async () => {
-        const result = await editAdminUpdate(
-          updateId,
-          currentEditor.revision,
-          currentEditor.body,
-          currentEditor.kind,
-        );
+        const result =
+          updateId !== null && currentEditor.revision !== null
+            ? await editAdminUpdate(updateId, currentEditor.revision, currentEditor.body, kind)
+            : await createAdminUpdate(currentEditor.body, kind);
         inlineEditorSavingRef.current = false;
         if (result.error) {
           queuedInlineEditorRef.current = null;
@@ -350,6 +340,34 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
         router.refresh();
       });
     });
+  }
+
+  function setUpdateKind(
+    update: AdminUpdate | null,
+    kind: AdminUpdateKind,
+    trigger: HTMLElement | null,
+  ) {
+    const targetId = update?.id ?? null;
+    if (editor?.id === targetId) {
+      setEditor((current) => (current?.id === targetId ? { ...current, kind } : current));
+      setError('');
+      return;
+    }
+    openEditor(update, trigger, kind);
+  }
+
+  function setUpdateBody(update: AdminUpdate | null, body: string) {
+    const targetId = update?.id ?? null;
+    setEditor((current) => {
+      if (current?.id === targetId) {
+        return { ...current, body };
+      }
+      if (current) {
+        return current;
+      }
+      return update ? { ...createUpdateEditor(update), body } : createDraftEditor(body);
+    });
+    setError('');
   }
 
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -368,21 +386,12 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     }
   }
 
-  function runListAction(action: () => Promise<AdminFormState>) {
-    if (pending || inlineEditorSavingRef.current || (editor && editor.id !== null)) {
-      return;
+  function handleInlineKeyDown(event: KeyboardEvent<HTMLLIElement>, updateId: string | null) {
+    if (event.key === 'Escape' && !pending) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelInlineEditor(updateId);
     }
-    setError('');
-    setMessage('');
-    startTransition(async () => {
-      const result = await action();
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      setMessage(result.message ?? 'Update saved.');
-      router.refresh();
-    });
   }
 
   function submitCompletion(event: FormEvent<HTMLFormElement>) {
@@ -418,364 +427,171 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   const editorErrorId = `${idPrefix}-editor-error`;
   const versionErrorId = `${idPrefix}-version-error`;
 
-  function handleUpdateBodyClick(event: ReactMouseEvent<HTMLFieldSetElement>, update: AdminUpdate) {
-    if (event.target instanceof Element && event.target.closest('a')) {
-      return;
-    }
-    if (editor && editor.id !== null && editor.id !== update.id) {
-      openEditor(update, editButtonRefs.current.get(update.id));
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-      return;
-    }
-    openEditor(update, editButtonRefs.current.get(update.id));
+  function renderUpdateRow(update: AdminUpdate | null) {
+    const updateId = update?.id ?? null;
+    const isEditing = editor?.id === updateId;
+    const isNew = update === null;
+    const scope = `${idPrefix}-kind-${updateId ?? 'new'}`;
+    const rowError = isEditing ? error : '';
+    const kind = isEditing ? (editor?.kind ?? null) : (update?.kind ?? null);
+
+    return (
+      <li
+        className={`admin-update-row${isNew ? ' is-new' : ''}`}
+        key={update?.id ?? 'new'}
+        onBlur={isEditing ? (event) => saveInlineEditorOnBlur(event, updateId, scope) : undefined}
+        onKeyDown={isEditing ? (event) => handleInlineKeyDown(event, updateId) : undefined}
+      >
+        <div className="admin-update-done">
+          {update?.completed_version ? (
+            <button
+              aria-label={`Done in ${update.completed_version}`}
+              className="admin-update-version"
+              data-update-done={update.id}
+              disabled={pending}
+              type="button"
+              onClick={() => openCompletion(update)}
+            >
+              {update.completed_version}
+            </button>
+          ) : update ? (
+            <label className="admin-update-checkbox-hit-area">
+              <input
+                aria-label={`Mark "${update.body_markdown.slice(0, 60)}" done`}
+                checked={false}
+                data-update-done={update.id}
+                disabled={pending}
+                type="checkbox"
+                onChange={() => openCompletion(update)}
+              />
+            </label>
+          ) : null}
+        </div>
+        <div className="admin-update-body">
+          <textarea
+            aria-describedby={rowError ? editorErrorId : undefined}
+            aria-invalid={Boolean(rowError) || undefined}
+            aria-label={isNew ? 'Add update' : 'Update text'}
+            autoCapitalize="sentences"
+            className="admin-update-inline-textarea"
+            placeholder={isNew ? 'Add update...' : undefined}
+            readOnly={!isNew && !isEditing}
+            ref={(element) => {
+              if (isEditing) {
+                editorTextareaRef.current = element;
+              }
+              if (isNew) {
+                addTextareaRef.current = element;
+              }
+              if (element) {
+                resizeTextarea(element);
+              }
+            }}
+            rows={1}
+            value={isEditing ? (editor?.body ?? '') : (update?.body_markdown ?? '')}
+            onChange={(event) => setUpdateBody(update, event.currentTarget.value)}
+            onFocus={(event) => {
+              if (!isEditing) {
+                openEditor(update, event.currentTarget);
+              }
+            }}
+            onClick={(event) => {
+              if (!isEditing && update) {
+                openEditor(update, event.currentTarget);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (isEditing) {
+                if (event.key === 'Escape' && !pending) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  cancelInlineEditor(updateId);
+                } else {
+                  handleEditorKeyDown(event);
+                }
+              } else if (update && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                openEditor(update, event.currentTarget);
+              }
+            }}
+          />
+          {rowError && (
+            <p className="admin-updates-feedback" id={editorErrorId} role="alert">
+              {rowError}
+            </p>
+          )}
+        </div>
+        <div className="admin-update-kind">
+          <Picklist
+            className="admin-update-type-picker"
+            disabled={pending}
+            label={kind === 'fix' ? 'Fix' : kind === 'feature' ? 'Feature' : '+ Add tag'}
+            options={kindOptions}
+            scope={scope}
+            showArrow={false}
+            sizeToContent={false}
+            value={(isEditing ? editor?.kind : update?.kind) ?? ''}
+            onSelect={(value) => {
+              if (isAdminUpdateKind(value)) {
+                setUpdateKind(
+                  update,
+                  value,
+                  document.activeElement instanceof HTMLElement ? document.activeElement : null,
+                );
+              }
+            }}
+          >
+            {kind ? (
+              <UpdateKindTag kind={kind} />
+            ) : (
+              <span className="admin-update-add-tag">+ Add tag</span>
+            )}
+          </Picklist>
+        </div>
+      </li>
+    );
   }
 
   return (
     <section aria-labelledby={`${idPrefix}-title`} className="admin-updates">
       <div className="admin-updates-heading">
-        <div>
-          <h2 id={`${idPrefix}-title`}>Application updates</h2>
-          <p>Shared release work for administrators.</p>
-        </div>
-        {!isAdding && (
-          <button
-            className="admin-updates-primary"
-            disabled={pending || Boolean(editor && editor.id !== null)}
-            ref={addButtonRef}
-            type="button"
-            onClick={() => {
-              if (!inlineEditorSavingRef.current) {
-                openEditor();
-              }
-            }}
-          >
-            Add update
-          </button>
-        )}
+        <h2 id={`${idPrefix}-title`}>Application updates</h2>
+        <button
+          aria-label={showDone ? 'Hide done updates' : 'Show done updates'}
+          aria-pressed={showDone}
+          className="admin-updates-visibility-toggle"
+          disabled={pending}
+          title={showDone ? 'Hide done updates' : 'Show done updates'}
+          type="button"
+          onClick={() => setShowDone((shown) => !shown)}
+        >
+          {showDone ? (
+            <EyeOff aria-hidden="true" size={18} />
+          ) : (
+            <Eye aria-hidden="true" size={18} />
+          )}
+        </button>
       </div>
 
-      {message && (
-        <p className="admin-updates-feedback is-success" role="status">
-          {message}
-        </p>
-      )}
+      <p className="visually-hidden" role="status">
+        {message}
+      </p>
       {error && !editor && (
         <p className="admin-updates-feedback" role="alert">
           {error}
         </p>
       )}
 
-      {isAdding && editor ? (
-        <form
-          aria-busy={pending}
-          className="admin-update-editor"
-          onKeyDown={(event) => {
-            if (event.key === 'Escape' && !pending) {
-              event.preventDefault();
-              closeEditor();
-            }
-          }}
-          onSubmit={submitEditor}
-        >
-          <div className="admin-update-editor-heading">
-            <h3>Add update</h3>
-            <Picklist
-              className="admin-update-type-picker"
-              disabled={pending}
-              label={
-                editor.kind === 'fix' ? 'Fix' : editor.kind === 'feature' ? 'Feature' : '+ Add tag'
-              }
-              options={kindOptions}
-              showArrow={false}
-              sizeToContent={false}
-              value={editor.kind ?? ''}
-              onSelect={(value) => {
-                if (isAdminUpdateKind(value)) {
-                  setEditor((current) => (current ? { ...current, kind: value } : current));
-                  setError('');
-                }
-              }}
-            >
-              {editor.kind ? (
-                <UpdateKindTag kind={editor.kind} />
-              ) : (
-                <span className="admin-update-add-tag">+ Add tag</span>
-              )}
-            </Picklist>
-          </div>
-
-          <div className="admin-update-editor-grid">
-            <div className="admin-update-editor-field">
-              <label htmlFor={`${idPrefix}-body`}>Update text</label>
-              <textarea
-                aria-describedby={error ? editorErrorId : undefined}
-                aria-invalid={Boolean(error) || undefined}
-                autoCapitalize="sentences"
-                id={`${idPrefix}-body`}
-                ref={editorTextareaRef}
-                value={editor.body}
-                onChange={(event) => {
-                  const body = event.currentTarget.value;
-                  setEditor((current) => (current ? { ...current, body } : current));
-                  setError('');
-                }}
-                onKeyDown={handleEditorKeyDown}
-              />
-              <div className="admin-update-editor-meta">
-                <span>Markdown supported; raw HTML and images are not.</span>
-                <span>{Array.from(normalizeAdminUpdateBody(editor.body)).length}/5,000</span>
-              </div>
-              {error && (
-                <p className="admin-updates-feedback" id={editorErrorId} role="alert">
-                  {error}
-                </p>
-              )}
-            </div>
-            <section aria-label="Preview" className="admin-update-preview-panel">
-              <h4>Preview</h4>
-              <div className="admin-update-preview">
-                {editor.body.trim() ? (
-                  <UpdateBody markdown={editor.body} />
-                ) : (
-                  <p className="admin-update-preview-empty">Your preview will appear here.</p>
-                )}
-              </div>
-            </section>
-          </div>
-
-          <div className="admin-update-editor-actions">
-            <button disabled={pending} type="button" onClick={closeEditor}>
-              Cancel
-            </button>
-            <button className="admin-updates-primary" disabled={pending} type="submit">
-              {pending ? 'Submitting…' : 'Submit update'}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <>
-          <div className="admin-updates-list-controls">
-            <button
-              aria-pressed={showArchived}
-              className="admin-updates-secondary"
-              disabled={pending}
-              type="button"
-              onClick={() => {
-                if (!inlineEditorSavingRef.current && !(editor && editor.id !== null)) {
-                  setShowArchived((shown) => !shown);
-                }
-              }}
-            >
-              {showArchived ? 'Hide archived updates' : 'Show archived updates'}
-            </button>
-          </div>
-          {visibleUpdates.length ? (
-            <div className="admin-updates-table-scroll">
-              <table className="admin-updates-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Done</th>
-                    <th scope="col">Update</th>
-                    <th scope="col">Actions</th>
-                    <th scope="col">Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleUpdates.map((update) => (
-                    <tr className={update.is_archived ? 'is-archived' : undefined} key={update.id}>
-                      <td data-column="done" data-label="Done">
-                        {update.completed_version ? (
-                          <button
-                            aria-label={`Done in ${update.completed_version}`}
-                            className="admin-update-version"
-                            data-update-done={update.id}
-                            disabled={pending}
-                            type="button"
-                            onClick={openCompletion.bind(null, update)}
-                          >
-                            {update.completed_version}
-                          </button>
-                        ) : (
-                          <label className="admin-update-checkbox-hit-area">
-                            <input
-                              aria-label="Mark update done"
-                              checked={false}
-                              data-update-done={update.id}
-                              disabled={pending}
-                              type="checkbox"
-                              onChange={() => openCompletion(update)}
-                            />
-                          </label>
-                        )}
-                      </td>
-                      <td
-                        className="admin-update-text-cell"
-                        data-column="update"
-                        data-label="Update"
-                      >
-                        {editor?.id === update.id ? (
-                          <fieldset
-                            aria-busy={pending}
-                            aria-label="Edit update"
-                            className="admin-update-inline-editor"
-                            onBlur={(event) =>
-                              saveInlineEditorOnBlur(
-                                event,
-                                update.id,
-                                `${idPrefix}-kind-${update.id}`,
-                              )
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key === 'Escape' && !pending) {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                cancelInlineEditor(update.id);
-                              }
-                            }}
-                          >
-                            <div className="admin-update-inline-editor-heading">
-                              <Picklist
-                                className="admin-update-type-picker"
-                                disabled={pending}
-                                label={
-                                  editor.kind === 'fix'
-                                    ? 'Fix'
-                                    : editor.kind === 'feature'
-                                      ? 'Feature'
-                                      : '+ Add tag'
-                                }
-                                options={kindOptions}
-                                scope={`${idPrefix}-kind-${update.id}`}
-                                showArrow={false}
-                                sizeToContent={false}
-                                value={editor.kind ?? ''}
-                                onSelect={(value) => {
-                                  if (isAdminUpdateKind(value)) {
-                                    setEditor((current) =>
-                                      current?.id === update.id
-                                        ? { ...current, kind: value }
-                                        : current,
-                                    );
-                                    setError('');
-                                  }
-                                }}
-                              >
-                                {editor.kind ? (
-                                  <UpdateKindTag kind={editor.kind} />
-                                ) : (
-                                  <span className="admin-update-add-tag">+ Add tag</span>
-                                )}
-                              </Picklist>
-                              <span>Move focus outside to save; press Escape to discard.</span>
-                            </div>
-                            <textarea
-                              aria-describedby={error ? editorErrorId : undefined}
-                              aria-invalid={Boolean(error) || undefined}
-                              aria-label="Update text"
-                              autoCapitalize="sentences"
-                              className="admin-update-inline-textarea"
-                              disabled={pending}
-                              ref={editorTextareaRef}
-                              rows={1}
-                              value={editor.body}
-                              onChange={(event) => {
-                                const body = event.currentTarget.value;
-                                setEditor((current) =>
-                                  current?.id === update.id ? { ...current, body } : current,
-                                );
-                                setError('');
-                              }}
-                              onKeyDown={handleEditorKeyDown}
-                            />
-                            {error && (
-                              <p className="admin-updates-feedback" id={editorErrorId} role="alert">
-                                {error}
-                              </p>
-                            )}
-                          </fieldset>
-                        ) : (
-                          <>
-                            {/* biome-ignore lint/a11y/useKeyWithClickEvents: The row's Edit update button is the keyboard equivalent of this pointer shortcut. */}
-                            <fieldset
-                              aria-label="Edit update text"
-                              className="admin-update-text-edit-target"
-                              title="Click to edit this update"
-                              onClick={(event) => handleUpdateBodyClick(event, update)}
-                            >
-                              <UpdateBody markdown={update.body_markdown} />
-                            </fieldset>
-                          </>
-                        )}
-                        {update.is_archived && (
-                          <span className="admin-update-archived-label">Archived</span>
-                        )}
-                      </td>
-                      <td
-                        className="admin-update-actions-cell"
-                        data-column="actions"
-                        data-label="Actions"
-                      >
-                        <div className="admin-update-actions">
-                          <button
-                            disabled={pending}
-                            ref={(element) => {
-                              if (element) {
-                                editButtonRefs.current.set(update.id, element);
-                              } else {
-                                editButtonRefs.current.delete(update.id);
-                              }
-                            }}
-                            type="button"
-                            onClick={() => {
-                              if (editor?.id === update.id) {
-                                editorTextareaRef.current?.focus();
-                              } else {
-                                openEditor(update);
-                              }
-                            }}
-                          >
-                            {editor?.id === update.id ? 'Editing update' : 'Edit update'}
-                          </button>
-                          {update.is_archived ? (
-                            <button
-                              disabled={pending}
-                              type="button"
-                              onClick={() =>
-                                runListAction(() => restoreAdminUpdate(update.id, update.revision))
-                              }
-                            >
-                              Restore update
-                            </button>
-                          ) : (
-                            <button
-                              disabled={pending}
-                              type="button"
-                              onClick={() =>
-                                runListAction(() => archiveAdminUpdate(update.id, update.revision))
-                              }
-                            >
-                              Archive update
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="admin-update-kind-cell" data-column="type" data-label="Type">
-                        <UpdateKindTag kind={update.kind} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="admin-updates-empty" role="status">
-              showArchived ? 'No updates to show.' : 'No updates yet. Add one to get started.'
-            </p>
-          )}
-        </>
-      )}
+      <div className="admin-update-list">
+        <div className="admin-update-list-header">
+          <span>Done</span>
+          <span>Type</span>
+        </div>
+        <ul aria-label="Update entries" className="admin-update-list-items">
+          {renderUpdateRow(null)}
+          {visibleUpdates.map((update) => renderUpdateRow(update))}
+        </ul>
+      </div>
 
       {completion && (
         <dialog
@@ -827,7 +643,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
                 Cancel
               </button>
               <button className="admin-updates-primary" disabled={pending} type="submit">
-                {pending ? 'Submitting…' : 'Submit version'}
+                {pending ? 'Submitting...' : 'Submit version'}
               </button>
             </div>
           </form>

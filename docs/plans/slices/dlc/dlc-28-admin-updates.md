@@ -39,9 +39,9 @@ regular signed-in users or anonymous visitors.
 - The new content is globally shared application data, not owned by an
   account. Any administrator may read and manage it. It is not a user-facing
   changelog, email notification, package-version source, or account backup.
-- Provide **Add update**, individual edit, Archive, and Restore actions.
-  Archived entries are hidden by default and available through an explicit
-  archived-items control. Do not hard-delete an entry or its audit history.
+- Keep the Updates pane focused on the list; do not show Add, Edit, Archive,
+  or Restore buttons. Preserve archive state and audit history in the database,
+  but show previously archived entries as ordinary rows.
 - Each entry contains Markdown text and exactly one required type: **Fix** or
   **Feature**. **Tweak** and other types are deferred and excluded from this slice.
 - The type control is a compact **+ Add tag** pill while a new entry is being
@@ -50,7 +50,7 @@ regular signed-in users or anonymous visitors.
   cannot be cleared. A draft cannot be submitted without choosing one.
   Labels remain visible independently of color, and both fills/text meet the
   project's contrast target.
-- The **Done** column is first. An incomplete entry has a native checkbox;
+- **Done** is the leftmost control. An incomplete entry has a native checkbox;
   checking it opens a dialog with a required version field, **Cancel**, and
   **Submit**. Completion is staged until valid submission. Accept only the
   SemVer core `major.minor.patch` (for example `1.2.3`): no leading zeroes in
@@ -61,26 +61,25 @@ regular signed-in users or anonymous visitors.
   opens the same dialog to correct it or explicitly mark the entry incomplete.
 - Sort incomplete entries first, newest-created first. Sort completed entries
   by semantic version descending (numeric components, not string order), then
-  creation time descending. Archived entries are sorted the same way when
-  shown. Manual row reordering is not part of this slice.
-- Use a semantic table/list with a **Done** header and a rightmost **Type**
-  column. Keep update text primary, display type pills at the far right, and
-  keep row controls compact without making actions hover-only. On narrow
-  screens, reflow rows without page-level horizontal scrolling.
+  creation time descending. Archive state does not affect order or visibility.
+  Manual row reordering is not part of this slice.
+- Use a semantic list with **Done** and **Type** headings. A persistent blank
+  Markdown field at the top creates entries; each saved row keeps its
+  completion control on the left, text in the center, and type pill at the far
+  right. Keep controls compact and prevent page-level horizontal scrolling.
+- Hide completed entries by default. A compact eye/eye-off control toggles
+  their visibility; incomplete entries remain visible.
 
 ## Editor and content behavior
 
-- **Add update** opens a focused editor pane with explicit **Cancel** and
-  **Submit** actions. Existing entries can be edited directly in the list:
-  clicking their text or choosing **Edit update** replaces that row's text
-  with an inline editor and the required type picker. Moving focus outside
-  both inline controls saves the body and type together; **Escape** discards
-  the inline draft. Switching to another entry saves the current valid draft
-  before opening the next one.
+- The blank field at the top of the list is always available for a new entry.
+  Clicking an existing text field edits it in place; its type pill stays
+  alongside it. Moving focus outside the row saves the body and type together;
+  **Escape** discards the inline draft. Switching to another entry saves the
+  current valid draft before opening the next one.
 - Validate the inline draft before saving. Keep invalid text or server errors
-  visible in the row with the draft intact, and report successful saves through
-  the Updates status message. Add-pane cancellation discards its draft;
-  successful submission returns to the list and announces success.
+  visible in the row with the draft intact. Announce successful saves to
+  assistive technology without adding routine helper text to the pane.
 - Reuse the instruction editor's plain-text Markdown authoring behavior:
   paragraphs, headings, emphasis, links, ordered and unordered lists, nested
   list continuation, and keyboard text editing. This is not a rich-text
@@ -161,9 +160,12 @@ regular signed-in users or anonymous visitors.
 
 ### Entry lifecycle and classification
 
-- Admins can add and edit individual entries, archive them, reveal archived
-  entries, and restore them. Archived entries are hidden by default and
-  history remains append-only.
+- Admins can add and edit individual entries from the list. The persistent
+  blank field appears above saved rows; each row keeps completion, text, and
+  type controls in the left-center-right order. Previously archived entries
+  appear as ordinary rows; archive history remains append-only.
+- The eye/eye-off control hides or reveals completed entries. Incomplete
+  entries remain visible in either state.
 - New and edited entries cannot be submitted without exactly one Fix or
   Feature classification. The in-progress **+ Add tag** control is discoverable
   with keyboard and touch, selecting a type changes its text and color, and
@@ -186,17 +188,17 @@ regular signed-in users or anonymous visitors.
 
 ### Presentation, reliability, and accessibility
 
-- Markdown formatting and safe links render consistently in the list and
-  editor preview, without interpreting recipe-specific tokens or raw HTML.
-- Empty, loading, saving, archive, restore, conflict, and server-error states
-  are understandable and recoverable. Cancel never saves partial changes.
+- The centered text field is a plain Markdown editor without preview or
+  recipe-specific interpretation.
+- Empty, saving, conflict, and server-error states are understandable and
+  recoverable. Escape never saves partial changes.
 - Desktop and mobile browser checks cover representative content and widths
   around the existing 640px navigation breakpoint, with no page overflow.
   Fix/Feature pills meet text contrast requirements; the version label remains
   legible at its compact target size.
-- Automated accessibility checks cover tabs, editor, type selection,
-  completion dialog, focus return, semantic table headings, and error
-  announcements in Chromium and Fold 6.
+- Automated accessibility checks cover tabs, inline editing, type selection,
+  completion dialog, focus return, list headings, and error announcements in
+  Chromium and Fold 6.
 
 ## Implementation and verification
 
@@ -204,11 +206,13 @@ regular signed-in users or anonymous visitors.
 - Local pgTAP migration coverage passes all 29 assertions, including
   constraints, audit events, revision conflicts, RLS, and actor deletion.
 - The Chromium and Fold 6 browser suite passes all four admin/non-admin cases.
-  It covers create/edit, required classification, nested-list keyboard entry,
-  completion validation/correction/reopen, archive/restore, Axe, responsive
-  widths, overflow, and mobile hit targets.
-- `npm run typecheck`, the focused Biome checks, and `npm run build` pass.
-  Full-repository Biome and Markdown lint are also run during final review.
+  It covers top-draft creation, nested-list keyboard continuation, inline
+  editing and Escape cancellation, required classification, completion
+  validation/correction/reopen, role isolation, Axe, responsive widths,
+  overflow, and mobile hit targets.
+- `npm run typecheck`, `npm run build`, and `npm run lint:md` pass. Repository
+  Biome lint exits successfully with warnings; focused checks for changed
+  TypeScript and CSS formatting pass.
 - Screenshots were inspected at desktop and Fold 6 widths. Browser assertions
   verify the page and list do not overflow at 641px, 640px, and 390px.
 - The comprehensive reference, data model, DLC roadmap, and visual design

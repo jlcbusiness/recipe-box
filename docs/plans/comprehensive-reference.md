@@ -1576,14 +1576,17 @@ Print requests landscape while leaving the browser dialog authoritative.
 - Administration has **Accounts** and **Updates** tabs. Accounts remains the
   default and retains invitation and account management. Updates is a
   global, admin-only internal tracker, not a public changelog.
-- An administrator can add, edit, archive, and restore individual update
-  entries. Entries are shared among admins, remain independent of any one
-  account, and are excluded from account reset and database ZIP import/export.
-- **Add update** uses a focused editor pane with explicit submit/cancel. Existing
-  entries edit in place when their text is clicked or **Edit update** is
-  activated; moving focus outside the inline body and type controls saves the
-  draft, while Escape discards it. Invalid or failed saves retain the draft in
-  the row, and switching rows saves a valid draft before opening the next one.
+- An administrator can add and edit individual update entries. Entries are
+  shared among admins, remain independent of any one account, and are excluded
+  from account reset and database ZIP import/export. Archive data and audit
+  history remain stored, but the Updates interface has no archive or restore
+  controls and displays previously archived entries as ordinary rows.
+- The Updates list has a persistent blank Markdown field at the top. Each row
+  has a completion control on the left, a directly editable text field in the
+  center, and its required type pill on the right. Moving focus outside a row
+  saves its valid draft; Escape discards it. Invalid or failed saves retain the
+  draft in the row, and switching rows saves a valid draft before opening the
+  next one.
 - Each saved entry has Markdown body text and exactly one required
   classification: **Fix** or **Feature**. No unclassified entry can be
   submitted, and an existing classification can be changed but not cleared.
@@ -1599,8 +1602,9 @@ Print requests landscape while leaving the browser dialog authoritative.
   reopening the entry.
 - Incomplete entries sort before completed entries. Incomplete entries sort by
   creation time descending; completed entries sort by semantic version
-  descending, then creation time descending. Archived entries are hidden by
-  default and retain the same ordering when shown.
+  descending, then creation time descending. Completed entries are hidden by
+  default and a compact eye/eye-off control toggles their visibility. Archive
+  state does not affect whether an entry appears.
 - Every operation independently checks the authenticated administrator on the
   server and uses the authenticated session client to call an admin RPC. The
   RPC repeats the admin check, and RLS denies anonymous and non-admin access.

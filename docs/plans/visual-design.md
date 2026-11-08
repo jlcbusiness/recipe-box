@@ -352,37 +352,34 @@ keyboard-operable **Accounts** and **Updates** tabs announce selection and
 support Arrow Left/Right and Home/End navigation. The page heading is
 Administration.
 
-The Updates tab presents a compact table with **Done** first, update text as
-the primary content, row actions, and the required type at the far right.
-Incomplete entries have a checkbox; completed entries show their version in a
-small 8pt label. **Fix** uses a high-contrast olive treatment and **Feature**
-uses a high-contrast light-blue treatment. Row actions stay visible rather
-than appearing only on hover. Archived entries are hidden by default; the
-archive toggle reveals them alongside active entries with a subdued surface
-and an Archived label.
+The Updates tab uses a compact list with **Done** and **Type** headings. A
+persistent blank Markdown field sits at the top for adding entries. Each row
+has a completion control on the left, a directly editable text field in the
+center, and the required type pill on the right. Incomplete entries have a
+checkbox; completed entries show their version in a small 8pt label. **Fix**
+uses a high-contrast olive treatment and **Feature** uses a high-contrast
+light-blue treatment.
 
-**Add update** replaces the list with a focused Markdown editor and preview.
-Existing update text is a clickable pointer shortcut; the row's **Edit update**
-button provides keyboard access. Either action replaces the text in its row
-with an inline Markdown editor and the required type picker. Leaving both
-inline controls saves the valid draft; Escape discards it. Switching rows saves
-the current valid draft before opening the next one. Invalid or failed saves
-retain the draft and show an inline message. The required type picker is a compact
-**+ Add tag** control until Fix or Feature is chosen. On desktop, the add
-editor and safe Markdown preview share a two-column layout; on narrow screens
-they stack. The preview renders an explicit safe element allow-list, treats
-raw HTML as text, makes unsafe links inert, and renders image syntax as alt
-text. No recipe-specific autocomplete or interpretation is present.
+Clicking a text field edits it in place. Leaving the row saves a valid draft;
+Escape discards the draft. The top field promotes entered text into an update
+row, and each saved row retains an empty field above it for the next update.
+The required type picker is a compact **+ Add tag** pill until Fix or Feature
+is chosen; it can also change the type of a saved entry. No add, edit, archive,
+or restore action buttons or explanatory helper text are shown. A small
+eye/eye-off control hides or reveals completed entries; incomplete entries are
+always visible. Previously archived database entries appear as ordinary rows,
+without an Archived label or archive control. The authoring field uses plain
+Markdown and does not interpret recipe-specific autocomplete or tokens.
 
 Completing an entry opens a titled native dialog. It accepts only a standard
 `major.minor.patch` version, preserves invalid input beside a red textual
 error, and lets an existing completion be corrected or explicitly reopened.
 The dialog and editor support Escape cancellation, move focus into the active
-control, and return focus to their trigger when canceled. Mobile rows reflow
-as labeled cards without page-level or table-level horizontal scrolling.
-Touch targets for tabs, checkboxes, type selection, and row actions are at
-least 48px while their visible controls remain compact. The Fix and Feature
-text/fill pairs exceed the 4.5:1 WCAG AA contrast threshold.
+control, and return focus to their trigger when canceled. Mobile rows preserve
+the compact left-center-right layout without page-level horizontal scrolling.
+Touch targets for tabs, checkboxes, type selection, and the visibility control
+are at least 48px while their visible controls remain compact. The Fix and
+Feature text/fill pairs exceed the 4.5:1 WCAG AA contrast threshold.
 
 ## Settings (Slice 14A)
 

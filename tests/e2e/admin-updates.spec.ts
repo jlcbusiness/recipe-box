@@ -25,9 +25,10 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
 
   try {
     const runId = Date.now().toString();
-    const initialText = `Restore keyboard focus after saving ${runId}.`;
-    const editedText = `Improve saved update guidance ${runId}.`;
-    const switchText = `Switch edits directly ${runId}.`;
+    const initialText = `Track compact update editing ${runId}.`;
+    const initialBody = `${initialText}\n\n- Keep nested lists\n  - readable`;
+    const savedBody = `${initialBody}\n  - keyboard item`;
+    const editedText = `Track compact update editing after save ${runId}.`;
     await signInAs(page, admin);
     await page.goto('/admin');
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
@@ -43,35 +44,17 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await page.keyboard.press('ArrowRight');
     await expect(updatesTab).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tabpanel', { name: 'Updates' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add update' })).toHaveCount(0);
+    await expect(page.getByText('Done', { exact: true })).toBeVisible();
+    await expect(page.getByText('Type', { exact: true })).toBeVisible();
 
-    const partialRunRows = page
-      .getByRole('row')
-      .filter({ hasText: /Restore keyboard focus after saving(?: \d+)?\./ });
-    while (await partialRunRows.count()) {
-      const previousCount = await partialRunRows.count();
-      await partialRunRows.first().getByRole('button', { name: 'Archive update' }).click();
-      await expect(page.getByRole('status')).toHaveText('Update archived.');
-      await expect(partialRunRows).toHaveCount(previousCount - 1, { timeout: 15_000 });
-    }
-    const partialSwitchRows = page
-      .getByRole('row')
-      .filter({ hasText: /Switch edits directly(?: \d+)?\./ });
-    while (await partialSwitchRows.count()) {
-      const previousCount = await partialSwitchRows.count();
-      await partialSwitchRows.first().getByRole('button', { name: 'Archive update' }).click();
-      await expect(page.getByRole('status')).toHaveText('Update archived.');
-      await expect(partialSwitchRows).toHaveCount(previousCount - 1, { timeout: 15_000 });
-    }
-
-    await page.getByRole('button', { name: 'Add update' }).click();
-    await page
-      .getByRole('textbox', { name: 'Update text' })
-      .fill(
-        `Restore keyboard focus after **saving** ${runId}.\n\n- Keep nested lists\n  - readable`,
-      );
-    await page.getByRole('textbox', { name: 'Update text' }).press('Enter');
+    const addRow = page.locator('.admin-update-row.is-new');
+    const addField = page.getByRole('textbox', { name: 'Add update' });
+    await expect(addField).toBeVisible();
+    await addField.fill(initialBody);
+    await addField.press('Enter');
     await page.keyboard.type('keyboard item');
-    const typePicker = page.getByRole('combobox', { name: '+ Add tag' });
+    const typePicker = addRow.getByRole('combobox', { name: '+ Add tag' });
     const fixOption = page.getByRole('option', { name: 'Fix', exact: true });
     if (testInfo.project.name === 'Fold 6') {
       await typePicker.tap();
@@ -80,43 +63,57 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
       await typePicker.click();
       await fixOption.click();
     }
-    await page.getByRole('button', { name: 'Submit update' }).click();
-    await expect(page.getByText(initialText)).toBeVisible();
-    const row = page.getByRole('row').filter({ hasText: initialText });
-    await expect(row.getByText('Fix', { exact: true })).toBeVisible();
-    await expect(row.locator('ul > li > ul > li').nth(0)).toHaveText('readable');
-    await expect(row.locator('ul > li > ul > li').nth(1)).toHaveText('keyboard item');
+    await page.getByRole('heading', { name: 'Application updates' }).click();
+
+    const savedRow = page.locator('.admin-update-row').filter({
+      has: page.getByRole('checkbox', { name: `Mark "${savedBody.slice(0, 60)}" done` }),
+    });
+    await expect(savedRow).toHaveCount(1);
+    await expect(savedRow.locator('textarea')).toHaveValue(savedBody);
+    await expect(savedRow.getByText('Fix', { exact: true })).toBeVisible();
+    await expect(page.locator('.admin-updates [role="status"]')).not.toBeEmpty();
+    const updateId = await savedRow.locator('[data-update-done]').getAttribute('data-update-done');
+    expect(updateId).toBeTruthy();
+    const row = page.locator(`.admin-update-row:has([data-update-done="${updateId}"])`);
     const desktopGeometry = await page.evaluate(() => {
-      const list = document.querySelector('.admin-updates-table-scroll');
+      const list = document.querySelector('.admin-update-list');
+      const field = document.querySelector('.admin-update-row.is-new textarea');
       return {
         viewport: window.innerWidth,
         document: document.documentElement.scrollWidth,
         listWidth: list?.clientWidth ?? 0,
         listScrollWidth: list?.scrollWidth ?? 0,
+        addFieldHeight: field?.getBoundingClientRect().height ?? 0,
       };
     });
     expect(desktopGeometry.document).toBeLessThanOrEqual(desktopGeometry.viewport);
     expect(desktopGeometry.listScrollWidth).toBeLessThanOrEqual(desktopGeometry.listWidth);
-    await page.screenshot({
-      path: testInfo.outputPath('admin-updates-desktop.png'),
-    });
+    expect(desktopGeometry.addFieldHeight).toBeLessThan(100);
+    await page.screenshot({ path: testInfo.outputPath('admin-updates-desktop.png') });
 
-    await page.getByRole('button', { name: 'Add update' }).click();
-    await page.getByRole('textbox', { name: 'Update text' }).fill(switchText);
-    const secondTypePicker = page.getByRole('combobox', { name: '+ Add tag' });
-    const secondFixOption = page.getByRole('option', { name: 'Fix', exact: true });
+    const textField = row.getByRole('textbox', { name: 'Update text' });
+    await textField.click();
+    await textField.fill(`Discard this draft ${runId}.`);
+    await textField.press('Escape');
+    await expect(textField).toHaveValue(savedBody);
+    await textField.click();
+    await textField.fill(editedText);
+    const currentTypePicker = row.getByRole('combobox', { name: 'Fix' });
+    const featureOption = page.getByRole('option', { name: 'Feature', exact: true });
     if (testInfo.project.name === 'Fold 6') {
-      await secondTypePicker.tap();
-      await secondFixOption.tap();
+      await currentTypePicker.tap();
+      await featureOption.tap();
     } else {
-      await secondTypePicker.click();
-      await secondFixOption.click();
+      await currentTypePicker.click();
+      await featureOption.click();
     }
-    await page.getByRole('button', { name: 'Submit update' }).click();
-    const switchRow = page.getByRole('row').filter({ hasText: switchText });
-    await expect(switchRow).toBeVisible();
+    await page.getByRole('heading', { name: 'Application updates' }).click();
+    await expect(page.locator('.admin-updates [role="status"]')).toHaveText('Update saved.');
+    await expect(textField).toHaveValue(editedText);
+    await expect(textField).toHaveAttribute('readonly', '');
+    await expect(row.getByRole('combobox', { name: 'Feature' })).toBeVisible();
 
-    await row.getByRole('checkbox', { name: /mark .* done/i }).click();
+    await row.getByRole('checkbox', { name: /done/i }).click();
     const versionDialog = page.getByRole('dialog', { name: 'Complete update' });
     await expect(versionDialog).toBeVisible();
     await versionDialog.getByLabel('Version').fill('01.2.3');
@@ -126,10 +123,14 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await versionDialog.getByLabel('Version').fill('1.10.0');
     await versionDialog.getByRole('button', { name: 'Submit version' }).click();
     await expect(versionDialog).toBeHidden({ timeout: 15_000 });
+    await expect(row).toHaveCount(0);
+
+    const showDoneButton = page.getByRole('button', { name: 'Show done updates' });
+    await expect(showDoneButton).toHaveAttribute('aria-pressed', 'false');
+    await showDoneButton.click();
     await expect(row.getByRole('button', { name: 'Done in 1.10.0' })).toBeVisible({
       timeout: 15_000,
     });
-
     await row.getByRole('button', { name: 'Done in 1.10.0' }).click();
     const correctionDialog = page.getByRole('dialog', { name: 'Update completion' });
     await correctionDialog.getByLabel('Version').fill('1.10.1');
@@ -142,154 +143,49 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     const reopenDialog = page.getByRole('dialog', { name: 'Update completion' });
     await reopenDialog.getByLabel('Mark incomplete').check();
     await reopenDialog.getByRole('button', { name: 'Submit version' }).click();
-    await expect(row.getByRole('checkbox', { name: /mark .* done/i })).toBeVisible({
+    await expect(row.getByRole('checkbox', { name: /done/i })).toBeVisible({
       timeout: 15_000,
     });
 
-    await row.getByRole('button', { name: 'Edit update' }).focus();
-    await page.keyboard.press('Enter');
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveCount(0);
-    await expect(row.getByRole('button', { name: 'Edit update' })).toBeFocused();
-    await row.locator('.admin-update-text-edit-target').click();
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
-    const inlineDesktopGeometry = await page.evaluate(() => {
-      const cell = document.querySelector('[data-column="update"]');
-      const textarea = document.querySelector('.admin-update-inline-textarea');
-      return {
-        cellWidth: cell?.getBoundingClientRect().width ?? 0,
-        textareaWidth: textarea?.getBoundingClientRect().width ?? 0,
-        textareaHeight: textarea?.getBoundingClientRect().height ?? 0,
-      };
-    });
-    expect(inlineDesktopGeometry.textareaWidth).toBeLessThanOrEqual(
-      inlineDesktopGeometry.cellWidth,
-    );
-    expect(inlineDesktopGeometry.textareaHeight).toBeGreaterThanOrEqual(48);
-    await page.screenshot({
-      path: testInfo.outputPath('admin-updates-inline-desktop.png'),
-    });
-    await page.getByRole('textbox', { name: 'Update text' }).fill(`Discard this draft ${runId}.`);
-    await page.keyboard.press('Escape');
-    await expect(page.getByText(initialText)).toBeVisible();
-    await expect(row.getByRole('button', { name: 'Edit update' })).toBeFocused();
-    await row.getByRole('button', { name: 'Edit update' }).click();
-    await page.getByRole('textbox', { name: 'Update text' }).fill(' ');
-    await page.getByRole('button', { name: 'Show archived updates' }).focus();
-    await expect(page.locator('.admin-update-inline-editor').getByRole('alert')).toHaveText(
-      /enter update text/i,
-    );
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveValue(' ');
-    await page.getByRole('textbox', { name: 'Update text' }).focus();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveCount(0);
-    await row.getByRole('button', { name: 'Edit update' }).click();
-    await page.getByRole('textbox', { name: 'Update text' }).fill(editedText);
-    const fixPicker = page.getByRole('combobox', { name: 'Fix' });
-    const featureOption = page.getByRole('option', { name: 'Feature', exact: true });
-    if (testInfo.project.name === 'Fold 6') {
-      await fixPicker.tap();
-      await featureOption.tap();
-    } else {
-      await fixPicker.click();
-      await featureOption.click();
+    await expect(textField).toHaveValue(editedText);
+    await expect(row.getByRole('combobox', { name: 'Feature' })).toBeVisible();
+
+    for (const width of [641, 640, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      );
     }
-    await switchRow.locator('.admin-update-text-edit-target').click();
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveValue(switchText);
-    await expect(page.getByRole('status')).toHaveText('Update saved.');
-    await page.keyboard.press('Escape');
-    const editedRow = page.getByRole('row').filter({ hasText: editedText });
-    await expect(editedRow.getByText('Feature', { exact: true })).toBeVisible();
-
-    await editedRow.getByRole('button', { name: 'Archive update' }).click();
-    await switchRow.getByRole('button', { name: 'Archive update' }).click();
-    await page.getByRole('button', { name: 'Show archived updates' }).click();
-    const archivedRow = page.getByRole('row').filter({ hasText: editedText });
-    await expect(archivedRow).toBeVisible();
-    await expect(switchRow).toBeVisible();
-    await archivedRow.getByRole('button', { name: 'Restore update' }).click();
-    await expect(archivedRow).toBeVisible();
-    await page.getByRole('button', { name: 'Hide archived updates' }).click();
-    await expect(archivedRow).toBeVisible();
-
-    await page.setViewportSize({ width: 641, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      641,
-    );
-    await page.setViewportSize({ width: 640, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      640,
-    );
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      390,
-    );
     const mobileGeometry = await page.evaluate(() => {
-      const list = document.querySelector('.admin-updates-table-scroll');
+      const row = document.querySelector('.admin-update-row:not(.is-new) textarea');
+      const list = document.querySelector('.admin-update-list');
       return {
         viewport: window.innerWidth,
         document: document.documentElement.scrollWidth,
         listWidth: list?.clientWidth ?? 0,
         listScrollWidth: list?.scrollWidth ?? 0,
+        textWidth: row?.getBoundingClientRect().width ?? 0,
       };
     });
     expect(mobileGeometry.document).toBeLessThanOrEqual(mobileGeometry.viewport);
     expect(mobileGeometry.listScrollWidth).toBeLessThanOrEqual(mobileGeometry.listWidth);
-    const checkboxTargetHeight = await page
-      .locator('.admin-update-checkbox-hit-area')
-      .first()
-      .evaluate((element) => element.getBoundingClientRect().height);
-    const actionTargetHeight = await page
-      .getByRole('button', { name: 'Archive update' })
-      .first()
-      .evaluate((element) => element.getBoundingClientRect().height);
-    expect(checkboxTargetHeight).toBeGreaterThanOrEqual(48);
-    expect(actionTargetHeight).toBeGreaterThanOrEqual(48);
+    expect(mobileGeometry.textWidth).toBeGreaterThan(0);
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({
-      path: testInfo.outputPath('admin-updates-mobile.png'),
-    });
-    if (testInfo.project.name === 'Fold 6') {
-      await editedRow.locator('.admin-update-text-edit-target').tap();
-    } else {
-      await editedRow.locator('.admin-update-text-edit-target').click();
-    }
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toBeFocused();
-    const inlineMobileGeometry = await page.evaluate(() => {
-      const cell = document.querySelector('[data-column="update"]');
-      const textarea = document.querySelector('.admin-update-inline-textarea');
-      const typePicker = document.querySelector('.admin-update-type-picker');
-      return {
-        cellWidth: cell?.getBoundingClientRect().width ?? 0,
-        textareaWidth: textarea?.getBoundingClientRect().width ?? 0,
-        textareaHeight: textarea?.getBoundingClientRect().height ?? 0,
-        typePickerHeight: typePicker?.getBoundingClientRect().height ?? 0,
-        documentWidth: document.documentElement.scrollWidth,
-      };
-    });
-    expect(inlineMobileGeometry.textareaWidth).toBeLessThanOrEqual(inlineMobileGeometry.cellWidth);
-    expect(inlineMobileGeometry.textareaHeight).toBeGreaterThanOrEqual(48);
-    expect(inlineMobileGeometry.typePickerHeight).toBeGreaterThanOrEqual(48);
-    expect(inlineMobileGeometry.documentWidth).toBeLessThanOrEqual(390);
-    await page.screenshot({
-      path: testInfo.outputPath('admin-updates-inline-mobile.png'),
-    });
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('textbox', { name: 'Update text' })).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath('admin-updates-mobile.png') });
     const mobileA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
     expect(mobileA11y.violations).toEqual([]);
-    await page.reload();
-    await page.getByRole('tab', { name: 'Updates' }).click();
-    await expect(page.getByText(editedText)).toBeVisible();
-    const finalRow = page.getByRole('row').filter({ hasText: editedText });
-    await finalRow.getByRole('button', { name: 'Archive update' }).click();
-    await expect(finalRow).toHaveCount(0);
-    await page.getByRole('button', { name: 'Show archived updates' }).click();
-    await expect(finalRow).toBeVisible();
+
+    await row.getByRole('checkbox', { name: /done/i }).click();
+    const finalCompletion = page.getByRole('dialog', { name: 'Complete update' });
+    await finalCompletion.getByLabel('Version').fill('0.0.0');
+    await finalCompletion.getByRole('button', { name: 'Submit version' }).click();
+    await expect(row.getByRole('button', { name: 'Done in 0.0.0' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole('button', { name: 'Hide done updates' }).click();
+    await expect(row).toHaveCount(0);
   } finally {
     await deleteTestUser(request, admin);
   }
