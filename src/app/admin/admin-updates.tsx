@@ -253,6 +253,61 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     setError('');
   }
 
+  function persistInlineEditor(updateId: string | null, currentEditor: UpdateEditor) {
+    if (inlineEditorSavingRef.current) {
+      return;
+    }
+    if (updateId === null && !currentEditor.body.trim() && !currentEditor.kind) {
+      leaveInlineEditor(updateId);
+      return;
+    }
+
+    const bodyError = getAdminUpdateBodyError(currentEditor.body);
+    if (bodyError) {
+      queuedInlineEditorRef.current = null;
+      setError(bodyError);
+      return;
+    }
+    const kind = currentEditor.kind;
+    if (!kind) {
+      queuedInlineEditorRef.current = null;
+      setError('Choose Fix or Feature before saving.');
+      return;
+    }
+    if (updateId !== null && currentEditor.revision === null) {
+      queuedInlineEditorRef.current = null;
+      setError('This update cannot be saved. Reload the page and try again.');
+      return;
+    }
+    if (
+      updateId !== null &&
+      normalizeAdminUpdateBody(currentEditor.body) === currentEditor.originalBody &&
+      currentEditor.kind === currentEditor.originalKind
+    ) {
+      setError('');
+      leaveInlineEditor(updateId);
+      return;
+    }
+
+    inlineEditorSavingRef.current = true;
+    setError('');
+    startTransition(async () => {
+      const result =
+        updateId !== null && currentEditor.revision !== null
+          ? await editAdminUpdate(updateId, currentEditor.revision, currentEditor.body, kind)
+          : await createAdminUpdate(currentEditor.body, kind);
+      inlineEditorSavingRef.current = false;
+      if (result.error) {
+        queuedInlineEditorRef.current = null;
+        setError(result.error);
+        return;
+      }
+      setMessage(result.message ?? 'Update saved.');
+      leaveInlineEditor(updateId);
+      router.refresh();
+    });
+  }
+
   function saveInlineEditorOnBlur(
     event: ReactFocusEvent<HTMLLIElement>,
     updateId: string | null,
@@ -290,55 +345,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       if (!currentEditor || currentEditor.id !== updateId) {
         return;
       }
-      if (updateId === null && !currentEditor.body.trim() && !currentEditor.kind) {
-        leaveInlineEditor(updateId);
-        return;
-      }
-
-      const bodyError = getAdminUpdateBodyError(currentEditor.body);
-      if (bodyError) {
-        queuedInlineEditorRef.current = null;
-        setError(bodyError);
-        return;
-      }
-      const kind = currentEditor.kind;
-      if (!kind) {
-        queuedInlineEditorRef.current = null;
-        setError('Choose Fix or Feature before saving.');
-        return;
-      }
-      if (updateId !== null && currentEditor.revision === null) {
-        queuedInlineEditorRef.current = null;
-        setError('This update cannot be saved. Reload the page and try again.');
-        return;
-      }
-      if (
-        updateId !== null &&
-        normalizeAdminUpdateBody(currentEditor.body) === currentEditor.originalBody &&
-        currentEditor.kind === currentEditor.originalKind
-      ) {
-        setError('');
-        leaveInlineEditor(updateId);
-        return;
-      }
-
-      inlineEditorSavingRef.current = true;
-      setError('');
-      startTransition(async () => {
-        const result =
-          updateId !== null && currentEditor.revision !== null
-            ? await editAdminUpdate(updateId, currentEditor.revision, currentEditor.body, kind)
-            : await createAdminUpdate(currentEditor.body, kind);
-        inlineEditorSavingRef.current = false;
-        if (result.error) {
-          queuedInlineEditorRef.current = null;
-          setError(result.error);
-          return;
-        }
-        setMessage(result.message ?? 'Update saved.');
-        leaveInlineEditor(updateId);
-        router.refresh();
-      });
+      persistInlineEditor(updateId, currentEditor);
     });
   }
 
@@ -349,8 +356,12 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   ) {
     const targetId = update?.id ?? null;
     if (editor?.id === targetId) {
-      setEditor((current) => (current?.id === targetId ? { ...current, kind } : current));
+      const updatedEditor = { ...editor, kind };
+      setEditor((current) => (current?.id === targetId ? updatedEditor : current));
       setError('');
+      if (update === null && editor.body.trim()) {
+        persistInlineEditor(targetId, updatedEditor);
+      }
       return;
     }
     openEditor(update, trigger, kind);

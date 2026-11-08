@@ -364,8 +364,10 @@ Clicking a text field edits it in place. Leaving the row saves a valid draft;
 Escape discards the draft. The top field promotes entered text into an update
 row, and each saved row retains an empty field above it for the next update.
 The required type picker is a compact **+ Add tag** pill until Fix or Feature
-is chosen; it can also change the type of a saved entry. No add, edit, archive,
-or restore action buttons or explanatory helper text are shown. A small
+is chosen; it can also change the type of a saved entry. Choosing a type while
+the top draft contains text creates the entry immediately; with no text, the
+type remains staged in the draft. No add, edit, archive, or restore action
+buttons or explanatory helper text are shown. A small
 eye/eye-off control hides or reveals completed entries; incomplete entries are
 always visible. Previously archived database entries appear as ordinary rows,
 without an Archived label or archive control. The authoring field uses plain

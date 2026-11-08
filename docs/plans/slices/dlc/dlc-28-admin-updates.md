@@ -48,6 +48,8 @@ regular signed-in users or anonymous visitors.
   drafted. Selecting a type replaces it with a content-sized olive-green
   **Fix** or light-blue **Feature** pill. The saved type can be changed but
   cannot be cleared. A draft cannot be submitted without choosing one.
+  Selecting a type on a non-empty top draft creates it immediately; choosing
+  a type while the draft is empty stages it without creating an entry.
   Labels remain visible independently of color, and both fills/text meet the
   project's contrast target.
 - **Done** is the leftmost control. An incomplete entry has a native checkbox;
@@ -75,8 +77,9 @@ regular signed-in users or anonymous visitors.
 - The blank field at the top of the list is always available for a new entry.
   Clicking an existing text field edits it in place; its type pill stays
   alongside it. Moving focus outside the row saves the body and type together;
-  **Escape** discards the inline draft. Switching to another entry saves the
-  current valid draft before opening the next one.
+  selecting a type creates a non-empty top draft immediately. **Escape**
+  discards the inline draft. Switching to another entry saves the current valid
+  draft before opening the next one.
 - Validate the inline draft before saving. Keep invalid text or server errors
   visible in the row with the draft intact. Announce successful saves to
   assistive technology without adding routine helper text to the pane.
@@ -206,10 +209,10 @@ regular signed-in users or anonymous visitors.
 - Local pgTAP migration coverage passes all 29 assertions, including
   constraints, audit events, revision conflicts, RLS, and actor deletion.
 - The Chromium and Fold 6 browser suite passes all four admin/non-admin cases.
-  It covers top-draft creation, nested-list keyboard continuation, inline
-  editing and Escape cancellation, required classification, completion
-  validation/correction/reopen, role isolation, Axe, responsive widths,
-  overflow, and mobile hit targets.
+  It covers immediate creation from a populated draft on type selection,
+  nested-list keyboard continuation, inline editing and Escape cancellation,
+  required classification, completion validation/correction/reopen, role
+  isolation, Axe, responsive widths, overflow, and mobile hit targets.
 - `npm run typecheck`, `npm run build`, and `npm run lint:md` pass. Repository
   Biome lint exits successfully with warnings; focused checks for changed
   TypeScript and CSS formatting pass.

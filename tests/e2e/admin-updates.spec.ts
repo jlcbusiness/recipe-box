@@ -63,7 +63,8 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
       await typePicker.click();
       await fixOption.click();
     }
-    await page.getByRole('heading', { name: 'Application updates' }).click();
+    await expect(page.locator('.admin-updates [role="status"]')).toHaveText('Update added.');
+    await expect(addField).toHaveValue('');
 
     const savedRow = page.locator('.admin-update-row').filter({
       has: page.getByRole('checkbox', { name: `Mark "${savedBody.slice(0, 60)}" done` }),

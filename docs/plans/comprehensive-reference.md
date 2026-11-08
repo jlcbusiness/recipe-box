@@ -1587,6 +1587,9 @@ Print requests landscape while leaving the browser dialog authoritative.
   saves its valid draft; Escape discards it. Invalid or failed saves retain the
   draft in the row, and switching rows saves a valid draft before opening the
   next one.
+- Choosing Fix or Feature while the top draft contains text creates the entry
+  immediately. With no text, the type remains staged in the draft; saved-row
+  type changes continue to save through the inline editor.
 - Each saved entry has Markdown body text and exactly one required
   classification: **Fix** or **Feature**. No unclassified entry can be
   submitted, and an existing classification can be changed but not cleared.
