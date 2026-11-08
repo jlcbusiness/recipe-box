@@ -2878,7 +2878,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 
 @media (max-width: 640px) {
   .private-content main.recipes-main {
-    padding-block: 28px 48px;
+    padding-block: 28px 0;
   }
 
   .recipe-page-heading {

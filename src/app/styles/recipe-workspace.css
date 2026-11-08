@@ -505,7 +505,7 @@
 .recipe-empty-state {
   margin: 0;
   border-top: 1px solid var(--line);
-  padding: 28px 0;
+  padding: 28px 0 0;
   color: var(--muted);
 }
 

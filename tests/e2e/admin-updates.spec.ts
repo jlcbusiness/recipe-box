@@ -268,17 +268,27 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     const desktopGeometry = await page.evaluate(() => {
       const list = document.querySelector('.admin-update-list');
       const field = document.querySelector('.admin-update-row.is-new textarea');
+      const navigation = document.querySelector('.private-nav');
       return {
         viewport: window.innerWidth,
         document: document.documentElement.scrollWidth,
+        viewportHeight: window.innerHeight,
         listWidth: list?.clientWidth ?? 0,
         listScrollWidth: list?.scrollWidth ?? 0,
         addFieldHeight: field?.getBoundingClientRect().height ?? 0,
+        navigationPosition: navigation ? getComputedStyle(navigation).position : '',
+        navigationHeight: navigation?.getBoundingClientRect().height ?? 0,
       };
     });
     expect(desktopGeometry.document).toBeLessThanOrEqual(desktopGeometry.viewport);
     expect(desktopGeometry.listScrollWidth).toBeLessThanOrEqual(desktopGeometry.listWidth);
     expect(desktopGeometry.addFieldHeight).toBeLessThan(100);
+    if (desktopGeometry.viewport > 640) {
+      expect(desktopGeometry.navigationPosition).toBe('fixed');
+      expect(
+        Math.abs(desktopGeometry.navigationHeight - desktopGeometry.viewportHeight),
+      ).toBeLessThanOrEqual(1);
+    }
     await page.screenshot({ path: testInfo.outputPath('admin-updates-desktop.png') });
 
     const textField = row.getByRole('textbox', { name: 'Update text' });
@@ -383,6 +393,8 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
         textHeight: row?.clientHeight ?? 0,
         textScrollHeight: row?.scrollHeight ?? 0,
         rowHeight: rowElement?.getBoundingClientRect().height ?? 0,
+        listBottom: list?.getBoundingClientRect().bottom ?? 0,
+        footerTop: document.querySelector('.app-version-footer')?.getBoundingClientRect().top ?? 0,
       };
     });
     expect(mobileGeometry.document).toBeLessThanOrEqual(mobileGeometry.viewport);
@@ -392,6 +404,8 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     expect(mobileGeometry.textHeight).toBeGreaterThan(0);
     expect(mobileGeometry.textHeight).toBeGreaterThanOrEqual(mobileGeometry.textScrollHeight - 1);
     expect(mobileGeometry.rowHeight).toBeGreaterThanOrEqual(mobileGeometry.textHeight + 8);
+    expect(mobileGeometry.footerTop - mobileGeometry.listBottom).toBeGreaterThanOrEqual(0);
+    expect(mobileGeometry.footerTop - mobileGeometry.listBottom).toBeLessThanOrEqual(1);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: testInfo.outputPath('admin-updates-mobile.png') });
     const mobileA11y = await new AxeBuilder({ page })

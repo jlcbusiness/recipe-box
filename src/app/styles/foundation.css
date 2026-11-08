@@ -331,21 +331,30 @@ a {
 
 .private-shell {
   display: grid;
-  grid-template-columns: fit-content(140px) minmax(0, 1fr);
+  grid-template-columns: 140px minmax(0, 1fr);
 }
 
 .private-nav {
-  position: sticky;
+  position: fixed;
+  z-index: 20;
   top: 0;
-  align-self: start;
+  left: 0;
   box-sizing: border-box;
   display: flex;
-  max-height: 100dvh;
+  width: fit-content;
+  max-width: 140px;
+  height: 100vh;
   flex-direction: column;
   overflow-y: auto;
   border-right: 1px solid var(--line);
   padding: 24px 18px;
   background: white;
+}
+
+@supports (height: 100dvh) {
+  .private-nav {
+    height: 100dvh;
+  }
 }
 
 .private-nav:has(.account-menu[open]) {
@@ -527,10 +536,11 @@ a {
 }
 
 .private-content {
+  grid-column: 2;
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: 24px max(24px, calc((100vw - 980px) / 2));
+  padding: 24px max(24px, calc((100vw - 980px) / 2)) 0;
 }
 
 @media (min-width: 641px) {
@@ -1220,7 +1230,7 @@ a {
   flex: 1;
   align-content: center;
   justify-items: start;
-  padding-block: 48px;
+  padding-block: 48px 0;
 }
 
 .private-content main.admin-main {
@@ -1229,7 +1239,7 @@ a {
   align-content: initial;
   justify-items: initial;
   width: 100%;
-  padding-block: 24px;
+  padding-block: 24px 0;
 }
 
 .private-content main.admin-main > .eyebrow {
@@ -1250,7 +1260,7 @@ a {
   align-content: start;
   width: 100%;
   max-width: 880px;
-  padding-block: 24px 48px;
+  padding-block: 24px 0;
 }
 
 .private-content main.help-main h1 {
@@ -1337,7 +1347,7 @@ h1 {
   display: block;
   align-content: start;
   width: 100%;
-  padding-block: 48px;
+  padding-block: 48px 0;
 }
 
 .private-content .settings-section {
@@ -1363,11 +1373,10 @@ h1 {
 
 .app-version-footer {
   display: flex;
-  min-height: 36px;
   align-items: center;
   justify-content: flex-end;
   box-sizing: border-box;
-  padding: 8px 24px;
+  padding: 4px 24px 8px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.2;
@@ -2369,11 +2378,18 @@ h1 {
     grid-template-rows: auto auto;
   }
 
+  .private-content {
+    grid-column: 1;
+  }
+
   .private-nav {
     position: sticky;
     z-index: 20;
     top: 0;
+    right: auto;
+    left: auto;
     height: auto;
+    width: auto;
     overflow: visible;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -2566,7 +2582,7 @@ h1 {
   }
 
   .private-content {
-    padding: 16px 20px;
+    padding: 16px 20px 0;
   }
 
   .private-content h1 {
@@ -2574,7 +2590,7 @@ h1 {
   }
 
   .private-content main.settings-main {
-    padding-block: 24px;
+    padding-block: 24px 0;
   }
 
   .help-encoding-list > div {
@@ -2655,7 +2671,7 @@ h1 {
   flex: initial;
   align-content: initial;
   justify-items: initial;
-  padding-block: 34px 64px;
+  padding-block: 34px 0;
 }
 
 .private-content main.recipes-main:has(.recipe-detail-heading),

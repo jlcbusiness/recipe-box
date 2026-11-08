@@ -56,18 +56,25 @@ test('version footer follows short private content without a viewport-height she
 
       const main = content.querySelector('main');
       if (!main) throw new Error('Expected the short private route to contain main content.');
+      const lastContent = main.querySelector('.recipe-empty-state');
+      if (!lastContent) throw new Error('Expected the empty state to be the final page content.');
       return {
-        contentBottom: content.getBoundingClientRect().bottom,
+        lastContentBottom: lastContent.getBoundingClientRect().bottom,
         footerTop: footer.getBoundingClientRect().top,
         footerBottom: footer.getBoundingClientRect().bottom,
         viewportHeight: window.innerHeight,
+        viewportWidth: window.innerWidth,
         navigationPosition: getComputedStyle(navigation).position,
+        navigationHeight: navigation.getBoundingClientRect().height,
       };
     });
 
-    expect(geometry.navigationPosition).toBe('sticky');
-    expect(geometry.footerTop - geometry.contentBottom).toBeGreaterThanOrEqual(0);
-    expect(geometry.footerTop - geometry.contentBottom).toBeLessThanOrEqual(1);
+    expect(geometry.navigationPosition).toBe(geometry.viewportWidth > 640 ? 'fixed' : 'sticky');
+    if (geometry.viewportWidth > 640) {
+      expect(Math.abs(geometry.navigationHeight - geometry.viewportHeight)).toBeLessThanOrEqual(1);
+    }
+    expect(geometry.footerTop - geometry.lastContentBottom).toBeGreaterThanOrEqual(0);
+    expect(geometry.footerTop - geometry.lastContentBottom).toBeLessThanOrEqual(1);
     expect(geometry.footerBottom).toBeLessThan(geometry.viewportHeight);
   } finally {
     await deleteTestUser(request, user);

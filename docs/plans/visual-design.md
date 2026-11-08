@@ -341,9 +341,11 @@ scroll to reveal the pane; keep it above page menus.
 
 The app version appears once in a muted, right-aligned document footer after the
 page content on every route. It is not fixed to the viewport and reads from the
-application package version. Private shells and their sticky navigation must not
-impose a viewport-height minimum on the document; on short pages, the footer
-follows the shell content rather than being pushed to the viewport bottom.
+application package version. Desktop private navigation fills the viewport but
+is fixed outside document flow, so it does not push the footer down. On mobile,
+the navigation remains sticky at the top. Private shells must not impose a
+viewport-height minimum on the document; on short pages, the footer follows the
+content instead of being pushed to the viewport bottom.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
 compact, while labeled rows, picklist triggers, popup options, standalone
