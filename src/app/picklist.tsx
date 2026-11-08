@@ -43,6 +43,7 @@ export function usePicklistMenu({
   selectOnTab = true,
   open,
   onOpenChange,
+  selectOnTypeAheadWhenClosed = false,
 }: {
   value: string;
   options: PicklistOption[];
@@ -53,6 +54,7 @@ export function usePicklistMenu({
   selectOnTab?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  selectOnTypeAheadWhenClosed?: boolean;
 }) {
   const listId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -185,6 +187,8 @@ export function usePicklistMenu({
 
   function clearPendingSelection() {
     setHasSelectedSinceFocus(false);
+    typeaheadBufferRef.current = '';
+    typeaheadUpdatedAtRef.current = 0;
   }
 
   function toggle() {
@@ -260,7 +264,13 @@ export function usePicklistMenu({
       event.stopPropagation();
       setIsOpen(false);
       triggerRef.current?.focus();
-    } else if (event.key.length === 1 && !event.altKey && !event.ctrlKey && !event.metaKey) {
+    } else if (
+      (isOpen || selectOnTypeAheadWhenClosed) &&
+      event.key.length === 1 &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
       if (options.length === 0) {
         return;
       }
@@ -296,9 +306,11 @@ export function usePicklistMenu({
         return;
       }
       setActiveIndex(matchingIndex);
-      if (!isOpen) {
-        setMenuPosition(null);
-        setIsOpen(true);
+      if (!isOpen && selectOnTypeAheadWhenClosed) {
+        const matchingValue = options[matchingIndex].value;
+        if (matchingValue !== value) {
+          select(matchingValue);
+        }
       }
     }
   }

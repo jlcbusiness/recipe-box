@@ -126,6 +126,7 @@ function MeasurementPicklist({
   onCommitEnter,
   onTabSelect,
   onFocus,
+  selectOnTypeAheadWhenClosed = false,
 }: {
   label: string;
   prompt: string;
@@ -138,6 +139,7 @@ function MeasurementPicklist({
   onCommitEnter?: () => void;
   onTabSelect?: (valueId: string) => boolean | undefined;
   onFocus?: () => void;
+  selectOnTypeAheadWhenClosed?: boolean;
 }) {
   const selectedValue = options.find((option) => option.id === selectedId);
   const menu = usePicklistMenu({
@@ -150,6 +152,7 @@ function MeasurementPicklist({
     onSelect,
     onCommitEnter,
     onTabSelect,
+    selectOnTypeAheadWhenClosed,
     selectOnTab: true,
   });
 
@@ -452,6 +455,7 @@ export function MeasurementEditor({
           onFocus={() => onUnitFocus?.(type)}
           onCommitEnter={onCommitRow}
           onSelect={(unitCode) => updateMeasurement(type, { unitCode })}
+          selectOnTypeAheadWhenClosed
         />
       </div>
     );

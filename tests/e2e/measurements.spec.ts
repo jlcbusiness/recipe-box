@@ -1138,16 +1138,13 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     const volumeUnitPicker = page.getByRole('combobox', { name: 'Volume unit, row 1' });
     const mobileUnitMenu = page.getByRole('listbox');
     await volumeUnitPicker.press('t');
-    await expect(mobileUnitMenu).toBeVisible();
-    await expect(mobileUnitMenu.getByRole('option', { name: 'tsp', exact: true })).toHaveClass(
-      /is-active/,
-    );
+    await expect(volumeUnitPicker).toHaveText('tsp');
+    await expect(volumeUnitPicker).toHaveAttribute('aria-expanded', 'false');
+    await expect(mobileUnitMenu).toBeHidden();
     await volumeUnitPicker.press('t');
-    await expect(mobileUnitMenu.getByRole('option', { name: 'TBSP', exact: true })).toHaveClass(
-      /is-active/,
-    );
-    await expect(volumeUnitPicker).toHaveText('cup');
-    await volumeUnitPicker.press('Escape');
+    await expect(volumeUnitPicker).toHaveText('TBSP');
+    await expect(volumeUnitPicker).toHaveAttribute('aria-expanded', 'false');
+    await expect(volumeUnitPicker).toBeFocused();
     await expect(mobileUnitMenu).toBeHidden();
     await volumeUnitPicker.click();
     await expect(mobileUnitMenu.locator('.ingredient-cell-option-group').first()).toHaveText('US');
