@@ -260,13 +260,10 @@ export function usePicklistMenu({
       event.stopPropagation();
       setIsOpen(false);
       triggerRef.current?.focus();
-    } else if (
-      isOpen &&
-      event.key.length === 1 &&
-      !event.altKey &&
-      !event.ctrlKey &&
-      !event.metaKey
-    ) {
+    } else if (event.key.length === 1 && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      if (options.length === 0) {
+        return;
+      }
       event.preventDefault();
       const now = Date.now();
       const typedCharacter = event.key.toLocaleLowerCase();
@@ -281,12 +278,27 @@ export function usePicklistMenu({
       typeaheadBufferRef.current = searchText;
       typeaheadUpdatedAtRef.current = now;
 
+      const selectedIndex = options.findIndex((option) => option.value === value);
+      const startIndex = isOpen ? activeIndex : Math.max(0, selectedIndex);
+      let matchingIndex: number | null = null;
       for (let offset = 1; offset <= options.length; offset += 1) {
-        const candidateIndex = (activeIndex + offset) % options.length;
+        const candidateIndex = (startIndex + offset) % options.length;
         if (options[candidateIndex].label.toLocaleLowerCase().startsWith(searchText)) {
-          setActiveIndex(candidateIndex);
+          matchingIndex = candidateIndex;
           break;
         }
+      }
+      if (matchingIndex === null) {
+        if (!isOpen) {
+          typeaheadBufferRef.current = '';
+          typeaheadUpdatedAtRef.current = 0;
+        }
+        return;
+      }
+      setActiveIndex(matchingIndex);
+      if (!isOpen) {
+        setMenuPosition(null);
+        setIsOpen(true);
       }
     }
   }

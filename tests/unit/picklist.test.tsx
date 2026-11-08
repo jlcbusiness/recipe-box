@@ -111,6 +111,34 @@ describe('compact picklist presentation', () => {
 });
 
 describe('shared picklist type-ahead', () => {
+  it('opens a closed picklist at matching options without selecting them', () => {
+    const picklistOptions: PicklistOption[] = [
+      { value: 'cup', label: 'cup' },
+      { value: 'tsp', label: 'tsp' },
+      { value: 'tbsp', label: 'TBSP' },
+    ];
+    const { onSelect, trigger } = renderPicklist('cup', picklistOptions);
+    trigger.focus();
+
+    fireEvent.keyDown(trigger, { key: 't' });
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(getActiveOption(trigger)).toContain('tsp');
+
+    fireEvent.keyDown(trigger, { key: 't' });
+    expect(getActiveOption(trigger)).toContain('TBSP');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps a closed picklist closed when the typed character has no match', () => {
+    const { trigger } = renderPicklist();
+    trigger.focus();
+
+    fireEvent.keyDown(trigger, { key: 'x' });
+
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
   it('refines a short prefix without selecting the active option', () => {
     const { onSelect, trigger } = renderPicklist();
     fireEvent.click(trigger);

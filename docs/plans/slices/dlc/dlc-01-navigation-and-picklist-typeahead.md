@@ -5,7 +5,7 @@
 ## Outcome
 
 An authenticated visit to `/app` opens the Library. The current navigation
-destination is visibly distinguishable without color alone. An open shared
+destination is visibly distinguishable without color alone. A focused shared
 picklist supports a short, multi-character type-ahead buffer while preserving
 its existing selection and focus model.
 
@@ -18,10 +18,11 @@ its existing selection and focus model.
   state a pale green surface, reinforced by a desktop underline and a stronger
   mobile circle outline. Keep its accessible name, `aria-current`, existing
   order, breakpoint, dimensions, and gold focus outline.
-- In an open shared picklist, printable characters build a case-insensitive
-  option-label prefix query for 700 ms. Search starts after the active option
-  and wraps. Repeating the same character cycles through options with that
-  initial instead of building a repeated-letter query.
+- On a focused shared picklist trigger, printable characters build a
+  case-insensitive option-label prefix query for 700 ms. A matching key opens a
+  closed picklist at the match; in an open picklist, search starts after the
+  active option and wraps. Repeating the same character cycles through options
+  with that initial instead of building a repeated-letter query.
 - Type-ahead changes the active option only. Enter, click, and the existing Tab
   behavior retain their current selection and commit semantics. A no-match key
   leaves the active option unchanged. Arrow keys, Home, End, Escape, focus
@@ -53,11 +54,12 @@ navigation or Escape dismissal.
 
 ## Interaction and responsive contract
 
-Typing works only while the list is open and the trigger owns focus. Printable
-single characters extend the buffer within 700 ms; repeated identical
-characters cycle by initial. Matching is case-insensitive. A match updates
-`aria-activedescendant` and the existing active-option styling. The selected
-option remains distinct until the user selects through an existing action.
+Typing works while the trigger owns focus, whether the list is open or closed.
+Printable single characters extend the buffer within 700 ms; a matching key
+opens a closed list at the matching option. In an open list, repeated identical
+characters cycle by initial. Matching is case-insensitive. Type-ahead updates
+the active option only; it never commits a selection. A closed list stays
+closed when a key has no match, and an open list keeps its active option.
 Escape closes the menu and returns focus to its trigger.
 
 The Library link remains leaf green (`#386044`) on desktop and mobile, with a

@@ -789,11 +789,14 @@ from Ingredient to same-row Specifics and from Preparation to the next row's
 Ingredient. Enter commits Specifics text directly.
 Measurement picklists follow the same first-Enter selection and next-Enter row
 commit behavior. ArrowUp/ArrowDown opens a closed listbox and moves its active
-option; Tab accepts an active option before advancing. Enter in an amount or
-Specifics input commits the row when no suggestion is open. Non-submit Enter
-does not submit the recipe form; only Save recipe saves the recipe. Committing
-focuses the trailing Add ingredient row cell on desktop and submits the row
-popover on mobile. Escape closes a listbox or cancels the active edit/popover.
+option; typing a matching printable character also opens it at the next
+matching unit without selecting it. While open, type-ahead refines the prefix
+and repeated characters cycle matching options. Tab accepts an active option
+before advancing. Enter in an amount or Specifics input commits the row when no
+suggestion is open. Non-submit Enter does not submit the recipe form; only Save
+recipe saves the recipe. Committing focuses the trailing Add ingredient row cell
+on desktop and submits the row popover on mobile. Escape closes a listbox or
+cancels the active edit/popover.
 
 Selecting `divided` in the Preparation cell reveals a compact first-portion
 input, its current measurement unit, and the computed remainder as read-only
