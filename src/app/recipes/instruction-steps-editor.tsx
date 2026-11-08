@@ -15,6 +15,7 @@ import {
 } from '../../lib/recipes/instruction-rules';
 import { createUuid } from '../../lib/uuid';
 import { FramedMediaImage } from '../media/framed-media-image';
+import { ReorderGrip } from '../reorder-grip';
 import { useReorderDrag } from './use-reorder-drag';
 
 type InstructionIngredient = {
@@ -562,7 +563,7 @@ export function InstructionStepsEditor({
                       }
                     }}
                   >
-                    <span aria-hidden="true" className="recipe-instruction-grip" />
+                    <ReorderGrip />
                   </button>
                 </>
               )}

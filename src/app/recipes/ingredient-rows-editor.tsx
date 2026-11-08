@@ -42,6 +42,7 @@ import {
   type NutritionPaneSave,
   nutritionFieldOverridesToValues,
 } from '../nutrition/nutrition-pane';
+import { ReorderGrip } from '../reorder-grip';
 import { MeasurementEditor } from './measurement-editor';
 import { type ReorderDragBound, useReorderDrag } from './use-reorder-drag';
 
@@ -2179,7 +2180,7 @@ export function IngredientRowsEditor({
             }
           }}
         >
-          <span aria-hidden="true" className="recipe-ingredient-grip" />
+          <ReorderGrip />
         </button>
         <input
           aria-label={`Main, row ${index + 1}`}

@@ -2073,14 +2073,6 @@
   cursor: grabbing;
 }
 
-.recipe-instruction-grip {
-  width: 8px;
-  height: 14px;
-  border-right: 2px dotted #a7b2a1;
-  border-left: 2px dotted #a7b2a1;
-  pointer-events: none;
-}
-
 .recipe-form textarea.recipe-instruction-textarea {
   min-height: 48px;
   border: 0;
@@ -2850,14 +2842,6 @@
 
 .recipe-ingredient-drag-handle:active {
   cursor: grabbing;
-}
-
-.recipe-ingredient-grip {
-  width: 8px;
-  height: 14px;
-  border-right: 2px dotted var(--line-strong);
-  border-left: 2px dotted var(--line-strong);
-  pointer-events: none;
 }
 
 .recipe-form .recipe-ingredient-rail-row input[type="checkbox"] {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeOff, GripVertical } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
@@ -26,6 +26,7 @@ import {
 import { continueInstructionListOnEnter } from '../../lib/recipes/instruction-markdown';
 import { Picklist, type PicklistOption } from '../picklist';
 import { useReorderDrag } from '../recipes/use-reorder-drag';
+import { ReorderGrip } from '../reorder-grip';
 import {
   createAdminUpdate,
   editAdminUpdate,
@@ -142,6 +143,27 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       .map((update) => update.id);
     setManualOrder(nextOrder);
   }, [updates]);
+
+  useEffect(() => {
+    const list = document.querySelector<HTMLElement>('.admin-update-list');
+    if (!list || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    let listWidth = list.getBoundingClientRect().width;
+    const observer = new ResizeObserver(() => {
+      const nextWidth = list.getBoundingClientRect().width;
+      if (nextWidth === listWidth) {
+        return;
+      }
+      listWidth = nextWidth;
+      list
+        .querySelectorAll<HTMLTextAreaElement>('.admin-update-inline-textarea')
+        .forEach(resizeTextarea);
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (editorKey && !pending) {
@@ -363,7 +385,6 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   }
 
   function finishUpdateDrag(event: ReactPointerEvent<HTMLButtonElement>) {
-    const handle = event.currentTarget;
     stopAutoScroll();
     reorderDrag.move(event.clientY);
     const targetId = document
@@ -373,7 +394,6 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     if (drag) {
       persistManualOrder(drag.order, drag.sourceId);
     }
-    handle.focus();
   }
 
   function moveUpdateByKeyboard(updateId: string, direction: 'up' | 'down') {
@@ -696,11 +716,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
         : undefined;
     const rowTransform =
       dragPreview && dragPreview.sourceId === update?.id
-        ? `translateY(${
-            dragPreview.targetId === dragPreview.sourceId
-              ? dragPreview.pointerOffset
-              : (dragPreview.offsets.get(update.id) ?? dragPreview.pointerOffset)
-          }px)`
+        ? `translateY(${dragPreview.pointerOffset}px)`
         : update && dragPreview?.offsets.has(update.id)
           ? `translateY(${dragPreview.offsets.get(update.id)}px)`
           : update && dropOffsets.has(update.id)
@@ -753,49 +769,47 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
               />
             </label>
           ) : null}
-        </div>
-        <div className="admin-update-body">
-          <div className="admin-update-body-content">
-            {update && update.completed_version === null ? (
-              <button
-                aria-label={`Reorder update ${reorderPosition}`}
-                className="admin-update-reorder-handle"
-                disabled={pending || Boolean(editor) || incompleteUpdates.length < 2}
-                title="Drag to reorder. Use Ctrl+Up or Ctrl+Down to move by keyboard."
-                type="button"
-                onPointerDown={(event) => startUpdateDrag(update, event)}
-                onPointerMove={(event) => {
-                  if (isDragActiveRef.current) {
-                    reorderDrag.move(event.clientY);
-                    trackDragPointer(event.clientY);
-                  }
-                }}
-                onPointerUp={finishUpdateDrag}
-                onPointerCancel={(event) => {
+          {update && update.completed_version === null && (
+            <button
+              aria-label={`Reorder update ${reorderPosition}`}
+              className="admin-update-reorder-handle"
+              disabled={pending || Boolean(editor) || incompleteUpdates.length < 2}
+              title="Drag to reorder. Use Ctrl+Up or Ctrl+Down to move by keyboard."
+              type="button"
+              onPointerDown={(event) => startUpdateDrag(update, event)}
+              onPointerMove={(event) => {
+                if (isDragActiveRef.current) {
+                  reorderDrag.move(event.clientY);
+                  trackDragPointer(event.clientY);
+                }
+              }}
+              onPointerUp={finishUpdateDrag}
+              onPointerCancel={(event) => {
+                stopAutoScroll();
+                reorderDrag.cancel();
+                event.currentTarget.focus();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape' && dragPreview) {
+                  event.preventDefault();
                   stopAutoScroll();
                   reorderDrag.cancel();
                   event.currentTarget.focus();
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape' && dragPreview) {
-                    event.preventDefault();
-                    stopAutoScroll();
-                    reorderDrag.cancel();
-                    event.currentTarget.focus();
-                  } else if (event.ctrlKey && event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    moveUpdateByKeyboard(update.id, 'up');
-                  } else if (event.ctrlKey && event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    moveUpdateByKeyboard(update.id, 'down');
-                  }
-                }}
-              >
-                <GripVertical aria-hidden="true" size={16} />
-              </button>
-            ) : (
-              <span aria-hidden="true" className="admin-update-reorder-spacer" />
-            )}
+                } else if (event.ctrlKey && event.key === 'ArrowUp') {
+                  event.preventDefault();
+                  moveUpdateByKeyboard(update.id, 'up');
+                } else if (event.ctrlKey && event.key === 'ArrowDown') {
+                  event.preventDefault();
+                  moveUpdateByKeyboard(update.id, 'down');
+                }
+              }}
+            >
+              <ReorderGrip />
+            </button>
+          )}
+        </div>
+        <div className="admin-update-body">
+          <div className="admin-update-body-content">
             <textarea
               aria-describedby={rowError ? editorErrorId : undefined}
               aria-invalid={Boolean(rowError) || undefined}
@@ -895,9 +909,9 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
           onClick={() => setShowDone((shown) => !shown)}
         >
           {showDone ? (
-            <EyeOff aria-hidden="true" size={18} />
+            <Eye aria-hidden="true" data-visibility-state="visible" size={18} />
           ) : (
-            <Eye aria-hidden="true" size={18} />
+            <EyeOff aria-hidden="true" data-visibility-state="hidden" size={18} />
           )}
         </button>
       </div>
@@ -916,7 +930,11 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
           <span>Done</span>
           <span>Type</span>
         </div>
-        <ul aria-label="Update entries" className="admin-update-list-items">
+        <ul
+          aria-label="Update entries"
+          className="admin-update-list-items"
+          data-reordering={dragPreview ? 'true' : undefined}
+        >
           {renderUpdateRow(null)}
           {visibleUpdates.map((update) => renderUpdateRow(update))}
         </ul>

@@ -61,20 +61,32 @@ regular signed-in users or anonymous visitors.
   numeric components (except `0`), `v` prefix, prerelease, or build suffix.
   Do not require the entered version to equal the running package version.
 - A completed entry shows its version in the Done column at approximately
-  8pt, with an accessible label such as `Done in 1.2.3`. Activating the version
-  opens the same dialog to correct it or explicitly mark the entry incomplete.
+  8pt, centered horizontally without a border, with an accessible label such as
+  `Done in 1.2.3`. Activating the version opens the same dialog to correct it
+  or explicitly mark the entry incomplete.
 - Sort incomplete entries first and preserve their manual order. New and
   reopened incomplete entries start at the top. Completed entries cannot be
   reordered and sort by completion timestamp descending, newest first,
   independent of version text. Correcting a completed version preserves its
   timestamp; reopening clears it. Archive state does not affect order or
-  visibility.
+  visibility. Group the completion checkbox and reorder handle in a compact
+  leading rail with about 12 CSS pixels from list edge to checkbox, checkbox
+  to grip, and grip to text. Use the same compact dotted grip symbol as recipe
+  instructions; keep the dragged row attached to the pointer while neighboring
+  rows move into place. Successful pointer drops should not force a lingering
+  focus outline. Nearby rows should follow drag previews with responsive motion
+  that respects reduced-motion settings.
 - Use a semantic list with **Done** and **Type** headings. A persistent blank
   Markdown field at the top creates entries; each saved row keeps its
   completion control on the left, text in the center, and type pill at the far
   right. Keep controls compact and prevent page-level horizontal scrolling.
+  On mobile, use 14px text with 1.4 line height. Rows have a 56px minimum from
+  48px controls plus vertical padding, then grow to fit all wrapped lines;
+  recalculate textarea height when the list width changes and never clip
+  partial lines.
 - Hide completed entries by default. A compact eye/eye-off control toggles
-  their visibility; incomplete entries remain visible.
+  their visibility, and the icon indicates current state (crossed eye when
+  hidden, open eye when visible); incomplete entries remain visible.
 
 ## Editor and content behavior
 

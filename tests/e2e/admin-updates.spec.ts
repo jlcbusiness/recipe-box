@@ -69,12 +69,34 @@ async function dragUpdate(
 ) {
   const sourceHandle = sourceRow.getByRole('button', { name: /^Reorder update /u });
   await expect(sourceHandle).toBeEnabled();
-  await sourceHandle.scrollIntoViewIfNeeded();
+  await expect(sourceHandle.locator('.reorder-handle-grip')).toBeVisible();
+  await expect(sourceHandle).toHaveCSS('border-width', '0px');
+  await sourceHandle.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', inline: 'nearest' }),
+  );
+  const listBounds = await page.locator('.admin-update-list').boundingBox();
+  const checkboxBounds = await sourceRow
+    .locator('.admin-update-checkbox-hit-area input')
+    .boundingBox();
+  const gripBounds = await sourceHandle.locator('.reorder-handle-grip').boundingBox();
+  const textBounds = await sourceRow.locator('.admin-update-inline-textarea').boundingBox();
+  if (!listBounds || !checkboxBounds || !gripBounds || !textBounds) {
+    throw new Error('Update controls must be visible for drag.');
+  }
+  const checkboxInset = checkboxBounds.x - listBounds.x;
+  const checkboxToGripGap = gripBounds.x - (checkboxBounds.x + checkboxBounds.width);
+  const gripToTextGap = textBounds.x - (gripBounds.x + gripBounds.width);
+  expect(checkboxInset).toBeGreaterThanOrEqual(12);
+  expect(checkboxInset).toBeLessThanOrEqual(14);
+  expect(checkboxToGripGap).toBeGreaterThanOrEqual(12);
+  expect(checkboxToGripGap).toBeLessThanOrEqual(14);
+  expect(gripToTextGap).toBe(12);
   await expect(sourceRow).toHaveCSS('transform', 'none');
   await expect(targetRow).toHaveCSS('transform', 'none');
   const sourceBounds = await sourceHandle.boundingBox();
+  const sourceRowBounds = await sourceRow.boundingBox();
   const targetBounds = await targetRow.boundingBox();
-  if (!sourceBounds || !targetBounds) {
+  if (!sourceBounds || !sourceRowBounds || !targetBounds) {
     throw new Error('Both update reorder targets must be visible.');
   }
   const sourceX = sourceBounds.x + sourceBounds.width / 2;
@@ -97,6 +119,7 @@ async function dragUpdate(
       type: 'touchStart',
       touchPoints: [touchPoint(1, sourceX, sourceY)],
     });
+    await expect(sourceRow).toHaveAttribute('data-reorder-state', 'dragging');
     await touch.send('Input.dispatchTouchEvent', {
       type: 'touchMove',
       touchPoints: [touchPoint(1, targetX, targetY)],
@@ -107,14 +130,12 @@ async function dragUpdate(
     const targetPreviewTop = (await targetRow.boundingBox())?.y;
     expect(sourcePreviewTop).toBeDefined();
     expect(targetPreviewTop).toBeDefined();
+    expect(
+      Math.abs((sourcePreviewTop ?? 0) - (sourceRowBounds.y + targetY - sourceY)),
+    ).toBeLessThanOrEqual(2);
     await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    const sourceReleasedTop = (await sourceRow.boundingBox())?.y;
-    const targetReleasedTop = (await targetRow.boundingBox())?.y;
-    expect(sourceReleasedTop).toBeDefined();
-    expect(targetReleasedTop).toBeDefined();
-    expect(Math.abs((sourceReleasedTop ?? 0) - (sourcePreviewTop ?? 0))).toBeLessThanOrEqual(2);
-    expect(Math.abs((targetReleasedTop ?? 0) - (targetPreviewTop ?? 0))).toBeLessThanOrEqual(2);
     await expect(sourceRow).toHaveCSS('transform', 'none');
+    await expect(targetRow).toHaveCSS('transform', 'none');
     await touch.detach();
     return;
   }
@@ -128,14 +149,12 @@ async function dragUpdate(
   const targetPreviewTop = (await targetRow.boundingBox())?.y;
   expect(sourcePreviewTop).toBeDefined();
   expect(targetPreviewTop).toBeDefined();
+  expect(
+    Math.abs((sourcePreviewTop ?? 0) - (sourceRowBounds.y + targetY - sourceY)),
+  ).toBeLessThanOrEqual(2);
   await page.mouse.up();
-  const sourceReleasedTop = (await sourceRow.boundingBox())?.y;
-  const targetReleasedTop = (await targetRow.boundingBox())?.y;
-  expect(sourceReleasedTop).toBeDefined();
-  expect(targetReleasedTop).toBeDefined();
-  expect(Math.abs((sourceReleasedTop ?? 0) - (sourcePreviewTop ?? 0))).toBeLessThanOrEqual(2);
-  expect(Math.abs((targetReleasedTop ?? 0) - (targetPreviewTop ?? 0))).toBeLessThanOrEqual(2);
   await expect(sourceRow).toHaveCSS('transform', 'none');
+  await expect(targetRow).toHaveCSS('transform', 'none');
 }
 
 test('admins can manage classified updates and versioned completion @e2e @a11y', async ({
@@ -150,7 +169,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     const initialText = `Track compact update editing ${runId}.`;
     const initialBody = `${initialText}\n\n- Keep nested lists\n  - readable`;
     const savedBody = `${initialBody}\n  - keyboard item`;
-    const editedText = `Track compact update editing after save ${runId}.`;
+    const editedText = `Track compact update editing after save ${runId} while keeping every wrapped line visible on narrow mobile screens.`;
     await signInAs(page, admin);
     await page.goto('/admin');
     await expect(page.getByRole('contentinfo', { name: 'Application version' })).toHaveText(
@@ -253,11 +272,28 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
 
     const showDoneButton = page.getByRole('button', { name: 'Show done updates' });
     await expect(showDoneButton).toHaveAttribute('aria-pressed', 'false');
+    await expect(showDoneButton.locator('svg')).toHaveAttribute('data-visibility-state', 'hidden');
     await showDoneButton.click();
-    await expect(row.getByRole('button', { name: 'Done in 1.10.0' })).toBeVisible({
+    const completedVersion = row.getByRole('button', { name: 'Done in 1.10.0' });
+    await expect(completedVersion).toBeVisible({
       timeout: 15_000,
     });
-    await row.getByRole('button', { name: 'Done in 1.10.0' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Hide done updates' }).locator('svg'),
+    ).toHaveAttribute('data-visibility-state', 'visible');
+    await expect(completedVersion).toHaveCSS('border-width', '0px');
+    const doneBounds = await row.locator('.admin-update-done').boundingBox();
+    const versionBounds = await completedVersion.boundingBox();
+    expect(doneBounds).toBeDefined();
+    expect(versionBounds).toBeDefined();
+    expect(
+      Math.abs(
+        (versionBounds?.x ?? 0) +
+          (versionBounds?.width ?? 0) / 2 -
+          ((doneBounds?.x ?? 0) + (doneBounds?.width ?? 0) / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
+    await completedVersion.click();
     const correctionDialog = page.getByRole('dialog', { name: 'Update completion' });
     await correctionDialog.getByLabel('Version').fill('1.10.1');
     await correctionDialog.getByRole('button', { name: 'Submit version' }).click();
@@ -282,20 +318,35 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
         width,
       );
     }
+    await expect
+      .poll(() =>
+        row.locator('textarea').evaluate((field) => field.clientHeight >= field.scrollHeight - 1),
+      )
+      .toBe(true);
     const mobileGeometry = await page.evaluate(() => {
       const row = document.querySelector('.admin-update-row:not(.is-new) textarea');
       const list = document.querySelector('.admin-update-list');
+      const rowElement = row?.closest('.admin-update-row');
+      const styles = row ? getComputedStyle(row) : null;
       return {
         viewport: window.innerWidth,
         document: document.documentElement.scrollWidth,
         listWidth: list?.clientWidth ?? 0,
         listScrollWidth: list?.scrollWidth ?? 0,
         textWidth: row?.getBoundingClientRect().width ?? 0,
+        textFontSize: styles?.fontSize ?? '',
+        textHeight: row?.clientHeight ?? 0,
+        textScrollHeight: row?.scrollHeight ?? 0,
+        rowHeight: rowElement?.getBoundingClientRect().height ?? 0,
       };
     });
     expect(mobileGeometry.document).toBeLessThanOrEqual(mobileGeometry.viewport);
     expect(mobileGeometry.listScrollWidth).toBeLessThanOrEqual(mobileGeometry.listWidth);
     expect(mobileGeometry.textWidth).toBeGreaterThan(0);
+    expect(mobileGeometry.textFontSize).toBe('14px');
+    expect(mobileGeometry.textHeight).toBeGreaterThan(0);
+    expect(mobileGeometry.textHeight).toBeGreaterThanOrEqual(mobileGeometry.textScrollHeight - 1);
+    expect(mobileGeometry.rowHeight).toBeGreaterThanOrEqual(mobileGeometry.textHeight + 8);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: testInfo.outputPath('admin-updates-mobile.png') });
     const mobileA11y = await new AxeBuilder({ page })

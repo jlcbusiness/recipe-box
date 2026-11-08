@@ -358,12 +358,14 @@ Administration.
 
 The Updates tab uses a compact list with **Done** and **Type** headings. A
 persistent blank Markdown field sits at the top for adding entries. Each row
-has a completion control on the left, a directly editable text field in the
-center, and the required type pill on the right. Incomplete entries have a
-checkbox and a dedicated reorder handle beside the text; completed entries show
-their version in a small 8pt label and cannot be reordered. **Fix** uses a
-high-contrast olive treatment and **Feature** uses a high-contrast light-blue
-treatment.
+has a compact leading rail with the completion control and reorder handle
+together, a directly editable text field in the center, and the required type
+pill on the right. Keep the visible inset from the list edge to the checkbox
+about 12 CSS pixels, with about 12 CSS pixels between the checkbox and drag
+grip and between the grip and text field.
+Completed entries show their version in a small, borderless 8pt label centered
+in the Done column and cannot be reordered. **Fix** uses a high-contrast olive
+treatment and **Feature** uses a high-contrast light-blue treatment.
 
 Clicking a text field edits it in place. Leaving the row saves a valid draft;
 Escape discards the draft. The top field promotes entered text into an update
@@ -372,16 +374,24 @@ The required type picker is a compact **+ Add tag** pill until Fix or Feature
 is chosen; it can also change the type of a saved entry. Choosing a type while
 the top draft contains text creates the entry immediately; with no text, the
 type remains staged in the draft. No add, edit, archive, or restore action
-buttons or explanatory helper text are shown. A small
-eye/eye-off control hides or reveals completed entries; incomplete entries are
-always visible. Previously archived database entries appear as ordinary rows,
-without an Archived label or archive control. The authoring field uses plain
-Markdown and does not interpret recipe-specific autocomplete or tokens.
+buttons or explanatory helper text are shown. A small eye/eye-off control hides
+or reveals completed entries; its icon reflects current visibility (crossed
+eye when hidden, open eye when visible), and incomplete entries are always
+visible. Previously archived database entries appear as ordinary rows, without
+an Archived label or archive control. The authoring field uses plain Markdown
+and does not interpret recipe-specific autocomplete or tokens.
 Incomplete entries keep a persistent manual order, and newly created or
 reopened entries start at the top. Completed entries follow the incomplete
 entries and sort by completion time, newest first. The reorder handle supports
 pointer/touch dragging, Ctrl+ArrowUp/Down, Escape cancellation, and polite move
-announcements.
+announcements. Use the same compact dotted grip symbol as the instruction
+editor, without a persistent pointer-focus outline after a successful drop.
+Keep the dragged row attached to the pointer as neighboring rows make room;
+animate those rows promptly and honor reduced-motion settings.
+On mobile, update text uses 14px type with a 1.4 line height. Rows have a
+minimum height set by the 48px controls and vertical padding, then grow to show
+all wrapped text lines. Recalculate textarea height when the list width changes;
+do not clip or truncate at fractional lines.
 
 Completing an entry opens a titled native dialog. It accepts only a standard
 `major.minor.patch` version, preserves invalid input beside a red textual

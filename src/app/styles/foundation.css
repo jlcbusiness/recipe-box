@@ -776,13 +776,13 @@ a {
 .admin-update-list-header,
 .admin-update-row {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) max-content;
+  grid-template-columns: 64px minmax(0, 1fr) max-content;
   align-items: start;
-  column-gap: 12px;
+  column-gap: 0;
 }
 
 .admin-update-list-header {
-  padding: 6px 8px;
+  padding: 6px 8px 6px 0;
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
@@ -790,13 +790,14 @@ a {
 }
 
 .admin-update-list-header span:last-child {
+  margin-left: 12px;
   text-align: right;
 }
 
 .admin-update-row {
   border-bottom: 1px solid var(--line);
-  padding: 6px 8px;
-  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  padding: 6px 8px 6px 0;
+  transition: transform 80ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .admin-update-row[data-reorder-state="dragging"] {
@@ -824,10 +825,10 @@ a {
 
 .admin-update-done {
   display: flex;
-  min-width: 44px;
+  min-width: 64px;
   min-height: 44px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .admin-updates input[type="checkbox"] {
@@ -841,6 +842,7 @@ a {
 .admin-update-checkbox-hit-area {
   display: inline-flex;
   width: 44px;
+  flex: 0 0 44px;
   height: 44px;
   align-items: center;
   justify-content: center;
@@ -850,7 +852,10 @@ a {
 .admin-updates .admin-update-version {
   min-width: 44px;
   min-height: 44px;
+  margin-inline: auto;
+  border: 0;
   padding: 4px;
+  background: transparent;
   font-size: 10.67px;
   font-weight: 600;
   line-height: 1.2;
@@ -861,28 +866,27 @@ a {
 }
 
 .admin-update-body-content {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: start;
-  gap: 4px;
+  min-width: 0;
 }
 
-.admin-update-reorder-handle,
-.admin-update-reorder-spacer {
+.admin-update-reorder-handle {
   display: inline-flex;
-  width: 24px;
-  min-width: 24px;
+  width: 20px;
+  min-width: 20px;
   min-height: 44px;
   align-items: center;
   justify-content: center;
 }
 
-.admin-update-reorder-handle {
+.admin-updates button.admin-update-reorder-handle {
+  min-height: 44px;
   border: 0;
+  border-radius: 0;
   padding: 0;
   background: transparent;
   color: var(--muted);
   cursor: grab;
+  justify-content: flex-start;
   touch-action: none;
   user-select: none;
 }
@@ -895,10 +899,18 @@ a {
   cursor: not-allowed;
 }
 
-.admin-update-reorder-handle:focus-visible {
+.admin-updates button.admin-update-reorder-handle:focus-visible {
   border-radius: 4px;
   outline: 2px solid var(--gold);
   outline-offset: -2px;
+}
+
+.reorder-handle-grip {
+  width: 8px;
+  height: 14px;
+  border-right: 2px dotted var(--line-strong);
+  border-left: 2px dotted var(--line-strong);
+  pointer-events: none;
 }
 
 .admin-update-inline-textarea {
@@ -929,6 +941,7 @@ a {
 .admin-update-kind {
   display: flex;
   min-height: 44px;
+  margin-left: 12px;
   align-items: center;
   justify-content: flex-end;
 }
@@ -1158,14 +1171,19 @@ a {
     min-height: 48px;
   }
 
+  .admin-update-inline-textarea {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
   .admin-update-list-header,
   .admin-update-row {
-    grid-template-columns: 48px minmax(0, 1fr) max-content;
-    column-gap: 8px;
+    grid-template-columns: 64px minmax(0, 1fr) max-content;
+    column-gap: 0;
   }
 
   .admin-update-row {
-    padding: 4px 6px;
+    padding: 4px 6px 4px 0;
   }
 
   .admin-update-done,
@@ -1174,13 +1192,12 @@ a {
     min-height: 48px;
   }
 
-  .admin-update-reorder-handle,
-  .admin-update-reorder-spacer {
+  .admin-updates button.admin-update-reorder-handle {
     min-height: 48px;
   }
 
   .admin-update-checkbox-hit-area {
-    width: 48px;
+    min-height: 48px;
   }
 
   .admin-updates .admin-update-editor-actions button,
