@@ -331,7 +331,6 @@ a {
 
 .private-shell {
   display: grid;
-  min-height: 100vh;
   grid-template-columns: fit-content(140px) minmax(0, 1fr);
 }
 
@@ -341,8 +340,7 @@ a {
   align-self: start;
   box-sizing: border-box;
   display: flex;
-  height: 100dvh;
-  min-height: 100vh;
+  max-height: 100dvh;
   flex-direction: column;
   overflow-y: auto;
   border-right: 1px solid var(--line);
@@ -2368,7 +2366,7 @@ h1 {
 @media (max-width: 640px) {
   .private-shell {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
   }
 
   .private-nav {

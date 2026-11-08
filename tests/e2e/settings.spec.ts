@@ -34,6 +34,46 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await expect(page).toHaveURL(/\/publications$/);
 }
 
+test('version footer follows short private content without a viewport-height shell @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/trash');
+    await expect(page.getByRole('heading', { name: 'Trash', level: 1 })).toBeVisible();
+    await expect(page.getByText('Trash is empty.')).toBeVisible();
+
+    const geometry = await page.evaluate(() => {
+      const content = document.querySelector('.private-content');
+      const navigation = document.querySelector('.private-nav');
+      const footer = document.querySelector('.app-version-footer');
+      if (!content || !navigation || !footer) {
+        throw new Error('Expected the private shell and application version footer.');
+      }
+
+      const main = content.querySelector('main');
+      if (!main) throw new Error('Expected the short private route to contain main content.');
+      return {
+        contentBottom: content.getBoundingClientRect().bottom,
+        footerTop: footer.getBoundingClientRect().top,
+        footerBottom: footer.getBoundingClientRect().bottom,
+        viewportHeight: window.innerHeight,
+        navigationPosition: getComputedStyle(navigation).position,
+      };
+    });
+
+    expect(geometry.navigationPosition).toBe('sticky');
+    expect(geometry.footerTop - geometry.contentBottom).toBeGreaterThanOrEqual(0);
+    expect(geometry.footerTop - geometry.contentBottom).toBeLessThanOrEqual(1);
+    expect(geometry.footerBottom).toBeLessThan(geometry.viewportHeight);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Library stays visually distinct and shared picklists support type-ahead @e2e @a11y', async ({
   page,
   request,
