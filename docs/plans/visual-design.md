@@ -361,11 +361,11 @@ persistent blank Markdown field sits at the top for adding entries. Each row
 has a compact leading rail with the completion control and reorder handle
 together, a directly editable text field in the center, and the required type
 pill on the right. Keep the visible inset from the list edge to the checkbox
-about 12 CSS pixels and about 12 CSS pixels between the visible checkbox and
-the small dotted grip. The reorder button fills the lane from the checkbox
-hit-area edge to the text field and spans the full row height; use a 48px-wide
-target on touch viewports. Keep the grip at the checkbox-side edge and do not
-overlap the checkbox or text-field hit areas.
+about 12 CSS pixels, with about 12 CSS pixels between checkbox and grip and
+between grip and text. Keep the 64px rail and text position unchanged. Extend
+the drag hit area over the blank lane around the grip and through the
+grip-to-text gap, spanning the full row height without covering the checkbox
+or text field.
 Completed entries show their version in a small, borderless 8pt label centered
 in the Done column and cannot be reordered. **Fix** uses a high-contrast olive
 treatment and **Feature** uses a high-contrast light-blue treatment.

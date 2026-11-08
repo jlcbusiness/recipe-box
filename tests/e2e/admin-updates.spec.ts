@@ -103,10 +103,13 @@ async function dragUpdate(
   expect(checkboxInset).toBeLessThanOrEqual(14);
   expect(checkboxToGripGap).toBeGreaterThanOrEqual(12);
   expect(checkboxToGripGap).toBeLessThanOrEqual(14);
-  expect(gripToTextGap).toBeGreaterThanOrEqual(30);
-  expect(handleBounds.x).toBeCloseTo(checkboxHitAreaBounds.x + checkboxHitAreaBounds.width, 1);
+  expect(gripToTextGap).toBe(12);
+  expect(textBounds.x - checkboxHitAreaBounds.x).toBe(64);
+  expect(handleBounds.x).toBeCloseTo(checkboxHitAreaBounds.x + 32, 1);
   expect(handleBounds.x + handleBounds.width).toBeCloseTo(textBounds.x, 1);
-  expect(handleBounds.width).toBeGreaterThanOrEqual(useTouch ? 48 : 44);
+  expect(handleBounds.width).toBe(32);
+  expect(handleBounds.x).toBeGreaterThanOrEqual(checkboxBounds.x + checkboxBounds.width);
+  expect(gripBounds.y - sourceRowBounds.y).toBe(21);
   expect(Math.abs(handleBounds.y - sourceRowBounds.y)).toBeLessThanOrEqual(1);
   expect(
     Math.abs(handleBounds.y + handleBounds.height - (sourceRowBounds.y + sourceRowBounds.height)),
