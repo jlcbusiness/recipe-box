@@ -14,6 +14,7 @@ import {
   type NutritionEquivalent,
   type NutritionProfile,
 } from './nutrition-rules';
+import { createPublicPhotoId } from './public-photo-id';
 import {
   buildPublicRecipePayload,
   type PublicRecipePayload,
@@ -21,13 +22,13 @@ import {
 } from './public-rules';
 
 const publicIdPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu;
-const signedUrlLifetimeSeconds = 900;
 
 function createPublicDataAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) {
-    throw new Error('Supabase server administration is not configured.');
+    console.error('Public recipe data failed.', { operation: 'admin_client_configuration' });
+    throw new PublicRecipeDataError();
   }
   return createClient(url, serviceRoleKey, {
     auth: {
@@ -52,8 +53,13 @@ export type PublicRecipePhoto = {
 };
 
 export type PublicRecipePageData =
-  | { status: 'unavailable' | 'gone' }
-  | { status: 'active'; recipe: PublicRecipePayload; photos: PublicRecipePhoto[] };
+  | { status: 'unavailable' | 'gone' | 'error' }
+  | {
+      status: 'active';
+      recipe: PublicRecipePayload;
+      photos: PublicRecipePhoto[];
+      authorUsername: string;
+    };
 
 type PublicRecipeRow = {
   id: string;
@@ -112,15 +118,24 @@ type PublicPhotoRow = {
   source_full_path: string;
 };
 
-type SignedPublicPhoto = Omit<PublicRecipePhoto, 'id'> & { assetId: string };
+type PublicPhotoRecord = {
+  assetId: string;
+  photo: PublicRecipePhoto;
+};
 
-function ensureNoError(error: { message: string } | null): void {
+class PublicRecipeDataError extends Error {}
+
+function ensureNoError(error: { code?: string } | null, operation: string): void {
   if (error) {
-    throw new Error('Unable to load this public recipe.');
+    console.error('Public recipe data query failed.', {
+      operation,
+      code: error.code ?? 'unknown',
+    });
+    throw new PublicRecipeDataError();
   }
 }
 
-async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
+async function getPublicPhotos(recipeId: string, publicId: string): Promise<PublicPhotoRecord[]> {
   const supabase = createPublicDataAdminClient();
   const { data, error } = await supabase
     .from('media_assets')
@@ -132,32 +147,26 @@ async function getPublicPhotos(recipeId: string): Promise<SignedPublicPhoto[]> {
     .eq('status', 'ready')
     .order('position')
     .order('created_at');
-  ensureNoError(error);
+  ensureNoError(error, 'recipe_photo_metadata');
 
   const rows = (data ?? []) as PublicPhotoRow[];
-  return Promise.all(
-    rows.map(async ({ id, full_path, thumbnail_path, source_full_path, ...metadata }) => {
-      const [full, thumbnail] = await Promise.all([
-        supabase.storage.from('recipe-media').createSignedUrl(full_path, signedUrlLifetimeSeconds),
-        supabase.storage
-          .from('recipe-media')
-          .createSignedUrl(thumbnail_path, signedUrlLifetimeSeconds),
-      ]);
-      if (full.error || thumbnail.error) {
-        throw new Error('Unable to prepare this recipe photo.');
-      }
-      return {
+  return rows.map(({ id, full_path, thumbnail_path, source_full_path, ...metadata }) => {
+    const photoId = createPublicPhotoId(publicId, id);
+    const photoUrl = `/api/public-recipes/${publicId}/photos/${photoId}`;
+    return {
+      assetId: id,
+      photo: {
         ...metadata,
+        id: photoId,
         crop: full_path === source_full_path ? metadata.crop : null,
-        assetId: id,
-        full_url: full.data.signedUrl,
-        thumbnail_url: thumbnail.data.signedUrl,
-      };
-    }),
-  );
+        full_url: `${photoUrl}?variant=full`,
+        thumbnail_url: `${photoUrl}?variant=thumbnail`,
+      },
+    };
+  });
 }
 
-export async function getPublicRecipePageData(publicId: string): Promise<PublicRecipePageData> {
+async function loadPublicRecipePageData(publicId: string): Promise<PublicRecipePageData> {
   if (!publicIdPattern.test(publicId)) {
     return { status: 'unavailable' };
   }
@@ -170,7 +179,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
     )
     .eq('public_id', publicId)
     .maybeSingle();
-  ensureNoError(error);
+  ensureNoError(error, 'recipe_visibility');
 
   if (!row) {
     const { data: tombstone, error: tombstoneError } = await supabase
@@ -178,12 +187,22 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
       .select('public_id')
       .eq('public_id', publicId)
       .maybeSingle();
-    ensureNoError(tombstoneError);
+    ensureNoError(tombstoneError, 'purged_recipe_lookup');
     return { status: tombstone ? 'gone' : 'unavailable' };
   }
 
   const recipeRow = row as PublicRecipeRow;
   if (recipeRow.is_private || recipeRow.trashed_at) {
+    return { status: 'unavailable' };
+  }
+
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('public_username')
+    .eq('id', recipeRow.account_id)
+    .maybeSingle();
+  ensureNoError(accountError, 'public_username');
+  if (!account?.public_username) {
     return { status: 'unavailable' };
   }
 
@@ -243,16 +262,17 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
       .eq('recipe_id', recipeRow.id)
       .order('position'),
   ]);
-  for (const result of [
-    publicationResult,
-    assignmentResult,
-    ingredientSetResult,
-    stepResult,
-    ingredientResult,
-    pairingResult,
-    referenceResult,
-  ]) {
-    ensureNoError(result.error);
+  const publicDataResults: Array<[string, { error: { code?: string } | null }]> = [
+    ['publication', publicationResult],
+    ['equipment_assignments', assignmentResult],
+    ['ingredient_sets', ingredientSetResult],
+    ['instruction_steps', stepResult],
+    ['recipe_ingredients', ingredientResult],
+    ['recipe_pairings', pairingResult],
+    ['recipe_references', referenceResult],
+  ];
+  for (const [operation, result] of publicDataResults) {
+    ensureNoError(result.error, operation);
   }
 
   const equipmentIds = (assignmentResult.data ?? []).map(
@@ -266,7 +286,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
         .eq('category', 'equipment')
         .in('id', equipmentIds)
     : { data: [], error: null };
-  ensureNoError(equipmentError);
+  ensureNoError(equipmentError, 'equipment_values');
 
   const ingredientRows = (ingredientResult.data ?? []) as IngredientRow[];
   const ingredientIds = [...new Set(ingredientRows.map((ingredient) => ingredient.ingredient_id))];
@@ -319,11 +339,11 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
             .in('ingredient_id', ingredientIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
-  ensureNoError(canonicalResult.error);
-  ensureNoError(measurementResult.error);
-  ensureNoError(profileResult.error);
-  ensureNoError(equivalentResult.error);
-  ensureNoError(densityResult.error);
+  ensureNoError(canonicalResult.error, 'ingredient_names');
+  ensureNoError(measurementResult.error, 'ingredient_measurements');
+  ensureNoError(profileResult.error, 'ingredient_nutrition_profiles');
+  ensureNoError(equivalentResult.error, 'ingredient_measure_equivalents');
+  ensureNoError(densityResult.error, 'ingredient_densities');
 
   const measurementRows = (measurementResult.data ?? []) as MeasurementRow[];
   const measurementOptionIds = [
@@ -340,7 +360,7 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
         .eq('account_id', recipeRow.account_id)
         .in('id', measurementOptionIds)
     : { data: [], error: null };
-  ensureNoError(measurementOptionError);
+  ensureNoError(measurementOptionError, 'measurement_picklist_values');
 
   const ingredientNames = new Map(
     (canonicalResult.data ?? []).map((ingredient) => [ingredient.id, ingredient.name]),
@@ -445,21 +465,26 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
     pairings: pairingResult.data ?? [],
     references: referenceResult.data ?? [],
   };
-  const signedPhotos = await getPublicPhotos(recipeRow.id);
+  const photoRecords = await getPublicPhotos(recipeRow.id, publicId);
+  const photos = photoRecords.map(({ photo }) => photo);
   const publicPhotoIds = new Map(
-    signedPhotos.map(({ assetId }, index) => [
-      assetId.toLocaleLowerCase(),
-      `00000000-0000-4000-8000-${(1_000_000 + index).toString(16).padStart(12, '0')}`,
-    ]),
+    photoRecords.map(({ assetId, photo }) => [assetId.toLocaleLowerCase(), photo.id]),
   );
   const recipe = buildPublicRecipePayload(
     source,
     (equipmentRows ?? []).map((equipment) => equipment.display_value),
     publicPhotoIds,
   );
-  const photos = signedPhotos.map(({ assetId, ...photo }) => ({
-    ...photo,
-    id: publicPhotoIds.get(assetId.toLocaleLowerCase()) ?? '',
-  }));
-  return { status: 'active', recipe, photos };
+  return { status: 'active', recipe, photos, authorUsername: account.public_username };
+}
+
+export async function getPublicRecipePageData(publicId: string): Promise<PublicRecipePageData> {
+  try {
+    return await loadPublicRecipePageData(publicId);
+  } catch (error) {
+    if (error instanceof PublicRecipeDataError) {
+      return { status: 'error' };
+    }
+    throw error;
+  }
 }

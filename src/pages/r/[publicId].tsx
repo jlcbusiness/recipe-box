@@ -27,8 +27,13 @@ import {
 import { formatRecipeDuration } from '../../lib/recipes/recipe-rules';
 
 type PublicRecipePageProps =
-  | { state: 'unavailable' | 'gone' }
-  | { state: 'active'; recipe: PublicRecipePayload; photos: PublicRecipePhoto[] };
+  | { state: 'unavailable' | 'gone' | 'error' }
+  | {
+      state: 'active';
+      recipe: PublicRecipePayload;
+      photos: PublicRecipePhoto[];
+      authorUsername: string;
+    };
 
 function withOccurrenceKeys<T>(items: T[], getIdentity: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -47,11 +52,22 @@ export const getServerSideProps = (async ({ params, res }) => {
   );
   res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
 
+  if (result.status === 'error') {
+    res.statusCode = 500;
+    return { props: { state: 'error' } };
+  }
   if (result.status !== 'active') {
     res.statusCode = result.status === 'gone' ? 410 : 404;
     return { props: { state: result.status } };
   }
-  return { props: { state: 'active', recipe: result.recipe, photos: result.photos } };
+  return {
+    props: {
+      state: 'active',
+      recipe: result.recipe,
+      photos: result.photos,
+      authorUsername: result.authorUsername,
+    },
+  };
 }) satisfies GetServerSideProps<PublicRecipePageProps>;
 
 function renderInstructionBlocks(
@@ -213,14 +229,16 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
           <p>
             {props.state === 'gone'
               ? 'This recipe is no longer available.'
-              : 'This recipe is currently unavailable.'}
+              : props.state === 'error'
+                ? 'This recipe could not be loaded. Please try again later.'
+                : 'This recipe is currently unavailable.'}
           </p>
         </section>
       </main>
     );
   }
 
-  const { recipe, photos } = props;
+  const { recipe, photos, authorUsername } = props;
   const times = [
     ['Total time', recipe.timings.total],
     ['Prep', recipe.timings.prep],
@@ -294,6 +312,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                 </RecipeActionFeedbackProvider>
               </div>
             </div>
+            <p className="recipe-public-author">By {authorUsername}</p>
             {recipe.attribution && (
               <p className="recipe-attribution">
                 <cite>{recipe.attribution.publication_name}</cite>

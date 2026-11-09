@@ -154,7 +154,7 @@ divide. Scaling changes numeric amounts but does not invent precision for
 unmeasured values. Unit conversion works within volume or weight dimensions;
 cross-dimension conversion requires trusted density.
 
-Nutrition is owner-entered; the app never imports nutrition automatically from
+Nutrition is User-entered; the app never imports nutrition automatically from
 external sources. DLC 12 adds per-ingredient Settings profiles, explicit
 Count-or-Things average-measure equivalents, recipe-specific field overrides,
 and per-serving recipe estimates. Recipe-level manual values are stored as
@@ -218,7 +218,7 @@ other non-drag controls providing the equivalent operation.
 
 Publication types are Book, Magazine, Site, and the reserved Recipe Tin
 collection. Each account has one permanent Tin; it is not offered in normal
-publication creation and cannot be edited or deleted by the account owner.
+publication creation and cannot be edited or deleted by the User.
 See [comprehensive-reference.md § 6](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin).
 The Library supports List and Grid views, compact type and sort picklists, a
 direct icon toggle for View, and sorting by Date Added and Date Changed. Mobile
@@ -288,17 +288,23 @@ mention style.
 
 ## Sharing And Authentication
 
-Recipes are linkable by default at stable random URLs.
+Recipes are private by default and have stable random URLs. Existing recipes
+are private unless the User explicitly republishes them; their URLs remain
+unchanged.
 See [comprehensive-reference.md § 9](comprehensive-reference.md#9-sharing-privacy-urls-and-image-delivery)
 and [comprehensive-reference.md § 10](comprehensive-reference.md#10-authentication-and-account-setup).
 A Private toggle limits
-viewing to the owning account while preserving the URL. Public readers can scale,
-convert units, and print, but cannot navigate, open references, edit, or access
-publication links. Attribution may appear but is not clickable.
+viewing to the signed-in User whose account contains the recipe while
+preserving the URL. Anyone accessing a public recipe link is a Guest for that
+recipe, whether signed in or not. Guests can scale, convert units, and print,
+but cannot navigate, open references, edit, or access publication links.
+Attribution may appear but is not clickable.
 
-Public recipe images are served from private storage only after the recipe's
-public-link access check succeeds. The application must not expose a generally
-public image bucket.
+Public recipe images are served from private storage through an
+application-controlled endpoint that checks the recipe's current public-link
+access on every request. It must not expose a generally public image bucket or
+return a signed Storage URL for public photos. Making a recipe private blocks
+future photo requests, but cannot retract bytes already delivered or saved.
 
 A private or trashed recipe URL returns a custom unavailable page with HTTP
 `404` and `Cache-Control: no-store`. A permanently purged recipe returns HTTP
@@ -309,10 +315,14 @@ and change history.
 
 Support password sign-in, password recovery, and Google sign-in. Each account
 uses exactly one sign-in method, chosen when its invite is accepted.
-In production, sign-up is invite-only: an admin generates account-creation
-links, and the owner's account is created by accepting a pre-created admin invite
-sent to the configured owner email address. Admin is a flag that existing admins
-can grant. Invites are emailed, and accepting one verifies the email address.
+In production, sign-up is invite-only: an Admin generates account-creation
+links for Users, and the designated Owner is established from the configured
+pre-created administrator invite. Admins can grant Admin access; only the Owner
+can demote or delete Admin accounts or transfer Owner status. A transfer makes
+the recipient the new Owner and leaves the former Owner as an Admin. Invites
+are emailed, and accepting one verifies the email address. Account roles use
+`is_admin` and `is_owner`, with exactly one Owner; see
+[comprehensive-reference.md § 10.0](comprehensive-reference.md#100-role-terminology-and-current-implementation-boundary).
 Development keeps sign-up open, with no verification, through a per-environment
 switch.
 

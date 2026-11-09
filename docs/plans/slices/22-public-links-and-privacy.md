@@ -18,10 +18,10 @@
 
 ## Outcome
 
-An owner can copy a stable recipe link and switch the recipe between linkable
-and private. A guest can read and cook a linkable active recipe without an
-account, while private and trashed recipes remain indistinguishable (404) and
-permanently purged links return 410.
+The User whose account contains a recipe can copy its stable link and switch
+it between linkable and private. Anyone accessing a public recipe link is a
+Guest in that context, whether signed in or not. Private and trashed recipes
+remain indistinguishable (404), and permanently purged links return 410.
 
 ## Public data contract
 
@@ -30,13 +30,13 @@ The guest page uses an explicit server-side projection, never the private
 title, servings, timings, equipment, ingredients and measurements, instructions,
 static publication attribution, and approved relationship display data. It
 must not include verdict, enthusiasm, occasion details, reason, notes, gotchas,
-tags, history, owner identity, account preferences, or private media metadata.
+tags, history, User identity, account preferences, or private media metadata.
 
-Per the owner-approved boundary, external HTTP(S) reference URLs remain usable
+Per the product-approved boundary, external HTTP(S) reference URLs remain usable
 links. In-app recipe References and Pairs With entries show their saved display
 names as plain text only; do not include target IDs, route links, target recipe
 content, or incoming relationship data. Validate external link schemes before
-rendering. Publication attribution is static text, never an owner-only route.
+rendering. Publication attribution is static text, never a User's private route.
 
 The public-link ID is a stable, opaque, cryptographically random identifier,
 unique independently of recipe UUIDs. Backfill IDs for existing recipes. New
@@ -68,10 +68,10 @@ must be in the same transaction. Tombstones are retained so repeated requests
 continue to return 410; they contain no account or recipe content. Trashing
 alone does not create a tombstone. Restore keeps the same public ID.
 
-## Guest and owner experience
+## Guest and User experience
 
 The guest page has no private navigation, account actions, edit/delete/clone
-controls, or links into the owner's library. Open in Ingredient-first view;
+controls, or links into the User's library. Open in Ingredient-first view;
 shade odd ingredient rows with the light-tin wash, leaving even rows and
 ingredient-set dividers unshaded to match the private reader. Reuse the
 established transient scaling, unit switching, and print behavior without
@@ -100,9 +100,10 @@ the open mobile menu beneath the title actions and keep it within the viewport.
 Keep the public Download and Page Settings buttons 36px square with 48px
 mobile hit areas, matching private recipe controls.
 
-The owner can copy the stable link and toggle Private/Linkable from the recipe
-workflow. Make sharing discoverable with a recognizable copy/share icon button,
-including an accessible name and tooltip. The toggle is owner-authorized,
+The User whose account contains the recipe can copy the stable link and toggle
+Private/Linkable from the recipe workflow. Make sharing discoverable with a
+recognizable copy/share icon button,
+including an accessible name and tooltip. The toggle is User-authorized,
 version-checked, and recorded in recipe history. Existing recipes default to
 linkable as defined by the schema; private recipes must stop rendering their
 page and photos on the next request.
@@ -110,17 +111,17 @@ page and photos on the next request.
 ## Test-first acceptance
 
 - Unit tests prove the public projection includes only approved fields and
-  never leaks personal fields, IDs, linked-target content, or owner data; cover
+  never leaks personal fields, IDs, linked-target content, or User data; cover
   safe external URL schemes, text-only in-app relationships, and media gating.
 - Isolated database/API tests prove unique random IDs and existing-row
-  backfill, default-linkable behavior, owner-only privacy changes, stale-version
+  backfill, default-linkable behavior, User-authorized privacy changes, stale-version
   rejection and history, import ID regeneration/preservation rules, no anon
   table access, and tombstone insertion for every purge path. Re-running purge
   is safe, restore retains the ID, and tombstones retain no recipe content.
 - HTTP tests assert 200 for active/linkable, identical generic 404 behavior for
   unknown/private/trashed, 410 for tombstoned IDs, `Cache-Control: no-store`
   on every result, and no photo signing for unavailable recipes.
-- Chromium and Fold 6 tests cover owner copy/toggle behavior, guest cooking
+- Chromium and Fold 6 tests cover User copy/toggle behavior, Guest cooking
   controls, serving scaling, unit switching, print content, safe references,
   title/output-trigger alignment, mobile Download naming and icon, inline
   serving-label typography, page gutters, capped

@@ -429,8 +429,13 @@ placeholders.
 
 Changing a Picklist saves that account preference immediately and announces the
 save status. A failed save restores the last saved value. Picklist, ingredient,
-catalog, tag, density, and data-management features are separate Settings
-domains delivered by their later slices.
+catalog, tag, density, data management, and Public sharing are separate
+Settings domains.
+
+The Public sharing section uses a labeled, content-sized username field with
+plain-language explanation, an adjacent Save action, and an inline accessible
+status or validation message. The field is editable so Users can change the
+public byline without exposing their sign-in email or creating a public profile.
 
 ## Settings (Slice 14B)
 
@@ -1171,6 +1176,13 @@ the accessible name and tooltip `Download`, while retaining the same four-item
 output menu.
 Public Download and Page Settings buttons remain 36px square with the existing
 48px mobile hit areas, matching private recipe controls.
+
+DLC 30 adds a plain-text `By {username}` byline directly beneath the recipe
+title. It is not a profile link and appears only on an active, linkable recipe;
+the public projection does not include account identifiers or login email.
+Public photo URLs use the application-controlled photo endpoint, which checks
+visibility for each request and returns non-cacheable image bytes rather than
+a signed Storage URL.
 
 ## Publication Editing
 

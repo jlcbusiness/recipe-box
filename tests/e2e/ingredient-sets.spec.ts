@@ -727,6 +727,16 @@ test('ingredient sections stay simple across reader, editor, and public views @e
     });
 
     const publicId = await test.step('create a linkable recipe ID', async () => {
+      const publicUsername = `test-${user.id.slice(0, 8)}`;
+      const usernameResponse = await request.post(
+        `${config.apiUrl}/rest/v1/rpc/set_public_username`,
+        {
+          headers: ownerHeaders(config, user),
+          data: { p_public_username: publicUsername },
+          timeout: 10_000,
+        },
+      );
+      expect(usernameResponse.ok(), await usernameResponse.text()).toBeTruthy();
       const privacyResponse = await request.post(
         `${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`,
         {
@@ -735,6 +745,7 @@ test('ingredient sections stay simple across reader, editor, and public views @e
             p_recipe_id: recipe.id,
             p_expected_version: recipe.version,
             p_is_private: false,
+            p_public_username: publicUsername,
           },
           timeout: 10_000,
         },

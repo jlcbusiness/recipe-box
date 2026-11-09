@@ -986,6 +986,45 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await expect(
       grid.locator('tbody tr[data-row-id]').first().locator('.recipe-measurement-desktop-fields'),
     ).toHaveCSS('flex-wrap', 'nowrap');
+    const measurementRow = grid.locator('tbody tr[data-row-id]').first();
+    const volumeUnitBounds = await measurementRow
+      .getByRole('combobox', { name: 'Volume unit, row 1' })
+      .boundingBox();
+    const measurementSlashBounds = await measurementRow
+      .locator('.recipe-measurement-slash')
+      .boundingBox();
+    const weightAmountBounds = await measurementRow
+      .getByRole('textbox', { name: 'Weight amount, row 1' })
+      .boundingBox();
+    const weightUnitBounds = await measurementRow
+      .getByRole('combobox', { name: 'Weight unit, row 1' })
+      .boundingBox();
+    const amountCellBounds = await measurementRow
+      .locator('.recipe-ingredient-amount-cell')
+      .boundingBox();
+    expect(volumeUnitBounds).not.toBeNull();
+    expect(measurementSlashBounds).not.toBeNull();
+    expect(weightAmountBounds).not.toBeNull();
+    expect(weightUnitBounds).not.toBeNull();
+    expect(amountCellBounds).not.toBeNull();
+    if (
+      !volumeUnitBounds ||
+      !measurementSlashBounds ||
+      !weightAmountBounds ||
+      !weightUnitBounds ||
+      !amountCellBounds
+    ) {
+      throw new Error('Dual measurement controls must be visible in the desktop row.');
+    }
+    expect(
+      measurementSlashBounds.x - volumeUnitBounds.x - volumeUnitBounds.width,
+    ).toBeGreaterThanOrEqual(4);
+    expect(
+      weightAmountBounds.x - measurementSlashBounds.x - measurementSlashBounds.width,
+    ).toBeGreaterThanOrEqual(4);
+    expect(weightUnitBounds.x + weightUnitBounds.width).toBeLessThanOrEqual(
+      amountCellBounds.x + amountCellBounds.width + 1,
+    );
 
     const volumeAmount = page.getByRole('textbox', { name: 'Volume amount, row 1' });
     await volumeAmount.fill('1200');
@@ -1046,6 +1085,29 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     );
     await expect(page.locator('.recipe-measurement-editor')).toHaveCSS('border-top-width', '0px');
     await expect(page.locator('.recipe-measurement-dimension').first()).toHaveCSS('gap', '8px');
+    const mobileVolumeUnitBounds = await page
+      .getByRole('combobox', { name: 'Volume unit, row 1' })
+      .boundingBox();
+    const mobileMeasurementSlashBounds = await mobilePane
+      .locator('.recipe-measurement-slash')
+      .boundingBox();
+    const mobileWeightAmountBounds = await page
+      .getByRole('textbox', { name: 'Weight amount, row 1' })
+      .boundingBox();
+    expect(mobileVolumeUnitBounds).not.toBeNull();
+    expect(mobileMeasurementSlashBounds).not.toBeNull();
+    expect(mobileWeightAmountBounds).not.toBeNull();
+    if (!mobileVolumeUnitBounds || !mobileMeasurementSlashBounds || !mobileWeightAmountBounds) {
+      throw new Error('Dual measurement controls must be visible in the mobile editor.');
+    }
+    expect(
+      mobileMeasurementSlashBounds.x - mobileVolumeUnitBounds.x - mobileVolumeUnitBounds.width,
+    ).toBeGreaterThanOrEqual(4);
+    expect(
+      mobileWeightAmountBounds.x -
+        mobileMeasurementSlashBounds.x -
+        mobileMeasurementSlashBounds.width,
+    ).toBeGreaterThanOrEqual(4);
     await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveValue('1,200');
     await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveCSS(
       'text-align',

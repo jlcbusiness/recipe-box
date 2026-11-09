@@ -248,6 +248,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   let includeInstructionPhotosInPrivatePrint = true;
   let repeatIngredientsInPrivatePrint = true;
   let includePrivateDetailsInPrivatePrint = false;
+  let publicUsername: string | null = null;
   let emphasisColors = {
     ingredient: getInstructionEmphasisColor(defaultInstructionEmphasis.ingredient),
     temperature: getInstructionEmphasisColor(defaultInstructionEmphasis.temperature),
@@ -257,10 +258,11 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     const { data: account } = await supabase
       .from('accounts')
       .select(
-        'volume_system, weight_system, temperature_system, ingredient_presentation, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print',
+        'volume_system, weight_system, temperature_system, ingredient_presentation, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, public_username',
       )
       .eq('id', authData.user.id)
       .maybeSingle();
+    publicUsername = account?.public_username ?? null;
     volumeSystem = isMeasurementSystemPreference(account?.volume_system)
       ? account.volume_system
       : 'us_customary';
@@ -430,6 +432,8 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                   isPrivate={recipe.is_private}
                   publicId={recipe.public_id}
                   recipeId={recipe.id}
+                  recipeName={recipe.name}
+                  publicUsername={publicUsername}
                   version={recipe.version}
                 />
                 <RecipeOutputActions

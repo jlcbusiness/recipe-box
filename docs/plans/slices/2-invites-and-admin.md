@@ -22,10 +22,20 @@ lifecycle; no parallel invitation-token table is introduced.
 ## Outcome
 
 In the local open-sign-up mode, a person can create an email/password account
-without email verification and enter the private shell. An existing admin can
+without email verification and enter the private shell. An existing Admin can
 send a bound invitation, see it arrive in Mailpit, and grant admin status to an
 existing account. The invitee confirms the invitation, chooses a password, and
 can then sign in. Non-admin users cannot send invitations or alter admin status.
+
+## Role terminology follow-up
+
+Use the [role definitions in the comprehensive reference](../comprehensive-reference.md#100-role-terminology-and-current-implementation-boundary):
+Guest, User, Admin, and Owner are distinct terms. This slice's verified
+implementation initially stored only `is_admin` and allowed Admin promotion.
+Migration `20261108000000_add_account_owner_role.sql` adds the `is_owner` role,
+backfills the first Owner, and provides a protected ownership-transfer
+function. The current workflow lets any Admin grant Admin access, while only
+the Owner can demote or delete Admin accounts or transfer Owner status.
 
 ## Scope
 
@@ -63,12 +73,13 @@ can then sign in. Non-admin users cannot send invitations or alter admin status.
   enforce the one-provider rule against Supabase's same-email identity linking.
 - The configured first production admin invite, hosted SMTP, and production
   Supabase/Vercel configuration belong to Slice 25.
-- Household collaboration, additional roles, account deletion, and invite
-  revocation UI are out of scope.
+- Household collaboration, account deletion outside Administration, and invite
+  revocation UI are out of scope for this historical slice. The Owner/Admin
+  distinction was added by the later account-owner-role migration.
 
 ## Security boundaries
 
-- Account owners may read their own Account row, but authenticated PostgREST
+- Users may read their own Account row, but authenticated PostgREST
   clients receive no update privilege for `is_admin` or `sign_in_method`. Keep
   only the minimal update privilege needed by Slice 1's owner-isolation test.
 - The admin server client is created in a `server-only` module. No client

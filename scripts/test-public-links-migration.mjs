@@ -6,7 +6,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-const migrationName = '20261106000000_public_recipe_links_and_privacy.sql';
+const migrationName = '20261220000000_dlc30_safe_public_recipe_publishing.sql';
 const repositoryRoot = process.cwd();
 const temporaryRoot = await mkdtemp(join(tmpdir(), 'recipe-box-public-links-'));
 const projectDirectory = join(temporaryRoot, 'project');
@@ -300,6 +300,27 @@ async function verifyMigrationAndRunBrowserTests() {
       },
     });
   }
+  const legacyStepId = randomUUID();
+  await apiCall(`${config.apiUrl}/rest/v1/recipe_steps`, {
+    method: 'POST',
+    headers: serviceHeaders(config),
+    body: {
+      id: legacyStepId,
+      account_id: owner.id,
+      recipe_id: legacyRecipe.id,
+      position: 0,
+      content_markdown: 'Migration content sentinel',
+      plain_text: 'Migration content sentinel',
+    },
+  });
+  const legacyBefore = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=id,public_id,name,version,created_at,updated_at,serves,is_private&id=eq.${legacyRecipe.id}`,
+    { headers: serviceHeaders(config) },
+  );
+  const legacyStepBefore = await apiCall(
+    `${config.apiUrl}/rest/v1/recipe_steps?select=id,position,content_markdown,plain_text&recipe_id=eq.${legacyRecipe.id}`,
+    { headers: serviceHeaders(config) },
+  );
   await apiCall(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
     method: 'POST',
     headers: ownerHeaders(config, owner),
@@ -521,13 +542,22 @@ async function verifyMigrationAndRunBrowserTests() {
   assert.match(repeatedBootstrap.stderr, /administrator already exists/u);
 
   const legacyRows = await apiCall(
-    `${config.apiUrl}/rest/v1/recipes?select=id,public_id,is_private&id=eq.${legacyRecipe.id}`,
+    `${config.apiUrl}/rest/v1/recipes?select=id,public_id,name,version,created_at,updated_at,serves,is_private&id=eq.${legacyRecipe.id}`,
     { headers: ownerHeaders(config, owner) },
   );
   assert.equal(legacyRows.length, 1);
   assert.ok(legacyRows[0].public_id);
   assert.notEqual(legacyRows[0].public_id, legacyRecipe.id);
-  assert.equal(legacyRows[0].is_private, false);
+  assert.equal(legacyRows[0].is_private, true);
+  assert.deepEqual(
+    legacyRows.map(({ is_private, ...row }) => row),
+    legacyBefore.map(({ is_private, ...row }) => row),
+  );
+  const legacyStepAfter = await apiCall(
+    `${config.apiUrl}/rest/v1/recipe_steps?select=id,position,content_markdown,plain_text&recipe_id=eq.${legacyRecipe.id}`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.deepEqual(legacyStepAfter, legacyStepBefore);
   const historyAfter = await apiCall(
     `${config.apiUrl}/rest/v1/recipe_history?select=id,event_type,after_data&record_id=eq.${legacyRecipe.id}&order=created_at.asc,id.asc`,
     { headers: serviceHeaders(config) },
@@ -552,6 +582,7 @@ async function verifyMigrationAndRunBrowserTests() {
   assert.ok(insertedRows[0].public_id);
   assert.notEqual(insertedRows[0].public_id, clientChosenId);
   assert.notEqual(insertedRows[0].public_id, legacyRows[0].public_id);
+  assert.equal(insertedRows[0].is_private, true);
 
   const privacyAttempt = await apiCall(`${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
     method: 'POST',
@@ -573,6 +604,78 @@ async function verifyMigrationAndRunBrowserTests() {
     },
   });
   assert.equal(stalePrivacy.ok, false);
+
+  const firstPublish = await apiCall(`${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
+    method: 'POST',
+    headers: ownerHeaders(config, owner),
+    body: {
+      p_recipe_id: insertedRows[0].id,
+      p_expected_version: insertedRows[0].version,
+      p_is_private: false,
+      p_public_username: ' Mixed-Handle ',
+    },
+  });
+  assert.equal(firstPublish[0].is_private, false);
+  const stalePrivacyAfterPublish = await apiAttempt(
+    `${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`,
+    {
+      method: 'POST',
+      headers: ownerHeaders(config, owner),
+      body: {
+        p_recipe_id: insertedRows[0].id,
+        p_expected_version: insertedRows[0].version,
+        p_is_private: true,
+      },
+    },
+  );
+  assert.equal(stalePrivacyAfterPublish.ok, false);
+  const savedUsername = await apiCall(
+    `${config.apiUrl}/rest/v1/accounts?select=public_username&id=eq.${owner.id}`,
+    { headers: ownerHeaders(config, owner) },
+  );
+  assert.deepEqual(savedUsername, [{ public_username: 'mixed-handle' }]);
+  const usernameConstraint = await apiAttempt(
+    `${config.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+    {
+      method: 'PATCH',
+      headers: serviceHeaders(config),
+      body: { public_username: 'invalid-' },
+    },
+  );
+  assert.equal(usernameConstraint.ok, false);
+
+  const duplicateOwner = await createOwner(config);
+  const otherAccountUsernameUpdate = await apiAttempt(
+    `${config.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+    {
+      method: 'PATCH',
+      headers: ownerHeaders(config, duplicateOwner),
+      body: { public_username: 'other-users-handle' },
+    },
+  );
+  assert.equal(otherAccountUsernameUpdate.ok, false);
+  const ownerUsernameAfterUnauthorizedUpdate = await apiCall(
+    `${config.apiUrl}/rest/v1/accounts?select=public_username&id=eq.${owner.id}`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.deepEqual(ownerUsernameAfterUnauthorizedUpdate, [{ public_username: 'mixed-handle' }]);
+  const duplicateRecipe = await createRecipe(config, duplicateOwner, 'Duplicate handle recipe');
+  const duplicatePublish = await apiAttempt(`${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
+    method: 'POST',
+    headers: ownerHeaders(config, duplicateOwner),
+    body: {
+      p_recipe_id: duplicateRecipe.id,
+      p_expected_version: duplicateRecipe.version,
+      p_is_private: false,
+      p_public_username: 'MIXED-HANDLE',
+    },
+  });
+  assert.equal(duplicatePublish.ok, false);
+  const duplicateRows = await apiCall(
+    `${config.apiUrl}/rest/v1/recipes?select=is_private&id=eq.${duplicateRecipe.id}`,
+    { headers: serviceHeaders(config) },
+  );
+  assert.deepEqual(duplicateRows, [{ is_private: true }]);
 
   for (const table of ['recipes', 'purged_recipe_public_ids']) {
     const anonymousRead = await apiAttempt(
@@ -619,7 +722,9 @@ async function verifyMigrationAndRunBrowserTests() {
   if (browserResult.error || browserResult.status !== 0) {
     throw new Error('Isolated public-link browser acceptance failed.');
   }
-  console.log('Public ID backfill, privacy/RLS guards, tombstones, and browser acceptance passed.');
+  console.log(
+    'Private-by-default migration, stable public IDs/content/history, privacy/RLS guards, tombstones, and browser acceptance passed.',
+  );
 }
 
 try {

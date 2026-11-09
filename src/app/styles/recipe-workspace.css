@@ -3093,6 +3093,7 @@
 
 .recipe-measurement-desktop-pair {
   flex: 0 1 auto;
+  min-width: 0;
   gap: 6px;
 }
 
@@ -3164,6 +3165,7 @@
 }
 
 .recipe-measurement-slash {
+  flex: 0 0 auto;
   color: var(--muted);
   font-size: 12px;
 }
@@ -3449,6 +3451,7 @@
 .recipe-form .recipe-measurement-picklist-trigger.recipe-measurement-unit-trigger {
   box-sizing: border-box;
   width: calc(4ch + 16px);
+  max-width: 100%;
   padding-right: 4px;
   padding-left: 4px;
 }

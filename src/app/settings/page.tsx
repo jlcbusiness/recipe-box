@@ -23,6 +23,7 @@ import {
   type IngredientDensityEntry,
   IngredientDensityManager,
 } from './ingredient-density-manager';
+import { PublicUsernameSettings } from './public-username';
 import { RecipeColumnOrderManager } from './recipe-column-order-manager';
 import { RecipePicklistManager } from './recipe-picklist-manager';
 import { TagCatalogManager } from './tag-catalog-manager';
@@ -47,7 +48,7 @@ export default async function SettingsPage({
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select(
-      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at, sign_in_method',
+      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at, sign_in_method, public_username',
     )
     .eq('id', data.user.id)
     .maybeSingle();
@@ -301,6 +302,7 @@ export default async function SettingsPage({
           }
         />
       </section>
+      <PublicUsernameSettings publicUsername={account.public_username} />
       <RecipePicklistManager
         initialValues={picklistsResult.data ?? []}
         initialRevisions={revisions}

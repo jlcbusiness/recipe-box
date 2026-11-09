@@ -23,9 +23,19 @@ exposure before implementing the schema or access code.
 
 ## Ownership
 
-An account owns its recipes, publications, configuration, media, explorer
-preferences, and history. All private data access is scoped to its owning account. Public
-recipe access is limited to the recipe's public-link route and permitted media.
+A User's account owns its recipes, publications, configuration, media, explorer
+preferences, and history. All private data access is scoped to that User's
+account. Public recipe access is limited to the recipe's public-link route and
+permitted media.
+
+The product roles are Guest (a public-recipe access context, regardless of
+sign-in), User (a person with an account), Admin (a User with Administration
+access who manages User accounts), and Owner (the single application-owning
+Admin who can demote/delete Admin accounts and transfer Owner status). A
+signed-in User may be a Guest while accessing another User's public recipe.
+Admins can grant Admin access; only the Owner can demote or delete Admin
+accounts or transfer Owner status. See
+[comprehensive-reference.md § 10.0](comprehensive-reference.md#100-role-terminology-and-current-implementation-boundary).
 
 Slice 1 first implements this boundary with the minimal Account record linked
 to the authenticated user's identity. It is intentionally the only
@@ -33,8 +43,8 @@ account-owned product record in that slice: it establishes and tests row-level
 security without prematurely creating recipe or other domain tables.
 
 Application updates are global internal records, not account-owned data. Only
-authenticated administrators can read them through row-level security;
-server actions independently verify the administrator and call
+authenticated Admins can read them through row-level security; server actions
+independently verify the Admin and call
 authorization-checking RPCs through the session client. Each mutation appends
 an immutable audit event in the same transaction. Deleting an actor account
 sets its history actor reference to null without deleting the shared update or
@@ -58,15 +68,15 @@ event. Updates and events are excluded from account reset and database bundles.
 | Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Explorer state | A per-account last-used recipe or publication explorer configuration: filters, sort, direction, view, List-column visibility, desktop widths, and fixed publication scope when applicable. |
-| Preference | Account-level defaults: ingredient presentation, volume, weight, and temperature display systems, mobile hand preference, independent ingredient/temperature/duration emphasis colors, and private-print emphasis, inline-photo, repeated-ingredient, and owner-only-detail choices. |
-| Account | The account record linked to the sign-in identity; it owns private data, volume, weight, and temperature display-system defaults, print preferences, a mobile hand preference, an immutable sign-in method, and a server-managed admin flag. |
+| Preference | Account-level defaults: ingredient presentation, volume, weight, and temperature display systems, mobile hand preference, independent ingredient/temperature/duration emphasis colors, and private-print emphasis, inline-photo, repeated-ingredient, and User-only-detail choices. |
+| Account | The account record linked to the sign-in identity; it owns private data, volume, weight, and temperature display-system defaults, print preferences, a mobile hand preference, an immutable sign-in method, and server-managed `is_admin` and `is_owner` flags. An Owner must also be an Admin, and a partial unique index permits at most one Owner. |
 | Purged recipe | A tombstone record of a permanently purged recipe public-link ID to serve HTTP 410. |
 | Media asset | Metadata and private storage path for a cover or recipe image. A recipe photo has a unique, persisted two-digit reference code within its recipe; covers have no code. |
 | Recipe nutrition | Per-whole-recipe manual nutrient overrides; absent fields remain derived from ingredient rows. |
 | Ingredient nutrition profile | One canonical-ingredient Settings record with a Volume or Weight serving-size basis, required Calories, optional core and approved micronutrients. |
 | Ingredient measure equivalent | One explicit average Volume and/or Weight for a quantity of one Count or one selected Things unit on a canonical ingredient. |
 | Application update | A global administrator-managed Markdown entry with exactly one required Fix or Feature classification, persistent manual order while incomplete, an optional validated completed version and completion timestamp, archive state, timestamps, actors, and an optimistic revision. New or reopened incomplete entries start at the top; completed entries sort by completion time, newest first. It is not owned by an account or included in account reset or bundles. |
-| Admin update event | An append-only audit event recording an administrator's create, edit, classification, completion, reorder, archive, or restore action on an Application update, with allow-listed before/after state. |
+| Admin update event | An append-only audit event recording an Admin's create, edit, classification, completion, reorder, archive, or restore action on an Application update, with allow-listed before/after state. |
 | History event | An append-only forensic record of a saved change. |
 
 Find's Advanced Rules uses one version-1 filter envelope rather than a new
@@ -74,7 +84,7 @@ table. Its JSON value retains expression text and ordered rule records with
 unique UUID identities. The editor keeps numbered slots stable while changes
 are staged, represents deleted slots explicitly, and compacts active rules on
 Apply while updating expression references by ID. The same envelope travels
-through URLs, search/facet RPCs, and owner-scoped remembered explorer state.
+through URLs, search/facet RPCs, and account-scoped remembered explorer state.
 Legacy flat filters retain AND semantics. See the
 [DLC 13 brief](slices/dlc/dlc-13-advanced-query-groups.md).
 
@@ -225,7 +235,7 @@ release permits one trusted density per ingredient.
 DLC 12 adds one optional nutrition profile and one optional Count-or-Things
 measure equivalent per canonical ingredient. Recipe ingredient overrides keep
 their own basis and stale acknowledgement; recipe-level overrides are
-whole-recipe totals. These records participate in owner-scoped RLS, catalog
+whole-recipe totals. These records participate in account-scoped RLS, catalog
 revision/history, recipe version/history, Trash/restore, bundles, and
 offline snapshots as defined by the [DLC 12 brief](slices/dlc/dlc-12-recipe-nutrition.md).
 
@@ -233,7 +243,7 @@ Slice 13 stores `volume_system` and `weight_system` on Account as non-null
 preferences. Both default to `us_customary`; the values may be `us_customary`,
 `metric`, or `recipe`. DLC 29 adds `recipe` as a display preference, not an
 intrinsic measurement-unit system. Existing accounts keep their current
-defaults when the migration is applied. Authenticated owners retain their
+defaults when the migration is applied. Signed-in Users retain their
 existing account read policy, but direct updates remain restricted. A narrow
 authenticated preference function derives the account from `auth.uid()` and
 updates only its explicit allow-listed preference columns; it accepts no
@@ -255,7 +265,7 @@ bundles.
 
 The private-only details preference adds the non-null Account field
 `include_private_details_in_private_print`, defaulting to `false` for existing
-and new accounts. It controls whether owner-only metadata, notes, pairings, and
+and new accounts. It controls whether User-only metadata, notes, pairings, and
 references are included in private Print and Download outputs. Page-level
 changes are transient; the preference is included in database bundles and
 remains optional when importing older bundles. Recipe tags are not included in

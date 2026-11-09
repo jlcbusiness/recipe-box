@@ -2,6 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import {
+  normalizePublicUsername,
+  validatePublicUsername,
+} from '../../lib/accounts/public-username-rules';
 import { normalizeHttpUrl } from '../../lib/publications/validation';
 import type { RecipeState } from '../../lib/recipes/data';
 import type { IngredientRowPayload } from '../../lib/recipes/ingredient-rules';
@@ -501,6 +505,7 @@ export async function setRecipePrivacy(formData: FormData): Promise<void> {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_is_private: privacyValue === 'true',
+    p_public_username: null,
   });
   if (error) {
     redirect(
@@ -516,6 +521,91 @@ export async function setRecipePrivacy(formData: FormData): Promise<void> {
   revalidatePath('/recipes');
   revalidatePath(`/recipes/${recipeId}`);
   redirect(`/recipes/${recipeId}`);
+}
+
+export type PublishRecipeActionState =
+  | { status: 'idle' }
+  | { status: 'error'; message: string; fieldError?: boolean }
+  | { status: 'published'; publicId: string; intent: 'copy' | 'toggle' };
+
+export async function publishRecipeWithUsername(
+  _previousState: PublishRecipeActionState,
+  formData: FormData,
+): Promise<PublishRecipeActionState> {
+  const recipeId = formText(formData, 'recipe_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  const intentValue = formText(formData, 'intent');
+  const rawUsername = formText(formData, 'public_username');
+  if (
+    !recipeId ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 1 ||
+    !['copy', 'toggle'].includes(intentValue)
+  ) {
+    return { status: 'error', message: 'The recipe could not be published. Reload and try again.' };
+  }
+  const intent = intentValue === 'copy' ? 'copy' : 'toggle';
+
+  if (rawUsername) {
+    const validationError = validatePublicUsername(rawUsername);
+    if (validationError) {
+      return { status: 'error', message: validationError, fieldError: true };
+    }
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { status: 'error', message: 'Sign in again before publishing this recipe.' };
+  }
+
+  const { data, error } = await supabase.rpc('set_recipe_privacy', {
+    p_recipe_id: recipeId,
+    p_expected_version: expectedVersion,
+    p_is_private: false,
+    p_public_username: rawUsername ? normalizePublicUsername(rawUsername) : null,
+  });
+  if (error?.code === '23505') {
+    return {
+      status: 'error',
+      message: 'That username is already in use. Try another.',
+      fieldError: true,
+    };
+  }
+  if (error?.code === 'PT422' || error?.code === '23514') {
+    return {
+      status: 'error',
+      message:
+        validatePublicUsername(rawUsername) ??
+        'Choose a public username in Settings before publishing.',
+      fieldError: true,
+    };
+  }
+  if (error) {
+    return {
+      status: 'error',
+      message:
+        error.code === 'PT409' ||
+        error.code === '40001' ||
+        error.code === '55000' ||
+        error.code === 'P0002'
+          ? 'This recipe changed or is no longer available. Reload and try again.'
+          : 'The recipe could not be published. Try again.',
+    };
+  }
+
+  const result = Array.isArray(data) ? data[0] : null;
+  if (!result || typeof result.public_id !== 'string') {
+    return { status: 'error', message: 'The recipe could not be published. Try again.' };
+  }
+
+  revalidatePath('/recipes');
+  revalidatePath(`/recipes/${recipeId}`);
+  return {
+    status: 'published',
+    publicId: result.public_id,
+    intent,
+  };
 }
 
 export async function setRecipeMarker(

@@ -2305,6 +2305,40 @@ h1 {
   gap: 24px 48px;
 }
 
+.public-username-settings-form {
+  display: grid;
+  width: min(100%, 640px);
+  gap: 8px;
+}
+
+.public-username-settings-form > label {
+  font-weight: 700;
+}
+
+.public-username-settings-form > p {
+  margin: 0;
+}
+
+.public-username-settings-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.public-username-settings-controls input {
+  box-sizing: border-box;
+  width: min(100%, 320px);
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 9px;
+}
+
+.public-username-error {
+  margin: 0;
+  color: var(--tomato);
+  font-weight: 700;
+}
+
 .settings-unit-field {
   display: grid;
   min-width: 0;

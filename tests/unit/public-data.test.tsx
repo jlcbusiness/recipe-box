@@ -13,6 +13,29 @@ afterEach(() => {
 });
 
 describe('public recipe media access', () => {
+  it('returns a generic loader error and logs only the failed operation and code', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://localhost:54321');
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key');
+
+    const maybeSingle = vi.fn(async () => ({
+      data: null,
+      error: { code: 'XX000', message: 'private database diagnostic' },
+    }));
+    const query = {
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) })),
+    };
+    const from = vi.fn(() => query);
+    createClientMock.mockReturnValue({ from });
+    const logError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(getPublicRecipePageData(publicId)).resolves.toEqual({ status: 'error' });
+    expect(logError).toHaveBeenCalledWith('Public recipe data query failed.', {
+      operation: 'recipe_visibility',
+      code: 'XX000',
+    });
+    expect(JSON.stringify(logError.mock.calls)).not.toContain('private database diagnostic');
+  });
+
   it.each([
     { label: 'private', is_private: true, trashed_at: null },
     { label: 'trashed', is_private: false, trashed_at: '2026-01-01T00:00:00.000Z' },

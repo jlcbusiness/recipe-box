@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Locator, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import sharp from 'sharp';
@@ -26,6 +26,14 @@ function serviceHeaders(config: LocalSupabaseConfig) {
     Authorization: `Bearer ${config.serviceRoleKey}`,
     Prefer: 'return=representation',
   };
+}
+
+async function signIn(page: Page, user: TestUser) {
+  await page.goto('/');
+  await page.getByLabel('Email').fill(user.email);
+  await page.getByLabel('Password').fill(user.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/(?:recipes|publications(?:\/[0-9a-f-]+)?)$/);
 }
 
 function expectNoStoreOrRevalidation(headers: Record<string, string>) {
@@ -105,6 +113,7 @@ async function createRecipe(
   instructionSuffix = '',
   plainTextSuffix = instructionSuffix,
   makes?: { quantity: number; thing: string },
+  publishAutomatically = true,
 ) {
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
@@ -197,7 +206,8 @@ async function createRecipe(
     },
   });
   expect(response.ok(), await response.text()).toBeTruthy();
-  const [recipe] = await response.json();
+  const [recipe] = (await response.json()) as Array<{ id: string; version: number }>;
+  if (!recipe) throw new Error('Expected the recipe save to return a row.');
   if (makes) {
     const makesUpdate = await request.patch(`${config.apiUrl}/rest/v1/recipes?id=eq.${recipe.id}`, {
       headers: serviceHeaders(config),
@@ -205,7 +215,36 @@ async function createRecipe(
     });
     expect(makesUpdate.ok(), await makesUpdate.text()).toBeTruthy();
   }
-  return recipe as { id: string; version: number };
+  if (!publishAutomatically) return recipe;
+
+  const publicUsername = `test-${user.id.slice(0, 8)}`;
+  const usernameUpdate = await request.post(`${config.apiUrl}/rest/v1/rpc/set_public_username`, {
+    headers: ownerHeaders(config, user),
+    data: { p_public_username: publicUsername },
+  });
+  expect(usernameUpdate.ok(), await usernameUpdate.text()).toBeTruthy();
+  const publish = await request.post(`${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
+    headers: ownerHeaders(config, user),
+    data: {
+      p_recipe_id: recipe.id,
+      p_expected_version: recipe.version,
+      p_is_private: false,
+      p_public_username: publicUsername,
+    },
+  });
+  expect(publish.ok(), await publish.text()).toBeTruthy();
+  const [publishedRecipe] = (await publish.json()) as Array<{ version: number }>;
+  if (!publishedRecipe) throw new Error('Expected the recipe to be published.');
+  return { id: recipe.id, version: publishedRecipe.version };
+}
+
+async function createPrivateRecipe(
+  request: import('@playwright/test').APIRequestContext,
+  config: LocalSupabaseConfig,
+  user: TestUser,
+  name: string,
+) {
+  return createRecipe(request, config, user, name, undefined, false, [], '', '', undefined, false);
 }
 
 async function createPublication(
@@ -253,6 +292,25 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
   let tombstoneId: string | null = null;
 
   try {
+    const privateByDefault = await request.post(`${config.apiUrl}/rest/v1/recipes`, {
+      headers: {
+        ...serviceHeaders(config),
+        Prefer: 'return=representation',
+      },
+      data: {
+        account_id: user.id,
+        name: 'Private by default',
+        state: 'want_to_try',
+      },
+    });
+    expect(privateByDefault.ok(), await privateByDefault.text()).toBeTruthy();
+    const [privateRecipe] = (await privateByDefault.json()) as Array<{
+      public_id: string;
+      is_private: boolean;
+    }>;
+    expect(privateRecipe?.is_private).toBe(true);
+    expect((await request.get(`/r/${privateRecipe.public_id}`)).status()).toBe(404);
+
     const recipe = await createRecipe(request, config, user);
     const publicId = await getPublicId(request, config, recipe.id);
 
@@ -263,7 +321,9 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
     expect(publicHtml).toContain('Guest citrus cake');
     expect(publicHtml).not.toContain('Private note sentinel');
     expect(publicHtml).not.toContain(recipe.id);
+    expect(publicHtml).not.toContain(user.email);
     expect(publicHtml).not.toContain('Main navigation');
+    expect(publicHtml).toContain(`test-${user.id.slice(0, 8)}`);
 
     otherUser = await createTestUser(request);
     const nonOwnerPrivacyChange = await request.post(
@@ -381,6 +441,185 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
         },
       );
     }
+    await deleteTestUser(request, user);
+  }
+});
+
+test('copying a private recipe requires confirmation and a valid first username @e2e', async ({
+  context,
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipe = await createPrivateRecipe(request, config, user, 'First public recipe');
+    const publicId = await getPublicId(request, config, recipe.id);
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await signIn(page, user);
+    await page.goto(`/recipes/${recipe.id}`);
+
+    await page.getByRole('button', { name: 'Copy share link' }).click();
+    const publishDialog = page.getByRole('dialog', { name: 'Publish this recipe?' });
+    await expect(publishDialog).toBeVisible();
+    const [dialogBounds, viewport] = await Promise.all([
+      publishDialog.boundingBox(),
+      page.evaluate(() => ({
+        width: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      })),
+    ]);
+    if (!dialogBounds) throw new Error('Expected the publishing dialog to have visible bounds.');
+    expect(dialogBounds.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBounds.x + dialogBounds.width).toBeLessThanOrEqual(viewport.width);
+    expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.width);
+    await expect(
+      publishDialog.getByRole('heading', { name: 'Publish this recipe?' }),
+    ).toBeFocused();
+    await expect(publishDialog).toContainText('Publishing First public recipe');
+    await expect(publishDialog).toContainText('read and save a private copy');
+    await expect(publishDialog.getByLabel('Public username')).toBeVisible();
+    const dialogAccessibility = await new AxeBuilder({ page }).analyze();
+    expect(dialogAccessibility.violations).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(publishDialog).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Copy share link' })).toBeFocused();
+
+    await page.getByRole('button', { name: 'Copy share link' }).click();
+    const canceledDialog = page.getByRole('dialog', { name: 'Publish this recipe?' });
+    await canceledDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(canceledDialog).toBeHidden();
+    const privateState = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=is_private&id=eq.${recipe.id}`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(await privateState.json()).toEqual([{ is_private: true }]);
+
+    await page.getByRole('button', { name: 'Copy share link' }).click();
+    const retryDialog = page.getByRole('dialog', { name: 'Publish this recipe?' });
+    const usernameInput = retryDialog.getByLabel('Public username');
+    await usernameInput.fill('-bad');
+    await retryDialog.getByRole('button', { name: 'Publish & copy link' }).click();
+    await expect(retryDialog.getByRole('alert')).toContainText(
+      'Use 3–30 letters, numbers, or hyphens',
+    );
+    await expect(usernameInput).toHaveValue('-bad');
+    await expect(usernameInput).toHaveAttribute('aria-invalid', 'true');
+
+    await usernameInput.fill('first-publisher');
+    await retryDialog.getByRole('button', { name: 'Publish & copy link' }).click();
+    await expect(retryDialog).toBeHidden();
+    await expect(page.getByRole('status')).toContainText('Link copied!');
+    const [savedAccount] = (await (
+      await request.get(
+        `${config.apiUrl}/rest/v1/accounts?select=public_username&id=eq.${user.id}`,
+        { headers: ownerHeaders(config, user) },
+      )
+    ).json()) as Array<{ public_username: string }>;
+    expect(savedAccount?.public_username).toBe('first-publisher');
+    expect((await request.get(`/r/${publicId}`)).status()).toBe(200);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('first-time direct publishing collects a username, then reuses and edits it @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  let otherUser: TestUser | null = null;
+
+  try {
+    const firstRecipe = await createPrivateRecipe(
+      request,
+      config,
+      user,
+      'Directly published recipe',
+    );
+    const secondRecipe = await createPrivateRecipe(request, config, user, 'Reused public username');
+    const firstPublicId = await getPublicId(request, config, firstRecipe.id);
+    await signIn(page, user);
+    await page.goto(`/recipes/${firstRecipe.id}`);
+
+    await page.getByRole('switch', { name: 'Make linkable' }).click();
+    const usernameDialog = page.getByRole('dialog', { name: 'Choose a public username' });
+    await expect(usernameDialog).toBeVisible();
+    await expect(usernameDialog).not.toContainText('Anyone with this link can read');
+    await usernameDialog.getByLabel('Public username').fill('toggle-publisher');
+    await usernameDialog.getByRole('button', { name: 'Save username & publish' }).click();
+    await expect(usernameDialog).toBeHidden();
+    await expect(page.getByRole('switch', { name: 'Make private' })).toBeVisible();
+    await page.getByRole('button', { name: 'Copy share link' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await page.goto(`/recipes/${secondRecipe.id}`);
+    await page.getByRole('switch', { name: 'Make linkable' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('switch', { name: 'Make private' })).toBeVisible();
+
+    otherUser = await createTestUser(request);
+    await createRecipe(request, config, otherUser, 'Username collision');
+    await page.goto('/settings');
+    const usernameInput = page.getByRole('textbox', { name: 'Public username' });
+    await expect(usernameInput).toHaveValue('toggle-publisher');
+    await usernameInput.fill(`test-${otherUser.id.slice(0, 8)}`);
+    await page.getByRole('button', { name: 'Save username' }).click();
+    await expect(page.locator('.public-username-error')).toContainText('already in use');
+    await expect(usernameInput).toHaveValue(`test-${otherUser.id.slice(0, 8)}`);
+    await expect(usernameInput).toHaveAttribute('aria-invalid', 'true');
+
+    await usernameInput.fill('Updated-Publisher');
+    await page.getByRole('button', { name: 'Save username' }).click();
+    await expect(page.getByText('Public username saved.', { exact: true })).toBeVisible();
+    await expect(usernameInput).toHaveValue('updated-publisher');
+    await page.goto(`/r/${firstPublicId}`);
+    await expect(page.getByText('By updated-publisher', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('By updated-publisher', { exact: true }).locator('..'),
+    ).not.toHaveRole('link');
+  } finally {
+    await deleteTestUser(request, user);
+    if (otherUser) await deleteTestUser(request, otherUser);
+  }
+});
+
+test('clipboard failure reports that publication succeeded @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipe = await createPrivateRecipe(request, config, user, 'Clipboard failure recipe');
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async () => {
+            throw new DOMException('Clipboard access denied.', 'NotAllowedError');
+          },
+        },
+      });
+    });
+    await signIn(page, user);
+    await page.goto(`/recipes/${recipe.id}`);
+    await page.getByRole('button', { name: 'Copy share link' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Publish this recipe?' });
+    await dialog.getByLabel('Public username').fill('clipboard-publisher');
+    await dialog.getByRole('button', { name: 'Publish & copy link' }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('status')).toContainText(
+      'Published, but the share link could not be copied.',
+    );
+    const [publishedRecipe] = (await (
+      await request.get(`${config.apiUrl}/rest/v1/recipes?select=is_private&id=eq.${recipe.id}`, {
+        headers: ownerHeaders(config, user),
+      })
+    ).json()) as Array<{ is_private: boolean }>;
+    expect(publishedRecipe?.is_private).toBe(false);
+  } finally {
     await deleteTestUser(request, user);
   }
 });
@@ -539,10 +778,7 @@ test('an owner can switch a recipe between linkable and private @e2e', async ({
     const recipe = await createRecipe(request, config, user);
     publicId = await getPublicId(request, config, recipe.id);
 
-    await page.goto('/');
-    await page.getByLabel('Email').fill(user.email);
-    await page.getByLabel('Password').fill(user.password);
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await signIn(page, user);
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await page.goto(`/recipes/${recipe.id}`);
 
@@ -1939,10 +2175,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     );
     expect(carrotUpdate.ok(), await carrotUpdate.text()).toBeTruthy();
 
-    await page.goto('/');
-    await page.getByLabel('Email').fill(user.email);
-    await page.getByLabel('Password').fill(user.password);
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await signIn(page, user);
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: 'Public cooking view' })).toBeVisible();
@@ -2568,6 +2801,39 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(publicImageBounds.height).toBeLessThanOrEqual(page.viewportSize()?.height ?? Infinity);
     await publicGalleryViewer.getByRole('button', { name: 'Close image viewer' }).click();
     await expect(publicGalleryViewer).toHaveJSProperty('open', false);
+    const publicPhotoUrl = await publicPhoto.getAttribute('src');
+    if (!publicPhotoUrl) throw new Error('Expected the public photo to have an application URL.');
+    expect(publicPhotoUrl).toContain(`/api/public-recipes/${publicId}/photos/`);
+    expect(publicPhotoUrl).not.toContain('/storage/v1/object/');
+    const recipeVersionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=version&id=eq.${recipe.id}`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(recipeVersionResponse.ok(), await recipeVersionResponse.text()).toBeTruthy();
+    const [currentRecipe] = (await recipeVersionResponse.json()) as Array<{ version: number }>;
+    if (!currentRecipe) throw new Error('Expected the public recipe version.');
+    const makePrivate = await request.post(`${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
+      headers: ownerHeaders(config, user),
+      data: {
+        p_recipe_id: recipe.id,
+        p_expected_version: currentRecipe.version,
+        p_is_private: true,
+      },
+    });
+    expect(makePrivate.ok(), await makePrivate.text()).toBeTruthy();
+    const revokedPhoto = await request.get(new URL(publicPhotoUrl, page.url()).toString());
+    expect(revokedPhoto.status()).toBe(404);
+    expectNoStoreOrRevalidation(revokedPhoto.headers());
+    expect((await revokedPhoto.body()).byteLength).toBe(0);
+    const restorePublic = await request.post(`${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
+      headers: ownerHeaders(config, user),
+      data: {
+        p_recipe_id: recipe.id,
+        p_expected_version: currentRecipe.version + 1,
+        p_is_private: false,
+      },
+    });
+    expect(restorePublic.ok(), await restorePublic.text()).toBeTruthy();
     const galleryViewport = page.viewportSize();
     await page.setViewportSize({ width: 390, height: 844 });
     const [mobileGalleryBox, mobileSummaryBox] = await Promise.all([
@@ -2642,6 +2908,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/r/${publicId}`);
     const longTitle = page.getByRole('heading', { name: longRecipeName });
+    const authorByline = page.getByText(`By test-${user.id.slice(0, 8)}`, { exact: true });
     const [longTitleBox, longTitleRowBox, longTitlePrintBox, longTitleSettingsBox] =
       await Promise.all([
         longTitle.boundingBox(),
@@ -2652,6 +2919,9 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     if (!longTitleBox || !longTitleRowBox || !longTitlePrintBox || !longTitleSettingsBox) {
       throw new Error('Expected the long public title and actions to have layout bounds.');
     }
+    const bylineBox = await authorByline.boundingBox();
+    if (!bylineBox) throw new Error('Expected the public author byline to have layout bounds.');
+    expect(bylineBox.y).toBeGreaterThanOrEqual(longTitleBox.y + longTitleBox.height);
     expect(longTitlePrintBox.x + longTitlePrintBox.width).toBeLessThanOrEqual(
       longTitleSettingsBox.x,
     );

@@ -88,6 +88,17 @@ while retaining the existing single-image viewer without gallery navigation.
   Fix and Feature entries with versioned completion, archive/restore, and
   append-only audit history.
 
+### Phase 7: Public sharing and Recipe Tin
+
+- **DLC 30 (implemented; production 500 verification pending deployment):**
+  [Safe public recipe publishing](dlc-30-safe-public-recipe-publishing.md)
+  makes recipes private by default, confirms the copy consequences when
+  sharing a private link, and adds a public username and guarded photo delivery.
+- **DLC 31 (candidate; depends on DLC 30):**
+  [Save public recipe copies](dlc-31-save-public-recipe-copies.md) saves the
+  public allow-listed recipe and photos as a private Recipe Tin copy with a
+  protected, titled source reference.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for
@@ -111,6 +122,9 @@ while retaining the existing single-image viewer without gallery navigation.
   Markdown authoring behavior from DLC 05. It is independent of DLC 26 and 27.
 - DLC 24 means erasing account content while retaining authentication. Full
   account deletion is a separate, existing guarded administrative capability.
+- DLC 31 depends on DLC 30 so viewers are told that publishing permits copies
+  before a Save action exists. Copies remain private and retain protected source
+  attribution.
 
 ## Existing deferrals not assigned a DLC brief
 

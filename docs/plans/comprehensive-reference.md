@@ -24,7 +24,7 @@ sections of this reference that the current work needs.
 2. [Recipe Card and Metadata](#2-recipe-card-and-metadata)
 3. [Ingredient Rows, Measurements, and Density](#3-ingredient-rows-measurements-and-density)
 Grid shows the default recipe photo when available with Fit/contain unless
-the owner has saved framing. Filter and sort
+the User has saved framing. Filter and sort
 
 4. [Ingredient Presentation and Sorting](#4-ingredient-presentation-and-sorting)
 5. [Instructions, Autocomplete, and Recipe Linking](#5-instructions-autocomplete-and-recipe-linking)
@@ -99,7 +99,7 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Settings-managed multi-select dropdown; follows Serves on the State row. |
 | **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling. |
 | **Makes** | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes` | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged. |
-| **Nutrition** | Optional estimated nutrient values | FDA label nutrients and approved optional vitamins/minerals | Shown as an italic sans-serif “Nutrition Per Serving” Nutrition Facts-style list after Notes (left of Notes on desktop) when Serves and nutrition values are available; print and downloads use one compact string. Values are estimates from owner-entered ingredient profiles and/or whole-recipe overrides, never an external lookup. |
+| **Nutrition** | Optional estimated nutrient values | FDA label nutrients and approved optional vitamins/minerals | Shown as an italic sans-serif “Nutrition Per Serving” Nutrition Facts-style list after Notes (left of Notes on desktop) when Serves and nutrition values are available; print and downloads use one compact string. Values are estimates from User-entered ingredient profiles and/or whole-recipe overrides, never an external lookup. |
 | **Tags** | Multi-select account-owned tags | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17. |
 | **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
 
@@ -148,7 +148,7 @@ time is broken down into specific categories:
   for deletion.
 - Originals upload directly to a one-use signed path in the private
   `recipe-media` bucket. The server validates and processes them before
-  recording metadata. Signed read URLs are owner-authorized and expire after
+  recording metadata. Signed read URLs are User-authorized and expire after
   15 minutes.
 - Recipe photos use the platform's ordinary image picker, allowing supported
   devices to offer camera capture and photo-library selection. They can be
@@ -164,14 +164,14 @@ time is broken down into specific categories:
   photo without changing primary status or stored order. The buttons have
   accessible names, selected state, and native keyboard activation; the images
   remain decorative with empty alternative text.
-- Owners can save reversible framing independently for each recipe photo and
+- Users can save reversible framing independently for each recipe photo and
   publication cover. Without saved framing, show the complete source using
   Fit/contain; never crop automatically. A saved frame is used consistently in
   thumbnails, detail views, instruction references, public recipe views, and
   the existing single-image viewer, preserving the saved crop's aspect ratio
   within each display's bounds. Fixed square thumbnail viewports may letterbox a
   crop but must not stretch it. Only the framing editor shows the complete
-  uncropped source while the owner adjusts the frame. Saved framing generates
+  uncropped source while the User adjusts the frame. Saved framing generates
   versioned official WebP display files while retaining the normalized source
   variants for future edits and reset. New displays use those generated files;
   legacy assets retain metadata-based framing until the next framing save or
@@ -196,9 +196,10 @@ time is broken down into specific categories:
   photo and do not open the viewer; the viewer has no gallery navigation.
 - Trashed parents hide but retain their photos for restoration. Permanent purge
   queues all object paths for deletion; failed Storage deletions remain queued
-  for retry. Public recipe photos are signed only after the public-link,
-  privacy, and active-lifecycle checks. Publication covers remain owner-only.
-  Image export is delivered in Slice 20; image import is delivered in Slice 21.
+  for retry. Public photo requests recheck public-link, privacy, and
+  active-lifecycle state on every request; public photos are not served through
+  signed URLs. Publication covers remain User-only. Image export is delivered
+  in Slice 20; image import is delivered in Slice 21.
 
 ### 2.4 Recipe Metadata Entry Presentation
 
@@ -524,7 +525,7 @@ Preparation section.
 - A recipe ingredient uses current Settings nutrition fields as per-field
   defaults. Its serving-size basis may inherit the Settings basis or be
   overridden for that recipe ingredient only. Without a Settings profile, the
-  owner can enter a recipe-only basis and nutrient values. Settings defaults
+  User can enter a recipe-only basis and nutrient values. Settings defaults
   scale to a recipe-only basis when dimensions match. A manually entered field
   overrides only that field and is stored on the recipe ingredient. Clearing
   the override releases it to the current Settings value. Derived/default
@@ -540,7 +541,7 @@ Preparation section.
   red-tinted with a “serving changed” tag; color is never the only cue.
 - Settings may define one average equivalent per canonical ingredient: either
   one Count or one selected Things unit, mapping an amount of one to optional
-  Volume and/or Weight amounts. Owners may enter estimates even for
+  Volume and/or Weight amounts. Users may enter estimates even for
   non-countable Things such as bunch, handful, or head; the app never supplies
   defaults or infers equivalency. This mapping is separate from Trusted
   Density. Count/Things-to-other-dimension conversion may use only the selected
@@ -568,7 +569,7 @@ Preparation section.
   calculation. Unedited nutrients stay calculated. Values are not adjusted for
   cooking loss and are labeled estimates, not laboratory results or nutrition
   advice.
-- Ingredient Settings profiles and measure equivalents are owner-only. Public
+- Ingredient Settings profiles and measure equivalents are User-only. Public
   pages, print, offline snapshots, history, and versioned bundles preserve the
   recipe-level outputs and required data without exposing Settings profiles in
   public projections. See [DLC 12](slices/dlc/dlc-12-recipe-nutrition.md).
@@ -878,7 +879,7 @@ In recipe detail and edit, References follows Notes, which follows Pairs With. T
 
 - **Rule on Origins:** A recipe adapted from multiple disparate sources is considered an original recipe and belongs in
   the **Recipe Tin** with these references cited in References.
-- In-app recipe references are owner-scoped. A trashed target is displayed
+- In-app recipe references are account-scoped. A trashed target is displayed
   as text without a link; restoring it makes the link active again. Purging a
   target clears the recipe association but preserves its resolved display
   text. Purging the recipe that owns a reference removes that reference.
@@ -913,7 +914,7 @@ omitted.
 | **Book** | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
 | **Magazine** | Magazine title and optional cover image | Per-recipe issue, volume, edition/date, and optional page citation | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit. |
 | **Website** | Site Display Name, Site Root URL, Site Logo/Favicon (optional) | Full recipe URL | Minimalist site icon / badge. |
-| **Collection** | Reserved Recipe Tin, one per account | None | Mirrored transparent tin image; cannot be created, edited, or deleted by the account owner. |
+| **Collection** | Reserved Recipe Tin, one per account | None | Mirrored transparent tin image; cannot be created, edited, or deleted by the User. |
 
 ### 6.2 Magazine Titles, Recipe Locations, and Online URLs
 
@@ -964,7 +965,7 @@ border as Add Recipe.
 
 Saving is explicit. Each successful save increments the publication version and
 appends one `publication.updated` before/after history event, including when the
-submitted values are unchanged. The save checks ownership, active status, and
+submitted values are unchanged. The save checks account ownership, active status, and
 the version loaded by the editor. Validation, duplicate-title, and stale-version
 errors leave the dialog open with its draft intact; the top-right close control
 and Escape discard the draft. Delete is available in the edit pane and opens
@@ -973,7 +974,7 @@ Save stays right-aligned at equal widths on desktop and mobile. Updating
 metadata preserves the publication ID, its recipe links and locations, and its
 cover association. Cover management remains a separate interaction in the edit
 pane. The authenticated client has no direct table-update grant; edits go
-through the owner-scoped update function.
+through the account-scoped update function.
 
 ### 6.4 The Recipe Tin Collection
 
@@ -1118,7 +1119,7 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   and resets pagination. Details omits the separate Sort and Sort Order
   controls. Keep headers vertically centered without changing their horizontal
   alignment.
-- **Last-used explorer state:** Each explorer restores its owner's last-used
+- **Last-used explorer state:** Each explorer restores its User's last-used
   filters, sort key, sort direction, and List/Grid choice. A valid shareable
   URL takes precedence over remembered search state. Publication recipe scope
   remains fixed by its route.
@@ -1126,7 +1127,7 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   and resize desktop column widths independently in Find, Library, and each
   publication recipe explorer. A small settings icon opens the column chooser.
   Star and Heart columns are visible by default in each recipe-list explorer
-  and may be hidden or shown independently. An owner's saved visibility choice
+  and may be hidden or shown independently. A User's saved visibility choice
   overrides the default for that exact account and explorer context. Makes and
   nutrition columns are hidden by default. Active custom stamp indicators
   align right in List and stack at the top-right of
@@ -1177,7 +1178,7 @@ and a single-line mobile list:
     and active recipe count. Authors appear on separate lines on desktop, with
     no publication-type prefix. Uploaded covers preserve the complete image
     and its aspect ratio inside the cover frame by default. An explicitly saved
-    crop uses the owner's framing; do not crop automatically. Desktop covers are
+    crop uses the User's framing; do not crop automatically. Desktop covers are
     72px wide; mobile cards use 48px covers and truncate long titles and authors
     to one line.
 - **Compact Controls:** Type, View, Sort by, and Sort direction use separate
@@ -1200,7 +1201,7 @@ and a single-line mobile list:
   prevents an old free-text query from making the collection appear incomplete.
 - **Publication Recipe Explorer:** Publication detail uses the shared recipe
   explorer controls and List/Grid views scoped to that publication. Grid shows
-  the default recipe photo when available with Fit/contain unless the owner has
+  the default recipe photo when available with Fit/contain unless the User has
   saved framing. Filter and sort fields follow the recipe field catalog; Slice
   18 restores its last-used
   state without losing the publication scope. On mobile, Sort, direction, View,
@@ -1231,7 +1232,7 @@ confirmed inline value creation from their open recipe-editor menus:
   internal whitespace runs to one space, preserves entered casing, and matches
   existing values case-insensitively within the signed-in account and category.
 - A matching value is selected without creating a duplicate or changing the
-  catalog revision. Otherwise, the server action uses the existing owner-scoped
+  catalog revision. Otherwise, the server action uses the existing account-scoped
   picklist management function to append the value, increment its revision, and
   record `picklist.added` history.
 - The new/reused catalog value is selected in the recipe draft; recipe
@@ -1374,14 +1375,14 @@ section after Ingredients and before Tags, with matching disclosure spacing and 
 Settings' Ingredient catalog offers a compact **Nutrition** action per
 canonical ingredient. Its shared Nutrition pane has serving size, Calories,
 core label nutrients, and an **Add vitamin/mineral** chooser. Saving updates
-the owner's ingredient Settings profile; Cancel discards the pane draft;
+the User's ingredient Settings profile; Cancel discards the pane draft;
 Clear removes the profile. No external nutrition service is contacted.
 
-A separate **Measure equivalents** action records an owner-entered average
+A separate **Measure equivalents** action records a User-entered average
 Volume and/or Weight for one Count or one selected Things unit of that
 ingredient. Its one-unit basis is explicit. Only one Count-or-Things mapping
 is allowed per ingredient. Settings shows explanatory copy that nonstandard
-amounts are estimates supplied by the owner. It does not replace the
+amounts are estimates supplied by the User. It does not replace the
 volume/weight Trusted Density feature.
 
 In the recipe editor, each ingredient's Nutrition action opens the same pane.
@@ -1430,18 +1431,20 @@ save status, and never offer public or cross-account preference changes.
 
 ### 9.2 Privacy Toggle and HTTP Status Behavior
 
-- **Default State:** Recipes are linkable by default.
-- **Private Toggle:** Marking a recipe private restricts access to the logged-in owner account.
-- **HTTP Response Rules for Unauthenticated / Non-Owner Requests:**
+- **Default State:** Recipes are private by default. Existing recipes are
+  private unless the User explicitly republishes them; their stable public IDs
+  and URLs are preserved.
+- **Private Toggle:** Marking a recipe private restricts access to the signed-in User whose account contains the recipe.
+- **HTTP Response Rules for Guest Requests:**
   - **Private Recipe:** Returns **HTTP 404 Not Found** with a generic, calm page ("This recipe is currently
-    unavailable") and `Cache-Control: no-store` . Does not reveal that the recipe exists, nor its title, owner, or
+    unavailable") and `Cache-Control: no-store` . Does not reveal that the recipe exists, nor its title, User, or
     publication. (Avoids misusing HTTP 503).
   - **Trashed Recipe:** Treated like a private recipe (404) until restored or purged.
   - **Permanently Purged Recipe:** Returns **HTTP 410 Gone**. This requires keeping a record of the purged public ID.
 
 ### 9.3 Public Recipe Experience
 
-When an unauthenticated guest accesses a valid public recipe link:
+When a Guest accesses a valid public recipe link, whether signed in or not:
 
 - **Allowed Actions:**
   - View full recipe card in Ingredient-First view.
@@ -1451,7 +1454,7 @@ When an unauthenticated guest accesses a valid public recipe link:
 - **Restricted / Hidden Elements:**
   - No application navigation, sidebar, or account links.
   - No edit, delete, or clone buttons.
-  - No owner-only evaluation metadata, including Verdict, Score, Star, or Heart.
+  - No User-only evaluation metadata, including Verdict, Score, Star, or Heart.
   - Publication name is displayed as static text attribution, not a clickable link.
   - Safe external HTTP(S) references are clickable; in-app recipe references
     remain static text.
@@ -1489,9 +1492,12 @@ Print requests landscape while leaving the browser dialog authoritative.
   a Server Action or function request body. The authenticated server validates
   the staged object and writes metadata-free WebP full and thumbnail
   derivatives.
-- Image assets are served through 15-minute signed URLs generated on the
-  server after validating owner access. Public recipe photos are signed only
-  after the public ID, privacy flag, and active lifecycle are verified.
+- Public recipe photos are delivered through an application-controlled
+  endpoint that checks the recipe's current public and active state on every
+  request, streams the image bytes from private Storage, and prevents response
+  caching. Do not expose or redirect to a signed Storage URL for public recipe
+  photos. Privatizing or trashing a recipe blocks future photo requests, but
+  cannot retract image bytes already delivered or saved by a Guest.
   Publication covers are never public.
 - Deletion queues every private object path. A Vercel daily cron invokes the
   protected cleanup endpoint; Storage failures remain queued and are retried.
@@ -1508,10 +1514,40 @@ Print requests landscape while leaving the browser dialog authoritative.
 
 ## 10. Authentication and Account Setup
 
+### 10.0 Role terminology and current implementation boundary
+
+- **Guest:** Anyone accessing a recipe through its public link. Guest describes
+  the access context, not account status; a signed-in User can be a Guest while
+  viewing another User's public recipe.
+- **User:** A person with an account on the app. A User's account contains that
+  User's private recipes and other account data. Use **User** or **account**
+  rather than calling a User an owner.
+- **Admin:** A User with access to Administration and authority to manage
+  ordinary User accounts and the administrative functions provided there.
+  Admins can grant Admin access, but cannot demote or delete an Admin account
+  or transfer application ownership.
+- **Owner:** The single application-owning Admin. The Owner can manage Admin
+  accounts, including demotion and deletion, and can transfer Owner status to
+  another account. On transfer, the new Owner becomes an Admin and the former
+  Owner remains an Admin.
+
+Use **Owner** only for the application role. Guest is contextual and can apply
+to any account status. Existing account and recipe data-ownership relationships
+may be described as account-owned; do not use "owner" as a synonym for User.
+The Administration table labels an ordinary User as **Member**; Member is a
+display label, not a separate role.
+
+The account schema has `is_admin` and `is_owner` flags, constrains the Owner to
+also be an Admin, and permits at most one Owner. The Owner role is assigned to
+the first administrator and can be transferred through the protected
+Administration workflow. The Owner account cannot be deleted before ownership
+is transferred. Admins can grant Admin access; only the Owner can demote or
+delete Admin accounts or transfer Owner status.
+
 ### 10.1 Email and Password Authentication
 
 - Email + password login with standard "Forgot Password" reset link flow.
-- **Email Verification:** Verification is the invite. The app emails the invite link to the address the admin enters,
+- **Email Verification:** Verification is the invite. The app emails the invite link to the address the Admin enters,
   and accepting it proves the person controls that mailbox, so there is no separate verification step and no skip
   option. Open development sign-up has no verification.
 
@@ -1522,12 +1558,15 @@ Print requests landscape while leaving the browser dialog authoritative.
 
 ### 10.3 Invite-Only Sign-Up
 
-- In production, sign-up is invite-only. The admin generates account-creation links for specific people.
+- In production, sign-up is invite-only. An Admin generates account-creation
+  links for ordinary Users.
 - In development, sign-up is open. A per-environment switch controls this; development runs locally and production is
   set up last (14).
-- **Admin:** Admin is an account flag that existing admins can grant. Production starts with a pre-created admin invite
-  to the owner's email address, supplied through configuration and not committed to the repository. This prevents a
-  stranger from claiming the first account. Admins send all later invites.
+- Production starts with the designated Owner account from the configured
+  pre-created administrator invite. The first-Admin claim establishes the
+  Owner role, and only one Owner can exist at a time. Admins manage ordinary
+  User accounts and send invitations; any Admin can grant Admin access, while
+  only the Owner can demote or delete Admin accounts or transfer Owner status.
 - Invites are sent by email, not copied by hand.
 - An invite is bound to the email address the admin enters. Slice 2 supports
   email/password accounts and stores the chosen method immutably. Before Google
@@ -1537,11 +1576,11 @@ Print requests landscape while leaving the browser dialog authoritative.
 ### 10.4 Slice 1 account boundary and deterministic auth testing
 
 - Slice 1 establishes the account-owned data boundary with a minimal Account
-  record linked to the authenticated user's identity. It is the first concrete
-  owner-scoped resource and proves the row-level security pattern before any
+  record linked to the authenticated User's identity. It is the first concrete
+  account-scoped resource and proves the row-level security pattern before any
   recipe, publication, picklist, or other product schema exists.
 - Tests create their local Auth users directly through a test-only local setup
-  path. They do not exercise or depend on invitations, admin provisioning,
+  path. They do not exercise or depend on invitations, Admin provisioning,
   production sign-up restrictions, or external email delivery to arrange their
   fixtures.
 - The slice must prove that an authenticated account can access only its own
@@ -1552,7 +1591,7 @@ Print requests landscape while leaving the browser dialog authoritative.
   and verifies session claims; protected server-rendered routes verify the
   current Auth user before rendering private content.
 - This test-fixture convenience does not define the product sign-up policy.
-  Slice 2 owns invitations, admin behavior, production invite-only enforcement,
+  Slice 2 defines invitations, Admin behavior, production invite-only enforcement,
   and the one-sign-in-method rule. Recipe and other domain tables remain
   deferred to their owning slices, beginning with Slice 4.
 
@@ -1563,14 +1602,14 @@ Print requests landscape while leaving the browser dialog authoritative.
   self-registration and rejects sign-up actions; production also disables
   Supabase Auth sign-up directly when production is configured in Slice 25.
 - Supabase Auth is the source of truth for invitation creation, email binding,
-  single use, and expiry. An existing admin sends an invite from the trusted
+  single use, and expiry. An existing Admin sends an invite from the trusted
   server, Supabase sends the email, and the invitee confirms it before choosing
   a password. Local invitation links use the configured email OTP expiry of
   3,600 seconds (one hour).
-- `accounts.is_admin` defaults to false. Account owners cannot modify
+- `accounts.is_admin` defaults to false. Users cannot modify
   `is_admin` or `sign_in_method` through PostgREST. Authenticated update
   privileges are column-scoped; administrative changes use a server-only
-  Supabase secret key only after the request's Auth user and admin flag are
+  Supabase secret key only after the request's Auth User and Admin flag are
   verified.
 - Slice 2 accepts email/password accounts only and records the method as
   `email_password`. Google sign-in and the same-email identity-linking conflict
@@ -1644,8 +1683,8 @@ contain:
   version, and each payload file's uncompressed byte count and SHA-256 digest.
 - `data.json`: Normalized relational JSON using fixed record-table and
   per-table field allow-lists, including ingredient sets and each row's set
-  membership, portion ratio, Size value/unit, and mention ordinal. Owner
-  account IDs, Auth user IDs, admin and
+  membership, portion ratio, Size value/unit, and mention ordinal. Account
+  IDs, Auth user IDs, admin and
   sign-in-method fields, signed URLs, private Storage paths, and export
   timestamps are omitted. Media rows include nullable normalized crop framing
   and retained source path/size metadata; product preferences and recipe
@@ -1713,7 +1752,7 @@ independently resolved roots.
 A recipe bundle's publication metadata is a dependency, not a second
 replaceable root. A unique active normalized type/name match is reused; if no
 match exists, the publication is created automatically. Recipe Tin maps to the
-destination owner's existing collection and is never imported as a
+destination User's existing collection and is never imported as a
 publication record. New and duplicate recipes default to the source publication
 and can be assigned to another active destination publication.
 When the retained or selected destination type forbids a source recipe URL or
@@ -1747,7 +1786,7 @@ full-database export date. Missing or unreadable ready images also fail rather
 than producing a partial archive.
 
 The server builds the ZIP as a Node.js stream and uploads it to a random
-owner-prefixed path in the private `recipe-exports` Storage bucket. The API
+account-prefixed path in the private `recipe-exports` Storage bucket. The API
 returns a 15-minute signed URL instead of ZIP bytes, avoiding the Vercel
 Function 4.5 MiB response-body limit. A successful export is queued for deletion
 at least 24 hours later. The full-database timestamp advances only after the
@@ -1774,7 +1813,7 @@ not represented by the fixture if it needs to survive a reset.
 After `npm run dev:local` or `supabase db reset --local` has reapplied
 migrations, run `npm run seed:synthetic -- --local` to restore the synthetic
 baseline. To recover other exported app data, create a fresh local Auth
-account and import the full database ZIP from Settings. Import is owner-derived,
+account and import the full database ZIP from Settings. Import is account-derived,
 so it does not require the original Auth user ID. This workflow restores
 account data, not Auth identities or history. Never reset a linked or hosted
 database as part of local testing.
