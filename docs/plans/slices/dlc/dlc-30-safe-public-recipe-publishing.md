@@ -1,7 +1,8 @@
 # DLC 30: Safe Public Recipe Publishing
 
-**Status:** Implemented and validated locally; production HTTP 500 resolution
-remains pending deployment evidence.
+**Status:** Implemented and validated locally and in production. The reported
+public-recipe HTTP 500 was resolved by granting the service role read access to
+the nutrition tables used by the public loader.
 
 ## References
 
@@ -190,9 +191,11 @@ Write focused failing tests before production changes:
   keyboard and focus behavior, visible labels, axe checks, and responsive
   bounds. Verify the public page byline does not introduce navigation or
   horizontal overflow.
-- Confirm production resolution of the reported 500 from deployment evidence
-  after rollout; local tests alone cannot prove a production-only failure is
-  fixed.
+- Production verification confirmed the reported 500 was caused by SQLSTATE
+  `42501` on `ingredient_nutrition_profiles`. After applying
+  `20261221000000_grant_public_recipe_nutrition_service_role.sql`, all three
+  required nutrition-table grants were present and the reported public URL
+  returned HTTP 200.
 
 ## Accepted decisions and remaining assumption
 

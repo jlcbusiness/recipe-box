@@ -90,7 +90,7 @@ while retaining the existing single-image viewer without gallery navigation.
 
 ### Phase 7: Public sharing and Recipe Tin
 
-- **DLC 30 (implemented; production 500 verification pending deployment):**
+- **DLC 30 (implemented; production 500 resolved):**
   [Safe public recipe publishing](dlc-30-safe-public-recipe-publishing.md)
   makes recipes private by default, confirms the copy consequences when
   sharing a private link, and adds a public username and guarded photo delivery.

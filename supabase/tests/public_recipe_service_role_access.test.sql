@@ -22,6 +22,9 @@ select ok(
       ('recipe_picklist_values'),
       ('ingredients'),
       ('recipe_ingredient_measurements'),
+      ('ingredient_nutrition_profiles'),
+      ('ingredient_measure_equivalents'),
+      ('ingredient_densities'),
       ('media_assets')
     ) as required_tables(table_name)
   ),
