@@ -644,6 +644,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                 ) : (
                   reference.display_text
                 )}
+                {reference.is_protected_source && (
+                  <>
+                    {' '}
+                    <span className="recipe-reference-locked-label">(protected source)</span>
+                  </>
+                )}
               </li>
             ))}
           </ul>

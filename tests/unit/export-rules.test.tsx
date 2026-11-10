@@ -24,6 +24,7 @@ const firstStepId = '44444444-4444-4444-8444-444444444444';
 const firstAssetId = '55555555-5555-4555-8555-555555555555';
 const secondAssetId = '66666666-6666-4666-8666-666666666666';
 const unrelatedAssetId = '77777777-7777-4777-8777-777777777777';
+const sourcePublicId = '88888888-8888-4888-8888-888888888888';
 
 function createSnapshot() {
   return {
@@ -138,7 +139,20 @@ function createSnapshot() {
       ],
       recipe_site_listings: [{ id: 'listing-cake', recipe_id: firstRecipeId }],
       recipe_pairings: [{ id: 'pairing-cake', source_recipe_id: firstRecipeId }],
-      recipe_references: [{ id: 'reference-cake', recipe_id: firstRecipeId }],
+      recipe_references: [
+        {
+          id: 'reference-cake',
+          recipe_id: firstRecipeId,
+          reference_type: 'external_url',
+          publication_id: null,
+          linked_recipe_id: null,
+          display_text: "source-user's Lemon cake",
+          url: `https://recipe-box.example/r/${sourcePublicId}`,
+          position: 0,
+          is_protected_source: true,
+          source_public_id: sourcePublicId,
+        },
+      ],
       ingredient_densities: [{ ingredient_id: firstIngredientId, volume_amount: 1 }],
       ingredient_nutrition_profiles: [
         {
@@ -215,6 +229,16 @@ function createSnapshot() {
 }
 
 describe('export rules', () => {
+  it('exports protected source identity in schema version 10', () => {
+    const output = buildPortableData(createSnapshot(), { type: 'recipe', id: firstRecipeId });
+
+    expect(output.schema_version).toBe(10);
+    expect(output.records.recipe_references[0]).toMatchObject({
+      is_protected_source: true,
+      source_public_id: sourcePublicId,
+    });
+  });
+
   it('accepts only supported scope shapes and valid record identifiers', () => {
     expect(parseExportScope({ type: 'database' })).toEqual({ type: 'database' });
     expect(parseExportScope({ type: 'publication', id: firstPublicationId })).toEqual({
@@ -354,7 +378,7 @@ describe('export rules', () => {
     );
   });
 
-  it('exports Recipe unit preferences without changing the bundle schema', () => {
+  it('exports Recipe unit preferences in schema v10', () => {
     const snapshot = createSnapshot();
     const output = buildPortableData(
       {
@@ -368,7 +392,7 @@ describe('export rules', () => {
       { type: 'database' },
     );
 
-    expect(output.schema_version).toBe(9);
+    expect(output.schema_version).toBe(10);
     expect(output.account_preferences).toMatchObject({
       volume_system: 'recipe',
       weight_system: 'recipe',
@@ -388,7 +412,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(9);
+    expect(manifest.schema_version).toBe(10);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

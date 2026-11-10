@@ -5,6 +5,7 @@ import { ImageViewer } from '../../app/media/image-viewer';
 import { RecipePhotoGallery } from '../../app/media/media-display';
 import { RecipeActionFeedbackProvider } from '../../app/recipe-action-feedback';
 import { InstructionList } from '../../app/recipes/instruction-list';
+import { PublicRecipeSaveAction } from '../../app/recipes/public-recipe-save-action';
 import { RecipeOutputActions } from '../../app/recipes/recipe-output-actions';
 import {
   RecipeInstructionMention,
@@ -33,6 +34,7 @@ type PublicRecipePageProps =
       recipe: PublicRecipePayload;
       photos: PublicRecipePhoto[];
       authorUsername: string;
+      publicId: string;
     };
 
 function withOccurrenceKeys<T>(items: T[], getIdentity: (item: T) => string) {
@@ -66,6 +68,7 @@ export const getServerSideProps = (async ({ params, res }) => {
       recipe: result.recipe,
       photos: result.photos,
       authorUsername: result.authorUsername,
+      publicId: Array.isArray(publicId) ? (publicId[0] ?? '') : (publicId ?? ''),
     },
   };
 }) satisfies GetServerSideProps<PublicRecipePageProps>;
@@ -238,7 +241,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
     );
   }
 
-  const { recipe, photos, authorUsername } = props;
+  const { recipe, photos, authorUsername, publicId } = props;
   const times = [
     ['Total time', recipe.timings.total],
     ['Prep', recipe.timings.prep],
@@ -298,19 +301,6 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                   />
                 )}
               </h1>
-              <div className="recipe-public-title-actions">
-                <RecipeActionFeedbackProvider>
-                  <RecipeOutputActions
-                    defaultSettings={{
-                      repeatIngredients: true,
-                      includeInstructionPhotos: true,
-                      useEmphasisColors: true,
-                      includePrivateDetails: false,
-                    }}
-                    isPublic
-                  />
-                </RecipeActionFeedbackProvider>
-              </div>
             </div>
             <p className="recipe-public-author">By {authorUsername}</p>
             {recipe.attribution && (
@@ -320,6 +310,19 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
               </p>
             )}
           </div>
+          <PublicRecipeSaveAction publicId={publicId} recipeName={recipe.name}>
+            <RecipeActionFeedbackProvider>
+              <RecipeOutputActions
+                defaultSettings={{
+                  repeatIngredients: true,
+                  includeInstructionPhotos: true,
+                  useEmphasisColors: true,
+                  includePrivateDetails: false,
+                }}
+                isPublic
+              />
+            </RecipeActionFeedbackProvider>
+          </PublicRecipeSaveAction>
         </div>
         {(photos.length > 0 || hasPublicSummary) && (
           <div

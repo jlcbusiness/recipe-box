@@ -38,7 +38,7 @@ function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -73,7 +73,16 @@ function createBundleEntries(options: {
         table,
         options.records?.[table] ??
           (table === 'recipes' && options.recipe
-            ? [options.recipe]
+            ? [
+                {
+                  ...(schemaVersion >= 6
+                    ? { score: null, is_starred: false, is_hearted: false }
+                    : {}),
+                  ...(schemaVersion >= 8 ? { makes_quantity: null, makes_thing: null } : {}),
+                  ...(schemaVersion >= 9 ? { nutrition_overrides: {} } : {}),
+                  ...options.recipe,
+                },
+              ]
             : table === 'publications' && options.publication
               ? [options.publication]
               : table === 'recipe_ingredient_sets' && options.recipe
@@ -1078,5 +1087,80 @@ describe('import bundle validation', () => {
       },
     });
     expect(() => validateImportBundleFiles(invalidEntries)).toThrow(/nutrition profile/i);
+  });
+
+  it('preserves protected source identity in v10 and backfills v9 references as editable', () => {
+    const sourcePublicId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const sourceReference = {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      recipe_id: recipeId,
+      reference_type: 'external_url',
+      publication_id: null,
+      display_text: "source-user's Lemon cake",
+      url: `https://recipe-box.example/r/${sourcePublicId}`,
+      position: 0,
+      linked_recipe_id: null,
+      is_protected_source: true,
+      source_public_id: sourcePublicId,
+    };
+    const currentEntries = createBundleEntries({
+      schemaVersion: 10,
+      recipe: { id: recipeId, name: 'Lemon cake' },
+      records: { recipe_references: [sourceReference] },
+    });
+
+    expect(
+      validateImportBundleFiles(currentEntries).data.records.recipe_references[0],
+    ).toMatchObject({
+      is_protected_source: true,
+      source_public_id: sourcePublicId,
+      url: sourceReference.url,
+    });
+
+    const legacyEntries = createBundleEntries({
+      schemaVersion: 9,
+      recipe: { id: recipeId, name: 'Lemon cake' },
+      records: {
+        recipe_references: [
+          Object.fromEntries(
+            Object.entries(sourceReference).filter(
+              ([key]) => key !== 'is_protected_source' && key !== 'source_public_id',
+            ),
+          ),
+        ],
+      },
+    });
+    expect(
+      validateImportBundleFiles(legacyEntries).data.records.recipe_references[0],
+    ).toMatchObject({
+      is_protected_source: false,
+      source_public_id: null,
+    });
+  });
+
+  it('rejects protected source metadata whose stable URL does not match its public ID', () => {
+    const sourcePublicId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const entries = createBundleEntries({
+      schemaVersion: 10,
+      recipe: { id: recipeId, name: 'Lemon cake' },
+      records: {
+        recipe_references: [
+          {
+            id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            recipe_id: recipeId,
+            reference_type: 'external_url',
+            publication_id: null,
+            display_text: "source-user's Lemon cake",
+            url: 'https://recipe-box.example/r/ffffffff-ffff-4fff-8fff-ffffffffffff',
+            position: 0,
+            linked_recipe_id: null,
+            is_protected_source: true,
+            source_public_id: sourcePublicId,
+          },
+        ],
+      },
+    });
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/source|protected|identity/i);
   });
 });

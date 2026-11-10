@@ -320,14 +320,18 @@ place Settings after Trash and before Account in the pinned sidebar; Help
 follows Search in the main navigation. On mobile, show icon-only navigation
 controls. Keep Help at the far left regardless of hand preference, using a
 question-mark glyph inside its existing circular hit target. The remaining
-controls follow the selected hand preference. Give each icon control a
-descriptive accessible name and tooltip.
+controls follow the selected hand preference. Keep all navigation icons within
+the viewport, with a white navigation strip that is 80% transparent over the
+page and white circular icon controls.
+Give each icon control a descriptive accessible name and tooltip.
 
 The Library icon on mobile and label on desktop stay leaf green as a distinct
-destination. When Library is current, add a pale green surface, a desktop
-underline, and a stronger mobile circle outline; retain `aria-current` and the
-gold keyboard-focus outline. The authenticated `/app` entry opens Library while
-`/` remains sign-in.
+destination. On mobile, keep the Library circle on the theme's pale wash surface
+and fill the book faces with a darker mix of that surface and the theme ink.
+Give every current mobile navigation destination a stronger circle outline;
+Library also retains its desktop underline. Keep `aria-current` and the gold
+keyboard-focus outline. The authenticated `/app` entry opens Library while `/`
+remains sign-in.
 
 The account menu uses the same options everywhere. On desktop, show the account
 email at the bottom of the pinned left navigation, after the Trash and Settings
@@ -1086,7 +1090,13 @@ intentional; print and paginated downloads retain their own page margins.
   returns to view. Delete remains a separate text action below it and is not
   placed beside the detail actions or on recipe-list rows.
 - Delete opens a native confirmation dialog that names the recipe and explains
-  the 30-day restore window. Cancel and Escape leave the recipe unchanged.
+  the 30-day restore window. Its confirm button has a trash icon and the concise
+  **Trash** label, with 8px between the copy and action row to match the
+  inter-button gap. Cancel and Escape leave the recipe unchanged. At mobile
+  widths, center the dialog in the visual viewport, keep it within the viewport
+  bounds, and reflow the buttons to fit its content width.
+  At mobile widths, keep the dialog and both action buttons within the visual viewport;
+  reflow the buttons to fit the dialog's content width.
 - Trash is a dense responsive working list with deleted and purge dates and an
   explicit Restore action. Its empty state links back to the active Recipe Tin.
 - Print uses the active detail content and a light paper layout. Ingredients
@@ -1169,13 +1179,15 @@ emphasis states, and requests landscape. Public metadata and reading content
 use the available width with outer gutters capped at 96 CSS pixels per side
 and aligned section-group edges. See [Slice 22](slices/22-public-links-and-privacy.md)
 for the public data and interaction contract and [DLC 08](slices/dlc/dlc-08-recipe-public-and-print-layout.md)
-for the print and responsive-width contract. The public Print & Download
-control uses the same filled leaf treatment as standard private recipe detail.
-At 640px and below, public and private output triggers use a Download icon and
-the accessible name and tooltip `Download`, while retaining the same four-item
-output menu.
-Public Download and Page Settings buttons remain 36px square with the existing
-48px mobile hit areas, matching private recipe controls.
+for the print and responsive-width contract. On desktop, public recipe actions
+form a compact grid: Save to Recipe Tin, Download, and Print occupy the first
+row in that order; Page Settings sits below Print at the right edge. Print is
+immediate, while Download opens the HTML, PNG, and PDF choices. The public
+output and Save icons use the filled leaf treatment. At 640px and below, keep
+the combined Print & Download menu to the right of Save, with Page Settings
+directly below that menu. Keep each mobile icon visually 36px square with a
+48px hit area. Private recipe output controls retain their existing Print &
+Download menu.
 
 DLC 30 adds a plain-text `By {username}` byline directly beneath the recipe
 title. It is not a profile link and appears only on an active, linkable recipe;
@@ -1183,6 +1195,29 @@ the public projection does not include account identifiers or login email.
 Public photo URLs use the application-controlled photo endpoint, which checks
 visibility for each request and returns non-cacheable image bytes rather than
 a signed Storage URL.
+
+DLC 31 shows **Save to Recipe Tin** only after a signed-in User session is
+verified. Present it as a clearly named Save icon beside the public output
+controls, using the desktop and mobile action-grid layouts above. Keep the
+title and byline on the left, opposing the controls on the right in the same
+header row. Keep the Save icon in its original grid position after success,
+showing a disabled saved indicator so the remaining controls do not shift.
+Place success and recoverable error feedback left of Page settings, right-aligned
+to that control with an 8px gap and vertically centered on its icon. Keep the
+feedback out of layout flow so it does not add a row or shift the header; it
+must not constrain the title or overlap it. On narrow screens, use compact
+visible success and failure labels while preserving the full status and error
+announcements and saved-copy link for assistive technology. Keep the saved-copy
+link underlined when idle so its link affordance is clear.
+Let the public header reflow rather than compressing the title or creating an
+oversized action row.
+Show nonblocking progress and a success link to the private copy. A repeated
+save after reload opens a confirmation dialog with **Open saved copy** and
+**Cancel**; cancel leaves the User on the public recipe. A matching copy in
+Trash is not active: saving creates a fresh copy and leaves the trashed recipe
+untouched. Visitors without a verified session retain public reading and
+output but see no save or sign-in action. Keep the action and status usable
+without horizontal overflow at mobile widths.
 
 ## Publication Editing
 

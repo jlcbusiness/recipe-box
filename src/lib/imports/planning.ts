@@ -589,21 +589,58 @@ export function planImport(
       source_recipe_id: mappedId('recipes', record.source_recipe_id, 'recipe'),
       linked_recipe_id: mapRecipeLink(record.linked_recipe_id, record.display_text),
     }));
+  const existingProtectedReferences = rowsFrom(existing, 'recipe_references').filter(
+    (reference) => reference.is_protected_source === true,
+  );
   records.recipe_references = incoming.records.recipe_references
     .filter(recipeOwned)
-    .map((record) => ({
-      ...record,
-      id: mappedId('recipe_references', record.id, 'recipe reference'),
-      recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
-      publication_id:
-        record.publication_id === null
-          ? null
-          : (idMappings.publications.get(String(record.publication_id)) ?? null),
-      linked_recipe_id:
-        record.linked_recipe_id === null
-          ? null
-          : mapRecipeLink(record.linked_recipe_id, record.display_text),
-    }));
+    .flatMap((record) => {
+      const recipeId = mappedId('recipes', record.recipe_id, 'recipe');
+      if (record.is_protected_source === true) {
+        const sourcePublicId = String(record.source_public_id).toLocaleLowerCase();
+        const existingReference = existingProtectedReferences.find(
+          (reference) =>
+            String(reference.source_public_id ?? '').toLocaleLowerCase() === sourcePublicId,
+        );
+        if (existingReference) {
+          if (String(existingReference.recipe_id) !== String(recipeId)) {
+            throw new Error('This public source is already saved in another Recipe Tin recipe.');
+          }
+          return [{ ...existingReference }];
+        }
+      }
+
+      return [
+        {
+          ...record,
+          id: mappedId('recipe_references', record.id, 'recipe reference'),
+          recipe_id: recipeId,
+          publication_id:
+            record.publication_id === null
+              ? null
+              : (idMappings.publications.get(String(record.publication_id)) ?? null),
+          linked_recipe_id:
+            record.linked_recipe_id === null
+              ? null
+              : mapRecipeLink(record.linked_recipe_id, record.display_text),
+        },
+      ];
+    });
+  const plannedRecipeIds = new Set(records.recipes.map((recipe) => String(recipe.id)));
+  const plannedProtectedSources = new Set(
+    records.recipe_references
+      .filter((reference) => reference.is_protected_source === true)
+      .map((reference) => String(reference.source_public_id).toLocaleLowerCase()),
+  );
+  for (const reference of existingProtectedReferences) {
+    if (
+      plannedRecipeIds.has(String(reference.recipe_id)) &&
+      !plannedProtectedSources.has(String(reference.source_public_id).toLocaleLowerCase())
+    ) {
+      records.recipe_references.push({ ...reference });
+      plannedProtectedSources.add(String(reference.source_public_id).toLocaleLowerCase());
+    }
+  }
   const nextReferencePosition = new Map<string, number>();
   for (const reference of records.recipe_references) {
     const recipeId = String(reference.recipe_id);

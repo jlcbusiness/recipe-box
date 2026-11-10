@@ -1,4 +1,4 @@
-import type { RecipeIngredientSet, RecipeRecord } from './data';
+import type { PublicationType, RecipeIngredientSet, RecipeRecord } from './data';
 import type { NutrientValues } from './nutrition-rules';
 
 type PublicRecipeIngredient = Omit<
@@ -26,7 +26,7 @@ export type PublicRecipeSource = {
   rest_time_minutes: number | null;
   total_time_minutes: number | null;
   publication_page: string | null;
-  publication: { name: string } | null;
+  publication: { name: string; publication_type: PublicationType } | null;
   ingredient_sets: RecipeIngredientSet[];
   ingredients: PublicRecipeIngredient[];
   steps: RecipeRecord['steps'];
@@ -64,7 +64,11 @@ export type PublicRecipePayload = {
   ingredients: PublicRecipeIngredient[];
   steps: Array<Pick<RecipeRecord['steps'][number], 'position' | 'content_markdown'>>;
   nutrition_per_serving: NutrientValues | null;
-  attribution: { publication_name: string; page: string | null } | null;
+  attribution: {
+    publication_name: string;
+    publication_type: PublicationType;
+    page: string | null;
+  } | null;
   pairings: string[];
   references: PublicRecipeReference[];
 };
@@ -203,6 +207,7 @@ export function buildPublicRecipePayload(
     attribution: recipe.publication
       ? {
           publication_name: recipe.publication.name,
+          publication_type: recipe.publication.publication_type,
           page: recipe.publication_page,
         }
       : null,

@@ -143,8 +143,9 @@ chrome.
   a recipe. It opens a semantic confirmation dialog; it is never a one-click
   destructive action.
 - The dialog names the recipe, states that it moves to Trash, says it can be
-  restored for 30 days, and gives its destructive confirmation an unambiguous
-  label such as **Move to Trash**. Cancel is the non-destructive default and
+  restored for 30 days, and gives its destructive confirmation a trash icon
+  with the concise **Trash** label. Leave 8px between the copy and action row,
+  matching the gap between buttons. Cancel is the non-destructive default and
   Escape closes the dialog without changes.
 - On confirmation, navigate to the authenticated recipe list and show a
   concise status message with a link to Trash. Do not render a soft-deleted

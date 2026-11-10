@@ -94,10 +94,10 @@ while retaining the existing single-image viewer without gallery navigation.
   [Safe public recipe publishing](dlc-30-safe-public-recipe-publishing.md)
   makes recipes private by default, confirms the copy consequences when
   sharing a private link, and adds a public username and guarded photo delivery.
-- **DLC 31 (candidate; depends on DLC 30):**
+- **DLC 31 (delivered; depends on DLC 30):**
   [Save public recipe copies](dlc-31-save-public-recipe-copies.md) saves the
   public allow-listed recipe and photos as a private Recipe Tin copy with a
-  protected, titled source reference.
+  protected, titled source reference and schema-v10 import/export support.
 
 ## Sequencing notes
 

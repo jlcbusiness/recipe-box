@@ -21,6 +21,10 @@ A person with a local account can sign in, sign out, request and complete a
 password recovery, and reach an empty private shell that works on desktop and
 mobile. The shell is not a recipe or library experience.
 
+The sign-in header shows the detailed Recipe Box illustration beside a
+single-line Recipe Box wordmark; omit the secondary private-library label. The
+simplified illustration is the browser favicon.
+
 ## Scope
 
 - Add Next.js session handling for email and password sign-in, sign-out, and

@@ -64,7 +64,7 @@ event. Updates and events are excluded from account reset and database bundles.
 | Ingredient mention | A structured link from an instruction location to one recipe ingredient row and optionally one of its two portions. |
 | Instruction photo reference | A stable media-asset identity embedded in a recipe step; it can reference only a ready photo owned by that same recipe. |
 | Recipe pairing | A Pairs with entry with required display text and an optional linked target recipe. |
-| Recipe reference | A same-account recipe link, external URL, or printed citation linked to a recipe; legacy Publication references remain static text, and purged recipe targets retain their display text. |
+| Recipe reference | A same-account recipe link, external URL, or printed citation linked to a recipe; legacy Publication references remain static text, and purged recipe targets retain their display text. A protected public-copy source URL stores its source public ID, is unique per account/source, and cannot be changed while its recipe exists. |
 | Tag | A trimmed, case-preserving account-owned name, unique after case-folding, with one fixed pastel color key, linked to recipes and publications. |
 | Picklist value | A managed selectable value for an account-scoped configurable taxonomy. |
 | Explorer state | A per-account last-used recipe or publication explorer configuration: filters, sort, direction, view, List-column visibility, desktop widths, and fixed publication scope when applicable. |
@@ -169,6 +169,12 @@ columns.
   a version conflict leaves both recipe content and media unchanged.
 - A recipe pairing may be plain text or link another recipe. Linked pairings are
   directional and expose both outgoing and incoming recipe relationships.
+- Saving a public recipe creates a private, destination-owned Recipe Tin copy
+  from the public projection, including public photos only. The copy retains a
+  protected URL reference to the source; the Recipe Tin collection itself is
+  not treated as source attribution. Schema-v10 bundles preserve the protected
+  source public ID, and import cannot remove or replace an existing protected
+  reference.
 - A Magazine publication represents its title. Each Magazine recipe stores its
   own issue, volume, edition/date, and optional page citation in its recipe
   location. Its optional online recipe URL belongs to the recipe and does not

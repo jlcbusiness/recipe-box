@@ -117,6 +117,8 @@ const privateRecipe = {
       publication_id: null,
       url: null,
       position: 0,
+      is_protected_source: false,
+      source_public_id: null,
     },
     {
       id: 'external-reference-id',
@@ -127,6 +129,8 @@ const privateRecipe = {
       publication_id: null,
       url: 'https://recipes.example/lemon-cake',
       position: 1,
+      is_protected_source: false,
+      source_public_id: null,
     },
     {
       id: 'printed-reference-id',
@@ -137,6 +141,8 @@ const privateRecipe = {
       publication_id: null,
       url: null,
       position: 2,
+      is_protected_source: false,
+      source_public_id: null,
     },
   ],
 } satisfies RecipeRecord;
@@ -230,7 +236,11 @@ describe('public recipe projection', () => {
             'Add [[ingredient:00000000-0000-4000-8000-000000000002|lemon]] and [[ingredient:00000000-0000-4000-8000-000000000004|pepper]].',
         },
       ],
-      attribution: { publication_name: 'Baking Quarterly', page: '75' },
+      attribution: {
+        publication_name: 'Baking Quarterly',
+        publication_type: 'magazine',
+        page: '75',
+      },
       nutrition_per_serving: null,
       pairings: ['Roast chicken'],
       references: [

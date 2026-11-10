@@ -4,6 +4,24 @@ import { createTestUser, deleteTestUser, getLocalMailpitUrl } from '../support/l
 
 test('rejected credentials produce an accessible sign-in error @e2e', async ({ page }) => {
   await page.goto('/');
+  const faviconResponse = await page.request.get('/favicon.ico');
+  expect(faviconResponse.ok()).toBe(true);
+  expect(faviconResponse.headers()['content-type']).toContain('image/x-icon');
+  const wordmarkLogo = page.getByRole('link', { name: 'Recipe Box home' }).locator('img');
+  await expect(wordmarkLogo).toBeVisible();
+  await expect(wordmarkLogo).toHaveAttribute('alt', '');
+  await expect(page.locator('.topbar .workspace-label')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Recipe Box home' })).toHaveCSS(
+    'white-space',
+    'nowrap',
+  );
+  await expect
+    .poll(() =>
+      wordmarkLogo.evaluate(
+        (image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+      ),
+    )
+    .toBe(true);
   await page.getByLabel('Email').fill('missing-account@example.test');
   await page.getByLabel('Password').fill('incorrect-password-42');
   await page.getByRole('button', { name: 'Sign in' }).click();
@@ -302,15 +320,49 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
+    const mobileNav = page.getByRole('navigation', { name: 'Main navigation' });
+    const mobileNavBoundsAt390 = await mobileNav.boundingBox();
+    expect(mobileNavBoundsAt390?.x).toBe(0);
+    expect(mobileNavBoundsAt390?.width).toBe(390);
+    await expect(mobileNav).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.2)');
     const mobileLibraryLink = page.getByRole('link', { name: 'Library' });
     await expect(mobileLibraryLink).toHaveAttribute('aria-current', 'page');
     await expect(mobileLibraryLink).toHaveCSS('border-width', '2px');
     await expect(mobileLibraryLink).toHaveCSS('background-color', 'rgb(237, 244, 233)');
     await expect(mobileLibraryLink).toHaveCSS('color', 'rgb(56, 96, 68)');
+    const libraryColors = await mobileLibraryLink.evaluate((link) => {
+      const books = link.querySelectorAll('svg > rect, svg > path:last-child');
+      if (books.length !== 2) {
+        throw new Error('Expected the Library icon to contain both book shapes.');
+      }
+      return {
+        background: getComputedStyle(link).backgroundColor,
+        bookFills: Array.from(books, (book) => getComputedStyle(book).fill),
+      };
+    });
+    const normalizeRgb = (color: string) => {
+      const channels = color
+        .match(/[\d.]+/gu)
+        ?.map(Number)
+        .slice(0, 3);
+      if (channels?.length !== 3) {
+        throw new Error(`Expected a computed RGB color, received ${color}.`);
+      }
+      return color.startsWith('color(srgb') ? channels : channels.map((channel) => channel / 255);
+    };
+    const backgroundChannels = normalizeRgb(libraryColors.background);
+    for (const bookFill of libraryColors.bookFills) {
+      const bookFillChannels = normalizeRgb(bookFill);
+      expect(bookFillChannels.every((channel, index) => channel < backgroundChannels[index])).toBe(
+        true,
+      );
+    }
     const mobileSearchLink = page.getByRole('link', { name: 'Search' });
     const mobileHelpLink = page.getByRole('link', { name: 'Help' });
     const mobileSettingsLink = page.getByRole('link', { name: 'Settings' });
     await expect(mobileLibraryLink.locator('.private-nav-mobile-icon')).toBeVisible();
+    await expect(mobileSettingsLink).toHaveCSS('border-width', '1px');
+    await expect(mobileHelpLink).toHaveCSS('border-width', '1px');
     await expect(mobileSearchLink.locator('.private-nav-mobile-icon')).toBeVisible();
     await expect(mobileHelpLink.locator('svg')).toBeVisible();
     await expect(mobileHelpLink.locator('svg')).toHaveCSS('width', '22px');
@@ -327,11 +379,30 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       307,
     );
+    const narrowNavBounds = await mobileNav.boundingBox();
+    const narrowNavItemBounds = await page
+      .locator('.private-nav a, .private-nav .account-menu-trigger')
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const { left, right } = element.getBoundingClientRect();
+          return { left, right };
+        }),
+      );
+    expect(narrowNavBounds?.x).toBeGreaterThanOrEqual(0);
+    expect((narrowNavBounds?.x ?? 0) + (narrowNavBounds?.width ?? 0)).toBeLessThanOrEqual(307);
+    expect(narrowNavItemBounds.length).toBeGreaterThan(0);
+    for (const bounds of narrowNavItemBounds) {
+      expect(bounds.left).toBeGreaterThanOrEqual(0);
+      expect(bounds.right).toBeLessThanOrEqual(307);
+    }
     const narrowHelpBounds = await mobileHelpLink.boundingBox();
     const narrowLibraryBounds = await mobileLibraryLink.boundingBox();
     expect(narrowHelpBounds?.x).toBeLessThan(narrowLibraryBounds?.x ?? Number.POSITIVE_INFINITY);
     await page.setViewportSize({ width: 390, height: 844 });
     await mobileHelpLink.click();
+    await expect(mobileHelpLink).toHaveCSS('border-width', '2px');
+    await expect(mobileLibraryLink).toHaveCSS('border-width', '1px');
+    await expect(mobileLibraryLink).toHaveCSS('background-color', 'rgb(237, 244, 233)');
     await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
@@ -386,6 +457,26 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await page.goto('/recipes');
     await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
     await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const themedLibraryLink = page.locator('.private-nav-links a[href="/publications"]');
+    await expect(themedLibraryLink).toHaveCSS('background-color', 'rgb(244, 239, 233)');
+    const themedLibraryColors = await themedLibraryLink.evaluate((link) => {
+      const books = link.querySelectorAll('svg > rect, svg > path:last-child');
+      if (books.length !== 2) {
+        throw new Error('Expected the Library icon to contain both book shapes.');
+      }
+      return {
+        background: getComputedStyle(link).backgroundColor,
+        bookFills: Array.from(books, (book) => getComputedStyle(book).fill),
+      };
+    });
+    const themedBackgroundChannels = normalizeRgb(themedLibraryColors.background);
+    for (const bookFill of themedLibraryColors.bookFills) {
+      const themedBookFillChannels = normalizeRgb(bookFill);
+      expect(
+        themedBookFillChannels.every((channel, index) => channel < themedBackgroundChannels[index]),
+      ).toBe(true);
+    }
     await page.goto('/app');
     await expect(page).toHaveURL(/\/publications$/);
     await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();

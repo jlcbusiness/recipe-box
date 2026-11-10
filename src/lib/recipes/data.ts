@@ -137,6 +137,8 @@ export type RecipeReference = {
   publication_id: string | null;
   url: string | null;
   position: number;
+  is_protected_source: boolean;
+  source_public_id: string | null;
 };
 
 type RecipeMeasurementRecord = Omit<RecipeMeasurement, 'picklist_value'> & {
@@ -506,7 +508,9 @@ export async function getRecipe(
     supabase.from('recipe_pairings').select('source_recipe_id').eq('linked_recipe_id', recipeId),
     supabase
       .from('recipe_references')
-      .select('id, reference_type, display_text, linked_recipe_id, publication_id, url, position')
+      .select(
+        'id, reference_type, display_text, linked_recipe_id, publication_id, url, position, is_protected_source, source_public_id',
+      )
       .eq('recipe_id', recipeId)
       .order('position'),
   ]);
@@ -648,6 +652,8 @@ export async function getRecipe(
     references: (referencesResult.data ?? []).map((recipeReference) => ({
       ...recipeReference,
       reference_type: recipeReference.reference_type as RecipeReference['reference_type'],
+      is_protected_source: recipeReference.is_protected_source === true,
+      source_public_id: recipeReference.source_public_id ?? null,
       linked_recipe_is_active: recipeReference.linked_recipe_id
         ? recipeTargets.get(recipeReference.linked_recipe_id)?.trashed_at === null
         : false,

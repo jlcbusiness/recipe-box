@@ -36,6 +36,20 @@ async function signIn(page: Page, user: TestUser) {
   await expect(page).toHaveURL(/\/(?:recipes|publications(?:\/[0-9a-f-]+)?)$/);
 }
 
+function publicOutputTrigger(page: Page) {
+  return page.locator('.recipe-public-title-actions .recipe-output-trigger');
+}
+
+async function requestPublicPrint(page: Page) {
+  const printButton = page.getByRole('button', { name: 'Print', exact: true });
+  if ((page.viewportSize()?.width ?? 1280) > 640) {
+    await printButton.click();
+    return;
+  }
+  await publicOutputTrigger(page).click();
+  await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+}
+
 function expectNoStoreOrRevalidation(headers: Record<string, string>) {
   const cacheControl = headers['cache-control'] ?? '';
   expect(cacheControl).toMatch(/no-store|no-cache/);
@@ -442,6 +456,488 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
       );
     }
     await deleteTestUser(request, user);
+  }
+});
+
+test('signed-in users visiting the home page are sent to their recipe library @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user);
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/i);
+    await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('a signed-in user can save one active copy while preserving trashed copies @e2e', async ({
+  page,
+  request,
+}) => {
+  const sourceUser = await createTestUser(request);
+  let destinationUser: TestUser | null = null;
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const sourceRecipe = await createRecipe(request, config, sourceUser, 'Public copy source');
+    const publicId = await getPublicId(request, config, sourceRecipe.id);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/r/${publicId}`);
+    await expect(page.getByRole('button', { name: 'Save to Recipe Tin' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /sign in/i })).toHaveCount(0);
+
+    destinationUser = await createTestUser(request);
+    await signIn(page, destinationUser);
+    await page.goto(`/r/${publicId}`);
+    const saveButton = page.getByRole('button', { name: 'Save to Recipe Tin' });
+    const mobileOutputButton = publicOutputTrigger(page);
+    const mobileSettingsButton = page.getByRole('button', { name: 'Page settings' });
+    await expect(saveButton).toBeVisible();
+    await expect(saveButton).toHaveAttribute('title', 'Save to Recipe Tin');
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+    const [mobileOutputBox, mobileSaveBox, mobileSettingsBox] = await Promise.all([
+      mobileOutputButton.boundingBox(),
+      saveButton.boundingBox(),
+      mobileSettingsButton.boundingBox(),
+    ]);
+    if (!mobileOutputBox || !mobileSaveBox || !mobileSettingsBox) {
+      throw new Error('Expected the mobile public action grid to have bounds.');
+    }
+    const mobileHeading = page.locator('.recipe-page-heading.recipe-detail-heading');
+    const mobileHeadingBoxBeforeSave = await mobileHeading.boundingBox();
+    if (!mobileHeadingBoxBeforeSave) {
+      throw new Error('Expected the mobile public recipe heading to have bounds.');
+    }
+    expect(mobileSaveBox.x + mobileSaveBox.width).toBeLessThanOrEqual(mobileOutputBox.x);
+    expect(mobileOutputBox.y).toBeCloseTo(mobileSaveBox.y, 0);
+    expect(mobileSettingsBox.x).toBeCloseTo(mobileOutputBox.x, 0);
+    expect(mobileSettingsBox.y).toBeGreaterThan(mobileSaveBox.y);
+    await saveButton.focus();
+    await page.keyboard.press('Tab');
+    await expect(mobileOutputButton).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(mobileSettingsButton).toBeFocused();
+    await saveButton.focus();
+    await page.getByRole('button', { name: 'Save to Recipe Tin' }).click();
+
+    const savedCopyLink = page.getByRole('link', { name: 'Open your saved copy' });
+    await expect(savedCopyLink).toBeVisible();
+    await expect(savedCopyLink).toHaveCSS('text-decoration-line', 'underline');
+    await expect(page.locator('.recipe-public-save-feedback')).toHaveCSS('overflow-y', 'visible');
+    await expect(savedCopyLink.locator('.recipe-public-save-status-compact')).toHaveCSS(
+      'text-decoration-line',
+      'underline',
+    );
+    await expect(savedCopyLink).toHaveCSS('border-bottom-style', 'solid');
+    await expect(savedCopyLink).toHaveCSS('border-bottom-width', '1px');
+    const savedRecipePath = await savedCopyLink.getAttribute('href');
+    expect(savedRecipePath).toMatch(/^\/recipes\/[0-9a-f-]+$/i);
+    const savedRecipeId = savedRecipePath?.split('/').at(-1);
+    if (!savedRecipeId) throw new Error('Expected the saved copy to have a recipe ID.');
+    const savedIndicator = page.getByRole('button', { name: 'Saved to Recipe Tin' });
+    await expect(savedIndicator).toBeVisible();
+    await expect(savedIndicator).toBeDisabled();
+    const [savedActionBox, savedControlsBox, savedStatusBox, savedSettingsBox, savedHeadingBox] =
+      await Promise.all([
+        savedIndicator.boundingBox(),
+        page.locator('.recipe-public-title-actions').boundingBox(),
+        page.locator('.recipe-public-save-status').boundingBox(),
+        mobileSettingsButton.boundingBox(),
+        mobileHeading.boundingBox(),
+      ]);
+    if (
+      !savedActionBox ||
+      !savedControlsBox ||
+      !savedStatusBox ||
+      !savedSettingsBox ||
+      !savedHeadingBox
+    ) {
+      throw new Error('Expected the saved public recipe header to have bounds.');
+    }
+    expect(savedActionBox.x).toBeCloseTo(mobileSaveBox.x, 1);
+    expect(savedActionBox.y).toBeCloseTo(mobileSaveBox.y, 1);
+    expect(savedControlsBox.width).toBeCloseTo(96, 0);
+    const mobileStatusRightGap = savedSettingsBox.x - (savedStatusBox.x + savedStatusBox.width);
+    expect(mobileStatusRightGap).toBeGreaterThanOrEqual(5);
+    expect(mobileStatusRightGap).toBeLessThanOrEqual(10);
+    expect(
+      Math.abs(
+        savedStatusBox.y +
+          savedStatusBox.height / 2 -
+          (savedSettingsBox.y + savedSettingsBox.height / 2),
+      ),
+    ).toBeLessThanOrEqual(1.5);
+    expect(savedHeadingBox.height).toBeCloseTo(mobileHeadingBoxBeforeSave.height, 1);
+    const savedTitleTextRects = await page.locator('.recipe-detail-title').evaluate((element) => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const textRects: Array<{ x: number; y: number; width: number; height: number }> = [];
+      while (walker.nextNode()) {
+        const range = document.createRange();
+        range.selectNodeContents(walker.currentNode);
+        textRects.push(
+          ...Array.from(range.getClientRects(), ({ x, y, width, height }) => ({
+            x,
+            y,
+            width,
+            height,
+          })),
+        );
+      }
+      return textRects;
+    });
+    const mobileSuccessOverlapsTitle = savedTitleTextRects.some(
+      (titleText) =>
+        savedStatusBox.x < titleText.x + titleText.width &&
+        savedStatusBox.x + savedStatusBox.width > titleText.x &&
+        savedStatusBox.y < titleText.y + titleText.height &&
+        savedStatusBox.y + savedStatusBox.height > titleText.y,
+    );
+    expect(mobileSuccessOverlapsTitle).toBe(false);
+
+    const copiedRecipeResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=id,account_id,is_private,name,version&id=eq.${savedRecipeId}`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(copiedRecipeResponse.ok(), await copiedRecipeResponse.text()).toBeTruthy();
+    const savedRecipes = (await copiedRecipeResponse.json()) as Array<{
+      id: string;
+      account_id: string;
+      is_private: boolean;
+      name: string;
+      version: number;
+    }>;
+    expect(savedRecipes).toHaveLength(1);
+    const savedRecipe = savedRecipes[0];
+    if (!savedRecipe) throw new Error('Expected the saved recipe record.');
+    expect(savedRecipe).toMatchObject({
+      id: savedRecipeId,
+      account_id: destinationUser.id,
+      is_private: true,
+      name: 'Public copy source',
+    });
+
+    const referenceResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_references?select=display_text,url,is_protected_source,source_public_id&recipe_id=eq.${savedRecipeId}`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(referenceResponse.ok(), await referenceResponse.text()).toBeTruthy();
+    const copiedReferences = (await referenceResponse.json()) as Array<{
+      display_text: string;
+      url: string;
+      is_protected_source: boolean;
+      source_public_id: string;
+    }>;
+    expect(copiedReferences).toHaveLength(1);
+    expect(copiedReferences[0]).toMatchObject({
+      display_text: `test-${sourceUser.id.slice(0, 8)}'s Public copy source`,
+      is_protected_source: true,
+      source_public_id: publicId,
+    });
+    expect(copiedReferences[0]?.url).toMatch(new RegExp(`/r/${publicId}$`));
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(savedCopyLink).toHaveCSS('text-decoration-line', 'underline');
+    await expect(savedCopyLink.locator('.recipe-public-save-status-full')).toHaveCSS(
+      'text-decoration-line',
+      'underline',
+    );
+    const [
+      desktopSavedIndicator,
+      desktopSavedActions,
+      desktopSavedStatus,
+      desktopSavedSettings,
+      desktopSavedHeading,
+    ] = await Promise.all([
+      page.getByRole('button', { name: 'Saved to Recipe Tin' }).boundingBox(),
+      page.locator('.recipe-public-title-actions').boundingBox(),
+      page.locator('.recipe-public-save-status').boundingBox(),
+      page.getByRole('button', { name: 'Page settings' }).boundingBox(),
+      page.locator('.recipe-page-heading.recipe-detail-heading').boundingBox(),
+    ]);
+    if (
+      !desktopSavedIndicator ||
+      !desktopSavedActions ||
+      !desktopSavedStatus ||
+      !desktopSavedSettings ||
+      !desktopSavedHeading
+    ) {
+      throw new Error('Expected the desktop saved recipe header to have bounds.');
+    }
+    const desktopStatusRightGap =
+      desktopSavedSettings.x - (desktopSavedStatus.x + desktopSavedStatus.width);
+    expect(desktopStatusRightGap).toBeGreaterThanOrEqual(5);
+    expect(desktopStatusRightGap).toBeLessThanOrEqual(10);
+    expect(
+      Math.abs(
+        desktopSavedStatus.y +
+          desktopSavedStatus.height / 2 -
+          (desktopSavedSettings.y + desktopSavedSettings.height / 2),
+      ),
+    ).toBeLessThanOrEqual(1.5);
+    expect(desktopSavedIndicator.y).toBeCloseTo(desktopSavedActions.y, 0);
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Save to Recipe Tin' })).toBeVisible();
+    const desktopHeadingAfterReload = await page
+      .locator('.recipe-page-heading.recipe-detail-heading')
+      .boundingBox();
+    if (!desktopHeadingAfterReload) {
+      throw new Error('Expected the desktop public recipe heading to have bounds after reload.');
+    }
+    expect(desktopHeadingAfterReload.height).toBeCloseTo(desktopSavedHeading.height, 1);
+    const desktopPrintButton = page.getByRole('button', { name: 'Print', exact: true });
+    const desktopDownloadButton = page.getByRole('button', { name: 'Download', exact: true });
+    const desktopSaveButton = page.getByRole('button', { name: 'Save to Recipe Tin' });
+    const desktopSettingsButton = page.getByRole('button', { name: 'Page settings' });
+    const [desktopPrintBox, desktopDownloadBox, desktopSaveBox, desktopSettingsBox] =
+      await Promise.all([
+        desktopPrintButton.boundingBox(),
+        desktopDownloadButton.boundingBox(),
+        desktopSaveButton.boundingBox(),
+        desktopSettingsButton.boundingBox(),
+      ]);
+    if (!desktopPrintBox || !desktopDownloadBox || !desktopSaveBox || !desktopSettingsBox) {
+      throw new Error('Expected the desktop public action grid to have bounds.');
+    }
+    expect(desktopSaveBox.x + desktopSaveBox.width).toBeLessThanOrEqual(desktopDownloadBox.x);
+    expect(desktopDownloadBox.x + desktopDownloadBox.width).toBeLessThanOrEqual(desktopPrintBox.x);
+    expect(desktopPrintBox.y).toBeCloseTo(desktopDownloadBox.y, 0);
+    expect(desktopDownloadBox.y).toBeCloseTo(desktopSaveBox.y, 0);
+    expect(desktopSettingsBox.x).toBeCloseTo(desktopPrintBox.x, 0);
+    expect(desktopSettingsBox.y).toBeGreaterThan(desktopSaveBox.y);
+    await desktopSaveButton.focus();
+    await page.keyboard.press('Tab');
+    await expect(desktopDownloadButton).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(desktopPrintButton).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(desktopSettingsButton).toBeFocused();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+    await page.getByRole('button', { name: 'Save to Recipe Tin' }).click();
+    const existingCopyDialog = page.getByRole('dialog', { name: 'Already in your Recipe Tin' });
+    await expect(existingCopyDialog).toBeVisible();
+    await expect(existingCopyDialog).toContainText('Public copy source');
+    await expect(existingCopyDialog.getByRole('link', { name: 'Open saved copy' })).toHaveAttribute(
+      'href',
+      savedRecipePath ?? '',
+    );
+    await existingCopyDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(existingCopyDialog).not.toBeVisible();
+
+    const trashCopyResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
+      headers: ownerHeaders(config, destinationUser),
+      data: {
+        p_recipe_id: savedRecipeId,
+        p_expected_version: savedRecipe.version,
+      },
+    });
+    expect(trashCopyResponse.ok(), await trashCopyResponse.text()).toBeTruthy();
+    await page.goto(`/r/${publicId}`);
+    await page.getByRole('button', { name: 'Save to Recipe Tin' }).click();
+    const replacementCopyLink = page.getByRole('link', { name: 'Open your saved copy' });
+    await expect(replacementCopyLink).toBeVisible();
+    const replacementRecipePath = await replacementCopyLink.getAttribute('href');
+    expect(replacementRecipePath).toMatch(/^\/recipes\/[0-9a-f-]+$/i);
+    const replacementRecipeId = replacementRecipePath?.split('/').at(-1);
+    if (!replacementRecipeId || !replacementRecipePath) {
+      throw new Error('Expected the replacement copy to have a recipe ID and path.');
+    }
+    expect(replacementRecipeId).not.toBe(savedRecipeId);
+
+    const copiesResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=id,trashed_at&account_id=eq.${destinationUser.id}&id=in.(${savedRecipeId},${replacementRecipeId})`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(copiesResponse.ok(), await copiesResponse.text()).toBeTruthy();
+    const copies = (await copiesResponse.json()) as Array<{
+      id: string;
+      trashed_at: string | null;
+    }>;
+    expect(copies).toHaveLength(2);
+    expect(copies.find(({ id }) => id === savedRecipeId)?.trashed_at).not.toBeNull();
+    expect(copies.find(({ id }) => id === replacementRecipeId)?.trashed_at).toBeNull();
+
+    const sourceCopiesResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_references?select=recipe_id&account_id=eq.${destinationUser.id}&source_public_id=eq.${publicId}&is_protected_source=eq.true`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(sourceCopiesResponse.ok(), await sourceCopiesResponse.text()).toBeTruthy();
+    const sourceCopies = (await sourceCopiesResponse.json()) as Array<{ recipe_id: string }>;
+    expect(sourceCopies).toHaveLength(2);
+    expect(sourceCopies.map(({ recipe_id }) => recipe_id)).toEqual(
+      expect.arrayContaining([savedRecipeId, replacementRecipeId]),
+    );
+
+    await page.goto(`/r/${publicId}`);
+    await page.getByRole('button', { name: 'Save to Recipe Tin' }).click();
+    const replacementCopyDialog = page.getByRole('dialog', {
+      name: 'Already in your Recipe Tin',
+    });
+    await expect(replacementCopyDialog).toContainText('Public copy source');
+    await expect(
+      replacementCopyDialog.getByRole('link', { name: 'Open saved copy' }),
+    ).toHaveAttribute('href', replacementRecipePath);
+    await replacementCopyDialog.getByRole('button', { name: 'Cancel' }).click();
+
+    await page.goto(replacementRecipePath);
+    const sourceReference = page.getByRole('link', {
+      name: `test-${sourceUser.id.slice(0, 8)}'s Public copy source`,
+    });
+    await expect(sourceReference.locator('..')).toHaveText(
+      `test-${sourceUser.id.slice(0, 8)}'s Public copy source (protected source)`,
+    );
+  } finally {
+    if (destinationUser) {
+      await deleteTestUser(request, destinationUser);
+    }
+    await deleteTestUser(request, sourceUser);
+  }
+});
+
+test('public save errors appear beside settings without shifting the header @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  let publicId: string | null = null;
+
+  try {
+    const recipe = await createRecipe(
+      request,
+      config,
+      user,
+      'A long recipe title that remains independent from the public action controls',
+    );
+    publicId = await getPublicId(request, config, recipe.id);
+    await signIn(page, user);
+    await page.route(`**/api/public-recipes/${publicId}/copy`, (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Unable to save this recipe. Please try again.' }),
+      }),
+    );
+    await page.goto(`/r/${publicId}`);
+    const saveError = page.locator('.recipe-public-save-error[role="alert"]');
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.reload();
+      const saveButton = page.getByRole('button', { name: 'Save to Recipe Tin' });
+      await expect(saveButton).toBeVisible();
+      const heading = page.locator('.recipe-page-heading.recipe-detail-heading');
+      const titleHeading = page.getByRole('heading', { level: 1 });
+      const titleBlock = page.locator('.recipe-detail-title');
+      const errorText = 'Unable to save this recipe. Please try again.';
+      const [headingBefore, titleBefore] = await Promise.all([
+        heading.boundingBox(),
+        titleHeading.boundingBox(),
+      ]);
+      if (!headingBefore || !titleBefore) {
+        throw new Error('Expected the public recipe heading to have bounds before saving.');
+      }
+
+      await saveButton.click();
+      await expect(saveError.locator('.recipe-public-save-error-full')).toHaveText(errorText);
+      if (viewport.width <= 640) {
+        await expect(saveError.locator('.recipe-public-save-error-compact')).toHaveText(
+          'Not saved',
+        );
+      }
+      await expect(page.locator('.recipe-public-title-actions [role="alert"]')).toHaveCount(0);
+      const [title, controls, error, settings, headingAfter, titleAfter] = await Promise.all([
+        titleBlock.boundingBox(),
+        page.locator('.recipe-public-title-actions').boundingBox(),
+        saveError.boundingBox(),
+        page.getByRole('button', { name: 'Page settings' }).boundingBox(),
+        heading.boundingBox(),
+        titleHeading.boundingBox(),
+      ]);
+      if (!title || !controls || !error || !settings || !headingAfter || !titleAfter) {
+        throw new Error('Expected the public header and save error to have bounds.');
+      }
+      const controlWidth = await page
+        .locator('.recipe-public-title-actions')
+        .evaluate((element) => {
+          const bounds = Array.from(element.children, (child) =>
+            child.getBoundingClientRect(),
+          ).filter((rect) => rect.width > 0);
+          if (bounds.length === 0) return 0;
+          const left = Math.min(...bounds.map((rect) => rect.left));
+          const right = Math.max(...bounds.map((rect) => rect.right));
+          return right - left;
+        });
+      expect(title.width).toBeGreaterThan(controlWidth);
+      expect(controls.x).toBeGreaterThan(title.x);
+      expect(controls.y).toBeCloseTo(title.y, 0);
+      const errorRightGap = settings.x - (error.x + error.width);
+      expect(errorRightGap).toBeGreaterThanOrEqual(5);
+      expect(errorRightGap).toBeLessThanOrEqual(10);
+      expect(
+        Math.abs(error.y + error.height / 2 - (settings.y + settings.height / 2)),
+      ).toBeLessThanOrEqual(1.5);
+      expect(headingAfter.height).toBeCloseTo(headingBefore.height, 1);
+      expect(titleAfter.x).toBeCloseTo(titleBefore.x, 1);
+      expect(titleAfter.y).toBeCloseTo(titleBefore.y, 1);
+      expect(titleAfter.width).toBeCloseTo(titleBefore.width, 1);
+      expect(titleAfter.height).toBeCloseTo(titleBefore.height, 1);
+      const titleTextRects = await titleBlock.evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const textRects: Array<{ x: number; y: number; width: number; height: number }> = [];
+        while (walker.nextNode()) {
+          const range = document.createRange();
+          range.selectNodeContents(walker.currentNode);
+          textRects.push(
+            ...Array.from(range.getClientRects(), ({ x, y, width, height }) => ({
+              x,
+              y,
+              width,
+              height,
+            })),
+          );
+        }
+        return textRects;
+      });
+      const overlapsTitle = titleTextRects.some(
+        (titleText) =>
+          error.x < titleText.x + titleText.width &&
+          error.x + error.width > titleText.x &&
+          error.y < titleText.y + titleText.height &&
+          error.y + error.height > titleText.y,
+      );
+      expect(
+        overlapsTitle,
+        `Save feedback overlaps the title at ${viewport.width}px: ${JSON.stringify({
+          title,
+          error,
+          settings,
+          titleTextRects,
+        })}`,
+      ).toBe(false);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+        .toBe(true);
+    }
+  } finally {
+    await deleteTestUser(request, user);
+    if (publicId) {
+      await request.delete(
+        `${config.apiUrl}/rest/v1/purged_recipe_public_ids?public_id=eq.${publicId}`,
+        { headers: serviceHeaders(config) },
+      );
+    }
   }
 });
 
@@ -1026,24 +1522,45 @@ test('public recipe output actions create standalone files and keep settings tra
       page.getByRole('heading', { name: 'Standalone output view - serves 4' }),
     ).toBeVisible();
     await expect(page.locator('.recipe-instruction-list')).toContainText('Fold flour into batter.');
-    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    const outputButton = publicOutputTrigger(page);
     const isMobileOutput = (page.viewportSize()?.width ?? 1280) <= 640;
-    await expect(
-      outputButton.locator(`svg.lucide-${isMobileOutput ? 'download' : 'printer'}`),
-    ).toBeVisible();
+    await expect(outputButton.locator('svg.lucide-download')).toBeVisible();
+    await expect(outputButton).toHaveAttribute(
+      'aria-label',
+      isMobileOutput ? 'Print & Download' : 'Download',
+    );
     const settingsButton = page.getByRole('button', { name: 'Page settings' });
     await expect(page.getByRole('button', { name: 'Export recipe' })).toHaveCount(0);
+    if (!isMobileOutput) {
+      const [desktopOutputBox, desktopSettingsBox] = await Promise.all([
+        outputButton.boundingBox(),
+        settingsButton.boundingBox(),
+      ]);
+      if (!desktopOutputBox || !desktopSettingsBox) {
+        throw new Error('Expected the desktop public output controls to have bounds.');
+      }
+      expect(desktopOutputBox.x + desktopOutputBox.width).toBeLessThanOrEqual(desktopSettingsBox.x);
+      expect(desktopOutputBox.y).toBeCloseTo(desktopSettingsBox.y, 0);
+    }
 
     await outputButton.click();
-    const outputMenu = page.getByRole('menu', { name: 'Print and download actions' });
-    await expect(outputMenu.getByRole('menuitem')).toHaveCount(4);
-    await expect(outputMenu.getByRole('menuitem', { name: 'Print', exact: true })).toBeVisible();
+    const outputMenu = page.getByRole('menu', {
+      name: isMobileOutput ? 'Print and download actions' : 'Download formats',
+    });
+    await expect(outputMenu.getByRole('menuitem')).toHaveCount(isMobileOutput ? 4 : 3);
+    await expect(outputMenu.getByRole('menuitem', { name: 'Print', exact: true })).toHaveCount(
+      isMobileOutput ? 1 : 0,
+    );
+    if (!isMobileOutput) {
+      await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeVisible();
+    }
     await page.keyboard.press('Escape');
     await expect(outputMenu).toBeHidden();
     await expect(outputButton).toBeFocused();
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const mobileOutputButton = page.getByRole('button', { name: 'Print & Download' });
+    const mobileOutputButton = publicOutputTrigger(page);
+    const mobileOutputMenu = page.getByRole('menu', { name: 'Print and download actions' });
     const mobileSettingsButton = page.getByRole('button', { name: 'Page settings' });
     await expect(mobileOutputButton).toHaveAttribute('title', 'Download');
     await expect(mobileOutputButton.locator('svg.lucide-download')).toBeVisible();
@@ -1054,14 +1571,18 @@ test('public recipe output actions create standalone files and keep settings tra
     if (!mobileTriggerBox || !mobileSettingsBox) {
       throw new Error('Expected the mobile output controls to have layout bounds.');
     }
+    expect(mobileTriggerBox.x + mobileTriggerBox.width).toBeLessThanOrEqual(mobileSettingsBox.x);
+    expect(mobileTriggerBox.y).toBeCloseTo(mobileSettingsBox.y, 0);
     expect(mobileTriggerBox.width).toBe(36);
     expect(mobileTriggerBox.height).toBe(36);
     expect(mobileSettingsBox.width).toBe(36);
     expect(mobileSettingsBox.height).toBe(36);
     await mobileOutputButton.click();
-    await expect(outputMenu.getByRole('menuitem')).toHaveCount(4);
-    await expect(outputMenu.getByRole('menuitem', { name: 'Print', exact: true })).toBeVisible();
-    const mobileMenuBox = await outputMenu.boundingBox();
+    await expect(mobileOutputMenu.getByRole('menuitem')).toHaveCount(4);
+    await expect(
+      mobileOutputMenu.getByRole('menuitem', { name: 'Print', exact: true }),
+    ).toBeVisible();
+    const mobileMenuBox = await mobileOutputMenu.boundingBox();
     const viewport = page.viewportSize();
     if (!mobileTriggerBox || !mobileMenuBox || !viewport) {
       throw new Error('Expected the mobile output trigger and menu to have layout bounds.');
@@ -1356,8 +1877,7 @@ test('public recipe output actions create standalone files and keep settings tra
       content:
         '.recipe-output-standalone-style-probe { background-image: url("/recipe-output-style-probe.png"); }',
     });
-    await outputButton.click();
-    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+    await requestPublicPrint(page);
     const preparedPrintFrame = page.locator('iframe[title="Recipe print document"]');
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
     await expect(page.locator('.recipe-output-feedback-success')).toHaveText('Print request sent.');
@@ -1420,8 +1940,7 @@ test('public recipe output actions create standalone files and keep settings tra
     await page
       .locator('html')
       .evaluate((element) => element.removeAttribute('data-print-requested'));
-    await outputButton.click();
-    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+    await requestPublicPrint(page);
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
     await expect(page.locator('.recipe-output-feedback-success')).toHaveText('Print request sent.');
     const neutralEmphasisColors = (
@@ -1589,7 +2108,7 @@ test('multi-page recipe output contains separated instruction photos and creates
       }
     });
 
-    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    const outputButton = publicOutputTrigger(page);
     const htmlDownloadPromise = page.waitForEvent('download');
     await outputButton.click();
     await page.getByRole('menuitem', { name: 'Download HTML' }).click();
@@ -1666,8 +2185,7 @@ test('multi-page recipe output contains separated instruction photos and creates
       await pdfDocument.destroy();
     }
 
-    await outputButton.click();
-    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+    await requestPublicPrint(page);
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
     await expect(page.locator('html')).toHaveAttribute('data-print-page-count', '2');
     await expect(page.locator('html')).toHaveAttribute(
@@ -1832,7 +2350,7 @@ test('print continues an oversized ingredient column while standalone formats fa
       }
     });
 
-    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    const outputButton = publicOutputTrigger(page);
     const errorFeedback = page.locator('.recipe-output-feedback-error');
     for (const format of ['Download HTML', 'Download PNG', 'Download PDF']) {
       await outputButton.click();
@@ -1842,8 +2360,7 @@ test('print continues an oversized ingredient column while standalone formats fa
       );
     }
 
-    await outputButton.click();
-    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+    await requestPublicPrint(page);
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
     await expect(page.locator('html')).toHaveText(/Print request sent\./);
     const printedIngredients = JSON.parse(
@@ -1961,7 +2478,7 @@ test('standalone output reports unavailable photos, supports retry, and aborts i
       firstStep.append(image);
     });
 
-    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    const outputButton = publicOutputTrigger(page);
     await outputButton.click();
     await page.getByRole('menuitem', { name: 'Download PDF' }).click();
     await expect(page.locator('.recipe-output-feedback-error')).toContainText(
@@ -2069,7 +2586,7 @@ test('public outputs omit private Rating and marker data @e2e', async ({
     ).toHaveCount(0);
     await expect(page.locator('.recipe-public-main')).not.toContainText('-5');
 
-    const outputButton = page.getByRole('button', { name: 'Print & Download' });
+    const outputButton = publicOutputTrigger(page);
     if (testInfo.project.name !== 'Fold 6') {
       const htmlDownloadPromise = page.waitForEvent('download');
       await outputButton.click();
@@ -2583,6 +3100,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.getByRole('checkbox', { name: 'Include instruction photos' })).toBeChecked();
     await expect(instructionPhoto).toBeVisible();
     await page.keyboard.press('Escape');
+    const saveButton = page.getByRole('button', { name: 'Save to Recipe Tin' });
+    await expect(saveButton).toBeVisible();
     const [titleRowBox, titleBox, actionsBox, printBox, toggleBox] = await Promise.all([
       page.locator('.recipe-detail-title-row').boundingBox(),
       page.getByRole('heading', { name: 'Public cooking view - serves 4' }).boundingBox(),
@@ -2590,22 +3109,21 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       outputButton.boundingBox(),
       settingsButton.boundingBox(),
     ]);
-    if (
-      !titleRowBox ||
-      !titleBox ||
-      !printBox ||
-      !toggleBox ||
-      ((page.viewportSize()?.width ?? 0) > 640 && !actionsBox)
-    ) {
+    if (!titleRowBox || !titleBox || !actionsBox || !printBox || !toggleBox) {
       throw new Error('Expected the public title and actions to be visible.');
     }
-    if (actionsBox) {
-      expect(actionsBox.x + actionsBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
-    }
+    const saveBox = await saveButton.boundingBox();
+    if (!saveBox) throw new Error('Expected the public save action to have bounds.');
+    expect(actionsBox.x + actionsBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
     if ((page.viewportSize()?.width ?? 0) <= 640) {
-      expect(toggleBox.x + toggleBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
-      expect(printBox.width).toBeGreaterThanOrEqual(48);
-      expect(printBox.height).toBeGreaterThanOrEqual(48);
+      expect(actionsBox.width).toBe(96);
+      expect(toggleBox.x + toggleBox.width).toBeCloseTo(actionsBox.x + actionsBox.width - 6, 1);
+      expect(saveBox.x + saveBox.width).toBeLessThanOrEqual(printBox.x);
+      expect(printBox.y).toBeCloseTo(saveBox.y, 0);
+      expect(toggleBox.x).toBeCloseTo(printBox.x, 0);
+      expect(toggleBox.y).toBeGreaterThan(saveBox.y);
+      expect(printBox.width).toBe(36);
+      expect(printBox.height).toBe(36);
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
         .toBe(true);
@@ -2613,7 +3131,16 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       if (!actionsBox) {
         throw new Error('Expected the desktop public title actions to have bounds.');
       }
-      expect(printBox.x + printBox.width).toBeLessThanOrEqual(toggleBox.x);
+      const desktopPrintBox = await page
+        .getByRole('button', { name: 'Print', exact: true })
+        .boundingBox();
+      if (!desktopPrintBox) throw new Error('Expected the desktop print action to have bounds.');
+      expect(saveBox.x + saveBox.width).toBeLessThanOrEqual(printBox.x);
+      expect(printBox.x + printBox.width).toBeLessThanOrEqual(desktopPrintBox.x);
+      expect(desktopPrintBox.y).toBeCloseTo(saveBox.y, 0);
+      expect(printBox.y).toBeCloseTo(saveBox.y, 0);
+      expect(toggleBox.x).toBeCloseTo(desktopPrintBox.x, 0);
+      expect(toggleBox.y).toBeGreaterThan(saveBox.y);
       expect(toggleBox.x + toggleBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
       expect(Math.max(titleBox.y, actionsBox.y)).toBeLessThan(
         Math.min(titleBox.y + titleBox.height, actionsBox.y + actionsBox.height),
@@ -2621,19 +3148,36 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     }
     const originalViewport = page.viewportSize();
     await page.setViewportSize({ width: 390, height: 844 });
-    const [narrowTitleRowBox, narrowPrintBox, narrowToggleBox] = await Promise.all([
-      page.locator('.recipe-detail-title-row').boundingBox(),
-      outputButton.boundingBox(),
-      settingsButton.boundingBox(),
-    ]);
-    if (!narrowTitleRowBox || !narrowPrintBox || !narrowToggleBox) {
+    const [narrowTitleRowBox, narrowActionsBox, narrowPrintBox, narrowSaveBox, narrowToggleBox] =
+      await Promise.all([
+        page.locator('.recipe-detail-title-row').boundingBox(),
+        page.locator('.recipe-public-title-actions').boundingBox(),
+        outputButton.boundingBox(),
+        saveButton.boundingBox(),
+        settingsButton.boundingBox(),
+      ]);
+    if (
+      !narrowTitleRowBox ||
+      !narrowActionsBox ||
+      !narrowPrintBox ||
+      !narrowSaveBox ||
+      !narrowToggleBox
+    ) {
       throw new Error('Expected the narrow public title and actions to be visible.');
     }
-    expect(narrowToggleBox.x + narrowToggleBox.width).toBeCloseTo(
+    expect(narrowActionsBox.width).toBe(96);
+    expect(narrowActionsBox.x + narrowActionsBox.width).toBeCloseTo(
       narrowTitleRowBox.x + narrowTitleRowBox.width,
       1,
     );
-    expect(narrowPrintBox.x + narrowPrintBox.width).toBeLessThanOrEqual(narrowToggleBox.x);
+    expect(narrowToggleBox.x + narrowToggleBox.width).toBeCloseTo(
+      narrowActionsBox.x + narrowActionsBox.width - 6,
+      1,
+    );
+    expect(narrowSaveBox.x + narrowSaveBox.width).toBeLessThanOrEqual(narrowPrintBox.x);
+    expect(narrowPrintBox.y).toBeCloseTo(narrowSaveBox.y, 0);
+    expect(narrowToggleBox.x).toBeCloseTo(narrowSaveBox.x, 0);
+    expect(narrowToggleBox.y).toBeGreaterThan(narrowSaveBox.y);
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);
@@ -2867,8 +3411,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await settingsButton.click();
     await noPhotosToggle.uncheck();
     await expect(instructionPhoto).toBeHidden();
-    await outputButton.click();
-    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+    await requestPublicPrint(page);
     await expect(page.locator('html')).toHaveAttribute('data-printed', 'true');
     await page.emulateMedia({ media: 'print' });
     await expect(ingredientContent).toContainText('33.81 TBSP');
@@ -2909,14 +3452,26 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await page.goto(`/r/${publicId}`);
     const longTitle = page.getByRole('heading', { name: longRecipeName });
     const authorByline = page.getByText(`By test-${user.id.slice(0, 8)}`, { exact: true });
-    const [longTitleBox, longTitleRowBox, longTitlePrintBox, longTitleSettingsBox] =
-      await Promise.all([
-        longTitle.boundingBox(),
-        page.locator('.recipe-detail-title-row').boundingBox(),
-        page.getByRole('button', { name: 'Print & Download' }).boundingBox(),
-        page.getByRole('button', { name: 'Page settings' }).boundingBox(),
-      ]);
-    if (!longTitleBox || !longTitleRowBox || !longTitlePrintBox || !longTitleSettingsBox) {
+    const [
+      longTitleBox,
+      longTitleRowBox,
+      longTitleActionsBox,
+      longTitlePrintBox,
+      longTitleSettingsBox,
+    ] = await Promise.all([
+      longTitle.boundingBox(),
+      page.locator('.recipe-detail-title-row').boundingBox(),
+      page.locator('.recipe-public-title-actions').boundingBox(),
+      publicOutputTrigger(page).boundingBox(),
+      page.getByRole('button', { name: 'Page settings' }).boundingBox(),
+    ]);
+    if (
+      !longTitleBox ||
+      !longTitleRowBox ||
+      !longTitleActionsBox ||
+      !longTitlePrintBox ||
+      !longTitleSettingsBox
+    ) {
       throw new Error('Expected the long public title and actions to have layout bounds.');
     }
     const bylineBox = await authorByline.boundingBox();
@@ -2926,6 +3481,10 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       longTitleSettingsBox.x,
     );
     expect(longTitleSettingsBox.x + longTitleSettingsBox.width).toBeCloseTo(
+      longTitleActionsBox.x + longTitleActionsBox.width - 6,
+      1,
+    );
+    expect(longTitleActionsBox.x + longTitleActionsBox.width).toBeCloseTo(
       longTitleRowBox.x + longTitleRowBox.width,
       1,
     );

@@ -41,6 +41,8 @@ type ReferenceDraft = {
   linked_recipe_id: string | null;
   publication_id: string | null;
   url: string | null;
+  is_protected_source: boolean;
+  source_public_id: string | null;
 };
 
 type SerializedReference = {
@@ -50,6 +52,8 @@ type SerializedReference = {
   linked_recipe_id: string | null;
   publication_id: string | null;
   url: string | null;
+  is_protected_source: boolean;
+  source_public_id: string | null;
 };
 
 type RecipeRelationshipsEditorProps = {
@@ -232,6 +236,8 @@ function createReference(): ReferenceDraft {
     linked_recipe_id: null,
     publication_id: null,
     url: null,
+    is_protected_source: false,
+    source_public_id: null,
   };
 }
 
@@ -251,13 +257,24 @@ export function RecipeRelationshipsEditor({
   );
   const [references, setReferences] = useState<ReferenceDraft[]>(() =>
     initialReferences.map(
-      ({ id, reference_type, display_text, linked_recipe_id, publication_id, url }) => ({
+      ({
         id,
         reference_type,
         display_text,
         linked_recipe_id,
         publication_id,
         url,
+        is_protected_source,
+        source_public_id,
+      }) => ({
+        id,
+        reference_type,
+        display_text,
+        linked_recipe_id,
+        publication_id,
+        url,
+        is_protected_source,
+        source_public_id,
       }),
     ),
   );
@@ -305,7 +322,9 @@ export function RecipeRelationshipsEditor({
 
   const serializedReferences: SerializedReference[] = [];
   for (const reference of references) {
-    if (reference.reference_type === 'publication' && reference.display_text.trim()) {
+    if (reference.is_protected_source) {
+      serializedReferences.push(reference);
+    } else if (reference.reference_type === 'publication' && reference.display_text.trim()) {
       serializedReferences.push(reference);
     } else if (reference.reference_type === 'recipe' && reference.display_text.trim()) {
       serializedReferences.push({ ...reference, publication_id: null, url: null });
@@ -540,6 +559,23 @@ export function RecipeRelationshipsEditor({
             <span />
           </div>
           {references.map((reference, index) => {
+            if (reference.is_protected_source) {
+              return (
+                <div
+                  className="recipe-relationship-row recipe-reference-row recipe-reference-protected-row"
+                  key={reference.id}
+                >
+                  <div className="recipe-reference-locked-value">
+                    {reference.url ? (
+                      <a href={reference.url}>{reference.display_text}</a>
+                    ) : (
+                      reference.display_text
+                    )}{' '}
+                    <span className="recipe-reference-locked-label">(protected source)</span>
+                  </div>
+                </div>
+              );
+            }
             const isRecipeLookupOpen = activeReferenceSuggestion?.referenceId === reference.id;
             const suggestions = isRecipeLookupOpen
               ? matchingReferenceRecipes(activeReferenceSuggestion.query)

@@ -1451,6 +1451,10 @@ When a Guest accesses a valid public recipe link, whether signed in or not:
   - Scale servings ($jx$, $1/j$, or custom servings).
   - Switch measurement display units. The page opens in the recipe's stored units because a guest has no unit preferences.
   - Print recipe.
+  - A signed-in User can save an active public recipe to their Recipe Tin.
+    The copy is private, uses only public recipe data and photos, and is
+    independent of the source. Visitors without a verified session can still
+    read and print but do not see a save action.
 - **Restricted / Hidden Elements:**
   - No application navigation, sidebar, or account links.
   - No edit, delete, or clone buttons.
@@ -1471,18 +1475,33 @@ When available, public recipe detail and print show the italic
 estimated values; the public payload never contains ingredient Settings
 profiles, recipe-ingredient overrides, or measure equivalents.
 
-The public title and Print action share a row. When a base serving count exists,
+The public title and action grid share a row. On desktop, Save to Recipe Tin,
+Download, and Print appear across the top row in that order, with Page settings
+beneath Print at the right edge. At 640px and below, keep Print & Download
+combined to the right of Save, and put Page settings beneath that menu. When a
+base serving count exists,
 show `- serves n` inline after the title, separated by a space, in regular 16px
 text; do not repeat Serves in the summary. Use 24px horizontal page gutters. Cap public
 photos at 420px wide and `min(280px, 60vh)` high. Above 760px, show the photo
 gallery beside the Time Breakdown and Equipment summary; at narrower widths, stack the
 summary below the photos. The **No emphasis** and **No instruction photos**
 buttons are text-labeled, start unpressed, and keep transient state only for
-the loaded page. On narrow screens, place Print at the title area's top-right
-and the toggles below the title. Public print matches the visible guest
+the loaded page. On narrow screens, place the combined Print & Download action
+grid at the title area's top-right and the toggles below the title. Public print matches the visible guest
 presentation and field order, omits controls and gallery photos, and honors the
 active inline-photo and emphasis choices without loading Account preferences.
 Print requests landscape while leaving the browser dialog authoritative.
+
+Saving a public recipe creates at most one active copy per destination account
+and source public ID. If an active copy already exists, the User chooses
+whether to open it or stay on the public recipe. A copy in Trash remains
+untouched; saving again creates a fresh active copy. The copy receives
+destination-owned IDs and private photo objects, remains private, and does not
+inherit source account data or private fields. Its read-only protected URL
+reference is labeled `{source username}'s {recipe title}` and cannot be
+changed while the copy exists. If the source publication is the Recipe Tin
+collection, it is not copied as a source citation; the Tin is a container, not
+a recipe source.
 
 ### 9.4 Secure Image Delivery
 
@@ -1676,14 +1695,15 @@ delete Admin accounts or transfer Owner status.
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 9 archives
+user-facing backup mechanism; Supabase backups are not used. Version 10 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
   version, and each payload file's uncompressed byte count and SHA-256 digest.
 - `data.json`: Normalized relational JSON using fixed record-table and
   per-table field allow-lists, including ingredient sets and each row's set
-  membership, portion ratio, Size value/unit, and mention ordinal. Account
+  membership, portion ratio, Size value/unit, mention ordinal, and protected
+  source-reference identity. Account
   IDs, Auth user IDs, admin and
   sign-in-method fields, signed URLs, private Storage paths, and export
   timestamps are omitted. Media rows include nullable normalized crop framing

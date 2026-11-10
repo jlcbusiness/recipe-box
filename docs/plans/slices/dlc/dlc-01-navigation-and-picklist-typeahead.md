@@ -14,10 +14,12 @@ its existing selection and focus model.
 - Route the authenticated `/app` entry to `/publications`; keep `/` as the
   unauthenticated sign-in page and leave direct recipe routes unchanged.
 - Keep the Library navigation link's icon on mobile and label on desktop in
-  leaf green so it remains a distinct visual destination. Give its current-page
-  state a pale green surface, reinforced by a desktop underline and a stronger
-  mobile circle outline. Keep its accessible name, `aria-current`, existing
-  order, breakpoint, dimensions, and gold focus outline.
+  leaf green so it remains a distinct visual destination. On mobile, its circle
+  always uses the theme's pale wash surface and its book faces use a darker
+  mix of that surface and the theme ink. Give every current navigation
+  destination a stronger mobile circle outline; Library also keeps its desktop
+  underline. Keep accessible names, `aria-current`, existing order, breakpoint,
+  dimensions, and gold focus outline.
 - In an open shared picklist, printable characters build a case-insensitive
   option-label prefix query for 700 ms. Search starts after the active option
   and wraps. Repeating the same character cycles through options with that
@@ -88,9 +90,10 @@ Verify the navigation at 641px and 640px as well as representative 1280px and
   entry. The root sign-in page and shared `/app` redirect establish this
   boundary in the current implementation.
 - **Design choice:** keep the Library link leaf green to make it stand out as a
-  destination; its current state adds a pale green surface, desktop underline,
-  and stronger mobile circle outline. Preserve the existing gold keyboard-focus
-  outline and control dimensions.
+  destination; its mobile circle always uses the theme's pale wash and darker
+  book fills. Give every current destination a stronger mobile circle outline;
+  Library also keeps its desktop underline. Preserve the existing gold
+  keyboard-focus outline and control dimensions.
 - **Research:** WAI-ARIA APG recommends type-ahead for listboxes and supports
   rapid multi-character prefix matching. Adopt the search behavior; preserve
   Recipe Box's established trigger focus, active-descendant, and explicit

@@ -202,6 +202,21 @@ test('private navigation links to Settings and keeps Units out of the nav @e2e @
     await expect(privateNavigation.getByLabel('Units', { exact: true })).toHaveCount(0);
     const trashLink = page.getByRole('link', { name: 'Trash' });
     await expect(trashLink).toBeVisible();
+    if (testInfo.project.name === 'Fold 6') {
+      const viewport = page.viewportSize();
+      const navigationBounds = await privateNavigation.boundingBox();
+      if (!viewport || !navigationBounds) {
+        throw new Error('Expected the mobile private navigation to have bounds.');
+      }
+      expect(navigationBounds.x).toBeGreaterThanOrEqual(0);
+      expect(navigationBounds.width).toBeCloseTo(viewport.width, 0);
+      expect(navigationBounds.x + navigationBounds.width).toBeLessThanOrEqual(
+        viewport.width + 1,
+      );
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+        .toBe(true);
+    }
     const utilityLabels = page.locator('.private-nav-utility-label');
     await expect(utilityLabels).toHaveCount(2);
 
@@ -209,6 +224,12 @@ test('private navigation links to Settings and keeps Units out of the nav @e2e @
       await expect(utilityLabels.nth(0)).toBeHidden();
       await expect(utilityLabels.nth(1)).toBeHidden();
       expect((await trashLink.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      const [navigationBackground, pageBackground] = await Promise.all([
+        privateNavigation.evaluate((element) => getComputedStyle(element).backgroundColor),
+        page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+      ]);
+      expect(navigationBackground).toBe('rgba(255, 255, 255, 0.2)');
+      expect(pageBackground).not.toBe(navigationBackground);
     } else {
       await expect(utilityLabels.nth(0)).toBeVisible();
       await expect(utilityLabels.nth(1)).toBeVisible();
@@ -704,7 +725,8 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       'Cuisine',
     ]);
     await expect(page.getByRole('heading', { name: 'Time Breakdown', exact: true })).toBeHidden();
-    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileViewportWidth = testInfo.project.name === 'Fold 6' ? 307 : 390;
+    await page.setViewportSize({ width: mobileViewportWidth, height: 844 });
     const mobileDetailHeadingBounds = await page.locator('.recipe-detail-heading').boundingBox();
     const mobileDetailsBounds = await detailsAfterPhotoFreeHeading.boundingBox();
     const mobileSummaryTitleBounds = await page.locator('.recipe-detail-title').boundingBox();
@@ -1312,6 +1334,9 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const toolbarActionBounds = await Promise.all(
       toolbarActionSelectors.map((selector) => actionToolbar.locator(selector).boundingBox()),
     );
+    const toolbarRight = await actionToolbar.evaluate((element) =>
+      element.getBoundingClientRect().right,
+    );
     const otherActionBottoms = await actionToolbar
       .locator(':scope > :not(.recipe-marker-actions):not(.recipe-marker-action-status)')
       .evaluateAll((elements) =>
@@ -1342,6 +1367,9 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       throw new Error('Expected recipe marker action geometry.');
     }
     expect(markerGroupBounds.y).toBeGreaterThanOrEqual(Math.max(...otherActionBottoms) - 1);
+    expect(
+      toolbarActionBounds[5]!.x + toolbarActionBounds[5]!.width,
+    ).toBeCloseTo(toolbarRight, 0);
     expect(
       Math.abs(
         starBounds.x + starBounds.width / 2 - (pageSettingsBounds.x + pageSettingsBounds.width / 2),
@@ -3285,7 +3313,7 @@ test('trashing a publication recipe returns to its publication @e2e', async ({ p
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await page
       .getByRole('dialog', { name: 'Move recipe to Trash?' })
-      .getByRole('button', { name: 'Move to Trash' })
+      .getByRole('button', { name: 'Trash', exact: true })
       .click();
 
     await expect(page).toHaveURL(`/publications/${publicationId}?status=trashed`);
@@ -3341,15 +3369,106 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
       await expect(deleteRecipe).toHaveCSS('background-color', 'rgb(180, 62, 50)');
       await expect(deleteRecipe).toHaveCSS('color', 'rgb(255, 255, 255)');
     }
+    const zoomedLayoutViewport = { width: 384, height: 941 };
+    const zoomedVisualViewport = {
+      left: 0,
+      top: 189.183349609375,
+      width: 307,
+      height: 752,
+    };
+    if (testInfo.project.name === 'Fold 6') {
+      await page.setViewportSize(zoomedLayoutViewport);
+      await page.evaluate((viewport) => {
+        const originalViewport = window.visualViewport;
+        if (!originalViewport) {
+          throw new Error('Expected the browser to expose its visual viewport.');
+        }
+        Object.defineProperty(window, '__recipeTestOriginalVisualViewport', {
+          configurable: true,
+          value: originalViewport,
+        });
+        Object.defineProperty(window, 'visualViewport', {
+          configurable: true,
+          value: Object.assign(new EventTarget(), {
+            offsetLeft: viewport.left,
+            offsetTop: viewport.top,
+            width: viewport.width,
+            height: viewport.height,
+            scale: 1.25,
+          }),
+        });
+      }, zoomedVisualViewport);
+    }
     await deleteRecipe.click();
     const confirmation = page.getByRole('dialog', { name: 'Move recipe to Trash?' });
     await expect(confirmation).toContainText('30 days');
     await expect(confirmation.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    const trashButton = confirmation.getByRole('button', { name: 'Trash', exact: true });
+    await expect(trashButton.locator('svg[aria-hidden="true"]')).toBeVisible();
+    const [descriptionBounds, actionsBounds] = await Promise.all([
+      confirmation.locator('#recipe-trash-description').boundingBox(),
+      confirmation.locator('.recipe-confirmation-actions').boundingBox(),
+    ]);
+    if (!descriptionBounds || !actionsBounds) {
+      throw new Error('Expected the Trash confirmation copy and actions to have bounds.');
+    }
+    expect(actionsBounds.y - descriptionBounds.y - descriptionBounds.height).toBe(8);
+    if (testInfo.project.name === 'Fold 6') {
+      const [dialogBounds, cancelBounds, trashBounds] = await Promise.all([
+        confirmation.boundingBox(),
+        confirmation.getByRole('button', { name: 'Cancel' }).boundingBox(),
+        trashButton.boundingBox(),
+      ]);
+      if (!dialogBounds || !cancelBounds || !trashBounds) {
+        throw new Error('Expected the mobile Trash confirmation dialog to have bounds.');
+      }
+      expect(dialogBounds.x).toBeGreaterThanOrEqual(zoomedVisualViewport.left);
+      expect(dialogBounds.x + dialogBounds.width).toBeLessThanOrEqual(
+        zoomedVisualViewport.left + zoomedVisualViewport.width,
+      );
+      expect(
+        Math.abs(
+          dialogBounds.x +
+            dialogBounds.width / 2 -
+            (zoomedVisualViewport.left + zoomedVisualViewport.width / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(
+          dialogBounds.y +
+            dialogBounds.height / 2 -
+            (zoomedVisualViewport.top + zoomedVisualViewport.height / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(dialogBounds.y).toBeGreaterThanOrEqual(zoomedVisualViewport.top);
+      expect(dialogBounds.y + dialogBounds.height).toBeLessThanOrEqual(
+        zoomedVisualViewport.top + zoomedVisualViewport.height,
+      );
+      expect(cancelBounds.x).toBeGreaterThanOrEqual(dialogBounds.x + 12);
+      expect(trashBounds.x + trashBounds.width).toBeLessThanOrEqual(
+        dialogBounds.x + dialogBounds.width - 12,
+      );
+    }
     const dialogA11y = await new AxeBuilder({ page }).analyze();
     expect(dialogA11y.violations).toEqual([]);
     await page.keyboard.press('Escape');
     await expect(confirmation).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    if (testInfo.project.name === 'Fold 6') {
+      await page.evaluate(() => {
+        const original = Object.getOwnPropertyDescriptor(
+          window,
+          '__recipeTestOriginalVisualViewport',
+        );
+        if (!original) throw new Error('Expected the original visual viewport to be saved.');
+        Object.defineProperty(window, 'visualViewport', {
+          configurable: true,
+          value: original.value,
+        });
+        Reflect.deleteProperty(window, '__recipeTestOriginalVisualViewport');
+      });
+      await page.setViewportSize({ width: 307, height: 629 });
+    }
 
     await deleteRecipe.click();
     await expect(confirmation).toBeVisible();
@@ -3364,7 +3483,7 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await page
       .getByRole('dialog', { name: 'Move recipe to Trash?' })
-      .getByRole('button', { name: 'Move to Trash' })
+      .getByRole('button', { name: 'Trash', exact: true })
       .click();
     await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+\?status=trashed$/);
     await expect(page.locator('.recipe-status-message')).toContainText('Recipe moved to Trash');
@@ -3397,10 +3516,9 @@ test('owners can move a recipe to Trash and restore it @e2e', async ({
       await expect(restoreButton).toHaveCSS('opacity', '1');
     }
     if (testInfo.project.name === 'Fold 6') {
-      const restoreBounds = await page
-        .getByRole('button', { name: 'Restore A recipe to restore' })
-        .boundingBox();
-      expect(restoreBounds?.height).toBeGreaterThanOrEqual(48);
+      await expect(restoreButton).toHaveCSS('min-height', '48px');
+      const restoreBounds = await restoreButton.boundingBox();
+      expect(restoreBounds?.height).toBeCloseTo(48, 1);
     }
     await page.getByRole('button', { name: 'Restore A recipe to restore' }).click();
 

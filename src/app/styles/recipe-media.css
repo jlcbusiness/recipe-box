@@ -2031,6 +2031,10 @@ section.recipe-detail-section .recipe-relationship-list a {
   min-width: 0;
 }
 
+.recipe-reference-protected-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .recipe-reference-heading {
   color: var(--muted);
   font-size: 12px;
@@ -2043,6 +2047,17 @@ section.recipe-detail-section .recipe-relationship-list a {
 
 .recipe-reference-field-fill {
   width: 100%;
+}
+
+.recipe-reference-locked-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recipe-reference-locked-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .recipe-reference-lookup {
@@ -2655,12 +2670,16 @@ section.recipe-detail-section .recipe-relationship-list a {
   z-index: 10;
   top: 50%;
   left: 50%;
+  margin: 0;
   width: min(28rem, calc(100vw - 32px));
-  transform: translate(-50%, -50%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--line);
   background: white;
   padding: 20px;
   box-shadow: 0 12px 28px rgb(35 45 31 / 24%);
+  transform: translate(-50%, -50%);
 }
 
 .recipe-publish-dialog {
@@ -2717,6 +2736,40 @@ section.recipe-detail-section .recipe-relationship-list a {
   margin: 5px 0 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+.recipe-public-save-action {
+  margin: 0;
+}
+
+.recipe-public-save-status {
+  max-width: 100%;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.recipe-public-save-status-compact {
+  display: none;
+}
+
+.recipe-public-save-error {
+  max-width: 100%;
+  margin: 0;
+  color: var(--tomato);
+}
+
+.recipe-public-save-error-compact {
+  display: none;
+}
+
+.recipe-public-save-spinner {
+  animation: recipe-public-save-spin 1s linear infinite;
+}
+
+@keyframes recipe-public-save-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .publication-delete-dialog {
@@ -2904,6 +2957,10 @@ section.recipe-detail-section .recipe-relationship-list a {
   margin-top: 0;
 }
 
+.recipe-delete-dialog p {
+  margin-bottom: 8px;
+}
+
 .recipe-confirmation-actions {
   display: flex;
   justify-content: end;
@@ -2933,6 +2990,29 @@ section.recipe-detail-section .recipe-relationship-list a {
 }
 
 @media (max-width: 640px) {
+  .recipe-delete-dialog {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .recipe-delete-dialog .recipe-confirmation-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recipe-delete-dialog .recipe-confirmation-actions form {
+    min-width: 0;
+  }
+
+  .recipe-delete-dialog .recipe-confirmation-actions button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 8px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .public-username-settings-controls {
     align-items: stretch;
     flex-direction: column;
@@ -3030,6 +3110,8 @@ section.recipe-detail-section .recipe-relationship-list a {
     display: grid;
     width: 100%;
     flex: 0 0 auto;
+    justify-self: end;
+    justify-content: end;
     grid-template-columns: 36px 36px repeat(4, 36px);
     column-gap: 4px;
     row-gap: 4px;

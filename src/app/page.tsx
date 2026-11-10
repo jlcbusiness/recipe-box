@@ -1,4 +1,8 @@
+import Image from 'next/image';
+import { redirect } from 'next/navigation';
 import { isSelfSignupAllowed } from '../lib/auth/signup-mode';
+import { createClient } from '../lib/supabase/server';
+import logoDetail from './images/logo_detail.png';
 import { SignInForm } from './sign-in-form';
 
 export function HomePageView({
@@ -14,12 +18,9 @@ export function HomePageView({
     <div className="workspace-shell">
       <header className="topbar">
         <a className="wordmark" href="/" aria-label="Recipe Box home">
-          <span className="wordmark-mark" aria-hidden="true">
-            R
-          </span>
+          <Image alt="" className="wordmark-mark-detail" src={logoDetail} />
           <span>Recipe Box</span>
         </a>
-        <span className="workspace-label">PRIVATE RECIPE LIBRARY</span>
       </header>
 
       <main className="auth-main" aria-labelledby="page-title">
@@ -54,7 +55,15 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ error?: string | string[] }>;
 }) {
-  const { error } = await searchParams;
+  const [{ error }, supabase] = await Promise.all([searchParams, createClient()]);
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError && !isMissingAuthSession(authError)) {
+    throw authError;
+  }
+  if (authData.user) {
+    redirect('/recipes');
+  }
+
   const isLocalDevelopment =
     process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_ENV !== 'preview';
 
@@ -64,5 +73,14 @@ export default async function HomePage({
       googleSignInError={error === 'google-sign-in'}
       selfSignupAllowed={isSelfSignupAllowed()}
     />
+  );
+}
+
+function isMissingAuthSession(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AuthSessionMissingError'
   );
 }

@@ -151,6 +151,7 @@ export function RecipeOutputActions({
 }: RecipeOutputActionsProps) {
   const outputMenuId = useId();
   const settingsId = useId();
+  const printButtonRef = useRef<HTMLButtonElement>(null);
   const outputButtonRef = useRef<HTMLButtonElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -296,10 +297,13 @@ export function RecipeOutputActions({
     }
   }
 
-  async function startOutput(format: RecipeOutputFormat) {
+  async function startOutput(
+    format: RecipeOutputFormat,
+    triggerButton: HTMLButtonElement | null = outputButtonRef.current,
+  ) {
     setOpenPanel(null);
-    outputButtonRef.current?.focus();
-    const main = outputButtonRef.current?.closest<HTMLElement>('main.recipes-main');
+    triggerButton?.focus();
+    const main = triggerButton?.closest<HTMLElement>('main.recipes-main');
     if (!main) {
       updateFeedback(
         { kind: 'error', message: 'The recipe content is unavailable for output.' },
@@ -393,6 +397,11 @@ export function RecipeOutputActions({
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
+  const hasDedicatedPrintAction = isPublic && !isMobileViewport;
+  const visibleOutputChoices = hasDedicatedPrintAction
+    ? outputChoices.filter(({ format }) => format !== 'print')
+    : outputChoices;
+
   return (
     <>
       <div className="recipe-output-action recipe-output-menu-action">
@@ -400,7 +409,7 @@ export function RecipeOutputActions({
           aria-controls={openPanel === 'output' ? outputMenuId : undefined}
           aria-expanded={openPanel === 'output'}
           aria-haspopup="menu"
-          aria-label="Print & Download"
+          aria-label={hasDedicatedPrintAction ? 'Download' : 'Print & Download'}
           aria-busy={feedback?.kind === 'working'}
           aria-describedby={
             feedback && recipeActionFeedback
@@ -411,10 +420,10 @@ export function RecipeOutputActions({
           disabled={feedback?.kind === 'working'}
           onClick={() => setOpenPanel((current) => (current === 'output' ? null : 'output'))}
           ref={outputButtonRef}
-          title={isMobileViewport ? 'Download' : 'Print & Download'}
+          title={isMobileViewport || hasDedicatedPrintAction ? 'Download' : 'Print & Download'}
           type="button"
         >
-          {isMobileViewport ? (
+          {isMobileViewport || isPublic ? (
             <Download aria-hidden="true" size={16} strokeWidth={2} />
           ) : (
             <Printer aria-hidden="true" size={16} strokeWidth={2} />
@@ -422,14 +431,14 @@ export function RecipeOutputActions({
         </button>
         {openPanel === 'output' && (
           <div
-            aria-label="Print and download actions"
+            aria-label={hasDedicatedPrintAction ? 'Download formats' : 'Print and download actions'}
             className="recipe-output-menu"
             id={outputMenuId}
             onKeyDown={handleMenuKeyDown}
             ref={panelRef}
             role="menu"
           >
-            {outputChoices.map(({ format, label, Icon }) => (
+            {visibleOutputChoices.map(({ format, label, Icon }) => (
               <button
                 key={format}
                 onClick={() => void startOutput(format)}
@@ -464,6 +473,27 @@ export function RecipeOutputActions({
           />
         )}
       </div>
+      {hasDedicatedPrintAction && (
+        <div className="recipe-output-action recipe-output-print-action">
+          <button
+            aria-busy={feedback?.kind === 'working'}
+            aria-describedby={
+              feedback && recipeActionFeedback
+                ? recipeActionFeedback.feedbackIds['recipe-output']
+                : undefined
+            }
+            aria-label="Print"
+            className="recipe-secondary-button recipe-detail-action recipe-icon-action recipe-output-print-trigger"
+            disabled={feedback?.kind === 'working'}
+            onClick={() => void startOutput('print', printButtonRef.current)}
+            ref={printButtonRef}
+            title="Print"
+            type="button"
+          >
+            <Printer aria-hidden="true" size={16} strokeWidth={2} />
+          </button>
+        </div>
+      )}
       {exportAction}
       <div className="recipe-output-action recipe-output-settings-action">
         <button

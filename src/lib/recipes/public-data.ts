@@ -61,6 +61,20 @@ export type PublicRecipePageData =
       authorUsername: string;
     };
 
+export type PublicRecipeCopySourceData =
+  | { status: 'unavailable' | 'gone' | 'error' }
+  | {
+      status: 'active';
+      publicId: string;
+      recipe: PublicRecipePayload;
+      authorUsername: string;
+      photoSources: Array<{
+        photo: PublicRecipePhoto;
+        fullPath: string;
+        thumbnailPath: string;
+      }>;
+    };
+
 type PublicRecipeRow = {
   id: string;
   account_id: string;
@@ -121,7 +135,19 @@ type PublicPhotoRow = {
 type PublicPhotoRecord = {
   assetId: string;
   photo: PublicRecipePhoto;
+  fullPath: string;
+  thumbnailPath: string;
 };
+
+type LoadedPublicRecipePageData =
+  | { status: 'unavailable' | 'gone' | 'error' }
+  | {
+      status: 'active';
+      recipe: PublicRecipePayload;
+      photos: PublicRecipePhoto[];
+      authorUsername: string;
+      photoSources: PublicPhotoRecord[];
+    };
 
 class PublicRecipeDataError extends Error {}
 
@@ -162,11 +188,13 @@ async function getPublicPhotos(recipeId: string, publicId: string): Promise<Publ
         full_url: `${photoUrl}?variant=full`,
         thumbnail_url: `${photoUrl}?variant=thumbnail`,
       },
+      fullPath: full_path,
+      thumbnailPath: thumbnail_path,
     };
   });
 }
 
-async function loadPublicRecipePageData(publicId: string): Promise<PublicRecipePageData> {
+async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicRecipePageData> {
   if (!publicIdPattern.test(publicId)) {
     return { status: 'unavailable' };
   }
@@ -218,7 +246,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<PublicRecipeP
     recipeRow.publication_id
       ? supabase
           .from('publications')
-          .select('name')
+          .select('name, publication_type')
           .eq('account_id', recipeRow.account_id)
           .eq('id', recipeRow.publication_id)
           .maybeSingle()
@@ -475,12 +503,50 @@ async function loadPublicRecipePageData(publicId: string): Promise<PublicRecipeP
     (equipmentRows ?? []).map((equipment) => equipment.display_value),
     publicPhotoIds,
   );
-  return { status: 'active', recipe, photos, authorUsername: account.public_username };
+  return {
+    status: 'active',
+    recipe,
+    photos,
+    authorUsername: account.public_username,
+    photoSources: photoRecords,
+  };
 }
 
 export async function getPublicRecipePageData(publicId: string): Promise<PublicRecipePageData> {
   try {
-    return await loadPublicRecipePageData(publicId);
+    const result = await loadPublicRecipePageData(publicId);
+    if (result.status !== 'active') return result;
+    return {
+      status: 'active',
+      recipe: result.recipe,
+      photos: result.photos,
+      authorUsername: result.authorUsername,
+    };
+  } catch (error) {
+    if (error instanceof PublicRecipeDataError) {
+      return { status: 'error' };
+    }
+    throw error;
+  }
+}
+
+export async function getPublicRecipeCopySource(
+  publicId: string,
+): Promise<PublicRecipeCopySourceData> {
+  try {
+    const result = await loadPublicRecipePageData(publicId);
+    if (result.status !== 'active') return result;
+    return {
+      status: 'active',
+      publicId,
+      recipe: result.recipe,
+      authorUsername: result.authorUsername,
+      photoSources: result.photoSources.map(({ photo, fullPath, thumbnailPath }) => ({
+        photo,
+        fullPath,
+        thumbnailPath,
+      })),
+    };
   } catch (error) {
     if (error instanceof PublicRecipeDataError) {
       return { status: 'error' };

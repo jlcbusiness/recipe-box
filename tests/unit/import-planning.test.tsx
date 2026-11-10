@@ -15,6 +15,7 @@ const externalDestinationRecipeId = '33333333-3333-4333-8333-333333333333';
 const externalSourcePublicationId = '44444444-4444-4444-8444-444444444444';
 const newPairingId = '55555555-5555-4555-8555-555555555555';
 const newReferenceId = '66666666-6666-4666-8666-666666666666';
+const sourcePublicId = '77777777-7777-4777-8777-777777777777';
 
 function emptyData(): PortableData {
   return {
@@ -62,6 +63,7 @@ function createInput() {
         name: 'Lemon cake',
       },
     ],
+    recipe_references: [] as PortableData['records']['recipe_references'],
   };
   return { data, existing };
 }
@@ -1015,6 +1017,84 @@ describe('scoped import planning', () => {
         display_text: 'Family cookbook',
       }),
     ]);
+  });
+
+  it('keeps the existing protected attribution when replacing a recipe from an older bundle', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipe_references = [];
+    existing.recipe_references = [
+      {
+        id: '88888888-8888-4888-8888-888888888888',
+        recipe_id: destinationRecipeId,
+        reference_type: 'external_url',
+        publication_id: null,
+        linked_recipe_id: null,
+        display_text: "source-user's Lemon cake",
+        url: `https://recipe-box.example/r/${sourcePublicId}`,
+        position: 1,
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      },
+    ];
+
+    const plan = planImport(
+      data,
+      existing,
+      { [`recipe:${sourceRecipeId}`]: { action: 'replace', targetId: destinationRecipeId } },
+      () => newReferenceId,
+    );
+
+    expect(plan.records.recipe_references).toContainEqual(
+      expect.objectContaining({
+        recipe_id: destinationRecipeId,
+        display_text: "source-user's Lemon cake",
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      }),
+    );
+  });
+
+  it('rejects importing a second copy of the same public source into another recipe', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipe_references = [
+      {
+        id: '99999999-9999-4999-8999-999999999999',
+        recipe_id: sourceRecipeId,
+        reference_type: 'external_url',
+        publication_id: null,
+        linked_recipe_id: null,
+        display_text: "source-user's Lemon cake",
+        url: `https://recipe-box.example/r/${sourcePublicId}`,
+        position: 0,
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      },
+    ];
+    existing.recipe_references = [
+      {
+        id: '88888888-8888-4888-8888-888888888888',
+        recipe_id: destinationRecipeId,
+        reference_type: 'external_url',
+        publication_id: null,
+        linked_recipe_id: null,
+        display_text: "source-user's Lemon cake",
+        url: `https://recipe-box.example/r/${sourcePublicId}`,
+        position: 0,
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      },
+    ];
+
+    expect(() =>
+      planImport(
+        data,
+        existing,
+        { [`recipe:${sourceRecipeId}`]: { action: 'duplicate', targetId: destinationRecipeId } },
+        () => newRecipeId,
+      ),
+    ).toThrow(/already.*recipe tin|already saved|public source/i);
   });
 
   it('clears an out-of-scope recipe link when the display name is ambiguous', () => {

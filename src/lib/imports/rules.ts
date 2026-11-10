@@ -26,6 +26,7 @@ import { isRecipeScore } from '../recipes/recipe-rules';
 
 const imagePathPattern =
   /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
+const uuidPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu;
 const requiredManifestKeys = [
   'format',
   'schema_version',
@@ -384,6 +385,63 @@ function validateData(
     }));
     records.ingredient_nutrition_profiles = [];
     records.ingredient_measure_equivalents = [];
+  }
+
+  if (schemaVersion < 10) {
+    records.recipe_references = (records.recipe_references as ExportRecord[]).map((reference) => ({
+      ...reference,
+      is_protected_source: false,
+      source_public_id: null,
+    }));
+  } else {
+    const sourcePublicIds = new Set<string>();
+    for (const reference of records.recipe_references as ExportRecord[]) {
+      const protectedSource = reference.is_protected_source;
+      const sourcePublicId = reference.source_public_id;
+      if (typeof protectedSource !== 'boolean') {
+        throw new Error('The bundle contains invalid protected source metadata.');
+      }
+      if (!protectedSource) {
+        if (sourcePublicId !== null) {
+          throw new Error('Editable references cannot contain a protected source identity.');
+        }
+        continue;
+      }
+
+      if (typeof sourcePublicId !== 'string') {
+        throw new Error('The bundle contains invalid protected source metadata.');
+      }
+      if (
+        !uuidPattern.test(sourcePublicId) ||
+        reference.reference_type !== 'external_url' ||
+        reference.publication_id !== null ||
+        reference.linked_recipe_id !== null ||
+        typeof reference.url !== 'string'
+      ) {
+        throw new Error('The bundle contains invalid protected source metadata.');
+      }
+      let sourceUrl: URL;
+      try {
+        sourceUrl = new URL(reference.url);
+      } catch {
+        throw new Error('A protected source reference must use its stable public URL.');
+      }
+      if (
+        (sourceUrl.protocol !== 'http:' && sourceUrl.protocol !== 'https:') ||
+        sourceUrl.username ||
+        sourceUrl.password ||
+        sourceUrl.search ||
+        sourceUrl.hash ||
+        sourceUrl.pathname.toLocaleLowerCase() !== `/r/${sourcePublicId.toLocaleLowerCase()}`
+      ) {
+        throw new Error('A protected source reference must use its stable public URL.');
+      }
+      const normalizedId = sourcePublicId.toLocaleLowerCase();
+      if (sourcePublicIds.has(normalizedId)) {
+        throw new Error('The bundle repeats a protected public source identity.');
+      }
+      sourcePublicIds.add(normalizedId);
+    }
   }
 
   if (schemaVersion < 8) {

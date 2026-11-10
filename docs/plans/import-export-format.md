@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 9 archive contains:
+A version 10 archive contains:
 
 ```text
 manifest.json
@@ -31,7 +31,7 @@ already the official image.
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 9,
+  "schema_version": 10,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "1.0.0",
   "scope": {
@@ -70,7 +70,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 9,
+  "schema_version": 10,
   "scope": {
     "type": "database"
   },
@@ -102,7 +102,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v9; future
+array contains only the normalized product fields selected for v10; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -159,10 +159,11 @@ adds nullable media crop framing with 0-degree rotation. Version 5 adds
 quarter-turn rotation. Version 6 adds recipe ratings and independent star and
 heart markers. Version 7 preserves distinct official display images and
 retained source images so future framing edits remain reversible. Version 8
-adds the optional paired Makes quantity and thing. Version 9 is current and
-adds ingredient nutrition profiles and measure equivalents plus recipe-level
-and recipe-ingredient nutrition overrides. Versions 1 through 8 import with
-their existing compatibility rules; older
+adds the optional paired Makes quantity and thing. Version 9 adds ingredient
+nutrition profiles and measure equivalents plus recipe-level and
+recipe-ingredient nutrition overrides. Version 10 is current and adds
+protected public-copy source identity to recipe references. Versions 1 through
+9 import with their existing compatibility rules; older
 media rows treat their full and thumbnail files as the retained source.
 
 A v1 import synthesizes one `Main` set per recipe and assigns that recipe's
@@ -185,8 +186,15 @@ records. The fixed allow-list excludes owner IDs and unrecognized nutrient
 keys. Versions 1 through 8 import without profiles, equivalents, or nutrition
 overrides.
 
+Version 10 adds `is_protected_source` and nullable `source_public_id` fields to
+recipe references. Protected references must be external URLs with a valid
+source public ID, and each account may have only one protected reference per
+source ID. Versions 1 through 9 import references with protected metadata set
+to false and null. Import and replacement preserve existing protected source
+attribution rather than allowing incoming data to remove or overwrite it.
+
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 9, verify all file sizes and checksums before
+accept only versions 1 through 10, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 
