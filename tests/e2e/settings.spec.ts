@@ -34,6 +34,299 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await expect(page).toHaveURL(/\/publications$/);
 }
 
+test('Settings tabs group sections and preserve URL and keyboard state @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/settings');
+
+    const tabList = page.getByRole('tablist', { name: 'Settings areas' });
+    const preferencesTab = tabList.getByRole('tab', { name: 'Preferences' });
+    const recipeDataTab = tabList.getByRole('tab', { name: 'Recipe data' });
+    const accountDataTab = tabList.getByRole('tab', { name: 'Account & data' });
+    const preferencesPanel = page.getByRole('tabpanel', { name: 'Preferences' });
+    const recipeDataPanel = page.getByRole('tabpanel', { name: 'Recipe data' });
+    const accountDataPanel = page.getByRole('tabpanel', { name: 'Account & data' });
+
+    await expect(tabList.getByRole('tab')).toHaveCount(3);
+    await expect(preferencesTab).toHaveAttribute('aria-selected', 'true');
+    await expect(preferencesPanel).toBeVisible();
+    await expect(
+      preferencesPanel.getByRole('region', { name: 'Personal preferences' }),
+    ).toBeVisible();
+    await expect(preferencesPanel.getByRole('region', { name: 'Recipe columns' })).toBeVisible();
+    await expect(recipeDataPanel).toBeHidden();
+    await expect(accountDataPanel).toBeHidden();
+    await expect(
+      page.getByRole('region', { name: 'Personal preferences', includeHidden: true }),
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole('region', { name: 'Recipe columns', includeHidden: true }),
+    ).toHaveCount(1);
+    await expect(page.getByRole('region', { name: 'Picklists', includeHidden: true })).toHaveCount(
+      1,
+    );
+    await expect(
+      page.getByRole('region', { name: 'Ingredients', includeHidden: true }),
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole('region', { name: 'Trusted densities', includeHidden: true }),
+    ).toHaveCount(1);
+    await expect(page.getByRole('region', { name: 'Tags', includeHidden: true })).toHaveCount(1);
+    await expect(
+      page.getByRole('region', { name: 'Public sharing', includeHidden: true }),
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole('region', { name: 'Data management', includeHidden: true }),
+    ).toHaveCount(1);
+
+    const historyLength = await page.evaluate(() => window.history.length);
+    await recipeDataTab.click();
+    await expect(recipeDataTab).toHaveAttribute('aria-selected', 'true');
+    await expect(recipeDataPanel).toBeVisible();
+    await expect(page).toHaveURL(/\/settings\?tab=recipe-data$/);
+    expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
+    await expect(recipeDataPanel.getByRole('region', { name: 'Picklists' })).toBeVisible();
+    await expect(recipeDataPanel.getByRole('region', { name: 'Ingredients' })).toBeVisible();
+    await expect(recipeDataPanel.getByRole('region', { name: 'Trusted densities' })).toBeVisible();
+    await expect(recipeDataPanel.getByRole('region', { name: 'Tags' })).toBeVisible();
+    await expect(preferencesPanel).toBeHidden();
+
+    await recipeDataTab.press('ArrowRight');
+    await expect(accountDataTab).toBeFocused();
+    await expect(accountDataTab).toHaveCSS('outline-style', 'solid');
+    await expect(accountDataTab).toHaveCSS('outline-width', '2px');
+    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
+    await expect(accountDataPanel).toBeVisible();
+    await accountDataTab.press('ArrowLeft');
+    await expect(recipeDataTab).toBeFocused();
+    await expect(recipeDataTab).toHaveAttribute('aria-selected', 'true');
+    await recipeDataTab.press('ArrowRight');
+    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
+    await accountDataTab.press('ArrowRight');
+    await expect(preferencesTab).toBeFocused();
+    await preferencesTab.press('End');
+    await expect(accountDataTab).toBeFocused();
+    await accountDataTab.press('Home');
+    await expect(preferencesTab).toBeFocused();
+    await expect(preferencesTab).toHaveAttribute('aria-selected', 'true');
+
+    await page.goto('/settings?source=kept');
+    await accountDataTab.click();
+    await expect(page).toHaveURL(/\/settings\?source=kept&tab=account-data$/);
+    await page.reload();
+    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
+    await expect(accountDataPanel).toBeVisible();
+    await expect(accountDataPanel.getByRole('region', { name: 'Public sharing' })).toBeVisible();
+    await expect(accountDataPanel.getByRole('region', { name: 'Data management' })).toBeVisible();
+
+    await page.goto('/settings?tab=unknown');
+    await expect(preferencesTab).toHaveAttribute('aria-selected', 'true');
+    await page.goto('/settings?content_reset_reauthenticated=1');
+    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      accountDataPanel.getByRole('dialog', { name: 'Wipe all account data?' }),
+    ).toBeVisible();
+    await page.goto('/settings?content_reset_error=unavailable');
+    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
+    const resetDialog = accountDataPanel.getByRole('dialog', { name: 'Wipe all account data?' });
+    await expect(resetDialog).toBeVisible();
+    await expect(resetDialog.getByRole('alert')).toHaveText(
+      'Google re-authentication is unavailable right now. Try again shortly.',
+    );
+
+    await page.goto('/settings');
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Settings tab draft state and Fold 6 geometry remain usable @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
+
+    const picklistsSection = page.getByRole('region', { name: 'Picklists' });
+    await picklistsSection.getByRole('button', { name: 'Picklists' }).click();
+    const draftField = picklistsSection.getByRole('textbox', { name: /^Add / });
+    await draftField.fill('unsaved draft');
+    await page.getByRole('tab', { name: 'Account & data' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
+    await expect(draftField).toHaveValue('unsaved draft');
+
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+    const geometry = await page.locator('.settings-tabs').evaluate((element) => {
+      const tabs = Array.from(element.querySelectorAll<HTMLElement>('[role="tab"]'));
+      const labelLines = tabs.map((tab) =>
+        Array.from(tab.querySelectorAll<HTMLElement>('.settings-tab-label-line')).map(
+          (line) => line.getBoundingClientRect().top,
+        ),
+      );
+      return {
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        borderBottomWidth: getComputedStyle(element).borderBottomWidth,
+        selectedBorderTop: (() => {
+          const selected = element.querySelector<HTMLElement>('[aria-selected="true"]');
+          if (!selected) throw new Error('Expected a selected Settings tab.');
+          const style = getComputedStyle(selected);
+          return {
+            width: style.borderTopWidth,
+            color: style.borderTopColor,
+          };
+        })(),
+        tabs: tabs.map((tab) => ({
+          width: tab.getBoundingClientRect().width,
+          height: tab.getBoundingClientRect().height,
+          scrollWidth: tab.scrollWidth,
+          clientWidth: tab.clientWidth,
+          borderLeftWidth: getComputedStyle(tab).borderLeftWidth,
+          borderLeftStyle: getComputedStyle(tab).borderLeftStyle,
+        })),
+        labelLines,
+        pageWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+      };
+    });
+
+    expect(geometry.clientWidth).toBeGreaterThan(0);
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
+    expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth);
+    expect(geometry.borderBottomWidth).toBe('0px');
+    expect(geometry.selectedBorderTop.width).toBe('3px');
+    expect(geometry.selectedBorderTop.color).not.toBe('rgba(0, 0, 0, 0)');
+    expect(geometry.tabs).toHaveLength(3);
+    for (const tab of geometry.tabs) {
+      expect(tab.width).toBeGreaterThanOrEqual(48);
+      expect(tab.height).toBeGreaterThanOrEqual(48);
+      expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
+    }
+
+    if (testInfo.project.name === 'Fold 6') {
+      expect(geometry.viewportWidth).toBe(307);
+      expect(geometry.labelLines[0]).toHaveLength(1);
+      expect(new Set(geometry.tabs.map((tab) => tab.width)).size).toBeGreaterThan(1);
+      for (const tab of await page.getByRole('tab').all()) {
+        await expect(tab).toHaveCSS('padding-top', '8px');
+        await expect(tab).toHaveCSS('padding-bottom', '6px');
+      }
+      for (const tab of geometry.tabs) {
+        expect(tab.borderLeftWidth).toBe('1px');
+        expect(tab.borderLeftStyle).toBe('solid');
+      }
+      for (const lines of geometry.labelLines.slice(1)) {
+        expect(lines).toHaveLength(2);
+        expect(lines[1]).toBeGreaterThan(lines[0]);
+      }
+    } else {
+      expect(geometry.viewportWidth).toBe(1280);
+      for (const tab of await page.getByRole('tab').all()) {
+        await expect(tab).toHaveCSS('padding-top', '8px');
+        await expect(tab).toHaveCSS('padding-bottom', '8px');
+      }
+    }
+
+    for (const tabName of ['Preferences', 'Recipe data', 'Account & data']) {
+      await page.getByRole('tab', { name: tabName }).click();
+      const firstSection = page
+        .getByRole('tabpanel', { name: tabName })
+        .locator(':scope > .settings-section')
+        .first();
+      await expect(firstSection).toHaveCSS('border-top-width', '1px');
+      await expect(firstSection).toHaveCSS('margin-top', '0px');
+      const sectionOffset = await firstSection.evaluate((section) => {
+        const tablist = document.querySelector('.settings-tabs');
+        if (!tablist) throw new Error('Expected the Settings tab list.');
+        return section.getBoundingClientRect().top - tablist.getBoundingClientRect().bottom;
+      });
+      expect(sectionOffset).toBe(0);
+    }
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Account & data controls remain clear and ordered on mobile @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/settings?tab=account-data');
+
+    const accountPanel = page.getByRole('tabpanel', { name: 'Account & data' });
+    const publicSharing = accountPanel.getByRole('region', { name: 'Public sharing' });
+    const username = publicSharing.getByRole('textbox', { name: 'Public username' });
+    const saveButton = publicSharing.getByRole('button', { name: 'Save', exact: true });
+    const dataManagement = accountPanel.getByRole('region', { name: 'Data management' });
+    const wipeButton = dataManagement.getByRole('button', { name: 'Wipe all account data' });
+    const exportButton = dataManagement.getByRole('button', { name: 'Export database' });
+    const importButton = dataManagement.getByRole('button', { name: 'Import database' });
+
+    await expect(username).toHaveCSS('border-top-width', '1px');
+    await expect(username).toHaveCSS('border-top-style', 'solid');
+    await expect(saveButton).toBeVisible();
+
+    const saveBounds = await saveButton.boundingBox();
+    const dataManagementBounds = await dataManagement.boundingBox();
+    const wipeBounds = await wipeButton.boundingBox();
+    const exportBounds = await exportButton.boundingBox();
+    const importBounds = await importButton.boundingBox();
+    expect(saveBounds).not.toBeNull();
+    expect(dataManagementBounds).not.toBeNull();
+    expect(wipeBounds).not.toBeNull();
+    expect(exportBounds).not.toBeNull();
+    expect(importBounds).not.toBeNull();
+    if (!saveBounds || !dataManagementBounds || !wipeBounds || !exportBounds || !importBounds) {
+      throw new Error('Expected Account & data controls to have visible geometry.');
+    }
+
+    expect(dataManagementBounds.y - saveBounds.y - saveBounds.height).toBeGreaterThanOrEqual(12);
+    if (testInfo.project.name === 'Fold 6') {
+      expect(wipeBounds.y).toBeGreaterThan(exportBounds.y + exportBounds.height);
+      expect(wipeBounds.y).toBeGreaterThan(importBounds.y + importBounds.height);
+
+      const mobileNav = page.getByRole('navigation', { name: 'Main navigation' });
+      await expect(mobileNav).toHaveCSS(
+        'background-color',
+        'color(srgb 0.219608 0.376471 0.266667 / 0.5)',
+      );
+      await page.evaluate(() => {
+        const themeMarker = document.createElement('span');
+        themeMarker.className = 'recipe-tin-theme';
+        themeMarker.hidden = true;
+        document.body.append(themeMarker);
+      });
+      await expect(mobileNav).toHaveCSS(
+        'background-color',
+        'color(srgb 0.376471 0.298039 0.219608 / 0.5)',
+      );
+      await page.evaluate(() => document.querySelector('.recipe-tin-theme')?.remove());
+    } else {
+      expect(wipeBounds.x).toBeLessThan(exportBounds.x);
+      expect(wipeBounds.x).toBeLessThan(importBounds.x);
+    }
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('version footer follows short private content without a viewport-height shell @e2e', async ({
   page,
   request,
@@ -99,7 +392,7 @@ test('Library stays visually distinct and shared picklists support type-ahead @e
     await expect(libraryLink).not.toHaveAttribute('aria-current');
     await expect(libraryLink).toHaveCSS('color', 'rgb(56, 96, 68)');
     if (isMobile) {
-      await expect(libraryLink).toHaveCSS('border-color', 'rgb(56, 96, 68)');
+      await expect(libraryLink).toHaveCSS('border-color', 'rgb(217, 223, 211)');
     }
 
     const volumeSelect = page.getByRole('combobox', { name: 'Volume', exact: true });
@@ -140,6 +433,7 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     await page.getByRole('link', { name: 'Settings' }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+    await page.getByRole('tab', { name: 'Account & data' }).click();
     const dataManagement = page.getByRole('region', { name: 'Data management' });
     const versionFooter = page.getByRole('contentinfo', { name: 'Application version' });
     await expect(versionFooter).toHaveText(`Recipe Box v${appVersion}`);
@@ -153,7 +447,10 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     if (!dataManagementBounds || !versionBounds) {
       throw new Error('Expected Data management and application footer bounds.');
     }
-    expect(versionBounds.y).toBeGreaterThan(dataManagementBounds.y + dataManagementBounds.height);
+    expect(versionBounds.y).toBeGreaterThanOrEqual(
+      dataManagementBounds.y + dataManagementBounds.height,
+    );
+    await page.getByRole('tab', { name: 'Preferences' }).click();
     await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();
     await expect(page.locator('.units-menu-panel')).toHaveCount(0);
     const settingsWidth = (await page.locator('.settings-main').boundingBox())?.width ?? 0;
@@ -173,6 +470,13 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     if (testInfo.project.name === 'Fold 6') {
       await expect(rightHand).toHaveAttribute('aria-pressed', 'true');
       await expect(leftHand).toHaveAttribute('aria-pressed', 'false');
+      const preferenceGroups = page.locator(
+        '.settings-unit-preferences-form > .settings-preference-group',
+      );
+      for (const index of [1, 2, 3]) {
+        await expect(preferenceGroups.nth(index)).toHaveCSS('margin-top', '16px');
+      }
+      await expect(page.locator('.settings-hand-preference')).toHaveCSS('gap', '16px');
     } else {
       await expect(leftHand).toBeHidden();
       await expect(rightHand).toBeHidden();
@@ -183,6 +487,7 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     const volumeWidth = (await volumeSelect.boundingBox())?.width ?? 0;
 
     const picklistsSection = page.getByRole('region', { name: 'Picklists' });
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const sectionSpacing = await picklistsSection.evaluate((section) => {
       const heading = section.querySelector('h2');
       if (!heading) throw new Error('Expected the Picklists heading.');
@@ -194,6 +499,7 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
         Number.parseFloat(getComputedStyle(section).borderTopWidth)
       );
     });
+    await page.getByRole('tab', { name: 'Preferences' }).click();
     await expect(page.getByRole('region', { name: 'Personal preferences' })).toHaveCSS(
       'padding-bottom',
       '28px',
@@ -389,6 +695,7 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
       );
       expect(handButtonBounds[1].left - handButtonBounds[0].right).toBeCloseTo(48, 0);
 
+      await page.getByRole('tab', { name: 'Recipe data' }).click();
       const disclosureCenters = await Promise.all(
         ['Picklists', 'Ingredients', 'Trusted densities', 'Edit tags'].map((name) =>
           page
@@ -405,8 +712,10 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
         (center, index) => center - (disclosureCenters[index] ?? 0),
       );
       expect(Math.abs((spacing[2] ?? 0) - (spacing[1] ?? 0))).toBeLessThanOrEqual(3);
+      await page.getByRole('tab', { name: 'Preferences' }).click();
     }
 
+    await volumeSelect.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('listbox')).toBeVisible();
     await page.keyboard.press('ArrowDown');
@@ -670,53 +979,57 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
 
+    const recipeDataTab = page.getByRole('tab', { name: 'Recipe data' });
     const section = page.getByRole('region', { name: 'Ingredients' });
     const densitySection = page.getByRole('region', { name: 'Trusted densities' });
     const picklistsSection = page.getByRole('region', { name: 'Picklists' });
     const recipeColumnsSection = page.getByRole('region', { name: 'Recipe columns' });
     const tagsSection = page.getByRole('region', { name: 'Tags' });
-    const accordionSections = [
-      picklistsSection,
-      recipeColumnsSection,
-      section,
-      tagsSection,
-      densitySection,
-    ];
-    for (const accordionSection of accordionSections) {
-      await expect(accordionSection).toHaveCSS('border-top-width', '1px');
-      await expect(accordionSection).toHaveCSS('margin-top', '0px');
-      await expect(accordionSection).toHaveCSS('padding-top', '8px');
-      await expect(accordionSection).toHaveCSS('padding-bottom', '8px');
-      await expect(accordionSection.locator('h2')).toHaveCSS('min-height', '44px');
-    }
-    const accordionSpacing = await Promise.all(
-      accordionSections.map((accordionSection) =>
-        accordionSection.evaluate((section) => {
-          const heading = section.querySelector('h2');
-          if (!heading) throw new Error('Expected an accordion heading.');
-          const sectionBounds = section.getBoundingClientRect();
-          const headingBounds = heading.getBoundingClientRect();
-          const borderTop = Number.parseFloat(getComputedStyle(section).borderTopWidth);
-          return {
-            above: headingBounds.top - sectionBounds.top - borderTop,
-            below: sectionBounds.bottom - headingBounds.bottom,
-          };
-        }),
-      ),
-    );
-    for (const spacing of accordionSpacing) {
-      expect(spacing.above).toBeCloseTo(spacing.below, 0);
-    }
+    const checkAccordionStyles = async (accordionSections: Locator[]) => {
+      for (const accordionSection of accordionSections) {
+        await expect(accordionSection).toHaveCSS('border-top-width', '1px');
+        await expect(accordionSection).toHaveCSS('margin-top', '0px');
+        await expect(accordionSection).toHaveCSS('padding-top', '8px');
+        await expect(accordionSection).toHaveCSS('padding-bottom', '8px');
+        await expect(accordionSection.locator('h2')).toHaveCSS('min-height', '44px');
+      }
+    };
+    const measureAccordionSpacing = async (accordionSections: Locator[]) =>
+      Promise.all(
+        accordionSections.map((accordionSection) =>
+          accordionSection.evaluate((section) => {
+            const heading = section.querySelector('h2');
+            if (!heading) throw new Error('Expected an accordion heading.');
+            const sectionBounds = section.getBoundingClientRect();
+            const headingBounds = heading.getBoundingClientRect();
+            const borderTop = Number.parseFloat(getComputedStyle(section).borderTopWidth);
+            return {
+              above: headingBounds.top - sectionBounds.top - borderTop,
+              below: sectionBounds.bottom - headingBounds.bottom,
+            };
+          }),
+        ),
+      );
+    await checkAccordionStyles([recipeColumnsSection]);
     await expect(
       recipeColumnsSection.getByRole('button', { name: 'Show all recipe columns' }),
     ).toContainText('All');
     await expect(
       recipeColumnsSection.getByRole('button', { name: 'Show all recipe columns' }).locator('svg'),
     ).toHaveCount(1);
-    await expect(page.getByRole('region', { name: 'Data management' })).toHaveCSS(
-      'margin-top',
-      '0px',
-    );
+    const recipeColumnsSpacing = await measureAccordionSpacing([recipeColumnsSection]);
+
+    await recipeDataTab.click();
+    const recipeDataSections = [picklistsSection, section, tagsSection, densitySection];
+    await checkAccordionStyles(recipeDataSections);
+    const recipeDataSpacing = await measureAccordionSpacing(recipeDataSections);
+    const accordionSpacing = [...recipeDataSpacing, ...recipeColumnsSpacing];
+    for (const spacing of accordionSpacing) {
+      expect(spacing.above).toBeCloseTo(spacing.below, 0);
+    }
+    await expect(
+      page.getByRole('region', { name: 'Data management', includeHidden: true }),
+    ).toHaveCSS('margin-top', '0px');
     const toggle = section.getByRole('button', { name: 'Ingredients' });
     const picklistToggle = page.getByRole('button', { name: 'Picklists' });
     const tagToggle = page.getByRole('button', { name: 'Tags' });

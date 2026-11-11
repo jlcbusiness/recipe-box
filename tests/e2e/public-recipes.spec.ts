@@ -1058,17 +1058,17 @@ test('first-time direct publishing collects a username, then reuses and edits it
 
     otherUser = await createTestUser(request);
     await createRecipe(request, config, otherUser, 'Username collision');
-    await page.goto('/settings');
+    await page.goto('/settings?tab=account-data');
     const usernameInput = page.getByRole('textbox', { name: 'Public username' });
     await expect(usernameInput).toHaveValue('toggle-publisher');
     await usernameInput.fill(`test-${otherUser.id.slice(0, 8)}`);
-    await page.getByRole('button', { name: 'Save username' }).click();
+    await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.locator('.public-username-error')).toContainText('already in use');
     await expect(usernameInput).toHaveValue(`test-${otherUser.id.slice(0, 8)}`);
     await expect(usernameInput).toHaveAttribute('aria-invalid', 'true');
 
     await usernameInput.fill('Updated-Publisher');
-    await page.getByRole('button', { name: 'Save username' }).click();
+    await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText('Public username saved.', { exact: true })).toBeVisible();
     await expect(usernameInput).toHaveValue('updated-publisher');
     await page.goto(`/r/${firstPublicId}`);

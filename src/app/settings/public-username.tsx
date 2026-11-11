@@ -41,7 +41,7 @@ export function PublicUsernameSettings({ publicUsername }: { publicUsername: str
             value={value}
           />
           <button className="recipe-secondary-button" disabled={isPending} type="submit">
-            {isPending ? 'Saving…' : 'Save username'}
+            {isPending ? 'Saving…' : 'Save'}
           </button>
         </div>
         {state.status === 'error' && (

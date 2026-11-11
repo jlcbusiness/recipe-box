@@ -181,15 +181,18 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
 
+    await page.getByRole('tab', { name: 'Preferences' }).click();
     await expect(page.getByRole('heading', { name: 'Recipe columns' })).toHaveCSS(
       'margin-bottom',
       '0px',
     );
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     await expect(page.getByRole('heading', { name: 'Trusted densities' })).toHaveCSS(
       'margin-bottom',
       '0px',
     );
 
+    await page.getByRole('tab', { name: 'Account & data' }).click();
     const dataManagement = page.getByRole('region', { name: 'Data management' });
     const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
     await expect(importTrigger).toBeVisible();
@@ -294,6 +297,7 @@ test('Settings reports invalid archives and recovers for a valid retry @e2e', as
   try {
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Account & data' }).click();
     const dataManagement = page.getByRole('region', { name: 'Data management' });
     const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
     const importDialog = dataManagement.getByRole('dialog', { name: 'Import database' });
@@ -418,6 +422,7 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
   try {
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Account & data' }).click();
     const dataManagement = page.getByRole('region', { name: 'Data management' });
     const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
     const importDialog = dataManagement.getByRole('dialog', { name: 'Import database' });

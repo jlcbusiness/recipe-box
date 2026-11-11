@@ -228,7 +228,7 @@ test('private navigation links to Settings and keeps Units out of the nav @e2e @
         privateNavigation.evaluate((element) => getComputedStyle(element).backgroundColor),
         page.evaluate(() => getComputedStyle(document.body).backgroundColor),
       ]);
-      expect(navigationBackground).toBe('rgba(255, 255, 255, 0.2)');
+      expect(navigationBackground).toBe('color(srgb 0.219608 0.376471 0.266667 / 0.5)');
       expect(pageBackground).not.toBe(navigationBackground);
     } else {
       await expect(utilityLabels.nth(0)).toBeVisible();

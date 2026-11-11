@@ -78,6 +78,9 @@ implemented; do not show empty sections or placeholder links in advance.
 - Keep Picklist triggers content-sized and 36px high. Expand their mobile tap
   areas to 48px without changing their visible height. Keep the page free of
   horizontal overflow.
+- On mobile, keep 16px between preference groups and between the Hand label
+  and its buttons, matching the unit-row spacing. Preserve the first group's
+  existing offset.
 - Keep the desktop sidebar pinned while page content scrolls. Place Settings
   after Trash and immediately before Account in the utility links.
 - On mobile, use compact icon-only navigation for Library, Search, Recipe Tin,
@@ -107,7 +110,8 @@ Write the focused browser tests before production UI changes:
 - Chromium and Fold 6 checks confirm desktop navigation remains visible while
   content scrolls, Hand is hidden on desktop, mobile navigation remains
   available and reverses for Right, preference triggers have 48px hit areas,
-  and the page has no horizontal overflow.
+  group and Hand control spacing is consistent, and the page has no horizontal
+  overflow.
 
 Run the focused Settings browser tests on Chromium and Fold 6, then unit tests,
 typecheck, lint, and `git diff --check`. Reuse local data when useful; a reset

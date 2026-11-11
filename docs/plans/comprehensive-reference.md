@@ -1214,12 +1214,11 @@ and a single-line mobile list:
 
 ## 8. Settings, Taxonomies, and Picklists
 
-Settings is a section-based workspace, not a compact menu or a grid of cards.
-Show implemented management domains as full-width, unframed sections. Personal
-preferences, configurable picklists, ingredient catalog, trusted density, tags,
-nutrition and measure equivalents, and later data tools can grow into distinct
-sections as their slices ship. Do not render empty placeholder sections or
-links for work that is not yet implemented.
+Settings is a wide workspace organized by three accessible tabs: Preferences,
+Recipe data, and Account & data. Each tab contains its implemented domains as
+full-width, unframed sections; do not turn Settings into a compact menu or a
+grid of cards. Do not render empty placeholder sections, tabs, or links for
+work that is not implemented.
 
 ### 8.1 Centralized Picklist Management
 
@@ -1416,9 +1415,47 @@ direction, Choose columns for Left hand, and mirrors it to Choose columns,
 direction, Sort, View at the right for Right hand. Details omits Sort and
 direction. Visual and keyboard order agree; text and icons are not flipped.
 Desktop and other explorer toolbars are unchanged.
+On mobile, keep 16px between preference groups and between the Hand label and
+its buttons, matching the spacing between unit rows. Preserve the first
+group's existing offset.
 Visible preference controls are 36px high; Picklist hit areas
 expand to at least 48px on mobile. The controls are keyboard operable, display
 save status, and never offer public or cross-account preference changes.
+
+### 8.5 Settings Tabs
+
+The authenticated `/settings` page keeps its existing sections and workflows,
+organized into exactly three tabs:
+
+| Tab | Sections |
+| ---- | -------- |
+| **Preferences** | Personal preferences; Recipe column order |
+| **Recipe data** | Recipe picklists; Ingredient catalog, including nutrition and measure equivalents; Trusted densities; Tags |
+| **Account & data** | Public sharing; Data management, including content reset, database export, and database import |
+
+Preferences is selected by default. The `tab` query parameter accepts
+`preferences`, `recipe-data`, or `account-data`. A valid value selects the
+matching tab on direct navigation and reload; a missing or invalid value selects
+Preferences, except a content-reset reauthentication or error return selects
+Account & data when `tab` is not valid. Tab changes replace the current URL
+entry, preserve other query parameters, and do not add one browser-history
+entry per switch.
+
+Tabs use the semantic tablist pattern with one selected tab, roving focus, and
+Left/Right, Home, and End keyboard navigation. Activating a tab immediately
+shows its panel. Keep all panels mounted so switching tabs preserves local
+drafts; hide inactive panels from keyboard navigation and assistive technology.
+
+On the 307px Fold 6 viewport, keep the tabs in one row and size each to its
+content rather than stretching them equally. Use 13px labels, 4px horizontal
+padding, 4px gaps, and a 48px minimum tab width. Show Preferences on one line
+and break Recipe / data and Account / & data into two lines. Keep hit areas at
+least 48px high and prevent clipping and horizontal page overflow. The tabs
+have a subtle outline and a leaf accent on the active tab's top edge. Use the
+first section's top border as the single divider below the tabs, aligned
+directly with the tab row without an additional row border or first-section
+gap. Keep subsequent section dividers and spacing. They change navigation only;
+they add no data, authorization path, or settings behavior.
 
 ---
 

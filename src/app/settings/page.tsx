@@ -26,6 +26,7 @@ import {
 import { PublicUsernameSettings } from './public-username';
 import { RecipeColumnOrderManager } from './recipe-column-order-manager';
 import { RecipePicklistManager } from './recipe-picklist-manager';
+import { SettingsTabs } from './settings-tabs';
 import { TagCatalogManager } from './tag-catalog-manager';
 import { UnitPreferences } from './unit-preferences';
 
@@ -33,6 +34,7 @@ export default async function SettingsPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    tab?: string;
     content_reset_error?: string;
     content_reset_reauthenticated?: string;
   }>;
@@ -255,114 +257,137 @@ export default async function SettingsPage({
   return (
     <main aria-labelledby="page-title" className="settings-main">
       <h1 id="page-title">Settings</h1>
-      <section aria-labelledby="personal-preferences-title" className="settings-section">
-        <h2 id="personal-preferences-title">Personal preferences</h2>
-        <UnitPreferences
-          durationColor={
-            isInstructionEmphasisColor(account.duration_color)
-              ? account.duration_color
-              : defaultInstructionEmphasis.duration
-          }
-          handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
-          includeInstructionPhotosInPrivatePrint={
-            account.include_instruction_photos_in_private_print !== false
-          }
-          includePrivateDetailsInPrivatePrint={
-            account.include_private_details_in_private_print === true
-          }
-          ingredientColor={
-            isInstructionEmphasisColor(account.ingredient_color)
-              ? account.ingredient_color
-              : defaultInstructionEmphasis.ingredient
-          }
-          ingredientPresentation={
-            account.ingredient_presentation === 'ingredient_first' ? 'ingredient_first' : 'standard'
-          }
-          privatePrintUsesColors={account.private_print_uses_colors !== false}
-          repeatIngredientsInPrivatePrint={account.repeat_ingredients_in_private_print !== false}
-          temperatureColor={
-            isInstructionEmphasisColor(account.temperature_color)
-              ? account.temperature_color
-              : defaultInstructionEmphasis.temperature
-          }
-          temperatureSystem={
-            (account.temperature_system === 'celsius'
-              ? 'celsius'
-              : 'fahrenheit') as TemperatureSystem
-          }
-          volumeSystem={
-            isMeasurementSystemPreference(account.volume_system)
-              ? account.volume_system
-              : 'us_customary'
-          }
-          weightSystem={
-            isMeasurementSystemPreference(account.weight_system)
-              ? account.weight_system
-              : 'us_customary'
-          }
-        />
-      </section>
-      <PublicUsernameSettings publicUsername={account.public_username} />
-      <RecipePicklistManager
-        initialValues={picklistsResult.data ?? []}
-        initialRevisions={revisions}
-        referenceCounts={referenceCounts}
+      <SettingsTabs
+        initialTab={query.tab}
+        resetFallback={
+          query.content_reset_reauthenticated === '1' ||
+          ['google', 'provider', 'unavailable'].includes(query.content_reset_error ?? '')
+        }
+        preferences={
+          <>
+            <section aria-labelledby="personal-preferences-title" className="settings-section">
+              <h2 id="personal-preferences-title">Personal preferences</h2>
+              <UnitPreferences
+                durationColor={
+                  isInstructionEmphasisColor(account.duration_color)
+                    ? account.duration_color
+                    : defaultInstructionEmphasis.duration
+                }
+                handPreference={account.hand_preference === 'left' ? 'left' : 'right'}
+                includeInstructionPhotosInPrivatePrint={
+                  account.include_instruction_photos_in_private_print !== false
+                }
+                includePrivateDetailsInPrivatePrint={
+                  account.include_private_details_in_private_print === true
+                }
+                ingredientColor={
+                  isInstructionEmphasisColor(account.ingredient_color)
+                    ? account.ingredient_color
+                    : defaultInstructionEmphasis.ingredient
+                }
+                ingredientPresentation={
+                  account.ingredient_presentation === 'ingredient_first'
+                    ? 'ingredient_first'
+                    : 'standard'
+                }
+                privatePrintUsesColors={account.private_print_uses_colors !== false}
+                repeatIngredientsInPrivatePrint={
+                  account.repeat_ingredients_in_private_print !== false
+                }
+                temperatureColor={
+                  isInstructionEmphasisColor(account.temperature_color)
+                    ? account.temperature_color
+                    : defaultInstructionEmphasis.temperature
+                }
+                temperatureSystem={
+                  (account.temperature_system === 'celsius'
+                    ? 'celsius'
+                    : 'fahrenheit') as TemperatureSystem
+                }
+                volumeSystem={
+                  isMeasurementSystemPreference(account.volume_system)
+                    ? account.volume_system
+                    : 'us_customary'
+                }
+                weightSystem={
+                  isMeasurementSystemPreference(account.weight_system)
+                    ? account.weight_system
+                    : 'us_customary'
+                }
+              />
+            </section>
+            <RecipeColumnOrderManager
+              initialHiddenColumns={normalizeHiddenRecipeColumns(account.recipe_hidden_columns)}
+              initialOrder={normalizeRecipeColumnOrder(account.recipe_column_order)}
+            />
+          </>
+        }
+        recipeData={
+          <>
+            <RecipePicklistManager
+              initialValues={picklistsResult.data ?? []}
+              initialRevisions={revisions}
+              referenceCounts={referenceCounts}
+            />
+            <IngredientCatalogManager
+              initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
+              initialRevision={ingredientCatalogRevisionResult.data.revision}
+              referenceCounts={ingredientReferenceCounts}
+              initialNutrition={nutritionEntries}
+              initialEquivalents={equivalentEntries}
+              thingOptions={thingsOptions}
+            />
+            <IngredientDensityManager
+              initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
+              initialDensities={densityEntries}
+              initialRevision={ingredientCatalogRevisionResult.data.revision}
+            />
+            <TagCatalogManager
+              initialTags={(tagsResult.data ?? []) as TagOption[]}
+              initialRevision={tagCatalogRevisionResult.data.revision}
+              referenceCounts={tagReferenceCounts}
+            />
+          </>
+        }
+        accountData={
+          <>
+            <PublicUsernameSettings publicUsername={account.public_username} />
+            <section
+              aria-labelledby="data-management-title"
+              className="settings-section settings-data-management"
+            >
+              <div className="settings-data-management-heading">
+                <h2 id="data-management-title">Data management</h2>
+                <p>
+                  {account.last_database_export_at
+                    ? `Last database export: ${new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(account.last_database_export_at))}`
+                    : 'No database export yet'}
+                </p>
+              </div>
+              {isDatabaseExportReminderDue(account.last_database_export_at) && (
+                <p className="settings-export-reminder" role="note">
+                  Make a database export now. Your backup reminder appears every 30 days.
+                </p>
+              )}
+              <div className="settings-data-management-content">
+                <AccountContentResetAction
+                  initialOpen={
+                    query.content_reset_reauthenticated === '1' ||
+                    ['google', 'provider', 'unavailable'].includes(query.content_reset_error ?? '')
+                  }
+                  initialReauthReady={query.content_reset_reauthenticated === '1'}
+                  provider={account.sign_in_method === 'google' ? 'google' : 'email_password'}
+                  redirectError={query.content_reset_error}
+                />
+                <div className="settings-data-management-transfers">
+                  <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
+                  <DatabaseImportAction />
+                </div>
+              </div>
+            </section>
+          </>
+        }
       />
-      <RecipeColumnOrderManager
-        initialHiddenColumns={normalizeHiddenRecipeColumns(account.recipe_hidden_columns)}
-        initialOrder={normalizeRecipeColumnOrder(account.recipe_column_order)}
-      />
-      <IngredientCatalogManager
-        initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
-        initialRevision={ingredientCatalogRevisionResult.data.revision}
-        referenceCounts={ingredientReferenceCounts}
-        initialNutrition={nutritionEntries}
-        initialEquivalents={equivalentEntries}
-        thingOptions={thingsOptions}
-      />
-      <IngredientDensityManager
-        initialIngredients={(ingredientCatalogResult.data ?? []) as IngredientCatalogEntry[]}
-        initialDensities={densityEntries}
-        initialRevision={ingredientCatalogRevisionResult.data.revision}
-      />
-      <TagCatalogManager
-        initialTags={(tagsResult.data ?? []) as TagOption[]}
-        initialRevision={tagCatalogRevisionResult.data.revision}
-        referenceCounts={tagReferenceCounts}
-      />
-      <section
-        aria-labelledby="data-management-title"
-        className="settings-section settings-data-management"
-      >
-        <div className="settings-data-management-heading">
-          <h2 id="data-management-title">Data management</h2>
-          <p>
-            {account.last_database_export_at
-              ? `Last database export: ${new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(account.last_database_export_at))}`
-              : 'No database export yet'}
-          </p>
-        </div>
-        {isDatabaseExportReminderDue(account.last_database_export_at) && (
-          <p className="settings-export-reminder" role="note">
-            Make a database export now. Your backup reminder appears every 30 days.
-          </p>
-        )}
-        <div className="settings-data-management-content">
-          <AccountContentResetAction
-            initialOpen={
-              query.content_reset_reauthenticated === '1' ||
-              ['google', 'provider', 'unavailable'].includes(query.content_reset_error ?? '')
-            }
-            initialReauthReady={query.content_reset_reauthenticated === '1'}
-            provider={account.sign_in_method === 'google' ? 'google' : 'email_password'}
-            redirectError={query.content_reset_error}
-          />
-          <div className="settings-data-management-transfers">
-            <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
-            <DatabaseImportAction />
-          </div>
-        </div>
-      </section>
     </main>
   );
 }

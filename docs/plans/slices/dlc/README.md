@@ -99,6 +99,13 @@ while retaining the existing single-image viewer without gallery navigation.
   public allow-listed recipe and photos as a private Recipe Tin copy with a
   protected, titled source reference and schema-v10 import/export support.
 
+### Phase 8: Settings navigation
+
+- **DLC 32 (implemented in app version 1.6.0):**
+  [Settings tabs](dlc-32-settings-tabs.md) organizes the existing Settings
+  sections into Preferences, Recipe data, and Account & data tabs without
+  changing the settings workflows themselves.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for

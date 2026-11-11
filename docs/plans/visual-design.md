@@ -308,21 +308,34 @@ gallery, then details and reading content.
 ### Account menu
 
 Account preferences are managed from Settings, not from a persistent navigation
-shortcut. Settings uses a wide, unframed section layout rather than a compact
-menu panel or card. The Personal preferences section contains labeled Volume,
-Weight, Temperature, and View controls using the shared portal `Picklist`, with stable,
+shortcut. Settings is a wide workspace organized by Preferences, Recipe data,
+and Account & data tabs; each tab retains full-width, unframed sections rather
+than a compact menu panel or card. Follow [DLC 32](slices/dlc/dlc-32-settings-tabs.md)
+for section assignment, URL state, and accessible tab behavior. On mobile, keep
+the three tabs content-sized in one row, with the approved two-line labels,
+48px minimum hit targets in both dimensions, a subtle outline with a leaf
+accent on the active tab's top edge, and no horizontal overflow. Use the first
+section's top border as the single divider below the tabs: align it directly
+with the tab row and do not add a separate tab-row rule or extra first-section
+gap. Keep subsequent section dividers and spacing. Do not add a second
+preference form or empty placeholder sections or links.
+On desktop, balance the tab label's vertical padding at 8px above and below;
+retain the current mobile padding.
+
+The Personal preferences section contains labeled Volume, Weight, Temperature,
+and View controls using the shared portal `Picklist`, with stable,
 content-sized triggers and the existing save action and status. A mobile-only
-Hand control reverses compact navigation order for Right. Do not add a second
-preference form. Future settings domains become sections as their features are
-implemented; do not display empty placeholder sections or links.
+Hand control reverses compact navigation order for Right. Keep the mobile
+spacing between preference groups and between the Hand label and buttons at
+16px, matching the unit-row rhythm; preserve the first group's existing offset.
 The private navigation keeps Settings, Trash, Help, and Account. On desktop,
 place Settings after Trash and before Account in the pinned sidebar; Help
 follows Search in the main navigation. On mobile, show icon-only navigation
 controls. Keep Help at the far left regardless of hand preference, using a
 question-mark glyph inside its existing circular hit target. The remaining
 controls follow the selected hand preference. Keep all navigation icons within
-the viewport, with a white navigation strip that is 80% transparent over the
-page and white circular icon controls.
+the viewport, with a navigation strip using the active theme's `--leaf` color
+at 50% opacity over the page and white circular icon controls.
 Give each icon control a descriptive accessible name and tooltip.
 
 The Library icon on mobile and label on desktop stay leaf green as a distinct
@@ -420,7 +433,8 @@ Feature text/fill pairs exceed the 4.5:1 WCAG AA contrast threshold.
 
 Settings appears in the private navigation on Library, Find Recipes, and
 Administration routes. The page uses a wide, unframed Personal preferences
-section with labeled Volume, Weight, and View controls from the shared portal
+section within the Preferences tab, with labeled Volume, Weight, and View
+controls from the shared portal
 `Picklist`, without a Units subsection. Volume and Weight independently offer
 US customary, Metric, and Recipe; Recipe preserves each saved unit system and
 permits same-system simplification. The controls remain content-sized and
@@ -437,8 +451,9 @@ catalog, tag, density, data management, and Public sharing are separate
 Settings domains.
 
 The Public sharing section uses a labeled, content-sized username field with
-plain-language explanation, an adjacent Save action, and an inline accessible
-status or validation message. The field is editable so Users can change the
+plain-language explanation, a visible border, an adjacent Save action, and an
+inline accessible status or validation message. Leave space between the action
+and the next section divider. The field is editable so Users can change the
 public byline without exposing their sign-in email or creating a public profile.
 
 ## Settings (Slice 14B)
@@ -747,8 +762,9 @@ mobile action rows fit without page-level horizontal overflow.
 
 Place Wipe all account data at the left of the existing unframed Data
 management action row, with Export database and Import database grouped and
-right-aligned. On narrow screens, allow the groups to wrap while keeping the
-transfer actions right-aligned. Use the existing destructive button treatment
+right-aligned. On narrow screens, place the transfer actions above Wipe all
+account data, keeping them grouped and right-aligned. Use the existing
+destructive button treatment
 and shared native confirmation dialog, centered at up to 28rem wide with an
 internal scrollbar when its content exceeds the viewport. Keep its
 confirmation copy, provider re-authentication, exact-phrase input, and

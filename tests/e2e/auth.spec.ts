@@ -324,7 +324,10 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     const mobileNavBoundsAt390 = await mobileNav.boundingBox();
     expect(mobileNavBoundsAt390?.x).toBe(0);
     expect(mobileNavBoundsAt390?.width).toBe(390);
-    await expect(mobileNav).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.2)');
+    await expect(mobileNav).toHaveCSS(
+      'background-color',
+      'color(srgb 0.219608 0.376471 0.266667 / 0.5)',
+    );
     const mobileLibraryLink = page.getByRole('link', { name: 'Library' });
     await expect(mobileLibraryLink).toHaveAttribute('aria-current', 'page');
     await expect(mobileLibraryLink).toHaveCSS('border-width', '2px');

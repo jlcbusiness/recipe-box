@@ -674,6 +674,43 @@ a {
   border-bottom: 1px solid var(--line-strong);
 }
 
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 20px;
+}
+
+.settings-tab {
+  flex: 0 0 auto;
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  border-top: 3px solid transparent;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-tab[aria-selected="true"] {
+  border-top-color: var(--leaf);
+  color: var(--ink);
+}
+
+.settings-tab-panel {
+  min-width: 0;
+}
+
+.settings-tab-panel > .settings-section:first-child {
+  margin-top: 0;
+}
+
+.settings-tab-panel[hidden] {
+  display: none;
+}
+
 .admin-tab {
   min-height: 48px;
   border: 0;
@@ -692,6 +729,7 @@ a {
 }
 
 .admin-tab:focus-visible,
+.settings-tab:focus-visible,
 .admin-updates button:focus-visible,
 .admin-update-completion-dialog button:focus-visible,
 .admin-update-completion-dialog input:focus-visible,
@@ -1175,6 +1213,23 @@ a {
     margin-top: 16px;
   }
 
+  .settings-tabs {
+    margin-top: 16px;
+  }
+
+  .settings-tab {
+    border: 1px solid var(--line);
+    border-top-width: 3px;
+    border-radius: 3px 3px 0 0;
+    padding-block: 8px 6px;
+    padding-inline: 4px;
+    font-size: 13px;
+  }
+
+  .settings-tab-label-line {
+    display: block;
+  }
+
   .admin-tab {
     flex: 1;
     min-height: 48px;
@@ -1609,8 +1664,13 @@ h1 {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .account-content-reset-action {
+    grid-row: 2;
+  }
+
   .settings-data-management-transfers {
     grid-column: 1;
+    grid-row: 1;
     justify-self: end;
   }
 }
@@ -2334,6 +2394,10 @@ h1 {
   margin: 0;
 }
 
+.private-content .settings-section:has(.public-username-settings-form) {
+  padding-bottom: 12px;
+}
+
 .public-username-settings-controls {
   display: flex;
   align-items: center;
@@ -2345,7 +2409,12 @@ h1 {
   width: min(100%, 320px);
   min-width: 0;
   min-height: 40px;
+  border: 1px solid var(--control-border);
+  border-radius: 3px;
   padding: 7px 9px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
 }
 
 .public-username-error {
@@ -2451,7 +2520,7 @@ h1 {
     padding: 8px;
     min-height: 0;
     gap: 0;
-    background: rgb(255 255 255 / 20%);
+    background: color-mix(in srgb, var(--leaf) 50%, transparent);
   }
 
   .private-shell[data-hand="left"] .private-nav {
@@ -2585,6 +2654,10 @@ h1 {
     gap: 16px;
   }
 
+  .settings-preference-group + .settings-preference-group {
+    margin-top: 16px;
+  }
+
   .settings-unit-field {
     grid-template-columns: minmax(84px, 104px) max-content;
     gap: 12px;
@@ -2600,7 +2673,7 @@ h1 {
     flex-direction: column;
     align-items: center;
     justify-self: stretch;
-    gap: 8px;
+    gap: 16px;
   }
 
   .single-picklist-trigger.settings-unit-picklist::before {
