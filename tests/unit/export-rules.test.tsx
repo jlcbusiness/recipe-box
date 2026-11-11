@@ -16,6 +16,8 @@ const secondRecipeId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const trashedRecipeId = '88888888-8888-4888-8888-888888888888';
 const firstIngredientId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const secondIngredientId = '11111111-1111-4111-8111-111111111111';
+const cookTimeTypeId = '12121212-1212-4121-8121-121212121212';
+const prepTimeTypeId = '13131313-1313-4131-8131-131313131313';
 const firstRowId = '22222222-2222-4222-8222-222222222222';
 const secondRowId = '33333333-3333-4333-8333-333333333333';
 const firstSetId = '99999999-9999-4999-8999-999999999999';
@@ -58,6 +60,8 @@ function createSnapshot() {
           is_hearted: false,
           makes_quantity: 2,
           makes_thing: 'baby cakes',
+          prep_time_minutes: 10,
+          total_time_minutes: 40,
           is_private: true,
           public_link_id: 'future-public-link-identity',
           food_type_category: 'food_type',
@@ -72,6 +76,7 @@ function createSnapshot() {
           publication_id: secondPublicationId,
           name: 'Tomato soup',
           state: 'tried',
+          total_time_minutes: 20,
           score: null,
           is_starred: false,
           is_hearted: true,
@@ -98,7 +103,44 @@ function createSnapshot() {
       recipe_picklist_values: [
         { id: 'food-type-cake', account_id: ownerId, category: 'food_type' },
         { id: 'food-type-soup', account_id: ownerId, category: 'food_type' },
+        {
+          id: cookTimeTypeId,
+          account_id: ownerId,
+          category: 'time_type',
+          value: 'Cook',
+          display_value: 'Cook',
+        },
+        {
+          id: prepTimeTypeId,
+          account_id: ownerId,
+          category: 'time_type',
+          value: 'Prep',
+          display_value: 'Prep',
+        },
         { id: 'thing-bunch', account_id: ownerId, category: 'informal_unit', value: 'bunch' },
+      ],
+      recipe_time_entries: [
+        {
+          id: '14141414-1414-4141-8141-141414141414',
+          recipe_id: firstRecipeId,
+          time_type_id: prepTimeTypeId,
+          minutes: 10,
+          position: 0,
+        },
+        {
+          id: '15151515-1515-4151-8151-151515151515',
+          recipe_id: firstRecipeId,
+          time_type_id: cookTimeTypeId,
+          minutes: 30,
+          position: 1,
+        },
+        {
+          id: '16161616-1616-4161-8161-161616161616',
+          recipe_id: secondRecipeId,
+          time_type_id: cookTimeTypeId,
+          minutes: 20,
+          position: 0,
+        },
       ],
       recipe_picklist_assignments: [
         { recipe_id: firstRecipeId, picklist_value_id: 'meal-dessert' },
@@ -229,14 +271,32 @@ function createSnapshot() {
 }
 
 describe('export rules', () => {
-  it('exports protected source identity in schema version 10', () => {
+  it('exports protected source identity and ordered time entries in schema version 11', () => {
     const output = buildPortableData(createSnapshot(), { type: 'recipe', id: firstRecipeId });
 
-    expect(output.schema_version).toBe(10);
+    expect(output.schema_version).toBe(11);
     expect(output.records.recipe_references[0]).toMatchObject({
       is_protected_source: true,
       source_public_id: sourcePublicId,
     });
+    expect(output.records.recipes[0]).toMatchObject({ total_time_minutes: 40 });
+    expect(output.records.recipes[0]).not.toHaveProperty('prep_time_minutes');
+    expect(output.records.recipe_time_entries).toEqual([
+      {
+        id: '14141414-1414-4141-8141-141414141414',
+        recipe_id: firstRecipeId,
+        time_type_id: prepTimeTypeId,
+        minutes: 10,
+        position: 0,
+      },
+      {
+        id: '15151515-1515-4151-8151-151515151515',
+        recipe_id: firstRecipeId,
+        time_type_id: cookTimeTypeId,
+        minutes: 30,
+        position: 1,
+      },
+    ]);
   });
 
   it('accepts only supported scope shapes and valid record identifiers', () => {
@@ -316,6 +376,13 @@ describe('export rules', () => {
     expect(output.records.recipe_picklist_values.map((record) => record.id)).toContain(
       'thing-bunch',
     );
+    expect(output.records.recipe_picklist_values.map((record) => record.id)).toContain(
+      prepTimeTypeId,
+    );
+    expect(output.records.recipe_time_entries.map((record) => record.id)).toEqual([
+      '14141414-1414-4141-8141-141414141414',
+      '15151515-1515-4151-8151-151515151515',
+    ]);
     expect(output.records.explorer_state).toEqual([]);
   });
 
@@ -378,7 +445,7 @@ describe('export rules', () => {
     );
   });
 
-  it('exports Recipe unit preferences in schema v10', () => {
+  it('exports Recipe unit preferences in schema v11', () => {
     const snapshot = createSnapshot();
     const output = buildPortableData(
       {
@@ -392,7 +459,7 @@ describe('export rules', () => {
       { type: 'database' },
     );
 
-    expect(output.schema_version).toBe(10);
+    expect(output.schema_version).toBe(11);
     expect(output.account_preferences).toMatchObject({
       volume_system: 'recipe',
       weight_system: 'recipe',
@@ -412,7 +479,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(10);
+    expect(manifest.schema_version).toBe(11);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

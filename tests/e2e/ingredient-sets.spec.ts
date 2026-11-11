@@ -791,7 +791,11 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       const publicHtml = await page.content();
       expect(publicHtml).not.toContain(sauceSetId);
       expect(publicHtml).not.toContain(fillingSetId);
-      const publicPrintButton = page.getByRole('button', { name: 'Print & Download' });
+      const isMobilePublicOutput = (page.viewportSize()?.width ?? 1280) <= 640;
+      const publicPrintButton = page.getByRole('button', {
+        name: isMobilePublicOutput ? 'Print & Download' : 'Print',
+        exact: !isMobilePublicOutput,
+      });
       const publicPrintButtonColors = await publicPrintButton.evaluate((element) => {
         const style = getComputedStyle(element);
         return {
@@ -801,8 +805,10 @@ test('ingredient sections stay simple across reader, editor, and public views @e
         };
       });
       expect(publicPrintButtonColors).toEqual(privatePrintButtonColors);
-      await page.getByRole('button', { name: 'Print & Download' }).click();
-      await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+      await publicPrintButton.click();
+      if (isMobilePublicOutput) {
+        await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+      }
       await expect(page.locator('html')).toHaveAttribute(
         'data-print-stripe-odd',
         'rgb(237, 244, 233)',

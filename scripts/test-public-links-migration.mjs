@@ -217,6 +217,7 @@ async function startNextServer(config, port) {
   originalNextEnv = await readFile(join(repositoryRoot, 'next-env.d.ts'), 'utf8');
   const serverEnvironment = {
     ...process.env,
+    NEXT_PUBLIC_SITE_URL: `http://localhost:${port}`,
     NEXT_PUBLIC_SUPABASE_URL: config.apiUrl,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: config.anonKey,
     SUPABASE_SERVICE_ROLE_KEY: config.serviceRoleKey,
@@ -274,7 +275,7 @@ async function verifyMigrationAndRunBrowserTests() {
   const { migrations, targetIndex, sourceMigrations } = await configureProject();
   supabaseStartAttempted = true;
   runSupabase(['start', '--yes']);
-  runSupabase(['migration', 'up', '--local']);
+  runSupabase(['migration', 'up']);
 
   const config = getSupabaseConfig();
   const owner = await createOwner(config);
@@ -344,15 +345,10 @@ async function verifyMigrationAndRunBrowserTests() {
   for (const migration of migrations.slice(targetIndex + 1)) {
     await cp(join(sourceMigrations, migration), join(supabaseDirectory, 'migrations', migration));
   }
-  runSupabase(['migration', 'up', '--local']);
-  runSupabase(['test', 'db', '--local', 'supabase/tests/auth_provider_guard.test.sql']);
-  runSupabase(['test', 'db', '--local', 'supabase/tests/export_service_role_access.test.sql']);
-  runSupabase([
-    'test',
-    'db',
-    '--local',
-    'supabase/tests/public_recipe_service_role_access.test.sql',
-  ]);
+  runSupabase(['migration', 'up']);
+  runSupabase(['test', 'db', 'supabase/tests/auth_provider_guard.test.sql']);
+  runSupabase(['test', 'db', 'supabase/tests/export_service_role_access.test.sql']);
+  runSupabase(['test', 'db', 'supabase/tests/public_recipe_service_role_access.test.sql']);
 
   const backfilledSets = await apiCall(
     `${config.apiUrl}/rest/v1/recipe_ingredient_sets?select=id,recipe_id,label,position&recipe_id=in.(${legacyRecipe.id},${trashedLegacyRecipe.id})&order=recipe_id`,

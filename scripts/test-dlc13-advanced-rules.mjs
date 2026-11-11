@@ -100,12 +100,23 @@ async function createPublication(apiUrl, owner, name) {
   return data;
 }
 
+async function getCookTimeTypeId(apiUrl, owner) {
+  const { response, data } = await request(
+    `${apiUrl}/rest/v1/recipe_picklist_values?select=id&category=eq.time_type&value=eq.Cook`,
+    { headers: owner.headers },
+  );
+  assert.equal(response.status, 200, `Could not read Cook Time Type: ${JSON.stringify(data)}`);
+  assert.equal(data.length, 1, 'The account must have one default Cook Time Type');
+  return data[0].id;
+}
+
 async function createRecipe(
   apiUrl,
   owner,
-  { name, publicationId, totalTime, prepTime, serves = null, nutritionOverrides = {} },
+  { name, publicationId, totalTime, serves = null, nutritionOverrides = {} },
+  cookTimeTypeId,
 ) {
-  const { response, data } = await callRpc(apiUrl, owner, 'save_recipe_with_nutrition', {
+  const { response, data } = await callRpc(apiUrl, owner, 'save_recipe_with_time_entries', {
     p_recipe_id: null,
     p_expected_version: null,
     p_name: name,
@@ -116,16 +127,6 @@ async function createRecipe(
     p_occasion_details: null,
     p_reason: null,
     p_serves: serves,
-    p_prep_time_minutes: prepTime,
-    p_mixing_time_minutes: null,
-    p_marinate_time_minutes: null,
-    p_chill_time_minutes: null,
-    p_freeze_time_minutes: null,
-    p_cook_time_minutes: null,
-    p_bake_time_minutes: null,
-    p_cooling_time_minutes: null,
-    p_rest_time_minutes: null,
-    p_total_time_minutes: totalTime,
     p_notes_markdown: '',
     p_meal_type_ids: [],
     p_cuisine_ids: [],
@@ -142,6 +143,8 @@ async function createRecipe(
     p_makes_quantity: null,
     p_makes_thing: null,
     p_nutrition_overrides: nutritionOverrides,
+    p_time_entries:
+      totalTime === null ? [] : [{ time_type_id: cookTimeTypeId, minutes: totalTime, position: 0 }],
   });
   assert.equal(response.status, 200, `Could not create recipe fixture: ${JSON.stringify(data)}`);
   assert.ok(Array.isArray(data) && data[0]?.id, 'Recipe save must return an ID');
@@ -239,7 +242,6 @@ function runExplain(owner, publicationId, filters) {
     [
       'db',
       'query',
-      '--local',
       `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
        WITH auth_context AS MATERIALIZED (
          SELECT set_config('request.jwt.claim.sub', '${owner.id}', true)
@@ -301,6 +303,8 @@ async function verifyAdvancedRules() {
   const otherOwner = await createOwner(apiUrl, anonKey);
 
   try {
+    const ownerCookTimeTypeId = await getCookTimeTypeId(apiUrl, owner);
+    const otherOwnerCookTimeTypeId = await getCookTimeTypeId(apiUrl, otherOwner);
     const publications = await request(
       `${apiUrl}/rest/v1/publications?select=id,name&order=name.asc`,
       { headers: owner.headers },
@@ -321,53 +325,74 @@ async function verifyAdvancedRules() {
 
     const fixtures = new Map();
     for (const recipe of [
-      { name: 'DLC13 Alpha', totalTime: 10, prepTime: 5 },
-      { name: 'DLC13 Beta', totalTime: 20, prepTime: 10 },
-      { name: 'DLC13 Gamma', totalTime: null, prepTime: null },
-      { name: 'DLC13 Delta', totalTime: 40, prepTime: 20 },
+      { name: 'DLC13 Alpha', totalTime: 10, serves: 1 },
+      { name: 'DLC13 Beta', totalTime: 20, serves: 2 },
+      { name: 'DLC13 Gamma', totalTime: null },
+      { name: 'DLC13 Delta', totalTime: 40, serves: 4 },
     ]) {
       fixtures.set(
         recipe.name,
-        await createRecipe(apiUrl, owner, { ...recipe, publicationId: ownerPublicationId }),
+        await createRecipe(
+          apiUrl,
+          owner,
+          { ...recipe, publicationId: ownerPublicationId },
+          ownerCookTimeTypeId,
+        ),
       );
     }
     fixtures.set(
       'DLC13 Side publication',
-      await createRecipe(apiUrl, owner, {
-        name: 'DLC13 Side publication',
-        publicationId: secondPublicationId,
-        totalTime: 60,
-        prepTime: 30,
-      }),
+      await createRecipe(
+        apiUrl,
+        owner,
+        {
+          name: 'DLC13 Side publication',
+          publicationId: secondPublicationId,
+          totalTime: 60,
+        },
+        ownerCookTimeTypeId,
+      ),
     );
-    const trashedFixture = await createRecipe(apiUrl, owner, {
-      name: 'DLC13 Trashed',
-      publicationId: ownerPublicationId,
-      totalTime: 25,
-      prepTime: 15,
-    });
+    const trashedFixture = await createRecipe(
+      apiUrl,
+      owner,
+      {
+        name: 'DLC13 Trashed',
+        publicationId: ownerPublicationId,
+        totalTime: 25,
+      },
+      ownerCookTimeTypeId,
+    );
     const trashed = await callRpc(apiUrl, owner, 'trash_recipe', {
       p_recipe_id: trashedFixture.id,
       p_expected_version: trashedFixture.version,
     });
     assert.equal(trashed.response.status, 200, JSON.stringify(trashed.data));
-    await createRecipe(apiUrl, otherOwner, {
-      name: 'DLC13 Foreign owner',
-      publicationId: otherPublicationId,
-      totalTime: 60,
-      prepTime: 30,
-    });
+    await createRecipe(
+      apiUrl,
+      otherOwner,
+      {
+        name: 'DLC13 Foreign owner',
+        publicationId: otherPublicationId,
+        totalTime: 60,
+      },
+      otherOwnerCookTimeTypeId,
+    );
 
     const benchmarkFixtureCount = 110;
     for (let index = 0; index < benchmarkFixtureCount; index += 1) {
-      await createRecipe(apiUrl, owner, {
-        name: `Benchmark Plan ${String(index + 1).padStart(3, '0')}`,
-        publicationId: ownerPublicationId,
-        totalTime: 30 + (index % 60),
-        prepTime: 10 + (index % 20),
-        serves: 1,
-        nutritionOverrides: { calories: 120 },
-      });
+      await createRecipe(
+        apiUrl,
+        owner,
+        {
+          name: `Benchmark Plan ${String(index + 1).padStart(3, '0')}`,
+          publicationId: ownerPublicationId,
+          totalTime: 30 + (index % 60),
+          serves: 1,
+          nutritionOverrides: { calories: 120 },
+        },
+        ownerCookTimeTypeId,
+      );
     }
 
     const primaryRules = ruleRefs(
@@ -466,7 +491,7 @@ async function verifyAdvancedRules() {
     assert.deepEqual(recipeNames(externalFilter.data), ['DLC13 Alpha']);
 
     const externalColumnFilter = await search(apiUrl, owner, {
-      filters: [makeFilter('column_prep_time_minutes', 'in', ['10'])],
+      filters: [makeFilter('total_time_minutes', 'in', [20])],
       text: '1 OR 2',
       rules: ruleRefs(
         makeRule('name', 'contains', 'DLC13'),
@@ -538,7 +563,7 @@ async function verifyAdvancedRules() {
     const facetResponse = await callRpc(apiUrl, owner, 'recipe_search_column_facet_values', {
       p_query: 'DLC13',
       p_filters: [advancedFilter('1', [makeRule('name', 'contains', 'DLC13')])],
-      p_column_keys: ['prep_time_minutes'],
+      p_column_keys: ['serves'],
       p_publication_id: ownerPublicationId,
     });
     assert.equal(facetResponse.response.status, 200, JSON.stringify(facetResponse.data));
@@ -546,9 +571,9 @@ async function verifyAdvancedRules() {
       facetResponse.data.map(({ facet_value, recipe_count }) => [facet_value, recipe_count]),
       [
         ['__blank__', 1],
-        ['10', 1],
-        ['20', 1],
-        ['5', 1],
+        ['1', 1],
+        ['2', 1],
+        ['4', 1],
       ],
       'Facet aggregation must apply the expression as one complete predicate',
     );
@@ -824,7 +849,7 @@ async function verifyAdvancedRules() {
 
     const benchmarkOrNotFilter = advancedFilter('1 OR 2 AND NOT 3', [
       makeRule('name', 'contains', 'Benchmark Plan'),
-      makeRule('prep_time_minutes', 'at_least', 10),
+      makeRule('total_time_minutes', 'at_least', 10),
       makeRule('total_time_minutes', 'less_than', 0),
     ]);
     const benchmarkNutritionFilter = advancedFilter('1', [makeRule('calories', 'at_least', 100)]);

@@ -201,7 +201,7 @@ async function runMigrationTest() {
   const { migrations, targetIndex, sourceMigrations } = await configureProject();
   supabaseStartAttempted = true;
   runSupabase(['start', '--yes']);
-  runSupabase(['migration', 'up', '--local']);
+  runSupabase(['migration', 'up']);
 
   const config = getSupabaseConfig();
   const owner = await createOwner(config);
@@ -253,15 +253,11 @@ async function runMigrationTest() {
   for (const migration of migrations.slice(targetIndex + 1)) {
     await cp(join(sourceMigrations, migration), join(supabaseDirectory, 'migrations', migration));
   }
-  const preflight = spawnSync(
-    supabaseCommand,
-    ['migration', 'up', '--local', '--workdir', projectDirectory],
-    {
-      encoding: 'utf8',
-      shell: process.platform === 'win32',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    },
-  );
+  const preflight = spawnSync(supabaseCommand, ['migration', 'up', '--workdir', projectDirectory], {
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
   assert.notEqual(preflight.status, 0, 'duplicate preflight unexpectedly succeeded');
   assert.match(`${preflight.stdout}\n${preflight.stderr}`, /Resolve repeated ingredients/u);
 
@@ -275,7 +271,7 @@ async function runMigrationTest() {
     `${config.apiUrl}/rest/v1/recipe_ingredients?recipe_id=eq.${recipe.id}&position=eq.1`,
     { method: 'DELETE', headers: service },
   );
-  runSupabase(['migration', 'up', '--local']);
+  runSupabase(['migration', 'up']);
 
   const migratedRows = await apiCall(
     `${config.apiUrl}/rest/v1/recipe_ingredients?select=id,portion_one_ratio,size_value,size_unit&recipe_id=eq.${recipe.id}`,

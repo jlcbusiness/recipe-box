@@ -65,6 +65,7 @@ export default async function SettingsPage({
     recipesResult,
     assignmentsResult,
     measurementsResult,
+    recipeTimeEntriesResult,
     recipeIngredientsResult,
     ingredientCatalogResult,
     ingredientDensitiesResult,
@@ -88,6 +89,7 @@ export default async function SettingsPage({
       .from('recipe_ingredient_measurements')
       .select('recipe_ingredient_id, picklist_value_id')
       .not('picklist_value_id', 'is', null),
+    supabase.from('recipe_time_entries').select('recipe_id, time_type_id'),
     supabase.from('recipe_ingredients').select('id, recipe_id, ingredient_id'),
     supabase.from('ingredients').select('id, name').order('name'),
     supabase
@@ -116,6 +118,7 @@ export default async function SettingsPage({
     recipesResult.error ||
     assignmentsResult.error ||
     measurementsResult.error ||
+    recipeTimeEntriesResult.error ||
     recipeIngredientsResult.error ||
     ingredientCatalogResult.error ||
     ingredientDensitiesResult.error ||
@@ -148,6 +151,9 @@ export default async function SettingsPage({
   }
   for (const assignment of assignmentsResult.data ?? []) {
     addRecipeReference(assignment.picklist_value_id, assignment.recipe_id);
+  }
+  for (const entry of recipeTimeEntriesResult.data ?? []) {
+    addRecipeReference(entry.time_type_id, entry.recipe_id);
   }
   const recipeIdByIngredientId = new Map(
     (recipeIngredientsResult.data ?? []).map((ingredient) => [ingredient.id, ingredient.recipe_id]),

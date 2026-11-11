@@ -29,7 +29,7 @@ function serviceHeaders(serviceRoleKey: string) {
 
 function runLocalSql(sql: string) {
   try {
-    execFileSync('supabase', ['db', 'query', '--local', '--output-format', 'json', sql], {
+    execFileSync('supabase', ['db', 'query', '--output-format', 'json', sql], {
       encoding: 'utf8',
     });
   } catch (error) {

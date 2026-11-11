@@ -36,6 +36,18 @@ const requiredManifestKeys = [
   'files',
 ];
 const requiredDataKeys = ['format', 'schema_version', 'scope', 'account_preferences', 'records'];
+const legacyTimeFields = [
+  ['prep_time_minutes', 'Prep'],
+  ['mixing_time_minutes', 'Mixing'],
+  ['marinate_time_minutes', 'Marinate'],
+  ['chill_time_minutes', 'Chill'],
+  ['freeze_time_minutes', 'Freeze'],
+  ['cook_time_minutes', 'Cook'],
+  ['bake_time_minutes', 'Bake'],
+  ['cooling_time_minutes', 'Cooling'],
+  ['rest_time_minutes', 'Rest'],
+] as const;
+const postgresIntegerMax = 2_147_483_647;
 const preferenceFields = new Set([
   'volume_system',
   'weight_system',
@@ -231,6 +243,135 @@ function validateIngredientPortionFields(records: PortableData['records']) {
   }
 }
 
+function normalizeLegacyRecipeTimes(records: ExportRecord, schemaVersion: number) {
+  const recipes = records.recipes as ExportRecord[];
+  const timeEntries: ExportRecord[] = [];
+  if (schemaVersion < 11) {
+    const picklistValues = records.recipe_picklist_values as ExportRecord[];
+    const typeIds = new Map<string, string>();
+    const getTypeId = (label: string, sortOrder: number) => {
+      const current = picklistValues.find(
+        (value) => value.category === 'time_type' && value.value === label,
+      );
+      if (typeof current?.id === 'string') {
+        return current.id;
+      }
+      const id = randomUUID();
+      picklistValues.push({
+        id,
+        category: 'time_type',
+        value: label,
+        display_value: label,
+        sort_order: sortOrder,
+        is_protected: false,
+      });
+      return id;
+    };
+
+    for (const recipe of recipes) {
+      let total = 0;
+      let position = 0;
+      let hasComponents = false;
+      for (const [sortOrder, [field, label]] of legacyTimeFields.entries()) {
+        const minutes = recipe[field];
+        if (minutes === null || minutes === undefined) {
+          continue;
+        }
+        hasComponents = true;
+        if (
+          typeof minutes !== 'number' ||
+          !Number.isInteger(minutes) ||
+          minutes < 0 ||
+          minutes > postgresIntegerMax
+        ) {
+          throw new Error('The bundle contains an invalid recipe time value.');
+        }
+        total += minutes;
+        if (total > postgresIntegerMax) {
+          throw new Error('The bundle recipe time total exceeds the supported range.');
+        }
+        const timeTypeId = typeIds.get(label) ?? getTypeId(label, sortOrder);
+        typeIds.set(label, timeTypeId);
+        timeEntries.push({
+          id: randomUUID(),
+          recipe_id: recipe.id,
+          time_type_id: timeTypeId,
+          minutes,
+          position,
+        });
+        position += 1;
+      }
+
+      if (!hasComponents && typeof recipe.total_time_minutes === 'number') {
+        const legacyTotal = recipe.total_time_minutes;
+        if (!Number.isInteger(legacyTotal) || legacyTotal < 0 || legacyTotal > postgresIntegerMax) {
+          throw new Error('The bundle contains an invalid recipe total time value.');
+        }
+        if (legacyTotal > 0) {
+          const timeTypeId = typeIds.get('Cook') ?? getTypeId('Cook', 5);
+          typeIds.set('Cook', timeTypeId);
+          timeEntries.push({
+            id: randomUUID(),
+            recipe_id: recipe.id,
+            time_type_id: timeTypeId,
+            minutes: legacyTotal,
+            position: 0,
+          });
+          total = legacyTotal;
+        }
+      }
+
+      recipe.total_time_minutes = total;
+      for (const [field] of legacyTimeFields) {
+        delete recipe[field];
+      }
+    }
+  } else {
+    timeEntries.push(...(records.recipe_time_entries as ExportRecord[]));
+  }
+  records.recipe_time_entries = timeEntries;
+}
+
+function validateRecipeTimeEntries(records: PortableData['records']) {
+  const entriesByRecipe = new Map<string, ExportRecord[]>();
+  for (const entry of records.recipe_time_entries) {
+    if (
+      typeof entry.id !== 'string' ||
+      !uuidPattern.test(entry.id) ||
+      typeof entry.recipe_id !== 'string' ||
+      typeof entry.time_type_id !== 'string' ||
+      typeof entry.minutes !== 'number' ||
+      !Number.isInteger(entry.minutes) ||
+      entry.minutes < 0 ||
+      entry.minutes > postgresIntegerMax ||
+      typeof entry.position !== 'number' ||
+      !Number.isInteger(entry.position) ||
+      entry.position < 0
+    ) {
+      throw new Error('The bundle contains an invalid recipe time entry.');
+    }
+    const recipeEntries = entriesByRecipe.get(entry.recipe_id) ?? [];
+    recipeEntries.push(entry);
+    entriesByRecipe.set(entry.recipe_id, recipeEntries);
+  }
+
+  for (const recipe of records.recipes) {
+    const entries = entriesByRecipe.get(String(recipe.id)) ?? [];
+    entries.sort((left, right) => Number(left.position) - Number(right.position));
+    if (
+      entries.some((entry, index) => entry.position !== index) ||
+      entries.reduce((total, entry) => total + Number(entry.minutes), 0) !==
+        recipe.total_time_minutes ||
+      typeof recipe.total_time_minutes !== 'number' ||
+      !Number.isInteger(recipe.total_time_minutes) ||
+      recipe.total_time_minutes < 0 ||
+      recipe.total_time_minutes > postgresIntegerMax
+    ) {
+      throw new Error('The bundle recipe time entries do not match their recipe total.');
+    }
+  }
+}
+
 function validateData(
   value: unknown,
   manifestScope: ExportScope,
@@ -295,6 +436,7 @@ function validateData(
   const inputTables = exportTableNames.filter(
     (table) =>
       !(schemaVersion === 1 && table === 'recipe_ingredient_sets') &&
+      !(schemaVersion < 11 && table === 'recipe_time_entries') &&
       !(
         schemaVersion < 9 &&
         ['ingredient_nutrition_profiles', 'ingredient_measure_equivalents'].includes(table)
@@ -307,7 +449,10 @@ function validateData(
     }
     const allowedFields = new Set(
       table === 'recipes'
-        ? portableRecordFields[table].filter(
+        ? [
+            ...portableRecordFields[table],
+            ...(schemaVersion < 11 ? legacyTimeFields.map(([field]) => field) : []),
+          ].filter(
             (field) =>
               !(schemaVersion < 6 && ['score', 'is_starred', 'is_hearted'].includes(field)) &&
               !(schemaVersion < 8 && ['makes_quantity', 'makes_thing'].includes(field)) &&
@@ -471,6 +616,8 @@ function validateData(
     }
   }
 
+  normalizeLegacyRecipeTimes(records, schemaVersion);
+  validateRecipeTimeEntries(records as unknown as PortableData['records']);
   validateIngredientPortionFields(records as unknown as PortableData['records']);
   validateNutritionRecords(records as unknown as PortableData['records']);
 
@@ -594,6 +741,7 @@ function validateData(
   }
 
   data.account_preferences = preferences;
+  data.schema_version = EXPORT_SCHEMA_VERSION;
   return data as unknown as PortableData;
 }
 
@@ -702,6 +850,11 @@ function validateDatabaseReferences(records: PortableData['records']) {
     }
     ids.set(table, tableIds);
   }
+  const picklistValues = new Map(
+    records.recipe_picklist_values
+      .filter((value) => typeof value.id === 'string' && typeof value.category === 'string')
+      .map((value) => [String(value.id), value]),
+  );
 
   const requireReference = (table: ExportTableName, value: unknown, label: string) => {
     if (typeof value !== 'string' || !ids.get(table)?.has(value)) {
@@ -723,6 +876,13 @@ function validateDatabaseReferences(records: PortableData['records']) {
   for (const assignment of records.recipe_picklist_assignments) {
     requireReference('recipes', assignment.recipe_id, 'recipe');
     requireReference('recipe_picklist_values', assignment.picklist_value_id, 'picklist value');
+  }
+  for (const entry of records.recipe_time_entries) {
+    requireReference('recipes', entry.recipe_id, 'time entry recipe');
+    requireReference('recipe_picklist_values', entry.time_type_id, 'time type');
+    if (picklistValues.get(String(entry.time_type_id))?.category !== 'time_type') {
+      throw new Error('A recipe time entry must reference a Time Type value.');
+    }
   }
   const ingredientSetOwners = new Map<string, string>();
   for (const set of records.recipe_ingredient_sets) {

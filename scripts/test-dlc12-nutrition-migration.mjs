@@ -611,8 +611,8 @@ try {
   const mailpitUrl = await configureProject();
   supabaseStartAttempted = true;
   runSupabase(['start', '--yes']);
-  runSupabase(['migration', 'up', '--local']);
-  const migrationList = runSupabase(['migration', 'list', '--local']);
+  runSupabase(['migration', 'up']);
+  const migrationList = runSupabase(['migration', 'list']);
   assert.match(
     migrationList,
     /20261211000000/u,

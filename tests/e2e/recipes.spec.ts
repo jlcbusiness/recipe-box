@@ -3,7 +3,13 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, test } from '@playwright/test';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
+import {
+  createTestUser,
+  deleteTestUser,
+  getLocalSupabaseConfig,
+  type LocalSupabaseConfig,
+  type TestUser,
+} from '../support/local-supabase';
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
   await page.goto('/');
@@ -22,7 +28,30 @@ async function selectSinglePicklist(
   await page.getByRole('option', { name: option, exact: true }).click();
 }
 
-test('recipe time controls do not overlap the Pairings or Notes sections @e2e', async ({
+async function getPicklistId(
+  request: import('@playwright/test').APIRequestContext,
+  config: LocalSupabaseConfig,
+  user: TestUser,
+  category: string,
+  value: string,
+) {
+  const response = await request.get(
+    `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id&account_id=eq.${user.id}&category=eq.${category}&value=eq.${encodeURIComponent(value)}`,
+    {
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${user.accessToken}`,
+      },
+    },
+  );
+  const responseBody = await response.text();
+  expect(response.ok(), responseBody).toBeTruthy();
+  const [picklistValue] = JSON.parse(responseBody) as { id: string }[];
+  if (!picklistValue) throw new Error(`Expected the ${value} ${category} picklist value.`);
+  return picklistValue.id;
+}
+
+test('recipe time entries calculate, validate, and save in order @e2e', async ({
   page,
   request,
 }) => {
@@ -35,23 +64,30 @@ test('recipe time controls do not overlap the Pairings or Notes sections @e2e', 
     await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
     await page.getByRole('link', { name: 'Add Recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
-    const calculateButton = page.getByRole('button', { name: 'Calculate total time' });
-    const topSaveButton = page
+    const timeSection = page.locator('.recipe-time-fieldset');
+    const addTimeButton = timeSection.getByRole('button', { name: 'Add time' });
+    const totalTime = page.locator('#total-time');
+    const saveButton = page
       .locator('.recipe-form-save-row')
       .getByRole('button', { name: 'Save recipe', exact: true });
-    const addRecipeButton = page
-      .locator('.recipe-time-total-row')
-      .getByRole('button', { name: 'Save new recipe from the Total Time row', exact: true });
-    await expect(topSaveButton).toHaveText('Save');
-    await expect(addRecipeButton).toHaveText('Save');
+    await expect(saveButton).toHaveText('Save');
+    await expect(page.getByRole('button', { name: 'Save recipe', exact: true })).toHaveCount(1);
+    await expect(timeSection.locator('.recipe-time-total-row').getByRole('button')).toHaveCount(0);
+    await expect(addTimeButton).toBeVisible();
+    await expect(addTimeButton).toHaveCSS('font-style', 'italic');
+    await expect(totalTime).toHaveText('0');
+    await expect(page.getByRole('button', { name: 'Calculate total time' })).toHaveCount(0);
+    await expect(timeSection.getByRole('group')).toHaveCount(0);
+    await expect(timeSection.locator('.recipe-time-entry-headers')).toHaveCount(0);
+
     for (const viewport of [
       { width: 1280, height: 900 },
       { width: 384, height: 915 },
     ]) {
       await page.setViewportSize(viewport);
-      const calculateBounds = await calculateButton.boundingBox();
-      const addRecipeBounds = await addRecipeButton.boundingBox();
-      const totalRowBounds = await page.locator('.recipe-time-total-row').boundingBox();
+      const saveBounds = await saveButton.boundingBox();
+      const instructionsBounds = await page.locator('.recipe-instruction-section').boundingBox();
+      const timeSectionBounds = await timeSection.boundingBox();
       const pairingBounds = await page
         .locator('#recipe-form > fieldset')
         .filter({ has: page.getByText('Pairs With', { exact: true }) })
@@ -61,60 +97,218 @@ test('recipe time controls do not overlap the Pairings or Notes sections @e2e', 
         .filter({ has: page.getByText('Notes', { exact: true }) })
         .boundingBox();
 
-      expect(calculateBounds).not.toBeNull();
-      expect(addRecipeBounds).not.toBeNull();
-      expect(totalRowBounds).not.toBeNull();
+      expect(saveBounds).not.toBeNull();
+      expect(instructionsBounds).not.toBeNull();
+      expect(timeSectionBounds).not.toBeNull();
       expect(pairingBounds).not.toBeNull();
       expect(notesBounds).not.toBeNull();
-      expect(addRecipeBounds?.x).toBeGreaterThan(
-        (calculateBounds?.x ?? 0) + (calculateBounds?.width ?? 0),
+      expect(saveBounds?.y).toBeGreaterThanOrEqual(
+        (instructionsBounds?.y ?? 0) + (instructionsBounds?.height ?? 0),
       );
-      expect((addRecipeBounds?.x ?? 0) + (addRecipeBounds?.width ?? 0)).toBeCloseTo(
-        (totalRowBounds?.x ?? 0) + (totalRowBounds?.width ?? 0),
-        0,
+      expect((saveBounds?.y ?? 0) + (saveBounds?.height ?? 0)).toBeLessThanOrEqual(
+        timeSectionBounds?.y ?? 0,
       );
-      expect(addRecipeBounds?.y).toBeLessThan(
-        (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
+      expect(pairingBounds?.y).toBeGreaterThanOrEqual(
+        (timeSectionBounds?.y ?? 0) + (timeSectionBounds?.height ?? 0),
       );
-      if (viewport.width === 384) {
-        expect(pairingBounds?.y).toBeGreaterThanOrEqual(
-          (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
-        );
-        expect(notesBounds?.y).toBeGreaterThanOrEqual(
-          (calculateBounds?.y ?? 0) + (calculateBounds?.height ?? 0),
-        );
-      }
+      expect(notesBounds?.y).toBeGreaterThanOrEqual(
+        (timeSectionBounds?.y ?? 0) + (timeSectionBounds?.height ?? 0),
+      );
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        viewport.width,
+      );
     }
 
     await page.getByLabel('Name').fill('Quick add recipe test');
-    await addRecipeButton.click();
-    await expect(page.getByRole('heading', { name: 'Quick add recipe test' })).toBeVisible();
+    await addTimeButton.click();
+    const firstEntry = timeSection.getByRole('group', { name: 'Time entry 1' });
+    const firstMinutes = firstEntry.getByRole('textbox', { name: 'Minutes' });
+    const firstTimeType = firstEntry.getByRole('combobox', { name: 'Time Type' });
+    await firstTimeType.focus();
+    const timeTypeMenu = page.getByRole('listbox');
+    await expect(timeTypeMenu.getByRole('option')).toHaveCount(9);
+    const menuHeight = await timeTypeMenu.evaluate((menu) => menu.getBoundingClientRect().height);
+    expect(menuHeight).toBeGreaterThan(0);
+    await page.evaluate(() => window.scrollBy(0, 60));
+    await expect
+      .poll(() => timeTypeMenu.evaluate((menu) => menu.getBoundingClientRect().height))
+      .toBe(menuHeight);
+    await firstTimeType.fill('Coo');
+    await expect(timeTypeMenu.getByRole('option', { name: 'Cook', exact: true })).toBeVisible();
+    await expect(timeTypeMenu.getByRole('option', { name: 'Cooling', exact: true })).toBeVisible();
+    await expect(
+      timeTypeMenu.getByRole('option', { name: 'Add "Coo"', exact: true }),
+    ).toBeVisible();
+    await firstTimeType.fill('Cook');
+    await page.getByRole('option', { name: 'Cook', exact: true }).click();
+    await expect(timeSection.locator('.recipe-time-entry-headers')).toBeVisible();
+    await expect(timeSection.locator('.recipe-time-entry-headers')).toContainText('Minutes');
+    await expect(timeSection.locator('.recipe-time-entry-headers')).toContainText('Time Type');
+    await firstMinutes.fill('20 / 3');
+    await firstMinutes.press('Tab');
+    await expect(firstMinutes).toHaveValue('7');
+    await expect(totalTime).toHaveText('7');
 
-    await page.goto(`${page.url()}/edit`);
-    const editTopSaveButton = page
-      .locator('.recipe-form-save-row')
-      .getByRole('button', { name: 'Save recipe', exact: true });
-    const saveChangesButton = page
-      .locator('.recipe-time-total-row')
-      .getByRole('button', { name: 'Save changes from the Total Time row', exact: true });
-    await expect(editTopSaveButton).toHaveText('Save');
-    await expect(saveChangesButton).toHaveText('Save');
+    await addTimeButton.click();
+    const secondEntry = timeSection.getByRole('group', { name: 'Time entry 2' });
+    const secondMinutes = secondEntry.getByRole('textbox', { name: 'Minutes' });
+    const secondTimeType = secondEntry.getByRole('combobox', { name: 'Time Type' });
+    await secondTimeType.fill('Stea');
+    await secondTimeType.press('Tab');
+    await expect(secondTimeType).toHaveValue('Stea');
+    await expect(secondEntry.getByRole('alert')).toHaveText(
+      'Choose a Time Type or select its Add suggestion.',
+    );
+    await secondTimeType.focus();
+    await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(9);
+    await secondTimeType.fill('Steam');
+    await expect(page.getByRole('option', { name: 'Add "Steam"', exact: true })).toBeVisible();
+    await page.getByRole('option', { name: 'Add "Steam"', exact: true }).click();
+    await expect(secondTimeType).toHaveValue('Steam');
+    await secondMinutes.fill('8 * (3 + 2)');
+    await secondMinutes.press('Tab');
+    await expect(secondMinutes).toHaveValue('40');
+    await expect(totalTime).toHaveText('47');
+    const timeRows = timeSection.locator('.recipe-time-entry-row');
     for (const viewport of [
       { width: 1280, height: 900 },
       { width: 384, height: 915 },
     ]) {
       await page.setViewportSize(viewport);
-      const [saveBounds, totalRowBounds] = await Promise.all([
-        saveChangesButton.boundingBox(),
-        page.locator('.recipe-time-total-row').boundingBox(),
-      ]);
-      expect(saveBounds).not.toBeNull();
-      expect(totalRowBounds).not.toBeNull();
-      expect((saveBounds?.x ?? 0) + (saveBounds?.width ?? 0)).toBeCloseTo(
-        (totalRowBounds?.x ?? 0) + (totalRowBounds?.width ?? 0),
-        0,
+      await expect(timeRows).toHaveCount(2);
+      const timeHeaders = timeSection.locator('.recipe-time-entry-headers > span');
+      const firstTimeRow = timeRows.first();
+      const minuteHeaderBounds = await timeHeaders.nth(1).boundingBox();
+      const typeHeaderBounds = await timeHeaders.nth(2).boundingBox();
+      const firstMinutes = firstTimeRow.getByRole('textbox', { name: 'Minutes' });
+      const firstTimeType = firstTimeRow.getByRole('combobox', { name: 'Time Type' });
+      const minuteInputBounds = await firstMinutes.boundingBox();
+      const typeInputBounds = await firstTimeType.boundingBox();
+      const totalBounds = await totalTime.boundingBox();
+      const removeButtonBounds = await firstTimeRow
+        .getByRole('button', { name: 'Remove time entry 1' })
+        .boundingBox();
+      const totalLabel = timeSection.locator('.recipe-time-total-row .recipe-time-field > span');
+      expect(minuteHeaderBounds).not.toBeNull();
+      expect(typeHeaderBounds).not.toBeNull();
+      expect(minuteInputBounds).not.toBeNull();
+      expect(typeInputBounds).not.toBeNull();
+      expect(totalBounds).not.toBeNull();
+      expect(removeButtonBounds).not.toBeNull();
+      expect(minuteHeaderBounds?.x).toBeCloseTo(minuteInputBounds?.x ?? 0, 0);
+      expect(typeHeaderBounds?.x).toBeCloseTo(typeInputBounds?.x ?? 0, 0);
+      expect(totalBounds?.x).toBeCloseTo(minuteInputBounds?.x ?? 0, 0);
+      expect(totalBounds?.width).toBeCloseTo(minuteInputBounds?.width ?? 0, 0);
+      expect(minuteInputBounds?.width ?? 0).toBeLessThan(48);
+      expect(
+        Math.abs(
+          (minuteInputBounds?.y ?? 0) +
+            (minuteInputBounds?.height ?? 0) / 2 -
+            ((typeInputBounds?.y ?? 0) + (typeInputBounds?.height ?? 0) / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(
+          (removeButtonBounds?.x ?? 0) -
+            ((typeInputBounds?.x ?? 0) + (typeInputBounds?.width ?? 0)) -
+            8,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await expect(firstTimeType).toHaveAttribute('size', '8');
+      await expect(totalLabel).toHaveCSS('text-align', 'left');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        viewport.width,
       );
     }
+
+    await page.setViewportSize({ width: 384, height: 915 });
+    const secondHandle = secondEntry.getByRole('button', { name: 'Reorder time entry 2' });
+    const secondHandleBounds = await secondHandle.boundingBox();
+    const firstRowBounds = await timeRows.nth(0).boundingBox();
+    if (!secondHandleBounds || !firstRowBounds) {
+      throw new Error('Time rows must be visible for drag reordering.');
+    }
+    await page.mouse.move(
+      secondHandleBounds.x + secondHandleBounds.width / 2,
+      secondHandleBounds.y + secondHandleBounds.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      firstRowBounds.x + firstRowBounds.width / 2,
+      firstRowBounds.y + firstRowBounds.height / 2,
+      { steps: 4 },
+    );
+    await expect(
+      page.locator('.recipe-time-entry-row[data-reorder-state="displaced"]'),
+    ).toHaveCount(1);
+    await page.mouse.up();
+    await expect(timeRows.nth(0).getByRole('textbox', { name: 'Minutes' })).toHaveValue('40');
+    await expect(timeRows.nth(1).getByRole('textbox', { name: 'Minutes' })).toHaveValue('7');
+    await expect(timeSection.locator('p[role="status"]')).toHaveText(
+      'Time entry moved to position 1.',
+    );
+
+    await timeRows
+      .nth(0)
+      .getByRole('button', { name: 'Reorder time entry 1' })
+      .press('Control+ArrowDown');
+    await expect(timeRows.nth(0).getByRole('textbox', { name: 'Minutes' })).toHaveValue('7');
+    await expect(timeSection.locator('p[role="status"]')).toHaveText(
+      'Time entry moved to position 2.',
+    );
+    await timeRows
+      .nth(1)
+      .getByRole('button', { name: 'Reorder time entry 2' })
+      .press('Control+ArrowUp');
+    await expect(timeRows.nth(0).getByRole('textbox', { name: 'Minutes' })).toHaveValue('40');
+    await expect(timeSection.locator('p[role="status"]')).toHaveText(
+      'Time entry moved to position 1.',
+    );
+
+    await addTimeButton.click();
+    const invalidEntry = timeSection.getByRole('group', { name: 'Time entry 3' });
+    const invalidMinutes = invalidEntry.getByRole('textbox', { name: 'Minutes' });
+    await invalidMinutes.fill('5 / 0');
+    await invalidMinutes.press('Tab');
+    await expect(invalidEntry.getByRole('alert')).toBeVisible();
+    await saveButton.click();
+    await expect(page).toHaveURL(/\/recipes\/new(?:\?.*)?$/);
+    await expect(invalidEntry.getByRole('alert')).toBeVisible();
+    await invalidEntry.getByRole('button', { name: 'Remove time entry 3' }).click();
+
+    await saveButton.click();
+    await expect(page.getByRole('heading', { name: 'Quick add recipe test' })).toBeVisible();
+    await expect(page.getByText('Total time', { exact: true })).toBeVisible();
+    await expect(page.getByText('47 min', { exact: true })).toBeVisible();
+
+    const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+    expect(recipeId).toBeTruthy();
+    const savedTimes = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_time_entries?select=minutes,position&recipe_id=eq.${recipeId}&order=position.asc`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+      },
+    );
+    expect(savedTimes.ok(), await savedTimes.text()).toBeTruthy();
+    expect(await savedTimes.json()).toEqual([
+      { minutes: 40, position: 0 },
+      { minutes: 7, position: 1 },
+    ]);
+
+    const savedRecipe = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=total_time_minutes&id=eq.${recipeId}`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+      },
+    );
+    expect(savedRecipe.ok(), await savedRecipe.text()).toBeTruthy();
+    expect(await savedRecipe.json()).toEqual([{ total_time_minutes: 47 }]);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -210,9 +404,7 @@ test('private navigation links to Settings and keeps Units out of the nav @e2e @
       }
       expect(navigationBounds.x).toBeGreaterThanOrEqual(0);
       expect(navigationBounds.width).toBeCloseTo(viewport.width, 0);
-      expect(navigationBounds.x + navigationBounds.width).toBeLessThanOrEqual(
-        viewport.width + 1,
-      );
+      expect(navigationBounds.x + navigationBounds.width).toBeLessThanOrEqual(viewport.width + 1);
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
         .toBe(true);
@@ -433,11 +625,14 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       .all()) {
       await expect(integerInput).toHaveCSS('text-align', 'center');
     }
-    for (const integerLabel of await page
-      .locator('.recipe-form label[for="serves"] > span, .recipe-form .recipe-time-field > span')
-      .all()) {
-      await expect(integerLabel).toHaveCSS('text-align', 'center');
-    }
+    await expect(page.locator('.recipe-form label[for="serves"] > span')).toHaveCSS(
+      'text-align',
+      'center',
+    );
+    await expect(page.locator('.recipe-time-total-row .recipe-time-field > span')).toHaveCSS(
+      'text-align',
+      'left',
+    );
     const foodTypeAfterSelectionBounds = await page
       .getByRole('combobox', { name: 'Food Type', exact: true })
       .boundingBox();
@@ -472,14 +667,13 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
         Math.abs((equipmentTriggerBounds?.y ?? 0) - stateAfterSelectionBounds.y),
       ).toBeLessThanOrEqual(4);
     }
-    const prepBounds = await page.getByLabel('Prep time (minutes)').boundingBox();
-    const mixingBounds = await page.getByLabel('Mixing time (minutes)').boundingBox();
     await expect(page.locator('.recipe-time-fields')).toHaveCSS('display', 'flex');
-    expect(prepBounds?.width).toBeLessThanOrEqual(58);
-    expect(prepBounds?.height).toBeLessThanOrEqual(40);
-    if (prepBounds && mixingBounds) {
-      expect(mixingBounds.x - prepBounds.x - prepBounds.width).toBeLessThanOrEqual(10);
-    }
+    const timeSection = page.locator('.recipe-time-fieldset');
+    const addTimeButton = timeSection.getByRole('button', { name: 'Add time' });
+    const totalTime = page.locator('#total-time');
+    await expect(addTimeButton).toBeVisible();
+    await expect(totalTime).toHaveText('0');
+    await expect(timeSection.getByRole('group')).toHaveCount(0);
 
     const mealGroup = page.getByRole('group', { name: 'Meal Type' });
     await expect(mealGroup.getByRole('checkbox')).toHaveCount(0);
@@ -503,75 +697,36 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await selectSinglePicklist(page, 'State', 'Want to Try');
     await selectSinglePicklist(page, 'Enthusiasm', 'Absolutely');
     await page.getByLabel('Serves').fill('1200');
-    await page.getByLabel('Prep time (minutes)').fill('1015');
-    await expect(page.getByLabel('Serves')).toHaveValue('1,200');
-    await page.getByLabel('Mixing time (minutes)').fill('10');
-    await expect(page.getByLabel('Prep time (minutes)')).toHaveValue('1,015');
-    await page.getByLabel('Cook time (minutes)').fill('30');
-    await page.getByLabel('Total time (minutes)').fill('999');
-    expect(
-      await page
-        .getByLabel('Prep time (minutes)')
-        .evaluate((element) => getComputedStyle(element).appearance),
-    ).toBe('textfield');
-    const componentTimeBottoms = await Promise.all(
-      ['Prep', 'Mixing', 'Marinate', 'Chill', 'Freeze', 'Cook', 'Bake', 'Cooling', 'Rest'].map(
-        async (label) => {
-          const bounds = await page.getByLabel(`${label} time (minutes)`).boundingBox();
-          return bounds ? bounds.y + bounds.height : 0;
-        },
-      ),
+    await expect(page.getByLabel('Serves')).toHaveValue('1200');
+    for (const [index, timeEntry] of [
+      { type: 'Prep', minutes: '1015' },
+      { type: 'Mixing', minutes: '10' },
+      { type: 'Cook', minutes: '30' },
+    ].entries()) {
+      await addTimeButton.click();
+      const entry = timeSection.getByRole('group', { name: `Time entry ${index + 1}` });
+      await entry.getByRole('textbox', { name: 'Minutes' }).fill(timeEntry.minutes);
+      await entry.getByRole('combobox', { name: 'Time Type' }).click();
+      await page.getByRole('option', { name: timeEntry.type, exact: true }).click();
+    }
+    await expect(totalTime).toHaveText('1,055');
+    const lastTimeEntryBounds = await timeSection
+      .getByRole('group', { name: 'Time entry 3' })
+      .boundingBox();
+    const totalTimeBounds = await totalTime.boundingBox();
+    expect(lastTimeEntryBounds).not.toBeNull();
+    expect(totalTimeBounds?.y).toBeGreaterThanOrEqual(
+      (lastTimeEntryBounds?.y ?? 0) + (lastTimeEntryBounds?.height ?? 0),
     );
-    const totalTimeBounds = await page.getByLabel('Total time (minutes)').boundingBox();
-    expect(Math.max(...componentTimeBottoms)).toBeLessThan(totalTimeBounds?.y ?? 0);
-    const calculateButton = page.getByRole('button', { name: 'Calculate total time' });
-    await expect(calculateButton).toHaveText('Σ');
-    const totalRow = page.locator('.recipe-time-total-row');
-    await expect(totalRow).toBeVisible();
-    const calculateBounds = await calculateButton.boundingBox();
-    if (testInfo.project.name === 'Fold 6') {
-      expect(
-        Math.abs(
-          (calculateBounds?.y ?? 0) +
-            (calculateBounds?.height ?? 0) / 2 -
-            ((totalTimeBounds?.y ?? 0) + (totalTimeBounds?.height ?? 0) / 2),
-        ),
-      ).toBeLessThanOrEqual(1);
-      expect(calculateBounds?.width).toBeGreaterThanOrEqual(48);
-      expect(calculateBounds?.height).toBeGreaterThanOrEqual(48);
-    } else {
-      expect(calculateBounds?.y).toBe(totalTimeBounds?.y);
-      expect(calculateBounds?.x).toBeGreaterThan(totalTimeBounds?.x ?? 0);
-      expect(calculateBounds?.width).toBeLessThanOrEqual(34);
-      expect(
-        Math.abs((calculateBounds?.width ?? 0) - (calculateBounds?.height ?? 0)),
-      ).toBeLessThanOrEqual(1);
-    }
-    const componentTimeGap =
-      (mixingBounds?.x ?? 0) - ((prepBounds?.x ?? 0) + (prepBounds?.width ?? 0));
-    const calculateGapBounds =
-      testInfo.project.name === 'Fold 6'
-        ? await calculateButton.locator('.recipe-calculate-icon').boundingBox()
-        : calculateBounds;
-    const totalButtonGap =
-      (calculateGapBounds?.x ?? 0) - ((totalTimeBounds?.x ?? 0) + (totalTimeBounds?.width ?? 0));
-    if (testInfo.project.name === 'Fold 6') {
-      expect(componentTimeGap).toBeGreaterThanOrEqual(0);
-      expect(componentTimeGap).toBeLessThanOrEqual(16);
-      expect(totalButtonGap).toBeGreaterThanOrEqual(0);
-      expect(totalButtonGap).toBeLessThanOrEqual(20);
-    } else {
-      expect(Math.abs(componentTimeGap - totalButtonGap)).toBeLessThanOrEqual(1);
-    }
+    await expect(page.getByRole('button', { name: 'Calculate total time' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Equipment: Select' }).click();
     await page.getByRole('button', { name: 'Medium skillet', exact: true }).click();
     await page.getByLabel('Notes (Markdown)').fill('Add **fresh** basil at the end.');
 
-    await expect(page.getByLabel('Total time (minutes)')).toHaveValue('999');
-    await page.getByLabel('Cook time (minutes)').fill('31');
-    await expect(page.getByLabel('Total time (minutes)')).toHaveValue('999');
-    await page.getByRole('button', { name: 'Calculate total time' }).click();
-    await expect(page.getByLabel('Total time (minutes)')).toHaveValue('1,056');
+    const cookEntry = timeSection.getByRole('group', { name: 'Time entry 3' });
+    await cookEntry.getByRole('textbox', { name: 'Minutes' }).fill('31');
+    await cookEntry.getByRole('textbox', { name: 'Minutes' }).press('Tab');
+    await expect(totalTime).toHaveText('1,056');
     await expect(page.getByLabel('Makes quantity')).toHaveValue('3');
     await page.getByRole('button', { name: 'Save recipe' }).click();
 
@@ -820,7 +975,10 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.goto('/recipes');
     expect((await page.locator('.recipes-main').boundingBox())?.width).toBeGreaterThanOrEqual(1150);
     await page.getByRole('button', { name: 'Choose List columns' }).click();
-    await page.getByRole('checkbox', { name: 'Opinion', exact: true }).check();
+    const opinionColumn = page.getByRole('checkbox', { name: 'Opinion', exact: true });
+    await opinionColumn.focus();
+    await opinionColumn.press('Space');
+    await expect(opinionColumn).toBeChecked();
     await page.getByRole('button', { name: 'Choose List columns' }).click();
     await expect(page.getByRole('columnheader', { name: 'Opinion' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Last saved' })).toHaveCount(0);
@@ -869,10 +1027,12 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     expect(mobileEditHitArea.bottom).toBe('-8px');
     await mobileEditLink.click();
     await expect(page.getByLabel('Serves')).toHaveValue('1,200');
-    await expect(page.getByLabel('Prep time (minutes)')).toHaveValue('1,015');
-    await expect(page.getByLabel('Mixing time (minutes)')).toHaveValue('10');
-    await expect(page.getByLabel('Cook time (minutes)')).toHaveValue('31');
-    await expect(page.getByLabel('Total time (minutes)')).toHaveValue('1,056');
+    const prepEntry = timeSection.getByRole('group', { name: 'Time entry 1' });
+    const mixingEntry = timeSection.getByRole('group', { name: 'Time entry 2' });
+    await expect(prepEntry.getByRole('textbox', { name: 'Minutes' })).toHaveValue('1,015');
+    await expect(mixingEntry.getByRole('textbox', { name: 'Minutes' })).toHaveValue('10');
+    await expect(cookEntry.getByRole('textbox', { name: 'Minutes' })).toHaveValue('31');
+    await expect(page.locator('#total-time')).toHaveText('1,056');
     const mobileNameBounds = await page.getByLabel('Name').boundingBox();
     const mobilePublicationBounds = await page
       .getByRole('combobox', { name: 'Publication' })
@@ -916,7 +1076,10 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await selectSinglePicklist(page, 'State', 'Tried');
     await selectSinglePicklist(page, 'Verdict', 'Favorite');
     await page.getByLabel('Name').fill('Sunday tomato and basil soup');
-    await page.getByLabel('Total time (minutes)').fill('70');
+    await prepEntry.getByRole('textbox', { name: 'Minutes' }).fill('15');
+    await cookEntry.getByRole('textbox', { name: 'Minutes' }).fill('45');
+    await cookEntry.getByRole('textbox', { name: 'Minutes' }).press('Tab');
+    await expect(page.locator('#total-time')).toHaveText('70');
     await page.getByRole('button', { name: 'Save recipe' }).click();
 
     await expect(page.getByRole('heading', { name: 'Sunday tomato and basil soup' })).toBeVisible();
@@ -1334,8 +1497,8 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const toolbarActionBounds = await Promise.all(
       toolbarActionSelectors.map((selector) => actionToolbar.locator(selector).boundingBox()),
     );
-    const toolbarRight = await actionToolbar.evaluate((element) =>
-      element.getBoundingClientRect().right,
+    const toolbarRight = await actionToolbar.evaluate(
+      (element) => element.getBoundingClientRect().right,
     );
     const otherActionBottoms = await actionToolbar
       .locator(':scope > :not(.recipe-marker-actions):not(.recipe-marker-action-status)')
@@ -1367,9 +1530,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       throw new Error('Expected recipe marker action geometry.');
     }
     expect(markerGroupBounds.y).toBeGreaterThanOrEqual(Math.max(...otherActionBottoms) - 1);
-    expect(
-      toolbarActionBounds[5]!.x + toolbarActionBounds[5]!.width,
-    ).toBeCloseTo(toolbarRight, 0);
+    expect(toolbarActionBounds[5]!.x + toolbarActionBounds[5]!.width).toBeCloseTo(toolbarRight, 0);
     expect(
       Math.abs(
         starBounds.x + starBounds.width / 2 - (pageSettingsBounds.x + pageSettingsBounds.width / 2),
@@ -1754,6 +1915,7 @@ test('recipes and history are isolated to their owning account @e2e', async ({ r
       food_type: 12,
       informal_unit: 10,
       meal_type: 10,
+      time_type: 9,
       unmeasured_phrase: 5,
       verdict: 12,
     };
@@ -1775,7 +1937,7 @@ test('recipes and history are isolated to their owning account @e2e', async ({ r
           `${left.category}:${left.value}`.localeCompare(`${right.category}:${right.value}`),
         );
     expect(seedEntries(ownerPicklists)).toEqual(seedEntries(otherPicklists));
-    expect(ownerPicklists).toHaveLength(73);
+    expect(ownerPicklists).toHaveLength(82);
     expect(ownerPicklists.every(({ id }) => !otherPicklists.some((value) => value.id === id))).toBe(
       true,
     );
@@ -2173,10 +2335,13 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
-    const prepInputBounds = await page.getByLabel('Prep time (minutes)').boundingBox();
-    const prepTouchRowBounds = await page.locator('.recipe-time-field').first().boundingBox();
-    expect(prepInputBounds?.height).toBeLessThanOrEqual(36);
-    expect(prepTouchRowBounds?.height).toBeGreaterThanOrEqual(48);
+    const totalTime = page.locator('#total-time');
+    const totalTimeRow = page.locator('.recipe-time-total-row');
+    const addTimeButton = page
+      .locator('.recipe-time-fieldset')
+      .getByRole('button', { name: 'Add time' });
+    await expect(totalTime).toHaveText('0');
+    await expect(addTimeButton).toBeVisible();
     const mealTriggerBounds = await page
       .getByRole('button', { name: 'Meal Type: Select' })
       .boundingBox();
@@ -2186,23 +2351,10 @@ test('Recipe Tin list and editor are accessible on desktop and mobile @a11y', as
       .boundingBox();
     expect(mealTriggerBounds?.height).toBe(nameFieldBounds?.height);
     expect(publicationFieldBounds?.height).toBe(nameFieldBounds?.height);
-    const totalInputBounds = await page.getByLabel('Total time (minutes)').boundingBox();
-    const calculateButton = page.getByRole('button', { name: 'Calculate total time' });
-    const calculateButtonBounds = await calculateButton.boundingBox();
-    const calculateIconBounds = await calculateButton
-      .locator('.recipe-calculate-icon')
-      .boundingBox();
-    expect(calculateButtonBounds?.width).toBeGreaterThanOrEqual(48);
-    expect(calculateButtonBounds?.height).toBeGreaterThanOrEqual(48);
-    expect(calculateIconBounds?.width).toBe(30);
-    expect(calculateIconBounds?.height).toBe(30);
-    expect(
-      Math.abs(
-        (calculateIconBounds?.y ?? 0) +
-          (calculateIconBounds?.height ?? 0) / 2 -
-          ((totalInputBounds?.y ?? 0) + (totalInputBounds?.height ?? 0) / 2),
-      ),
-    ).toBeLessThanOrEqual(10);
+    const totalTimeBounds = await totalTime.boundingBox();
+    const totalTimeRowBounds = await totalTimeRow.boundingBox();
+    expect(totalTimeBounds?.height).toBeGreaterThan(0);
+    expect(totalTimeRowBounds?.height).toBeGreaterThanOrEqual(48);
     await page.getByRole('button', { name: 'Meal Type: Select' }).click();
     const mealOptionBounds = await page
       .getByRole('button', { name: 'Dinner', exact: true })
@@ -2298,8 +2450,8 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
       deleteBounds,
       saveBounds,
       saveRowBounds,
-      classificationBounds,
-      cuisineBounds,
+      instructionsBounds,
+      timeSectionBounds,
       foodTypeBounds,
       mealTypeBounds,
     ] = await Promise.all([
@@ -2307,8 +2459,8 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
       deleteButton.boundingBox(),
       saveRecipeButton.boundingBox(),
       saveRow.boundingBox(),
-      page.locator('.recipe-classification-fields').boundingBox(),
-      page.getByRole('button', { name: 'Cuisine: Select' }).boundingBox(),
+      page.locator('.recipe-instruction-section').boundingBox(),
+      page.locator('.recipe-time-fieldset').boundingBox(),
       page.locator('.recipe-classification-fields .recipe-picklist-trigger').nth(0).boundingBox(),
       page.locator('.recipe-classification-fields .recipe-picklist-trigger').nth(1).boundingBox(),
     ]);
@@ -2316,29 +2468,23 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
     expect(deleteBounds).not.toBeNull();
     expect(saveBounds).not.toBeNull();
     expect(saveRowBounds).not.toBeNull();
-    expect(classificationBounds).not.toBeNull();
-    expect(cuisineBounds).not.toBeNull();
+    expect(instructionsBounds).not.toBeNull();
+    expect(timeSectionBounds).not.toBeNull();
     expect(foodTypeBounds).not.toBeNull();
     expect(mealTypeBounds).not.toBeNull();
     expect(
       (mealTypeBounds?.x ?? 0) - ((foodTypeBounds?.x ?? 0) + (foodTypeBounds?.width ?? 0)),
     ).toBeCloseTo(8, 0);
-    expect((mealTypeBounds?.x ?? 0) + (mealTypeBounds?.width ?? 0)).toBeCloseTo(
-      (saveBounds?.x ?? 0) + (saveBounds?.width ?? 0),
-      1,
+    expect((saveBounds?.x ?? 0) + (saveBounds?.width ?? 0)).toBeCloseTo(
+      (saveRowBounds?.x ?? 0) + (saveRowBounds?.width ?? 0),
+      0,
     );
-    expect(
-      Math.abs(
-        (saveBounds?.x ?? 0) +
-          (saveBounds?.width ?? 0) -
-          ((classificationBounds?.x ?? 0) + (classificationBounds?.width ?? 0)),
-      ),
-    ).toBeLessThanOrEqual(1);
-    expect((saveBounds?.y ?? 0) + (saveBounds?.height ?? 0)).toBeCloseTo(
-      (cuisineBounds?.y ?? 0) + (cuisineBounds?.height ?? 0),
-      1,
+    expect(saveBounds?.y).toBeGreaterThanOrEqual(
+      (instructionsBounds?.y ?? 0) + (instructionsBounds?.height ?? 0),
     );
-    expect(saveBounds?.y).toBeLessThan(cancelBounds?.y ?? 0);
+    expect((saveBounds?.y ?? 0) + (saveBounds?.height ?? 0)).toBeLessThanOrEqual(
+      timeSectionBounds?.y ?? 0,
+    );
     expect(deleteBounds?.width).toBe(cancelBounds?.width);
     expect(deleteBounds?.height).toBe(cancelBounds?.height);
     await expect(cancelLink).toHaveCSS('text-align', 'center');
@@ -2351,16 +2497,14 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
     await page.setViewportSize({ width: 1280, height: 900 });
     const desktopSaveBounds = await saveRecipeButton.boundingBox();
     const desktopSaveRowBounds = await page.locator('.recipe-form-save-row').boundingBox();
-    const desktopClassificationBounds = await page
-      .locator('.recipe-classification-fields')
+    const desktopInstructionsBounds = await page
+      .locator('.recipe-instruction-section')
       .boundingBox();
-    const desktopCuisineBounds = await page
-      .getByRole('button', { name: 'Cuisine: Select' })
-      .boundingBox();
+    const desktopTimeSectionBounds = await page.locator('.recipe-time-fieldset').boundingBox();
     expect(desktopSaveBounds).not.toBeNull();
     expect(desktopSaveRowBounds).not.toBeNull();
-    expect(desktopClassificationBounds).not.toBeNull();
-    expect(desktopCuisineBounds).not.toBeNull();
+    expect(desktopInstructionsBounds).not.toBeNull();
+    expect(desktopTimeSectionBounds).not.toBeNull();
     expect(
       Math.abs(
         (desktopSaveBounds?.x ?? 0) +
@@ -2368,13 +2512,11 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
           ((desktopSaveRowBounds?.x ?? 0) + (desktopSaveRowBounds?.width ?? 0)),
       ),
     ).toBeLessThanOrEqual(1);
-    expect((desktopSaveBounds?.y ?? 0) + (desktopSaveBounds?.height ?? 0)).toBeCloseTo(
-      (desktopCuisineBounds?.y ?? 0) + (desktopCuisineBounds?.height ?? 0),
-      1,
+    expect(desktopSaveBounds?.y).toBeGreaterThanOrEqual(
+      (desktopInstructionsBounds?.y ?? 0) + (desktopInstructionsBounds?.height ?? 0),
     );
-    expect((desktopSaveRowBounds?.x ?? 0) + (desktopSaveRowBounds?.width ?? 0)).toBeCloseTo(
-      (desktopClassificationBounds?.x ?? 0) + (desktopClassificationBounds?.width ?? 0),
-      1,
+    expect((desktopSaveBounds?.y ?? 0) + (desktopSaveBounds?.height ?? 0)).toBeLessThanOrEqual(
+      desktopTimeSectionBounds?.y ?? 0,
     );
   } finally {
     await deleteTestUser(request, user);
@@ -3893,9 +4035,14 @@ test('recipe detail print matches the active presentation @e2e', async ({
   const ingredientRowId = randomUUID();
   const saltRowId = randomUUID();
   const stepId = randomUUID();
+  const ingredientSetId = randomUUID();
 
   try {
-    const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+    const [prepTimeTypeId, cookTimeTypeId] = await Promise.all([
+      getPicklistId(request, config, user, 'time_type', 'Prep'),
+      getPicklistId(request, config, user, 'time_type', 'Cook'),
+    ]);
+    const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`, {
       headers: {
         apikey: config.anonKey,
         Authorization: `Bearer ${user.accessToken}`,
@@ -3911,16 +4058,6 @@ test('recipe detail print matches the active presentation @e2e', async ({
         p_occasion_details: null,
         p_reason: null,
         p_serves: 4,
-        p_prep_time_minutes: 15,
-        p_mixing_time_minutes: null,
-        p_marinate_time_minutes: null,
-        p_chill_time_minutes: null,
-        p_freeze_time_minutes: null,
-        p_cook_time_minutes: 30,
-        p_bake_time_minutes: null,
-        p_cooling_time_minutes: null,
-        p_rest_time_minutes: null,
-        p_total_time_minutes: 45,
         p_notes_markdown: 'Serve warm.',
         p_meal_type_ids: [],
         p_cuisine_ids: [],
@@ -3928,6 +4065,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
         p_ingredient_rows: [
           {
             recipe_ingredient_id: ingredientRowId,
+            ingredient_set_id: ingredientSetId,
             ingredient_id: null,
             ingredient_name: 'Flour',
             is_main: true,
@@ -3952,6 +4090,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
           },
           {
             recipe_ingredient_id: saltRowId,
+            ingredient_set_id: ingredientSetId,
             ingredient_id: null,
             ingredient_name: 'Salt',
             is_main: false,
@@ -3975,6 +4114,20 @@ test('recipe detail print matches the active presentation @e2e', async ({
             content_markdown: `Mix [[ingredient:${ingredientRowId}|flour]].`,
             plain_text: 'Mix flour.',
           },
+        ],
+        p_publication_id: null,
+        p_publication_page: null,
+        p_recipe_url: null,
+        p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+        p_tag_ids: [],
+        p_ingredient_sets: [{ id: ingredientSetId, label: 'Main', position: 0 }],
+        p_score: null,
+        p_makes_quantity: null,
+        p_makes_thing: null,
+        p_nutrition_overrides: {},
+        p_time_entries: [
+          { time_type_id: prepTimeTypeId, minutes: 15, position: 0 },
+          { time_type_id: cookTimeTypeId, minutes: 30, position: 1 },
         ],
       },
     });
@@ -4641,9 +4794,11 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
   const config = await getLocalSupabaseConfig();
   const saltRowId = randomUUID();
   const chickenRowId = randomUUID();
+  const ingredientSetId = randomUUID();
 
   try {
-    const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+    const prepTimeTypeId = await getPicklistId(request, config, user, 'time_type', 'Prep');
+    const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`, {
       headers: {
         apikey: config.anonKey,
         Authorization: `Bearer ${user.accessToken}`,
@@ -4659,16 +4814,6 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
         p_occasion_details: null,
         p_reason: null,
         p_serves: 2,
-        p_prep_time_minutes: 65,
-        p_mixing_time_minutes: null,
-        p_marinate_time_minutes: null,
-        p_chill_time_minutes: null,
-        p_freeze_time_minutes: null,
-        p_cook_time_minutes: null,
-        p_bake_time_minutes: null,
-        p_cooling_time_minutes: null,
-        p_rest_time_minutes: null,
-        p_total_time_minutes: 70,
         p_notes_markdown: '',
         p_meal_type_ids: [],
         p_cuisine_ids: [],
@@ -4676,6 +4821,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
         p_ingredient_rows: [
           {
             recipe_ingredient_id: saltRowId,
+            ingredient_set_id: ingredientSetId,
             ingredient_id: null,
             ingredient_name: 'Salt',
             is_main: false,
@@ -4693,6 +4839,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
           },
           {
             recipe_ingredient_id: chickenRowId,
+            ingredient_set_id: ingredientSetId,
             ingredient_id: null,
             ingredient_name: 'Chicken thighs',
             is_main: false,
@@ -4710,6 +4857,17 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
           },
         ],
         p_instruction_steps: [],
+        p_publication_id: null,
+        p_publication_page: null,
+        p_recipe_url: null,
+        p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+        p_tag_ids: [],
+        p_ingredient_sets: [{ id: ingredientSetId, label: 'Main', position: 0 }],
+        p_score: null,
+        p_makes_quantity: null,
+        p_makes_thing: null,
+        p_nutrition_overrides: {},
+        p_time_entries: [{ time_type_id: prepTimeTypeId, minutes: 65, position: 0 }],
       },
     });
     expect(saved.ok(), await saved.text()).toBeTruthy();
@@ -4732,7 +4890,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     await expect(page.getByRole('heading', { name: 'Reader polish acceptance' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Time Breakdown' })).toBeHidden();
     await expect(page.locator('.recipe-time-list dt')).toHaveText(['Total time', 'Prep']);
-    await expect(page.locator('.recipe-total-time dd')).toHaveText('1 hr 10 min');
+    await expect(page.locator('.recipe-total-time dd')).toHaveText('1 hr 5 min');
     await expect(page.locator('.recipe-detail-times')).toContainText('1 hr 5 min');
     expect(
       await page
@@ -4957,9 +5115,9 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     await expect(page.locator('.recipe-ingredient-table')).toContainText('pinch');
     await expect(page.locator('.recipe-time-list dt')).toHaveText(['Total time', 'Prep']);
     await expect(page.locator('.recipe-detail-times')).toContainText('1 hr 5 min');
-    await expect(page.locator('.recipe-total-time dd')).toHaveText('1 hr 10 min');
+    await expect(page.locator('.recipe-total-time dd')).toHaveText('1 hr 5 min');
     await expect(page.locator('.recipe-metadata:not(.recipe-time-list)')).not.toContainText(
-      '1 hr 10 min',
+      '1 hr 5 min',
     );
 
     const storedMeasurement = await request.get(

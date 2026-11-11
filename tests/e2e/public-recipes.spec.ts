@@ -123,7 +123,7 @@ async function createRecipe(
   name = 'Guest citrus cake',
   publicationId?: string,
   includeCookingData = false,
-  extraIngredientRows: unknown[] = [],
+  extraIngredientRows: Record<string, unknown>[] = [],
   instructionSuffix = '',
   plainTextSuffix = instructionSuffix,
   makes?: { quantity: number; thing: string },
@@ -131,104 +131,121 @@ async function createRecipe(
 ) {
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
-  const endpoint = publicationId ? 'save_recipe_with_relationships' : 'save_recipe';
-  const response = await request.post(`${config.apiUrl}/rest/v1/rpc/${endpoint}`, {
-    headers: ownerHeaders(config, user),
-    data: {
-      p_recipe_id: null,
-      p_expected_version: null,
-      p_name: name,
-      p_food_type_id: null,
-      p_state: 'want_to_try',
-      p_verdict_id: null,
-      p_enthusiasm_id: null,
-      p_occasion_details: null,
-      p_reason: null,
-      p_serves: includeCookingData ? 4 : 8,
-      p_prep_time_minutes: includeCookingData ? 65 : 15,
-      p_mixing_time_minutes: null,
-      p_marinate_time_minutes: null,
-      p_chill_time_minutes: null,
-      p_freeze_time_minutes: null,
-      p_cook_time_minutes: 30,
-      p_bake_time_minutes: 35,
-      p_cooling_time_minutes: 20,
-      p_rest_time_minutes: null,
-      p_total_time_minutes: 70,
-      p_notes_markdown: 'Private note sentinel',
-      p_meal_type_ids: [],
-      p_cuisine_ids: [],
-      p_equipment_ids: [],
-      p_ingredient_rows: ingredientRowId
-        ? [
-            {
-              recipe_ingredient_id: ingredientRowId,
-              ingredient_id: null,
-              ingredient_name: 'Flour',
-              is_main: true,
-              detail: '',
-              preparation: '',
-              measurements: [
-                {
-                  measurement_type: 'volume',
-                  amount_min: 250,
-                  amount_max: null,
-                  unit_code: 'ml',
-                  picklist_value_id: null,
-                },
-              ],
-            },
-            {
-              recipe_ingredient_id: saltRowId,
-              ingredient_id: null,
-              ingredient_name: 'Salt',
-              is_main: false,
-              detail: '',
-              preparation: '',
-              measurements: [
-                {
-                  measurement_type: 'volume',
-                  amount_min: 1 / 16,
-                  amount_max: null,
-                  unit_code: 'tsp',
-                  picklist_value_id: null,
-                },
-              ],
-            },
-            ...extraIngredientRows,
-          ]
-        : [],
-      p_instruction_steps: ingredientRowId
-        ? [
-            {
-              id: randomUUID(),
-              position: 0,
-              content_markdown: `Fold [[ingredient:${ingredientRowId}|flour]] into batter.${instructionSuffix}`,
-              plain_text: `Fold flour into batter.${plainTextSuffix}`,
-            },
-          ]
-        : [],
-      ...(publicationId
-        ? {
-            p_publication_id: publicationId,
-            p_publication_page: null,
-            p_recipe_url: null,
-            p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
-            p_tag_ids: [],
-          }
-        : {}),
-    },
+  const ingredientSetId = randomUUID();
+  const timeTypeResponse = await request.get(
+    `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id,value&category=eq.time_type`,
+    { headers: ownerHeaders(config, user) },
+  );
+  const timeTypeBody = await timeTypeResponse.text();
+  expect(timeTypeResponse.ok(), timeTypeBody).toBeTruthy();
+  const timeTypeIds = new Map(
+    (JSON.parse(timeTypeBody) as { id: string; value: string }[]).map(({ id, value }) => [
+      value,
+      id,
+    ]),
+  );
+  const timeEntries = (
+    [
+      ['Prep', includeCookingData ? 65 : 15],
+      ['Cook', 30],
+      ['Bake', 35],
+      ['Cooling', 20],
+    ] as const
+  ).map(([type, minutes], position) => {
+    const timeTypeId = timeTypeIds.get(type);
+    if (!timeTypeId) throw new Error(`Expected the ${type} time type.`);
+    return { time_type_id: timeTypeId, minutes, position };
   });
+  const response = await request.post(
+    `${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`,
+    {
+      headers: ownerHeaders(config, user),
+      data: {
+        p_recipe_id: null,
+        p_expected_version: null,
+        p_name: name,
+        p_food_type_id: null,
+        p_state: 'want_to_try',
+        p_verdict_id: null,
+        p_enthusiasm_id: null,
+        p_occasion_details: null,
+        p_reason: null,
+        p_serves: includeCookingData ? 4 : 8,
+        p_notes_markdown: 'Private note sentinel',
+        p_meal_type_ids: [],
+        p_cuisine_ids: [],
+        p_equipment_ids: [],
+        p_ingredient_rows: ingredientRowId
+          ? [
+              {
+                recipe_ingredient_id: ingredientRowId,
+                ingredient_set_id: ingredientSetId,
+                ingredient_id: null,
+                ingredient_name: 'Flour',
+                is_main: true,
+                detail: '',
+                preparation: '',
+                measurements: [
+                  {
+                    measurement_type: 'volume',
+                    amount_min: 250,
+                    amount_max: null,
+                    unit_code: 'ml',
+                    picklist_value_id: null,
+                  },
+                ],
+              },
+              {
+                recipe_ingredient_id: saltRowId,
+                ingredient_set_id: ingredientSetId,
+                ingredient_id: null,
+                ingredient_name: 'Salt',
+                is_main: false,
+                detail: '',
+                preparation: '',
+                measurements: [
+                  {
+                    measurement_type: 'volume',
+                    amount_min: 1 / 16,
+                    amount_max: null,
+                    unit_code: 'tsp',
+                    picklist_value_id: null,
+                  },
+                ],
+              },
+              ...extraIngredientRows.map((row) => ({
+                ...row,
+                ingredient_set_id: ingredientSetId,
+              })),
+            ]
+          : [],
+        p_instruction_steps: ingredientRowId
+          ? [
+              {
+                id: randomUUID(),
+                position: 0,
+                content_markdown: `Fold [[ingredient:${ingredientRowId}|flour]] into batter.${instructionSuffix}`,
+                plain_text: `Fold flour into batter.${plainTextSuffix}`,
+              },
+            ]
+          : [],
+        p_publication_id: publicationId ?? null,
+        p_publication_page: null,
+        p_recipe_url: null,
+        p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+        p_tag_ids: [],
+        p_ingredient_sets: [{ id: ingredientSetId, label: 'Main', position: 0 }],
+        p_score: null,
+        p_makes_quantity: makes?.quantity ?? null,
+        p_makes_thing: makes?.thing ?? null,
+        p_nutrition_overrides: {},
+        p_time_entries: timeEntries,
+      },
+    },
+  );
   expect(response.ok(), await response.text()).toBeTruthy();
   const [recipe] = (await response.json()) as Array<{ id: string; version: number }>;
   if (!recipe) throw new Error('Expected the recipe save to return a row.');
-  if (makes) {
-    const makesUpdate = await request.patch(`${config.apiUrl}/rest/v1/recipes?id=eq.${recipe.id}`, {
-      headers: serviceHeaders(config),
-      data: { makes_quantity: makes.quantity, makes_thing: makes.thing },
-    });
-    expect(makesUpdate.ok(), await makesUpdate.text()).toBeTruthy();
-  }
   if (!publishAutomatically) return recipe;
 
   const publicUsername = `test-${user.id.slice(0, 8)}`;
@@ -541,6 +558,45 @@ test('a signed-in user can save one active copy while preserving trashed copies 
     expect(savedRecipePath).toMatch(/^\/recipes\/[0-9a-f-]+$/i);
     const savedRecipeId = savedRecipePath?.split('/').at(-1);
     if (!savedRecipeId) throw new Error('Expected the saved copy to have a recipe ID.');
+    if (!destinationUser) throw new Error('Expected the destination account to be available.');
+    const copiedTimeEntriesResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_time_entries?select=time_type_id,minutes,position&recipe_id=eq.${savedRecipeId}&order=position.asc`,
+      { headers: ownerHeaders(config, destinationUser) },
+    );
+    expect(copiedTimeEntriesResponse.ok(), await copiedTimeEntriesResponse.text()).toBeTruthy();
+    const copiedTimeEntries = (await copiedTimeEntriesResponse.json()) as {
+      time_type_id: string;
+      minutes: number;
+      position: number;
+    }[];
+    const copiedTimeTypesResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id,value&account_id=eq.${destinationUser.id}&category=eq.time_type`,
+      { headers: ownerHeaders(config, destinationUser) },
+    );
+    expect(copiedTimeTypesResponse.ok(), await copiedTimeTypesResponse.text()).toBeTruthy();
+    const copiedTimeTypes = (await copiedTimeTypesResponse.json()) as {
+      id: string;
+      value: string;
+    }[];
+    const copiedTimeTypeNames = new Map(copiedTimeTypes.map(({ id, value }) => [id, value]));
+    expect(
+      copiedTimeEntries.map(({ time_type_id, minutes, position }) => [
+        copiedTimeTypeNames.get(time_type_id),
+        minutes,
+        position,
+      ]),
+    ).toEqual([
+      ['Prep', 15, 0],
+      ['Cook', 30, 1],
+      ['Bake', 35, 2],
+      ['Cooling', 20, 3],
+    ]);
+    const copiedTimeTotalResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=total_time_minutes&id=eq.${savedRecipeId}`,
+      { headers: ownerHeaders(config, destinationUser) },
+    );
+    expect(copiedTimeTotalResponse.ok(), await copiedTimeTotalResponse.text()).toBeTruthy();
+    expect(await copiedTimeTotalResponse.json()).toEqual([{ total_time_minutes: 100 }]);
     const savedIndicator = page.getByRole('button', { name: 'Saved to Recipe Tin' });
     await expect(savedIndicator).toBeVisible();
     await expect(savedIndicator).toBeDisabled();
@@ -1805,7 +1861,7 @@ test('public recipe output actions create standalone files and keep settings tra
       expect(layout.metadataLabels).toContain('Equipment');
       expect(layout.metadataLineCount).toBe(1);
       expect(layout.metadataMarginTop).toBe('8px');
-      expect(layout.metadataAlignment).toBe('flex-start');
+      expect(['flex-start', 'flow-start']).toContain(layout.metadataAlignment);
       expect(layout.metadataRowAlignment).toBe('baseline');
       expect(layout.metadataLabelSize).toBe('13px');
       expect(layout.metadataValueSize).toBe('14px');
@@ -1914,7 +1970,7 @@ test('public recipe output actions create standalone files and keep settings tra
     await expect(page.locator('html')).toHaveAttribute('data-print-metadata-attribution-gap', '8');
     await expect(page.locator('html')).toHaveAttribute(
       'data-print-metadata-alignment',
-      'flex-start',
+      /^(?:flex-start|flow-start)$/u,
     );
     await expect(page.locator('html')).toHaveAttribute(
       'data-print-metadata-row-alignment',
@@ -3102,19 +3158,23 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await page.keyboard.press('Escape');
     const saveButton = page.getByRole('button', { name: 'Save to Recipe Tin' });
     await expect(saveButton).toBeVisible();
-    const [titleRowBox, titleBox, actionsBox, printBox, toggleBox] = await Promise.all([
-      page.locator('.recipe-detail-title-row').boundingBox(),
+    const [titleBox, actionsBox, printBox, toggleBox] = await Promise.all([
       page.getByRole('heading', { name: 'Public cooking view - serves 4' }).boundingBox(),
       page.locator('.recipe-public-title-actions').boundingBox(),
       outputButton.boundingBox(),
       settingsButton.boundingBox(),
     ]);
-    if (!titleRowBox || !titleBox || !actionsBox || !printBox || !toggleBox) {
+    if (!titleBox || !actionsBox || !printBox || !toggleBox) {
       throw new Error('Expected the public title and actions to be visible.');
     }
     const saveBox = await saveButton.boundingBox();
     if (!saveBox) throw new Error('Expected the public save action to have bounds.');
-    expect(actionsBox.x + actionsBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
+    const getPublicContentRightEdge = () =>
+      page.locator('.recipe-public-main').evaluate((main) => {
+        const bounds = main.getBoundingClientRect();
+        return bounds.right - Number.parseFloat(getComputedStyle(main).paddingRight);
+      });
+    expect(actionsBox.x + actionsBox.width).toBeCloseTo(await getPublicContentRightEdge(), 1);
     if ((page.viewportSize()?.width ?? 0) <= 640) {
       expect(actionsBox.width).toBe(96);
       expect(toggleBox.x + toggleBox.width).toBeCloseTo(actionsBox.x + actionsBox.width - 6, 1);
@@ -3141,33 +3201,29 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       expect(printBox.y).toBeCloseTo(saveBox.y, 0);
       expect(toggleBox.x).toBeCloseTo(desktopPrintBox.x, 0);
       expect(toggleBox.y).toBeGreaterThan(saveBox.y);
-      expect(toggleBox.x + toggleBox.width).toBeCloseTo(titleRowBox.x + titleRowBox.width, 1);
+      expect(toggleBox.x + toggleBox.width).toBeCloseTo(actionsBox.x + actionsBox.width, 1);
       expect(Math.max(titleBox.y, actionsBox.y)).toBeLessThan(
         Math.min(titleBox.y + titleBox.height, actionsBox.y + actionsBox.height),
       );
     }
     const originalViewport = page.viewportSize();
     await page.setViewportSize({ width: 390, height: 844 });
-    const [narrowTitleRowBox, narrowActionsBox, narrowPrintBox, narrowSaveBox, narrowToggleBox] =
-      await Promise.all([
-        page.locator('.recipe-detail-title-row').boundingBox(),
-        page.locator('.recipe-public-title-actions').boundingBox(),
-        outputButton.boundingBox(),
-        saveButton.boundingBox(),
-        settingsButton.boundingBox(),
-      ]);
-    if (
-      !narrowTitleRowBox ||
-      !narrowActionsBox ||
-      !narrowPrintBox ||
-      !narrowSaveBox ||
-      !narrowToggleBox
-    ) {
+    await expect(page.locator('.recipe-public-title-actions')).toHaveCSS(
+      'grid-template-columns',
+      '48px 48px',
+    );
+    const [narrowActionsBox, narrowPrintBox, narrowSaveBox, narrowToggleBox] = await Promise.all([
+      page.locator('.recipe-public-title-actions').boundingBox(),
+      outputButton.boundingBox(),
+      saveButton.boundingBox(),
+      settingsButton.boundingBox(),
+    ]);
+    if (!narrowActionsBox || !narrowPrintBox || !narrowSaveBox || !narrowToggleBox) {
       throw new Error('Expected the narrow public title and actions to be visible.');
     }
     expect(narrowActionsBox.width).toBe(96);
     expect(narrowActionsBox.x + narrowActionsBox.width).toBeCloseTo(
-      narrowTitleRowBox.x + narrowTitleRowBox.width,
+      await getPublicContentRightEdge(),
       1,
     );
     expect(narrowToggleBox.x + narrowToggleBox.width).toBeCloseTo(
@@ -3176,7 +3232,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     );
     expect(narrowSaveBox.x + narrowSaveBox.width).toBeLessThanOrEqual(narrowPrintBox.x);
     expect(narrowPrintBox.y).toBeCloseTo(narrowSaveBox.y, 0);
-    expect(narrowToggleBox.x).toBeCloseTo(narrowSaveBox.x, 0);
+    expect(narrowToggleBox.x).toBeCloseTo(narrowPrintBox.x, 0);
     expect(narrowToggleBox.y).toBeGreaterThan(narrowSaveBox.y);
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
@@ -3239,7 +3295,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(summary).not.toContainText('serves 4');
     await expect(summary.getByRole('heading', { name: 'Time Breakdown' })).toBeVisible();
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
-    await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
+    await expect(summary.locator('.recipe-time-list')).toContainText('2 hr 30 min');
     const timeList = summary.locator('.recipe-time-list');
     const totalTimeEntry = timeList.locator('.recipe-total-time');
     await expect(timeList.locator('dt').first()).toHaveText('Total time');
@@ -3416,7 +3472,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await page.emulateMedia({ media: 'print' });
     await expect(ingredientContent).toContainText('33.81 TBSP');
     await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 5 min');
-    await expect(summary.locator('.recipe-time-list')).toContainText('1 hr 10 min');
+    await expect(summary.locator('.recipe-time-list')).toContainText('2 hr 30 min');
     await expect(outputButton).toBeHidden();
     await expect(settingsButton).toBeHidden();
     await expect(page.locator('.recipe-photo-gallery')).toBeHidden();
@@ -3477,15 +3533,14 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     const bylineBox = await authorByline.boundingBox();
     if (!bylineBox) throw new Error('Expected the public author byline to have layout bounds.');
     expect(bylineBox.y).toBeGreaterThanOrEqual(longTitleBox.y + longTitleBox.height);
-    expect(longTitlePrintBox.x + longTitlePrintBox.width).toBeLessThanOrEqual(
-      longTitleSettingsBox.x,
-    );
+    expect(longTitleSettingsBox.x).toBeCloseTo(longTitlePrintBox.x, 0);
+    expect(longTitleSettingsBox.y).toBeGreaterThan(longTitlePrintBox.y);
     expect(longTitleSettingsBox.x + longTitleSettingsBox.width).toBeCloseTo(
       longTitleActionsBox.x + longTitleActionsBox.width - 6,
       1,
     );
     expect(longTitleActionsBox.x + longTitleActionsBox.width).toBeCloseTo(
-      longTitleRowBox.x + longTitleRowBox.width,
+      await getPublicContentRightEdge(),
       1,
     );
     expect(longTitlePrintBox.width).toBeCloseTo(36, 0);

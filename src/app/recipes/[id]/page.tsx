@@ -354,17 +354,18 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     ['Cuisine', assignedValues('cuisine', recipe.cuisine_ids).join(', ')],
   ].filter(([, value]) => Boolean(value));
   const times = [
-    ['Total time', recipe.total_time_minutes],
-    ['Prep', recipe.prep_time_minutes],
-    ['Mixing', recipe.mixing_time_minutes],
-    ['Marinate', recipe.marinate_time_minutes],
-    ['Chill', recipe.chill_time_minutes],
-    ['Freeze', recipe.freeze_time_minutes],
-    ['Cook', recipe.cook_time_minutes],
-    ['Bake', recipe.bake_time_minutes],
-    ['Cooling', recipe.cooling_time_minutes],
-    ['Rest', recipe.rest_time_minutes],
-  ].filter(([, value]) => value !== null);
+    ...(recipe.total_time_minutes > 0
+      ? [{ id: 'total-time', label: 'Total time', value: recipe.total_time_minutes, isTotal: true }]
+      : []),
+    ...recipe.time_entries
+      .filter((entry) => entry.minutes > 0)
+      .map((entry) => ({
+        id: entry.id,
+        label: entry.time_type,
+        value: entry.minutes,
+        isTotal: false,
+      })),
+  ];
   const unitSystems = { volume: volumeSystem, weight: weightSystem };
   const instructions = recipe.steps.length > 0 && (
     <section
@@ -537,13 +538,10 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               <div className="recipe-detail-times recipe-print-metadata-times">
                 <h3 className="recipe-detail-times-title">Time Breakdown</h3>
                 <dl className="recipe-metadata recipe-time-list">
-                  {times.map(([label, value]) => (
-                    <div
-                      className={label === 'Total time' ? 'recipe-total-time' : undefined}
-                      key={label}
-                    >
+                  {times.map(({ id, label, value, isTotal }) => (
+                    <div className={isTotal ? 'recipe-total-time' : undefined} key={id}>
                       <dt>{label}</dt>
-                      <dd>{formatRecipeDuration(value as number)}</dd>
+                      <dd>{formatRecipeDuration(value)}</dd>
                     </div>
                   ))}
                 </dl>

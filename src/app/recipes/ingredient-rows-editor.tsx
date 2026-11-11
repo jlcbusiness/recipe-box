@@ -491,34 +491,46 @@ function uniqueOptions(values: string[]): string[] {
     });
 }
 
-function SuggestionCellEditor({
+export function SuggestionCellEditor({
   label,
   value,
   options,
   initialCharacter,
   onCommit,
+  onSelectSuggestion,
   onEnterCommit,
   onCancel,
   onDraftChange,
   onTabCommit,
+  describedBy,
+  invalid = false,
   placement = 'above',
   focusOnMount = true,
   openOnFocus = true,
   fitContent = false,
+  syncValue = false,
+  resetOnCancel = false,
+  allowTabToSelectAdd = true,
 }: {
   label: string;
   value: string;
   options: string[];
   initialCharacter?: string;
   onCommit: (value: string) => void;
+  onSelectSuggestion?: (value: string) => void;
   onEnterCommit?: (value: string) => void;
   onCancel: () => void;
   onDraftChange?: (value: string) => void;
   onTabCommit?: () => void;
+  describedBy?: string;
+  invalid?: boolean;
   placement?: 'above' | 'below';
   focusOnMount?: boolean;
   openOnFocus?: boolean;
   fitContent?: boolean;
+  syncValue?: boolean;
+  resetOnCancel?: boolean;
+  allowTabToSelectAdd?: boolean;
 }) {
   const [draft, setDraft] = useState(initialCharacter ?? value);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -554,6 +566,12 @@ function SuggestionCellEditor({
       }
     }
   }, [focusOnMount, initialCharacter]);
+
+  useEffect(() => {
+    if (syncValue) {
+      setDraft(value);
+    }
+  }, [syncValue, value]);
 
   useLayoutEffect(() => {
     if (!isOpen) {
@@ -596,6 +614,10 @@ function SuggestionCellEditor({
     setHasTyped(false);
     setHasNavigated(false);
     onDraftChange?.(selected);
+    if (onSelectSuggestion) {
+      skipBlurCommit.current = true;
+      onSelectSuggestion(selected);
+    }
     return selected;
   }
 
@@ -640,19 +662,31 @@ function SuggestionCellEditor({
       suggestions.length > 0 &&
       (hasTyped || hasNavigated)
     ) {
-      const selected = choose(suggestions[activeIndex] ?? draft);
+      const activeSuggestion = suggestions[activeIndex] ?? draft;
+      if (!allowTabToSelectAdd && !hasNavigated && activeSuggestion.startsWith('Add "')) {
+        return;
+      }
+      const selected = choose(activeSuggestion);
       skipBlurCommit.current = true;
       if (onTabCommit) {
         event.preventDefault();
-        onCommit(selected);
+        if (!onSelectSuggestion) {
+          onCommit(selected);
+        }
         onTabCommit();
-      } else {
+      } else if (!onSelectSuggestion) {
         onCommit(selected);
       }
     } else if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       setIsOpen(false);
+      if (resetOnCancel) {
+        skipBlurCommit.current = true;
+        setDraft(value);
+        setHasTyped(false);
+        setHasNavigated(false);
+      }
       onCancel();
     }
   }
@@ -665,8 +699,10 @@ function SuggestionCellEditor({
         }
         aria-autocomplete="list"
         aria-controls={isOpen && suggestions.length ? listId : undefined}
+        aria-describedby={describedBy}
         aria-expanded={isOpen && suggestions.length > 0}
         aria-label={label}
+        aria-invalid={invalid || undefined}
         autoComplete="off"
         className={`ingredient-cell-input${fitContent ? ' is-fit-content' : ''}`}
         ref={inputRef}

@@ -35,16 +35,8 @@ const fieldLabels: Record<string, string> = {
   serves: 'Serves',
   makes_quantity: 'Makes quantity',
   makes_thing: 'Makes thing',
-  prep_time_minutes: 'Prep time',
-  mixing_time_minutes: 'Mixing time',
-  marinate_time_minutes: 'Marinating time',
-  chill_time_minutes: 'Chill time',
-  freeze_time_minutes: 'Freeze time',
-  cook_time_minutes: 'Cook time',
-  bake_time_minutes: 'Bake time',
-  cooling_time_minutes: 'Cooling time',
-  rest_time_minutes: 'Rest time',
   total_time_minutes: 'Total time',
+  time_entries: 'Time entries',
   notes_markdown: 'Notes',
   is_private: 'Sharing',
   ingredients: 'Ingredients',
@@ -174,6 +166,17 @@ function formatValue(key: string, value: unknown): string | null {
           : [],
     );
     return items.filter(Boolean).join(', ') || 'Not set';
+  }
+  if (key === 'time_entries' && Array.isArray(value)) {
+    return (
+      value
+        .flatMap((entry) => {
+          if (!isRecord(entry) || typeof entry.minutes !== 'number') return [];
+          const label = typeof entry.time_type === 'string' ? entry.time_type : 'Time';
+          return [`${label}: ${entry.minutes} min`];
+        })
+        .join('; ') || 'Not set'
+    );
   }
   if (Array.isArray(value)) {
     return value.filter(isSimpleValue).join(', ') || 'Not set';

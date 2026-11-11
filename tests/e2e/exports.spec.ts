@@ -603,6 +603,7 @@ test('Settings, publication detail, and recipe detail expose accessible export a
 
     await signIn(page, owner.email, owner.password);
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Account & data' }).click();
     const dataManagement = page.getByRole('region', { name: 'Data management' });
     await expect(dataManagement.getByText('No database export yet')).toBeVisible();
     await expect(
@@ -1059,6 +1060,7 @@ test('navigating away aborts an in-flight export request @e2e', async ({ page, r
   try {
     await signIn(page, owner.email, owner.password);
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Account & data' }).click();
     const exportButton = page.getByRole('button', { name: 'Export database' });
     await exportButton.click();
     await expect

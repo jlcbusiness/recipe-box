@@ -252,7 +252,7 @@ async function expectErrorCode(
 
 function runLocalSqlCommand(sql: string): string {
   try {
-    const args = ['db', 'query', '--local'];
+    const args = ['db', 'query'];
     if (process.env.SUPABASE_WORKDIR) {
       args.push('--workdir', process.env.SUPABASE_WORKDIR);
     }

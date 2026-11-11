@@ -15,16 +15,8 @@ export type PublicRecipeSource = {
   serves: number | null;
   makes_quantity: number | null;
   makes_thing: string | null;
-  prep_time_minutes: number | null;
-  mixing_time_minutes: number | null;
-  marinate_time_minutes: number | null;
-  chill_time_minutes: number | null;
-  freeze_time_minutes: number | null;
-  cook_time_minutes: number | null;
-  bake_time_minutes: number | null;
-  cooling_time_minutes: number | null;
-  rest_time_minutes: number | null;
-  total_time_minutes: number | null;
+  total_time_minutes: number;
+  time_entries: Array<{ time_type: string; minutes: number; position: number }>;
   publication_page: string | null;
   publication: { name: string; publication_type: PublicationType } | null;
   ingredient_sets: RecipeIngredientSet[];
@@ -47,18 +39,8 @@ export type PublicRecipePayload = {
   serves: number | null;
   makes_quantity: number | null;
   makes_thing: string | null;
-  timings: {
-    prep: number | null;
-    mixing: number | null;
-    marinate: number | null;
-    chill: number | null;
-    freeze: number | null;
-    cook: number | null;
-    bake: number | null;
-    cooling: number | null;
-    rest: number | null;
-    total: number | null;
-  };
+  total_time_minutes: number;
+  time_entries: Array<{ time_type: string; minutes: number; position: number }>;
   equipment: string[];
   ingredient_sets: RecipeIngredientSet[];
   ingredients: PublicRecipeIngredient[];
@@ -176,18 +158,12 @@ export function buildPublicRecipePayload(
     serves: recipe.serves,
     makes_quantity: recipe.makes_quantity,
     makes_thing: recipe.makes_thing,
-    timings: {
-      prep: recipe.prep_time_minutes,
-      mixing: recipe.mixing_time_minutes,
-      marinate: recipe.marinate_time_minutes,
-      chill: recipe.chill_time_minutes,
-      freeze: recipe.freeze_time_minutes,
-      cook: recipe.cook_time_minutes,
-      bake: recipe.bake_time_minutes,
-      cooling: recipe.cooling_time_minutes,
-      rest: recipe.rest_time_minutes,
-      total: recipe.total_time_minutes,
-    },
+    total_time_minutes: recipe.total_time_minutes,
+    time_entries: recipe.time_entries.map(({ time_type, minutes, position }) => ({
+      time_type,
+      minutes,
+      position,
+    })),
     equipment: [...equipment],
     ingredient_sets: ingredientSets,
     ingredients,

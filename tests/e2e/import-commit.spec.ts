@@ -78,6 +78,8 @@ test('database import commit is privileged, versioned, history-aware, and atomic
   const activeRecipeId = randomUUID();
   const createdAt = new Date().toISOString();
   const mediaAssetId = randomUUID();
+  const timeTypeId = randomUUID();
+  const timeEntryId = randomUUID();
   const records = {
     ...emptyRecords(),
     media_assets: [
@@ -112,6 +114,17 @@ test('database import commit is privileged, versioned, history-aware, and atomic
         created_at: createdAt,
       },
     ],
+    recipe_picklist_values: [
+      {
+        id: timeTypeId,
+        category: 'time_type',
+        value: 'Proofing',
+        display_value: 'Proofing',
+        sort_order: 0,
+        is_protected: false,
+        created_at: createdAt,
+      },
+    ],
     recipes: [
       {
         id: recipeId,
@@ -139,6 +152,15 @@ test('database import commit is privileged, versioned, history-aware, and atomic
         publication_id: publicationId,
         publication_page: null,
         recipe_url: null,
+      },
+    ],
+    recipe_time_entries: [
+      {
+        id: timeEntryId,
+        recipe_id: recipeId,
+        time_type_id: timeTypeId,
+        minutes: 25,
+        position: 0,
       },
     ],
     ingredients: [
@@ -220,6 +242,24 @@ test('database import commit is privileged, versioned, history-aware, and atomic
       await selectRows(
         request,
         config,
+        'recipe_time_entries',
+        `select=id,time_type_id,minutes,position&recipe_id=eq.${recipeId}`,
+        ownerHeaders(config, owner),
+      ),
+    ).toEqual([{ id: timeEntryId, time_type_id: timeTypeId, minutes: 25, position: 0 }]);
+    expect(
+      await selectRows(
+        request,
+        config,
+        'recipes',
+        `select=total_time_minutes&id=eq.${recipeId}`,
+        ownerHeaders(config, owner),
+      ),
+    ).toEqual([{ total_time_minutes: 25 }]);
+    expect(
+      await selectRows(
+        request,
+        config,
         'recipe_step_mentions',
         `select=recipe_ingredient_id&recipe_step_id=eq.${stepId}`,
         ownerHeaders(config, owner),
@@ -274,6 +314,7 @@ test('database import commit is privileged, versioned, history-aware, and atomic
     const replacementRecords = {
       ...records,
       ingredients: [],
+      recipe_picklist_values: [],
       recipe_ingredient_sets: [
         { ...records.recipe_ingredient_sets[0], label: 'Renamed imported section' },
       ],
@@ -299,6 +340,24 @@ test('database import commit is privileged, versioned, history-aware, and atomic
     expect(recipeRows).toEqual([
       { id: recipeId, name: 'Replaced import recipe', version: 2, is_private: true },
     ]);
+    expect(
+      await selectRows(
+        request,
+        config,
+        'recipe_time_entries',
+        `select=id,time_type_id,minutes,position&recipe_id=eq.${recipeId}`,
+        ownerHeaders(config, owner),
+      ),
+    ).toEqual([{ id: timeEntryId, time_type_id: timeTypeId, minutes: 25, position: 0 }]);
+    expect(
+      await selectRows(
+        request,
+        config,
+        'recipes',
+        `select=total_time_minutes&id=eq.${recipeId}`,
+        ownerHeaders(config, owner),
+      ),
+    ).toEqual([{ total_time_minutes: 25 }]);
     expect(
       await selectRows(
         request,

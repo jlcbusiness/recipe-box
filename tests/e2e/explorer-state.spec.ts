@@ -473,7 +473,7 @@ test('Publication recipe details center Rating and marker columns @e2e', async (
     expect(mobileMarkerGroupBounds).not.toBeNull();
     expect(mobileStarBounds).not.toBeNull();
     expect(mobileHeartBounds).not.toBeNull();
-    expect(mobileRatingCell).toHaveCSS('align-items', 'center');
+    await expect(mobileRatingCell).toHaveCSS('align-items', 'center');
     expect(toolbarContentBounds).not.toBeNull();
     expect(viewControlsBounds).not.toBeNull();
     expect(markerFiltersBounds).not.toBeNull();

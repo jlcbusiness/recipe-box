@@ -45,15 +45,6 @@ export type RecipeSearchFilterField =
   | 'hearted'
   | RecipeSearchColumnFilterField
   | 'serves'
-  | 'prep_time_minutes'
-  | 'mixing_time_minutes'
-  | 'marinate_time_minutes'
-  | 'chill_time_minutes'
-  | 'freeze_time_minutes'
-  | 'cook_time_minutes'
-  | 'bake_time_minutes'
-  | 'cooling_time_minutes'
-  | 'rest_time_minutes'
   | 'total_time_minutes'
   | 'created_at'
   | 'updated_at'
@@ -81,15 +72,6 @@ export const recipeSearchGenericColumnKeys = [
   'tags',
   'main_ingredients',
   ...STANDARD_NUTRIENT_KEYS,
-  'prep_time_minutes',
-  'mixing_time_minutes',
-  'marinate_time_minutes',
-  'chill_time_minutes',
-  'freeze_time_minutes',
-  'cook_time_minutes',
-  'bake_time_minutes',
-  'cooling_time_minutes',
-  'rest_time_minutes',
   'created_at',
   'updated_at',
   'pairs_with',
@@ -131,15 +113,6 @@ export type RecipeSearchSortKey =
   | 'cuisine'
   | 'tags'
   | 'main_ingredients'
-  | 'prep_time_minutes'
-  | 'mixing_time_minutes'
-  | 'marinate_time_minutes'
-  | 'chill_time_minutes'
-  | 'freeze_time_minutes'
-  | 'cook_time_minutes'
-  | 'bake_time_minutes'
-  | 'cooling_time_minutes'
-  | 'rest_time_minutes'
   | 'total_time_minutes'
   | 'created_at'
   | 'updated_at'

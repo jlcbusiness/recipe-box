@@ -293,10 +293,22 @@ describe('database import planning', () => {
     const sourceFoodTypeId = '10101010-1010-4010-8010-101010101010';
     const sourceVerdictId = '20202020-2020-4020-8020-202020202020';
     const sourceEnthusiasmId = '30303030-3030-4030-8030-303030303030';
+    const sourceTimeTypeId = '40404040-4040-4040-8040-404040404040';
+    const sourceTimeEntryId = '50505050-5050-4050-8050-505050505050';
     data.records.recipe_picklist_values = [
       { id: sourceFoodTypeId, category: 'food_type', value: 'Casserole' },
       { id: sourceVerdictId, category: 'verdict', value: 'Favorite' },
       { id: sourceEnthusiasmId, category: 'enthusiasm', value: 'Absolutely' },
+      { id: sourceTimeTypeId, category: 'time_type', value: 'Ferment' },
+    ];
+    data.records.recipe_time_entries = [
+      {
+        id: sourceTimeEntryId,
+        recipe_id: sourceRecipeId,
+        time_type_id: sourceTimeTypeId,
+        minutes: 25,
+        position: 0,
+      },
     ];
     Object.assign(data.records.recipes[0], {
       food_type_id: sourceFoodTypeId,
@@ -322,7 +334,15 @@ describe('database import planning', () => {
       recipe.food_type_id,
       recipe.verdict_id,
       recipe.enthusiasm_id,
+      plan.idMappings.recipe_picklist_values.get(sourceTimeTypeId),
     ]);
+    expect(plan.records.recipe_time_entries[0]).toMatchObject({
+      id: plan.idMappings.recipe_time_entries.get(sourceTimeEntryId),
+      recipe_id: destinationRecipeId,
+      time_type_id: plan.idMappings.recipe_picklist_values.get(sourceTimeTypeId),
+      minutes: 25,
+      position: 0,
+    });
   });
 
   it('maps media assets to fresh destination IDs while keeping parent links', () => {

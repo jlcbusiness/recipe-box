@@ -87,16 +87,7 @@ type PublicRecipeRow = {
   serves: number | null;
   makes_quantity: number | null;
   makes_thing: string | null;
-  prep_time_minutes: number | null;
-  mixing_time_minutes: number | null;
-  marinate_time_minutes: number | null;
-  chill_time_minutes: number | null;
-  freeze_time_minutes: number | null;
-  cook_time_minutes: number | null;
-  bake_time_minutes: number | null;
-  cooling_time_minutes: number | null;
-  rest_time_minutes: number | null;
-  total_time_minutes: number | null;
+  total_time_minutes: number;
   nutrition_overrides: NutrientValues;
 };
 
@@ -203,7 +194,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
   const { data: row, error } = await supabase
     .from('recipes')
     .select(
-      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, nutrition_overrides',
+      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, makes_quantity, makes_thing, total_time_minutes, nutrition_overrides',
     )
     .eq('public_id', publicId)
     .maybeSingle();
@@ -242,6 +233,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
     ingredientResult,
     pairingResult,
     referenceResult,
+    timeEntryResult,
   ] = await Promise.all([
     recipeRow.publication_id
       ? supabase
@@ -289,6 +281,12 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
       .eq('account_id', recipeRow.account_id)
       .eq('recipe_id', recipeRow.id)
       .order('position'),
+    supabase
+      .from('recipe_time_entries')
+      .select('time_type_id, minutes, position')
+      .eq('account_id', recipeRow.account_id)
+      .eq('recipe_id', recipeRow.id)
+      .order('position'),
   ]);
   const publicDataResults: Array<[string, { error: { code?: string } | null }]> = [
     ['publication', publicationResult],
@@ -298,6 +296,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
     ['recipe_ingredients', ingredientResult],
     ['recipe_pairings', pairingResult],
     ['recipe_references', referenceResult],
+    ['recipe_time_entries', timeEntryResult],
   ];
   for (const [operation, result] of publicDataResults) {
     ensureNoError(result.error, operation);
@@ -315,6 +314,26 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
         .in('id', equipmentIds)
     : { data: [], error: null };
   ensureNoError(equipmentError, 'equipment_values');
+  const timeTypeIds = [...new Set((timeEntryResult.data ?? []).map((entry) => entry.time_type_id))];
+  const { data: timeTypeRows, error: timeTypeError } = timeTypeIds.length
+    ? await supabase
+        .from('recipe_picklist_values')
+        .select('id, display_value')
+        .eq('account_id', recipeRow.account_id)
+        .eq('category', 'time_type')
+        .in('id', timeTypeIds)
+    : { data: [], error: null };
+  ensureNoError(timeTypeError, 'time_type_values');
+  const timeTypeLabels = new Map(
+    (timeTypeRows ?? []).map((option) => [option.id, option.display_value]),
+  );
+  const timeEntries = (timeEntryResult.data ?? []).map((entry) => {
+    const timeType = timeTypeLabels.get(entry.time_type_id);
+    if (!timeType) {
+      throw new PublicRecipeDataError('time_type_values');
+    }
+    return { time_type: timeType, minutes: entry.minutes, position: entry.position };
+  });
 
   const ingredientRows = (ingredientResult.data ?? []) as IngredientRow[];
   const ingredientIds = [...new Set(ingredientRows.map((ingredient) => ingredient.ingredient_id))];
@@ -486,6 +505,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
   const source: PublicRecipeSource = {
     ...recipeRow,
     publication: publicationResult.data,
+    time_entries: timeEntries,
     ingredient_sets: (ingredientSetResult.data ?? []) as RecipeIngredientSet[],
     ingredients,
     nutrition_per_serving: nutritionPerServing,

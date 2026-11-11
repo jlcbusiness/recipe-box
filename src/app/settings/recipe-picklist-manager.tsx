@@ -26,6 +26,7 @@ const categories: { id: PicklistCategory; label: string }[] = [
   { id: 'enthusiasm', label: 'Enthusiasm' },
   { id: 'informal_unit', label: 'Informal Unit' },
   { id: 'unmeasured_phrase', label: 'Unmeasured Phrase' },
+  { id: 'time_type', label: 'Time Type' },
 ];
 
 type ManagedValue = {
@@ -116,8 +117,9 @@ export function RecipePicklistManager({
     ? (referenceCounts[selectedValue.id] ?? { recipes: 0, measurements: 0 })
     : { recipes: 0, measurements: 0 };
   const requiresReplacement =
-    (category === 'informal_unit' || category === 'unmeasured_phrase') &&
-    selectedReferences.measurements > 0;
+    (category === 'time_type' && selectedReferences.recipes > 0) ||
+    ((category === 'informal_unit' || category === 'unmeasured_phrase') &&
+      selectedReferences.measurements > 0);
   const preview = reorderDrag.preview;
   const sourceIndex = preview ? rows.findIndex((item) => item.id === preview.sourceId) : -1;
   const targetIndex = preview ? rows.findIndex((item) => item.id === preview.targetId) : -1;
@@ -831,7 +833,9 @@ export function RecipePicklistManager({
               {selectedReferences.recipes === 0
                 ? 'This value is not used by any recipes and can be deleted without a replacement.'
                 : requiresReplacement
-                  ? 'A replacement is required to keep these measurements valid.'
+                  ? category === 'time_type'
+                    ? 'A replacement is required to keep these time entries valid.'
+                    : 'A replacement is required to keep these measurements valid.'
                   : 'Choose a replacement to preserve these recipe references, or clear the optional references.'}
             </p>
             {selectedReferences.recipes > 0 && (

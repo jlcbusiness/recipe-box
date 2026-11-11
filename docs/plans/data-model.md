@@ -54,7 +54,8 @@ event. Updates and events are excluded from account reset and database bundles.
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, timings, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
+| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, derived total time, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
+| Recipe time entry | An ordered recipe-owned duration in whole minutes linked to one account-managed Time Type. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
@@ -95,6 +96,10 @@ columns.
 
 ## Relationship Rules
 
+- A recipe time entry belongs to exactly one recipe and one Time Type in the
+  same account. Its order is persistent; a recipe's Total Time is derived from
+  the sum of its entries, not independently editable. Recipe save, time-entry
+  replacement, total derivation, and history capture are atomic.
 - Every recipe has one primary publication. Each account has one permanent,
   system-managed Recipe Tin collection publication for recipes without an
   external publication source; Tin recipes have no publication location.
@@ -231,9 +236,10 @@ columns.
 Volume and weight units are fixed recognized definitions. Count has no unit.
 Things units and Feel phrases are account-managed configuration. Their storage
 categories remain `informal_unit` and `unmeasured_phrase`.
-Ingredients, food types, meal types, cuisines, equipment, verdicts, enthusiasm
-options, tags, ingredient nutrition profiles, and ingredient measure
-equivalents are account-managed.
+Ingredients, food types, meal types, cuisines, equipment, Time Types, verdicts,
+enthusiasm options, tags, ingredient nutrition profiles, and ingredient measure
+equivalents are account-managed. Time Types use the existing picklist revision,
+history, rename, merge, and delete lifecycle.
 
 Trusted density belongs to the canonical ingredient, not a recipe row. The first
 release permits one trusted density per ingredient.

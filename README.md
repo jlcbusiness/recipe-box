@@ -447,7 +447,7 @@ that is not represented in the synthetic fixture before resetting.
 
 Local resets are allowed whenever their value justifies the time to reset and
 reload. `npm run dev:local` reapplies the versioned migrations and SQL seed
-script; alternatively, run `supabase db reset --local` against the running
+script; alternatively, run `supabase db reset` against the running
 local stack. Both remove local database state and Auth users. Once the stack is
 ready, `npm run seed:synthetic -- --local` recreates the synthetic test
 accounts and fixture data. The fixture is a repeatable test baseline, not a

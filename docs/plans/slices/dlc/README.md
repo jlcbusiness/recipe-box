@@ -106,6 +106,13 @@ while retaining the existing single-image viewer without gallery navigation.
   sections into Preferences, Recipe data, and Account & data tabs without
   changing the settings workflows themselves.
 
+### Phase 9: Recipe time authoring
+
+- **DLC 33 (implemented in app version 1.7.0):**
+  [Configurable recipe times](dlc-33-configurable-recipe-times.md) replaces
+  fixed time fields with configurable time-type entries, expression input, and
+  an automatically derived total.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for
@@ -132,6 +139,10 @@ while retaining the existing single-image viewer without gallery navigation.
 - DLC 31 depends on DLC 30 so viewers are told that publishing permits copies
   before a Save action exists. Copies remain private and retain protected source
   attribution.
+- DLC 33 reuses the existing recipe-picklist manager and recipe save path. Its
+  approved migration maps total-only legacy recipes to Cook, derives totals
+  from component entries when present, rounds expression results half-up, and
+  retains only Total Time in Find Recipes.
 
 ## Existing deferrals not assigned a DLC brief
 

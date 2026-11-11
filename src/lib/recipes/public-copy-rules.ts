@@ -70,16 +70,7 @@ export type PublicRecipeCopyPayload = {
     p_occasion_details: null;
     p_reason: null;
     p_serves: number | null;
-    p_prep_time_minutes: number | null;
-    p_mixing_time_minutes: number | null;
-    p_marinate_time_minutes: number | null;
-    p_chill_time_minutes: number | null;
-    p_freeze_time_minutes: number | null;
-    p_cook_time_minutes: number | null;
-    p_bake_time_minutes: number | null;
-    p_cooling_time_minutes: number | null;
-    p_rest_time_minutes: number | null;
-    p_total_time_minutes: number | null;
+    p_time_entries: Array<{ time_type: string; minutes: number; position: number }>;
     p_notes_markdown: string;
     p_meal_type_ids: string[];
     p_cuisine_ids: string[];
@@ -241,16 +232,7 @@ export function buildPublicRecipeCopyPayload(
       p_occasion_details: null,
       p_reason: null,
       p_serves: source.recipe.serves,
-      p_prep_time_minutes: source.recipe.timings.prep,
-      p_mixing_time_minutes: source.recipe.timings.mixing,
-      p_marinate_time_minutes: source.recipe.timings.marinate,
-      p_chill_time_minutes: source.recipe.timings.chill,
-      p_freeze_time_minutes: source.recipe.timings.freeze,
-      p_cook_time_minutes: source.recipe.timings.cook,
-      p_bake_time_minutes: source.recipe.timings.bake,
-      p_cooling_time_minutes: source.recipe.timings.cooling,
-      p_rest_time_minutes: source.recipe.timings.rest,
-      p_total_time_minutes: source.recipe.timings.total,
+      p_time_entries: source.recipe.time_entries.map((entry) => ({ ...entry })),
       p_notes_markdown: '',
       p_meal_type_ids: [],
       p_cuisine_ids: [],

@@ -377,7 +377,7 @@ async function main() {
 
   startAttempted = true;
   runSupabase(['start', '--yes']);
-  runSupabase(['migration', 'up', '--local']);
+  runSupabase(['migration', 'up']);
 
   const { apiUrl, anonKey, serviceRoleKey } = getSupabaseKeys();
   const owner = await createOwner(apiUrl, anonKey);
@@ -478,7 +478,7 @@ async function main() {
       join(supabaseDirectory, 'migrations', migration),
     );
   }
-  runSupabase(['migration', 'up', '--local']);
+  runSupabase(['migration', 'up']);
   const newOwner = await createOwner(apiUrl, anonKey);
 
   await verifyMigration(apiUrl, anonKey, owner, otherOwner, newOwner, {

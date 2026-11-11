@@ -122,14 +122,25 @@ and full-width metadata groups.
   Tried recipes show Verdict and optional Rating together. The following row
   holds Food Type, Meal Type, and Cuisine. Equipment follows Makes on the State
   row.
-- **Time is deliberate:** Component minutes are small, spinner-free numeric
-  inputs. Total Time is separate and changes only through the adjacent sigma
-  action.
+- **Time is deliberate:** Time entries use compact minute-expression inputs and
+  the ingredient/preparation suggestion pattern for Time Type. Focus opens the
+  full managed list; typing narrows suggestions, and an explicit Add suggestion
+  creates a new type. Show one Minutes/Time Type header above the ordered rows,
+  not repeated visible labels on each row. Each row has a leading drag grip for
+  pointer/touch and Ctrl+Arrow keyboard reordering, plus a remove action. A
+  Remove actions sit beside their Time Type fields at every viewport.
+  Vertically center the minute and Time Type controls in each row.
+  A minute field is no wider than three digits plus padding; Time Type fields are
+  content-sized to the longest available type. The read-only Total label is
+  left-aligned, and its grouped integer value shares the minute fields' column
+  and width. The “Times (min)” heading supplies the unit, so the editor total
+  shows `0` when no rows exist. A full-width italic “add time” row appends
+  another entry.
 - **Group view times:** Put Total Time first in the private and public time
-  breakdowns. On mobile, give it a full-width row above component times. On
-  desktop, separate it from component times with a fixed vertical rule. Keep the
-  mobile subsection divider and 18px navy small-caps “Time Breakdown” title;
-  component labels remain muted.
+  breakdowns, followed by non-zero entries in saved order. On mobile, give it a
+  full-width row above the entries. On desktop, separate it from the entries
+  with a fixed vertical rule. Keep the mobile subsection divider and 18px navy
+  small-caps “Time Breakdown” title; entry labels remain muted.
 
 ### Picklist behavior
 
@@ -160,7 +171,7 @@ looks heavier by default.
 Recipe metadata inputs, single- and multi-picklist triggers, Serves, both Makes
 controls, Reason, and Occasion Details remain 36px high on desktop and mobile,
 matching Name and Publication. Multi-picklist options have a 30px minimum on desktop and 36px on
-mobile. Keep component-time inputs compact; larger hit areas belong to distinct
+mobile. Keep time-entry controls compact; larger hit areas belong to distinct
 actions, not these recipe-entry controls.
 
 The visible single-choice prompt for Enthusiasm is “What am I feeling?” while
@@ -191,17 +202,24 @@ and Makes controls are 36px high on desktop and mobile, matching the recipe
 picklist triggers. Keep the Makes quantity and thing inputs on one line at every
 viewport: size quantity for two digits and let the thing input fill the remaining
 width under the shared heading.
-Times are grouped under “Times (min)” and wrap naturally. Each numeric input is
-sized to five characters or its visible label, whichever needs more room, with
-8px gaps. Total occupies its own final row, with a square icon-only `Σ` button
-beside it and an accessible name and tooltip of “Calculate total time.” Place a
-second submit button at the right edge of this row: `Add Recipe` on new forms
-and `Save changes` on edit forms. On mobile, keep a 48px hit target around the visibly compact
-30px square, aligned with the Total Time input and without extra visible
-horizontal spacing beyond the neighboring field gap. Serves and time values use
-comma grouping for thousands; time inputs accept valid grouped integers and
-normalize their display on blur. Hide numeric spinner controls; values are
-entered by typing. The single-line Reason input remains 36px high, matching
+Times are grouped under “Times (min)” in full-width, compact rows. Show one
+Minutes/Time Type header above the entries. Each entry has a leading drag grip,
+minute expression, searchable Time Type suggestions, and remove action beside
+the Time Type field at every viewport; vertically center both fields within
+each row.
+Focusing the type opens its full list; typing filters predictions, and selecting
+an explicit Add suggestion creates a managed type. Keep minute fields no wider
+than three digits plus padding and size Time Type fields to the longest available
+type. Align the read-only Total label to the left and its value with the minute
+column at the same width. Dragging reorders rows smoothly; Ctrl+ArrowUp/Down
+supports keyboard reordering. A full-width italic “add time” row appends an
+entry. Total is read-only and shows the derived sum. Keep one right-aligned Save
+action immediately after Instructions and before the Time section; do not repeat
+the action in the Total row.
+Serves and time values use comma grouping for thousands; time expressions
+normalize to a whole-minute value on blur. Hide numeric spinner controls; values
+are entered by typing. The
+single-line Reason input remains 36px high, matching
 adjacent recipe fields.
 
 ### Recipe list, detail, and headings
@@ -242,8 +260,8 @@ present, Serves, Makes, Equipment, Food Type, Meal Type, Cuisine, then Notes.
 Total Time leads the separate time breakdown instead of appearing in metadata.
 Center the numeric Rating value beneath its label on desktop and mobile.
 On desktop, Food Type, Meal Type, and Cuisine share their own full-width row.
-Center the fixed vertical rule in the gap between Total Time and the first
-component time; omit it when there are no component times.
+Center the fixed vertical rule in the gap between Total Time and the first time
+entry; omit it when there are no time entries.
 The Makes heading labels its value, so show only the quantity and authored thing
 in the value. The public title has no separate
 Makes heading and retains the inline label. Private recipe detail places alphabetized tag chips beneath the heading,
@@ -871,7 +889,7 @@ choices, not visible List columns. Configurable columns remain future work.
 ### Current implementation
 
 The mobile Recipe Tin list shows Name and Opinion. Recipe details show the
-recipe title, metadata, component times in their own subsection, ingredients,
+recipe title, metadata, ordered time entries in their own subsection, ingredients,
 and notes. Ingredient editing uses a one-column list with the Main checkbox and
 a pale 24px drag grip in a slim rail. Tapping a row opens a compact popover for
 Ingredient, Specifics, Amount, and Preparation in that order. The Amount

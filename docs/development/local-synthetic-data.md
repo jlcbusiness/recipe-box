@@ -50,7 +50,7 @@ interrupted load can be resumed.
 
 Local resets are allowed when the value of a clean baseline is worth the reset
 and reload effort. `npm run dev:local` resets local Supabase before starting
-the app; if the stack is already running, use `supabase db reset --local`.
+the app; if the stack is already running, use `supabase db reset`.
 After either reset, run `npm run seed:synthetic -- --local`. This provisions
 the synthetic owner/admin/neighbor/empty accounts as needed and restores
 publications, recipes, taxonomy assignments, instruction references, photo
@@ -77,5 +77,10 @@ Afterlight Kitchen also includes repeated ingredients across separate sections,
 divided ingredients with equal and unequal portion ratios, and cubed tofu with
 size metadata. These examples are part of the reloadable fixture, so the normal
 local seed command updates them without requiring a reset.
+The fixture keeps its legacy per-category `times` fields for migration
+verification; the loader converts them to ordered recipe time entries using
+the account's Time Types. Totals are derived from those entries, and a
+total-only legacy value is represented as a `Cook` entry.
 The loader compares saved ingredient rows, sections, measurements, and
-instruction steps, so ingredient-only fixture edits are applied as well.
+instruction steps and time entries, so fixture edits in those data are applied
+as well.

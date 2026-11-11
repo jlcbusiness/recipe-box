@@ -90,11 +90,9 @@ async function expectErrorCode(
 }
 
 function runLocalSql<T>(sql: string): T[] {
-  const output = execFileSync(
-    'supabase',
-    ['db', 'query', '--local', '--output-format', 'json', sql],
-    { encoding: 'utf8' },
-  );
+  const output = execFileSync('supabase', ['db', 'query', '--output-format', 'json', sql], {
+    encoding: 'utf8',
+  });
   const result = JSON.parse(output.slice(output.indexOf('{'))) as { rows: T[] };
   return result.rows;
 }

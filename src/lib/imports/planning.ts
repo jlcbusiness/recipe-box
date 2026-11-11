@@ -435,6 +435,18 @@ export function planImport(
   records.ingredients = ingredients.imported;
   records.recipe_picklist_values = picklists.imported;
   records.tags = tags.imported;
+  records.recipe_time_entries = incoming.records.recipe_time_entries
+    .filter(recipeOwned)
+    .map((record) => {
+      const id = createId();
+      idMappings.recipe_time_entries.set(String(record.id), id);
+      return {
+        ...record,
+        id,
+        recipe_id: mappedId('recipes', record.recipe_id, 'recipe'),
+        time_type_id: mappedId('recipe_picklist_values', record.time_type_id, 'time type'),
+      };
+    });
   records.explorer_state = incoming.records.explorer_state.flatMap((record) => {
     const contextKey = record.context_key;
     const contextMatch =

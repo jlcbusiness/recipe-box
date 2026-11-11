@@ -35,7 +35,8 @@ export type PicklistCategory =
   | 'verdict'
   | 'enthusiasm'
   | 'informal_unit'
-  | 'unmeasured_phrase';
+  | 'unmeasured_phrase'
+  | 'time_type';
 
 export type RecipePicklistValue = {
   id: string;
@@ -166,16 +167,8 @@ export type RecipeRecord = {
   serves: number | null;
   makes_quantity: number | null;
   makes_thing: string | null;
-  prep_time_minutes: number | null;
-  mixing_time_minutes: number | null;
-  marinate_time_minutes: number | null;
-  chill_time_minutes: number | null;
-  freeze_time_minutes: number | null;
-  cook_time_minutes: number | null;
-  bake_time_minutes: number | null;
-  cooling_time_minutes: number | null;
-  rest_time_minutes: number | null;
-  total_time_minutes: number | null;
+  time_entries: RecipeTimeEntry[];
+  total_time_minutes: number;
   notes_markdown: string;
   nutrition_overrides: NutrientValues;
   version: number;
@@ -191,6 +184,14 @@ export type RecipeRecord = {
   pairings: RecipePairing[];
   incoming_pairings: IncomingRecipePairing[];
   references: RecipeReference[];
+};
+
+export type RecipeTimeEntry = {
+  id: string;
+  time_type_id: string;
+  time_type: string;
+  minutes: number;
+  position: number;
 };
 
 export type TrashedRecipeRecord = {
@@ -419,7 +420,7 @@ export async function getRecipe(
   const { data, error } = await supabase
     .from('recipes')
     .select(
-      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, notes_markdown, nutrition_overrides, version, created_at, updated_at',
+      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, notes_markdown, nutrition_overrides, version, created_at, updated_at',
     )
     .eq('id', recipeId)
     .is('trashed_at', null)
@@ -499,7 +500,7 @@ export async function getRecipe(
     throw new Error('Unable to load this recipe.');
   }
 
-  const [pairingsResult, incomingResult, referencesResult] = await Promise.all([
+  const [pairingsResult, incomingResult, referencesResult, timeEntriesResult] = await Promise.all([
     supabase
       .from('recipe_pairings')
       .select('id, display_text, linked_recipe_id, position')
@@ -513,10 +514,42 @@ export async function getRecipe(
       )
       .eq('recipe_id', recipeId)
       .order('position'),
+    supabase
+      .from('recipe_time_entries')
+      .select('id, time_type_id, minutes, position')
+      .eq('recipe_id', recipeId)
+      .order('position'),
   ]);
-  if (pairingsResult.error || incomingResult.error || referencesResult.error) {
+  if (
+    pairingsResult.error ||
+    incomingResult.error ||
+    referencesResult.error ||
+    timeEntriesResult.error
+  ) {
     throw new Error('Unable to load this recipe.');
   }
+  const timeTypeIds = [
+    ...new Set((timeEntriesResult.data ?? []).map((entry) => entry.time_type_id)),
+  ];
+  const { data: timeTypeValues, error: timeTypeError } = timeTypeIds.length
+    ? await supabase
+        .from('recipe_picklist_values')
+        .select('id, display_value')
+        .in('id', timeTypeIds)
+    : { data: [], error: null };
+  if (timeTypeError) {
+    throw new Error('Unable to load this recipe.');
+  }
+  const timeTypeById = new Map(
+    (timeTypeValues ?? []).map((option) => [option.id, option.display_value]),
+  );
+  const timeEntries = (timeEntriesResult.data ?? []).map((entry) => {
+    const timeType = timeTypeById.get(entry.time_type_id);
+    if (!timeType) {
+      throw new Error('Unable to load this recipe.');
+    }
+    return { ...entry, time_type: timeType };
+  });
 
   const pairings = pairingsResult.data ?? [];
   const incoming = incomingResult.data ?? [];
@@ -625,6 +658,7 @@ export async function getRecipe(
     meal_type_ids: idsFor('meal_type'),
     cuisine_ids: idsFor('cuisine'),
     equipment_ids: idsFor('equipment'),
+    time_entries: timeEntries,
     tags: sortTagOptions((assignedTags ?? []) as TagOption[]),
     ingredient_sets: ingredientSets ?? [],
     ingredients: (recipeIngredients ?? []).map((row) => ({
@@ -680,7 +714,7 @@ export async function getRecipeExplorerColumnValues(
     supabase
       .from('recipes')
       .select(
-        'id, publication_id, publication_page, recipe_url, state, is_private, food_type_id, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, prep_time_minutes, mixing_time_minutes, marinate_time_minutes, chill_time_minutes, freeze_time_minutes, cook_time_minutes, bake_time_minutes, cooling_time_minutes, rest_time_minutes, total_time_minutes, created_at, updated_at',
+        'id, publication_id, publication_page, recipe_url, state, is_private, food_type_id, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, created_at, updated_at',
       )
       .in('id', recipeIds),
     supabase
@@ -866,15 +900,6 @@ export async function getRecipeExplorerColumnValues(
         cuisine: sortedDisplayValues(assignments?.get('cuisine')),
         tags: sortedDisplayValues(tagsByRecipe.get(recipe.id)),
         main_ingredients: ingredientsByRecipe.get(recipe.id)?.join(', ') ?? null,
-        prep_time_minutes: optionalValue(recipe.prep_time_minutes),
-        mixing_time_minutes: optionalValue(recipe.mixing_time_minutes),
-        marinate_time_minutes: optionalValue(recipe.marinate_time_minutes),
-        chill_time_minutes: optionalValue(recipe.chill_time_minutes),
-        freeze_time_minutes: optionalValue(recipe.freeze_time_minutes),
-        cook_time_minutes: optionalValue(recipe.cook_time_minutes),
-        bake_time_minutes: optionalValue(recipe.bake_time_minutes),
-        cooling_time_minutes: optionalValue(recipe.cooling_time_minutes),
-        rest_time_minutes: optionalValue(recipe.rest_time_minutes),
         total_time_minutes: optionalValue(recipe.total_time_minutes),
         score: optionalValue(recipe.score),
         starred: recipe.is_starred ? 'true' : null,

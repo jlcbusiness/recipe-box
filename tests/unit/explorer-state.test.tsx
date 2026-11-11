@@ -104,6 +104,14 @@ describe('explorer state contract', () => {
         'calcium',
         'iron',
         'potassium',
+        'total_time_minutes',
+        'created_at',
+        'updated_at',
+        'pairs_with',
+      ]),
+    );
+    expect(recipeColumns).not.toEqual(
+      expect.arrayContaining([
         'prep_time_minutes',
         'mixing_time_minutes',
         'marinate_time_minutes',
@@ -113,9 +121,6 @@ describe('explorer state contract', () => {
         'bake_time_minutes',
         'cooling_time_minutes',
         'rest_time_minutes',
-        'created_at',
-        'updated_at',
-        'pairs_with',
       ]),
     );
   });

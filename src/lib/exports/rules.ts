@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-export const EXPORT_SCHEMA_VERSION = 10;
+export const EXPORT_SCHEMA_VERSION = 11;
 export const EXPORT_DATA_BYTES_LIMIT = 64 * 1024 * 1024;
 export const EXPORT_MEDIA_BYTES_LIMIT = 1024 * 1024 * 1024;
 export const DATABASE_EXPORT_REMINDER_DAYS = 30;
@@ -27,6 +27,7 @@ const preferenceFields = [
 
 export const exportTableNames = [
   'recipes',
+  'recipe_time_entries',
   'publications',
   'recipe_picklist_values',
   'recipe_picklist_assignments',
@@ -221,15 +222,6 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'serves',
     'makes_quantity',
     'makes_thing',
-    'prep_time_minutes',
-    'mixing_time_minutes',
-    'marinate_time_minutes',
-    'chill_time_minutes',
-    'freeze_time_minutes',
-    'cook_time_minutes',
-    'bake_time_minutes',
-    'cooling_time_minutes',
-    'rest_time_minutes',
     'total_time_minutes',
     'notes_markdown',
     'is_private',
@@ -242,6 +234,7 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'recipe_url',
     'nutrition_overrides',
   ],
+  recipe_time_entries: ['id', 'recipe_id', 'time_type_id', 'minutes', 'position'],
   publications: [
     'id',
     'publication_type',
@@ -441,6 +434,9 @@ function makeRecordSet(
   const recipeIngredients = rows.recipe_ingredients.filter((row) =>
     recipeIds.has(relationId(row, 'recipe_id') ?? ''),
   );
+  const recipeTimeEntries = rows.recipe_time_entries.filter((row) =>
+    recipeIds.has(relationId(row, 'recipe_id') ?? ''),
+  );
   const recipeIngredientSets = rows.recipe_ingredient_sets.filter((row) =>
     recipeIds.has(relationId(row, 'recipe_id') ?? ''),
   );
@@ -489,6 +485,10 @@ function makeRecordSet(
     const id = relationId(row, 'picklist_value_id');
     if (id) picklistIds.add(id);
   }
+  for (const entry of recipeTimeEntries) {
+    const id = relationId(entry, 'time_type_id');
+    if (id) picklistIds.add(id);
+  }
   for (const measurement of measurements) {
     const id = relationId(measurement, 'picklist_value_id');
     if (id) picklistIds.add(id);
@@ -502,6 +502,7 @@ function makeRecordSet(
 
   const selected: Record<ExportTableName, ExportRecord[]> = {
     recipes: rows.recipes.filter((row) => recipeIds.has(recordId(row) ?? '')),
+    recipe_time_entries: recipeTimeEntries,
     publications: rows.publications.filter((row) => publicationIds.has(recordId(row) ?? '')),
     recipe_picklist_values:
       scope.type === 'database'

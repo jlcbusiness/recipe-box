@@ -63,9 +63,10 @@ multi-select meal type (e.g., breakfast, lunch, dinner, appetizer, side dish,
 snack, dessert, drink, booze, sauce), multi-select cuisine (e.g., American,
 Italian, Chinese, Mexican, French, Fusion), tags, equipment (e.g. small/medium/large
 pan, bowl, baking sheet, skillet, spatula, whisk, peeler), an optional positive
-integer Serves count, notes, and separate
-optional times for chill, freeze, marinate, prep, mix, cook, bake, cool, rest,
-and total.
+integer Serves count, notes, and an ordered list of optional time entries.
+Each entry has a Settings-managed Time Type and a whole-minute value; users may
+add any number of entries and time types. The editor's Total Time is read-only
+and always equals the sum of the entries.
 
 Food type describes what is made. Meal type describes when or how it is used.
 New recipes default to Want to try; State and its active response appear
@@ -74,10 +75,10 @@ and Cuisine occupy the next wrapping row; Equipment follows Serves on the State
 row.
 Multi-value picklists use compact checkmark dropdowns with a stable trigger width,
 not checklists. Selected values use a checkmark and pale green, bold text.
-Total time is manual. An explicit calculate control (`Σ`) visibly
-replaces total time with the sum of entered time fields only after the user invokes it.
-Serves and time values display with comma grouping for thousands; time inputs
-accept valid grouped integers and normalize their display on blur.
+Time values accept arithmetic expressions with parentheses and standard
+operator precedence. On blur, each valid expression is replaced by its
+nearest whole-minute result, with half-minute values rounded up; the equation
+is not saved. Serves and time values display with comma grouping for thousands.
 
 State is Want to try, Tried, or Will not try. State conditionally shows Enthusiasm,
 Verdict, or Reason:

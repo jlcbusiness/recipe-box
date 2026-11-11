@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 10 archive contains:
+A version 11 archive contains:
 
 ```text
 manifest.json
@@ -31,7 +31,7 @@ already the official image.
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 10,
+  "schema_version": 11,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "1.0.0",
   "scope": {
@@ -70,7 +70,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 10,
+  "schema_version": 11,
   "scope": {
     "type": "database"
   },
@@ -80,6 +80,7 @@ backslashes, and unexpected ZIP entries.
     "publications": [],
     "recipe_picklist_values": [],
     "recipe_picklist_assignments": [],
+    "recipe_time_entries": [],
     "ingredients": [],
     "ingredient_nutrition_profiles": [],
     "ingredient_measure_equivalents": [],
@@ -102,7 +103,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v10; future
+array contains only the normalized product fields selected for v11; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -161,9 +162,10 @@ heart markers. Version 7 preserves distinct official display images and
 retained source images so future framing edits remain reversible. Version 8
 adds the optional paired Makes quantity and thing. Version 9 adds ingredient
 nutrition profiles and measure equivalents plus recipe-level and
-recipe-ingredient nutrition overrides. Version 10 is current and adds
-protected public-copy source identity to recipe references. Versions 1 through
-9 import with their existing compatibility rules; older
+recipe-ingredient nutrition overrides. Version 10 adds protected public-copy
+source identity to recipe references. Version 11 adds ordered recipe time
+entries with their Time Type references. Versions 1 through 10 import with
+their existing compatibility rules; older
 media rows treat their full and thumbnail files as the retained source.
 
 A v1 import synthesizes one `Main` set per recipe and assigns that recipe's
@@ -193,8 +195,17 @@ source ID. Versions 1 through 9 import references with protected metadata set
 to false and null. Import and replacement preserve existing protected source
 attribution rather than allowing incoming data to remove or overwrite it.
 
+Version 11 adds `recipe_time_entries` records with `id`, `recipe_id`,
+`time_type_id`, `minutes`, and `position`. Each `time_type_id` references an
+included `recipe_picklist_values` record in the `time_type` category. The
+allow-list for v11 recipe records omits the nine legacy component-time columns
+and retains the derived `total_time_minutes`. Versions 1 through 10 convert
+non-null component values to entries of their matching seeded types; if no
+component value exists but Total Time is present, import creates one Cook
+entry. When component values exist, their sum determines the imported total.
+
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 10, verify all file sizes and checksums before
+accept only versions 1 through 11, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

@@ -230,7 +230,7 @@ async function main() {
   const targetIndex = migrationFiles.indexOf(migrationName);
   startAttempted = true;
   runSupabase(['start', '--yes']);
-  runSupabase(['migration', 'up', '--local']);
+  runSupabase(['migration', 'up']);
 
   const { apiUrl, anonKey, serviceRoleKey } = getSupabaseKeys();
   const existingOwner = await createOwner(apiUrl, anonKey);
@@ -258,7 +258,7 @@ async function main() {
       join(supabaseDirectory, 'migrations', migration),
     );
   }
-  runSupabase(['migration', 'up', '--local']);
+  runSupabase(['migration', 'up']);
 
   const existingTinId = await expectTin(apiUrl, anonKey, existingOwner);
   const secondTinId = await expectTin(apiUrl, anonKey, secondOwner);

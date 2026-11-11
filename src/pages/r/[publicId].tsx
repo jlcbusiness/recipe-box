@@ -243,17 +243,18 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
 
   const { recipe, photos, authorUsername, publicId } = props;
   const times = [
-    ['Total time', recipe.timings.total],
-    ['Prep', recipe.timings.prep],
-    ['Mixing', recipe.timings.mixing],
-    ['Marinate', recipe.timings.marinate],
-    ['Chill', recipe.timings.chill],
-    ['Freeze', recipe.timings.freeze],
-    ['Cook', recipe.timings.cook],
-    ['Bake', recipe.timings.bake],
-    ['Cooling', recipe.timings.cooling],
-    ['Rest', recipe.timings.rest],
-  ].filter(([, value]) => value !== null);
+    ...(recipe.total_time_minutes > 0
+      ? [{ id: 'total-time', label: 'Total time', value: recipe.total_time_minutes, isTotal: true }]
+      : []),
+    ...recipe.time_entries
+      .filter((entry) => entry.minutes > 0)
+      .map((entry) => ({
+        id: `time-entry-${entry.position}`,
+        label: entry.time_type,
+        value: entry.minutes,
+        isTotal: false,
+      })),
+  ];
   const hasPublicSummary = times.length > 0 || recipe.equipment.length > 0;
   const preserveStoredUnits = true;
   const unitSystems = { volume: 'us_customary' as const, weight: 'us_customary' as const };
@@ -337,13 +338,10 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                   <section className="recipe-detail-section" aria-labelledby="timings-title">
                     <h2 id="timings-title">Time Breakdown</h2>
                     <dl className="recipe-metadata recipe-time-list">
-                      {times.map(([label, value]) => (
-                        <div
-                          className={label === 'Total time' ? 'recipe-total-time' : undefined}
-                          key={label}
-                        >
+                      {times.map(({ id, label, value, isTotal }) => (
+                        <div className={isTotal ? 'recipe-total-time' : undefined} key={id}>
                           <dt>{label}</dt>
-                          <dd>{formatRecipeDuration(value as number)}</dd>
+                          <dd>{formatRecipeDuration(value)}</dd>
                         </div>
                       ))}
                     </dl>

@@ -105,35 +105,37 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 
 ### 2.2 Time Tracking and Overlapping Times
 
-Recipes often stealth-ambush cooks with hidden refrigeration, marinading, or resting steps. To ensure clear visibility,
-time is broken down into specific categories:
+Recipes can have any number of ordered time entries. Each entry has a
+Settings-managed Time Type and a non-negative whole-minute value. The default
+types are Prep, Mixing, Marinate, Chill, Freeze, Cook, Bake, Cooling, and Rest;
+Users may add and manage more types in Settings. Multiple entries may use the
+same type. Time values remain minutes in storage.
 
-- **Specific Time Dimensions:**
-  - Prep time
-  - Mixing time
-  - Marinate time
-  - Chill time (refrigeration)
-  - Freeze time
-  - Cook time (stovetop / sauté / boil)
-  - Bake time (oven)
-  - Cooling time
-  - Rest time (meat resting, dough proofing)
-  - Total time
-- **Card Display Rule:** Only non-zero/applicable times are displayed on the recipe card.
+- **Total Time:** The editor displays a read-only total equal to the sum of all
+  entries. It is zero when no entries exist. Overlapping activities are not
+  discounted. Find Recipes retains Total Time filters and its column, but
+  removes the former fixed component-time filters and columns.
+- **Expression Input:** A time value accepts integer literals, `+`, `-`, `*`,
+  `/`, and parentheses with ordinary arithmetic precedence. On blur, replace a
+  valid expression with its nearest whole-minute result; half-minute values
+  round up. Do not save the equation. Invalid, incomplete, negative,
+  divide-by-zero, or out-of-range results remain visible as errors and block
+  save. Never evaluate an expression as JavaScript.
+- **Legacy Migration:** Preserve non-null fixed component values as entries
+  with their matching default Time Type. If a recipe has no component values
+  but has a manual total, create a Cook entry with that value. If component
+  values exist, their sum becomes the total even when it differs from the old
+  manual total.
+- **Card Display Rule:** Show only non-zero/applicable entries and the derived
+  Total Time on recipe cards and summaries.
 - **Reader Display Rule:** Time summaries use the heading “Time Breakdown.”
-  Durations below one hour display as `N min`; durations of at least one hour
-  display as `N hr` or `N hr M min`, omitting zero minutes. Private, public,
-  and print views share this formatting while stored values remain minutes.
-- **Integer Formatting:** Serves and duration values display with comma grouping for thousands. Time fields accept valid
-  comma-grouped integers and normalize their display on blur; total-time calculation also accepts grouped values.
-- **Total Time Calculation Behavior:**
-  - Total time is stored as a distinct manual field. It is **never** auto-updated silently in the background, because
-    steps often overlap (e.g., chopping ingredients while an oven preheats, or dough rising while sauce simmers).
-  - Component times use compact, spinner-free numeric inputs sized to five-character values or their visible labels,
-    whichever needs more room, with 8 px gaps. Total Time appears on its own final row.
-  - A compact square **Auto-calculate** control showing only the `Σ` icon sits beside Total Time. It has the accessible
-    name and tooltip `Calculate total time` . When clicked, it sums all entered component durations and visibly replaces
-    Total Time, leaving the user in control.
+  Show Total Time first, followed by non-zero time entries in their saved
+  order. Durations below one hour display as `N min`; durations of at least
+  one hour display as `N hr` or `N hr M min`, omitting zero minutes. Private,
+  public, and print views share this formatting while stored values remain
+  minutes. Time types use the same label, value, and management conventions as
+  other recipe picklists. Serves and duration values display with comma
+  grouping for thousands.
 
 ### 2.3 Recipe Photos
 
@@ -240,11 +242,10 @@ time is broken down into specific categories:
 - Recipe metadata inputs, single- and multi-picklist triggers, Serves, Reason,
   and Occasion Details are 36px high on desktop and mobile, matching Name and
   Publication. Multi-picklist options have a 30px minimum height on desktop and
-  36px on mobile. Component-time inputs remain compact; distinct icon actions
-  retain their separately specified hit areas.
-- The mobile `Σ` control keeps a 48px hit target around a visibly compact 30px
-  square and aligns with the Total Time input without adding visible horizontal
-  spacing beyond the neighboring field gap.
+  36px on mobile. Time-entry controls remain compact; distinct actions
+   retain their separately specified hit areas.
+- Time expression fields accept arithmetic input and normalize to a grouped
+   whole-minute value on blur. Invalid expressions remain visible and block save.
 - Center the Serves number within its 36px input on desktop and mobile.
 - On desktop, the recipe list shows Name, Food Type, State, and Opinion, which
   shows the active Enthusiasm, Verdict, or Reason; Score and active custom
@@ -259,10 +260,10 @@ time is broken down into specific categories:
   Cuisine, then Notes. On desktop, Food Type, Meal Type, and Cuisine occupy a
   dedicated full-width row. Total Time leads the separate time breakdown on
   private and public pages. On mobile, it occupies a full-width row above
-  component times in the subsection with a divider and small-caps “Time
+  time entries in the subsection with a divider and small-caps “Time
   Breakdown” title. On desktop, a fixed vertical rule separates Total Time
-  from component times, centered in the gap before the first component time.
-  Omit the rule when no component time is present.
+  from the entries, centered in the gap before the first entry. Omit the rule
+  when there are no entries.
   Recipe Tin does not appear as a
   duplicate breadcrumb or attribution when it is already selected in navigation.
   Recipe-page headings are about 16pt (about 21.33px). A recipe assigned to a
@@ -1267,7 +1268,9 @@ The managed catalogs are:
 - **Ordering:** Recipe picklist values keep a user-defined order used for display and sorting. The ingredient catalog is
   a distinct case: its visible list is always alphabetical, with no manual sort or reorder control.
 - **Seeding:** New accounts start with the example values listed in section 2.1 for each picklist, in the order listed.
-  All values are editable. `Specific occasion` in Verdict and Enthusiasm is protected: it can be renamed but not deleted
+  Time Type starts with Prep, Mixing, Marinate, Chill, Freeze, Cook, Bake,
+  Cooling, and Rest. All values are editable. `Specific occasion` in Verdict
+  and Enthusiasm is protected: it can be renamed but not deleted.
   or merged, because it reveals Occasion Details.
 
 #### Ingredient catalog
@@ -1502,7 +1505,7 @@ When a Guest accesses a valid public recipe link, whether signed in or not:
   - In-app pairs-with links are displayed as static text.
 
 The public time summary is labeled “Time Breakdown,” places Total Time before
-component times, and follows the shared duration format in 2.2. Public
+ordered time entries, and follows the shared duration format in 2.2. Public
 ingredients use the same transient scalar
 teaspoon `pinch` display rule; saved account unit preferences are never read or
 exposed.
@@ -1867,7 +1870,7 @@ effort. The repeatable synthetic fixture can restore its test accounts and
 data; it does not preserve arbitrary local records. Export local data that is
 not represented by the fixture if it needs to survive a reset.
 
-After `npm run dev:local` or `supabase db reset --local` has reapplied
+After `npm run dev:local` or `supabase db reset` has reapplied
 migrations, run `npm run seed:synthetic -- --local` to restore the synthetic
 baseline. To recover other exported app data, create a fresh local Auth
 account and import the full database ZIP from Settings. Import is account-derived,

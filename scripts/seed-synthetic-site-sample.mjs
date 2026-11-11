@@ -7,6 +7,10 @@ import sharp from 'sharp';
 import { LOCAL_TEST_PASSWORD } from '../tests/support/local-test-password.mjs';
 import { SYNTHETIC_INGREDIENT_NUTRITION } from './synthetic-ingredient-nutrition.mjs';
 import { findLocalOwner } from './synthetic-owner-selection.mjs';
+import {
+  buildSyntheticRecipeTimeEntries,
+  sameSyntheticRecipeTimeEntries,
+} from './synthetic-recipe-time-entries.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fixturePath = path.join(root, 'tests/fixtures/recipe-box-synthetic-site-sample.json');
@@ -343,6 +347,7 @@ function recipePayload(
     };
   });
   const state = recipe.state;
+  const timeEntries = buildSyntheticRecipeTimeEntries(recipe.times, picklists);
 
   return {
     p_recipe_id: recipeId,
@@ -356,16 +361,6 @@ function recipePayload(
     p_occasion_details: recipe.opinion.occasionDetails,
     p_reason: state === 'will_not_try' ? recipe.opinion.reason : null,
     p_serves: recipe.serves,
-    p_prep_time_minutes: recipe.times.prepMinutes,
-    p_mixing_time_minutes: recipe.times.mixingMinutes,
-    p_marinate_time_minutes: recipe.times.marinateMinutes,
-    p_chill_time_minutes: recipe.times.chillMinutes,
-    p_freeze_time_minutes: recipe.times.freezeMinutes,
-    p_cook_time_minutes: recipe.times.cookMinutes,
-    p_bake_time_minutes: recipe.times.bakeMinutes,
-    p_cooling_time_minutes: recipe.times.coolingMinutes,
-    p_rest_time_minutes: recipe.times.restMinutes,
-    p_total_time_minutes: recipe.times.totalMinutes,
     p_notes_markdown: recipe.notesMarkdown,
     p_meal_type_ids: recipe.mealTypes.map((value) => lookup('meal_type', value)),
     p_cuisine_ids: recipe.cuisines.map((value) => lookup('cuisine', value)),
@@ -383,6 +378,10 @@ function recipePayload(
       position,
     })),
     p_score: personalSignals(recipe).score,
+    p_makes_quantity: null,
+    p_makes_thing: null,
+    p_nutrition_overrides: {},
+    p_time_entries: timeEntries,
   };
 }
 
@@ -1036,7 +1035,7 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
       null,
       [],
     );
-    const [saved] = await api.rpc('save_recipe_with_score', initialPayload);
+    const [saved] = await api.rpc('save_recipe_with_time_entries', initialPayload);
     if (!saved?.id || !Number.isSafeInteger(saved.version)) {
       throw new Error(`Local recipe creation returned no version for ${recipe.slug}.`);
     }
@@ -1124,9 +1123,19 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
     recipeVersion,
     steps,
   );
+  const currentTimeEntries = await api.table(
+    'recipe_time_entries',
+    formatApiFilters({
+      select: 'time_type_id,minutes,position',
+      account_id: `eq.${accountId}`,
+      recipe_id: `eq.${recipeId}`,
+      order: 'position.asc',
+    }),
+  );
   if (
     !scoreMatches ||
     !sameSteps(currentSteps, steps) ||
+    !sameSyntheticRecipeTimeEntries(currentTimeEntries, payload.p_time_entries) ||
     !(await sameIngredientData(
       api,
       accountId,
@@ -1135,7 +1144,7 @@ async function seedRecipe(api, accountId, publicationId, publication, recipe, pi
       payload.p_ingredient_sets,
     ))
   ) {
-    const [saved] = await api.rpc('save_recipe_with_score', payload);
+    const [saved] = await api.rpc('save_recipe_with_time_entries', payload);
     if (!saved?.id || !Number.isSafeInteger(saved.version)) {
       throw new Error(`Local recipe update returned no version for ${recipe.slug}.`);
     }

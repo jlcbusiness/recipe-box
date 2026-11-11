@@ -32,71 +32,80 @@ async function createContractRecipe(
     score?: number;
   },
 ): Promise<string> {
-  const response = await request.post(
-    `${apiUrl}/rest/v1/rpc/${recipe.score === undefined ? 'save_recipe' : 'save_recipe_with_score'}`,
-    {
-      headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
-      data: {
-        p_recipe_id: null,
-        p_expected_version: null,
-        p_name: recipe.name,
-        p_food_type_id: null,
-        p_state: recipe.state,
-        p_verdict_id: null,
-        p_enthusiasm_id: null,
-        p_occasion_details: null,
-        p_reason: null,
-        p_serves: null,
-        p_prep_time_minutes: null,
-        p_mixing_time_minutes: null,
-        p_marinate_time_minutes: null,
-        p_chill_time_minutes: null,
-        p_freeze_time_minutes: null,
-        p_cook_time_minutes: null,
-        p_bake_time_minutes: null,
-        p_cooling_time_minutes: null,
-        p_rest_time_minutes: null,
-        p_total_time_minutes: recipe.totalTime,
-        p_notes_markdown: recipe.notes,
-        p_meal_type_ids: [],
-        p_cuisine_ids: [],
-        p_equipment_ids: [],
-        p_ingredient_rows: (recipe.ingredients ?? []).map((ingredientName) => ({
-          recipe_ingredient_id: randomUUID(),
-          ingredient_id: null,
-          ingredient_name: ingredientName,
-          is_main: recipe.mainIngredients?.includes(ingredientName) ?? false,
-          detail: '',
-          preparation: '',
-          measurements: [],
-        })),
-        p_instruction_steps: [],
-        ...(recipe.score === undefined
-          ? {}
-          : {
-              p_score: recipe.score,
-              p_ingredient_sets: [{ id: randomUUID(), label: 'Main', position: 0 }],
-              p_publication_id: null,
-              p_publication_page: null,
-              p_recipe_url: null,
-              p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
-              p_tag_ids: [],
-            }),
-      },
+  const headers = { apikey: anonKey, Authorization: `Bearer ${accessToken}` };
+  const ingredientSetId = randomUUID();
+  const timeEntries: { time_type_id: string; minutes: number; position: number }[] = [];
+  if (recipe.totalTime !== null) {
+    const timeTypeResponse = await request.get(
+      `${apiUrl}/rest/v1/recipe_picklist_values?select=id&category=eq.time_type&value=eq.Cook`,
+      { headers },
+    );
+    const timeTypeBody = await timeTypeResponse.text();
+    expect(timeTypeResponse.ok(), timeTypeBody).toBeTruthy();
+    const [cookTimeType] = JSON.parse(timeTypeBody) as { id: string }[];
+    expect(cookTimeType).toBeDefined();
+    timeEntries.push({
+      time_type_id: cookTimeType.id,
+      minutes: recipe.totalTime,
+      position: 0,
+    });
+  }
+
+  const response = await request.post(`${apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`, {
+    headers,
+    data: {
+      p_recipe_id: null,
+      p_expected_version: null,
+      p_name: recipe.name,
+      p_food_type_id: null,
+      p_state: recipe.state,
+      p_verdict_id: null,
+      p_enthusiasm_id: null,
+      p_occasion_details: null,
+      p_reason: null,
+      p_serves: null,
+      p_notes_markdown: recipe.notes,
+      p_meal_type_ids: [],
+      p_cuisine_ids: [],
+      p_equipment_ids: [],
+      p_ingredient_rows: (recipe.ingredients ?? []).map((ingredientName) => ({
+        recipe_ingredient_id: randomUUID(),
+        ingredient_set_id: ingredientSetId,
+        ingredient_id: null,
+        ingredient_name: ingredientName,
+        is_main: recipe.mainIngredients?.includes(ingredientName) ?? false,
+        detail: '',
+        preparation: '',
+        measurements: [],
+      })),
+      p_instruction_steps: [],
+      p_publication_id: null,
+      p_publication_page: null,
+      p_recipe_url: null,
+      p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+      p_tag_ids: [],
+      p_ingredient_sets: [{ id: ingredientSetId, label: 'Main', position: 0 }],
+      p_score: recipe.score ?? null,
+      p_makes_quantity: null,
+      p_makes_thing: null,
+      p_nutrition_overrides: {},
+      p_time_entries: timeEntries,
     },
-  );
+  });
   const responseBody = await response.text();
   expect(response.ok(), responseBody).toBeTruthy();
   const [createdRecipe] = JSON.parse(responseBody) as { id: string; version: number }[];
   return createdRecipe.id;
 }
 
-async function setContractRecipePrivate(
+async function setContractRecipePrivacy(
   request: import('@playwright/test').APIRequestContext,
   apiUrl: string,
   anonKey: string,
   accessToken: string,
   recipeId: string,
+  isPrivate: boolean,
+  publicUsername?: string,
 ) {
   const headers = { apikey: anonKey, Authorization: `Bearer ${accessToken}` };
   const recipeResponse = await request.get(
@@ -108,7 +117,12 @@ async function setContractRecipePrivate(
   const [{ version }] = JSON.parse(recipeResponseBody) as { version: number }[];
   const privacyResponse = await request.post(`${apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
     headers,
-    data: { p_recipe_id: recipeId, p_expected_version: version, p_is_private: true },
+    data: {
+      p_recipe_id: recipeId,
+      p_expected_version: version,
+      p_is_private: isPrivate,
+      p_public_username: publicUsername ?? null,
+    },
   });
   expect(privacyResponse.ok(), await privacyResponse.text()).toBeTruthy();
 }
@@ -709,12 +723,27 @@ test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, r
   try {
     const linkableRecipeName = 'Linkable visibility filter recipe';
     const privateRecipeName = 'Private visibility filter recipe';
-    await createContractRecipe(request, config.apiUrl, config.anonKey, user.accessToken, {
-      name: linkableRecipeName,
-      state: 'want_to_try',
-      totalTime: null,
-      notes: '',
-    });
+    const linkableRecipeId = await createContractRecipe(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      {
+        name: linkableRecipeName,
+        state: 'want_to_try',
+        totalTime: null,
+        notes: '',
+      },
+    );
+    await setContractRecipePrivacy(
+      request,
+      config.apiUrl,
+      config.anonKey,
+      user.accessToken,
+      linkableRecipeId,
+      false,
+      `link-${randomUUID().slice(0, 8)}`,
+    );
     const privateRecipeId = await createContractRecipe(
       request,
       config.apiUrl,
@@ -722,12 +751,13 @@ test('Find Recipes exposes and filters recipe visibility @e2e', async ({ page, r
       user.accessToken,
       { name: privateRecipeName, state: 'want_to_try', totalTime: null, notes: '' },
     );
-    await setContractRecipePrivate(
+    await setContractRecipePrivacy(
       request,
       config.apiUrl,
       config.anonKey,
       user.accessToken,
       privateRecipeId,
+      true,
     );
 
     await page.goto('/');
@@ -1261,7 +1291,7 @@ test('Find Details honors column minimums and scrolls instead of compressing @e2
     for (const column of [
       'Makes',
       'Visibility',
-      'Rest Time',
+      'Total Time',
       'Date Added',
       'Date Changed',
       'Calories',
@@ -1505,19 +1535,39 @@ test('Find mobile Details aligns active markers with recipe titles @e2e', async 
 
     const listColumnsButton = page.getByRole('button', { name: 'Choose List columns' });
     const expectColumnChooserConnected = async () => {
-      const [chooserBounds, viewControlsBounds] = await Promise.all([
-        listColumnsButton.boundingBox(),
-        page.locator('.recipe-explorer-view-controls').boundingBox(),
-      ]);
-      expect(chooserBounds).not.toBeNull();
-      expect(viewControlsBounds).not.toBeNull();
-      if (!chooserBounds || !viewControlsBounds) {
-        throw new Error('Expected mobile view and column control geometry.');
-      }
-      expect(
-        Math.abs(chooserBounds.x - (viewControlsBounds.x + viewControlsBounds.width)),
-      ).toBeLessThanOrEqual(1);
-      await expect(listColumnsButton).toHaveCSS('border-left-width', '0px');
+      const viewControls = page.locator('.recipe-explorer-view-controls');
+      await expect(listColumnsButton).toBeVisible();
+      await expect(viewControls).toBeVisible();
+      const geometry = await page.evaluate(() => {
+        const chooser = document.querySelector('.explorer-list-preferences-trigger');
+        const controls = document.querySelector('.recipe-explorer-view-controls');
+        if (!chooser || !controls) return null;
+        const chooserBounds = chooser.getBoundingClientRect();
+        const controlsBounds = controls.getBoundingClientRect();
+        return {
+          chooser: {
+            x: chooserBounds.x,
+            y: chooserBounds.y,
+            width: chooserBounds.width,
+          },
+          controls: {
+            x: controlsBounds.x,
+            y: controlsBounds.y,
+            width: controlsBounds.width,
+          },
+        };
+      });
+      if (!geometry) throw new Error('Expected mobile view and column control geometry.');
+      expect(Math.abs(geometry.chooser.y - geometry.controls.y)).toBeLessThanOrEqual(1);
+      const chooserBeforeControls =
+        Math.abs(geometry.chooser.x + geometry.chooser.width - geometry.controls.x) <= 1;
+      const controlsBeforeChooser =
+        Math.abs(geometry.controls.x + geometry.controls.width - geometry.chooser.x) <= 1;
+      expect(chooserBeforeControls || controlsBeforeChooser).toBe(true);
+      await expect(listColumnsButton).toHaveCSS(
+        chooserBeforeControls ? 'border-right-width' : 'border-left-width',
+        '0px',
+      );
     };
 
     await expect(listColumnsButton).toHaveCSS('width', '40px');
@@ -2324,8 +2374,23 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     expect(publicationResponse.ok(), await publicationResponse.text()).toBeTruthy();
     const publicationId = (await publicationResponse.json()) as string;
 
+    const cookTimeTypeResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id&category=eq.time_type&value=eq.Cook`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    const cookTimeTypeBody = await cookTimeTypeResponse.text();
+    expect(cookTimeTypeResponse.ok(), cookTimeTypeBody).toBeTruthy();
+    const [cookTimeType] = JSON.parse(cookTimeTypeBody) as { id: string }[];
+    expect(cookTimeType).toBeDefined();
+    const ingredientSetId = randomUUID();
+
     const recipeResponse = await request.post(
-      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_relationships`,
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`,
       {
         headers: {
           apikey: config.anonKey,
@@ -2342,16 +2407,6 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
           p_occasion_details: null,
           p_reason: null,
           p_serves: null,
-          p_prep_time_minutes: null,
-          p_mixing_time_minutes: null,
-          p_marinate_time_minutes: null,
-          p_chill_time_minutes: null,
-          p_freeze_time_minutes: null,
-          p_cook_time_minutes: null,
-          p_bake_time_minutes: null,
-          p_cooling_time_minutes: null,
-          p_rest_time_minutes: null,
-          p_total_time_minutes: 20,
           p_notes_markdown: 'A distinctive cardamom notesearch marker.',
           p_meal_type_ids: [],
           p_cuisine_ids: [],
@@ -2359,6 +2414,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
           p_ingredient_rows: [
             {
               recipe_ingredient_id: randomUUID(),
+              ingredient_set_id: ingredientSetId,
               ingredient_id: null,
               ingredient_name: 'Searchable coriander ingredient',
               is_main: true,
@@ -2393,13 +2449,19 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
             ],
           },
           p_tag_ids: [],
+          p_ingredient_sets: [{ id: ingredientSetId, label: 'Main', position: 0 }],
+          p_score: null,
+          p_makes_quantity: null,
+          p_makes_thing: null,
+          p_nutrition_overrides: {},
+          p_time_entries: [{ time_type_id: cookTimeType.id, minutes: 20, position: 0 }],
         },
       },
     );
     expect(recipeResponse.ok(), await recipeResponse.text()).toBeTruthy();
 
     const secondRecipeResponse = await request.post(
-      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_relationships`,
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`,
       {
         headers: {
           apikey: config.anonKey,
@@ -2416,16 +2478,6 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
           p_occasion_details: null,
           p_reason: null,
           p_serves: null,
-          p_prep_time_minutes: null,
-          p_mixing_time_minutes: null,
-          p_marinate_time_minutes: null,
-          p_chill_time_minutes: null,
-          p_freeze_time_minutes: null,
-          p_cook_time_minutes: null,
-          p_bake_time_minutes: null,
-          p_cooling_time_minutes: null,
-          p_rest_time_minutes: null,
-          p_total_time_minutes: null,
           p_notes_markdown: '',
           p_meal_type_ids: [],
           p_cuisine_ids: [],
@@ -2437,6 +2489,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
           p_recipe_url: 'https://source.example.test/apricot-roast',
           p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
           p_tag_ids: [],
+          p_ingredient_sets: [{ id: randomUUID(), label: 'Main', position: 0 }],
+          p_score: null,
+          p_makes_quantity: null,
+          p_makes_thing: null,
+          p_nutrition_overrides: {},
+          p_time_entries: [],
         },
       },
     );
@@ -3716,11 +3774,11 @@ test('recipe search RPC honors typed filters, ranking, stable sorting, and page 
 
     const numericCases = [
       { operator: 'equals', value: 10, expected: [alphaName] },
-      { operator: 'not_equals', value: 10, expected: [gammaName] },
+      { operator: 'not_equals', value: 10, expected: [betaName, gammaName] },
       { operator: 'greater_than', value: 10, expected: [gammaName] },
-      { operator: 'less_than', value: 30, expected: [alphaName] },
+      { operator: 'less_than', value: 30, expected: [alphaName, betaName] },
       { operator: 'at_least', value: 30, expected: [gammaName] },
-      { operator: 'at_most', value: 10, expected: [alphaName] },
+      { operator: 'at_most', value: 10, expected: [alphaName, betaName] },
       { operator: 'between', value: 10, value_to: 30, expected: [alphaName, gammaName] },
     ];
     for (const numericCase of numericCases) {
@@ -3750,9 +3808,9 @@ test('recipe search RPC honors typed filters, ranking, stable sorting, and page 
     expect(ranked[0]?.rank).toBeGreaterThan(ranked[1]?.rank ?? 0);
 
     expect(await names({ sort: 'total_time_minutes', direction: 'asc' })).toEqual([
+      betaName,
       alphaName,
       gammaName,
-      betaName,
     ]);
     expect(await names({ sort: 'total_time_minutes', direction: 'desc' })).toEqual([
       gammaName,

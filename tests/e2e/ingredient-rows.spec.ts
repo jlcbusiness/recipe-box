@@ -877,13 +877,16 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(topSaveButton).toBeVisible();
     await expect(page.locator('.recipe-form-actions .recipe-primary-button')).toHaveCount(0);
     const saveButtonBounds = await topSaveButton.boundingBox();
-    const ingredientSectionBounds = await page
-      .locator('fieldset.recipe-ingredient-section > legend')
-      .boundingBox();
+    const instructionsBounds = await page.locator('.recipe-instruction-section').boundingBox();
+    const timeSectionBounds = await page.locator('.recipe-time-fieldset').boundingBox();
     expect(saveButtonBounds).not.toBeNull();
-    expect(ingredientSectionBounds).not.toBeNull();
-    expect(saveButtonBounds?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(
-      ingredientSectionBounds?.y ?? 0,
+    expect(instructionsBounds).not.toBeNull();
+    expect(timeSectionBounds).not.toBeNull();
+    expect(saveButtonBounds?.y).toBeGreaterThanOrEqual(
+      (instructionsBounds?.y ?? 0) + (instructionsBounds?.height ?? 0),
+    );
+    expect((saveButtonBounds?.y ?? 0) + (saveButtonBounds?.height ?? 0)).toBeLessThanOrEqual(
+      timeSectionBounds?.y ?? 0,
     );
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
     const ingredientRows = grid.locator('tbody tr[data-row-id]');

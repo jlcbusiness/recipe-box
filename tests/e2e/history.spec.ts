@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import {
@@ -40,7 +41,7 @@ async function saveRecipe(
   values: Record<string, unknown>,
 ) {
   const response = await request.post(
-    `${config.apiUrl}/rest/v1/rpc/save_recipe_with_relationships`,
+    `${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`,
     {
       headers: ownerHeaders(config, user),
       data: {
@@ -54,22 +55,18 @@ async function saveRecipe(
         p_occasion_details: null,
         p_reason: null,
         p_serves: null,
-        p_prep_time_minutes: null,
-        p_mixing_time_minutes: null,
-        p_marinate_time_minutes: null,
-        p_chill_time_minutes: null,
-        p_freeze_time_minutes: null,
-        p_cook_time_minutes: null,
-        p_bake_time_minutes: null,
-        p_cooling_time_minutes: null,
-        p_rest_time_minutes: null,
-        p_total_time_minutes: null,
         p_notes_markdown: '',
         p_meal_type_ids: [],
         p_cuisine_ids: [],
         p_equipment_ids: [],
         p_ingredient_rows: [],
         p_instruction_steps: [],
+        p_ingredient_sets: [{ id: randomUUID(), label: 'Main', position: 0 }],
+        p_score: null,
+        p_makes_quantity: null,
+        p_makes_thing: null,
+        p_nutrition_overrides: {},
+        p_time_entries: [],
         p_publication_id: null,
         p_publication_page: null,
         p_recipe_url: null,
@@ -106,10 +103,11 @@ test('active recipe owners can review readable, private change history @e2e @a11
     const casseroleId = await getPicklistId(request, config, owner, 'food_type', 'Casserole');
     const dinnerId = await getPicklistId(request, config, owner, 'meal_type', 'Dinner');
     const lunchId = await getPicklistId(request, config, owner, 'meal_type', 'Lunch');
+    const prepTimeTypeId = await getPicklistId(request, config, owner, 'time_type', 'Prep');
     const created = await saveRecipe(request, config, owner, {
       p_food_type_id: roastId,
       p_meal_type_ids: [dinnerId],
-      p_prep_time_minutes: 20,
+      p_time_entries: [{ time_type_id: prepTimeTypeId, minutes: 20, position: 0 }],
     });
     const updated = await saveRecipe(request, config, owner, {
       p_recipe_id: created.id,
@@ -117,7 +115,7 @@ test('active recipe owners can review readable, private change history @e2e @a11
       p_name: 'Crispy herb roast potatoes',
       p_food_type_id: casseroleId,
       p_meal_type_ids: [lunchId],
-      p_prep_time_minutes: 35,
+      p_time_entries: [{ time_type_id: prepTimeTypeId, minutes: 35, position: 0 }],
     });
 
     const historyUrl = new URL(`${config.apiUrl}/rest/v1/recipe_history`);

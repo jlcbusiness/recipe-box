@@ -1,8 +1,16 @@
 'use client';
 
-import { Salad } from 'lucide-react';
+import { Salad, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type FormEvent,
+  useActionState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { MediaAssetDisplay } from '../../lib/media/data';
 import type {
   IngredientOption,
@@ -49,11 +57,12 @@ import {
   roundNutrientValues,
 } from '../../lib/recipes/nutrition-rules';
 import {
-  calculateTotalMinutes,
   clearConditionalValuesForStateChange,
+  formatRecipeDuration,
   recipeScoreValues,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
+import { MAX_RECIPE_MINUTES, parseTimeExpression } from '../../lib/recipes/time-rules';
 import { createUuid } from '../../lib/uuid';
 import {
   createOrGetRecipePicklistValue,
@@ -65,14 +74,16 @@ import { uploadMediaFiles } from '../media/upload-files';
 import { NutritionEstimate } from '../nutrition/nutrition-estimate';
 import { NutritionPane, type NutritionPaneSave } from '../nutrition/nutrition-pane';
 import { Picklist } from '../picklist';
+import { ReorderGrip } from '../reorder-grip';
 import { TagMultiSelect } from '../tags/tag-controls';
 import { saveRecipe } from './actions';
-import { IngredientRowsEditor } from './ingredient-rows-editor';
+import { IngredientRowsEditor, SuggestionCellEditor } from './ingredient-rows-editor';
 import { InstructionStepsEditor } from './instruction-steps-editor';
 import { MultiPicklist, type RecipeMultiSelectCategory } from './multi-picklist';
 import { PublicationPicker } from './publication-picker';
 import { RecipeDeleteAction } from './recipe-detail-actions';
 import { RecipeRelationshipsEditor } from './recipe-relationships-editor';
+import { useReorderDrag } from './use-reorder-drag';
 
 type RecipeFormProps = {
   ingredients: IngredientOption[];
@@ -89,23 +100,19 @@ type RecipeFormProps = {
 
 type RecipeSinglePicklistCategory = 'food_type' | 'state' | 'verdict' | 'enthusiasm' | 'score';
 type RecipePicklistKey = RecipeMultiSelectCategory | RecipeSinglePicklistCategory;
-
 type SinglePicklistOption = {
   value: string;
   label: string;
 };
 
-const timeFields = [
-  ['prep_time_minutes', 'Prep time (minutes)', 'Prep'],
-  ['mixing_time_minutes', 'Mixing time (minutes)', 'Mixing'],
-  ['marinate_time_minutes', 'Marinate time (minutes)', 'Marinate'],
-  ['chill_time_minutes', 'Chill time (minutes)', 'Chill'],
-  ['freeze_time_minutes', 'Freeze time (minutes)', 'Freeze'],
-  ['cook_time_minutes', 'Cook time (minutes)', 'Cook'],
-  ['bake_time_minutes', 'Bake time (minutes)', 'Bake'],
-  ['cooling_time_minutes', 'Cooling time (minutes)', 'Cooling'],
-  ['rest_time_minutes', 'Rest time (minutes)', 'Rest'],
-] as const;
+type RecipeTimeEntryDraft = {
+  id: string;
+  timeTypeId: string;
+  expression: string;
+  minutes: number | null;
+  error: string;
+  typeError: string;
+};
 
 const stateOptions: SinglePicklistOption[] = [
   { value: 'want_to_try', label: 'Want to Try' },
@@ -125,6 +132,8 @@ function SinglePicklist({
   placeholder,
   options,
   isOpen,
+  describedBy,
+  invalid = false,
   onOpenChange,
   onChange,
   onAddOption,
@@ -136,6 +145,8 @@ function SinglePicklist({
   placeholder: string;
   options: SinglePicklistOption[];
   isOpen: boolean;
+  describedBy?: string;
+  invalid?: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onChange: (value: string) => void;
   onAddOption?: (value: string) => Promise<{ valueId?: string; error?: string }>;
@@ -147,6 +158,8 @@ function SinglePicklist({
       <span>{label}</span>
       <Picklist
         className="recipe-picklist-trigger"
+        describedBy={describedBy}
+        invalid={invalid}
         label={label}
         measureLabel={placeholder}
         menuClassName={menuClassName}
@@ -262,6 +275,63 @@ export function RecipeForm({
       })) ?? [{ id: 'instruction-draft', markdown: '', plainText: '' }],
   );
   const [instructionStepsError, setInstructionStepsError] = useState('');
+  const [timeEntries, setTimeEntries] = useState<RecipeTimeEntryDraft[]>(
+    () =>
+      recipe?.time_entries.map((entry) => ({
+        id: entry.id,
+        timeTypeId: entry.time_type_id,
+        expression: formatGroupedInteger(entry.minutes),
+        minutes: entry.minutes,
+        error: '',
+        typeError: '',
+      })) ?? [],
+  );
+  const [timeEntriesError, setTimeEntriesError] = useState('');
+  const [timeEntriesAnnouncement, setTimeEntriesAnnouncement] = useState('');
+  const timeFieldsRef = useRef<HTMLDivElement>(null);
+  const pendingTimeDrop = useRef<{ sourceId: string; rowTops: Map<string, number> } | null>(null);
+  const [timeDropOffsets, setTimeDropOffsets] = useState<Map<string, number>>(() => new Map());
+  const [timeDropCommitPending, setTimeDropCommitPending] = useState(false);
+  const [settlingTimeEntryId, setSettlingTimeEntryId] = useState<string | null>(null);
+  const reorderDrag = useReorderDrag();
+  const dragPreview = reorderDrag.preview;
+
+  useLayoutEffect(() => {
+    if (dragPreview) {
+      return;
+    }
+    const pending = pendingTimeDrop.current;
+    if (!pending) {
+      return;
+    }
+    pendingTimeDrop.current = null;
+
+    const offsets = new Map<string, number>();
+    for (const row of Array.from(
+      timeFieldsRef.current?.querySelectorAll<HTMLElement>(
+        '.recipe-time-entry-row[data-time-entry-id]',
+      ) ?? [],
+    )) {
+      const entryId = row.dataset.timeEntryId;
+      const startingTop = entryId ? pending.rowTops.get(entryId) : undefined;
+      if (entryId && startingTop !== undefined && row.getBoundingClientRect().height > 0) {
+        offsets.set(entryId, startingTop - row.getBoundingClientRect().top);
+      }
+    }
+    if (!offsets.size) {
+      setTimeDropCommitPending(false);
+      return;
+    }
+
+    setTimeDropOffsets(offsets);
+    setTimeDropCommitPending(false);
+    const canAnimate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setSettlingTimeEntryId(
+      canAnimate && Math.abs(offsets.get(pending.sourceId) ?? 0) > 0.5 ? pending.sourceId : null,
+    );
+    window.requestAnimationFrame(() => setTimeDropOffsets(new Map()));
+  }, [dragPreview]);
+
   const photoReferenceStepNumbers: Record<string, number[]> = {};
   const addPhotoReferenceSteps = (steps: readonly { markdown: string }[]) => {
     for (const [index, step] of steps.entries()) {
@@ -300,8 +370,13 @@ export function RecipeForm({
   const [enthusiasmId, setEnthusiasmId] = useState(recipe?.enthusiasm_id ?? '');
   const [occasionDetails, setOccasionDetails] = useState(recipe?.occasion_details ?? '');
   const [reason, setReason] = useState(recipe?.reason ?? '');
-  const [openPicklist, setOpenPicklist] = useState<RecipePicklistKey | null>(null);
+  const [openPicklist, setOpenPicklist] = useState<string | null>(null);
 
+  const totalTimeMinutes = timeEntries.reduce(
+    (total, entry) => total + BigInt(entry.minutes ?? 0),
+    BigInt(0),
+  );
+  const totalTimeExceedsLimit = totalTimeMinutes > BigInt(MAX_RECIPE_MINUTES);
   const parsedServes = serves ? parseGroupedInteger(serves) : null;
   const effectiveServes = parsedServes && parsedServes > 0 ? parsedServes : null;
   const nutritionState = useMemo(() => {
@@ -449,6 +524,137 @@ export function RecipeForm({
       current.some((item) => item.id === addedValue.id) ? current : [...current, addedValue],
     );
     return { valueId: addedValue.id };
+  }
+
+  const timeTypeOptions = valuesFor('time_type').map((option) => ({
+    value: option.id,
+    label: option.display_value,
+  }));
+
+  function updateTimeEntry(entryId: string, update: Partial<RecipeTimeEntryDraft>) {
+    setTimeEntries((current) =>
+      current.map((entry) => (entry.id === entryId ? { ...entry, ...update } : entry)),
+    );
+  }
+
+  function commitTimeType(entryId: string, rawValue: string) {
+    const value = rawValue.trim();
+    const option = timeTypeOptions.find(
+      (item) => item.label.toLocaleLowerCase() === value.toLocaleLowerCase(),
+    );
+    if (!value) {
+      updateTimeEntry(entryId, { timeTypeId: '', typeError: '' });
+    } else if (option) {
+      updateTimeEntry(entryId, { timeTypeId: option.value, typeError: '' });
+    } else {
+      updateTimeEntry(entryId, {
+        typeError: 'Choose a Time Type or select its Add suggestion.',
+      });
+    }
+  }
+
+  async function selectTimeType(entryId: string, rawValue: string) {
+    const value = rawValue.trim();
+    if (!value) {
+      updateTimeEntry(entryId, { typeError: 'Choose a Time Type.' });
+      return;
+    }
+    const option = timeTypeOptions.find(
+      (item) => item.label.toLocaleLowerCase() === value.toLocaleLowerCase(),
+    );
+    if (option) {
+      updateTimeEntry(entryId, { timeTypeId: option.value, typeError: '' });
+      return;
+    }
+
+    try {
+      const result = await addPicklistOption('time_type', value);
+      if (!result.valueId) {
+        updateTimeEntry(entryId, {
+          typeError: result.error ?? 'Time Type could not be added. Try again.',
+        });
+        return;
+      }
+      updateTimeEntry(entryId, { timeTypeId: result.valueId, typeError: '' });
+    } catch (error) {
+      updateTimeEntry(entryId, {
+        typeError:
+          error instanceof Error ? error.message : 'Time Type could not be added. Try again.',
+      });
+    }
+  }
+
+  function moveTimeEntry(entryId: string, offset: -1 | 1) {
+    const currentIndex = timeEntries.findIndex((entry) => entry.id === entryId);
+    const nextIndex = currentIndex + offset;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= timeEntries.length) {
+      return;
+    }
+
+    const reordered = [...timeEntries];
+    [reordered[currentIndex], reordered[nextIndex]] = [
+      reordered[nextIndex],
+      reordered[currentIndex],
+    ];
+    setTimeEntries(reordered);
+    setTimeEntriesAnnouncement(`Time entry moved to position ${nextIndex + 1}.`);
+  }
+
+  function reorderTimeEntries(order: string[], sourceId: string) {
+    const entriesById = new Map(timeEntries.map((entry) => [entry.id, entry]));
+    if (
+      order.length !== timeEntries.length ||
+      new Set(order).size !== order.length ||
+      order.some((entryId) => !entriesById.has(entryId))
+    ) {
+      setTimeEntriesAnnouncement('Time entry order could not be changed. Please try again.');
+      return;
+    }
+
+    const reordered = order
+      .map((entryId) => entriesById.get(entryId))
+      .filter((entry): entry is RecipeTimeEntryDraft => entry !== undefined);
+    setTimeEntries(reordered);
+    setTimeEntriesAnnouncement(`Time entry moved to position ${order.indexOf(sourceId) + 1}.`);
+  }
+
+  function addTimeEntry() {
+    setTimeEntries((current) => [
+      ...current,
+      {
+        id: createUuid(),
+        timeTypeId: timeTypeOptions[0]?.value ?? '',
+        expression: '',
+        minutes: null,
+        error: '',
+        typeError: '',
+      },
+    ]);
+    setTimeEntriesError('');
+    setTimeEntriesAnnouncement('');
+  }
+
+  function evaluateTimeEntry(entryId: string, expression: string) {
+    try {
+      const minutes = parseTimeExpression(expression);
+      updateTimeEntry(entryId, {
+        expression: formatGroupedInteger(minutes),
+        minutes,
+        error: '',
+      });
+      setTimeEntriesError('');
+    } catch (error) {
+      updateTimeEntry(entryId, {
+        expression,
+        error: error instanceof Error ? error.message : 'Check this time expression.',
+      });
+    }
+  }
+
+  function removeTimeEntry(entryId: string) {
+    setTimeEntries((current) => current.filter((entry) => entry.id !== entryId));
+    setTimeEntriesError('');
+    setTimeEntriesAnnouncement('');
   }
 
   useEffect(() => {
@@ -654,37 +860,65 @@ export function RecipeForm({
     setIngredientSetRemovalTargetId('');
   }
 
-  function calculateTotal() {
-    const form = formRef.current;
-    if (!form) {
-      return;
-    }
-
-    const readMinutes = (field: string) => {
-      const input = form.elements.namedItem(field);
-      return input instanceof HTMLInputElement ? parseGroupedInteger(input.value) : null;
-    };
-    const totalInput = form.elements.namedItem('total_time_minutes');
-    if (totalInput instanceof HTMLInputElement) {
-      totalInput.value = formatGroupedInteger(
-        calculateTotalMinutes({
-          prep: readMinutes('prep_time_minutes'),
-          mixing: readMinutes('mixing_time_minutes'),
-          marinate: readMinutes('marinate_time_minutes'),
-          chill: readMinutes('chill_time_minutes'),
-          freeze: readMinutes('freeze_time_minutes'),
-          cook: readMinutes('cook_time_minutes'),
-          bake: readMinutes('bake_time_minutes'),
-          cooling: readMinutes('cooling_time_minutes'),
-          rest: readMinutes('rest_time_minutes'),
-          total: readMinutes('total_time_minutes'),
-        }),
-      );
-    }
-  }
-
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     setSaveNotice('');
+    const availableTimeTypeIds = new Set(timeTypeOptions.map((option) => option.value));
+    const evaluatedTimeEntries = timeEntries.map((entry) => {
+      let minutes: number | null = null;
+      let error = '';
+      let typeError = entry.typeError;
+      if (!availableTimeTypeIds.has(entry.timeTypeId)) {
+        typeError ||= 'Choose a Time Type.';
+      }
+      try {
+        minutes = parseTimeExpression(entry.expression);
+      } catch (evaluationError) {
+        error =
+          evaluationError instanceof Error
+            ? evaluationError.message
+            : 'Check this time expression.';
+      }
+      return { entry, minutes, error, typeError };
+    });
+    const submittedTotal = evaluatedTimeEntries.reduce(
+      (total, evaluated) => total + BigInt(evaluated.minutes ?? 0),
+      BigInt(0),
+    );
+    const totalExceedsLimit = submittedTotal > BigInt(MAX_RECIPE_MINUTES);
+    if (
+      evaluatedTimeEntries.some(({ error, typeError }) => error || typeError) ||
+      totalExceedsLimit
+    ) {
+      event.preventDefault();
+      setTimeEntries((current) =>
+        current.map((entry, index) => {
+          const evaluated = evaluatedTimeEntries[index];
+          return {
+            ...entry,
+            ...(evaluated.minutes === null
+              ? {}
+              : {
+                  minutes: evaluated.minutes,
+                  expression: formatGroupedInteger(evaluated.minutes),
+                }),
+            error: evaluated.error,
+            typeError: evaluated.typeError,
+          };
+        }),
+      );
+      setTimeEntriesError(
+        totalExceedsLimit
+          ? 'Total time exceeds the supported whole-minute limit.'
+          : 'Check the highlighted time entries before saving.',
+      );
+      return;
+    }
+    const submittedTimeEntries = evaluatedTimeEntries.map(({ entry, minutes }, position) => ({
+      time_type_id: entry.timeTypeId,
+      minutes: minutes ?? 0,
+      position,
+    }));
+
     const normalizedSets = normalizeIngredientSets(ingredientSets);
     if (!normalizedSets) {
       event.preventDefault();
@@ -743,6 +977,7 @@ export function RecipeForm({
     const ingredientSetsInput = event.currentTarget.elements.namedItem('ingredient_sets');
     const instructionInput = event.currentTarget.elements.namedItem('instruction_steps');
     const nutritionInput = event.currentTarget.elements.namedItem('nutrition_overrides');
+    const timeEntriesInput = event.currentTarget.elements.namedItem('time_entries');
     if (ingredientInput instanceof HTMLInputElement) {
       ingredientInput.value = JSON.stringify(ingredientPayload);
     }
@@ -755,9 +990,13 @@ export function RecipeForm({
     if (nutritionInput instanceof HTMLInputElement) {
       nutritionInput.value = JSON.stringify(nutritionOverrides);
     }
+    if (timeEntriesInput instanceof HTMLInputElement) {
+      timeEntriesInput.value = JSON.stringify(submittedTimeEntries);
+    }
     setIngredientRowsError('');
     setIngredientSetsError('');
     setInstructionStepsError('');
+    setTimeEntriesError('');
   }
 
   const form = (
@@ -804,6 +1043,7 @@ export function RecipeForm({
       <input name="ingredient_sets" type="hidden" defaultValue="[]" />
       <input name="instruction_steps" type="hidden" defaultValue="[]" />
       <input name="nutrition_overrides" type="hidden" defaultValue="{}" />
+      <input name="time_entries" type="hidden" defaultValue="[]" />
       <button hidden name="save_mode" ref={shortcutSaveButtonRef} type="submit" value="shortcut" />
       {saveNotice && (
         <p aria-live="polite" className="recipe-form-save-status" role="status">
@@ -1034,16 +1274,6 @@ export function RecipeForm({
             onClose={() => setOpenPicklist(null)}
             onAddOption={(value) => addPicklistOption('cuisine', value)}
           />
-          <div className="recipe-form-save-row">
-            <button
-              aria-label="Save recipe"
-              className="recipe-primary-button"
-              disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
-              type="submit"
-            >
-              {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save'}
-            </button>
-          </div>
         </div>
         <TagMultiSelect tags={tags} selectedIds={recipe?.tags.map((tag) => tag.id)} />
       </fieldset>
@@ -1287,65 +1517,256 @@ export function RecipeForm({
           </div>
         </dialog>
       )}
+      <div className="recipe-form-save-row">
+        <button
+          aria-label="Save recipe"
+          className="recipe-primary-button"
+          disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
+          type="submit"
+        >
+          {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save'}
+        </button>
+      </div>
       <fieldset className="recipe-time-fieldset">
         <legend>Times (min)</legend>
-        <div className="recipe-time-fields">
-          {timeFields.map(([name, accessibleLabel, shortLabel]) => (
-            <label className="recipe-time-field" htmlFor={name} key={name}>
-              <span>{shortLabel}</span>
-              <input
-                aria-label={accessibleLabel}
-                id={name}
-                name={name}
-                inputMode="numeric"
-                type="text"
-                defaultValue={formatOptionalInteger(recipe?.[name])}
-                onBlur={(event) => {
-                  event.currentTarget.value = formatGroupedIntegerInput(event.currentTarget.value);
+        <div className="recipe-time-fields" ref={timeFieldsRef}>
+          {timeEntries.length > 0 && (
+            <div aria-hidden="true" className="recipe-time-entry-headers">
+              <span />
+              <span>Minutes</span>
+              <span>Time Type</span>
+              <span />
+            </div>
+          )}
+          {timeEntries.map((entry, index) => {
+            const expressionId = `time-expression-${entry.id}`;
+            const expressionErrorId = `${expressionId}-error`;
+            const typeErrorId = `time-type-${entry.id}-error`;
+            const sourceIndex = dragPreview
+              ? timeEntries.findIndex((item) => item.id === dragPreview.sourceId)
+              : -1;
+            const targetIndex = dragPreview
+              ? timeEntries.findIndex((item) => item.id === dragPreview.targetId)
+              : -1;
+            const reorderState =
+              dragPreview?.sourceId === entry.id
+                ? 'dragging'
+                : dragPreview &&
+                    ((sourceIndex < targetIndex && index > sourceIndex && index <= targetIndex) ||
+                      (sourceIndex > targetIndex && index >= targetIndex && index < sourceIndex))
+                  ? 'displaced'
+                  : settlingTimeEntryId === entry.id
+                    ? 'settling'
+                    : undefined;
+            const dragOffset = dragPreview?.offsets.get(entry.id);
+            const dropOffset = timeDropOffsets.get(entry.id);
+            const transform =
+              dragPreview && reorderState === 'dragging'
+                ? `translateY(${dragPreview.pointerOffset}px)`
+                : dragPreview && reorderState === 'displaced' && dragOffset !== undefined
+                  ? `translateY(${dragOffset}px)`
+                  : dropOffset !== undefined
+                    ? `translateY(${dropOffset}px)`
+                    : undefined;
+            return (
+              <fieldset
+                className="recipe-time-entry-row"
+                data-reorder-state={reorderState}
+                data-time-entry-id={entry.id}
+                key={entry.id}
+                style={{
+                  transform,
+                  transition:
+                    timeDropCommitPending || timeDropOffsets.has(entry.id) ? 'none' : undefined,
                 }}
-              />
-            </label>
-          ))}
+                onTransitionEnd={(event) => {
+                  if (event.propertyName === 'transform' && settlingTimeEntryId === entry.id) {
+                    setSettlingTimeEntryId(null);
+                  }
+                }}
+              >
+                <legend className="visually-hidden">Time entry {index + 1}</legend>
+                <button
+                  aria-label={`Reorder time entry ${index + 1}`}
+                  className="recipe-time-entry-drag-handle"
+                  title="Drag to reorder. Use Ctrl+Up or Ctrl+Down to move by keyboard."
+                  type="button"
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) {
+                      return;
+                    }
+                    const rowBounds = Array.from(
+                      timeFieldsRef.current?.querySelectorAll<HTMLElement>(
+                        '.recipe-time-entry-row[data-time-entry-id]',
+                      ) ?? [],
+                    ).flatMap((row) => {
+                      const rowId = row.dataset.timeEntryId;
+                      if (!rowId || row.getBoundingClientRect().height === 0) {
+                        return [];
+                      }
+                      const bounds = row.getBoundingClientRect();
+                      return [
+                        {
+                          id: rowId,
+                          top: bounds.top + window.scrollY,
+                          bottom: bounds.bottom + window.scrollY,
+                        },
+                      ];
+                    });
+                    const sourceElement =
+                      event.currentTarget.closest<HTMLElement>('.recipe-time-entry-row');
+                    reorderDrag.start(
+                      entry.id,
+                      event.clientY,
+                      sourceElement?.getBoundingClientRect().height ?? 48,
+                      rowBounds,
+                    );
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                  }}
+                  onPointerMove={(event) => reorderDrag.move(event.clientY)}
+                  onPointerUp={(event) => {
+                    const hitTargetId = document
+                      .elementFromPoint(event.clientX, event.clientY)
+                      ?.closest<HTMLElement>('.recipe-time-entry-row')?.dataset.timeEntryId;
+                    const draggedEntry = reorderDrag.finish(hitTargetId);
+                    if (!draggedEntry || draggedEntry.sourceId === draggedEntry.targetId) {
+                      return;
+                    }
+
+                    const rowTops = new Map(
+                      Array.from(
+                        timeFieldsRef.current?.querySelectorAll<HTMLElement>(
+                          '.recipe-time-entry-row[data-time-entry-id]',
+                        ) ?? [],
+                      ).flatMap((row) => {
+                        const rowId = row.dataset.timeEntryId;
+                        return rowId ? [[rowId, row.getBoundingClientRect().top] as const] : [];
+                      }),
+                    );
+                    pendingTimeDrop.current = { sourceId: draggedEntry.sourceId, rowTops };
+                    setTimeDropCommitPending(true);
+                    reorderTimeEntries(draggedEntry.order, draggedEntry.sourceId);
+                  }}
+                  onPointerCancel={(event) => {
+                    reorderDrag.cancel();
+                    event.currentTarget.focus();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape' && reorderDrag.preview) {
+                      event.preventDefault();
+                      reorderDrag.cancel();
+                      event.currentTarget.focus();
+                    } else if (event.ctrlKey && event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      moveTimeEntry(entry.id, -1);
+                    } else if (event.ctrlKey && event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      moveTimeEntry(entry.id, 1);
+                    }
+                  }}
+                >
+                  <ReorderGrip />
+                </button>
+                <label className="recipe-time-field" htmlFor={expressionId}>
+                  <span className="visually-hidden">Minutes</span>
+                  <input
+                    aria-describedby={entry.error ? expressionErrorId : undefined}
+                    aria-invalid={Boolean(entry.error)}
+                    autoComplete="off"
+                    id={expressionId}
+                    inputMode="text"
+                    type="text"
+                    value={entry.expression}
+                    onBlur={(event) => evaluateTimeEntry(entry.id, event.currentTarget.value)}
+                    onChange={(event) => {
+                      updateTimeEntry(entry.id, {
+                        expression: event.target.value,
+                        error: '',
+                      });
+                      setTimeEntriesError('');
+                    }}
+                  />
+                  {entry.error && (
+                    <span className="recipe-time-entry-error" id={expressionErrorId} role="alert">
+                      {entry.error}
+                    </span>
+                  )}
+                </label>
+                <div className="recipe-time-type-actions">
+                  <div className="recipe-time-type-field">
+                    <SuggestionCellEditor
+                      allowTabToSelectAdd={false}
+                      describedBy={entry.typeError ? typeErrorId : undefined}
+                      focusOnMount={false}
+                      fitContent
+                      invalid={Boolean(entry.typeError)}
+                      label="Time Type"
+                      onCancel={() => updateTimeEntry(entry.id, { typeError: '' })}
+                      onCommit={(value) => commitTimeType(entry.id, value)}
+                      onSelectSuggestion={(value) => {
+                        void selectTimeType(entry.id, value);
+                      }}
+                      options={timeTypeOptions.map((option) => option.label)}
+                      resetOnCancel
+                      syncValue
+                      value={
+                        timeTypeOptions.find((option) => option.value === entry.timeTypeId)
+                          ?.label ?? ''
+                      }
+                    />
+                    <input name={`time_type_${entry.id}`} type="hidden" value={entry.timeTypeId} />
+                    {entry.typeError && (
+                      <span className="recipe-time-entry-error" id={typeErrorId} role="alert">
+                        {entry.typeError}
+                      </span>
+                    )}
+                  </div>
+                  <div className="recipe-time-entry-actions">
+                    <button
+                      aria-label={`Remove time entry ${index + 1}`}
+                      className="recipe-ingredient-set-action recipe-time-entry-remove"
+                      title="Remove time entry"
+                      type="button"
+                      onClick={() => removeTimeEntry(entry.id)}
+                    >
+                      <X aria-hidden="true" size={16} />
+                    </button>
+                  </div>
+                </div>
+              </fieldset>
+            );
+          })}
+          <button
+            aria-label="Add time"
+            className="recipe-time-add-row"
+            type="button"
+            onClick={addTimeEntry}
+          >
+            add time
+          </button>
         </div>
+        <p className="visually-hidden" role="status">
+          {timeEntriesAnnouncement}
+        </p>
         <div className="recipe-time-total-row">
           <label className="recipe-time-field" htmlFor="total-time">
             <span>Total</span>
-            <input
-              aria-label="Total time (minutes)"
+            <output
+              aria-label="Total time in minutes"
               id="total-time"
-              name="total_time_minutes"
-              inputMode="numeric"
-              type="text"
-              defaultValue={formatOptionalInteger(recipe?.total_time_minutes)}
-              onBlur={(event) => {
-                event.currentTarget.value = formatGroupedIntegerInput(event.currentTarget.value);
-              }}
-            />
+              aria-describedby={totalTimeExceedsLimit ? 'recipe-time-total-error' : undefined}
+            >
+              {totalTimeExceedsLimit
+                ? 'Exceeds supported limit'
+                : formatGroupedInteger(Number(totalTimeMinutes))}
+            </output>
           </label>
-          <button
-            aria-label="Calculate total time"
-            className="recipe-secondary-button recipe-calculate-button"
-            title="Calculate total time"
-            type="button"
-            onClick={calculateTotal}
-          >
-            <span aria-hidden="true" className="recipe-calculate-icon">
-              Σ
-            </span>
-          </button>
-          <button
-            aria-label={
-              recipe
-                ? 'Save changes from the Total Time row'
-                : 'Save new recipe from the Total Time row'
-            }
-            className="recipe-primary-button recipe-time-submit-button"
-            disabled={pending || uploadingDraftPhotos || Boolean(actionState?.recipeId)}
-            type="submit"
-          >
-            {pending ? 'Saving…' : uploadingDraftPhotos ? 'Uploading photos…' : 'Save'}
-          </button>
         </div>
+        {(timeEntriesError || totalTimeExceedsLimit) && (
+          <p className="recipe-time-entry-error" id="recipe-time-total-error" role="alert">
+            {timeEntriesError || 'Total time exceeds the supported whole-minute limit.'}
+          </p>
+        )}
       </fieldset>
       <RecipeRelationshipsEditor
         pairings={recipe?.pairings ?? []}

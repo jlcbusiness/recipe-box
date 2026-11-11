@@ -38,7 +38,7 @@ function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -54,15 +54,19 @@ function createBundleEntries(options: {
           (table) =>
             table !== 'recipe_ingredient_sets' &&
             table !== 'ingredient_nutrition_profiles' &&
-            table !== 'ingredient_measure_equivalents',
+            table !== 'ingredient_measure_equivalents' &&
+            table !== 'recipe_time_entries',
         )
       : schemaVersion < 9
         ? exportTableNames.filter(
             (table) =>
               table !== 'ingredient_nutrition_profiles' &&
-              table !== 'ingredient_measure_equivalents',
+              table !== 'ingredient_measure_equivalents' &&
+              table !== 'recipe_time_entries',
           )
-        : exportTableNames;
+        : schemaVersion < 11
+          ? exportTableNames.filter((table) => table !== 'recipe_time_entries')
+          : exportTableNames;
   const data = {
     format: 'recipe-box-data',
     schema_version: schemaVersion,
@@ -526,6 +530,7 @@ describe('import bundle validation', () => {
         makes_quantity: null,
         makes_thing: null,
         nutrition_overrides: {},
+        total_time_minutes: 0,
       },
     ]);
     expect(bundle.data.records.recipe_ingredient_sets).toHaveLength(1);
@@ -1136,6 +1141,86 @@ describe('import bundle validation', () => {
       is_protected_source: false,
       source_public_id: null,
     });
+  });
+
+  it('converts legacy component times into ordered entries and derives their total', () => {
+    const entries = createBundleEntries({
+      schemaVersion: 10,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        prep_time_minutes: 12,
+        cook_time_minutes: 28,
+        total_time_minutes: 99,
+      },
+    });
+
+    const bundle = validateImportBundleFiles(entries);
+    const recipe = bundle.data.records.recipes[0];
+    expect(bundle.data.schema_version).toBe(11);
+    expect(recipe).not.toHaveProperty('prep_time_minutes');
+    expect(recipe.total_time_minutes).toBe(40);
+    expect(bundle.data.records.recipe_time_entries).toHaveLength(2);
+    expect(
+      bundle.data.records.recipe_time_entries.map((entry) => [entry.minutes, entry.position]),
+    ).toEqual([
+      [12, 0],
+      [28, 1],
+    ]);
+    expect(
+      bundle.data.records.recipe_picklist_values
+        .filter((value) => value.category === 'time_type')
+        .map((value) => value.value),
+    ).toEqual(['Prep', 'Cook']);
+  });
+
+  it('converts a legacy total-only recipe into a Cook entry', () => {
+    const entries = createBundleEntries({
+      schemaVersion: 10,
+      recipe: { id: recipeId, name: 'Slow soup', total_time_minutes: 40 },
+    });
+
+    const bundle = validateImportBundleFiles(entries);
+    expect(bundle.data.records.recipe_time_entries).toHaveLength(1);
+    expect(bundle.data.records.recipe_time_entries[0].minutes).toBe(40);
+    expect(bundle.data.records.recipe_time_entries[0].position).toBe(0);
+    const timeTypeId = bundle.data.records.recipe_time_entries[0].time_type_id;
+    expect(
+      bundle.data.records.recipe_picklist_values.find((value) => value.id === timeTypeId)?.value,
+    ).toBe('Cook');
+  });
+
+  it('validates version 11 time-entry references and ordering', () => {
+    const timeTypeId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const timeEntryId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const entries = createBundleEntries({
+      schemaVersion: 11,
+      recipe: { id: recipeId, name: 'Lemon cake', total_time_minutes: 25 },
+      records: {
+        recipe_picklist_values: [
+          { id: timeTypeId, category: 'time_type', value: 'Bake', display_value: 'Bake' },
+        ],
+        recipe_time_entries: [
+          {
+            id: timeEntryId,
+            recipe_id: recipeId,
+            time_type_id: timeTypeId,
+            minutes: 25,
+            position: 0,
+          },
+        ],
+      },
+    });
+
+    expect(validateImportBundleFiles(entries).data.records.recipe_time_entries).toEqual([
+      {
+        id: timeEntryId,
+        recipe_id: recipeId,
+        time_type_id: timeTypeId,
+        minutes: 25,
+        position: 0,
+      },
+    ]);
   });
 
   it('rejects protected source metadata whose stable URL does not match its public ID', () => {

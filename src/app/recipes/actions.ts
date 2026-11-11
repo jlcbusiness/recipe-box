@@ -26,6 +26,7 @@ import {
   validateNutritionValues,
 } from '../../lib/recipes/nutrition-rules';
 import { isRecipeScore, parseMakesInput } from '../../lib/recipes/recipe-rules';
+import { MAX_RECIPE_MINUTES } from '../../lib/recipes/time-rules';
 import { createClient } from '../../lib/supabase/server';
 
 export type RecipeActionState = {
@@ -51,8 +52,18 @@ type RecipeRelationshipsPayload = {
     linked_recipe_id: string | null;
     publication_id: string | null;
     url: string | null;
+    is_protected_source: boolean;
+    source_public_id: string | null;
   }[];
 };
+
+type RecipeTimeEntryPayload = {
+  time_type_id: string;
+  minutes: number;
+  position: number;
+};
+
+const uuidPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu;
 
 function formText(formData: FormData, name: string): string {
   return String(formData.get(name) ?? '').trim();
@@ -60,16 +71,6 @@ function formText(formData: FormData, name: string): string {
 
 function optionalId(formData: FormData, name: string): string | null {
   return formText(formData, name) || null;
-}
-
-function optionalInteger(formData: FormData, name: string): number | null | undefined {
-  const raw = formText(formData, name);
-  if (!raw) {
-    return null;
-  }
-
-  const value = parseGroupedInteger(raw);
-  return value !== null && value >= 0 ? value : undefined;
 }
 
 function selectedIds(formData: FormData, name: string): string[] {
@@ -125,6 +126,8 @@ function parseRecipeRelationships(formData: FormData): RecipeRelationshipsPayloa
           return null;
         }
         const reference = entry as Record<string, unknown>;
+        const isProtectedSource = reference.is_protected_source === true;
+        const sourcePublicId = reference.source_public_id;
         if (
           typeof reference.id !== 'string' ||
           !['recipe', 'publication', 'external_url', 'printed_citation'].includes(
@@ -133,7 +136,15 @@ function parseRecipeRelationships(formData: FormData): RecipeRelationshipsPayloa
           typeof reference.display_text !== 'string' ||
           (reference.linked_recipe_id !== null && typeof reference.linked_recipe_id !== 'string') ||
           (reference.publication_id !== null && typeof reference.publication_id !== 'string') ||
-          (reference.url !== null && typeof reference.url !== 'string')
+          (reference.url !== null && typeof reference.url !== 'string') ||
+          (reference.is_protected_source !== undefined &&
+            typeof reference.is_protected_source !== 'boolean') ||
+          (sourcePublicId !== undefined &&
+            sourcePublicId !== null &&
+            (typeof sourcePublicId !== 'string' || !uuidPattern.test(sourcePublicId))) ||
+          (isProtectedSource &&
+            (typeof sourcePublicId !== 'string' || reference.reference_type !== 'external_url')) ||
+          (!isProtectedSource && sourcePublicId !== undefined && sourcePublicId !== null)
         ) {
           return null;
         }
@@ -150,6 +161,8 @@ function parseRecipeRelationships(formData: FormData): RecipeRelationshipsPayloa
           linked_recipe_id: reference.linked_recipe_id,
           publication_id: reference.publication_id,
           url,
+          is_protected_source: isProtectedSource,
+          source_public_id: typeof sourcePublicId === 'string' ? sourcePublicId : null,
         };
       },
     );
@@ -214,6 +227,44 @@ function parseRecipeNutritionOverrides(formData: FormData): Record<string, numbe
     const values: unknown = JSON.parse(raw);
     if (validateNutritionValues(values)) return null;
     return values as Record<string, number>;
+  } catch {
+    return null;
+  }
+}
+
+function parseRecipeTimeEntries(formData: FormData): RecipeTimeEntryPayload[] | null {
+  const raw = formData.get('time_entries');
+  if (typeof raw !== 'string') return null;
+  try {
+    const entries: unknown = JSON.parse(raw);
+    if (!Array.isArray(entries)) return null;
+    let total = 0;
+    const normalized: RecipeTimeEntryPayload[] = [];
+    for (const [position, entry] of entries.entries()) {
+      if (
+        entry === null ||
+        typeof entry !== 'object' ||
+        Array.isArray(entry) ||
+        Object.keys(entry).length !== 3 ||
+        typeof entry.time_type_id !== 'string' ||
+        !uuidPattern.test(entry.time_type_id) ||
+        typeof entry.minutes !== 'number' ||
+        !Number.isSafeInteger(entry.minutes) ||
+        entry.minutes < 0 ||
+        entry.minutes > MAX_RECIPE_MINUTES ||
+        entry.position !== position
+      ) {
+        return null;
+      }
+      total += entry.minutes;
+      if (total > MAX_RECIPE_MINUTES) return null;
+      normalized.push({
+        time_type_id: entry.time_type_id,
+        minutes: entry.minutes,
+        position,
+      });
+    }
+    return normalized;
   } catch {
     return null;
   }
@@ -340,24 +391,9 @@ export async function saveRecipe(
   if (!relationships) {
     return { error: 'Check the Pairs With and References fields before saving.' };
   }
-
-  const timeFields = [
-    'prep_time_minutes',
-    'mixing_time_minutes',
-    'marinate_time_minutes',
-    'chill_time_minutes',
-    'freeze_time_minutes',
-    'cook_time_minutes',
-    'bake_time_minutes',
-    'cooling_time_minutes',
-    'rest_time_minutes',
-    'total_time_minutes',
-  ] as const;
-  const times = Object.fromEntries(
-    timeFields.map((field) => [field, optionalInteger(formData, field)]),
-  );
-  if (Object.values(times).some((value) => value === undefined)) {
-    return { error: 'Time values must be whole minutes greater than or equal to zero.' };
+  const timeEntries = parseRecipeTimeEntries(formData);
+  if (!timeEntries) {
+    return { error: 'Check the Time Type and whole-minute value for each time entry.' };
   }
 
   const servesText = formText(formData, 'serves');
@@ -403,7 +439,7 @@ export async function saveRecipe(
     return { error: 'Enter a valid HTTP(S) URL.' };
   }
 
-  const { data, error } = await supabase.rpc('save_recipe_with_nutrition', {
+  const { data, error } = await supabase.rpc('save_recipe_with_time_entries', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
     p_name: name,
@@ -417,16 +453,7 @@ export async function saveRecipe(
     p_makes_quantity: makes.quantity,
     p_makes_thing: makes.thing,
     p_nutrition_overrides: nutritionOverrides,
-    p_prep_time_minutes: times.prep_time_minutes,
-    p_mixing_time_minutes: times.mixing_time_minutes,
-    p_marinate_time_minutes: times.marinate_time_minutes,
-    p_chill_time_minutes: times.chill_time_minutes,
-    p_freeze_time_minutes: times.freeze_time_minutes,
-    p_cook_time_minutes: times.cook_time_minutes,
-    p_bake_time_minutes: times.bake_time_minutes,
-    p_cooling_time_minutes: times.cooling_time_minutes,
-    p_rest_time_minutes: times.rest_time_minutes,
-    p_total_time_minutes: times.total_time_minutes,
+    p_time_entries: timeEntries,
     p_notes_markdown: String(formData.get('notes_markdown') ?? ''),
     p_meal_type_ids: selectedIds(formData, 'meal_type_ids'),
     p_cuisine_ids: selectedIds(formData, 'cuisine_ids'),

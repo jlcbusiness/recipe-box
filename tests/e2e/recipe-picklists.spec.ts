@@ -28,6 +28,35 @@ async function expectPaneAdjacentToRow(
   ).toBeLessThan(4);
 }
 
+test('Settings manages the Time Type picklist @e2e @a11y', async ({ page, request }) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
+
+    const section = page.getByRole('region', { name: 'Picklists' });
+    await section.getByRole('button', { name: 'Picklists' }).click();
+    const category = section.getByRole('combobox', { name: 'Picklist category' });
+    await category.selectOption('time_type');
+    const values = section.getByRole('list', { name: 'Time Type' });
+    await expect(values.getByRole('button', { name: 'Edit Prep' })).toBeVisible();
+    await expect(values.getByRole('button', { name: 'Edit Rest' })).toBeVisible();
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+
+    const addValue = section.getByRole('textbox', { name: 'Add Time Type' });
+    await addValue.fill('Proofing');
+    await addValue.press('Enter');
+    await expect(values.getByRole('button', { name: 'Edit Proofing' })).toBeVisible();
+    await expect(section.getByRole('status')).toHaveText('Time Type added.');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Settings manages recipe picklist values as an ordered list @e2e @a11y', async ({
   page,
   request,
@@ -38,6 +67,7 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.waitForLoadState('networkidle');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
 
     const section = page.getByRole('region', { name: 'Picklists' });
     await expect(section).toBeVisible();

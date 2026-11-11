@@ -9,7 +9,12 @@ export type RecipePicklistActionState = {
   message?: string;
 };
 
-export type EditorPicklistCategory = 'food_type' | 'meal_type' | 'cuisine' | 'equipment';
+export type EditorPicklistCategory =
+  | 'food_type'
+  | 'meal_type'
+  | 'cuisine'
+  | 'equipment'
+  | 'time_type';
 
 export type RecipePicklistCreateResult = {
   value?: RecipePicklistValue;
@@ -26,12 +31,14 @@ const categories = new Set([
   'enthusiasm',
   'informal_unit',
   'unmeasured_phrase',
+  'time_type',
 ]);
 const editorCategories = new Set<EditorPicklistCategory>([
   'food_type',
   'meal_type',
   'cuisine',
   'equipment',
+  'time_type',
 ]);
 const actions = new Set(['add', 'rename', 'reorder', 'delete', 'merge']);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

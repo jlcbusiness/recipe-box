@@ -873,19 +873,20 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                                       <span data-explorer-column="state">
                                         {recipeStateLabels[recipe.state]}
                                       </span>
-                                      {recipe.total_time_minutes !== null && (
-                                        <>
-                                          <span
-                                            aria-hidden="true"
-                                            data-explorer-separator="total_time_minutes"
-                                          >
-                                            {' ~ '}
-                                          </span>
-                                          <span data-explorer-column="total_time_minutes">
-                                            {recipe.total_time_minutes} min
-                                          </span>
-                                        </>
-                                      )}
+                                      {recipe.total_time_minutes !== null &&
+                                        recipe.total_time_minutes > 0 && (
+                                          <>
+                                            <span
+                                              aria-hidden="true"
+                                              data-explorer-separator="total_time_minutes"
+                                            >
+                                              {' ~ '}
+                                            </span>
+                                            <span data-explorer-column="total_time_minutes">
+                                              {recipe.total_time_minutes} min
+                                            </span>
+                                          </>
+                                        )}
                                       {details?.opinion && (
                                         <span data-explorer-column="opinion">
                                           <span aria-hidden="true"> ~ </span>
@@ -987,7 +988,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                         <em>{recipe.publication_name ?? 'Recipe Tin'}</em>
                         <span aria-hidden="true"> ~ </span>
                         {recipeStateLabels[recipe.state]}
-                        {recipe.total_time_minutes !== null && (
+                        {recipe.total_time_minutes !== null && recipe.total_time_minutes > 0 && (
                           <>
                             <span aria-hidden="true"> ~ </span>
                             {recipe.total_time_minutes} min
