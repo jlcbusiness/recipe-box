@@ -1,3 +1,4 @@
+import { getResolvedEquivalentForMeasurement } from './measure-equivalent-rules';
 import type { MeasurementType } from './measurement-rules';
 import { convertUnitAmount } from './recipe-reader-rules';
 
@@ -308,23 +309,6 @@ function physicalAmount(
   }
 }
 
-function equivalentForMeasurement(
-  measurement: NutritionMeasurement,
-  equivalent: NutritionEquivalent | null,
-) {
-  if (!equivalent || equivalent.measurementType !== measurement.type) return null;
-  if (
-    measurement.type === 'informal' &&
-    ((measurement.picklistValueId && measurement.picklistValueId !== equivalent.picklistValueId) ||
-      (!measurement.picklistValueId &&
-        measurement.picklistValue?.trim().toLocaleLowerCase() !==
-          equivalent.picklistValue?.trim().toLocaleLowerCase()))
-  ) {
-    return null;
-  }
-  return equivalent;
-}
-
 function amountInBasis(
   measurement: NutritionMeasurement,
   basis: NutritionBasis,
@@ -366,7 +350,7 @@ function amountInBasis(
   }
 
   if (measurement.type !== 'count' && measurement.type !== 'informal') return null;
-  const matchedEquivalent = equivalentForMeasurement(measurement, equivalent);
+  const matchedEquivalent = getResolvedEquivalentForMeasurement(measurement, equivalent, density);
   if (!matchedEquivalent) return null;
   const directEquivalent = matchedEquivalent[basis.dimension];
   if (directEquivalent) {

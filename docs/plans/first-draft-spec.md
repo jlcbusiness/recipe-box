@@ -153,7 +153,12 @@ re-applies the density.
 Recipes are base batches. Readers can select target servings, multiply, or
 divide. Scaling changes numeric amounts but does not invent precision for
 unmeasured values. Unit conversion works within volume or weight dimensions;
-cross-dimension conversion requires trusted density.
+cross-dimension conversion requires trusted density. In the private reader,
+an ingredient with a configured Count/Things measure equivalent can also switch
+between that quantity and its explicit volume or weight equivalent. If trusted
+density exists, it derives the other dimension from the saved equivalent
+source; otherwise only explicitly saved dimensions are available. These
+reader choices are transient and never rewrite the recipe.
 
 Nutrition is User-entered; the app never imports nutrition automatically from
 external sources. DLC 12 adds per-ingredient Settings profiles, explicit

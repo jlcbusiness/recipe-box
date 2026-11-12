@@ -23,8 +23,8 @@ sections of this reference that the current work needs.
 1. [Product Vision and Paradigm](#1-product-vision-and-paradigm)
 2. [Recipe Card and Metadata](#2-recipe-card-and-metadata)
 3. [Ingredient Rows, Measurements, and Density](#3-ingredient-rows-measurements-and-density)
-Grid shows the default recipe photo when available with Fit/contain unless
-the User has saved framing. Filter and sort
+   Grid shows the default recipe photo when available with Fit/contain unless
+   the User has saved framing. Filter and sort
 
 4. [Ingredient Presentation and Sorting](#4-ingredient-presentation-and-sorting)
 5. [Instructions, Autocomplete, and Recipe Linking](#5-instructions-autocomplete-and-recipe-linking)
@@ -79,29 +79,29 @@ the User has saved framing. Filter and sort
 
 The top portion of the desktop recipe card contains compact, dense metadata inspired by Azure DevOps work items:
 
-| Field Name | Type | Options / Formats | Behavior & Visibility |
-| ---------- | ---- | ----------------- | --------------------- |
-| **Name** | Text | Free text | Primary recipe title. |
-| **Primary Publication** | Single-select picker | Searchable list of all user publications, including the reserved Recipe Tin collection, + "Add new publication" button | Clickable in view mode; navigates directly to the publication page. Every recipe belongs to a publication; Recipe Tin is the default collection and has no location fields. |
-| **Location** | Text / URL | Book page or range; free-text Magazine citation; website recipe URL | A Magazine citation is free text because citation styles vary. Its optional online recipe URL is a separate field and may coexist with the citation. |
-| **Food Type** | Single-select picklist | Casserole, roast, pie, galette, pasta, soup, sauce, cake, cocktail, bread, stew, salad, etc. | "What kind of dish is this?" Settings-managed picklist; use a compact custom dropdown aligned with the other picklist triggers. |
-| **Meal Type** | Multi-select picklist | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc. | "When or how do I serve this?" Settings-managed multi-select dropdown. Multiple values are toggled with buttons; selected values show a checkmark, leaf-green text, and a pale green background. |
-| **Cuisine** | Multi-select picklist | American, Italian, Chinese, Mexican, French, Thai, Indian, Fusion, etc. | Settings-managed multi-select dropdown to cleanly support fusion cooking. |
-| **Main Ingredients** | Derived index | Derived from ingredient rows | Not an independent metadata input. Automatically compiled from ingredient rows marked with the `Main` checkbox. Queryable as the **Main Ingredient** multi-select field and used by Search's **Main ingredients only** option. |
-| **State** | Single-select enum | `Want to try`, `Tried`, `Will not try` | New recipes default to `Want to try`. Place State immediately after Name; its active Enthusiasm, Verdict and optional Score, or Reason, Serves, and Equipment share its row. Food Type, Meal Type, and Cuisine follow on the next wrapping row. Changing State clears stale conditional values, including Score. |
-| **Verdict** | Single-select picklist | Favorite, delicious, staple, practice, try again, occasionally, specific occasion, once-a-year-rich, so-so, no, hell no, MISTAKE | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. Existing values, including Favorite, are preserved and are not mapped to Score, Star, or Heart. |
-| **Score** | Optional signed integer | `-5`, `-3`, `-1`, `0`, `1`, `2`, `3`, `4`, `5` | Visible only when `State == Tried`; changing State away from Tried clears it. The negative descriptions (`-1` Needs work, `-3` No, `-5` DO NOT TRY) and neutral `0` explain intended meaning only; the UI and accessible names remain numeric. Negative numeric values use tomato red as a supplementary cue wherever Rating appears in private detail and list views. |
-| **Star** | Boolean marker | On or off | Private “note this” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Heart and Verdict. Each recipe defaults off. |
-| **Heart** | Boolean marker | On or off | Private “love this and want to repeat it” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Star, Score, Verdict, and State. Each recipe defaults off. |
-| **Enthusiasm** | Single-select picklist | Absolutely, sounds good!, try, specific occasion, maybe, eh | Visible **only** when `State == Want to try`. The empty prompt reads “What am I feeling?” User-customizable in settings. |
-| **Occasion Details** | Free text | Text string describing the occasion | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected. |
-| **Reason** | Single-line text | Text string explaining rejection | Visible **only** when `State == Will not try`. |
-| **Equipment** | Multi-select picklist | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc. | Settings-managed multi-select dropdown; follows Serves on the State row. |
-| **Serves** | Optional positive integer | Number of people served (e.g., `4`) | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling. |
-| **Makes** | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes` | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged. |
-| **Nutrition** | Optional estimated nutrient values | FDA label nutrients and approved optional vitamins/minerals | Shown as an italic sans-serif “Nutrition Per Serving” Nutrition Facts-style list after Notes (left of Notes on desktop) when Serves and nutrition values are available; print and downloads use one compact string. Values are estimates from User-entered ingredient profiles and/or whole-recipe overrides, never an external lookup. |
-| **Tags** | Multi-select account-owned tags | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17. |
-| **Notes** | Markdown text | Multi-line text | Captured gotchas, recipe tweaks, variations, and improvement observations. |
+| Field Name              | Type                                           | Options / Formats                                                                                                                | Behavior & Visibility                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**                | Text                                           | Free text                                                                                                                        | Primary recipe title.                                                                                                                                                                                                                                                                                                                                                  |
+| **Primary Publication** | Single-select picker                           | Searchable list of all user publications, including the reserved Recipe Tin collection, + "Add new publication" button           | Clickable in view mode; navigates directly to the publication page. Every recipe belongs to a publication; Recipe Tin is the default collection and has no location fields.                                                                                                                                                                                            |
+| **Location**            | Text / URL                                     | Book page or range; free-text Magazine citation; website recipe URL                                                              | A Magazine citation is free text because citation styles vary. Its optional online recipe URL is a separate field and may coexist with the citation.                                                                                                                                                                                                                   |
+| **Food Type**           | Single-select picklist                         | Casserole, roast, pie, galette, pasta, soup, sauce, cake, cocktail, bread, stew, salad, etc.                                     | "What kind of dish is this?" Settings-managed picklist; use a compact custom dropdown aligned with the other picklist triggers.                                                                                                                                                                                                                                        |
+| **Meal Type**           | Multi-select picklist                          | Breakfast, lunch, dinner, appetizer, side dish, snack, dessert, drink, booze, sauce, etc.                                        | "When or how do I serve this?" Settings-managed multi-select dropdown. Multiple values are toggled with buttons; selected values show a checkmark, leaf-green text, and a pale green background.                                                                                                                                                                       |
+| **Cuisine**             | Multi-select picklist                          | American, Italian, Chinese, Mexican, French, Thai, Indian, Fusion, etc.                                                          | Settings-managed multi-select dropdown to cleanly support fusion cooking.                                                                                                                                                                                                                                                                                              |
+| **Main Ingredients**    | Derived index                                  | Derived from ingredient rows                                                                                                     | Not an independent metadata input. Automatically compiled from ingredient rows marked with the `Main` checkbox. Queryable as the **Main Ingredient** multi-select field and used by Search's **Main ingredients only** option.                                                                                                                                         |
+| **State**               | Single-select enum                             | `Want to try`, `Tried`, `Will not try`                                                                                           | New recipes default to `Want to try`. Place State immediately after Name; its active Enthusiasm, Verdict and optional Score, or Reason, Serves, and Equipment share its row. Food Type, Meal Type, and Cuisine follow on the next wrapping row. Changing State clears stale conditional values, including Score.                                                       |
+| **Verdict**             | Single-select picklist                         | Favorite, delicious, staple, practice, try again, occasionally, specific occasion, once-a-year-rich, so-so, no, hell no, MISTAKE | Visible **only** when `State == Tried`. Combines emotional verdict, culinary opinion, and repeat cadence ("Law of Undulation"). User-customizable in settings. Existing values, including Favorite, are preserved and are not mapped to Score, Star, or Heart.                                                                                                         |
+| **Score**               | Optional signed integer                        | `-5`, `-3`, `-1`, `0`, `1`, `2`, `3`, `4`, `5`                                                                                   | Visible only when `State == Tried`; changing State away from Tried clears it. The negative descriptions (`-1` Needs work, `-3` No, `-5` DO NOT TRY) and neutral `0` explain intended meaning only; the UI and accessible names remain numeric. Negative numeric values use tomato red as a supplementary cue wherever Rating appears in private detail and list views. |
+| **Star**                | Boolean marker                                 | On or off                                                                                                                        | Private “note this” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Heart and Verdict. Each recipe defaults off.                                                                                                                                                                           |
+| **Heart**               | Boolean marker                                 | On or off                                                                                                                        | Private “love this and want to repeat it” marker, available in any State. Toggled immediately through a custom stamp control on private recipe detail; independent of Star, Score, Verdict, and State. Each recipe defaults off.                                                                                                                                       |
+| **Enthusiasm**          | Single-select picklist                         | Absolutely, sounds good!, try, specific occasion, maybe, eh                                                                      | Visible **only** when `State == Want to try`. The empty prompt reads “What am I feeling?” User-customizable in settings.                                                                                                                                                                                                                                               |
+| **Occasion Details**    | Free text                                      | Text string describing the occasion                                                                                              | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected.                                                                                                                                                                                                                                                                                   |
+| **Reason**              | Single-line text                               | Text string explaining rejection                                                                                                 | Visible **only** when `State == Will not try`.                                                                                                                                                                                                                                                                                                                         |
+| **Equipment**           | Multi-select picklist                          | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc.       | Settings-managed multi-select dropdown; follows Serves on the State row.                                                                                                                                                                                                                                                                                               |
+| **Serves**              | Optional positive integer                      | Number of people served (e.g., `4`)                                                                                              | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling.                                                                                                                                                                                                                                                                  |
+| **Makes**               | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes`                                                                            | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged.                                                                                                                                                                                        |
+| **Nutrition**           | Optional estimated nutrient values             | FDA label nutrients and approved optional vitamins/minerals                                                                      | Shown as an italic sans-serif “Nutrition Per Serving” Nutrition Facts-style list after Notes (left of Notes on desktop) when Serves and nutrition values are available; print and downloads use one compact string. Values are estimates from User-entered ingredient profiles and/or whole-recipe overrides, never an external lookup.                                |
+| **Tags**                | Multi-select account-owned tags                | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle             | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17.                                                                                                                                                                                                                       |
+| **Notes**               | Markdown text                                  | Multi-line text                                                                                                                  | Captured gotchas, recipe tweaks, variations, and improvement observations.                                                                                                                                                                                                                                                                                             |
 
 ### 2.2 Time Tracking and Overlapping Times
 
@@ -243,9 +243,9 @@ same type. Time values remain minutes in storage.
   and Occasion Details are 36px high on desktop and mobile, matching Name and
   Publication. Multi-picklist options have a 30px minimum height on desktop and
   36px on mobile. Time-entry controls remain compact; distinct actions
-   retain their separately specified hit areas.
+  retain their separately specified hit areas.
 - Time expression fields accept arithmetic input and normalize to a grouped
-   whole-minute value on blur. Invalid expressions remain visible and block save.
+  whole-minute value on blur. Invalid expressions remain visible and block save.
 - Center the Serves number within its 36px input on desktop and mobile.
 - On desktop, the recipe list shows Name, Food Type, State, and Opinion, which
   shows the active Enthusiasm, Verdict, or Reason; Score and active custom
@@ -330,8 +330,8 @@ trailing empty row.
    can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside
    its row editor pane; menus remain within the viewport and use the available space above or below the field.
 3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, including
-  leading-decimal forms such as `.5`, fraction text (`1/2`, `1 1/4`), and
-  optionally equivalent Unicode fraction glyphs (`½`, `1 ¼`),
+   leading-decimal forms such as `.5`, fraction text (`1/2`, `1 1/4`), and
+   optionally equivalent Unicode fraction glyphs (`½`, `1 ¼`),
    ranges (`2-3`), and
    comma-grouped whole-number parts (for example, `1,000` , `1,000 1/2` , or `1,000-2,000` ). Blank for Feel phrases.
    On blur, the editor preserves exact values expressible with supported fraction denominators as fraction text;
@@ -347,9 +347,15 @@ trailing empty row.
    - **Count:** A count has no unit. The quantity is simply how many of the ingredient (`2` eggs, `1` cucumber).
      Packaging and portion words such as can or bag are not units: a 14 oz can is entered as 14 oz under Units.
    - **Things Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk,
-     sheet, stick, slice, handful. Amounts in this category scale but never convert by default and never take part in
-     density; display pluralizes the unit when the amount (or range maximum) exceeds one. An explicit DLC 12 measure
-     equivalent is required before Count/Things can contribute to nutrition. Packaging words (can, bag,
+     sheet, stick, slice, handful. Amounts in this category scale but do not convert by default or take part in
+     density; display pluralizes the unit when the amount (or range maximum) exceeds one. A configured DLC 12 measure
+     equivalent lets the private reader switch from Count/Things to its available Volume and/or Weight measures;
+     public readers do not expose this Settings data. When both dimensions are available, `Units` reveals both and
+     each unit picker can independently switch its slot back to Count/Things. The reader returns to the single
+     Count/Things display only when both slots are switched back. When only one dimension is available, show it
+     initially and include Count/Things in its normal unit picker. Use concise Count/Things labels, omit a separate
+     `Recipe default` unit-list option, and let selecting the saved unit restore the recipe's display. An explicit
+     equivalent is also required before Count/Things can contribute to nutrition. Packaging words (can, bag,
      package) are not seeded.
    - **Feel Picker:** Approved culinary phrases: `to taste` , `as needed` , `for garnish` , `to serve` , `divided` .
      Feel is stored using the existing Unmeasured measurement type and phrase list.
@@ -367,11 +373,11 @@ trailing empty row.
    butter), `Brummel & Brown` (for margarine).
 6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or
    during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , `sliced` ,
-  `divided` . Users can add a preparation while editing; saved values appear in future suggestions. Selecting `divided`
-  reveals compact first-portion, current-unit, and read-only remainder controls in Preparation; there is no standalone
-  Divide checkbox. Selecting `cubed` reveals the separate Size field and an
-  underlined `in`/`cm` unit toggle there. Desktop keeps either control group
-  beside its Preparation value; mobile wraps them below the picker.
+   `divided` . Users can add a preparation while editing; saved values appear in future suggestions. Selecting `divided`
+   reveals compact first-portion, current-unit, and read-only remainder controls in Preparation; there is no standalone
+   Divide checkbox. Selecting `cubed` reveals the separate Size field and an
+   underlined `in`/`cm` unit toggle there. Desktop keeps either control group
+   beside its Preparation value; mobile wraps them below the picker.
 
 ### 3.2 Dual Measurement (Volume + Weight)
 
@@ -401,6 +407,14 @@ trailing empty row.
   - **Responsive amount field:** Derived values grow to fit their formatted
     quantity, including ten-digit values, while remaining within the amount
     group and clear of the target-unit picker.
+- When a Count/Things measure equivalent and trusted density are both
+  configured, density is authoritative for cross-dimension conversion. One
+  explicitly saved equivalent dimension supplies the source and density
+  derives the other. Existing equivalents that already contain both
+  dimensions use Weight as a compatibility source until edited; editing asks
+  which dimension to retain. Without trusted density, both explicitly saved
+  dimensions remain available. No equivalent or density change rewrites saved
+  recipe measurements.
 
 ### 3.4 Scaling Math and Rounding Rules
 
@@ -675,7 +689,7 @@ preserved.
      2. Weight items (normalized to grams for relative comparison).
      3. Count and Things items (e.g., `2` eggs, `1 bunch` cilantro).
      4. Feel items (e.g., `salt to taste`).
-   - Ascending or descending sorts *within* each group. Volume and weight are never mixed into an arbitrary single scale.
+   - Ascending or descending sorts _within_ each group. Volume and weight are never mixed into an arbitrary single scale.
    - A row that has both a volume and a weight measurement sorts by its volume measurement.
 4. **Order Entered:** The exact sequential order established when editing the recipe.
 
@@ -876,7 +890,7 @@ In recipe detail and edit, References follows Notes, which follows Pairs With. T
 
 1. **Recipe:** Clickable link to another active recipe in the same account.
 2. **External URL:** Clickable link pointing to a website or blog not formally imported into the library.
-3. **Print:** Non-clickable bibliographic reference (e.g., *The Joy of Cooking, 75th Anniv. Ed., p. 412*).
+3. **Print:** Non-clickable bibliographic reference (e.g., _The Joy of Cooking, 75th Anniv. Ed., p. 412_).
 
 - **Rule on Origins:** A recipe adapted from multiple disparate sources is considered an original recipe and belongs in
   the **Recipe Tin** with these references cited in References.
@@ -910,12 +924,12 @@ saved with the publication. Publication detail shows assigned tags as text
 chips with the tag's shared translucent pastel color; an empty assignment is
 omitted.
 
-| Publication Type | Specific Attributes | Recipe Location Field | Visual Treatment |
-| ---------------- | ------------------- | --------------------- | ---------------- |
-| **Book** | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
-| **Magazine** | Magazine title and optional cover image | Per-recipe issue, volume, edition/date, and optional page citation | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit. |
-| **Website** | Site Display Name, Site Root URL, Site Logo/Favicon (optional) | Full recipe URL | Minimalist site icon / badge. |
-| **Collection** | Reserved Recipe Tin, one per account | None | Mirrored transparent tin image; cannot be created, edited, or deleted by the User. |
+| Publication Type | Specific Attributes                                                                                                          | Recipe Location Field                                              | Visual Treatment                                                                                                                                                                                                                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Book**         | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range                                          | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
+| **Magazine**     | Magazine title and optional cover image                                                                                      | Per-recipe issue, volume, edition/date, and optional page citation | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit.                                                                                                                              |
+| **Website**      | Site Display Name, Site Root URL, Site Logo/Favicon (optional)                                                               | Full recipe URL                                                    | Minimalist site icon / badge.                                                                                                                                                                                                                                                |
+| **Collection**   | Reserved Recipe Tin, one per account                                                                                         | None                                                               | Mirrored transparent tin image; cannot be created, edited, or deleted by the User.                                                                                                                                                                                           |
 
 ### 6.2 Magazine Titles, Recipe Locations, and Online URLs
 
@@ -1006,9 +1020,9 @@ Deleting a publication always requires confirmation. When it has active recipes,
 the dialog requires one of three dispositions:
 
 1. **Delete all recipes inside:** moves active recipes to Trash with the
-  publication.
+   publication.
 2. **Move recipes to the Recipe Tin:** assigns the account's permanent Tin
-  publication and clears publication location fields.
+   publication and clears publication location fields.
 3. **Move recipes to another publication:** prompts for a destination.
 
 When a publication has no active recipes, the confirmation remains but the
@@ -1137,7 +1151,7 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   a saved view or search URL. Column visibility applies immediately; widths are
   adjusted by pointer or touch dragging. Resizing has no keyboard equivalent
   by explicit product choice; all other explorer controls remain
-  keyboard-operable.   In mobile Details views, active Star and Heart indicators share the
+  keyboard-operable. In mobile Details views, active Star and Heart indicators share the
   recipe-title row at the right, vertically centered on the title; the
   remaining metadata continues below. Search and Query Details place the
   numeric Rating beside those stamps without a visible label, with equal
@@ -1385,7 +1399,13 @@ Volume and/or Weight for one Count or one selected Things unit of that
 ingredient. Its one-unit basis is explicit. Only one Count-or-Things mapping
 is allowed per ingredient. Settings shows explanatory copy that nonstandard
 amounts are estimates supplied by the User. It does not replace the
-volume/weight Trusted Density feature.
+volume/weight Trusted Density feature. When trusted density exists, the
+explicitly saved equivalent dimension is the source and density derives the
+other dimension; a legacy two-dimension equivalent uses Weight as its
+compatibility source until edited. Without density, each saved dimension is
+explicit. Reader switching is transient and private. Recipe nutrition uses
+this same resolution rule, including for public recipe-level results, without
+exposing the underlying Settings data.
 
 In the recipe editor, each ingredient's Nutrition action opens the same pane.
 The current Settings profile and equivalent are loaded when the editor opens
@@ -1433,12 +1453,12 @@ Username and App data are separate authenticated pages linked from the
 Account menu, while App admin and Updates are added to Settings only for
 Admins.
 
-| Tab | Sections |
-| ---- | -------- |
-| **Preferences** | Personal preferences; Recipe column order |
-| **Recipe data** | Recipe picklists; Ingredient catalog, including nutrition and measure equivalents; Trusted densities; Tags |
-| **App admin** (Admins only) | Invitations and account administration |
-| **Updates** (Admins only) | The global administrative Updates tracker |
+| Tab                         | Sections                                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Preferences**             | Personal preferences; Recipe column order                                                                  |
+| **Recipe data**             | Recipe picklists; Ingredient catalog, including nutrition and measure equivalents; Trusted densities; Tags |
+| **App admin** (Admins only) | Invitations and account administration                                                                     |
+| **Updates** (Admins only)   | The global administrative Updates tracker                                                                  |
 
 Preferences is selected by default. The `tab` query parameter accepts
 `preferences`, `recipe-data`, `app-admin`, or `updates`. A valid value selects
@@ -1784,18 +1804,18 @@ contract and compatibility rules are defined in
 ### 11.2 Export Scopes
 
 1. **Database Export:** Accessible in App data from the Account menu. Includes all owned records,
-  including trashed-but-restorable rows, product preferences, and ready images.
+   including trashed-but-restorable rows, product preferences, and ready images.
 2. **Publication Export:** Accessible from publication detail, to the left of
-  Edit on desktop. Library cards do not expose publication export actions.
-  Includes the selected active publication, its recipes and dependent
-  relational rows, and their ready images. On mobile, a 40px transfer-menu
-  button offers `Export publication` and `Import recipe`; Edit and Add Recipe
-  remain separate icon actions in the compact toolbar.
+   Edit on desktop. Library cards do not expose publication export actions.
+   Includes the selected active publication, its recipes and dependent
+   relational rows, and their ready images. On mobile, a 40px transfer-menu
+   button offers `Export publication` and `Import recipe`; Edit and Add Recipe
+   remain separate icon actions in the compact toolbar.
 3. **Recipe Export:** Accessible beside Print and Edit on recipe detail.
-  The icon action is 36px square to match Print and Edit. It includes the
-  selected active recipe graph and ready images, plus basic metadata for its
-  primary publication. Cross-scope recipe links retain their source IDs and
-  display text.
+   The icon action is 36px square to match Print and Edit. It includes the
+   selected active recipe graph and ready images, plus basic metadata for its
+   primary publication. Cross-scope recipe links retain their source IDs and
+   display text.
 
 ### 11.3 Import Conflict Resolution
 
@@ -1994,13 +2014,13 @@ Keep the private navigation available while the main content scrolls. On
 desktop, pin the full-height left sidebar to the viewport and let it scroll
 independently if its contents exceed the viewport. Place the utility controls
 at the bottom in this order: Trash, Settings, then Account. On mobile, use a
-  wrapping horizontal navigation row with icon-only links for Library, Find
-  Recipes, Trash, and Settings; place Settings between Trash and the 48px circular
-  initials account control. Preserve descriptive accessible names for each icon
-  link. The Library link stays leaf green; when current, its pale green surface and
-  stronger circular outline make the state visible without color alone. On
-  desktop, its current state also uses an underline. `/` remains the sign-in page;
-  the authenticated `/app` entry opens the Library.
+wrapping horizontal navigation row with icon-only links for Library, Find
+Recipes, Trash, and Settings; place Settings between Trash and the 48px circular
+initials account control. Preserve descriptive accessible names for each icon
+link. The Library link stays leaf green; when current, its pale green surface and
+stronger circular outline make the state visible without color alone. On
+desktop, its current state also uses an underline. `/` remains the sign-in page;
+the authenticated `/app` entry opens the Library.
 
 Both account controls open the same menu with the email and Sign out action.
 

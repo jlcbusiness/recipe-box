@@ -1,18 +1,21 @@
 'use client';
 
-import { ChevronRight, Merge, Plus, Salad, Search, Trash2, X } from 'lucide-react';
+import { Calculator, ChevronRight, Merge, Plus, Salad, Search, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
   useTransition,
 } from 'react';
+import { type IngredientDensity, resolveMeasureEquivalent } from '../../lib/recipes/density-rules';
 import { volumeUnits, weightUnits } from '../../lib/recipes/measurement-rules';
 import type { NutritionEquivalent, NutritionProfile } from '../../lib/recipes/nutrition-rules';
+import { convertUnitAmount } from '../../lib/recipes/recipe-reader-rules';
 import { manageIngredientCatalog } from '../actions/ingredient-catalog';
 import { manageIngredientNutrition } from '../actions/ingredient-nutrition';
 import { MeasuringCup } from '../measuring-cup-icon';
@@ -56,6 +59,7 @@ type ManagerMode = 'merge' | 'delete';
 function IngredientEquivalentPane({
   ingredientName,
   equivalent,
+  density,
   thingOptions,
   isPending,
   onCancel,
@@ -64,6 +68,7 @@ function IngredientEquivalentPane({
 }: {
   ingredientName: string;
   equivalent: NutritionEquivalent | null;
+  density: IngredientDensity | null;
   thingOptions: ThingOption[];
   isPending: boolean;
   onCancel: () => void;
@@ -84,7 +89,69 @@ function IngredientEquivalentPane({
   );
   const [weightUnitCode, setWeightUnitCode] = useState(equivalent?.weight?.unitCode ?? 'g');
   const [error, setError] = useState('');
+  const [sourceDimension, setSourceDimension] = useState<'volume' | 'weight' | null>(() => {
+    if (!density || (equivalent?.volume && equivalent.weight)) {
+      return null;
+    }
+    return equivalent?.volume ? 'volume' : equivalent?.weight ? 'weight' : null;
+  });
+  const [openTooltip, setOpenTooltip] = useState<'volume' | 'weight' | null>(null);
+  const tooltipId = useId();
+  const hasLegacyPair = Boolean(density && equivalent?.volume && equivalent.weight);
   const selectedThing = thingOptions.find((option) => option.id === picklistValueId);
+  const sourceAmount = sourceDimension === 'volume' ? volumeAmount : weightAmount;
+  const parsedSourceAmount = Number(sourceAmount);
+  const hasValidSourceAmount =
+    sourceAmount.trim() !== '' && Number.isFinite(parsedSourceAmount) && parsedSourceAmount > 0;
+  const resolvedEquivalent =
+    density && sourceDimension && hasValidSourceAmount
+      ? resolveMeasureEquivalent(
+          {
+            measurementType,
+            picklistValueId: measurementType === 'informal' ? picklistValueId : null,
+            picklistValue: measurementType === 'informal' ? (selectedThing?.label ?? null) : null,
+            volume:
+              sourceDimension === 'volume'
+                ? { amount: parsedSourceAmount, unitCode: volumeUnitCode }
+                : null,
+            weight:
+              sourceDimension === 'weight'
+                ? { amount: parsedSourceAmount, unitCode: weightUnitCode }
+                : null,
+          },
+          density,
+          sourceDimension,
+        )
+      : null;
+  const volumeIsDerived = Boolean(density && sourceDimension === 'weight' && hasValidSourceAmount);
+  const weightIsDerived = Boolean(density && sourceDimension === 'volume' && hasValidSourceAmount);
+  const displayedVolumeAmount =
+    density && sourceDimension === 'weight'
+      ? resolvedEquivalent?.volume
+        ? String(
+            convertUnitAmount(
+              resolvedEquivalent.volume.amount,
+              'volume',
+              resolvedEquivalent.volume.unitCode,
+              volumeUnitCode,
+            ),
+          )
+        : ''
+      : volumeAmount;
+  const displayedWeightAmount =
+    density && sourceDimension === 'volume'
+      ? resolvedEquivalent?.weight
+        ? String(
+            convertUnitAmount(
+              resolvedEquivalent.weight.amount,
+              'weight',
+              resolvedEquivalent.weight.unitCode,
+              weightUnitCode,
+            ),
+          )
+        : ''
+      : weightAmount;
+  const sourceChoiceRequired = hasLegacyPair && !sourceDimension;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -97,12 +164,28 @@ function IngredientEquivalentPane({
   }, []);
 
   function save() {
-    const volume = volumeAmount.trim()
+    if (sourceChoiceRequired) {
+      setError('Choose which existing equivalent to keep as the source before saving.');
+      return;
+    }
+    const enteredVolume = volumeAmount.trim()
       ? { amount: Number(volumeAmount), unitCode: volumeUnitCode }
       : null;
-    const weight = weightAmount.trim()
+    const enteredWeight = weightAmount.trim()
       ? { amount: Number(weightAmount), unitCode: weightUnitCode }
       : null;
+    const volume =
+      density && sourceDimension
+        ? sourceDimension === 'volume'
+          ? enteredVolume
+          : null
+        : enteredVolume;
+    const weight =
+      density && sourceDimension
+        ? sourceDimension === 'weight'
+          ? enteredWeight
+          : null
+        : enteredWeight;
     if (
       (!volume && !weight) ||
       (volume && (!Number.isFinite(volume.amount) || volume.amount <= 0)) ||
@@ -122,6 +205,87 @@ function IngredientEquivalentPane({
       volume,
       weight,
     });
+  }
+
+  function updateAmount(dimension: 'volume' | 'weight', value: string) {
+    if (dimension === 'volume') {
+      setVolumeAmount(value);
+    } else {
+      setWeightAmount(value);
+    }
+    const currentSourceAmount = sourceDimension === 'volume' ? volumeAmount : weightAmount;
+    if (density && !currentSourceAmount.trim() && !sourceChoiceRequired) {
+      setSourceDimension(dimension);
+    }
+    setOpenTooltip(null);
+  }
+
+  function renderEquivalentMeasure(dimension: 'volume' | 'weight') {
+    const isVolume = dimension === 'volume';
+    const label = isVolume ? 'Volume' : 'Weight';
+    const amount = isVolume ? displayedVolumeAmount : displayedWeightAmount;
+    const unitCode = isVolume ? volumeUnitCode : weightUnitCode;
+    const unitOptions = isVolume ? VOLUME_UNIT_OPTIONS : WEIGHT_UNIT_OPTIONS;
+    const isDerived = isVolume ? volumeIsDerived : weightIsDerived;
+    const isReadOnly = isDerived || sourceChoiceRequired;
+    const statusId = `${tooltipId}-${dimension}-status`;
+    const tooltipIsOpen = openTooltip === dimension;
+    return (
+      <>
+        <div
+          className={`${styles.equivalentAmountWrap}${isDerived ? ` ${styles.equivalentAmountDerived}` : ''}`}
+          data-tooltip-open={tooltipIsOpen || undefined}
+        >
+          <input
+            aria-describedby={isDerived ? statusId : undefined}
+            aria-label={`Average ${label.toLocaleLowerCase()} amount`}
+            inputMode="decimal"
+            min="0"
+            readOnly={isReadOnly}
+            step="any"
+            type="number"
+            value={amount}
+            onChange={(event) => updateAmount(dimension, event.currentTarget.value)}
+          />
+          {isDerived && (
+            <>
+              <button
+                aria-describedby={statusId}
+                aria-expanded={tooltipIsOpen}
+                aria-label="Derived from density"
+                className={styles.equivalentDerivedIndicator}
+                title="Derived from density"
+                type="button"
+                onClick={() =>
+                  setOpenTooltip((current) => (current === dimension ? null : dimension))
+                }
+              >
+                <Calculator aria-hidden="true" size={14} />
+              </button>
+              <span className="visually-hidden" id={statusId} role="status">
+                Derived from density
+              </span>
+              <span className={styles.equivalentDerivedTooltip} role="tooltip">
+                Derived from trusted density.
+              </span>
+            </>
+          )}
+        </div>
+        <Picklist
+          className={styles.equivalentPicklist}
+          label={`Average ${label.toLocaleLowerCase()} unit`}
+          options={unitOptions}
+          scope="ingredient-equivalent"
+          value={unitCode}
+          onSelect={(value) => (isVolume ? setVolumeUnitCode(value) : setWeightUnitCode(value))}
+        />
+        {isDerived && (
+          <span className="visually-hidden">
+            Derived {label.toLocaleLowerCase()} unit: {unitCode}
+          </span>
+        )}
+      </>
+    );
   }
 
   return (
@@ -161,9 +325,38 @@ function IngredientEquivalentPane({
           </button>
         </div>
         <p className={styles.note}>
-          Enter the average volume and/or weight for one Count or Things unit. This mapping is
-          separate from Trusted Density.
+          Enter the average volume and/or weight for one Count or Things unit. When trusted density
+          exists, enter one dimension and the other is calculated. Without density, both dimensions
+          may be entered.
         </p>
+        {hasLegacyPair && (
+          <fieldset className={styles.equivalentSourceChoice}>
+            <legend>Existing values with trusted density</legend>
+            <span>
+              Choose which dimension to keep as the source; the other will be recalculated.
+            </span>
+            <label>
+              <input
+                checked={sourceDimension === 'volume'}
+                name={`${tooltipId}-source`}
+                type="radio"
+                value="volume"
+                onChange={() => setSourceDimension('volume')}
+              />
+              Use Volume as source
+            </label>
+            <label>
+              <input
+                checked={sourceDimension === 'weight'}
+                name={`${tooltipId}-source`}
+                type="radio"
+                value="weight"
+                onChange={() => setSourceDimension('weight')}
+              />
+              Use Weight as source
+            </label>
+          </fieldset>
+        )}
         <div className={styles.equivalentField}>
           <span>Recipe measurement</span>
           <Picklist
@@ -194,43 +387,11 @@ function IngredientEquivalentPane({
         )}
         <fieldset className={styles.equivalentGroup}>
           <legend>Average volume for one unit</legend>
-          <input
-            aria-label="Average volume amount"
-            inputMode="decimal"
-            min="0"
-            step="any"
-            type="number"
-            value={volumeAmount}
-            onChange={(event) => setVolumeAmount(event.currentTarget.value)}
-          />
-          <Picklist
-            className={styles.equivalentPicklist}
-            label="Average volume unit"
-            options={VOLUME_UNIT_OPTIONS}
-            scope="ingredient-equivalent"
-            value={volumeUnitCode}
-            onSelect={setVolumeUnitCode}
-          />
+          {renderEquivalentMeasure('volume')}
         </fieldset>
         <fieldset className={styles.equivalentGroup}>
           <legend>Average weight for one unit</legend>
-          <input
-            aria-label="Average weight amount"
-            inputMode="decimal"
-            min="0"
-            step="any"
-            type="number"
-            value={weightAmount}
-            onChange={(event) => setWeightAmount(event.currentTarget.value)}
-          />
-          <Picklist
-            className={styles.equivalentPicklist}
-            label="Average weight unit"
-            options={WEIGHT_UNIT_OPTIONS}
-            scope="ingredient-equivalent"
-            value={weightUnitCode}
-            onSelect={setWeightUnitCode}
-          />
+          {renderEquivalentMeasure('weight')}
         </fieldset>
         {error && (
           <p className={styles.equivalentError} role="alert">
@@ -262,6 +423,7 @@ export function IngredientCatalogManager({
   referenceCounts,
   initialNutrition,
   initialEquivalents,
+  initialDensities,
   thingOptions,
 }: {
   initialIngredients: IngredientCatalogEntry[];
@@ -269,6 +431,13 @@ export function IngredientCatalogManager({
   referenceCounts: Record<string, number>;
   initialNutrition: IngredientNutritionEntry[];
   initialEquivalents: IngredientEquivalentEntry[];
+  initialDensities: {
+    ingredient_id: string;
+    volume_amount: number;
+    volume_unit_code: string;
+    weight_amount: number;
+    weight_unit_code: string;
+  }[];
   thingOptions: ThingOption[];
 }) {
   const router = useRouter();
@@ -353,6 +522,17 @@ export function IngredientCatalogManager({
   );
   const equivalentByIngredient = new Map(
     initialEquivalents.map((entry) => [entry.ingredient_id, entry.equivalent]),
+  );
+  const densityByIngredient = new Map(
+    initialDensities.map((entry) => [
+      entry.ingredient_id,
+      {
+        volumeAmount: entry.volume_amount,
+        volumeUnitCode: entry.volume_unit_code,
+        weightAmount: entry.weight_amount,
+        weightUnitCode: entry.weight_unit_code,
+      },
+    ]),
   );
   const selectedRecipeCount = selectedIngredient
     ? (referenceCounts[selectedIngredient.id] ?? 0)
@@ -1002,6 +1182,7 @@ export function IngredientCatalogManager({
               <IngredientEquivalentPane
                 ingredientName={equivalentIngredient.name}
                 equivalent={equivalentByIngredient.get(equivalentIngredient.id) ?? null}
+                density={densityByIngredient.get(equivalentIngredient.id) ?? null}
                 thingOptions={thingOptions}
                 isPending={isPending}
                 onCancel={() => closeEquivalentPane()}

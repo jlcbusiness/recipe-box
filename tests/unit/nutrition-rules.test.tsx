@@ -396,6 +396,41 @@ describe('nutrition rules', () => {
     );
   });
 
+  it('uses trusted density to resolve a paired Count equivalent for nutrition', () => {
+    const countMeasurement = {
+      type: 'count' as const,
+      amount: 1,
+      maximum: null,
+      unitCode: null,
+      picklistValueId: null,
+      picklistValue: null,
+    };
+    const result = calculateRecipeNutrition(
+      [
+        ingredient({
+          measurements: [countMeasurement],
+          equivalent: {
+            measurementType: 'count',
+            picklistValueId: null,
+            picklistValue: null,
+            volume: { amount: 2, unitCode: 'cup' },
+            weight: { amount: 120, unitCode: 'g' },
+          },
+          density: {
+            volumeAmount: 1,
+            volumeUnitCode: 'cup',
+            weightAmount: 120,
+            weightUnitCode: 'g',
+          },
+        }),
+      ],
+      1,
+    );
+
+    expect(result.complete).toBe(true);
+    expect(result.total).toEqual(scaledFlour(1));
+  });
+
   it('rounds calculated nutrition values to whole numbers', () => {
     expect(formatNutritionString({ calories: 229.6, total_fat: 8.4, iron: 0.6 })).toBe(
       'Calories: 230 | Total Fat: 8g (11%) | Iron: 1mg (3%)',

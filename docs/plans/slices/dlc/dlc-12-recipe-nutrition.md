@@ -76,6 +76,13 @@ ingredient-based calculation.
   bunch, handful, head, or other units; owners may enter their own estimates.
   A mapping is separate from Trusted Density. It may bridge to the other
   dimension only through the ingredient's trusted density.
+- When a trusted density exists, an explicitly saved equivalent dimension is
+  the source and density derives the other dimension for nutrition
+  calculations. A legacy equivalent with both dimensions uses Weight as its
+  compatibility source until edited; without density, both saved dimensions
+  remain explicit. Reader conversions and nutrition calculations use the same
+  resolution rule, including public recipe-level nutrition without exposing
+  ingredient Settings data.
 - Remove Pinch from the default Things picklist and migrate existing recipe
   uses to Volume (`1 pinch = 1/16 tsp`). Keep the existing reader's numeric
   teaspoon-to-pinch display alias; pinch is not a stored measurement unit.

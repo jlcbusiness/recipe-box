@@ -182,6 +182,14 @@ question. Its output is a decision-log entry, not shipped code.
 | 24. Install and offline — complete | A person can install the app, open recently viewed recipes offline, and have sign-out clear cached private data. | Delivered with a root manifest/service worker, a bounded ten-recipe read-only snapshot cache, generic offline fallback, stale/private-cache invalidation, and purge-before-sign-out with retry on failure. Eight focused browser tests pass on Chromium and Fold 6; offline cache unit tests, TypeScript, targeted Biome, Markdown lint, and an isolated production build pass. The full unit suite and repository-wide Biome still report unrelated existing failures. Physical-device installation checks remain in Slice 25. See [Slice 24 brief](slices/24-install-and-offline.md). |
 | 25. Go online | A person can publish the downloaded source as a fresh private GitHub repository, deploy the app with Vercel and Supabase, invite an initial owner-admin and later users, and import local data. The README runbook and local provider/bootstrap implementation are documented and tested, including the one-time bootstrap invitation. The isolated migration/bootstrap harness and 10 Chromium/Fold 6 public-link browser checks passed on 2026-10-19; hosted and physical-device acceptance remains open. | Complete and record the hosted checklist in [Slice 25](slices/25-go-online.md): production migrations and variables; invite-only Auth plus custom SMTP; owner invitation acceptance; optional Google invitation acceptance; same-email provider boundary; public-link rate limiting; ZIP import; and HTTPS install/offline, wake lock, camera, and touch checks on Android and iOS. Review current plan limits and pricing; hosted CI remains excluded. |
 
+### Phase 11: Ingredient measure conversion
+
+- **DLC 35 (implemented in app version 1.9.0):** [Count and Things measure equivalents](slices/dlc/dlc-35-count-things-measure-equivalents.md)
+  provides transient private-recipe switching between Count/Things and
+  configured volume/weight equivalents. A saved trusted density derives the
+  missing measure dimension; without one, both measures may be explicit.
+  The approved brief also aligns nutrition calculations with this precedence.
+
 ## Completion Rule
 
 A slice is complete only when its stated demonstration works, the automated

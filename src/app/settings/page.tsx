@@ -339,6 +339,7 @@ export default async function SettingsPage({
               referenceCounts={ingredientReferenceCounts}
               initialNutrition={nutritionEntries}
               initialEquivalents={equivalentEntries}
+              initialDensities={densityEntries}
               thingOptions={thingsOptions}
             />
             <IngredientDensityManager

@@ -7,6 +7,7 @@ import {
   volumeUnits,
   weightUnits,
 } from './measurement-rules';
+import type { NutritionEquivalent } from './nutrition-rules';
 import { convertUnitAmount, type MeasurementDimension } from './recipe-reader-rules';
 
 export type IngredientDensity = {
@@ -15,6 +16,47 @@ export type IngredientDensity = {
   weightAmount: number;
   weightUnitCode: string;
 };
+
+export function resolveMeasureEquivalent(
+  equivalent: NutritionEquivalent | null,
+  density: IngredientDensity | null | undefined,
+  sourceDimension?: MeasurementDimension,
+): NutritionEquivalent | null {
+  if (!equivalent || !density) {
+    return equivalent;
+  }
+
+  const sourceType =
+    sourceDimension && equivalent[sourceDimension]
+      ? sourceDimension
+      : equivalent.weight
+        ? 'weight'
+        : equivalent.volume
+          ? 'volume'
+          : null;
+  if (!sourceType) {
+    return equivalent;
+  }
+
+  const source = equivalent[sourceType];
+  if (!source) {
+    return equivalent;
+  }
+
+  const targetType = sourceType === 'volume' ? 'weight' : 'volume';
+  const targetUnitCode = targetType === 'volume' ? density.volumeUnitCode : density.weightUnitCode;
+  const derived = deriveDensityRange(
+    { minimum: source.amount, maximum: null },
+    sourceType,
+    source.unitCode,
+    density,
+    targetUnitCode,
+  );
+  return {
+    ...equivalent,
+    [targetType]: { amount: derived.minimum, unitCode: targetUnitCode },
+  };
+}
 
 function measurementFor(
   measurements: MeasurementDraft[],

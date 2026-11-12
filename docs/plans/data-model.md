@@ -75,7 +75,7 @@ event. Updates and events are excluded from account reset and database bundles.
 | Media asset | Metadata and private storage path for a cover or recipe image. A recipe photo has a unique, persisted two-digit reference code within its recipe; covers have no code. |
 | Recipe nutrition | Per-whole-recipe manual nutrient overrides; absent fields remain derived from ingredient rows. |
 | Ingredient nutrition profile | One canonical-ingredient Settings record with a Volume or Weight serving-size basis, required Calories, optional core and approved micronutrients. |
-| Ingredient measure equivalent | One explicit average Volume and/or Weight for a quantity of one Count or one selected Things unit on a canonical ingredient. |
+| Ingredient measure equivalent | One explicit average Volume and/or Weight for a quantity of one Count or one selected Things unit on a canonical ingredient. When trusted density exists, one dimension is the saved source and the other is derived for use; without density, both saved dimensions are explicit. |
 | Application update | A global administrator-managed Markdown entry with exactly one required Fix or Feature classification, persistent manual order while incomplete, an optional validated completed version and completion timestamp, archive state, timestamps, actors, and an optimistic revision. New or reopened incomplete entries start at the top; completed entries sort by completion time, newest first. It is not owned by an account or included in account reset or bundles. |
 | Admin update event | An append-only audit event recording an Admin's create, edit, classification, completion, reorder, archive, or restore action on an Application update, with allow-listed before/after state. |
 | History event | An append-only forensic record of a saved change. |
@@ -250,6 +250,12 @@ their own basis and stale acknowledgement; recipe-level overrides are
 whole-recipe totals. These records participate in account-scoped RLS, catalog
 revision/history, recipe version/history, Trash/restore, bundles, and
 offline snapshots as defined by the [DLC 12 brief](slices/dlc/dlc-12-recipe-nutrition.md).
+When an equivalent and trusted density coexist, density resolves the
+cross-dimension value without persisting that derived value as another
+equivalent. A legacy two-dimension mapping uses Weight as the compatibility
+source until it is edited; the original pair remains stored until that edit
+commits a chosen source. Removing density before editing leaves both values
+explicit. Reader unit choices remain transient recipe-display state.
 
 Slice 13 stores `volume_system` and `weight_system` on Account as non-null
 preferences. Both default to `us_customary`; the values may be `us_customary`,

@@ -629,6 +629,83 @@
   text-align: right;
 }
 
+.equivalentAmountWrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.equivalentAmountDerived input {
+  width: calc(3ch + 38px);
+  border-color: var(--leaf);
+  background: #eef3e9;
+  padding-right: 28px;
+}
+
+.equivalentDerivedIndicator {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  display: inline-flex;
+  width: 30px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--leaf);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.equivalentDerivedTooltip {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 4px);
+  right: 0;
+  display: none;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 48px));
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--navy);
+  color: white;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.equivalentAmountWrap:hover .equivalentDerivedTooltip,
+.equivalentAmountWrap:focus-within .equivalentDerivedTooltip,
+.equivalentAmountWrap[data-tooltip-open="true"] .equivalentDerivedTooltip {
+  display: block;
+}
+
+.equivalentSourceChoice {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--line);
+  padding: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.equivalentSourceChoice legend {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.equivalentSourceChoice label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+}
+
+.equivalentSourceChoice input {
+  accent-color: var(--leaf);
+}
+
 .equivalentGroup input::-webkit-inner-spin-button,
 .equivalentGroup input::-webkit-outer-spin-button {
   margin: 0;
@@ -686,6 +763,8 @@
 .equivalentField select:focus-visible,
 .equivalentGroup input:focus-visible,
 .equivalentGroup select:focus-visible,
+.equivalentDerivedIndicator:focus-visible,
+.equivalentSourceChoice input:focus-visible,
 .equivalentActions button:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;

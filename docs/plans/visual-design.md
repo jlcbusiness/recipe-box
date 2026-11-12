@@ -708,8 +708,8 @@ wider) Notes and Nutrition Per Serving share one row under a single divider:
 Nutrition takes a left column up to 340px wide and Notes takes the flexible
 right column. On mobile they stack, Notes first. Without Notes, Nutrition
 stands alone at the same width. Text is italic sans-serif in the
-DM Sans body font (never the serif heading face), and is one compact string in label order: ` | ` between major
-sections, ` ~ ` between minor groups, ` - ` between items in a group, and no
+DM Sans body font (never the serif heading face), and is one compact string in label order: `|` between major
+sections, `~` between minor groups, `-` between items in a group, and no
 space between amounts and units. On screen, detail replaces the string with
 a Nutrition Facts-style list at every width: Calories large and bold
 between heavy rules, a right-aligned `% Daily Value` header, each nutrient on
@@ -736,6 +736,15 @@ size" label). Its unit and measurement choices use the app Picklist, sized to
 the longest option plus 1mm, and its amount fields are three digits wide.
 Initial focus goes to the Recipe measurement picklist. Both panes use a thin
 internal scrollbar.
+When a trusted density exists, the Measure equivalent pane treats one
+manually entered dimension as the source and displays the density-derived
+counterpart as read-only with the usual green tint and calculator icon. The
+icon's tooltip explains that the value is derived from density on hover,
+keyboard focus, and touch; an accessible status also identifies the source.
+Clearing the source clears the derived value so the other dimension can be
+entered. Without density, both dimensions are editable. A legacy mapping with
+both dimensions requires a source choice when edited; until then Weight is
+used as the compatibility source and both stored values remain unchanged.
 Pane width is measured from the visible viewport, excluding any classic page
 scrollbar. On mobile it uses that width less a small margin, inputs narrow so
 no field leaves the screen, nutrient labels wrap only between words (the
@@ -1019,8 +1028,9 @@ reports the actual wake-lock state and its warning can be dismissed. In
 Ingredient-first, active cook mode adds an unlabeled checkbox column before the
 Ingredient column. Exiting mode or changing recipes clears check-off, and
 system-released locks can be reacquired when the document becomes visible.
-Unit labels, including single-letter abbreviations such as `g`, have one
-continuous underline at rest. In mobile Ingredient-first cook mode, the table
+Unit labels, including single-letter abbreviations such as `g`, remain
+underlined at rest on desktop and mobile, without depending on hover. In mobile
+Ingredient-first cook mode, the table
 stays aligned to the section's left edge when the checkbox rail is present. The
 checkbox rail is 21px wide, placing the checkbox 1mm from the table edge and
 1mm from the ingredient column while keeping its hit area 48px tall.
@@ -1039,7 +1049,7 @@ numeric. Narrow cook-mode layouts preserve the 48px checkbox target and avoid
 horizontal overflow, reclaiming only the ingredient-side spacing needed by the
 checkbox rail.
 
-Unit can display volume, weight, or both with ` / ` separating the dimensions.
+Unit can display volume, weight, or both with `/` separating the dimensions.
 Things pluralize from their maximum range value; `cup` becomes `cups` above one
 while abbreviated fixed units remain unchanged. US customary quantities use
 Unicode glyphs for familiar fractions when close to halves, thirds, quarters,
@@ -1067,6 +1077,20 @@ clearing all transient ingredient overrides. Volume and weight units stay
 inline in natural recipe prose and open their own anchored picklist. Unit
 tokens underline on hover on desktop and remain underlined on mobile. Print
 follows the active presentation and hides reader controls and check-off state.
+When both Count/Things equivalents are available, the stored Count/Things
+quantity initially opens an anchored text picklist with a `Units` option;
+selecting it shows both equivalent dimensions. Each physical unit picklist
+offers Count/Things as an independent choice. Collapse back to the single
+Count/Things display only after both dimensions are switched back. When only
+one dimension is available, show it initially and add Count/Things to that
+dimension's normal unit picklist. Keep the text controls visibly underlined,
+keyboard-operable, and usable on mobile without hover or repeated icons.
+Use concise `Count` or `Things` labels without `Recipe measurement` wording.
+Do not add a separate `Recipe default` item to unit lists; the saved unit
+remains selectable and restores that dimension's default display. Accessible
+names identify the ingredient and current quantity. Switching is transient,
+follows recipe scaling, and prints the active private-reader choices; public
+readers do not expose the private Settings equivalents or density.
 The saved presentation is an account preference, not recipe data.
 Ingredient-first remains the required default for public share in Slice 22.
 

@@ -118,6 +118,146 @@ function instructionStep(position: number, contentMarkdown: string): RecipeInstr
 }
 
 describe('recipe reader measurement rules', () => {
+  it('shows both equivalents and switches each measurement slot back to Count independently', () => {
+    const lemon: RecipeIngredient = {
+      ...ingredientRow('lemon-row', 'Lemon', 0, [amount('count', 1)]),
+      nutrition_equivalent: {
+        measurementType: 'count',
+        picklistValueId: null,
+        picklistValue: null,
+        volume: { amount: 1, unitCode: 'cup' },
+        weight: null,
+      },
+      density: {
+        volumeAmount: 1,
+        volumeUnitCode: 'cup',
+        weightAmount: 120,
+        weightUnitCode: 'g',
+      },
+    };
+
+    render(
+      <RecipeReaderProvider serves={2}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[lemon]}
+          recipeId="recipe-id"
+          serves={2}
+          steps={[]}
+          volumeSystem="recipe"
+          weightSystem="recipe"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('listitem').textContent).toContain('1 lemon');
+    fireEvent.click(
+      screen.getByRole('combobox', { name: 'Change Lemon quantity measure (currently 1)' }),
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Units' }));
+    expect(screen.getByRole('listitem').textContent).toContain('1 cup / 120 g lemon');
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Change Lemon volume unit' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Count' }));
+    expect(screen.getByRole('listitem').textContent).toContain('1 / 120 g lemon');
+    expect(screen.getByRole('combobox', { name: 'Change Lemon weight unit' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Change Lemon weight unit' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Count' }));
+    expect(screen.getByRole('listitem').textContent).toContain('1 lemon');
+    expect(lemon.measurements[0]?.measurement_type).toBe('count');
+
+    fireEvent.click(
+      screen.getByRole('combobox', { name: 'Change Lemon quantity measure (currently 1)' }),
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Units' }));
+    expect(screen.getByRole('listitem').textContent).toContain('1 cup / 120 g lemon');
+  });
+
+  it('uses the single available equivalent as the initial measurement with Count in its unit list', () => {
+    const lemon: RecipeIngredient = {
+      ...ingredientRow('single-equivalent-lemon', 'Lemon', 0, [amount('count', 1)]),
+      nutrition_equivalent: {
+        measurementType: 'count',
+        picklistValueId: null,
+        picklistValue: null,
+        volume: { amount: 1, unitCode: 'cup' },
+        weight: null,
+      },
+      density: null,
+    };
+
+    render(
+      <RecipeReaderProvider serves={2}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[lemon]}
+          recipeId="recipe-id"
+          serves={2}
+          steps={[]}
+          volumeSystem="recipe"
+          weightSystem="recipe"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('listitem').textContent).toContain('1 cup lemon');
+    expect(
+      screen.queryByRole('combobox', {
+        name: 'Change Lemon quantity measure (currently 1 cup)',
+      }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole('combobox', { name: 'Change Lemon volume unit' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Count' }));
+    expect(screen.getByRole('listitem').textContent).toContain('1 lemon');
+  });
+
+  it('uses concise Things labels in both equivalent picklists', () => {
+    const basil: RecipeIngredient = {
+      ...ingredientRow('basil-row', 'Basil', 0, [amount('informal', 1)]),
+      measurements: [
+        {
+          ...amount('informal', 1),
+          picklist_value_id: 'sprig-id',
+          picklist_value: 'sprig',
+        },
+      ],
+      nutrition_equivalent: {
+        measurementType: 'informal',
+        picklistValueId: 'sprig-id',
+        picklistValue: 'Sprig',
+        volume: { amount: 1, unitCode: 'tbsp' },
+        weight: { amount: 2, unitCode: 'g' },
+      },
+      density: null,
+    };
+
+    render(
+      <RecipeReaderProvider serves={2}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[basil]}
+          recipeId="recipe-id"
+          serves={2}
+          steps={[]}
+          volumeSystem="recipe"
+          weightSystem="recipe"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    fireEvent.click(
+      screen.getByRole('combobox', { name: 'Change Basil quantity measure (currently 1 sprig)' }),
+    );
+    expect(screen.getByRole('option', { name: 'Things: Sprig' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: /recipe measurement/i })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Units' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Change Basil volume unit' }));
+    expect(screen.getByRole('option', { name: 'Things (sprig)' })).toBeDefined();
+    fireEvent.click(screen.getByRole('option', { name: 'Things (sprig)' }));
+    expect(screen.getByRole('listitem').textContent).toContain('1 sprig / 2 g basil');
+  });
+
   it('renders divided portions and Size in Standard and Ingredient-first views', () => {
     render(
       <RecipeReaderProvider serves={4}>
@@ -557,6 +697,38 @@ describe('recipe reader measurement rules', () => {
     expect(screen.getByRole('combobox', { name: 'Change Flour volume unit' })).toBeDefined();
   });
 
+  it('does not expose private equivalents in a reader that preserves stored measurements', () => {
+    const lemon: RecipeIngredient = {
+      ...ingredientRow('public-lemon', 'Lemon', 0, [amount('count', 1)]),
+      nutrition_equivalent: {
+        measurementType: 'count',
+        picklistValueId: null,
+        picklistValue: null,
+        volume: { amount: 1, unitCode: 'cup' },
+        weight: null,
+      },
+      density: null,
+    };
+
+    render(
+      <RecipeReaderProvider serves={1}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[lemon]}
+          preserveStoredUnits
+          recipeId="public-recipe-id"
+          serves={1}
+          steps={[]}
+          volumeSystem="us_customary"
+          weightSystem="us_customary"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('listitem').textContent?.replace(/\s+/gu, ' ').trim()).toBe('1 lemon');
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
   it('stages scaling in a compact pane and commits it to the recipe Serves field', () => {
     render(
       <RecipeReaderProvider serves={4}>
@@ -681,7 +853,12 @@ describe('recipe reader measurement rules', () => {
     expect(screen.getByRole('listitem').textContent?.replace(/\s+/gu, ' ').trim()).toBe(
       '16 TBSP flour',
     );
-    expect(screen.queryByLabelText('Flour volume unit')).toBeNull();
+    fireEvent.click(screen.getByRole('combobox', { name: 'Change Flour volume unit' }));
+    expect(screen.queryByRole('option', { name: /recipe default/i })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: /^cup$/u }));
+    expect(screen.getByRole('listitem').textContent?.replace(/\s+/gu, ' ').trim()).toBe(
+      '1 cup flour',
+    );
   });
 });
 

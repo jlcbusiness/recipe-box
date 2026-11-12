@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { createTestUser, deleteTestUser, getLocalSupabaseConfig } from '../support/local-supabase';
@@ -9,6 +10,288 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/publications$/);
 }
+
+test('Measure equivalents derive the other dimension from trusted density @e2e @a11y @density', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${user.accessToken}`,
+  };
+  const ingredientName = 'Density Equivalent Lemon';
+
+  try {
+    const revisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${user.id}`,
+      { headers },
+    );
+    expect(revisionResponse.ok(), await revisionResponse.text()).toBeTruthy();
+    const [catalogRevision] = (await revisionResponse.json()) as { revision: number }[];
+    expect(catalogRevision?.revision).toBeTruthy();
+    const addIngredient = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers,
+        data: {
+          p_action: 'add',
+          p_expected_revision: catalogRevision.revision,
+          p_name: ingredientName,
+        },
+      },
+    );
+    expect(addIngredient.ok(), await addIngredient.text()).toBeTruthy();
+    const revision = await addIngredient.json();
+    expect(revision).toBe(catalogRevision.revision + 1);
+    const ingredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id&account_id=eq.${user.id}&name=eq.Density%20Equivalent%20Lemon`,
+      { headers },
+    );
+    expect(ingredientResponse.ok(), await ingredientResponse.text()).toBeTruthy();
+    const [ingredient] = (await ingredientResponse.json()) as { id: string }[];
+    expect(ingredient?.id).toBeTruthy();
+    const densityResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_density`,
+      {
+        headers,
+        data: {
+          p_action: 'set',
+          p_expected_revision: revision,
+          p_ingredient_id: ingredient.id,
+          p_volume_amount: 1,
+          p_volume_unit_code: 'cup',
+          p_weight_amount: 120,
+          p_weight_unit_code: 'g',
+        },
+      },
+    );
+    expect(densityResponse.ok(), await densityResponse.text()).toBeTruthy();
+    const densitySnapshotResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_densities?select=account_id,ingredient_id,volume_amount,volume_unit_code,weight_amount,weight_unit_code&ingredient_id=eq.${ingredient.id}`,
+      { headers },
+    );
+    expect(densitySnapshotResponse.ok(), await densitySnapshotResponse.text()).toBeTruthy();
+    const densitySnapshot = await densitySnapshotResponse.json();
+    const historySnapshotResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_history?select=id,event_type,ingredient_id&account_id=eq.${user.id}&order=id.asc`,
+      { headers },
+    );
+    expect(historySnapshotResponse.ok(), await historySnapshotResponse.text()).toBeTruthy();
+    const historySnapshot = (await historySnapshotResponse.json()) as {
+      id: string;
+      event_type: string;
+      ingredient_id: string;
+    }[];
+
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
+    const section = page.getByRole('region', { name: 'Ingredients' });
+    await section.getByRole('button', { name: 'Ingredients', exact: true }).click();
+    await section.getByRole('button', { name: `Measure equivalent for ${ingredientName}` }).click();
+
+    const dialog = page.locator('dialog').filter({ hasText: 'Average measures' });
+    const volumeAmount = dialog.getByLabel('Average volume amount');
+    const weightAmount = dialog.getByLabel('Average weight amount');
+    await volumeAmount.fill('1');
+    await expect(weightAmount).toHaveValue('120');
+    await expect(weightAmount).toHaveAttribute('readonly');
+    await expect(dialog.getByRole('status')).toHaveText('Derived from density');
+    const sourceAmountBounds = await volumeAmount.boundingBox();
+    const derivedAmountBounds = await weightAmount.boundingBox();
+    expect(sourceAmountBounds).not.toBeNull();
+    expect(derivedAmountBounds).not.toBeNull();
+    expect(derivedAmountBounds?.width).toBeGreaterThan(sourceAmountBounds?.width ?? 0);
+    await testInfo.attach('measure-equivalent-density-fields', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+    const calculator = dialog.getByRole('button', { name: 'Derived from density' });
+    await calculator.hover();
+    await expect(dialog.getByRole('tooltip')).toBeVisible();
+    await page.mouse.move(0, 0);
+    await calculator.focus();
+    await expect(dialog.getByRole('tooltip')).toBeVisible();
+    await calculator.click();
+    await expect(dialog.getByRole('tooltip')).toBeVisible();
+
+    await volumeAmount.fill('');
+    await expect(weightAmount).toHaveValue('');
+    await expect(weightAmount).not.toHaveAttribute('readonly');
+    await weightAmount.fill('30');
+    await expect(volumeAmount).toHaveValue('0.25');
+    await expect(volumeAmount).toHaveAttribute('readonly');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(section.getByText('Measure equivalent saved.', { exact: true })).toBeVisible();
+
+    await section.getByRole('button', { name: `Measure equivalent for ${ingredientName}` }).click();
+    const reopenedDialog = page.locator('dialog').filter({ hasText: 'Average measures' });
+    await expect(reopenedDialog.getByLabel('Average volume amount')).toHaveValue('0.25');
+    await expect(reopenedDialog.getByLabel('Average volume amount')).toHaveAttribute('readonly');
+    await expect(reopenedDialog.getByLabel('Average weight amount')).toHaveValue('30');
+    await expect(reopenedDialog.getByLabel('Average weight amount')).not.toHaveAttribute(
+      'readonly',
+    );
+
+    const equivalentResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_measure_equivalents?select=volume_amount,weight_amount,volume_unit_code,weight_unit_code&ingredient_id=eq.${ingredient.id}`,
+      { headers },
+    );
+    expect(equivalentResponse.ok(), await equivalentResponse.text()).toBeTruthy();
+    const [savedEquivalent] = (await equivalentResponse.json()) as {
+      volume_amount: number | null;
+      weight_amount: number | null;
+      volume_unit_code: string | null;
+      weight_unit_code: string | null;
+    }[];
+    expect(savedEquivalent).toMatchObject({
+      volume_amount: null,
+      weight_amount: 30,
+      weight_unit_code: 'g',
+    });
+    const densityAfterResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_densities?select=account_id,ingredient_id,volume_amount,volume_unit_code,weight_amount,weight_unit_code&ingredient_id=eq.${ingredient.id}`,
+      { headers },
+    );
+    expect(densityAfterResponse.ok(), await densityAfterResponse.text()).toBeTruthy();
+    expect(await densityAfterResponse.json()).toEqual(densitySnapshot);
+    const historyAfterResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_history?select=id,event_type,ingredient_id&account_id=eq.${user.id}&order=id.asc`,
+      { headers },
+    );
+    expect(historyAfterResponse.ok(), await historyAfterResponse.text()).toBeTruthy();
+    const historyAfter = (await historyAfterResponse.json()) as typeof historySnapshot;
+    expect(
+      historyAfter.filter(({ event_type }) => event_type.startsWith('ingredient.density_')),
+    ).toEqual(
+      historySnapshot.filter(({ event_type }) => event_type.startsWith('ingredient.density_')),
+    );
+    expect(
+      historyAfter.filter(({ event_type }) => event_type === 'ingredient.measure_equivalent_set'),
+    ).toHaveLength(
+      historySnapshot.filter(({ event_type }) => event_type === 'ingredient.measure_equivalent_set')
+        .length + 1,
+    );
+
+    const ingredientRowId = randomUUID();
+    const ingredientSetId = randomUUID();
+    const saveRecipe = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`,
+      {
+        headers,
+        data: {
+          p_recipe_id: null,
+          p_expected_version: null,
+          p_name: 'Measure equivalent reader test',
+          p_food_type_id: null,
+          p_state: 'want_to_try',
+          p_verdict_id: null,
+          p_enthusiasm_id: null,
+          p_occasion_details: null,
+          p_reason: null,
+          p_serves: 1,
+          p_notes_markdown: '',
+          p_meal_type_ids: [],
+          p_cuisine_ids: [],
+          p_equipment_ids: [],
+          p_ingredient_rows: [
+            {
+              recipe_ingredient_id: ingredientRowId,
+              ingredient_set_id: ingredientSetId,
+              ingredient_id: ingredient.id,
+              ingredient_name: null,
+              is_main: true,
+              detail: '',
+              preparation: '',
+              portion_one_ratio: null,
+              size_value: null,
+              size_unit: null,
+              measurements: [
+                {
+                  measurement_type: 'count',
+                  amount_min: 1,
+                  amount_max: null,
+                  unit_code: null,
+                  picklist_value_id: null,
+                },
+              ],
+            },
+          ],
+          p_instruction_steps: [],
+          p_publication_id: null,
+          p_publication_page: null,
+          p_recipe_url: null,
+          p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+          p_tag_ids: [],
+          p_ingredient_sets: [{ id: ingredientSetId, label: 'Main', position: 0 }],
+          p_score: null,
+          p_makes_quantity: null,
+          p_makes_thing: null,
+          p_nutrition_overrides: {},
+          p_time_entries: [],
+        },
+      },
+    );
+    expect(saveRecipe.ok(), await saveRecipe.text()).toBeTruthy();
+    const [savedRecipe] = (await saveRecipe.json()) as { id: string }[];
+    expect(savedRecipe?.id).toBeTruthy();
+    await page.goto(`/recipes/${savedRecipe.id}`);
+    const recipeIngredient = page
+      .locator('.recipe-ingredient-list li, .recipe-ingredient-first-table tbody tr')
+      .filter({ hasText: ingredientName })
+      .first();
+    await expect(recipeIngredient).toContainText('Density Equivalent Lemon');
+    await expect(recipeIngredient).toContainText('1');
+    await page
+      .getByRole('combobox', {
+        name: `Change ${ingredientName} quantity measure (currently 1)`,
+      })
+      .click();
+    await expect(page.getByRole('option', { name: 'Count', exact: true })).toBeVisible();
+    await expect(page.getByRole('option', { name: /recipe measurement/i })).toHaveCount(0);
+    await page.getByRole('option', { name: 'Units', exact: true }).click();
+    await expect(recipeIngredient).toContainText('¼ cup');
+    await expect(recipeIngredient).toContainText('1.06 oz');
+    const readerAccessibility = await new AxeBuilder({ page })
+      .include('.recipe-reading-layout')
+      .analyze();
+    expect(readerAccessibility.violations).toEqual([]);
+    await testInfo.attach('measure-equivalent-reader-units', {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+    await page.emulateMedia({ media: 'print' });
+    const printedIngredient = page
+      .locator('.recipe-ingredient-list li, .recipe-ingredient-first-table tbody tr')
+      .filter({ hasText: ingredientName })
+      .first();
+    await expect(printedIngredient).toContainText('¼ cup');
+    await expect(printedIngredient).toContainText('1.06 oz');
+    await page.emulateMedia({ media: 'screen' });
+    await page.getByRole('combobox', { name: `Change ${ingredientName} volume unit` }).click();
+    await expect(page.getByRole('option', { name: /recipe default/i })).toHaveCount(0);
+    await page.getByRole('option', { name: 'Count', exact: true }).click();
+    await expect(recipeIngredient).toContainText('1');
+    await expect(recipeIngredient).toContainText('1.06 oz');
+    await page.getByRole('combobox', { name: `Change ${ingredientName} weight unit` }).click();
+    await expect(page.getByRole('option', { name: /recipe default/i })).toHaveCount(0);
+    await page.getByRole('option', { name: 'Count', exact: true }).click();
+    await expect(recipeIngredient).toContainText('1');
+    await expect(
+      page.getByRole('combobox', {
+        name: `Change ${ingredientName} quantity measure (currently 1)`,
+      }),
+    ).toBeVisible();
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasHorizontalOverflow).toBe(false);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
 
 test('Settings stages, searches, edits, and removes trusted ingredient densities @e2e @a11y @density', async ({
   page,
@@ -67,6 +350,7 @@ test('Settings stages, searches, edits, and removes trusted ingredient densities
 
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     await page.waitForLoadState('networkidle');
     const section = page.getByRole('region', { name: 'Trusted densities' });
     const toggle = section.getByRole('button', { name: 'Trusted densities', exact: true });
@@ -546,22 +830,37 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
     }
 
     async function derivedTextIconGap(label: string) {
-      return page.getByRole('textbox', { name: label }).evaluate((input) => {
+      return page.getByRole('textbox', { name: label }).evaluate(async (input) => {
         const amountInput = input as HTMLInputElement;
         const indicator = amountInput.parentElement?.querySelector(
           '.recipe-measurement-derived-indicator',
         );
-        const canvas = amountInput.ownerDocument.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (!indicator || !context) return null;
+        if (!indicator) return null;
+        await amountInput.ownerDocument.fonts.ready;
         const style = getComputedStyle(amountInput);
-        context.font = style.font;
+        const textMeasure = amountInput.ownerDocument.createElement('span');
+        Object.assign(textMeasure.style, {
+          position: 'fixed',
+          visibility: 'hidden',
+          whiteSpace: 'pre',
+          font: style.font,
+          letterSpacing: style.letterSpacing,
+          fontKerning: style.fontKerning,
+          fontFeatureSettings: style.fontFeatureSettings,
+          fontVariationSettings: style.fontVariationSettings,
+          textTransform: style.textTransform,
+          wordSpacing: style.wordSpacing,
+        });
+        textMeasure.textContent = amountInput.value;
+        amountInput.ownerDocument.body.append(textMeasure);
+        const textWidth = textMeasure.getBoundingClientRect().width;
+        textMeasure.remove();
         const bounds = amountInput.getBoundingClientRect();
         const textEnd =
           bounds.left +
-          amountInput.clientLeft +
+          Number.parseFloat(style.borderLeftWidth) +
           Number.parseFloat(style.paddingLeft) +
-          context.measureText(amountInput.value).width -
+          textWidth -
           amountInput.scrollLeft;
         return indicator.getBoundingClientRect().left - textEnd;
       });
@@ -800,6 +1099,12 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
       await expect(weightAmount).toHaveValue('2,400,000,000');
       await expect(weightAmount).toHaveAttribute('size', '14');
       await expect(weightAmount).toHaveCSS('padding-right', '21px');
+      const longAmountScreenshot = testInfo.outputPath('recipe-density-long-derived-desktop.png');
+      await page.screenshot({ path: longAmountScreenshot, fullPage: true });
+      await testInfo.attach('recipe-density-long-derived-desktop', {
+        path: longAmountScreenshot,
+        contentType: 'image/png',
+      });
       const textIconGap = await derivedTextIconGap('Weight amount, row 1');
       expect(textIconGap).toBeGreaterThanOrEqual(3.5);
       expect(textIconGap).toBeLessThanOrEqual(6.5);
@@ -820,12 +1125,6 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
         ),
       ).toBe(false);
       expect(longAmountBounds?.width).toBeGreaterThan(shortWeightBounds?.width ?? 0);
-      const longAmountScreenshot = testInfo.outputPath('recipe-density-long-derived-desktop.png');
-      await page.screenshot({ path: longAmountScreenshot, fullPage: true });
-      await testInfo.attach('recipe-density-long-derived-desktop', {
-        path: longAmountScreenshot,
-        contentType: 'image/png',
-      });
       await volumeAmount.fill('1/7');
       await volumeAmount.fill('1/8');
       await expect(weightAmount).toHaveValue('30');

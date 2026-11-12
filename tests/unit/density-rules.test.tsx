@@ -4,6 +4,7 @@ import {
   deriveDensityRange,
   type IngredientDensity,
   reconcileDensityIngredientChange,
+  resolveMeasureEquivalent,
 } from '../../src/lib/recipes/density-rules';
 import {
   type MeasurementDraft,
@@ -18,6 +19,46 @@ const flourDensity: IngredientDensity = {
 };
 
 describe('trusted density rules', () => {
+  it('resolves equivalent dimensions from trusted density and keeps legacy Weight precedence', () => {
+    const volumeOnly = {
+      measurementType: 'count' as const,
+      picklistValueId: null,
+      picklistValue: null,
+      volume: { amount: 0.5, unitCode: 'cup' },
+      weight: null,
+    };
+    expect(resolveMeasureEquivalent(volumeOnly, flourDensity)).toEqual({
+      ...volumeOnly,
+      weight: { amount: 60, unitCode: 'g' },
+    });
+
+    const legacyPair = {
+      ...volumeOnly,
+      volume: { amount: 2, unitCode: 'cup' },
+      weight: { amount: 120, unitCode: 'g' },
+    };
+    expect(resolveMeasureEquivalent(legacyPair, flourDensity)).toEqual({
+      ...legacyPair,
+      volume: { amount: 1, unitCode: 'cup' },
+    });
+    expect(legacyPair.volume).toEqual({ amount: 2, unitCode: 'cup' });
+    expect(resolveMeasureEquivalent(legacyPair, flourDensity, 'volume')).toEqual({
+      ...legacyPair,
+      weight: { amount: 240, unitCode: 'g' },
+    });
+  });
+
+  it('leaves explicit dimensions alone without trusted density', () => {
+    const pair = {
+      measurementType: 'informal' as const,
+      picklistValueId: 'scoop-id',
+      picklistValue: 'Scoop',
+      volume: { amount: 0.5, unitCode: 'cup' },
+      weight: { amount: 75, unitCode: 'g' },
+    };
+    expect(resolveMeasureEquivalent(pair, null)).toBe(pair);
+  });
+
   it('derives weight from volume in the requested unit without rounding', () => {
     expect(
       deriveDensityRange({ minimum: 1.5, maximum: null }, 'volume', 'cup', flourDensity, 'g'),

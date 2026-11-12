@@ -41,6 +41,11 @@ import {
   type IngredientDisplayInput,
 } from '../../lib/recipes/ingredient-rules';
 import {
+  applyMeasureEquivalent,
+  getResolvedMeasureEquivalent,
+  type MeasureEquivalentOverrides,
+} from '../../lib/recipes/measure-equivalent-rules';
+import {
   formatQuantity,
   type MeasurementSystemPreference,
   type MeasurementType,
@@ -48,7 +53,11 @@ import {
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
-import { formatNutritionString, type NutrientValues } from '../../lib/recipes/nutrition-rules';
+import {
+  formatNutritionString,
+  type NutrientValues,
+  type NutritionEquivalent,
+} from '../../lib/recipes/nutrition-rules';
 import {
   getScaleMultiplier,
   type IngredientPresentation,
@@ -113,6 +122,10 @@ type RecipeScaleContextValue = {
   setScale: (scale: RecipeScale) => void;
   unitOverrides: Record<string, IngredientUnitOverrides>;
   setUnitOverrides: Dispatch<SetStateAction<Record<string, IngredientUnitOverrides>>>;
+  measureEquivalentOverrides: Record<string, MeasureEquivalentOverrides>;
+  setMeasureEquivalentOverrides: Dispatch<
+    SetStateAction<Record<string, MeasureEquivalentOverrides>>
+  >;
 };
 
 const RecipeScaleContext = createContext<RecipeScaleContextValue | null>(null);
@@ -145,7 +158,7 @@ export function RecipeInstructionMention({
     weight: MeasurementSystemPreference;
   };
 }) {
-  const { multiplier, unitOverrides } = useRecipeScale();
+  const { multiplier, unitOverrides, measureEquivalentOverrides } = useRecipeScale();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLSpanElement>(null);
   const popupId = useId();
@@ -158,7 +171,10 @@ export function RecipeInstructionMention({
     top: number;
     placement: 'above' | 'below';
   } | null>(null);
-  const displayIngredient = transformIngredientForDisplay(ingredient, {
+  const displaySourceIngredient = preserveStoredUnits
+    ? ingredient
+    : applyMeasureEquivalent(ingredient, measureEquivalentOverrides[ingredient.id]);
+  const displayIngredient = transformIngredientForDisplay(displaySourceIngredient, {
     multiplier,
     unitSystems,
     preserveStoredUnits,
@@ -323,12 +339,17 @@ export function RecipeReaderProvider({
 }) {
   const [scale, setScale] = useState<RecipeScale>(() => initialScale(serves));
   const [unitOverrides, setUnitOverrides] = useState<Record<string, IngredientUnitOverrides>>({});
+  const [measureEquivalentOverrides, setMeasureEquivalentOverrides] = useState<
+    Record<string, MeasureEquivalentOverrides>
+  >({});
   const value = {
     scale,
     multiplier: getScaleMultiplier(scale),
     setScale,
     unitOverrides,
     setUnitOverrides,
+    measureEquivalentOverrides,
+    setMeasureEquivalentOverrides,
   };
 
   return <RecipeScaleContext.Provider value={value}>{children}</RecipeScaleContext.Provider>;
@@ -364,7 +385,8 @@ function selectedScaleDraft(scale: RecipeScale): { mode: ScaleMode; to: string }
 }
 
 function ReaderScaleButton({ serves }: { serves: number | null }) {
-  const { scale, multiplier, setScale, setUnitOverrides } = useRecipeScale();
+  const { scale, multiplier, setScale, setUnitOverrides, setMeasureEquivalentOverrides } =
+    useRecipeScale();
   const scope = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -473,6 +495,7 @@ function ReaderScaleButton({ serves }: { serves: number | null }) {
     const baseScale = initialScale(serves);
     setScale(baseScale);
     setUnitOverrides({});
+    setMeasureEquivalentOverrides({});
     const draft = selectedScaleDraft(baseScale);
     setMode(draft.mode);
     setTo(draft.mode === 'servings' ? draft.to : '2');
@@ -650,27 +673,26 @@ function ReaderUnitPicklist({
   ingredientName,
   dimension,
   unitCode,
-  unitLabel,
-  defaultUnitCode,
-  isOverridden,
+  countOptionLabel,
+  countSelected = false,
+  children,
   onSelect,
 }: {
   ingredientName: string;
   dimension: MeasurementDimension;
   unitCode: string;
-  unitLabel: string;
-  defaultUnitCode: string;
-  isOverridden: boolean;
+  countOptionLabel?: string;
+  countSelected?: boolean;
+  children: ReactNode;
   onSelect: (unitCode: string) => void;
 }) {
   const units: MeasurementUnit[] = dimension === 'volume' ? volumeUnits : weightUnits;
-  const defaultUnit = units.find((unit) => unit.code === defaultUnitCode);
   const options: ReaderPicklistOption[] = [
-    ...(isOverridden
+    ...(countOptionLabel
       ? [
           {
-            value: '__recipe_default',
-            label: `Recipe default (${defaultUnit?.abbreviation ?? defaultUnitCode})`,
+            value: '__recipe_count',
+            label: countOptionLabel,
           },
         ]
       : []),
@@ -688,10 +710,51 @@ function ReaderUnitPicklist({
       options={options}
       showArrow={false}
       title={`Change ${dimension} unit`}
-      value={isOverridden ? unitCode : defaultUnitCode}
-      onSelect={(value) => onSelect(value === '__recipe_default' ? '' : value)}
+      value={countSelected ? '__recipe_count' : unitCode}
+      onSelect={onSelect}
     >
-      <span className="recipe-reader-unit-label">{unitLabel}</span>
+      <span className="recipe-reader-unit-label">{children}</span>
+    </ReaderPicklist>
+  );
+}
+
+function ReaderMeasureEquivalentPicklist({
+  ingredientName,
+  currentQuantity,
+  equivalent,
+  showEquivalentMeasures,
+  children,
+  onSelect,
+}: {
+  ingredientName: string;
+  currentQuantity: string;
+  equivalent: NutritionEquivalent;
+  showEquivalentMeasures: boolean;
+  children: ReactNode;
+  onSelect: (showEquivalentMeasures: boolean) => void;
+}) {
+  const options: ReaderPicklistOption[] = [
+    {
+      value: '__recipe_count',
+      label:
+        equivalent.measurementType === 'count'
+          ? 'Count'
+          : `Things: ${equivalent.picklistValue ?? 'unit'}`,
+    },
+    { value: '__equivalent_units', label: 'Units' },
+  ];
+
+  return (
+    <ReaderPicklist
+      className="recipe-reader-unit-trigger"
+      label={`Change ${ingredientName} quantity measure (currently ${currentQuantity})`}
+      options={options}
+      showArrow={false}
+      title="Change quantity measure"
+      value={showEquivalentMeasures ? '__equivalent_units' : '__recipe_count'}
+      onSelect={(value) => onSelect(value === '__equivalent_units')}
+    >
+      <span className="recipe-reader-unit-label">{children}</span>
     </ReaderPicklist>
   );
 }
@@ -719,7 +782,13 @@ export function RecipeReader({
   volumeSystem: MeasurementSystemPreference;
   weightSystem: MeasurementSystemPreference;
 }) {
-  const { multiplier, unitOverrides, setUnitOverrides } = useRecipeScale();
+  const {
+    multiplier,
+    unitOverrides,
+    setUnitOverrides,
+    measureEquivalentOverrides,
+    setMeasureEquivalentOverrides,
+  } = useRecipeScale();
   const ingredientSets =
     suppliedIngredientSets ??
     (ingredients.length
@@ -749,8 +818,9 @@ export function RecipeReader({
       setCookMode(false);
       setCheckedIngredients({});
       setWakeStatus('');
+      setMeasureEquivalentOverrides({});
     }
-  }, [recipeId]);
+  }, [recipeId, setMeasureEquivalentOverrides]);
 
   useEffect(() => {
     if (!cookMode) {
@@ -834,6 +904,52 @@ export function RecipeReader({
     });
   }
 
+  function setMeasureEquivalentCount(
+    ingredient: RecipeIngredient,
+    dimension: MeasurementDimension,
+    isCount: boolean,
+  ) {
+    const equivalent = getResolvedMeasureEquivalent(ingredient);
+    const dimensions = [
+      ...(equivalent?.volume ? ['volume' as const] : []),
+      ...(equivalent?.weight ? ['weight' as const] : []),
+    ];
+    setMeasureEquivalentOverrides((current) => {
+      const existing = current[ingredient.id] ?? {};
+      const countDimensions = { ...existing.countDimensions };
+      if (isCount) {
+        countDimensions[dimension] = true;
+      } else {
+        delete countDimensions[dimension];
+      }
+      const allDimensionsCount =
+        dimensions.length === 2 && dimensions.every((candidate) => countDimensions[candidate]);
+      return {
+        ...current,
+        [ingredient.id]: {
+          showEquivalentMeasures: !allDimensionsCount,
+          countDimensions,
+        },
+      };
+    });
+  }
+
+  function setMeasureEquivalentDisplayMode(ingredientId: string, showEquivalentMeasures: boolean) {
+    setMeasureEquivalentOverrides((current) => ({
+      ...current,
+      [ingredientId]: {
+        showEquivalentMeasures,
+        countDimensions: {},
+      },
+    }));
+  }
+
+  function ingredientForCurrentMeasure(ingredient: RecipeIngredient) {
+    return preserveStoredUnits
+      ? ingredient
+      : applyMeasureEquivalent(ingredient, measureEquivalentOverrides[ingredient.id]);
+  }
+
   const visibleSets = ingredientSets.filter((set) =>
     ingredients.some((ingredient) => ingredient.ingredient_set_id === set.id),
   );
@@ -849,7 +965,8 @@ export function RecipeReader({
   const sortedIngredients = ingredientGroups.flatMap((group) => group.ingredients);
   const ingredientFirstColumnPresence = { volume: false, weight: false, preparation: false };
   for (const ingredient of sortedIngredients) {
-    const displayIngredient = transformIngredientForDisplay(ingredient, {
+    const displaySourceIngredient = ingredientForCurrentMeasure(ingredient);
+    const displayIngredient = transformIngredientForDisplay(displaySourceIngredient, {
       multiplier,
       preserveStoredUnits,
       unitSystems,
@@ -908,47 +1025,139 @@ export function RecipeReader({
             portionOrdinal,
           );
     const parts = getIngredientDisplayParts(portionedIngredient, { aliasPinch: true });
-    return parts.measurements
-      .filter(
-        (measurement) =>
-          !measurementTypes || measurementTypes.includes(measurement.measurementType),
-      )
-      .map((measurement, index) => {
-        const dimension =
-          measurement.measurementType === 'volume' || measurement.measurementType === 'weight'
-            ? measurement.measurementType
-            : null;
-        const defaultUnitCode = defaultIngredient.measurements?.find(
-          (candidate) => candidate.measurement_type === measurement.measurementType,
-        )?.unit_code;
-        const isOverridden = Boolean(dimension && unitOverrides[ingredient.id]?.[dimension]);
-        return (
-          <Fragment key={`${measurement.measurementType}-${measurement.unitCode}`}>
-            {index > 0 && ' / '}
-            {renderFractionGlyphs(measurement.quantity)}
-            {measurement.unitLabel && (
-              <>
-                {' '}
-                {dimension && measurement.unitCode && defaultUnitCode ? (
-                  <ReaderUnitPicklist
-                    defaultUnitCode={defaultUnitCode}
-                    dimension={dimension}
-                    ingredientName={ingredient.ingredient_name}
-                    isOverridden={isOverridden}
-                    unitCode={measurement.unitCode}
-                    unitLabel={measurement.unitLabel}
-                    onSelect={(unitCode) =>
-                      setIngredientOverride(ingredient.id, dimension, unitCode)
-                    }
-                  />
-                ) : (
-                  measurement.unitLabel
-                )}
-              </>
-            )}
-          </Fragment>
+    const equivalent = preserveStoredUnits ? null : getResolvedMeasureEquivalent(ingredient);
+    const sourceMeasurement = ingredient.measurements.find(
+      (candidate) =>
+        candidate.measurement_type === 'count' || candidate.measurement_type === 'informal',
+    );
+    const switchEquivalent =
+      equivalent && sourceMeasurement && sourceMeasurement.amount_min !== null ? equivalent : null;
+    const equivalentOverrides = measureEquivalentOverrides[ingredient.id];
+    const hasBothEquivalentDimensions = Boolean(
+      switchEquivalent?.volume && switchEquivalent.weight,
+    );
+    const showEquivalentMeasures =
+      equivalentOverrides?.showEquivalentMeasures ?? !hasBothEquivalentDimensions;
+    const countDimension = (measurement: (typeof parts.measurements)[number]) => {
+      if (measurement.measurementType === 'volume' || measurement.measurementType === 'weight') {
+        return measurement.measurementType;
+      }
+      if (
+        switchEquivalent &&
+        equivalentOverrides?.showEquivalentMeasures &&
+        sourceMeasurement &&
+        (measurement.measurementType === 'count' || measurement.measurementType === 'informal')
+      ) {
+        return (['volume', 'weight'] as const).find(
+          (dimension) => equivalentOverrides.countDimensions?.[dimension],
         );
-      });
+      }
+      return null;
+    };
+    const visibleMeasurements = parts.measurements.filter(
+      (measurement) => !measurementTypes || measurementTypes.includes(measurement.measurementType),
+    );
+    const orderedMeasurements = [...visibleMeasurements].sort((left, right) => {
+      const getOrder = (measurement: (typeof parts.measurements)[number]) => {
+        const dimension = countDimension(measurement);
+        if (dimension === 'volume') return 0;
+        if (dimension === 'weight') return 1;
+        if (measurement.measurementType === 'volume') return 0;
+        if (measurement.measurementType === 'weight') return 1;
+        if (measurement.measurementType === 'count') return 2;
+        return 3;
+      };
+      return getOrder(left) - getOrder(right);
+    });
+    return orderedMeasurements.map((measurement, index) => {
+      const dimension = countDimension(measurement);
+      const defaultUnitCode =
+        defaultIngredient.measurements?.find(
+          (candidate) => candidate.measurement_type === measurement.measurementType,
+        )?.unit_code ??
+        (dimension ? switchEquivalent?.[dimension]?.unitCode : undefined) ??
+        measurement.unitCode;
+      const countPickerLabel =
+        switchEquivalent && sourceMeasurement
+          ? sourceMeasurement.measurement_type === 'count'
+            ? 'Count'
+            : `Things (${sourceMeasurement.picklist_value ?? switchEquivalent?.picklistValue ?? 'unit'})`
+          : undefined;
+      const useInitialCountPicker =
+        switchEquivalent && hasBothEquivalentDimensions && !showEquivalentMeasures;
+      const amountNode = renderFractionGlyphs(measurement.quantity);
+      const selectUnit = (unitCode: string) => {
+        if (!dimension) return;
+        if (unitCode === '__recipe_count') {
+          if (switchEquivalent) {
+            setMeasureEquivalentCount(ingredient, dimension, true);
+          }
+          return;
+        }
+        if (switchEquivalent) {
+          setMeasureEquivalentCount(ingredient, dimension, false);
+        }
+        setIngredientOverride(
+          ingredient.id,
+          dimension,
+          unitCode === defaultUnitCode ? '' : unitCode,
+        );
+      };
+      const unitPicker = (children: ReactNode) =>
+        dimension && defaultUnitCode ? (
+          <ReaderUnitPicklist
+            countOptionLabel={countPickerLabel}
+            countSelected={Boolean(
+              switchEquivalent && equivalentOverrides?.countDimensions?.[dimension],
+            )}
+            dimension={dimension}
+            ingredientName={ingredient.ingredient_name}
+            unitCode={
+              measurement.unitCode ??
+              unitOverrides[ingredient.id]?.[dimension] ??
+              switchEquivalent?.[dimension]?.unitCode ??
+              defaultUnitCode
+            }
+            onSelect={selectUnit}
+          >
+            {children}
+          </ReaderUnitPicklist>
+        ) : (
+          children
+        );
+      const quantity = useInitialCountPicker ? (
+        <ReaderMeasureEquivalentPicklist
+          equivalent={switchEquivalent}
+          ingredientName={ingredient.ingredient_name}
+          currentQuantity={`${measurement.quantity}${measurement.unitLabel ? ` ${measurement.unitLabel}` : ''}`}
+          showEquivalentMeasures={showEquivalentMeasures}
+          onSelect={(nextShowEquivalentMeasures) =>
+            setMeasureEquivalentDisplayMode(ingredient.id, nextShowEquivalentMeasures)
+          }
+        >
+          {amountNode}
+          {measurement.unitLabel && ` ${measurement.unitLabel}`}
+        </ReaderMeasureEquivalentPicklist>
+      ) : dimension && !measurement.unitLabel ? (
+        unitPicker(amountNode)
+      ) : (
+        amountNode
+      );
+      return (
+        <Fragment key={`${measurement.measurementType}-${measurement.unitCode}`}>
+          {index > 0 && ' / '}
+          {quantity}
+          {measurement.unitLabel && !useInitialCountPicker && (
+            <>
+              {' '}
+              {dimension && defaultUnitCode
+                ? unitPicker(measurement.unitLabel)
+                : measurement.unitLabel}
+            </>
+          )}
+        </Fragment>
+      );
+    });
   }
 
   function renderPortions(
@@ -1036,11 +1245,15 @@ export function RecipeReader({
   function renderIngredientRows(groupIngredients: RecipeIngredient[] = sortedIngredients) {
     return groupIngredients.map((ingredient) => {
       const displayOptions = { multiplier, preserveStoredUnits, unitSystems };
-      const displayIngredient = transformIngredientForDisplay(ingredient, {
+      const displaySourceIngredient = ingredientForCurrentMeasure(ingredient);
+      const displayIngredient = transformIngredientForDisplay(displaySourceIngredient, {
         ...displayOptions,
         unitOverrides: unitOverrides[ingredient.id],
       });
-      const defaultIngredient = transformIngredientForDisplay(ingredient, displayOptions);
+      const defaultIngredient = transformIngredientForDisplay(
+        displaySourceIngredient,
+        displayOptions,
+      );
       const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
       const checked = Boolean(checkedIngredients[ingredient.id]);
       const portionBreakdown = renderPortionBreakdown(ingredient, displayIngredient);
