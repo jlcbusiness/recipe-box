@@ -583,3 +583,34 @@ export async function restoreAdminUpdate(
 ): Promise<AdminFormState> {
   return setAdminUpdateArchived(updateId, revision, false);
 }
+
+export async function deleteAdminUpdate(
+  updateId: unknown,
+  revision: unknown,
+): Promise<AdminFormState> {
+  if (typeof updateId !== 'string' || !adminUpdateIdPattern.test(updateId)) {
+    return { error: 'Choose a valid update.' };
+  }
+  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
+    return { error: 'This update has an invalid revision. Reload it and try again.' };
+  }
+
+  const access = await getAdminUpdatesClient();
+  if ('error' in access) {
+    return access;
+  }
+
+  const { error } = await access.client.rpc('admin_update_delete', {
+    p_id: updateId,
+    p_revision: revision,
+  });
+  if (error?.code === 'P0002') {
+    return { error: 'This update no longer exists. Reload the page and try again.' };
+  }
+  if (error) {
+    return getAdminUpdateActionError(error, 'Unable to delete this update. Try again.');
+  }
+
+  revalidatePath('/settings');
+  return { message: 'Update deleted.' };
+}

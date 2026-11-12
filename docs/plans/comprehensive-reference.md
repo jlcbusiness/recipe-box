@@ -1727,9 +1727,10 @@ delete Admin accounts or transfer Owner status.
   redirects to App admin for Admins and retains its non-admin redirect.
 - An administrator can add and edit individual update entries. Entries are
   shared among admins, remain independent of any one account, and are excluded
-  from account reset and database ZIP import/export. Archive data and audit
-  history remain stored, but the Updates interface has no archive or restore
-  controls and displays previously archived entries as ordinary rows.
+  from account reset and database ZIP import/export. The Updates interface has
+  no archive or restore controls and displays previously archived entries as
+  ordinary rows. Each saved entry has a trailing X control that asks for
+  confirmation before permanently deleting the entry and its audit history.
 - The Updates list has a persistent blank Markdown field at the top. Each row
   has a completion control on the left, a directly editable text field in the
   center, and its required type pill on the right. Moving focus outside a row

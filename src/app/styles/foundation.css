@@ -857,7 +857,7 @@ a {
 .admin-update-list-header,
 .admin-update-row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) max-content;
+  grid-template-columns: 64px minmax(0, 1fr) max-content 48px;
   align-items: start;
   column-gap: 0;
 }
@@ -1060,6 +1060,24 @@ a {
   background: transparent;
 }
 
+.admin-updates button.admin-update-delete-action {
+  display: inline-flex;
+  width: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-color: transparent;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.admin-updates button.admin-update-delete-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tomato) 8%, white);
+  color: var(--tomato);
+}
+
 .admin-update-type-picker .admin-update-kind-tag,
 .admin-update-add-tag {
   min-height: 32px;
@@ -1116,7 +1134,10 @@ a {
 
 .admin-update-completion-dialog {
   width: min(390px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
   max-width: none;
+  margin: auto;
+  overflow: auto;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   padding: 20px;
@@ -1137,6 +1158,28 @@ a {
 .admin-update-completion-dialog form {
   display: grid;
   gap: 8px;
+}
+
+.admin-update-delete-preview {
+  max-height: 7rem;
+  margin: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  border-left: 3px solid var(--line-strong);
+  padding: 8px;
+  background: white;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.admin-updates button.admin-update-delete-confirm {
+  border-color: var(--tomato);
+  background: var(--tomato);
+  color: white;
+}
+
+.admin-updates button.admin-update-delete-confirm:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tomato) 88%, black);
 }
 
 .admin-update-reopen-option {
@@ -1278,7 +1321,7 @@ a {
 
   .admin-update-list-header,
   .admin-update-row {
-    grid-template-columns: 64px minmax(0, 1fr) max-content;
+    grid-template-columns: 64px minmax(0, 1fr) max-content 48px;
     column-gap: 0;
   }
 

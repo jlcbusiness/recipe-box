@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(46);
+select plan(52);
 
 insert into auth.users (
   id,
@@ -61,6 +61,12 @@ select throws_ok(
   'anonymous users cannot create application updates'
 );
 select throws_ok(
+  $$select public.admin_update_delete('28000000-0000-4000-8000-000000000099', 1)$$,
+  '42501',
+  null,
+  'anonymous users cannot delete application updates'
+);
+select throws_ok(
   $$select id from public.admin_update_events$$,
   '42501',
   null,
@@ -85,6 +91,12 @@ select throws_ok(
   '42501',
   null,
   'non-admin users cannot reorder application updates'
+);
+select throws_ok(
+  $$select public.admin_update_delete('28000000-0000-4000-8000-000000000099', 1)$$,
+  '42501',
+  null,
+  'non-admin users cannot delete application updates'
 );
 select is(
   (select count(*)::integer from public.admin_update_events),
@@ -360,6 +372,36 @@ select is(
      and event_type = 'reordered'),
   1,
   'manual order changes use the reordered audit event'
+);
+select throws_ok(
+  $$select public.admin_update_delete(
+    (select id from public.app_updates where body_markdown = 'Review the second issue'),
+    2
+  )$$,
+  'PT409',
+  null,
+  'delete rejects a stale update revision'
+);
+select lives_ok(
+  $$select public.admin_update_delete(
+    (select id from public.app_updates where body_markdown = 'Review the second issue'),
+    1
+  )$$,
+  'an admin can permanently delete an update'
+);
+select is(
+  (select count(*)::integer
+   from public.app_updates
+   where body_markdown = 'Review the second issue'),
+  0,
+  'permanently deleted updates are removed'
+);
+select is(
+  (select count(*)::integer
+   from public.admin_update_events
+   where after_state ->> 'body_markdown' = 'Review the second issue'),
+  0,
+  'permanently deleted updates have no audit history'
 );
 select throws_ok(
   $$update public.admin_update_events set event_type = 'edited'$$,

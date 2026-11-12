@@ -443,9 +443,11 @@ type remains staged in the draft. No add, edit, archive, or restore action
 buttons or explanatory helper text are shown. A small eye/eye-off control hides
 or reveals completed entries; its icon reflects current visibility (crossed
 eye when hidden, open eye when visible), and incomplete entries are always
-visible. Previously archived database entries appear as ordinary rows, without
-an Archived label or archive control. The authoring field uses plain Markdown
-and does not interpret recipe-specific autocomplete or tokens.
+visible. Each saved entry ends with an icon-only X that opens a confirmation
+before permanently deleting the entry and its audit history. Previously
+archived database entries appear as ordinary rows, without an Archived label or
+archive control. The authoring field uses plain Markdown and does not interpret
+recipe-specific autocomplete or tokens.
 Incomplete entries keep a persistent manual order, and newly created or
 reopened entries start at the top. Completed entries follow the incomplete
 entries and sort by completion time, newest first. The reorder handle supports
@@ -462,12 +464,14 @@ do not clip or truncate at fractional lines.
 Completing an entry opens a titled native dialog. It accepts only a standard
 `major.minor.patch` version, preserves invalid input beside a red textual
 error, and lets an existing completion be corrected or explicitly reopened.
-The dialog and editor support Escape cancellation, move focus into the active
-control, and return focus to their trigger when canceled. Mobile rows preserve
+The dialogs and editor support Escape cancellation, move focus into the active
+control, and return focus to their trigger when canceled; completion and delete
+dialogs are centered in the visual viewport. Mobile rows preserve
 the compact left-center-right layout without page-level horizontal scrolling.
-Touch targets for tabs, checkboxes, type selection, and the visibility control
-are at least 48px while their visible controls remain compact. The Fix and
-Feature text/fill pairs exceed the 4.5:1 WCAG AA contrast threshold.
+Touch targets for tabs, checkboxes, type selection, the visibility control, and
+the delete action are at least 48px while their visible controls remain
+compact. The Fix and Feature text/fill pairs exceed the 4.5:1 WCAG AA contrast
+threshold.
 
 ## Settings (Slice 14A)
 

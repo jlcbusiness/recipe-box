@@ -42,8 +42,11 @@ regular signed-in users or anonymous visitors.
   account. Any administrator may read and manage it. It is not a user-facing
   changelog, email notification, package-version source, or account backup.
 - Keep the Updates pane focused on the list; do not show Add, Edit, Archive,
-  or Restore buttons. Preserve archive state and audit history in the database,
-  but show previously archived entries as ordinary rows.
+  or Restore buttons. Each saved entry has a trailing X control that opens a
+  confirmation before permanently deleting the entry and its audit history.
+  The delete RPC requires administrator access and the current revision.
+  Preserve archive state and audit history for all other lifecycle actions,
+  and show previously archived entries as ordinary rows.
 - Each entry contains Markdown text and exactly one required type: **Fix** or
   **Feature**. **Tweak** and other types are deferred and excluded from this slice.
 - The type control is a compact **+ Add tag** pill while a new entry is being
@@ -186,8 +189,13 @@ regular signed-in users or anonymous visitors.
 
 - Admins can add and edit individual entries from the list. The persistent
   blank field appears above saved rows; each row keeps completion, text, and
-  type controls in the left-center-right order. Previously archived entries
-  appear as ordinary rows; archive history remains append-only.
+  type controls in the left-center-right order, followed by a delete X.
+  Previously archived entries appear as ordinary rows; archive history remains
+  append-only unless an admin confirms permanent deletion.
+- The delete X has an accessible name and a 48px target. It opens a centered
+  confirmation naming the entry and explaining that its audit history will
+  also be removed. Cancel retains the entry and returns focus to the X;
+  confirmation deletes the entry and its history, then refreshes the list.
 - The eye/eye-off control hides or reveals completed entries. Incomplete
   entries remain visible in either state.
 - New and edited entries cannot be submitted without exactly one Fix or
@@ -226,6 +234,9 @@ regular signed-in users or anonymous visitors.
   Fix/Feature pills meet text contrast requirements; the version label remains
   legible at its compact target size and appears at the document end on every
   route.
+- Completion and delete dialogs are centered in the viewport. The delete
+  action is tested on desktop and mobile; the database test covers
+  administrator authorization, stale revisions, and removal of entry history.
 - Automated accessibility checks cover tabs, inline editing, type selection,
   completion dialog, focus return, list headings, and error announcements in
   Chromium and Fold 6.
@@ -233,11 +244,12 @@ regular signed-in users or anonymous visitors.
 ## Implementation and verification
 
 - Unit and bootstrap tests pass: 554 Vitest tests and 8 Node tests.
-- Local pgTAP migration coverage passes all 46 assertions, including order
+- Local pgTAP migration coverage passes all 52 assertions, including order
   initialization, completion timestamps, reorder authorization and stale-list
   conflicts, audit events, revision conflicts, RLS, and actor deletion.
 - Focused Chromium and Fold 6 browser coverage passes all eight cases: the
-  Admin Updates create/edit/complete flows, pointer/touch/keyboard reordering,
+  Admin Updates create/edit/complete/delete flows, centered dialogs,
+  pointer/touch/keyboard reordering,
   role isolation, and the shared version-footer check. It covers immediate
   creation from a populated draft on type selection, nested-list keyboard
   continuation, inline editing and Escape cancellation, completion

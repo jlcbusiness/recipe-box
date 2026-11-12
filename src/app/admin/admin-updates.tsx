@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEvent,
@@ -29,6 +29,7 @@ import { useReorderDrag } from '../recipes/use-reorder-drag';
 import { ReorderGrip } from '../reorder-grip';
 import {
   createAdminUpdate,
+  deleteAdminUpdate,
   editAdminUpdate,
   reorderAdminUpdates,
   setAdminUpdateCompletion,
@@ -113,6 +114,10 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   const completionDialogRef = useRef<HTMLDialogElement>(null);
   const completionInputRef = useRef<HTMLInputElement>(null);
   const completionTriggerRef = useRef<HTMLElement | null>(null);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  const deleteCancelButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteTriggerRef = useRef<HTMLElement | null>(null);
+  const deleteSucceededRef = useRef(false);
   const dragPointerYRef = useRef<number | null>(null);
   const autoScrollFrameRef = useRef<number | null>(null);
   const isDragActiveRef = useRef(false);
@@ -120,9 +125,11 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
   const [showDone, setShowDone] = useState(false);
   const [editor, setEditor] = useState<UpdateEditor | null>(null);
   const [completion, setCompletion] = useState<CompletionDialog | null>(null);
+  const [deletion, setDeletion] = useState<AdminUpdate | null>(null);
   const [markIncomplete, setMarkIncomplete] = useState(false);
   const [error, setError] = useState('');
   const [versionError, setVersionError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   const [message, setMessage] = useState('');
   const [manualOrder, setManualOrder] = useState(() =>
     sortAdminUpdates(updates)
@@ -247,6 +254,28 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       });
     };
   }, [completionUpdateId]);
+
+  const deletionUpdateId = deletion?.id;
+  useEffect(() => {
+    const dialog = deleteDialogRef.current;
+    if (!deletionUpdateId || !dialog) {
+      return;
+    }
+    dialog.showModal();
+    deleteCancelButtonRef.current?.focus();
+    return () => {
+      if (dialog.open) {
+        dialog.close();
+      }
+      const target = deleteSucceededRef.current ? addTextareaRef.current : deleteTriggerRef.current;
+      deleteSucceededRef.current = false;
+      requestAnimationFrame(() => {
+        if (target?.isConnected) {
+          target.focus();
+        }
+      });
+    };
+  }, [deletionUpdateId]);
 
   const sortedUpdates = sortAdminUpdates(updates);
   const incompleteUpdates = sortedUpdates.filter((update) => update.completed_version === null);
@@ -481,6 +510,42 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     setCompletion(null);
     setMarkIncomplete(false);
     setVersionError('');
+  }
+
+  function openDelete(update: AdminUpdate, trigger: HTMLElement) {
+    if (pending || inlineEditorSavingRef.current || editor) {
+      return;
+    }
+    deleteTriggerRef.current = trigger;
+    deleteSucceededRef.current = false;
+    setDeleteError('');
+    setDeletion(update);
+  }
+
+  function closeDelete() {
+    setDeletion(null);
+    setDeleteError('');
+  }
+
+  function submitDelete(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!deletion) {
+      return;
+    }
+
+    setDeleteError('');
+    startTransition(async () => {
+      const result = await deleteAdminUpdate(deletion.id, deletion.revision);
+      if (result.error) {
+        setDeleteError(result.error);
+        return;
+      }
+      setMessage(result.message ?? 'Update deleted.');
+      setError('');
+      deleteSucceededRef.current = true;
+      setDeletion(null);
+      router.refresh();
+    });
   }
 
   function cancelInlineEditor(updateId: string | null) {
@@ -891,6 +956,18 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
             )}
           </Picklist>
         </div>
+        {update && (
+          <button
+            aria-label={`Delete update: ${normalizeAdminUpdateBody(update.body_markdown).replace(/\s+/gu, ' ').slice(0, 80)}`}
+            className="admin-update-delete-action"
+            disabled={pending || Boolean(editor)}
+            title="Delete update"
+            type="button"
+            onClick={(event) => openDelete(update, event.currentTarget)}
+          >
+            <X aria-hidden="true" size={16} />
+          </button>
+        )}
       </li>
     );
   }
@@ -991,6 +1068,46 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
               </button>
               <button className="admin-updates-primary" disabled={pending} type="submit">
                 {pending ? 'Submitting...' : 'Submit version'}
+              </button>
+            </div>
+          </form>
+        </dialog>
+      )}
+      {deletion && (
+        <dialog
+          aria-describedby={`${idPrefix}-delete-description`}
+          aria-labelledby={`${idPrefix}-delete-title`}
+          className="admin-update-completion-dialog"
+          ref={deleteDialogRef}
+          onCancel={(event) => {
+            event.preventDefault();
+            closeDelete();
+          }}
+        >
+          <form aria-busy={pending} onSubmit={submitDelete}>
+            <h2 id={`${idPrefix}-delete-title`}>Delete this update?</h2>
+            <p id={`${idPrefix}-delete-description`}>
+              This permanently deletes the entry and its audit history. This cannot be undone.
+            </p>
+            <p className="admin-update-delete-preview">
+              {normalizeAdminUpdateBody(deletion.body_markdown).replace(/\s+/gu, ' ').slice(0, 240)}
+            </p>
+            {deleteError && (
+              <p className="admin-updates-feedback" role="alert">
+                {deleteError}
+              </p>
+            )}
+            <div className="admin-update-editor-actions">
+              <button
+                disabled={pending}
+                ref={deleteCancelButtonRef}
+                type="button"
+                onClick={closeDelete}
+              >
+                Cancel
+              </button>
+              <button className="admin-update-delete-confirm" disabled={pending} type="submit">
+                {pending ? 'Deleting...' : 'Delete update'}
               </button>
             </div>
           </form>

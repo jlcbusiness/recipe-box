@@ -61,6 +61,19 @@ async function addUpdate(
   await expect(updateRow(page, body)).toBeVisible({ timeout: 15_000 });
 }
 
+async function expectDialogCentered(
+  page: import('@playwright/test').Page,
+  dialog: import('@playwright/test').Locator,
+) {
+  const bounds = await dialog.boundingBox();
+  const viewport = page.viewportSize();
+  if (!bounds || !viewport) {
+    throw new Error('The dialog and viewport must be available for the centering check.');
+  }
+  expect(Math.abs(bounds.x + bounds.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.y + bounds.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(1);
+}
+
 async function dragUpdate(
   page: import('@playwright/test').Page,
   sourceRow: import('@playwright/test').Locator,
@@ -311,6 +324,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await row.getByRole('checkbox', { name: /done/i }).click();
     const versionDialog = page.getByRole('dialog', { name: 'Complete update' });
     await expect(versionDialog).toBeVisible();
+    await expectDialogCentered(page, versionDialog);
     await versionDialog.getByLabel('Version').fill('01.2.3');
     await versionDialog.getByRole('button', { name: 'Submit version' }).click();
     await expect(versionDialog.getByRole('alert')).toHaveText(/standard version number/i);
@@ -411,12 +425,52 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await row.getByRole('checkbox', { name: /done/i }).click();
     const finalCompletion = page.getByRole('dialog', { name: 'Complete update' });
     await finalCompletion.getByLabel('Version').fill('0.0.0');
+    await expectDialogCentered(page, finalCompletion);
     await finalCompletion.getByRole('button', { name: 'Submit version' }).click();
     await expect(row.getByRole('button', { name: 'Done in 0.0.0' })).toBeVisible({
       timeout: 15_000,
     });
     await page.getByRole('button', { name: 'Hide done updates' }).click();
     await expect(row).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Show done updates' }).click();
+    await expect(row).toBeVisible();
+    const deleteButton = row.getByRole('button', {
+      name: `Delete update: ${editedText.slice(0, 80)}`,
+    });
+    await expect(deleteButton).toBeVisible();
+    const deleteBounds = await deleteButton.boundingBox();
+    const rowBounds = await row.boundingBox();
+    const kindBounds = await row.locator('.admin-update-kind').boundingBox();
+    if (!deleteBounds || !rowBounds || !kindBounds) {
+      throw new Error(
+        'The saved update row controls must be visible for the delete geometry check.',
+      );
+    }
+    expect(deleteBounds.width).toBeGreaterThanOrEqual(48);
+    expect(deleteBounds.x).toBeGreaterThanOrEqual(kindBounds.x + kindBounds.width);
+    expect(
+      Math.abs(deleteBounds.x + deleteBounds.width - (rowBounds.x + rowBounds.width - 6)),
+    ).toBeLessThanOrEqual(1);
+    if (testInfo.project.name === 'Fold 6') {
+      await deleteButton.tap();
+    } else {
+      await deleteButton.click();
+    }
+    const deleteDialog = page.getByRole('dialog', { name: 'Delete this update?' });
+    await expect(deleteDialog).toBeVisible();
+    await expectDialogCentered(page, deleteDialog);
+    await deleteDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(deleteDialog).toBeHidden();
+    await expect(row).toBeVisible();
+    await expect(deleteButton).toBeFocused();
+    if (testInfo.project.name === 'Fold 6') {
+      await deleteButton.tap();
+    } else {
+      await deleteButton.click();
+    }
+    await deleteDialog.getByRole('button', { name: 'Delete update', exact: true }).click();
+    await expect(row).toHaveCount(0, { timeout: 15_000 });
   } finally {
     await deleteTestUser(request, admin);
   }
