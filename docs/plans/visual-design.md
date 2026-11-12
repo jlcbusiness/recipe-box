@@ -396,13 +396,13 @@ Preserve the reset dialog behavior and accessible focus. The route and page
 title are distinct from Settings.
 
 The app version appears once in a muted, right-aligned document footer after the
-page content on every route. It is not fixed to the viewport and reads from the
-application package version. Desktop private navigation fills the viewport but
-is fixed outside document flow, so it does not push the footer down. On mobile,
-the navigation remains sticky at the top. Private shells must not impose a
-viewport-height minimum on the document; on short pages, the footer follows the
-content instead of being pushed to the viewport bottom. App data is a
-route-specific exception: it fills the available viewport so its final action
+page content on every route. It is not fixed or sticky and reads from the
+application package version. The document is at least as tall as the visual
+viewport: when content is shorter than the window, the footer sits at the
+window bottom; when content is longer, the footer follows the content at the
+bottom of the page and scrolls normally. Desktop private navigation fills the
+viewport but is fixed outside document flow. On mobile, the navigation remains
+sticky at the top. App data fills the available viewport so its final action
 can sit just above the normal-flow footer without adding a scroll.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay

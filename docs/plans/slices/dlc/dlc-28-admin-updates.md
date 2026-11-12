@@ -233,7 +233,8 @@ regular signed-in users or anonymous visitors.
   around the existing 640px navigation breakpoint, with no page overflow.
   Fix/Feature pills meet text contrast requirements; the version label remains
   legible at its compact target size and appears at the document end on every
-  route.
+  route. On short pages, the normal-flow footer sits at the viewport bottom;
+  on longer pages, it follows the content.
 - Completion and delete dialogs are centered in the viewport. The delete
   action is tested on desktop and mobile; the database test covers
   administrator authorization, stale revisions, and removal of entry history.

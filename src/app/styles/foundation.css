@@ -31,7 +31,9 @@ html {
 }
 
 body {
+  display: flex;
   min-height: 100vh;
+  flex-direction: column;
   margin: 0;
   color: var(--ink);
   font-family: "DM Sans Variable", sans-serif;
@@ -42,6 +44,12 @@ body {
     transparent 31px,
     var(--paper-rule) 32px
   );
+}
+
+@supports (height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
 }
 
 body:has(.recipe-tin-theme) {
@@ -1506,6 +1514,7 @@ h1 {
 
 .app-version-footer {
   display: flex;
+  margin-top: auto;
   align-items: center;
   justify-content: flex-end;
   box-sizing: border-box;
@@ -2416,18 +2425,6 @@ h1 {
 .settings-emphasis-swatch:disabled {
   cursor: wait;
   opacity: 0.65;
-}
-
-body:has(.settings-app-data) {
-  display: flex;
-  min-height: 100vh;
-  flex-direction: column;
-}
-
-@supports (height: 100dvh) {
-  body:has(.settings-app-data) {
-    min-height: 100dvh;
-  }
 }
 
 .private-shell:has(.settings-app-data) {

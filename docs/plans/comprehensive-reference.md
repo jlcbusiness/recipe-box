@@ -68,8 +68,10 @@ sections of this reference that the current work needs.
 - **Progressive Web App (PWA):** Installable, globally accessible via Vercel hosting, using Supabase for authentication,
   Postgres storage, and private media buckets. Native mobile apps (React Native / Expo) are deferred until native-only
   capabilities (offline camera scanner, local push notifications) are needed.
-- Every route ends with a muted, right-aligned document footer showing the application version from `package.json`; it
-  scrolls with the document rather than staying fixed to the viewport.
+- Every route ends with a muted, right-aligned document footer showing the
+  application version from `package.json`. On short pages it sits at the
+  viewport bottom; on longer pages it follows the content and scrolls with the
+  document. It never stays fixed to the viewport.
 
 ---
 

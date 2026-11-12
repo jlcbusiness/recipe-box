@@ -404,6 +404,10 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
         rowHeight: rowElement?.getBoundingClientRect().height ?? 0,
         listBottom: list?.getBoundingClientRect().bottom ?? 0,
         footerTop: document.querySelector('.app-version-footer')?.getBoundingClientRect().top ?? 0,
+        footerBottom:
+          document.querySelector('.app-version-footer')?.getBoundingClientRect().bottom ?? 0,
+        documentHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
       };
     });
     expect(mobileGeometry.document).toBeLessThanOrEqual(mobileGeometry.viewport);
@@ -413,8 +417,15 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     expect(mobileGeometry.textHeight).toBeGreaterThan(0);
     expect(mobileGeometry.textHeight).toBeGreaterThanOrEqual(mobileGeometry.textScrollHeight - 1);
     expect(mobileGeometry.rowHeight).toBeGreaterThanOrEqual(mobileGeometry.textHeight + 8);
-    expect(mobileGeometry.footerTop - mobileGeometry.listBottom).toBeGreaterThanOrEqual(0);
-    expect(mobileGeometry.footerTop - mobileGeometry.listBottom).toBeLessThanOrEqual(1);
+    expect(mobileGeometry.footerTop).toBeGreaterThanOrEqual(mobileGeometry.listBottom);
+    if (mobileGeometry.documentHeight > mobileGeometry.viewportHeight + 1) {
+      expect(mobileGeometry.footerTop - mobileGeometry.listBottom).toBeLessThanOrEqual(1);
+      expect(mobileGeometry.footerBottom).toBeGreaterThan(mobileGeometry.viewportHeight);
+    } else {
+      expect(
+        Math.abs(mobileGeometry.footerBottom - mobileGeometry.viewportHeight),
+      ).toBeLessThanOrEqual(1);
+    }
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: testInfo.outputPath('admin-updates-mobile.png') });
     const mobileA11y = await new AxeBuilder({ page })

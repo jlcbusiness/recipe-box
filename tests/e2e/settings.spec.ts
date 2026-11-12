@@ -299,10 +299,10 @@ test('Username and App data are separate account pages @e2e', async ({
   }
 });
 
-test('version footer follows short private content without a viewport-height shell @e2e', async ({
+test('version footer sits at the viewport bottom only when content is short @e2e', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   const user = await createTestUser(request);
 
   try {
@@ -329,6 +329,8 @@ test('version footer follows short private content without a viewport-height she
         footerBottom: footer.getBoundingClientRect().bottom,
         viewportHeight: window.innerHeight,
         viewportWidth: window.innerWidth,
+        documentHeight: document.documentElement.scrollHeight,
+        footerPosition: getComputedStyle(footer).position,
         navigationPosition: getComputedStyle(navigation).position,
         navigationHeight: navigation.getBoundingClientRect().height,
       };
@@ -339,8 +341,41 @@ test('version footer follows short private content without a viewport-height she
       expect(Math.abs(geometry.navigationHeight - geometry.viewportHeight)).toBeLessThanOrEqual(1);
     }
     expect(geometry.footerTop - geometry.lastContentBottom).toBeGreaterThanOrEqual(0);
-    expect(geometry.footerTop - geometry.lastContentBottom).toBeLessThanOrEqual(1);
-    expect(geometry.footerBottom).toBeLessThan(geometry.viewportHeight);
+    expect(geometry.documentHeight).toBeLessThanOrEqual(geometry.viewportHeight + 1);
+    expect(Math.abs(geometry.footerBottom - geometry.viewportHeight)).toBeLessThanOrEqual(1);
+    expect(geometry.footerPosition).toBe('static');
+    await page.screenshot({ path: testInfo.outputPath('short-page-version-footer.png') });
+
+    const longGeometry = await page.evaluate(() => {
+      const content = document.querySelector<HTMLElement>('.private-content main');
+      const footer = document.querySelector<HTMLElement>('.app-version-footer');
+      if (!content || !footer) {
+        throw new Error('Expected private content and the application version footer.');
+      }
+
+      const extension = document.createElement('div');
+      extension.dataset.footerLayoutProbe = 'long-content';
+      extension.style.height = '1200px';
+      content.append(extension);
+      return {
+        contentBottom: extension.getBoundingClientRect().bottom,
+        footerTop: footer.getBoundingClientRect().top,
+        footerBottom: footer.getBoundingClientRect().bottom,
+        viewportHeight: window.innerHeight,
+        documentHeight: document.documentElement.scrollHeight,
+      };
+    });
+
+    expect(longGeometry.documentHeight).toBeGreaterThan(longGeometry.viewportHeight);
+    expect(longGeometry.footerTop).toBeGreaterThanOrEqual(longGeometry.contentBottom);
+    expect(longGeometry.footerBottom).toBeGreaterThan(longGeometry.viewportHeight);
+    expect(Math.abs(longGeometry.footerBottom - longGeometry.documentHeight)).toBeLessThanOrEqual(
+      1,
+    );
+    await page.screenshot({
+      path: testInfo.outputPath('long-page-version-footer.png'),
+      fullPage: true,
+    });
   } finally {
     await deleteTestUser(request, user);
   }

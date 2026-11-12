@@ -148,7 +148,9 @@ to verify:
    remain available. Center Export and Import, then place the centered reset
    action last in normal page flow, 12px above the version footer. The page
    fills the available viewport without fixed controls and does not scroll when
-   its content fits.
+   its content fits. Across routes, the shared normal-flow version footer sits
+   at the viewport bottom when the page is short and follows page content when
+   it is longer than the viewport.
 4. A regular User sees only Preferences and Recipe data in Settings. An Admin
    also sees App admin and Updates. Each tab opens the correct content, the
    Settings query state survives reload, and keyboard and accessibility
