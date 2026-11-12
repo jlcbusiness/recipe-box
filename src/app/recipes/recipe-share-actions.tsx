@@ -225,7 +225,7 @@ export function RecipeShareActions({
               <p>
                 Choose a name to publish <strong>{recipeName}</strong>. It appears as plain-text
                 attribution on recipes you publish, is not your sign-in email, and can be changed
-                later in Settings.
+                later from the Username page in the Account menu.
               </p>
             )}
           </div>

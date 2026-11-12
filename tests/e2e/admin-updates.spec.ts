@@ -216,21 +216,16 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     const savedBody = `${initialBody}\n  - keyboard item`;
     const editedText = `Track compact update editing after save ${runId} while keeping every wrapped line visible on narrow mobile screens.`;
     await signInAs(page, admin);
-    await page.goto('/admin');
+    await page.goto('/settings?tab=app-admin');
     await expect(page.getByRole('contentinfo', { name: 'Application version' })).toHaveText(
       `Recipe Box v${appVersion}`,
     );
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Accounts' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    const appAdminTab = page.getByRole('tab', { name: 'App admin' });
+    await expect(appAdminTab).toHaveAttribute('aria-selected', 'true');
 
     const updatesTab = page.getByRole('tab', { name: 'Updates' });
-    await updatesTab.focus();
-    await page.keyboard.press('Home');
-    await expect(page.getByRole('tab', { name: 'Accounts' })).toBeFocused();
-    await page.keyboard.press('ArrowRight');
+    await appAdminTab.press('ArrowRight');
     await expect(updatesTab).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tabpanel', { name: 'Updates' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add update' })).toHaveCount(0);
@@ -441,8 +436,7 @@ test('admins can reorder incomplete updates with pointer, touch, and keyboard @e
 
   try {
     await signInAs(page, admin);
-    await page.goto('/admin');
-    await page.getByRole('tab', { name: 'Updates' }).click();
+    await page.goto('/settings?tab=updates');
     await addUpdate(page, first, 'Fix', useTouch);
     await addUpdate(page, second, 'Feature', useTouch);
     await addUpdate(page, third, 'Fix', useTouch);
@@ -559,8 +553,13 @@ test('non-admin users cannot read or change updates @e2e', async ({ page, reques
     expect(create.ok()).toBe(false);
 
     await signInAs(page, member);
-    await page.goto('/admin');
-    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
+    await page.goto('/settings?tab=updates');
+    await expect(page.getByRole('tab', { name: 'Preferences' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('tab', { name: 'Updates' })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Add update' })).toHaveCount(0);
   } finally {
     await deleteTestUser(request, member);
   }

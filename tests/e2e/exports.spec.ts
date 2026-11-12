@@ -506,7 +506,7 @@ test('a missing ready image fails export without advancing the database backup d
   }
 });
 
-test('Settings, publication detail, and recipe detail expose accessible export actions with retry @e2e @a11y', async ({
+test('App data, publication detail, and recipe detail expose accessible export actions with retry @e2e @a11y', async ({
   page,
   request,
 }, testInfo) => {
@@ -602,9 +602,8 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       testInfo.project.name === 'Fold 6' ? action.tap() : action.click();
 
     await signIn(page, owner.email, owner.password);
-    await page.goto('/settings');
-    await page.getByRole('tab', { name: 'Account & data' }).click();
-    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    await page.goto('/account/app-data');
+    const dataManagement = page.getByRole('region', { name: 'App data' });
     await expect(dataManagement.getByText('No database export yet')).toBeVisible();
     await expect(
       dataManagement.getByText(/more than 30 days|Make a database export/),
@@ -623,6 +622,10 @@ test('Settings, publication detail, and recipe detail expose accessible export a
       await page.setViewportSize({ width: 352, height: 864 });
     }
     const settingsExportTopBefore = (await databaseExport.boundingBox())?.y;
+    const databaseImport = dataManagement.getByRole('button', { name: 'Import database' });
+    const settingsImportTopBefore = (await databaseImport.boundingBox())?.y;
+    const resetAccountData = dataManagement.getByRole('button', { name: 'Wipe all account data' });
+    const settingsResetTopBefore = (await resetAccountData.boundingBox())?.y;
 
     await page.keyboard.press('Enter');
     await expect(databaseExport).toBeDisabled();
@@ -631,12 +634,28 @@ test('Settings, publication detail, and recipe detail expose accessible export a
     await expect(dataManagement.getByRole('alert')).toHaveText(
       'Unable to prepare the export. Please try again.',
     );
+    const exportErrorScreenshotPath = testInfo.outputPath('app-data-export-error.png');
+    await page.screenshot({ path: exportErrorScreenshotPath });
+    await testInfo.attach('App data export error feedback', {
+      path: exportErrorScreenshotPath,
+      contentType: 'image/png',
+    });
     const settingsExportBox = await databaseExport.boundingBox();
+    const settingsImportBox = await databaseImport.boundingBox();
+    const settingsResetBox = await resetAccountData.boundingBox();
     const settingsFeedbackBox = await dataManagement.getByRole('alert').boundingBox();
     expect(settingsFeedbackBox?.y).toBeGreaterThanOrEqual(
       (settingsExportBox?.y ?? 0) + (settingsExportBox?.height ?? 0),
     );
+    expect(settingsFeedbackBox?.y).toBeGreaterThanOrEqual(
+      (settingsImportBox?.y ?? 0) + (settingsImportBox?.height ?? 0),
+    );
+    expect((settingsFeedbackBox?.y ?? 0) + (settingsFeedbackBox?.height ?? 0)).toBeLessThan(
+      settingsResetBox?.y ?? 0,
+    );
     expect(settingsExportBox?.y).toBe(settingsExportTopBefore);
+    expect((await databaseImport.boundingBox())?.y).toBe(settingsImportTopBefore);
+    expect((await resetAccountData.boundingBox())?.y).toBe(settingsResetTopBefore);
     if (testInfo.project.name === 'Fold 6') {
       expect(settingsFeedbackBox?.width).toBeGreaterThan(100);
       await expectNoHorizontalOverflow(page);
@@ -1059,8 +1078,7 @@ test('navigating away aborts an in-flight export request @e2e', async ({ page, r
 
   try {
     await signIn(page, owner.email, owner.password);
-    await page.goto('/settings');
-    await page.getByRole('tab', { name: 'Account & data' }).click();
+    await page.goto('/account/app-data');
     const exportButton = page.getByRole('button', { name: 'Export database' });
     await exportButton.click();
     await expect

@@ -89,7 +89,6 @@ export function PrivateShell({
   mainNavigation.push({ href: '/recipes/trash', label: 'Trash' });
   const settingsNavigation = navigation.find(({ href }) => href === '/settings');
   const helpNavigation = { href: '/help', label: 'Help' };
-  const adminNavigation = navigation.find(({ href }) => href === '/admin');
   const isCurrent = (href: string) => {
     if (href === '/recipes') {
       return (
@@ -160,13 +159,7 @@ export function PrivateShell({
                 <span className="private-nav-utility-label">{settingsNavigation.label}</span>
               </a>
             )}
-            <AccountMenu
-              adminCurrent={Boolean(adminNavigation && isCurrent(adminNavigation.href))}
-              avatarUrl={profileImageUrl}
-              email={email}
-              initials={initials}
-              isAdmin={Boolean(adminNavigation)}
-            />
+            <AccountMenu avatarUrl={profileImageUrl} email={email} initials={initials} />
           </div>
         </nav>
         <div className={`private-content${wideContent ? ' private-content-wide' : ''}`}>

@@ -7,7 +7,9 @@ import { createAdminClient } from '../../../lib/supabase/admin';
 import { createClient } from '../../../lib/supabase/server';
 
 function contentResetErrorResponse(origin: string) {
-  const response = NextResponse.redirect(new URL('/settings?content_reset_error=google', origin));
+  const response = NextResponse.redirect(
+    new URL('/account/app-data?content_reset_error=google', origin),
+  );
   response.cookies.delete(ACCOUNT_CONTENT_RESET_COOKIE);
   return response;
 }
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get('code');
   const next = url.searchParams.get('next') ?? '/app';
   const destination = next.startsWith('/') && !next.startsWith('//') ? next : '/app';
-  const isContentResetReauth = destination === '/settings?content_reset_reauthenticated=1';
+  const isContentResetReauth = destination === '/account/app-data?content_reset_reauthenticated=1';
 
   if (url.searchParams.has('error')) {
     if (isContentResetReauth) return contentResetErrorResponse(url.origin);
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.redirect(
-          new URL('/settings?content_reset_reauthenticated=1', url.origin),
+          new URL('/account/app-data?content_reset_reauthenticated=1', url.origin),
         );
       }
 

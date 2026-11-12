@@ -12,7 +12,7 @@ export default async function HelpPage() {
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('is_admin, hand_preference, content_generation')
+    .select('hand_preference, content_generation')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -29,7 +29,6 @@ export default async function HelpPage() {
       navigation={[
         { href: '/publications', label: 'Library' },
         { href: '/settings', label: 'Settings' },
-        ...(account.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}
     >
       <main aria-labelledby="page-title" className="help-main">
@@ -127,11 +126,11 @@ export default async function HelpPage() {
           <p>
             Export database downloads a ZIP backup of your content and settings, but it does not
             include recipe or publication history. Keep it somewhere safe if you may want to restore
-            your recipes. Wipe all account data in Settings removes active and trashed recipes and
-            publications and their history; tags, ingredients and nutrition data; custom picklists
-            and explorer state; personal preferences; and managed media and export archives. Your
-            sign-in identity, account, and admin or owner access remain. The empty Recipe Tin and
-            shipped picklist defaults are restored.
+            your recipes. Wipe all account data on the App data page removes active and trashed
+            recipes and publications and their history; tags, ingredients and nutrition data; custom
+            picklists and explorer state; personal preferences; and managed media and export
+            archives. Your sign-in identity, account, and admin or owner access remain. The empty
+            Recipe Tin and shipped picklist defaults are restored.
           </p>
           <p>
             Reset revokes public recipe links, and importing a backup does not reactivate old public

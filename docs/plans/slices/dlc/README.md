@@ -113,6 +113,13 @@ while retaining the existing single-image viewer without gallery navigation.
   fixed time fields with configurable time-type entries, expression input, and
   an automatically derived total.
 
+### Phase 10: Account destinations and administration
+
+- **DLC 34 (candidate):**
+  [Account destinations and admin settings](dlc-34-account-and-admin-settings.md)
+  moves Username and App data to dedicated pages linked from the Account menu,
+  and consolidates Accounts and Updates into admin-only Settings tabs.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for

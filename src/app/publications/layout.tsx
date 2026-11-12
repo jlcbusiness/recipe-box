@@ -12,7 +12,7 @@ export default async function PublicationsLayout({ children }: { children: React
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('is_admin, hand_preference, content_generation')
+    .select('hand_preference, content_generation')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -30,7 +30,6 @@ export default async function PublicationsLayout({ children }: { children: React
       navigation={[
         { href: '/publications', label: 'Library', current: true },
         { href: '/settings', label: 'Settings' },
-        ...(account.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}
     >
       {children}

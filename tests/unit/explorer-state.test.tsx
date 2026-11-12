@@ -8,10 +8,32 @@ import {
   getQueryAutoSelectColumns,
   hasPersistedExplorerUrlState,
   isExplorerStateContext,
+  normalizeRecipeColumnOrder,
   serializeExplorerState,
 } from '../../src/lib/explorer-state';
 
 describe('explorer state contract', () => {
+  it('preserves the current column order while ignoring persisted legacy time columns', () => {
+    const reordered = [...defaultRecipeColumnOrder].reverse();
+    const legacyTimeColumns = [
+      'prep_time_minutes',
+      'mixing_time_minutes',
+      'marinate_time_minutes',
+      'chill_time_minutes',
+      'freeze_time_minutes',
+      'cook_time_minutes',
+      'bake_time_minutes',
+      'cooling_time_minutes',
+      'rest_time_minutes',
+    ];
+    const storedOrder = [...reordered.slice(0, 5), ...legacyTimeColumns, ...reordered.slice(5)];
+
+    expect(normalizeRecipeColumnOrder(storedOrder)).toEqual(reordered);
+    expect(normalizeRecipeColumnOrder([...storedOrder, 'unknown_column'])).toEqual(
+      defaultRecipeColumnOrder,
+    );
+  });
+
   it('uses the saved recipe-column order in both recipe explorer contexts', () => {
     const reversedOrder = [...defaultRecipeColumnOrder].reverse();
 

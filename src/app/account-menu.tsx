@@ -1,7 +1,7 @@
 'use client';
 
-import { ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { clearPrivateOfflineCaches } from '../lib/offline/cache-client';
 import { signOut } from './actions/auth';
@@ -10,15 +10,12 @@ export function AccountMenu({
   email,
   initials,
   avatarUrl,
-  isAdmin = false,
-  adminCurrent = false,
 }: {
   email: string;
   initials: string;
   avatarUrl: string | null;
-  isAdmin?: boolean;
-  adminCurrent?: boolean;
 }) {
+  const pathname = usePathname() ?? '';
   const menuRef = useRef<HTMLDetailsElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -73,16 +70,20 @@ export function AccountMenu({
       </summary>
       <div className="account-menu-panel">
         <p>{email}</p>
-        {isAdmin && (
-          <a
-            aria-current={adminCurrent ? 'page' : undefined}
-            className="account-menu-admin-link"
-            href="/admin"
-          >
-            <ShieldCheck aria-hidden="true" size={17} />
-            Administration
-          </a>
-        )}
+        <a
+          aria-current={pathname === '/account/username' ? 'page' : undefined}
+          className="account-menu-link"
+          href="/account/username"
+        >
+          Username
+        </a>
+        <a
+          aria-current={pathname === '/account/app-data' ? 'page' : undefined}
+          className="account-menu-link"
+          href="/account/app-data"
+        >
+          App data
+        </a>
         <form onSubmit={handleSignOut}>
           {error && (
             <p className="account-menu-error" role="alert">

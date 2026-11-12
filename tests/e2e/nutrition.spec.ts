@@ -220,7 +220,8 @@ test('database bundles round-trip nutrition profiles and measure equivalents @e2
     await equivalentDialog.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(ingredientSection.getByRole('status')).toHaveText('Measure equivalent saved.');
 
-    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    await page.goto('/account/app-data');
+    const dataManagement = page.getByRole('region', { name: 'App data' });
     const exportButton = dataManagement.getByRole('button', { name: 'Export database' });
     const exportDownload = page.waitForEvent('download');
     if (testInfo.project.name === 'Fold 6') {
@@ -283,9 +284,9 @@ test('database bundles round-trip nutrition profiles and measure equivalents @e2
     });
     destinationPage = await destinationContext.newPage();
     await signIn(destinationPage, destinationUser.email, destinationUser.password);
-    await destinationPage.goto('/settings');
+    await destinationPage.goto('/account/app-data');
     const destinationDataManagement = destinationPage.getByRole('region', {
-      name: 'Data management',
+      name: 'App data',
     });
     await destinationDataManagement.getByRole('button', { name: 'Import database' }).click();
     const importDialog = destinationDataManagement.getByRole('dialog', {

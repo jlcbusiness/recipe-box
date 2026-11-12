@@ -301,6 +301,10 @@ recipe, whether signed in or not. Guests can scale, convert units, and print,
 but cannot navigate, open references, edit, or access publication links.
 Attribution may appear but is not clickable.
 
+Users manage their public attribution name on the standalone Username page,
+linked from the Account menu. It is not part of Settings or the publication
+workflow.
+
 Public recipe images are served from private storage through an
 application-controlled endpoint that checks the recipe's current public-link
 access on every request. It must not expose a generally public image bucket or
@@ -318,11 +322,12 @@ Support password sign-in, password recovery, and Google sign-in. Each account
 uses exactly one sign-in method, chosen when its invite is accepted.
 In production, sign-up is invite-only: an Admin generates account-creation
 links for Users, and the designated Owner is established from the configured
-pre-created administrator invite. Admins can grant Admin access; only the Owner
-can demote or delete Admin accounts or transfer Owner status. A transfer makes
-the recipient the new Owner and leaves the former Owner as an Admin. Invites
-are emailed, and accepting one verifies the email address. Account roles use
-`is_admin` and `is_owner`, with exactly one Owner; see
+pre-created administrator invite. Admins use the App admin and Updates areas
+of Settings. Admins can grant Admin access; only the Owner can demote or delete
+Admin accounts or transfer Owner status. A transfer makes the recipient the
+new Owner and leaves the former Owner as an Admin. Invites are emailed, and
+accepting one verifies the email address. Account roles use `is_admin` and
+`is_owner`, with exactly one Owner; see
 [comprehensive-reference.md § 10.0](comprehensive-reference.md#100-role-terminology-and-current-implementation-boundary).
 Development keeps sign-up open, with no verification, through a per-environment
 switch.
@@ -335,12 +340,13 @@ Standard presentation.
 
 All recovery exports are ZIP bundles with a manifest, structured JSON, assets,
 and checksums. History is excluded. These exports are the only backup
-mechanism; Supabase backups are not used. Settings shows the last export date and
-reminds the user when it is more than 30 days old.
+mechanism; Supabase backups are not used. The Account menu links to App data,
+which shows the last export date and reminds the user when it is more than 30
+days old.
 See [comprehensive-reference.md § 11](comprehensive-reference.md#11-import-export-and-backup-bundles)
 and [comprehensive-reference.md § 12](comprehensive-reference.md#12-change-history-and-forensic-audit).
 
-- Settings provides Export database and Import database.
+- App data provides Export database and Import database.
 - The Library provides Export publication and Import publication beside New
   publication.
 - Recipe views provide Export recipe and Import recipe beside New recipe.

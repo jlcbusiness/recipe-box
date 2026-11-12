@@ -454,12 +454,14 @@ accounts and fixture data. The fixture is a repeatable test baseline, not a
 backup of arbitrary local data.
 
 If local records outside the fixture need to be retained, download a **full
-database export** from Settings before resetting and keep it outside Supabase
+database export** from Account > App data before resetting and keep it outside
+Supabase
 Storage and temporary project directories. The ZIP restores account-owned
 records, preferences, and ready image variants; it does not restore Auth users,
 passwords, or change history. Recreate a local Auth account and import the ZIP
-from Settings to recover those records. Never reset a linked or hosted database
-as part of local testing. See the [Slice 21 import brief](docs/plans/slices/21-import.md)
+from Account > App data to recover those records. Never reset a linked or hosted
+database as part of local testing. See the
+[Slice 21 import brief](docs/plans/slices/21-import.md)
 for the import contract.
 
 - App: <http://localhost:3000>

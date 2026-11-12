@@ -31,7 +31,10 @@ function createScopedArchive(
     ) as unknown as PortableData['records'],
   };
   data.records.publications = publications;
-  data.records.recipes = recipes;
+  data.records.recipes = recipes.map((recipe) => ({
+    ...recipe,
+    total_time_minutes: recipe.total_time_minutes ?? 0,
+  }));
   data.records.media_assets = mediaAssets;
   const dataBytes = strToU8(JSON.stringify(data));
   const files = [{ path: 'data.json', bytes: dataBytes }, ...imageFiles];

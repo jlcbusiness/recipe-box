@@ -1215,11 +1215,11 @@ and a single-line mobile list:
 
 ## 8. Settings, Taxonomies, and Picklists
 
-Settings is a wide workspace organized by three accessible tabs: Preferences,
-Recipe data, and Account & data. Each tab contains its implemented domains as
-full-width, unframed sections; do not turn Settings into a compact menu or a
-grid of cards. Do not render empty placeholder sections, tabs, or links for
-work that is not implemented.
+Settings is a wide workspace organized by Preferences and Recipe data tabs for
+all signed-in Users, with additional App admin and Updates tabs for Admins.
+Each tab contains its implemented domains as full-width, unframed sections; do
+not turn Settings into a compact menu or a grid of cards. Do not render empty
+placeholder sections, tabs, or links for work that is not implemented.
 
 ### 8.1 Centralized Picklist Management
 
@@ -1427,20 +1427,24 @@ save status, and never offer public or cross-account preference changes.
 
 ### 8.5 Settings Tabs
 
-The authenticated `/settings` page keeps its existing sections and workflows,
-organized into exactly three tabs:
+The authenticated `/settings` page keeps its existing Preferences and Recipe
+data tabs for every signed-in User. The former Account & data tab is removed:
+Username and App data are separate authenticated pages linked from the
+Account menu, while App admin and Updates are added to Settings only for
+Admins.
 
 | Tab | Sections |
 | ---- | -------- |
 | **Preferences** | Personal preferences; Recipe column order |
 | **Recipe data** | Recipe picklists; Ingredient catalog, including nutrition and measure equivalents; Trusted densities; Tags |
-| **Account & data** | Public sharing; Data management, including content reset, database export, and database import |
+| **App admin** (Admins only) | Invitations and account administration |
+| **Updates** (Admins only) | The global administrative Updates tracker |
 
 Preferences is selected by default. The `tab` query parameter accepts
-`preferences`, `recipe-data`, or `account-data`. A valid value selects the
-matching tab on direct navigation and reload; a missing or invalid value selects
-Preferences, except a content-reset reauthentication or error return selects
-Account & data when `tab` is not valid. Tab changes replace the current URL
+`preferences`, `recipe-data`, `app-admin`, or `updates`. A valid value selects
+the matching tab on direct navigation and reload for an Admin. A non-admin
+cannot render either admin tab, even when requesting its query value. Missing
+or invalid values select Preferences. Tab changes replace the current URL
 entry, preserve other query parameters, and do not add one browser-history
 entry per switch.
 
@@ -1449,16 +1453,32 @@ Left/Right, Home, and End keyboard navigation. Activating a tab immediately
 shows its panel. Keep all panels mounted so switching tabs preserves local
 drafts; hide inactive panels from keyboard navigation and assistive technology.
 
-On the 307px Fold 6 viewport, keep the tabs in one row and size each to its
-content rather than stretching them equally. Use 13px labels, 4px horizontal
-padding, 4px gaps, and a 48px minimum tab width. Show Preferences on one line
-and break Recipe / data and Account / & data into two lines. Keep hit areas at
-least 48px high and prevent clipping and horizontal page overflow. The tabs
-have a subtle outline and a leaf accent on the active tab's top edge. Use the
-first section's top border as the single divider below the tabs, aligned
-directly with the tab row without an additional row border or first-section
-gap. Keep subsequent section dividers and spacing. They change navigation only;
-they add no data, authorization path, or settings behavior.
+Preserve Settings' existing tab presentation and responsive no-overflow
+behavior. All four labels must fit and remain readable on mobile; do not rely
+on the removed two-line Account & data label to size the admin tabs. Keep hit
+areas at least 48px high, with visible focus and the existing design tokens.
+Use the first section's top border as the single divider below the tabs,
+aligned directly with the tab row without an additional row border or
+first-section gap. Keep subsequent section dividers and spacing. The change
+does not alter section save timing, validation, authorization, queries, or
+workflows.
+
+### 8.6 Account menu destinations
+
+The Account menu keeps the signed-in email and Sign out action and provides
+**Username** and **App data** links to standalone authenticated pages:
+
+- `/account/username` manages the public attribution name. Keep the existing
+  username validation, uniqueness, save status, and publication-attribution
+  explanation; the page and field are named Username.
+- `/account/app-data` provides the existing Data management workflows:
+  account reset, database export, and database import. Preserve export
+  reminders, reset reauthentication and recovery, and import/export behavior.
+
+Do not embed these workflows in the Account menu or place them in Settings.
+Admins do not receive a separate Administration link in the Account menu;
+admin-only tools are the App admin and Updates Settings tabs. Both account
+pages retain the existing authenticated-user boundary and private shell.
 
 ---
 
@@ -1581,12 +1601,12 @@ a recipe source.
 - **User:** A person with an account on the app. A User's account contains that
   User's private recipes and other account data. Use **User** or **account**
   rather than calling a User an owner.
-- **Admin:** A User with access to Administration and authority to manage
-  ordinary User accounts and the administrative functions provided there.
-  Admins can grant Admin access, but cannot demote or delete an Admin account
-  or transfer application ownership.
+- **Admin:** A User with access to the App admin and Updates areas of Settings
+  and authority to manage ordinary User accounts and the administrative
+  functions provided there. Admins can grant Admin access, but cannot demote
+  or delete an Admin account or transfer application ownership.
 - **Owner:** The single application-owning Admin. The Owner can manage Admin
-  accounts, including demotion and deletion, and can transfer Owner status to
+  accounts in App admin, including demotion and deletion, and can transfer Owner status to
   another account. On transfer, the new Owner becomes an Admin and the former
   Owner remains an Admin.
 
@@ -1599,7 +1619,7 @@ display label, not a separate role.
 The account schema has `is_admin` and `is_owner` flags, constrains the Owner to
 also be an Admin, and permits at most one Owner. The Owner role is assigned to
 the first administrator and can be transferred through the protected
-Administration workflow. The Owner account cannot be deleted before ownership
+App admin workflow. The Owner account cannot be deleted before ownership
 is transferred. Admins can grant Admin access; only the Owner can demote or
 delete Admin accounts or transfer Owner status.
 
@@ -1681,9 +1701,10 @@ delete Admin accounts or transfer Owner status.
 > administrator workflows, and responsive browser checks are recorded in the
 > [DLC 28 brief](slices/dlc/dlc-28-admin-updates.md).
 
-- Administration has **Accounts** and **Updates** tabs. Accounts remains the
-  default and retains invitation and account management. Updates is a
-  global, admin-only internal tracker, not a public changelog.
+- The admin-only Settings tabs **App admin** and **Updates** contain account
+  invitations/management and the global Updates tracker, respectively. Updates
+  is an internal tracker, not a public changelog. The legacy `/admin` route
+  redirects to App admin for Admins and retains its non-admin redirect.
 - An administrator can add and edit individual update entries. Entries are
   shared among admins, remain independent of any one account, and are excluded
   from account reset and database ZIP import/export. Archive data and audit
@@ -1762,7 +1783,7 @@ contract and compatibility rules are defined in
 
 ### 11.2 Export Scopes
 
-1. **Database Export:** Accessible in Settings. Includes all owned records,
+1. **Database Export:** Accessible in App data from the Account menu. Includes all owned records,
   including trashed-but-restorable rows, product preferences, and ready images.
 2. **Publication Export:** Accessible from publication detail, to the left of
   Edit on desktop. Library cards do not expose publication export actions.
@@ -1820,7 +1841,7 @@ printed location, preserve it as an external-URL reference or printed citation
 and clear the incompatible primary location field. Compatible location fields
 remain unchanged. Do not duplicate an equivalent imported reference.
 
-Import database remains in Settings. Selecting a ZIP starts upload and
+Import database remains in App data. Selecting a ZIP starts upload and
 comparison automatically; the compact file row shows the filename and
 record/media counts together without private/public recipe counts or an
 `Import preview` heading. Import publication is available in the Library, and
@@ -1835,7 +1856,7 @@ a foreign ID.
 
 ### 11.4 Backup Reminder
 
-Because export is the only backup, Settings shows the date of the last full-database export and a gentle reminder when
+Because export is the only backup, App data shows the date of the last full-database export and a gentle reminder when
 it is more than 30 days old.
 
 ### 11.5 Export Delivery and Limits
@@ -1856,9 +1877,10 @@ objects and leave the timestamp unchanged. Navigating away aborts an in-flight
 export request, and the server removes or queues any partial archive for cleanup.
 
 Export feedback is displayed below its action without changing the action row
-or the position of following page content. Settings retains a 48px mobile
-action target; compact publication and recipe actions use their dimensions
-above.
+or the position of following page content. On App data, feedback appears below
+the Export and Import actions and above Wipe all account data, without moving
+or covering those controls. App data retains a 48px mobile action target;
+compact publication and recipe actions use their dimensions above.
 
 ### 11.6 Recovery and reset boundaries
 
@@ -1873,7 +1895,7 @@ not represented by the fixture if it needs to survive a reset.
 After `npm run dev:local` or `supabase db reset` has reapplied
 migrations, run `npm run seed:synthetic -- --local` to restore the synthetic
 baseline. To recover other exported app data, create a fresh local Auth
-account and import the full database ZIP from Settings. Import is account-derived,
+account and import the full database ZIP from App data. Import is account-derived,
 so it does not require the original Auth user ID. This workflow restores
 account data, not Auth identities or history. Never reset a linked or hosted
 database as part of local testing.

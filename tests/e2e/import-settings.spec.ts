@@ -26,6 +26,7 @@ function createDatabaseArchive(
         .filter(
           (table) =>
             !(schemaVersion === 1 && table === 'recipe_ingredient_sets') &&
+            !(schemaVersion < 11 && table === 'recipe_time_entries') &&
             !(
               schemaVersion < 9 &&
               ['ingredient_nutrition_profiles', 'ingredient_measure_equivalents'].includes(table)
@@ -171,7 +172,7 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 }
 
-test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @a11y', async ({
+test('App data imports a database bundle accessibly on desktop and Fold 6 @e2e @a11y', async ({
   page,
   request,
 }, testInfo) => {
@@ -180,8 +181,6 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
   try {
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
-
-    await page.getByRole('tab', { name: 'Preferences' }).click();
     await expect(page.getByRole('heading', { name: 'Recipe columns' })).toHaveCSS(
       'margin-bottom',
       '0px',
@@ -192,8 +191,8 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
       '0px',
     );
 
-    await page.getByRole('tab', { name: 'Account & data' }).click();
-    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    await page.goto('/account/app-data');
+    const dataManagement = page.getByRole('region', { name: 'App data' });
     const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
     await expect(importTrigger).toBeVisible();
     await importTrigger.click();
@@ -275,7 +274,7 @@ test('Settings imports a database bundle accessibly on desktop and Fold 6 @e2e @
   }
 });
 
-test('Settings reports invalid archives and recovers for a valid retry @e2e', async ({
+test('App data reports invalid archives and recovers for a valid retry @e2e', async ({
   page,
   request,
 }, testInfo) => {
@@ -297,8 +296,8 @@ test('Settings reports invalid archives and recovers for a valid retry @e2e', as
   try {
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
-    await page.getByRole('tab', { name: 'Account & data' }).click();
-    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    await page.goto('/account/app-data');
+    const dataManagement = page.getByRole('region', { name: 'App data' });
     const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
     const importDialog = dataManagement.getByRole('dialog', { name: 'Import database' });
     const archiveInput = page.getByLabel('Database archive');
@@ -355,7 +354,7 @@ test('Settings reports invalid archives and recovers for a valid retry @e2e', as
   }
 });
 
-test('Settings resolves import conflicts and refreshes a stale preview @e2e', async ({
+test('App data resolves import conflicts and refreshes a stale preview @e2e', async ({
   page,
   request,
 }, testInfo) => {
@@ -422,8 +421,8 @@ test('Settings resolves import conflicts and refreshes a stale preview @e2e', as
   try {
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
-    await page.getByRole('tab', { name: 'Account & data' }).click();
-    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    await page.goto('/account/app-data');
+    const dataManagement = page.getByRole('region', { name: 'App data' });
     const importTrigger = dataManagement.getByRole('button', { name: 'Import database' });
     const importDialog = dataManagement.getByRole('dialog', { name: 'Import database' });
     const archiveInput = importDialog.getByLabel('Database archive');

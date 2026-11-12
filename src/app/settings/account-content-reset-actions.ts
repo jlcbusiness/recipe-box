@@ -173,26 +173,26 @@ export async function beginGoogleAccountContentResetReauth(): Promise<void> {
     .eq('id', authData.user.id)
     .maybeSingle();
   if (accountError || account?.sign_in_method !== 'google') {
-    redirect('/settings?content_reset_error=provider');
+    redirect('/account/app-data?content_reset_error=provider');
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (!siteUrl) {
-    redirect('/settings?content_reset_error=unavailable');
+    redirect('/account/app-data?content_reset_error=unavailable');
   }
 
   let challengeId: string;
   try {
     challengeId = await createAccountContentResetChallenge(authData.user.id, 'google', false);
   } catch {
-    redirect('/settings?content_reset_error=unavailable');
+    redirect('/account/app-data?content_reset_error=unavailable');
   }
 
   const cookieStore = await cookies();
   cookieStore.set(ACCOUNT_CONTENT_RESET_COOKIE, challengeId, setChallengeCookieOptions());
 
   const redirectTo = new URL('/auth/callback', siteUrl);
-  redirectTo.searchParams.set('next', '/settings?content_reset_reauthenticated=1');
+  redirectTo.searchParams.set('next', '/account/app-data?content_reset_reauthenticated=1');
   const { data: oauth, error: oauthError } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -204,7 +204,7 @@ export async function beginGoogleAccountContentResetReauth(): Promise<void> {
   if (oauthError || !oauth.url) {
     await cancelAccountContentResetChallenge(authData.user.id, challengeId);
     cookieStore.delete(ACCOUNT_CONTENT_RESET_COOKIE);
-    redirect('/settings?content_reset_error=unavailable');
+    redirect('/account/app-data?content_reset_error=unavailable');
   }
 
   redirect(oauth.url);
@@ -269,7 +269,7 @@ export async function resetAccountContent(
       : null;
   if (resultRecord?.database_reset !== true) {
     return {
-      error: 'The reset result could not be verified. Reload Settings before trying again.',
+      error: 'The reset result could not be verified. Reload App data before trying again.',
     };
   }
 

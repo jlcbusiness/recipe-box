@@ -499,25 +499,29 @@ a {
 }
 
 .account-menu-panel p {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   overflow-wrap: anywhere;
 }
 
-.account-menu-admin-link {
+.account-menu-link {
   display: flex;
-  min-height: 48px;
+  min-height: 32px;
   align-items: center;
   gap: 8px;
-  margin: 0 0 8px;
+  margin: 0;
   color: var(--ink);
   font-weight: 700;
   text-decoration: none;
 }
 
-.account-menu-admin-link[aria-current="page"] {
+.account-menu-link[aria-current="page"] {
   color: var(--leaf);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.account-menu-link:last-of-type {
+  margin-bottom: 8px;
 }
 
 .account-menu-panel form {
@@ -680,6 +684,10 @@ a {
   margin-top: 20px;
 }
 
+.settings-tabs-admin {
+  flex-wrap: wrap;
+}
+
 .settings-tab {
   flex: 0 0 auto;
   min-width: 48px;
@@ -709,6 +717,18 @@ a {
 
 .settings-tab-panel[hidden] {
   display: none;
+}
+
+.admin-settings-content {
+  min-width: 0;
+}
+
+.admin-settings-content > section {
+  margin-top: 14px;
+}
+
+.settings-main > .settings-section.settings-data-management {
+  margin-top: 28px;
 }
 
 .admin-tab {
@@ -1521,6 +1541,29 @@ h1 {
   gap: 12px 16px;
 }
 
+.private-content main.settings-main.settings-app-data {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.settings-app-data-section {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.settings-app-data-section .settings-data-management-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
 .account-content-reset-action {
   display: flex;
   min-width: 0;
@@ -1542,6 +1585,21 @@ h1 {
 
 .settings-data-management-transfers > .export-action {
   flex: 0 0 auto;
+}
+
+.settings-app-data-section .settings-data-management-transfers {
+  position: relative;
+  align-self: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.settings-app-data-section .account-content-reset-action {
+  justify-content: center;
+  margin-top: auto;
+  padding-bottom: 12px;
 }
 
 .account-content-reset-trigger {
@@ -1665,12 +1723,12 @@ h1 {
   }
 
   .account-content-reset-action {
-    grid-row: 2;
+    grid-row: 1;
   }
 
   .settings-data-management-transfers {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 2;
     justify-self: end;
   }
 }
@@ -2081,6 +2139,16 @@ h1 {
   max-width: calc(100vw - 24px);
 }
 
+.settings-app-data-export-action .export-action-feedback {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 1;
+  width: min(36ch, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  transform: translateX(-50%);
+}
+
 .export-action-button {
   min-height: 48px;
   white-space: nowrap;
@@ -2117,7 +2185,8 @@ h1 {
 
 .publication-detail-export-action .export-action-feedback,
 .recipe-detail-heading-actions .export-action-feedback,
-.recipe-public-title-actions .recipe-action-feedback-region {
+.recipe-public-title-actions .recipe-action-feedback-region,
+.settings-app-data-export-action .export-action-feedback {
   background: var(--paper);
   padding: 4px 6px;
 }
@@ -2304,6 +2373,22 @@ h1 {
 .settings-emphasis-swatch:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+body:has(.settings-app-data) {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+@supports (height: 100dvh) {
+  body:has(.settings-app-data) {
+    min-height: 100dvh;
+  }
+}
+
+.private-shell:has(.settings-app-data) {
+  flex: 1 0 auto;
 }
 
 @media (max-width: 640px) {

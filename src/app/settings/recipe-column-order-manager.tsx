@@ -1,7 +1,6 @@
 'use client';
 
 import { ChevronRight, Eye, EyeOff, GripVertical } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
 import {
   getExplorerColumns,
@@ -19,7 +18,6 @@ export function RecipeColumnOrderManager({
   initialOrder: string[];
   initialHiddenColumns: string[];
 }) {
-  const router = useRouter();
   const [order, setOrder] = useState(() => normalizeRecipeColumnOrder(initialOrder));
   const [hiddenColumns, setHiddenColumns] = useState(() =>
     normalizeHiddenRecipeColumns(initialHiddenColumns),
@@ -131,7 +129,6 @@ export function RecipeColumnOrderManager({
       setStatus(
         `${movedColumn?.label ?? 'Column'} moved to position ${nextOrder.indexOf(movedKey) + 1}.`,
       );
-      router.refresh();
     });
   }
 
@@ -168,7 +165,6 @@ export function RecipeColumnOrderManager({
           ? `${columnLabel} shown in recipe tables.`
           : `${columnLabel} hidden from recipe tables.`,
       );
-      router.refresh();
     });
   }
 
@@ -190,7 +186,6 @@ export function RecipeColumnOrderManager({
         return;
       }
       setStatus('All recipe columns shown.');
-      router.refresh();
     });
   }
 

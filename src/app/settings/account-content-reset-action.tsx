@@ -149,7 +149,7 @@ export function AccountContentResetAction({
       : completedReset;
 
   useEffect(() => {
-    if (initialOpen) router.replace('/settings', { scroll: false });
+    if (initialOpen) router.replace('/account/app-data', { scroll: false });
   }, [initialOpen, router]);
 
   useEffect(() => {

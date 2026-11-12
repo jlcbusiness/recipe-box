@@ -52,6 +52,6 @@ export async function savePublicUsername(
     return { status: 'error', message: 'Your public username could not be saved. Try again.' };
   }
 
-  revalidatePath('/settings');
-  return { status: 'saved', message: 'Public username saved.', publicUsername: data };
+  revalidatePath('/account/username');
+  return { status: 'saved', message: 'Username saved.', publicUsername: data };
 }

@@ -12,7 +12,7 @@ export default async function RecipesLayout({ children }: { children: React.Reac
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('is_admin, hand_preference, content_generation')
+    .select('hand_preference, content_generation')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -31,7 +31,6 @@ export default async function RecipesLayout({ children }: { children: React.Reac
         { href: '/publications', label: 'Library' },
         { href: '/recipes/find', label: 'Find Recipes' },
         { href: '/settings', label: 'Settings' },
-        ...(account.is_admin ? [{ href: '/admin', label: 'Administration' }] : []),
       ]}
     >
       {children}

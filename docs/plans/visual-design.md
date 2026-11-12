@@ -13,7 +13,7 @@
     - [Serves and times](#serves-and-times)
     - [Recipe list, detail, and headings](#recipe-list-detail-and-headings)
     - [Account menu](#account-menu)
-    - [Administration (DLC 28)](#administration-dlc-28)
+    - [App admin and Updates (DLC 28 / DLC 34)](#app-admin-and-updates-dlc-28--dlc-34)
   - [Settings (Slice 14A)](#settings-slice-14a)
     - [Current implementation](#current-implementation)
   - [Settings (Slice 14B)](#settings-slice-14b)
@@ -26,7 +26,7 @@
     - [Settings and editor behavior](#settings-and-editor-behavior)
   - [Nutrition (DLC 12)](#nutrition-dlc-12)
     - [Settings and recipe editor behavior](#settings-and-recipe-editor-behavior)
-  - [Data Management, Export, and Import (Slices 20 and 21B)](#data-management-export-and-import-slices-20-and-21b)
+  - [App data: Export and Import (Slices 20 and 21B; DLC 34)](#app-data-export-and-import-slices-20-and-21b-dlc-34)
   - [Desktop](#desktop)
     - [Current implementation](#current-implementation-3)
     - [Product direction](#product-direction)
@@ -326,19 +326,21 @@ gallery, then details and reading content.
 ### Account menu
 
 Account preferences are managed from Settings, not from a persistent navigation
-shortcut. Settings is a wide workspace organized by Preferences, Recipe data,
-and Account & data tabs; each tab retains full-width, unframed sections rather
-than a compact menu panel or card. Follow [DLC 32](slices/dlc/dlc-32-settings-tabs.md)
-for section assignment, URL state, and accessible tab behavior. On mobile, keep
-the three tabs content-sized in one row, with the approved two-line labels,
-48px minimum hit targets in both dimensions, a subtle outline with a leaf
-accent on the active tab's top edge, and no horizontal overflow. Use the first
-section's top border as the single divider below the tabs: align it directly
-with the tab row and do not add a separate tab-row rule or extra first-section
-gap. Keep subsequent section dividers and spacing. Do not add a second
-preference form or empty placeholder sections or links.
-On desktop, balance the tab label's vertical padding at 8px above and below;
-retain the current mobile padding.
+shortcut. The Account menu keeps the account email and Sign out action and adds
+**Username** and **App data** links to their own authenticated pages. Do not
+embed either workflow in the dropdown. Admins do not get an Administration
+link there.
+
+Settings retains the existing Preferences and Recipe data tabs for all
+signed-in users. The former Account & data tab is removed. Admins additionally
+see **App admin** and **Updates** tabs; non-admins see neither tab nor its
+content. Each tab retains full-width, unframed sections rather than a compact
+menu panel or card. Follow [DLC 34](slices/dlc/dlc-34-account-and-admin-settings.md)
+for section assignment, URL state, and access behavior. Preserve the existing
+tab keyboard interaction, visible focus, and direct section divider. All four
+labels must fit on mobile without horizontal overflow, and tab hit areas remain
+at least 48px high. Do not add empty placeholder sections or duplicate
+preference forms.
 
 The Personal preferences section contains labeled Volume, Weight, Temperature,
 and View controls using the shared portal `Picklist`, with stable,
@@ -367,12 +369,31 @@ remains sign-in.
 The account menu uses the same options everywhere. On desktop, show the account
 email at the bottom of the pinned left navigation, after the Trash and Settings
 utility links. On mobile, show a 48px circular initials button at the right of
-the navigation. Both controls open the same account menu with the email and
-Sign out action. Admin accounts also find Administration in this menu;
-non-admin accounts do not see the link. The `/admin` page and its server actions
-continue to enforce admin authorization independently. The open account pane
-overlays the page without clipping at the sidebar edge or making the navigation
-scroll to reveal the pane; keep it above page menus.
+the navigation. Both controls open the same account menu with the email,
+Username, App data, and Sign out actions. Admin-only destinations appear in
+Settings, not in this menu. Account pages and admin Settings tabs retain
+independent server-side authentication and authorization. The open account
+pane overlays the page without clipping at the sidebar edge or making the
+navigation scroll to reveal the pane; keep it above page menus.
+Keep the email and menu links compact: Username and App data use consecutive
+32px rows, with 8px between App data and Sign out. These menu links are an
+intentional exception to the 48px mobile touch-target guidance.
+
+### Account pages (DLC 34)
+
+The Username page has the page and section heading **Username**, with a
+programmatically labelled **Username** field, the existing attribution
+explanation, and the same save, validation, uniqueness, success, and error
+behavior.
+
+The **App data** page contains the former Data management section: last export
+date/reminder, database export, database import, and account reset. Center the
+Export and Import actions, followed by the centered reset action at the bottom
+of the page content, with 12px before the version footer. Use normal document
+flow, not a fixed or sticky action. At representative mobile and desktop
+viewports, the App data page fits without scrolling when its content fits.
+Preserve the reset dialog behavior and accessible focus. The route and page
+title are distinct from Settings.
 
 The app version appears once in a muted, right-aligned document footer after the
 page content on every route. It is not fixed to the viewport and reads from the
@@ -380,20 +401,23 @@ application package version. Desktop private navigation fills the viewport but
 is fixed outside document flow, so it does not push the footer down. On mobile,
 the navigation remains sticky at the top. Private shells must not impose a
 viewport-height minimum on the document; on short pages, the footer follows the
-content instead of being pushed to the viewport bottom.
+content instead of being pushed to the viewport bottom. App data is a
+route-specific exception: it fills the available viewport so its final action
+can sit just above the normal-flow footer without adding a scroll.
 
 On mobile, rows wrap without horizontal page overflow. Visible input boxes stay
 compact, while labeled rows, picklist triggers, popup options, standalone
 actions, and compact inline action hit areas retain touch targets of at least
 48px.
 
-### Administration (DLC 28)
+### App admin and Updates (DLC 28 / DLC 34)
 
-The Administration page retains **Accounts** as the default tab, with the
-existing invitation and account-management workflows unchanged. The
-keyboard-operable **Accounts** and **Updates** tabs announce selection and
-support Arrow Left/Right and Home/End navigation. The page heading is
-Administration.
+The admin-only Settings tab **App admin** contains the existing invitation and
+account-management workflows. **Updates** is its own Settings tab and contains
+the existing Updates tracker. The Settings tabs announce selection and support
+Arrow Left/Right and Home/End navigation. The legacy `/admin` route redirects
+Admins to App admin and non-admins to `/recipes`; all server actions continue
+to authorize independently.
 
 The Updates tab uses a compact list with **Done** and **Type** headings. A
 persistent blank Markdown field sits at the top for adding entries. Each row
@@ -465,14 +489,13 @@ placeholders.
 
 Changing a Picklist saves that account preference immediately and announces the
 save status. A failed save restores the last saved value. Picklist, ingredient,
-catalog, tag, density, data management, and Public sharing are separate
-Settings domains.
+catalog, tag, and density remain Settings domains.
 
-The Public sharing section uses a labeled, content-sized username field with
-plain-language explanation, a visible border, an adjacent Save action, and an
-inline accessible status or validation message. Leave space between the action
-and the next section divider. The field is editable so Users can change the
-public byline without exposing their sign-in email or creating a public profile.
+The standalone Username page uses a labeled, content-sized Username field with
+the current plain-language attribution explanation, a visible border, an
+adjacent Save action, and an inline accessible status or validation message.
+The field is editable so Users can change the public byline without exposing
+their sign-in email or creating a public profile.
 
 ## Settings (Slice 14B)
 
@@ -723,12 +746,12 @@ before the move and delete controls. Verify keyboard focus containment/return, E
 dismissal, stale confirmation, visible status, and non-overflow at representative
 widths.
 
-## Data Management, Export, and Import (Slices 20 and 21B)
+## App data: Export and Import (Slices 20 and 21B; DLC 34)
 
-Settings places a full-width, unframed Data management section after the
-working preference and catalog sections. It shows the last completed full
-database export date, or `No database export yet`, and an explicit reminder
-when no export exists or the saved date is more than 30 days old.
+The standalone App data page contains a full-width, unframed data-management
+section. It shows the last completed full database export date, or `No database
+export yet`, and an explicit reminder when no export exists or the saved date
+is more than 30 days old.
 
 The Export database action starts immediately. While preparing, only that
 action is disabled and a live status announces progress; success starts the
@@ -755,13 +778,15 @@ the publication title and source link retain priority.
 Use the same export-arrow icon as recipe Export, not a sort-direction icon, and
 keep the publication actions 40px square.
 The menu supports keyboard navigation and returns focus to its trigger when
-closed. Export feedback overlays the page beneath its button without moving the
+closed. On App data, export feedback overlays below the Export and Import
+actions, above Wipe all account data, without moving or covering those
+controls. Other export feedback stays beneath its action without moving the
 action row or following content. Settings keeps its 48px mobile target while
 scoped actions retain their compact dimensions. All three actions share the
 same progress, completion, retry, and visible-focus behavior. No confirmation
 modal or new card layout is introduced.
 
-Import database remains in Settings. Import publication sits beside Add
+Import database remains in App data. Import publication sits beside Add
 publication in the Library; on mobile it uses a 48px square Upload control with
 an accessible name and tooltip. Import recipe is an item in the shared
 publication-detail transfer menu on desktop and mobile.
@@ -794,9 +819,8 @@ Storage cleanup or failed local-cache clearing. Explain that queued Storage
 deletions retry daily, that the displayed counts are a snapshot, and provide a
 status check to refresh them. Verify the dialog and action row fit desktop and
 narrow mobile viewports without horizontal page overflow.
-At the end of Settings, below Data management, show the current application
-version as a small muted line. Keep it informational rather than introducing a
-new Settings section or card.
+The application version remains in the shared document footer; it is not an
+App data section or card.
 The Help page's **Backups and account reset** section explains that ZIP
 backups exclude recipe and publication history, what reset removes and
 preserves, the effect on public links and downloaded files, offline-device

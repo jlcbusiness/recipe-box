@@ -2,31 +2,33 @@
 
 import { type KeyboardEvent, type ReactNode, useRef, useState } from 'react';
 
-const tabs = [
+const baseTabs = [
   { id: 'preferences', label: 'Preferences', labelLines: ['Preferences'] },
   { id: 'recipe-data', label: 'Recipe data', labelLines: ['Recipe', 'data'] },
-  { id: 'account-data', label: 'Account & data', labelLines: ['Account', '& data'] },
 ] as const;
 
-type SettingsTabId = (typeof tabs)[number]['id'];
+const adminTabs = [
+  { id: 'app-admin', label: 'App admin', labelLines: ['App', 'admin'] },
+  { id: 'updates', label: 'Updates', labelLines: ['Updates'] },
+] as const;
+
+const allTabs = [...baseTabs, ...adminTabs];
+type SettingsTabId = (typeof allTabs)[number]['id'];
 
 export function SettingsTabs({
   initialTab,
-  resetFallback,
   preferences,
   recipeData,
-  accountData,
+  adminPanels,
 }: {
   initialTab?: string;
-  resetFallback: boolean;
   preferences: ReactNode;
   recipeData: ReactNode;
-  accountData: ReactNode;
+  adminPanels?: { appAdmin: ReactNode; updates: ReactNode };
 }) {
+  const tabs = adminPanels ? allTabs : baseTabs;
   const requestedTab = tabs.find((tab) => tab.id === initialTab);
-  const [activeTab, setActiveTab] = useState<SettingsTabId>(
-    requestedTab?.id ?? (resetFallback ? 'account-data' : 'preferences'),
-  );
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(requestedTab?.id ?? 'preferences');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   function activateTab(tabId: SettingsTabId) {
@@ -59,12 +61,17 @@ export function SettingsTabs({
   const panelContent: Record<SettingsTabId, ReactNode> = {
     preferences,
     'recipe-data': recipeData,
-    'account-data': accountData,
+    'app-admin': adminPanels?.appAdmin ?? null,
+    updates: adminPanels?.updates ?? null,
   };
 
   return (
     <>
-      <div aria-label="Settings areas" className="settings-tabs" role="tablist">
+      <div
+        aria-label="Settings areas"
+        className={`settings-tabs${adminPanels ? ' settings-tabs-admin' : ''}`}
+        role="tablist"
+      >
         {tabs.map((tab, index) => (
           <button
             aria-controls={`settings-panel-${tab.id}`}

@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { normalizeHiddenRecipeColumns, normalizeRecipeColumnOrder } from '../../lib/explorer-state';
-import { isDatabaseExportReminderDue } from '../../lib/exports/rules';
 import type { PicklistCategory, TagOption } from '../../lib/recipes/data';
 import {
   defaultInstructionEmphasis,
@@ -10,9 +9,7 @@ import type { TemperatureSystem } from '../../lib/recipes/instruction-markdown';
 import { isMeasurementSystemPreference } from '../../lib/recipes/measurement-rules';
 import type { NutritionEquivalent, NutritionProfile } from '../../lib/recipes/nutrition-rules';
 import { createClient } from '../../lib/supabase/server';
-import { ExportAction } from '../export-action';
-import { AccountContentResetAction } from './account-content-reset-action';
-import { DatabaseImportAction } from './database-import-action';
+import { getAdminSettingsPanels } from '../admin/admin-settings-panels';
 import {
   type IngredientCatalogEntry,
   IngredientCatalogManager,
@@ -23,7 +20,6 @@ import {
   type IngredientDensityEntry,
   IngredientDensityManager,
 } from './ingredient-density-manager';
-import { PublicUsernameSettings } from './public-username';
 import { RecipeColumnOrderManager } from './recipe-column-order-manager';
 import { RecipePicklistManager } from './recipe-picklist-manager';
 import { SettingsTabs } from './settings-tabs';
@@ -35,8 +31,6 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{
     tab?: string;
-    content_reset_error?: string;
-    content_reset_reauthenticated?: string;
   }>;
 }) {
   const query = await searchParams;
@@ -50,7 +44,7 @@ export default async function SettingsPage({
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select(
-      'volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, recipe_column_order, recipe_hidden_columns, last_database_export_at, sign_in_method, public_username',
+      'is_admin, is_owner, volume_system, weight_system, temperature_system, ingredient_presentation, hand_preference, ingredient_color, temperature_color, duration_color, private_print_uses_colors, include_instruction_photos_in_private_print, repeat_ingredients_in_private_print, include_private_details_in_private_print, recipe_column_order, recipe_hidden_columns',
     )
     .eq('id', data.user.id)
     .maybeSingle();
@@ -58,6 +52,14 @@ export default async function SettingsPage({
   if (accountError || !account) {
     throw new Error('Unable to load account preferences.');
   }
+
+  const adminPanels = account.is_admin
+    ? await getAdminSettingsPanels({
+        supabase,
+        userId: data.user.id,
+        currentIsOwner: account.is_owner,
+      })
+    : undefined;
 
   const [
     picklistsResult,
@@ -265,10 +267,6 @@ export default async function SettingsPage({
       <h1 id="page-title">Settings</h1>
       <SettingsTabs
         initialTab={query.tab}
-        resetFallback={
-          query.content_reset_reauthenticated === '1' ||
-          ['google', 'provider', 'unavailable'].includes(query.content_reset_error ?? '')
-        }
         preferences={
           <>
             <section aria-labelledby="personal-preferences-title" className="settings-section">
@@ -355,44 +353,7 @@ export default async function SettingsPage({
             />
           </>
         }
-        accountData={
-          <>
-            <PublicUsernameSettings publicUsername={account.public_username} />
-            <section
-              aria-labelledby="data-management-title"
-              className="settings-section settings-data-management"
-            >
-              <div className="settings-data-management-heading">
-                <h2 id="data-management-title">Data management</h2>
-                <p>
-                  {account.last_database_export_at
-                    ? `Last database export: ${new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(account.last_database_export_at))}`
-                    : 'No database export yet'}
-                </p>
-              </div>
-              {isDatabaseExportReminderDue(account.last_database_export_at) && (
-                <p className="settings-export-reminder" role="note">
-                  Make a database export now. Your backup reminder appears every 30 days.
-                </p>
-              )}
-              <div className="settings-data-management-content">
-                <AccountContentResetAction
-                  initialOpen={
-                    query.content_reset_reauthenticated === '1' ||
-                    ['google', 'provider', 'unavailable'].includes(query.content_reset_error ?? '')
-                  }
-                  initialReauthReady={query.content_reset_reauthenticated === '1'}
-                  provider={account.sign_in_method === 'google' ? 'google' : 'email_password'}
-                  redirectError={query.content_reset_error}
-                />
-                <div className="settings-data-management-transfers">
-                  <ExportAction buttonLabel="Export database" scope={{ type: 'database' }} />
-                  <DatabaseImportAction />
-                </div>
-              </div>
-            </section>
-          </>
-        }
+        adminPanels={adminPanels}
       />
     </main>
   );

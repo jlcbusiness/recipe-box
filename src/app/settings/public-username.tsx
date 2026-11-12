@@ -19,9 +19,9 @@ export function PublicUsernameSettings({ publicUsername }: { publicUsername: str
 
   return (
     <section aria-labelledby="public-username-title" className="settings-section">
-      <h2 id="public-username-title">Public sharing</h2>
+      <h2 id="public-username-title">Username</h2>
       <form action={formAction} className="public-username-settings-form">
-        <label htmlFor={inputId}>Public username</label>
+        <label htmlFor={inputId}>Username</label>
         <p id={descriptionId}>
           This name appears as plain-text attribution on recipes you publish. It is not your sign-in
           email and does not create a public profile.

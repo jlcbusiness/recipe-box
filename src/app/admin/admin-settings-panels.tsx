@@ -1,0 +1,159 @@
+import { type AdminUpdate, isAdminUpdateKind } from '../../lib/admin-updates/rules';
+import { createAdminClient } from '../../lib/supabase/admin';
+import type { createClient } from '../../lib/supabase/server';
+import { AdminAccountActions, InviteForm } from './admin-controls';
+import { AdminUpdates } from './admin-updates';
+
+type SessionClient = Awaited<ReturnType<typeof createClient>>;
+
+function getAdminCredentialMetadata() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    return { format: 'missing', jwtRole: 'unknown' };
+  }
+
+  if (key.startsWith('sb_secret_')) {
+    return { format: 'supabase-secret', jwtRole: 'opaque' };
+  }
+
+  if (key.startsWith('sb_publishable_')) {
+    return { format: 'supabase-publishable', jwtRole: 'public' };
+  }
+
+  const payload = key.split('.')[1];
+  if (!payload) {
+    return { format: 'other', jwtRole: 'unknown' };
+  }
+
+  try {
+    const claims: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (claims && typeof claims === 'object' && 'role' in claims) {
+      const role = claims.role;
+      if (role === 'service_role' || role === 'anon' || role === 'authenticated') {
+        return { format: 'jwt', jwtRole: role };
+      }
+    }
+    return { format: 'jwt', jwtRole: 'other-or-missing' };
+  } catch {
+    return { format: 'jwt', jwtRole: 'unparseable' };
+  }
+}
+
+export async function getAdminSettingsPanels({
+  supabase,
+  userId,
+  currentIsOwner,
+}: {
+  supabase: SessionClient;
+  userId: string;
+  currentIsOwner: boolean;
+}) {
+  const admin = createAdminClient();
+  const [authUsers, accountRows, updateRows] = await Promise.all([
+    admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    admin
+      .from('accounts')
+      .select('id, is_admin, is_owner, sign_in_method, created_at')
+      .order('created_at'),
+    supabase
+      .from('app_updates')
+      .select(
+        'id, body_markdown, kind, completed_version, completed_at, sort_order, is_archived, revision, created_at, updated_at',
+      )
+      .order('created_at', { ascending: false }),
+  ]);
+
+  if (authUsers.error || accountRows.error || updateRows.error) {
+    console.error('Unable to load account administration.', {
+      adminCredential: getAdminCredentialMetadata(),
+      authUsers: authUsers.error
+        ? {
+            name: authUsers.error.name,
+            status: authUsers.error.status,
+            code: authUsers.error.code,
+          }
+        : null,
+      accountRows: accountRows.error
+        ? {
+            name: accountRows.error.name,
+            code: accountRows.error.code,
+          }
+        : null,
+      updates: updateRows.error
+        ? {
+            code: updateRows.error.code,
+          }
+        : null,
+    });
+    throw new Error('Unable to load account administration.');
+  }
+
+  const updates: AdminUpdate[] = updateRows.data.map((update) => {
+    if (!isAdminUpdateKind(update.kind)) {
+      throw new Error('An application update has an unsupported classification.');
+    }
+    return { ...update, kind: update.kind };
+  });
+  const accountById = new Map(accountRows.data.map((account) => [account.id, account]));
+  const users = authUsers.data.users
+    .map((authUser) => ({
+      id: authUser.id,
+      email: authUser.email ?? 'Unknown email',
+      account: accountById.get(authUser.id),
+    }))
+    .filter((user) => user.account);
+
+  return {
+    appAdmin: (
+      <div className="admin-settings-content">
+        <section aria-labelledby="invite-title">
+          <h2 id="invite-title">Send an invitation</h2>
+          <InviteForm />
+        </section>
+        <section aria-labelledby="accounts-title">
+          <h2 id="accounts-title">Account administration</h2>
+          <div className="admin-table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Email</th>
+                  <th scope="col">Sign-in method</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(({ id, email, account: rowAccount }) => (
+                  <tr key={id}>
+                    <td className="admin-account-email">{email}</td>
+                    <td className="admin-account-sign-in">
+                      <span className="admin-account-mobile-label">Sign-in: </span>
+                      {rowAccount?.sign_in_method === 'google' ? 'Google' : 'Email'}
+                    </td>
+                    <td className="admin-account-role">
+                      <span className="admin-account-mobile-label">Role: </span>
+                      {rowAccount?.is_owner ? 'Owner' : rowAccount?.is_admin ? 'Admin' : 'Member'}
+                    </td>
+                    <td className="admin-account-actions-cell">
+                      {rowAccount && (
+                        <AdminAccountActions
+                          accountId={id}
+                          currentAccountId={userId}
+                          currentIsOwner={currentIsOwner}
+                          email={email}
+                          isAdmin={rowAccount.is_admin}
+                          isOwner={rowAccount.is_owner}
+                        />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    ),
+    updates: <AdminUpdates updates={updates} />,
+  };
+}

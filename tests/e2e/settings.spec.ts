@@ -34,7 +34,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await expect(page).toHaveURL(/\/publications$/);
 }
 
-test('Settings tabs group sections and preserve URL and keyboard state @e2e @a11y', async ({
+test('Settings keeps preference and recipe tabs with URL and keyboard state @e2e @a11y', async ({
   page,
   request,
 }) => {
@@ -47,12 +47,13 @@ test('Settings tabs group sections and preserve URL and keyboard state @e2e @a11
     const tabList = page.getByRole('tablist', { name: 'Settings areas' });
     const preferencesTab = tabList.getByRole('tab', { name: 'Preferences' });
     const recipeDataTab = tabList.getByRole('tab', { name: 'Recipe data' });
-    const accountDataTab = tabList.getByRole('tab', { name: 'Account & data' });
     const preferencesPanel = page.getByRole('tabpanel', { name: 'Preferences' });
     const recipeDataPanel = page.getByRole('tabpanel', { name: 'Recipe data' });
-    const accountDataPanel = page.getByRole('tabpanel', { name: 'Account & data' });
 
-    await expect(tabList.getByRole('tab')).toHaveCount(3);
+    await expect(tabList.getByRole('tab')).toHaveCount(2);
+    await expect(tabList.getByRole('tab', { name: 'Account & data' })).toHaveCount(0);
+    await expect(tabList.getByRole('tab', { name: 'App admin' })).toHaveCount(0);
+    await expect(tabList.getByRole('tab', { name: 'Updates' })).toHaveCount(0);
     await expect(preferencesTab).toHaveAttribute('aria-selected', 'true');
     await expect(preferencesPanel).toBeVisible();
     await expect(
@@ -60,7 +61,6 @@ test('Settings tabs group sections and preserve URL and keyboard state @e2e @a11
     ).toBeVisible();
     await expect(preferencesPanel.getByRole('region', { name: 'Recipe columns' })).toBeVisible();
     await expect(recipeDataPanel).toBeHidden();
-    await expect(accountDataPanel).toBeHidden();
     await expect(
       page.getByRole('region', { name: 'Personal preferences', includeHidden: true }),
     ).toHaveCount(1);
@@ -77,12 +77,12 @@ test('Settings tabs group sections and preserve URL and keyboard state @e2e @a11
       page.getByRole('region', { name: 'Trusted densities', includeHidden: true }),
     ).toHaveCount(1);
     await expect(page.getByRole('region', { name: 'Tags', includeHidden: true })).toHaveCount(1);
-    await expect(
-      page.getByRole('region', { name: 'Public sharing', includeHidden: true }),
-    ).toHaveCount(1);
-    await expect(
-      page.getByRole('region', { name: 'Data management', includeHidden: true }),
-    ).toHaveCount(1);
+    await expect(page.getByRole('region', { name: 'Username', includeHidden: true })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole('region', { name: 'App data', includeHidden: true })).toHaveCount(
+      0,
+    );
 
     const historyLength = await page.evaluate(() => window.history.length);
     await recipeDataTab.click();
@@ -96,47 +96,26 @@ test('Settings tabs group sections and preserve URL and keyboard state @e2e @a11
     await expect(recipeDataPanel.getByRole('region', { name: 'Tags' })).toBeVisible();
     await expect(preferencesPanel).toBeHidden();
 
-    await recipeDataTab.press('ArrowRight');
-    await expect(accountDataTab).toBeFocused();
-    await expect(accountDataTab).toHaveCSS('outline-style', 'solid');
-    await expect(accountDataTab).toHaveCSS('outline-width', '2px');
-    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
-    await expect(accountDataPanel).toBeVisible();
-    await accountDataTab.press('ArrowLeft');
-    await expect(recipeDataTab).toBeFocused();
-    await expect(recipeDataTab).toHaveAttribute('aria-selected', 'true');
-    await recipeDataTab.press('ArrowRight');
-    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
-    await accountDataTab.press('ArrowRight');
+    await recipeDataTab.press('ArrowLeft');
     await expect(preferencesTab).toBeFocused();
     await preferencesTab.press('End');
-    await expect(accountDataTab).toBeFocused();
-    await accountDataTab.press('Home');
+    await expect(recipeDataTab).toBeFocused();
+    await recipeDataTab.press('Home');
     await expect(preferencesTab).toBeFocused();
     await expect(preferencesTab).toHaveAttribute('aria-selected', 'true');
 
     await page.goto('/settings?source=kept');
-    await accountDataTab.click();
-    await expect(page).toHaveURL(/\/settings\?source=kept&tab=account-data$/);
+    await recipeDataTab.click();
+    await expect(page).toHaveURL(/\/settings\?source=kept&tab=recipe-data$/);
     await page.reload();
-    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
-    await expect(accountDataPanel).toBeVisible();
-    await expect(accountDataPanel.getByRole('region', { name: 'Public sharing' })).toBeVisible();
-    await expect(accountDataPanel.getByRole('region', { name: 'Data management' })).toBeVisible();
+    await expect(recipeDataTab).toHaveAttribute('aria-selected', 'true');
+    await expect(recipeDataPanel).toBeVisible();
 
     await page.goto('/settings?tab=unknown');
     await expect(preferencesTab).toHaveAttribute('aria-selected', 'true');
-    await page.goto('/settings?content_reset_reauthenticated=1');
-    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
-    await expect(
-      accountDataPanel.getByRole('dialog', { name: 'Wipe all account data?' }),
-    ).toBeVisible();
-    await page.goto('/settings?content_reset_error=unavailable');
-    await expect(accountDataTab).toHaveAttribute('aria-selected', 'true');
-    const resetDialog = accountDataPanel.getByRole('dialog', { name: 'Wipe all account data?' });
-    await expect(resetDialog).toBeVisible();
-    await expect(resetDialog.getByRole('alert')).toHaveText(
-      'Google re-authentication is unavailable right now. Try again shortly.',
+    await expect(page.getByRole('tab', { name: 'Preferences' })).toHaveAttribute(
+      'aria-selected',
+      'true',
     );
 
     await page.goto('/settings');
@@ -162,7 +141,7 @@ test('Settings tab draft state and Fold 6 geometry remain usable @e2e', async ({
     await picklistsSection.getByRole('button', { name: 'Picklists' }).click();
     const draftField = picklistsSection.getByRole('textbox', { name: /^Add / });
     await draftField.fill('unsaved draft');
-    await page.getByRole('tab', { name: 'Account & data' }).click();
+    await page.getByRole('tab', { name: 'Preferences' }).click();
     await page.getByRole('tab', { name: 'Recipe data' }).click();
     await expect(draftField).toHaveValue('unsaved draft');
 
@@ -209,7 +188,7 @@ test('Settings tab draft state and Fold 6 geometry remain usable @e2e', async ({
     expect(geometry.borderBottomWidth).toBe('0px');
     expect(geometry.selectedBorderTop.width).toBe('3px');
     expect(geometry.selectedBorderTop.color).not.toBe('rgba(0, 0, 0, 0)');
-    expect(geometry.tabs).toHaveLength(3);
+    expect(geometry.tabs).toHaveLength(2);
     for (const tab of geometry.tabs) {
       expect(tab.width).toBeGreaterThanOrEqual(48);
       expect(tab.height).toBeGreaterThanOrEqual(48);
@@ -218,8 +197,6 @@ test('Settings tab draft state and Fold 6 geometry remain usable @e2e', async ({
 
     if (testInfo.project.name === 'Fold 6') {
       expect(geometry.viewportWidth).toBe(307);
-      expect(geometry.labelLines[0]).toHaveLength(1);
-      expect(new Set(geometry.tabs.map((tab) => tab.width)).size).toBeGreaterThan(1);
       for (const tab of await page.getByRole('tab').all()) {
         await expect(tab).toHaveCSS('padding-top', '8px');
         await expect(tab).toHaveCSS('padding-bottom', '6px');
@@ -228,10 +205,8 @@ test('Settings tab draft state and Fold 6 geometry remain usable @e2e', async ({
         expect(tab.borderLeftWidth).toBe('1px');
         expect(tab.borderLeftStyle).toBe('solid');
       }
-      for (const lines of geometry.labelLines.slice(1)) {
-        expect(lines).toHaveLength(2);
-        expect(lines[1]).toBeGreaterThan(lines[0]);
-      }
+      expect(geometry.labelLines[0]).toHaveLength(1);
+      expect(geometry.labelLines[1]).toHaveLength(2);
     } else {
       expect(geometry.viewportWidth).toBe(1280);
       for (const tab of await page.getByRole('tab').all()) {
@@ -240,7 +215,7 @@ test('Settings tab draft state and Fold 6 geometry remain usable @e2e', async ({
       }
     }
 
-    for (const tabName of ['Preferences', 'Recipe data', 'Account & data']) {
+    for (const tabName of ['Preferences', 'Recipe data']) {
       await page.getByRole('tab', { name: tabName }).click();
       const firstSection = page
         .getByRole('tabpanel', { name: tabName })
@@ -260,7 +235,7 @@ test('Settings tab draft state and Fold 6 geometry remain usable @e2e', async ({
   }
 });
 
-test('Account & data controls remain clear and ordered on mobile @e2e', async ({
+test('Username and App data are separate account pages @e2e', async ({
   page,
   request,
 }, testInfo) => {
@@ -268,36 +243,33 @@ test('Account & data controls remain clear and ordered on mobile @e2e', async ({
 
   try {
     await signIn(page, user.email, user.password);
-    await page.goto('/settings?tab=account-data');
-
-    const accountPanel = page.getByRole('tabpanel', { name: 'Account & data' });
-    const publicSharing = accountPanel.getByRole('region', { name: 'Public sharing' });
-    const username = publicSharing.getByRole('textbox', { name: 'Public username' });
-    const saveButton = publicSharing.getByRole('button', { name: 'Save', exact: true });
-    const dataManagement = accountPanel.getByRole('region', { name: 'Data management' });
-    const wipeButton = dataManagement.getByRole('button', { name: 'Wipe all account data' });
-    const exportButton = dataManagement.getByRole('button', { name: 'Export database' });
-    const importButton = dataManagement.getByRole('button', { name: 'Import database' });
-
+    await page.goto('/account/username');
+    const username = page.getByRole('textbox', { name: 'Username' });
+    const saveButton = page.getByRole('button', { name: 'Save', exact: true });
+    await expect(page.getByRole('heading', { name: 'Username', level: 1 })).toBeVisible();
     await expect(username).toHaveCSS('border-top-width', '1px');
     await expect(username).toHaveCSS('border-top-style', 'solid');
     await expect(saveButton).toBeVisible();
 
-    const saveBounds = await saveButton.boundingBox();
+    await page.goto('/account/app-data');
+    const dataManagement = page.getByRole('region', { name: 'App data' });
+    const wipeButton = dataManagement.getByRole('button', { name: 'Wipe all account data' });
+    const exportButton = dataManagement.getByRole('button', { name: 'Export database' });
+    const importButton = dataManagement.getByRole('button', { name: 'Import database' });
+    await expect(page.getByRole('heading', { name: 'App data', level: 1 })).toBeVisible();
+
     const dataManagementBounds = await dataManagement.boundingBox();
     const wipeBounds = await wipeButton.boundingBox();
     const exportBounds = await exportButton.boundingBox();
     const importBounds = await importButton.boundingBox();
-    expect(saveBounds).not.toBeNull();
     expect(dataManagementBounds).not.toBeNull();
     expect(wipeBounds).not.toBeNull();
     expect(exportBounds).not.toBeNull();
     expect(importBounds).not.toBeNull();
-    if (!saveBounds || !dataManagementBounds || !wipeBounds || !exportBounds || !importBounds) {
-      throw new Error('Expected Account & data controls to have visible geometry.');
+    if (!dataManagementBounds || !wipeBounds || !exportBounds || !importBounds) {
+      throw new Error('Expected App data controls to have visible geometry.');
     }
 
-    expect(dataManagementBounds.y - saveBounds.y - saveBounds.height).toBeGreaterThanOrEqual(12);
     if (testInfo.project.name === 'Fold 6') {
       expect(wipeBounds.y).toBeGreaterThan(exportBounds.y + exportBounds.height);
       expect(wipeBounds.y).toBeGreaterThan(importBounds.y + importBounds.height);
@@ -433,11 +405,23 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     await page.getByRole('link', { name: 'Settings' }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
-    await page.getByRole('tab', { name: 'Account & data' }).click();
-    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    await page.goto('/account/app-data');
+    const dataManagement = page.getByRole('region', { name: 'App data' });
     const versionFooter = page.getByRole('contentinfo', { name: 'Application version' });
     await expect(versionFooter).toHaveText(`Recipe Box v${appVersion}`);
-    await expect(versionFooter).toHaveCSS('justify-content', 'flex-end');
+    const footerTextAlignment = await versionFooter.evaluate((footer) => {
+      const range = document.createRange();
+      range.selectNodeContents(footer);
+      return {
+        textRight: range.getBoundingClientRect().right,
+        contentRight:
+          footer.getBoundingClientRect().right -
+          Number.parseFloat(getComputedStyle(footer).paddingRight),
+      };
+    });
+    expect(Math.abs(footerTextAlignment.textRight - footerTextAlignment.contentRight)).toBeLessThan(
+      1,
+    );
     const [dataManagementBounds, versionBounds] = await Promise.all([
       dataManagement.boundingBox(),
       versionFooter.boundingBox(),
@@ -445,12 +429,12 @@ test('Settings owns unit preferences without a navigation Units menu @e2e @a11y'
     expect(dataManagementBounds).not.toBeNull();
     expect(versionBounds).not.toBeNull();
     if (!dataManagementBounds || !versionBounds) {
-      throw new Error('Expected Data management and application footer bounds.');
+      throw new Error('Expected App data and application footer bounds.');
     }
     expect(versionBounds.y).toBeGreaterThanOrEqual(
       dataManagementBounds.y + dataManagementBounds.height,
     );
-    await page.getByRole('tab', { name: 'Preferences' }).click();
+    await page.goto('/settings');
     await expect(page.getByRole('region', { name: 'Personal preferences' })).toBeVisible();
     await expect(page.locator('.units-menu-panel')).toHaveCount(0);
     const settingsWidth = (await page.locator('.settings-main').boundingBox())?.width ?? 0;
@@ -1027,9 +1011,6 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
     for (const spacing of accordionSpacing) {
       expect(spacing.above).toBeCloseTo(spacing.below, 0);
     }
-    await expect(
-      page.getByRole('region', { name: 'Data management', includeHidden: true }),
-    ).toHaveCSS('margin-top', '0px');
     const toggle = section.getByRole('button', { name: 'Ingredients' });
     const picklistToggle = page.getByRole('button', { name: 'Picklists' });
     const tagToggle = page.getByRole('button', { name: 'Tags' });

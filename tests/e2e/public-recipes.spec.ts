@@ -1114,8 +1114,8 @@ test('first-time direct publishing collects a username, then reuses and edits it
 
     otherUser = await createTestUser(request);
     await createRecipe(request, config, otherUser, 'Username collision');
-    await page.goto('/settings?tab=account-data');
-    const usernameInput = page.getByRole('textbox', { name: 'Public username' });
+    await page.goto('/account/username');
+    const usernameInput = page.getByRole('textbox', { name: 'Username' });
     await expect(usernameInput).toHaveValue('toggle-publisher');
     await usernameInput.fill(`test-${otherUser.id.slice(0, 8)}`);
     await page.getByRole('button', { name: 'Save' }).click();
@@ -1125,7 +1125,7 @@ test('first-time direct publishing collects a username, then reuses and edits it
 
     await usernameInput.fill('Updated-Publisher');
     await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByText('Public username saved.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Username saved.', { exact: true })).toBeVisible();
     await expect(usernameInput).toHaveValue('updated-publisher');
     await page.goto(`/r/${firstPublicId}`);
     await expect(page.getByText('By updated-publisher', { exact: true })).toBeVisible();

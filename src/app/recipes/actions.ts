@@ -604,7 +604,7 @@ export async function publishRecipeWithUsername(
       status: 'error',
       message:
         validatePublicUsername(rawUsername) ??
-        'Choose a public username in Settings before publishing.',
+        'Choose a username from the Account menu before publishing.',
       fieldError: true,
     };
   }

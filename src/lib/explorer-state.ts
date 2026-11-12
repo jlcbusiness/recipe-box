@@ -172,6 +172,18 @@ export const explorerColumnDefinitions: Record<
 
 export const defaultRecipeColumnOrder = ['name', ...recipeColumnDefinitions.map(({ key }) => key)];
 
+const legacyRecipeTimeColumnKeys = new Set([
+  'prep_time_minutes',
+  'mixing_time_minutes',
+  'marinate_time_minutes',
+  'chill_time_minutes',
+  'freeze_time_minutes',
+  'cook_time_minutes',
+  'bake_time_minutes',
+  'cooling_time_minutes',
+  'rest_time_minutes',
+]);
+
 export function normalizeHiddenRecipeColumns(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   const allowedColumns = new Set(defaultRecipeColumnOrder);
@@ -190,11 +202,17 @@ export function normalizeRecipeColumnOrder(value: unknown): string[] {
   if (
     keys.length !== value.length ||
     new Set(keys).size !== keys.length ||
-    keys.some((key) => !defaultRecipeColumnOrder.includes(key))
+    keys.some(
+      (key) => !defaultRecipeColumnOrder.includes(key) && !legacyRecipeTimeColumnKeys.has(key),
+    )
   ) {
     return [...defaultRecipeColumnOrder];
   }
-  return [...keys, ...defaultRecipeColumnOrder.filter((key) => !keys.includes(key))];
+  const supportedKeys = keys.filter((key) => defaultRecipeColumnOrder.includes(key));
+  return [
+    ...supportedKeys,
+    ...defaultRecipeColumnOrder.filter((key) => !supportedKeys.includes(key)),
+  ];
 }
 
 export function getExplorerColumns(

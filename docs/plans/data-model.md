@@ -29,8 +29,8 @@ account. Public recipe access is limited to the recipe's public-link route and
 permitted media.
 
 The product roles are Guest (a public-recipe access context, regardless of
-sign-in), User (a person with an account), Admin (a User with Administration
-access who manages User accounts), and Owner (the single application-owning
+sign-in), User (a person with an account), Admin (a User with App admin and
+Updates access who manages User accounts), and Owner (the single application-owning
 Admin who can demote/delete Admin accounts and transfer Owner status). A
 signed-in User may be a Guest while accessing another User's public recipe.
 Admins can grant Admin access; only the Owner can demote or delete Admin

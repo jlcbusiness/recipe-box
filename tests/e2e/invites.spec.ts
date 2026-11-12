@@ -102,6 +102,14 @@ test('a user cannot self-promote or change their sign-in method @e2e', async ({
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
     await expect(page.getByRole('link', { name: 'Administration' })).toHaveCount(0);
+    await page.goto('/settings?tab=app-admin');
+    await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Preferences' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('tab', { name: 'App admin' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Account administration' })).toHaveCount(0);
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
   } finally {
@@ -131,8 +139,8 @@ test('an admin can invite an email, accept once, and grant admin to an existing 
     await page.locator('.account-menu-trigger').click();
     await expect(
       page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
-    ).toBeVisible();
-    await page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }).click();
+    ).toHaveCount(0);
+    await page.goto('/settings?tab=app-admin');
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
     await page.getByLabel('Invite email').fill(recipient);
     await page.getByRole('button', { name: 'Send invitation' }).click();
@@ -261,7 +269,7 @@ test('an admin can invite a Google-only account @e2e', async ({ page, request })
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
-    await page.goto('/admin');
+    await page.goto('/settings?tab=app-admin');
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByLabel('Invite email').fill(recipient);
     const inviteButton = page.getByRole('button', { name: 'Send invitation' });
@@ -370,11 +378,12 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
+
     await page.locator('.account-menu-trigger').click();
     await expect(
       page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
-    ).toBeVisible();
-    await page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }).click();
+    ).toHaveCount(0);
+    await page.goto('/settings?tab=app-admin');
 
     const memberRow = page.getByRole('row', { name: new RegExp(member.email) });
     await expect(memberRow).toContainText('Member');
@@ -399,8 +408,8 @@ test('an existing admin can grant admin status to another account @e2e', async (
     await page.locator('.account-menu-trigger').click();
     await expect(
       page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }),
-    ).toBeVisible();
-    await page.locator('.account-menu-panel').getByRole('link', { name: 'Administration' }).click();
+    ).toHaveCount(0);
+    await page.goto('/settings?tab=app-admin');
     await expect(page.getByRole('heading', { name: 'Account administration' })).toBeVisible();
   } finally {
     await deleteTestUser(request, member);
@@ -421,7 +430,7 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/publications$/);
-    await page.goto('/admin');
+    await page.goto('/settings?tab=app-admin');
     const accountTrigger = page.locator('.account-menu-trigger');
     await accountTrigger.focus();
     await accountTrigger.press('Enter');
@@ -433,11 +442,14 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
     expect(desktopA11y.violations).toEqual([]);
 
     await page.setViewportSize({ width: 307, height: 629 });
-    await expect(page.locator('.admin-main')).toHaveCSS('padding-top', '24px');
-    await expect(page.locator('.admin-main section').first()).toHaveCSS('margin-top', '14px');
+    await expect(page.locator('.settings-main')).toHaveCSS('padding-top', '24px');
+    await expect(page.locator('.admin-settings-content > section').first()).toHaveCSS(
+      'margin-top',
+      '14px',
+    );
     await expect(page.locator('.admin-invite-form')).toHaveCSS('margin-top', '16px');
     const titleFontSize = await page
-      .locator('.admin-main h1')
+      .locator('.settings-main h1')
       .evaluate((heading) => Number.parseFloat(getComputedStyle(heading).fontSize));
     expect(titleFontSize).toBeCloseTo(21.33, 1);
     const memberRow = page.getByRole('row', { name: new RegExp(member.email) });

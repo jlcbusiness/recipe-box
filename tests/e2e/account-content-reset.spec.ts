@@ -18,8 +18,9 @@ test('account content reset warning is accessible and Escape cancels @e2e @a11y'
 
   try {
     await signIn(page, user.email, user.password);
-    await page.getByRole('link', { name: 'Settings' }).click();
-    const dataManagement = page.getByRole('region', { name: 'Data management' });
+    await page.locator('.account-menu-trigger').click();
+    await page.locator('.account-menu-panel').getByRole('link', { name: 'App data' }).click();
+    const dataManagement = page.getByRole('region', { name: 'App data' });
     const wipeButton = page.getByRole('button', { name: 'Wipe all account data' });
     const transferActions = dataManagement.locator('.settings-data-management-transfers');
     const transferBounds = await transferActions.boundingBox();
@@ -27,23 +28,36 @@ test('account content reset warning is accessible and Escape cancels @e2e @a11y'
       .locator('.settings-data-management-content')
       .boundingBox();
     const wipeBounds = await wipeButton.boundingBox();
-    const settingsViewport = page.viewportSize();
     expect(transferBounds).not.toBeNull();
     expect(contentBounds).not.toBeNull();
     expect(wipeBounds).not.toBeNull();
     expect(
       Math.abs(
         (transferBounds?.x ?? 0) +
-          (transferBounds?.width ?? 0) -
-          ((contentBounds?.x ?? 0) + (contentBounds?.width ?? 0)),
+          (transferBounds?.width ?? 0) / 2 -
+          ((contentBounds?.x ?? 0) + (contentBounds?.width ?? 0) / 2),
       ),
     ).toBeLessThan(2);
-    if ((settingsViewport?.width ?? 0) > 640) {
-      expect(wipeBounds?.y).toBeCloseTo(transferBounds?.y ?? 0, 0);
-      expect(wipeBounds?.x).toBeLessThan(transferBounds?.x ?? 0);
-    } else {
-      expect(wipeBounds?.y).toBeLessThan(transferBounds?.y ?? 0);
-    }
+    expect(wipeBounds?.y).toBeGreaterThan(transferBounds?.y ?? 0);
+    const regionBounds = await dataManagement.boundingBox();
+    const footerBounds = await page.getByRole('contentinfo').boundingBox();
+    expect(regionBounds).not.toBeNull();
+    expect(footerBounds).not.toBeNull();
+    expect(
+      Math.abs(
+        (wipeBounds?.x ?? 0) +
+          (wipeBounds?.width ?? 0) / 2 -
+          ((regionBounds?.x ?? 0) + (regionBounds?.width ?? 0) / 2),
+      ),
+    ).toBeLessThan(2);
+    expect(
+      footerBounds?.y !== undefined && wipeBounds?.height !== undefined
+        ? footerBounds.y - ((wipeBounds?.y ?? 0) + wipeBounds.height)
+        : Number.NaN,
+    ).toBeCloseTo(12, 0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight),
+    ).toBeTruthy();
 
     await wipeButton.click();
 
@@ -112,13 +126,17 @@ test('account content reset warning is accessible and Escape cancels @e2e @a11y'
       expect(
         Math.abs(
           (mobileTransfers?.x ?? 0) +
-            (mobileTransfers?.width ?? 0) -
-            ((mobileContent?.x ?? 0) + (mobileContent?.width ?? 0)),
+            (mobileTransfers?.width ?? 0) / 2 -
+            ((mobileContent?.x ?? 0) + (mobileContent?.width ?? 0) / 2),
         ),
       ).toBeLessThan(2);
-      expect(mobileWipe?.y).toBeLessThan(mobileTransfers?.y ?? 0);
+      expect(mobileWipe?.y).toBeGreaterThan(mobileTransfers?.y ?? 0);
       expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <= window.innerWidth &&
+            document.documentElement.scrollHeight <= window.innerHeight,
+        ),
       ).toBeTruthy();
     }
   } finally {
@@ -134,12 +152,12 @@ test('account content reset keeps OAuth re-authentication after URL cleanup @e2e
 
   try {
     await signIn(page, user.email, user.password);
-    await page.goto('/settings?content_reset_reauthenticated=1');
+    await page.goto('/account/app-data?content_reset_reauthenticated=1');
 
     const dialog = page.getByRole('dialog', { name: 'Wipe all account data?' });
     const phrase = dialog.getByLabel(/Type RESET ALL CONTENT to confirm/);
     await expect(dialog).toBeVisible();
-    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page).toHaveURL(/\/account\/app-data$/);
     await expect(phrase).toBeVisible();
     await expect(dialog.getByLabel('Current password')).toBeHidden();
 
@@ -162,7 +180,8 @@ test('account content reset requires exact confirmation and clears offline snaps
 
   try {
     await signIn(page, user.email, user.password);
-    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.locator('.account-menu-trigger').click();
+    await page.locator('.account-menu-panel').getByRole('link', { name: 'App data' }).click();
     await page.evaluate(async () => {
       const cache = await caches.open('recipe-box-private-v1');
       await cache.put(

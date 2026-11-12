@@ -230,7 +230,7 @@ export async function sendInvitation(
     return { error: 'Unable to prepare the invitation. Try again.' };
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: `Invitation sent to ${email}.` };
 }
 
@@ -259,7 +259,7 @@ export async function grantAdmin(
     return { error: 'Unable to grant administrator access to that account.' };
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: 'Administrator access granted.' };
 }
 
@@ -299,7 +299,7 @@ export async function demoteAdmin(
     return { error: 'Unable to remove administrator access from that account.' };
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: 'Administrator access removed.' };
 }
 
@@ -325,7 +325,7 @@ export async function transferAccountOwner(
     return { error: 'Unable to transfer ownership to that account.' };
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: 'Account ownership transferred.' };
 }
 
@@ -368,7 +368,7 @@ export async function deleteAccount(
     return { error: 'Unable to delete that account.' };
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   let cleanupPending = false;
   try {
     const { data: queuedMedia, error: queueError } = await context.admin
@@ -423,7 +423,7 @@ export async function createAdminUpdate(
     return getAdminUpdateActionError(error, 'Unable to add this update. Try again.');
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: 'Update added.' };
 }
 
@@ -465,7 +465,7 @@ export async function editAdminUpdate(
     return getAdminUpdateActionError(error, 'Unable to save this update. Try again.');
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: 'Update saved.' };
 }
 
@@ -501,7 +501,7 @@ export async function setAdminUpdateCompletion(
     return getAdminUpdateActionError(error, 'Unable to update completion. Try again.');
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: completedVersion === null ? 'Update reopened.' : 'Update completed.' };
 }
 
@@ -532,7 +532,7 @@ export async function reorderAdminUpdates(updateIds: unknown): Promise<AdminForm
     return { error: 'Unable to save the update order. Try again.' };
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: 'Update order saved.' };
 }
 
@@ -566,7 +566,7 @@ async function setAdminUpdateArchived(
     );
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/settings');
   return { message: archived ? 'Update archived.' : 'Update restored.' };
 }
 
