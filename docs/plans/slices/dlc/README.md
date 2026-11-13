@@ -120,6 +120,18 @@ while retaining the existing single-image viewer without gallery navigation.
   moves Username and App data to dedicated pages linked from the Account menu,
   and consolidates Accounts and Updates into admin-only Settings tabs.
 
+### Phase 11: Ingredient measure conversion
+
+- **DLC 35 (implemented in app version 1.9.0):**
+  [Count and Things measure equivalents](dlc-35-count-things-measure-equivalents.md)
+
+### Phase 12: Recipe copying
+
+- **DLC 36 (implemented in app version 1.10.0):**
+  [Duplicate recipes](dlc-36-duplicate-recipes.md) adds direct, private recipe
+  duplication while preserving protected source attribution and distinguishing
+  a duplicate from a direct public save.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for

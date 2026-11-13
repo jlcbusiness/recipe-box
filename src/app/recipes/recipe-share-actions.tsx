@@ -184,13 +184,17 @@ export function RecipeShareActions({
             <span className="recipe-privacy-toggle-state-full">
               {isPrivate ? 'Private' : 'Linkable'}
             </span>
-            {!isPrivate && (
-              <span className="recipe-privacy-toggle-state-compact">
-                Can
-                <br />
-                Link
-              </span>
-            )}
+            <span className="recipe-privacy-toggle-state-compact">
+              {isPrivate ? (
+                'Private'
+              ) : (
+                <>
+                  Can
+                  <br />
+                  Link
+                </>
+              )}
+            </span>
           </span>
           <span aria-hidden="true" className="recipe-privacy-toggle-track">
             <span className="recipe-privacy-toggle-thumb" />

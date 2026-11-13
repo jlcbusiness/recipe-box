@@ -63,6 +63,7 @@ function createSnapshot() {
           prep_time_minutes: 10,
           total_time_minutes: 40,
           is_private: true,
+          saved_from_public_id: sourcePublicId,
           public_link_id: 'future-public-link-identity',
           food_type_category: 'food_type',
           verdict_category: 'verdict',
@@ -271,14 +272,15 @@ function createSnapshot() {
 }
 
 describe('export rules', () => {
-  it('exports protected source identity and ordered time entries in schema version 11', () => {
+  it('exports protected source identity, direct-save identity, and time entries in schema version 12', () => {
     const output = buildPortableData(createSnapshot(), { type: 'recipe', id: firstRecipeId });
 
-    expect(output.schema_version).toBe(11);
+    expect(output.schema_version).toBe(12);
     expect(output.records.recipe_references[0]).toMatchObject({
       is_protected_source: true,
       source_public_id: sourcePublicId,
     });
+    expect(output.records.recipes[0]).toMatchObject({ saved_from_public_id: sourcePublicId });
     expect(output.records.recipes[0]).toMatchObject({ total_time_minutes: 40 });
     expect(output.records.recipes[0]).not.toHaveProperty('prep_time_minutes');
     expect(output.records.recipe_time_entries).toEqual([
@@ -459,7 +461,7 @@ describe('export rules', () => {
       { type: 'database' },
     );
 
-    expect(output.schema_version).toBe(11);
+    expect(output.schema_version).toBe(12);
     expect(output.account_preferences).toMatchObject({
       volume_system: 'recipe',
       weight_system: 'recipe',
@@ -479,7 +481,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(11);
+    expect(manifest.schema_version).toBe(12);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

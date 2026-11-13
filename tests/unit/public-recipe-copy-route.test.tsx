@@ -142,7 +142,7 @@ describe('public recipe copy route', () => {
   });
 
   it('returns an existing saved copy without uploading media again', async () => {
-    const { admin, download, upload } = setup({
+    const { admin, download, recipeLookup, upload } = setup({
       existingRecipe: { id: copiedRecipeId, version: 4, trashed_at: null },
     });
 
@@ -155,6 +155,8 @@ describe('public recipe copy route', () => {
       alreadySaved: true,
       recipeId: copiedRecipeId,
     });
+    expect(recipeLookup.select).toHaveBeenCalledWith('id');
+    expect(recipeLookup.eq).toHaveBeenCalledWith('saved_from_public_id', publicId);
     expect(download).not.toHaveBeenCalled();
     expect(upload).not.toHaveBeenCalled();
     expect(admin.rpc).not.toHaveBeenCalled();

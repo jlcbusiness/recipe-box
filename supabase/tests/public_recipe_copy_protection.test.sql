@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(8);
+select plan(12);
 
 insert into auth.users (
   id,
@@ -41,7 +41,7 @@ values
   (
     '40000000-0000-4000-8000-000000000003',
     '40000000-0000-4000-8000-000000000001',
-    'Other recipe',
+    'Duplicate recipe',
     'want_to_try'
   );
 
@@ -68,6 +68,27 @@ values (
   '40000000-0000-4000-8000-000000000005'
 );
 
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+set local role service_role;
+select set_config(
+  'app.public_recipe_saved_from_public_id',
+  '40000000-0000-4000-8000-000000000005',
+  true
+);
+select set_config('app.public_recipe_copy_context', 'on', true);
+
+select lives_ok(
+  $$
+    update public.recipes
+    set saved_from_public_id = null
+    where id = '40000000-0000-4000-8000-000000000002'
+  $$,
+  'a trusted direct save can set its saved-from marker'
+);
+
+set local role postgres;
+select set_config('request.jwt.claims', '{"role":"postgres"}', true);
+
 select throws_ok(
   $$
     update public.recipe_references
@@ -89,46 +110,6 @@ select throws_ok(
   'protected source attribution cannot be deleted'
 );
 
-select throws_ok(
-  $$
-    insert into public.recipe_references (
-      account_id,
-      recipe_id,
-      reference_type,
-      display_text,
-      url,
-      position,
-      is_protected_source,
-      source_public_id
-    )
-    values (
-      '40000000-0000-4000-8000-000000000001',
-      '40000000-0000-4000-8000-000000000003',
-      'external_url',
-      'Duplicate source',
-      'https://recipe-box.example/r/40000000-0000-4000-8000-000000000005',
-      0,
-      true,
-      '40000000-0000-4000-8000-000000000005'
-    )
-  $$,
-  '23505',
-  'An active copy of this public recipe already exists.',
-  'an account cannot create a second active copy of a public source'
-);
-
-select set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', true);
-
-select lives_ok(
-  $$
-    select * from public.trash_recipe(
-      '40000000-0000-4000-8000-000000000002',
-      1
-    )
-  $$,
-  'an active copy can be moved to Trash'
-);
-
 select lives_ok(
   $$
     insert into public.recipe_references (
@@ -147,27 +128,121 @@ select lives_ok(
       '40000000-0000-4000-8000-000000000001',
       '40000000-0000-4000-8000-000000000003',
       'external_url',
-      'source-user''s Replacement recipe',
+      'source-user''s Duplicate recipe',
       'https://recipe-box.example/r/40000000-0000-4000-8000-000000000005',
       0,
       true,
       '40000000-0000-4000-8000-000000000005'
     )
   $$,
-  'a fresh active copy can coexist with its trashed predecessor'
+  'protected source attribution can be shared by distinct recipes'
 );
+
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+set local role service_role;
+
+select throws_ok(
+  $$
+    update public.recipes
+    set saved_from_public_id = null
+    where id = '40000000-0000-4000-8000-000000000003'
+  $$,
+  '23505',
+  'An active direct save of this public recipe already exists.',
+  'a second active direct-save marker is rejected'
+);
+
+set local role postgres;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"40000000-0000-4000-8000-000000000001"}',
+  true
+);
+select set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', true);
+
+select lives_ok(
+  $$
+    select * from public.trash_recipe(
+      '40000000-0000-4000-8000-000000000002',
+      (select version from public.recipes where id = '40000000-0000-4000-8000-000000000002')
+    )
+  $$,
+  'the direct saved recipe can be moved to Trash'
+);
+
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+set local role service_role;
+
+select lives_ok(
+  $$
+    insert into public.recipes (
+      id,
+      account_id,
+      name,
+      state
+    )
+    values (
+      '40000000-0000-4000-8000-000000000007',
+      '40000000-0000-4000-8000-000000000001',
+      'Replacement saved recipe',
+      'want_to_try'
+    )
+  $$,
+  'a new direct save is allowed while the previous marked recipe is trashed'
+);
+
+set local role postgres;
+select set_config('request.jwt.claims', '{"role":"postgres"}', true);
+
+select lives_ok(
+  $$
+    insert into public.recipe_references (
+      id,
+      account_id,
+      recipe_id,
+      reference_type,
+      display_text,
+      url,
+      position,
+      is_protected_source,
+      source_public_id
+    )
+    values (
+      '40000000-0000-4000-8000-000000000008',
+      '40000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000007',
+      'external_url',
+      'source-user''s Replacement saved recipe',
+      'https://recipe-box.example/r/40000000-0000-4000-8000-000000000005',
+      0,
+      true,
+      '40000000-0000-4000-8000-000000000005'
+    )
+  $$,
+  'the replacement direct save keeps the same protected attribution'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"40000000-0000-4000-8000-000000000001"}',
+  true
+);
+select set_config('request.jwt.claim.sub', '40000000-0000-4000-8000-000000000001', true);
 
 select throws_ok(
   $$
     select * from public.restore_recipe(
       '40000000-0000-4000-8000-000000000002',
-      2
+      (select version from public.recipes where id = '40000000-0000-4000-8000-000000000002')
     )
   $$,
   '23505',
-  'An active copy of this public recipe already exists.',
-  'restoring an old copy is blocked while a replacement is active'
+  'An active direct save of this public recipe already exists.',
+  'restoring an older direct save is blocked while a replacement is active'
 );
+
+set local role postgres;
+select set_config('request.jwt.claims', '{"role":"postgres"}', true);
 
 select lives_ok(
   $$
@@ -184,6 +259,16 @@ select ok(
     where id = '40000000-0000-4000-8000-000000000004'
   ),
   'deleting the copied recipe cascades to its protected source attribution'
+);
+
+select is(
+  (
+    select saved_from_public_id::text
+    from public.recipes
+    where id = '40000000-0000-4000-8000-000000000007'
+  ),
+  '40000000-0000-4000-8000-000000000005',
+  'the replacement recipe retains its direct-save marker'
 );
 
 select * from finish();

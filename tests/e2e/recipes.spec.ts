@@ -1377,22 +1377,59 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
   const user = await createTestUser(request);
 
   try {
+    const config = await getLocalSupabaseConfig();
     await signIn(page, user.email, user.password);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/recipes/new');
-    await page.getByLabel('Name').fill('Mobile marker layout');
+    const recipeName =
+      'A long recipe title for checking duplicate dialog wrapping at narrow mobile widths';
+    await page.getByLabel('Name').fill(recipeName);
     await page.getByRole('button', { name: 'Save recipe' }).click();
-    await expect(page.getByRole('heading', { name: 'Mobile marker layout' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await page.getByRole('switch', { name: 'Make linkable' }).click();
+    const usernameDialog = page.getByRole('dialog', { name: 'Choose a public username' });
+    await usernameDialog.getByLabel('Public username').fill(`marker-${user.id.slice(0, 8)}`);
+    await usernameDialog.getByRole('button', { name: 'Save username & publish' }).click();
+    await expect(usernameDialog).toBeHidden();
 
+    await page.setViewportSize({ width: 390, height: 844 });
+    const privateToggle = page.getByRole('switch', { name: 'Make private' });
+    await privateToggle.click();
+    const linkableToggle = page.getByRole('switch', { name: 'Make linkable' });
+    await expect(linkableToggle.locator('.recipe-privacy-toggle-state-compact')).toHaveText(
+      'Private',
+    );
+    await expect(linkableToggle.locator('.recipe-privacy-toggle-state-compact')).toBeVisible();
+    await expect(linkableToggle.locator('..')).toHaveCSS('width', '72px');
+    await page.setViewportSize({ width: 314, height: 844 });
+    await expect(linkableToggle.locator('..')).toHaveCSS('width', '72px');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      320,
+    );
+    await linkableToggle.click();
+    const restoredLinkableToggle = page.getByRole('switch', { name: 'Make private' });
+    await expect(restoredLinkableToggle.locator('.recipe-privacy-toggle-state-compact')).toHaveText(
+      'CanLink',
+    );
+    await expect(restoredLinkableToggle.locator('..')).toHaveCSS('width', '72px');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(restoredLinkableToggle.locator('..')).toHaveCSS('width', '72px');
+
+    await page.setViewportSize({ width: 1280, height: 900 });
     const desktopToolbar = page.locator('.recipe-detail-heading-actions');
     const desktopStar = page.getByRole('button', { name: 'Star recipe' });
     const desktopHeart = page.getByRole('button', { name: 'Heart recipe' });
+    const desktopDuplicate = page.getByRole('button', { name: 'Duplicate recipe' });
+    const pageSettingsButton = page.getByRole('button', { name: 'Page settings' });
+    const printButton = page.getByRole('button', { name: 'Print & Download' });
+    const editLink = page.getByRole('link', { name: 'Edit' });
     const desktopActionSelectors = [
       ':scope > .recipe-share-copy-action > button[aria-label="Copy share link"]',
       ':scope > .recipe-sharing-action-form',
+      ':scope > .recipe-output-settings-action',
       ':scope > .recipe-output-menu-action',
       ':scope > .recipe-detail-export-action > .recipe-detail-export-trigger',
-      ':scope > .recipe-output-settings-action',
+      ':scope > .recipe-duplicate-action',
       ':scope > a[aria-label="Edit"]',
     ];
     const desktopControlBounds = await Promise.all([
@@ -1407,6 +1444,65 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const desktopControls = desktopControlBounds.filter((bounds) => bounds !== null);
     const desktopRowTops = desktopControls.map((bounds) => bounds.y);
     expect(Math.max(...desktopRowTops) - Math.min(...desktopRowTops)).toBeLessThanOrEqual(1);
+    expect(desktopControls[4]!.x).toBeLessThan(desktopControls[5]!.x);
+    const desktopTreatments = await Promise.all(
+      [pageSettingsButton, printButton, desktopDuplicate, editLink].map((button) =>
+        button.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            borderColor: style.borderColor,
+            backgroundColor: style.backgroundColor,
+            color: style.color,
+          };
+        }),
+      ),
+    );
+    expect(desktopTreatments[0]).toEqual(desktopTreatments[1]);
+    expect(desktopTreatments[2]).toEqual(desktopTreatments[3]);
+    const desktopDuplicateBounds = await desktopDuplicate.boundingBox();
+    const desktopEditBounds = await page.getByRole('link', { name: 'Edit' }).boundingBox();
+    expect(desktopDuplicateBounds).not.toBeNull();
+    expect(desktopEditBounds).not.toBeNull();
+    if (!desktopDuplicateBounds || !desktopEditBounds) {
+      throw new Error('Expected the desktop Duplicate and Edit actions.');
+    }
+    expect(desktopEditBounds.x - desktopDuplicateBounds.x - desktopDuplicateBounds.width).toBe(8);
+
+    await desktopDuplicate.click();
+    const desktopDuplicateDialog = page.getByRole('dialog', { name: 'Duplicate recipe' });
+    await expect(desktopDuplicateDialog).toBeVisible();
+    await expect(desktopDuplicateDialog.getByLabel('Name')).toHaveValue(`${recipeName} (Copy)`);
+    await expect(
+      desktopDuplicateDialog.getByLabel('Publication').locator('option:checked'),
+    ).toHaveText('Recipe Tin');
+    const duplicateFields = desktopDuplicateDialog.locator('.recipe-duplicate-field');
+    const nameField = duplicateFields.nth(0);
+    const publicationField = duplicateFields.nth(1);
+    const nameLabel = nameField.locator('label');
+    const nameInput = desktopDuplicateDialog.getByLabel('Name');
+    const nameFieldBounds = await nameField.boundingBox();
+    const nameLabelBounds = await nameLabel.boundingBox();
+    const nameInputBounds = await nameInput.boundingBox();
+    const publicationFieldBounds = await publicationField.boundingBox();
+    expect(nameFieldBounds).not.toBeNull();
+    expect(nameLabelBounds).not.toBeNull();
+    expect(nameInputBounds).not.toBeNull();
+    expect(publicationFieldBounds).not.toBeNull();
+    if (!nameFieldBounds || !nameLabelBounds || !nameInputBounds || !publicationFieldBounds) {
+      throw new Error('Expected the duplicate dialog field geometry.');
+    }
+    expect(nameInputBounds.y).toBeGreaterThan(nameLabelBounds.y + nameLabelBounds.height);
+    expect(publicationFieldBounds.y).toBeGreaterThan(nameFieldBounds.y + nameFieldBounds.height);
+    await expect(nameLabel).toHaveCSS('font-weight', '700');
+    await expect(nameField).toHaveCSS('border-top-style', 'solid');
+    await expect(nameField).toHaveCSS('border-top-width', '1px');
+    const duplicateDialogA11y = await new AxeBuilder({ page })
+      .include('.recipe-duplicate-dialog')
+      .analyze();
+    expect(duplicateDialogA11y.violations).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(desktopDuplicateDialog).toBeHidden();
+    await expect(desktopDuplicate).toBeFocused();
     const [starIconBounds, heartIconBounds] = await Promise.all([
       desktopStar.locator('svg').boundingBox(),
       desktopHeart.locator('svg').boundingBox(),
@@ -1446,6 +1542,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     await page.setViewportSize({ width: 390, height: 844 });
     const actionToolbar = page.locator('.recipe-detail-heading-actions');
     const markerActions = actionToolbar.locator('.recipe-marker-actions');
+    const duplicateButton = page.getByRole('button', { name: 'Duplicate recipe' });
     const markerGroupBounds = await markerActions.boundingBox();
     const toolbarBounds = await actionToolbar.boundingBox();
     const privacyToggle = page.getByRole('switch', { name: 'Make private' });
@@ -1480,7 +1577,6 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const heartButton = page.getByRole('button', { name: 'Heart recipe' });
     const starButton = page.getByRole('button', { name: 'Star recipe' });
     const editButton = actionToolbar.getByRole('link', { name: 'Edit' });
-    const pageSettingsButton = page.getByRole('button', { name: 'Page settings' });
     const heartBounds = await heartButton.boundingBox();
     const starBounds = await starButton.boundingBox();
     const heartFormBounds = await heartButton.locator('..').boundingBox();
@@ -1500,14 +1596,6 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const toolbarRight = await actionToolbar.evaluate(
       (element) => element.getBoundingClientRect().right,
     );
-    const otherActionBottoms = await actionToolbar
-      .locator(':scope > :not(.recipe-marker-actions):not(.recipe-marker-action-status)')
-      .evaluateAll((elements) =>
-        elements
-          .map((element) => element.getBoundingClientRect())
-          .filter((bounds) => bounds.width > 0 && bounds.height > 0)
-          .map((bounds) => bounds.bottom),
-      );
     expect(markerGroupBounds).not.toBeNull();
     expect(toolbarBounds).not.toBeNull();
     expect(heartBounds).not.toBeNull();
@@ -1516,7 +1604,6 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     expect(editBounds).not.toBeNull();
     expect(pageSettingsBounds).not.toBeNull();
     expect(toolbarActionBounds.every((bounds) => bounds !== null)).toBe(true);
-    expect(otherActionBottoms.length).toBeGreaterThan(0);
     if (
       !markerGroupBounds ||
       !toolbarBounds ||
@@ -1529,30 +1616,37 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     ) {
       throw new Error('Expected recipe marker action geometry.');
     }
-    expect(markerGroupBounds.y).toBeGreaterThanOrEqual(Math.max(...otherActionBottoms) - 1);
+    const firstRowBottom = Math.max(
+      ...toolbarActionBounds.map((bounds) => bounds!.y + bounds!.height),
+    );
+    expect(markerGroupBounds.y).toBeGreaterThanOrEqual(firstRowBottom);
     expect(toolbarActionBounds[5]!.x + toolbarActionBounds[5]!.width).toBeCloseTo(toolbarRight, 0);
-    expect(
-      Math.abs(
-        starBounds.x + starBounds.width / 2 - (pageSettingsBounds.x + pageSettingsBounds.width / 2),
-      ),
-    ).toBeLessThanOrEqual(1);
     const actionGaps = toolbarActionBounds.slice(1).map((bounds, index) => {
       const previousBounds = toolbarActionBounds[index]!;
       return bounds!.x - (previousBounds.x + previousBounds.width);
     });
     expect(toolbarActionBounds[1]!.width).toBeGreaterThan(36);
-    expect(toolbarActionBounds[1]!.width).toBe(60);
+    expect(toolbarActionBounds[1]!.width).toBe(72);
     for (const actionGap of actionGaps.slice(1)) {
       expect(Math.abs(actionGap - actionGaps[0])).toBeLessThanOrEqual(1);
     }
-    expect(starBounds.y).toBeGreaterThanOrEqual(pageSettingsBounds.y + pageSettingsBounds.height);
+    expect(pageSettingsBounds.x - toolbarActionBounds[3]!.x - toolbarActionBounds[3]!.width).toBe(
+      4,
+    );
+    expect(pageSettingsBounds.y).toBe(toolbarActionBounds[4]!.y);
+    const duplicateBounds = await duplicateButton.boundingBox();
+    expect(duplicateBounds).not.toBeNull();
+    if (!duplicateBounds) throw new Error('Expected the mobile Duplicate action.');
+    expect(duplicateBounds.x - (heartBounds.x + heartBounds.width)).toBe(4);
+    expect(
+      Math.abs(
+        heartBounds.y + heartBounds.height / 2 - (duplicateBounds.y + duplicateBounds.height / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
     expect(
       Math.abs(
         heartBounds.x + heartBounds.width / 2 - (heartFormBounds.x + heartFormBounds.width / 2),
       ),
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(heartBounds.x + heartBounds.width / 2 - (editBounds.x + editBounds.width / 2)),
     ).toBeLessThanOrEqual(1);
     expect(await heartButton.evaluate((element) => getComputedStyle(element).width)).toBe('36px');
     expect(await heartButton.evaluate((element) => getComputedStyle(element).height)).toBe('36px');
@@ -1563,6 +1657,32 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     );
     expect(heartFormBounds.width).toBe(48);
     expect(heartFormBounds.height).toBe(48);
+    const mobileTreatments = await Promise.all(
+      [pageSettingsButton, printButton, duplicateButton, editLink].map((button) =>
+        button.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            borderColor: style.borderColor,
+            backgroundColor: style.backgroundColor,
+            color: style.color,
+          };
+        }),
+      ),
+    );
+    expect(mobileTreatments[0]).toEqual(mobileTreatments[1]);
+    expect(mobileTreatments[2]).toEqual(mobileTreatments[3]);
+    await duplicateButton.click();
+    const mobileDuplicateDialog = page.getByRole('dialog', { name: 'Duplicate recipe' });
+    const mobileDialogBounds = await mobileDuplicateDialog.boundingBox();
+    expect(mobileDialogBounds).not.toBeNull();
+    if (!mobileDialogBounds) throw new Error('Expected the mobile duplicate dialog.');
+    expect(mobileDialogBounds.x).toBeGreaterThanOrEqual(0);
+    expect(mobileDialogBounds.x + mobileDialogBounds.width).toBeLessThanOrEqual(390);
+    expect(
+      toolbarActionBounds[5]!.x - toolbarActionBounds[4]!.x - toolbarActionBounds[4]!.width,
+    ).toBe(4);
+    await mobileDuplicateDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(duplicateButton).toBeFocused();
     const inactiveBorders = await Promise.all(
       [starButton, heartButton].map((button) =>
         button.evaluate((element) => {
@@ -1617,9 +1737,9 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     await expectPrivacyContentsEvenlySpaced();
     const narrowToolbarBounds = await actionToolbar.boundingBox();
     const narrowSettingsBounds = await pageSettingsButton.boundingBox();
-    const narrowStarBounds = await starButton.boundingBox();
     const narrowHeartBounds = await heartButton.boundingBox();
     const narrowEditBounds = await editButton.boundingBox();
+    const narrowDuplicateBounds = await duplicateButton.boundingBox();
     const narrowHeartFormBounds = await heartButton.locator('..').boundingBox();
     const narrowActionBounds = await Promise.all(
       toolbarActionSelectors.map((selector) => actionToolbar.locator(selector).boundingBox()),
@@ -1627,40 +1747,47 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const narrowDocumentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(narrowToolbarBounds).not.toBeNull();
     expect(narrowSettingsBounds).not.toBeNull();
-    expect(narrowStarBounds).not.toBeNull();
     expect(narrowHeartBounds).not.toBeNull();
     expect(narrowEditBounds).not.toBeNull();
+    expect(narrowDuplicateBounds).not.toBeNull();
     expect(narrowHeartFormBounds).not.toBeNull();
     expect(narrowActionBounds.every((bounds) => bounds !== null)).toBe(true);
     if (
       !narrowToolbarBounds ||
       !narrowSettingsBounds ||
-      !narrowStarBounds ||
       !narrowHeartBounds ||
       !narrowEditBounds ||
+      !narrowDuplicateBounds ||
       !narrowHeartFormBounds ||
       narrowActionBounds.some((bounds) => bounds === null)
     ) {
       throw new Error('Expected narrow mobile recipe action geometry.');
     }
     expect(narrowDocumentWidth).toBeLessThanOrEqual(320);
-    expect(
-      Math.abs(
-        narrowStarBounds.x +
-          narrowStarBounds.width / 2 -
-          (narrowSettingsBounds.x + narrowSettingsBounds.width / 2),
-      ),
-    ).toBeLessThanOrEqual(1);
-    expect(narrowStarBounds.y).toBeGreaterThanOrEqual(
-      narrowSettingsBounds.y + narrowSettingsBounds.height,
+    expect(narrowSettingsBounds.x - narrowActionBounds[3]!.x - narrowActionBounds[3]!.width).toBe(
+      4,
     );
+    expect(narrowSettingsBounds.y).toBe(narrowActionBounds[4]!.y);
+    expect(narrowDuplicateBounds.x - (narrowHeartBounds.x + narrowHeartBounds.width)).toBe(4);
     expect(
       Math.abs(
-        narrowHeartBounds.x +
-          narrowHeartBounds.width / 2 -
-          (narrowEditBounds.x + narrowEditBounds.width / 2),
+        narrowHeartBounds.y +
+          narrowHeartBounds.height / 2 -
+          (narrowDuplicateBounds.y + narrowDuplicateBounds.height / 2),
       ),
     ).toBeLessThanOrEqual(1);
+    await duplicateButton.click();
+    const narrowDuplicateDialog = page.getByRole('dialog', { name: 'Duplicate recipe' });
+    const narrowDialogBounds = await narrowDuplicateDialog.boundingBox();
+    expect(narrowDialogBounds).not.toBeNull();
+    if (!narrowDialogBounds) throw new Error('Expected the narrow duplicate dialog.');
+    expect(narrowDialogBounds.x).toBeGreaterThanOrEqual(0);
+    expect(narrowDialogBounds.x + narrowDialogBounds.width).toBeLessThanOrEqual(314);
+    await narrowDuplicateDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(duplicateButton).toBeFocused();
+    expect(narrowActionBounds[5]!.x - narrowActionBounds[4]!.x - narrowActionBounds[4]!.width).toBe(
+      4,
+    );
     expect(narrowHeartBounds.x + narrowHeartBounds.width).toBeLessThanOrEqual(
       narrowToolbarBounds.x + narrowToolbarBounds.width + 1,
     );
@@ -1669,10 +1796,45 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       return bounds!.x - (previousBounds.x + previousBounds.width);
     });
     expect(narrowActionBounds[1]!.width).toBeGreaterThan(36);
-    expect(narrowActionBounds[1]!.width).toBe(60);
+    expect(narrowActionBounds[1]!.width).toBe(72);
     for (const actionGap of narrowActionGaps.slice(1)) {
       expect(Math.abs(actionGap - narrowActionGaps[0])).toBeLessThanOrEqual(1);
     }
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await duplicateButton.click();
+    const submitDialog = page.getByRole('dialog', { name: 'Duplicate recipe' });
+    const duplicateName = `${recipeName} (Editable Copy)`;
+    await submitDialog.getByLabel('Name').fill(duplicateName);
+    await submitDialog.getByRole('button', { name: 'Duplicate recipe' }).click();
+    await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit$/);
+    await expect(page.getByLabel('Name')).toHaveValue(duplicateName);
+
+    const copyId = new URL(page.url()).pathname.split('/').at(-2);
+    expect(copyId).toBeTruthy();
+    const copyResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=name,is_private,publication_id,saved_from_public_id&id=eq.${copyId}`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    const copyResponseBody = await copyResponse.text();
+    expect(copyResponse.ok(), copyResponseBody).toBeTruthy();
+    const [copy] = (await copyResponse.json()) as {
+      name: string;
+      is_private: boolean;
+      publication_id: string;
+      saved_from_public_id: string | null;
+    }[];
+    expect(copy).toMatchObject({
+      name: duplicateName,
+      is_private: true,
+      saved_from_public_id: null,
+    });
+    expect(copy?.publication_id).toBeTruthy();
   } finally {
     await deleteTestUser(request, user);
   }

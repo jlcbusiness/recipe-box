@@ -24,3 +24,20 @@
   default option; selecting the saved unit restores that dimension.
 - [x] Update the slice and product contracts and verify the related unit and
   desktop/mobile E2E tests.
+
+## Acceptance coverage follow-up
+
+- [x] Add E2E coverage for editing a legacy paired equivalent when trusted
+  density exists, including requiring a source choice and saving only it.
+- [x] Add Guest/public E2E coverage proving private equivalent amounts do not
+  appear in the rendered public recipe or its interactive controls.
+- [x] Run both focused E2E tests on Chromium and Fold 6, then run typecheck.
+- [x] Run the full unit and E2E phases: 653 unit tests passed; the E2E run
+  reported 380 passed, 52 failed, and 10 skipped.
+- [x] Run the accessibility suite separately after `npm test` stopped at E2E
+  failures: 100 passed, 25 failed, and 1 skipped.
+- [x] Correct DLC 35-related nutrition E2E setup uncovered during the run:
+  open the Recipe data Settings tab and set a public username before publishing.
+- [x] Rerun the focused nutrition/settings/database-bundle E2Es on Chromium and
+  Fold 6: 5 passed and 1 desktop-only test was skipped on Fold 6.
+- [x] Run the production build, typecheck, and scoped Biome check; all passed.

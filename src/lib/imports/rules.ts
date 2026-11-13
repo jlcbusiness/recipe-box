@@ -456,7 +456,8 @@ function validateData(
             (field) =>
               !(schemaVersion < 6 && ['score', 'is_starred', 'is_hearted'].includes(field)) &&
               !(schemaVersion < 8 && ['makes_quantity', 'makes_thing'].includes(field)) &&
-              !(schemaVersion < 9 && field === 'nutrition_overrides'),
+              !(schemaVersion < 9 && field === 'nutrition_overrides') &&
+              !(schemaVersion < 12 && field === 'saved_from_public_id'),
           )
         : table === 'recipe_ingredients'
           ? portableRecordFields[table].filter(
@@ -539,7 +540,7 @@ function validateData(
       source_public_id: null,
     }));
   } else {
-    const sourcePublicIds = new Set<string>();
+    const protectedReferenceKeys = new Set<string>();
     for (const reference of records.recipe_references as ExportRecord[]) {
       const protectedSource = reference.is_protected_source;
       const sourcePublicId = reference.source_public_id;
@@ -581,11 +582,40 @@ function validateData(
       ) {
         throw new Error('A protected source reference must use its stable public URL.');
       }
-      const normalizedId = sourcePublicId.toLocaleLowerCase();
-      if (sourcePublicIds.has(normalizedId)) {
-        throw new Error('The bundle repeats a protected public source identity.');
+      const key = `${String(reference.recipe_id).toLocaleLowerCase()}:${sourcePublicId.toLocaleLowerCase()}`;
+      if (protectedReferenceKeys.has(key)) {
+        throw new Error('The bundle repeats protected attribution on one recipe.');
       }
-      sourcePublicIds.add(normalizedId);
+      protectedReferenceKeys.add(key);
+    }
+  }
+
+  for (const recipe of records.recipes as ExportRecord[]) {
+    if (schemaVersion < 12) {
+      recipe.saved_from_public_id = null;
+      continue;
+    }
+
+    const savedFromPublicId = recipe.saved_from_public_id;
+    if (
+      !Object.hasOwn(recipe, 'saved_from_public_id') ||
+      (savedFromPublicId !== null &&
+        (typeof savedFromPublicId !== 'string' || !uuidPattern.test(savedFromPublicId)))
+    ) {
+      throw new Error('The bundle contains invalid direct-save identity data.');
+    }
+    if (typeof savedFromPublicId === 'string') {
+      const hasMatchingAttribution = (records.recipe_references as ExportRecord[]).some(
+        (reference) =>
+          String(reference.recipe_id).toLocaleLowerCase() ===
+            String(recipe.id).toLocaleLowerCase() &&
+          reference.is_protected_source === true &&
+          String(reference.source_public_id).toLocaleLowerCase() ===
+            savedFromPublicId.toLocaleLowerCase(),
+      );
+      if (!hasMatchingAttribution) {
+        throw new Error('A direct-save marker must match protected source attribution.');
+      }
     }
   }
 

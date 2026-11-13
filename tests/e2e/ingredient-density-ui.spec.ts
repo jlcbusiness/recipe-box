@@ -293,6 +293,179 @@ test('Measure equivalents derive the other dimension from trusted density @e2e @
   }
 });
 
+test('legacy paired equivalents require a source choice with trusted density @e2e @density', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${user.accessToken}`,
+  };
+  const ingredientName = 'Legacy Density Equivalent Lemon';
+
+  try {
+    const revisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${user.id}`,
+      { headers },
+    );
+    expect(revisionResponse.ok(), await revisionResponse.text()).toBeTruthy();
+    const [catalogRevision] = (await revisionResponse.json()) as { revision: number }[];
+    expect(catalogRevision?.revision).toBeTruthy();
+
+    const addIngredient = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers,
+        data: {
+          p_action: 'add',
+          p_expected_revision: catalogRevision.revision,
+          p_name: ingredientName,
+        },
+      },
+    );
+    expect(addIngredient.ok(), await addIngredient.text()).toBeTruthy();
+    const ingredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id&account_id=eq.${user.id}&name=eq.${encodeURIComponent(ingredientName)}`,
+      { headers },
+    );
+    expect(ingredientResponse.ok(), await ingredientResponse.text()).toBeTruthy();
+    const [ingredient] = (await ingredientResponse.json()) as { id: string }[];
+    expect(ingredient?.id).toBeTruthy();
+
+    await signIn(page, user.email, user.password);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
+    const section = page.getByRole('region', { name: 'Ingredients' });
+    await section.getByRole('button', { name: 'Ingredients', exact: true }).click();
+    await section.getByRole('button', { name: `Measure equivalent for ${ingredientName}` }).click();
+
+    let dialog = page.locator('dialog').filter({ hasText: 'Average measures' });
+    const volumeAmount = dialog.getByLabel('Average volume amount');
+    const weightAmount = dialog.getByLabel('Average weight amount');
+    await volumeAmount.fill('1');
+    await weightAmount.fill('120');
+    await expect(weightAmount).not.toHaveAttribute('readonly');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(section.getByRole('status')).toHaveText('Measure equivalent saved.');
+
+    const equivalentBeforeDensityResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_measure_equivalents?select=volume_amount,volume_unit_code,weight_amount,weight_unit_code&account_id=eq.${user.id}&ingredient_id=eq.${ingredient.id}`,
+      { headers },
+    );
+    expect(
+      equivalentBeforeDensityResponse.ok(),
+      await equivalentBeforeDensityResponse.text(),
+    ).toBeTruthy();
+    const [legacyEquivalent] = (await equivalentBeforeDensityResponse.json()) as {
+      volume_amount: number | null;
+      volume_unit_code: string | null;
+      weight_amount: number | null;
+      weight_unit_code: string | null;
+    }[];
+    expect(legacyEquivalent).toMatchObject({
+      volume_amount: 1,
+      volume_unit_code: 'cup',
+      weight_amount: 120,
+      weight_unit_code: 'g',
+    });
+
+    const latestRevisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${user.id}`,
+      { headers },
+    );
+    expect(latestRevisionResponse.ok(), await latestRevisionResponse.text()).toBeTruthy();
+    const [latestCatalogRevision] = (await latestRevisionResponse.json()) as {
+      revision: number;
+    }[];
+    expect(latestCatalogRevision?.revision).toBeTruthy();
+    const setDensity = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_density`,
+      {
+        headers,
+        data: {
+          p_action: 'set',
+          p_expected_revision: latestCatalogRevision.revision,
+          p_ingredient_id: ingredient.id,
+          p_volume_amount: 1,
+          p_volume_unit_code: 'cup',
+          p_weight_amount: 240,
+          p_weight_unit_code: 'g',
+        },
+      },
+    );
+    expect(setDensity.ok(), await setDensity.text()).toBeTruthy();
+    const densityBeforeSaveResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_densities?select=volume_amount,volume_unit_code,weight_amount,weight_unit_code&ingredient_id=eq.${ingredient.id}`,
+      { headers },
+    );
+    expect(densityBeforeSaveResponse.ok(), await densityBeforeSaveResponse.text()).toBeTruthy();
+    const densityBeforeSave = await densityBeforeSaveResponse.json();
+    expect(densityBeforeSave).toEqual([
+      {
+        volume_amount: 1,
+        volume_unit_code: 'cup',
+        weight_amount: 240,
+        weight_unit_code: 'g',
+      },
+    ]);
+
+    await page.reload();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
+    await section.getByRole('button', { name: 'Ingredients', exact: true }).click();
+    await section.getByRole('button', { name: `Measure equivalent for ${ingredientName}` }).click();
+    dialog = page.locator('dialog').filter({ hasText: 'Average measures' });
+    const sourceChoice = dialog.getByRole('group', {
+      name: 'Existing values with trusted density',
+    });
+    const volumeSource = sourceChoice.getByRole('radio', { name: 'Use Volume as source' });
+    const weightSource = sourceChoice.getByRole('radio', { name: 'Use Weight as source' });
+    await expect(volumeSource).not.toBeChecked();
+    await expect(weightSource).not.toBeChecked();
+    await expect(dialog.getByLabel('Average volume amount')).toHaveValue('1');
+    await expect(dialog.getByLabel('Average weight amount')).toHaveValue('120');
+
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'Choose which existing equivalent to keep as the source before saving.',
+    );
+
+    await volumeSource.check();
+    await expect(dialog.getByLabel('Average weight amount')).toHaveValue('240');
+    await expect(dialog.getByLabel('Average weight amount')).toHaveAttribute('readonly');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(section.getByText('Measure equivalent saved.', { exact: true })).toBeVisible();
+
+    const equivalentResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_measure_equivalents?select=volume_amount,volume_unit_code,weight_amount,weight_unit_code&account_id=eq.${user.id}&ingredient_id=eq.${ingredient.id}`,
+      { headers },
+    );
+    expect(equivalentResponse.ok(), await equivalentResponse.text()).toBeTruthy();
+    const [savedEquivalent] = (await equivalentResponse.json()) as {
+      volume_amount: number | null;
+      volume_unit_code: string | null;
+      weight_amount: number | null;
+      weight_unit_code: string | null;
+    }[];
+    expect(savedEquivalent).toMatchObject({
+      volume_amount: 1,
+      volume_unit_code: 'cup',
+      weight_amount: null,
+      weight_unit_code: null,
+    });
+
+    const densityAfterSaveResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_densities?select=volume_amount,volume_unit_code,weight_amount,weight_unit_code&ingredient_id=eq.${ingredient.id}`,
+      { headers },
+    );
+    expect(densityAfterSaveResponse.ok(), await densityAfterSaveResponse.text()).toBeTruthy();
+    expect(await densityAfterSaveResponse.json()).toEqual(densityBeforeSave);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('Settings stages, searches, edits, and removes trusted ingredient densities @e2e @a11y @density', async ({
   page,
   request,

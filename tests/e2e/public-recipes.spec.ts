@@ -2695,6 +2695,124 @@ test('public outputs omit private Rating and marker data @e2e', async ({
   }
 });
 
+test('Guest public recipes do not expose private measure equivalents @e2e', async ({
+  browser,
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ingredientName = `Public equivalent projection ${randomUUID()}`;
+  let guestPage: Page | null = null;
+
+  try {
+    const revisionResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredient_catalog_revisions?select=revision&account_id=eq.${user.id}`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(revisionResponse.ok(), await revisionResponse.text()).toBeTruthy();
+    const [catalogRevision] = (await revisionResponse.json()) as { revision: number }[];
+    expect(catalogRevision?.revision).toBeTruthy();
+
+    const addIngredient = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/manage_ingredient_catalog`,
+      {
+        headers: ownerHeaders(config, user),
+        data: {
+          p_action: 'add',
+          p_expected_revision: catalogRevision.revision,
+          p_name: ingredientName,
+        },
+      },
+    );
+    expect(addIngredient.ok(), await addIngredient.text()).toBeTruthy();
+    const ingredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/ingredients?select=id,name&account_id=eq.${user.id}`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(ingredientResponse.ok(), await ingredientResponse.text()).toBeTruthy();
+    const ingredients = (await ingredientResponse.json()) as { id: string; name: string }[];
+    const ingredient = ingredients.find(
+      (row) => row.name.toLocaleLowerCase() === ingredientName.toLocaleLowerCase(),
+    );
+    if (!ingredient?.id) throw new Error('Expected the new ingredient to be returned.');
+
+    await signIn(page, user);
+    await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
+    const ingredientSection = page.getByRole('region', { name: 'Ingredients' });
+    await ingredientSection.getByRole('button', { name: 'Ingredients', exact: true }).click();
+    await ingredientSection
+      .getByRole('button', { name: `Measure equivalent for ${ingredientName}` })
+      .click();
+    const equivalentDialog = page.locator('dialog').filter({ hasText: 'Average measures' });
+    await equivalentDialog.getByLabel('Average volume amount').fill('43.21');
+    await equivalentDialog.getByLabel('Average weight amount').fill('31586.51');
+    await expect(equivalentDialog.getByLabel('Average volume amount')).not.toHaveAttribute(
+      'readonly',
+    );
+    await expect(equivalentDialog.getByLabel('Average weight amount')).not.toHaveAttribute(
+      'readonly',
+    );
+    await equivalentDialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(ingredientSection.getByRole('status')).toHaveText('Measure equivalent saved.');
+
+    const ingredientRowId = randomUUID();
+    const recipe = await createRecipe(
+      request,
+      config,
+      user,
+      'Private equivalents stay private',
+      undefined,
+      true,
+      [
+        {
+          recipe_ingredient_id: ingredientRowId,
+          ingredient_id: ingredient.id,
+          ingredient_name: null,
+          is_main: true,
+          detail: '',
+          preparation: '',
+          measurements: [
+            {
+              measurement_type: 'count',
+              amount_min: 1,
+              amount_max: null,
+              unit_code: null,
+              picklist_value_id: null,
+            },
+          ],
+        },
+      ],
+    );
+    const publicId = await getPublicId(request, config, recipe.id);
+
+    const publicResponse = await request.get(`/r/${publicId}`);
+    expect(publicResponse.status()).toBe(200);
+    const publicHtml = await publicResponse.text();
+    expect(publicHtml).not.toContain('43.21');
+    expect(publicHtml).not.toContain('31586.51');
+
+    guestPage = await browser.newPage({ viewport: page.viewportSize() ?? undefined });
+    await guestPage.goto(`/r/${publicId}`);
+    await expect(
+      guestPage.getByRole('heading', { name: 'Private equivalents stay private' }),
+    ).toBeVisible();
+    const publicIngredient = guestPage
+      .locator('.recipe-ingredient-list li, .recipe-ingredient-first-table tbody tr')
+      .filter({ hasText: ingredientName })
+      .first();
+    await expect(publicIngredient).toContainText('1');
+    await expect(publicIngredient).not.toContainText('43.21');
+    await expect(publicIngredient).not.toContainText('31586.51');
+    await expect(publicIngredient).not.toContainText('cup');
+    await expect(guestPage.getByRole('combobox', { name: /quantity measure/i })).toHaveCount(0);
+  } finally {
+    await guestPage?.close();
+    await deleteTestUser(request, user);
+  }
+});
+
 test('a guest can scale, switch units, and print the public recipe @e2e', async ({
   page,
   request,

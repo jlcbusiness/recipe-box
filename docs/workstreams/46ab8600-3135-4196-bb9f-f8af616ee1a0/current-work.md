@@ -75,22 +75,52 @@
   Verified `package.json` and both lockfile version fields match. Scoped
   whitespace checks pass; the full check still reports trailing whitespace in
   the pre-existing `.github/prompts/update.prompt.md` edit.
+- 2026-11-12: Resumed in session `55a5aef2-c5f1-44fb-ad69-976e9f10efbd` to
+  close the remaining DLC 35 evidence gaps with focused E2E coverage for
+  legacy paired-equivalent source selection and Guest/public privacy.
+- 2026-11-12: Added both acceptance E2Es. The legacy case verifies an explicit
+  pair becomes source-choice-required when density is added, then saves only
+  the chosen source while preserving trusted density. The Guest case verifies
+  private equivalent values are absent from public HTML and reader controls.
+  Both tests pass on Chromium and Fold 6; typecheck, scoped Biome, and
+  `git diff --check` pass.
+- 2026-11-12: The user requested the full test suite and any additional checks
+  that could increase confidence in DLC 35. The current task is to run
+  `npm test` and the production build; the test web server applies local
+  migrations but does not reset the local database.
+- 2026-11-12: The full `npm test` run passed all 653 unit tests, then reported
+  380 E2E passes, 52 failures, and 10 skips. Because the E2E command failed,
+  the chained accessibility phase did not run; running `npm run test:a11y`
+  separately produced 100 passes, 25 failures, and 1 skip. The production
+  build passed.
+- 2026-11-12: Investigated DLC 35-related nutrition E2E failures. The Settings
+  checks needed to select the Recipe data tab, and the public nutrition check
+  needed to set the required public username before publishing. After updating
+  those test preconditions, the focused nutrition/settings/database-bundle
+  group passed on Chromium and Fold 6 (5 passed, 1 expected Fold 6 skip).
+  Scoped Biome and typecheck passed. The other broad-suite failures remain
+  untriaged, so their relation to DLC 35 is undetermined.
 
 ## Save Point
 
 - Goal: deliver Count and Things measure equivalents with trusted-density precedence.
-- Status: implemented; app version 1.9.0 selected.
+- Status: implemented; app version 1.9.0 selected, and the legacy-pair,
+  Guest/public, and nutrition database-bundle acceptance paths are verified
+  on Chromium and Fold 6. The repository-wide E2E and accessibility runs still
+  report untriaged failures.
 - Repository/branch: `/home/joshlamont/Code/recipe-box`, `main`.
-- Current step: reader picklist copy and saved-unit restoration follow-up is
-  complete; package metadata and DLC 35 docs now use app version 1.9.0.
-- Last verified result: the focused reader unit tests (55), equivalent E2E on
-  Chromium and Fold 6 (2), typecheck, targeted Biome, and `git diff --check`
-  passed. Version metadata and the lockfile now match at 1.9.0; the scoped
-  whitespace check passed. Markdown lint reports 30 unrelated repository
-  errors, and the full whitespace check flags the pre-existing update prompt.
-- Next action: no further versioning action; the earlier non-failing print-test
-  stream-write log remains uninvestigated unless it recurs.
+- Current step: requested validation is complete; no DLC 35-specific check is
+  pending.
+- Last verified result: full unit phase 653/653 passed; the E2E phase reported
+  380 passed, 52 failed, and 10 skipped; separate accessibility run reported
+  100 passed, 25 failed, and 1 skipped. The production build, typecheck,
+  scoped Biome, and focused DLC 35 nutrition/equivalent E2Es passed. Remaining
+  broad-suite failures are not yet triaged.
+- Next action: none for DLC 35 validation; the untriaged repository-wide
+  failures are a separate follow-up.
 - Checklist: [checklist.md](./checklist.md)
 - Trace: [trace.md](./trace.md) — session
-  `46ab8600-3135-4196-bb9f-f8af616ee1a0`; last action: selected and updated
-  app version 1.9.0.
+  `55a5aef2-c5f1-44fb-ad69-976e9f10efbd`; latest action: focused nutrition,
+  database-bundle, and public-nutrition E2Es passed on Chromium and Fold 6;
+  typecheck, scoped Biome, and production build passed. Broad-suite failures
+  remain untriaged.

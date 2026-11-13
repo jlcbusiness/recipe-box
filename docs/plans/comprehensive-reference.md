@@ -1517,6 +1517,9 @@ pages retain the existing authenticated-user boundary and private shell.
   private unless the User explicitly republishes them; their stable public IDs
   and URLs are preserved.
 - **Private Toggle:** Marking a recipe private restricts access to the signed-in User whose account contains the recipe.
+- On mobile, the privacy toggle remains 72px wide in both Private and
+  Linkable states. Show `Private` when private and the two-line `Can` / `Link`
+  label when linkable; do not resize the control when its state changes.
 - **HTTP Response Rules for Guest Requests:**
   - **Private Recipe:** Returns **HTTP 404 Not Found** with a generic, calm page ("This recipe is currently
     unavailable") and `Cache-Control: no-store` . Does not reveal that the recipe exists, nor its title, User, or
@@ -1585,7 +1588,29 @@ changed while the copy exists. If the source publication is the Recipe Tin
 collection, it is not copied as a source citation; the Tin is a container, not
 a recipe source.
 
-### 9.4 Secure Image Delivery
+### 9.4 Recipe duplication
+
+A signed-in User can duplicate an active recipe in their own account from its
+detail page. The dialog defaults the name to `{source name} (Copy)` and the
+active source publication, falling back to Recipe Tin if that publication is
+no longer active; both values can be changed. Confirming creates a separate
+private copy and opens it in the editor. The original is unchanged.
+
+Duplication copies the recipe graph and user-entered recipe data using fresh
+recipe and child identities. Same-account catalogs and valid recipe links are
+reused, self-links are remapped to the copy, and photos are staged at new
+private Storage paths before the atomic database commit. Failed staging or
+commit removes staged media and leaves no partial graph.
+
+Protected public-source attribution is copied as provenance, but duplication
+clears `saved_from_public_id`, which identifies only a recipe created by the
+direct public Save action. Each account may have only one active recipe for a
+non-null direct-save marker; a trashed marked recipe does not block a fresh
+direct save, and a conflicting restore is rejected. Migration backfill sets
+the marker only when a recipe has exactly one distinct protected source ID;
+ambiguous attribution remains protected but unmarked.
+
+### 9.5 Secure Image Delivery
 
 - All covers and recipe images are stored in **private Supabase Storage buckets**.
 - The public bucket setting is disabled.
@@ -1603,7 +1628,7 @@ a recipe source.
 - Deletion queues every private object path. A Vercel daily cron invokes the
   protected cleanup endpoint; Storage failures remain queued and are retried.
 
-### 9.5 Abuse Protection
+### 9.6 Abuse Protection
 
 - The application does not implement public-route rate limiting. Configure a
   Vercel Firewall rule for `/r/*` if deployment-level rate limiting is required.
@@ -1779,15 +1804,16 @@ delete Admin accounts or transfer Owner status.
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 10 archives
+user-facing backup mechanism; Supabase backups are not used. Version 12 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
   version, and each payload file's uncompressed byte count and SHA-256 digest.
 - `data.json`: Normalized relational JSON using fixed record-table and
   per-table field allow-lists, including ingredient sets and each row's set
-  membership, portion ratio, Size value/unit, mention ordinal, and protected
-  source-reference identity. Account
+  membership, portion ratio, Size value/unit, mention ordinal, protected
+  source-reference identity, ordered time entries, and the optional
+  `saved_from_public_id` direct-save marker. Account
   IDs, Auth user IDs, admin and
   sign-in-method fields, signed URLs, private Storage paths, and export
   timestamps are omitted. Media rows include nullable normalized crop framing
@@ -1822,7 +1848,7 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Imports accept supported v1 through v8 bundles only after validating archive
+Imports accept supported v1 through v12 bundles only after validating archive
 integrity, scope, and required graph data. Versions 1 through 3 default media
 framing to null (Fit/contain); version 4 preserves each media asset's nullable
 normalized crop rectangle at 0-degree rotation, and version 5 preserves its
@@ -1832,6 +1858,11 @@ variants; versions 1 through 6 treat their full and thumbnail files as the
 source. Invalid framing is rejected before applying records.
 Version 8 preserves the paired Makes quantity and thing; earlier versions
 default both fields to null.
+Version 9 adds nutrition profiles, measure equivalents, and recipe/ingredient
+nutrition overrides; version 10 adds protected public-source identity to
+references; version 11 adds ordered recipe time entries; and version 12 adds
+the `saved_from_public_id` direct-save marker. Versions 1 through 11 default
+that marker to null.
 Version 1 recipes receive a synthesized `Main` set and their ingredient rows
 are assigned to it. Version 2
 preserves the included set records and row membership. Versions 1 and 2 default
@@ -1840,6 +1871,12 @@ them and remaps portion markers with their row IDs. Imports are
 source-independent: the authenticated destination account determines
 ownership, and the import does not require the source account or source Auth
 identity to exist locally.
+
+Version 12 validates a non-null direct-save marker against the recipe's
+protected source attribution. Faithful imports preserve it only when no other
+active recipe in the destination account already has that marker; a collision
+is rejected. Choosing Duplicate for an import conflict clears the marker while
+preserving protected source attribution.
 
 Publication roots match by normalized publication type and name. Database and
 publication imports match recipe roots by normalized name within the resolved

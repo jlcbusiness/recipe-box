@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { exportTableNames, type PortableData } from '../../src/lib/exports/rules';
+import {
+  type ExportRecord,
+  exportTableNames,
+  type PortableData,
+} from '../../src/lib/exports/rules';
 import { planDatabaseImport, planImport } from '../../src/lib/imports/planning';
 import { findImportMatches } from '../../src/lib/imports/rules';
 
@@ -52,7 +56,11 @@ function createInput() {
       plain_text: 'Bake.',
     },
   ];
-  const existing = {
+  const existing: {
+    publications: ExportRecord[];
+    recipes: ExportRecord[];
+    recipe_references: ExportRecord[];
+  } = {
     publications: [
       { id: destinationPublicationId, publication_type: 'book', name: 'Baking Annual' },
     ],
@@ -197,8 +205,12 @@ describe('database import planning', () => {
         id: newRecipeId,
         publication_id: newPublicationId,
         name: 'Lemon cake',
+        food_type_id: undefined,
+        verdict_id: undefined,
+        enthusiasm_id: undefined,
         makes_quantity: 2,
         makes_thing: 'baby cakes',
+        saved_from_public_id: null,
         is_private: true,
       },
     ]);
@@ -1075,7 +1087,7 @@ describe('scoped import planning', () => {
     );
   });
 
-  it('rejects importing a second copy of the same public source into another recipe', () => {
+  it('preserves protected attribution when duplicating the same public source', () => {
     const { data, existing } = createInput();
     data.scope = { type: 'recipe', id: sourceRecipeId };
     data.records.recipe_references = [
@@ -1107,14 +1119,92 @@ describe('scoped import planning', () => {
       },
     ];
 
-    expect(() =>
-      planImport(
-        data,
-        existing,
-        { [`recipe:${sourceRecipeId}`]: { action: 'duplicate', targetId: destinationRecipeId } },
-        () => newRecipeId,
-      ),
-    ).toThrow(/already.*recipe tin|already saved|public source/i);
+    const plan = planImport(
+      data,
+      existing,
+      { [`recipe:${sourceRecipeId}`]: { action: 'duplicate', targetId: destinationRecipeId } },
+      () => newRecipeId,
+    );
+
+    expect(plan.records.recipe_references).toContainEqual(
+      expect.objectContaining({
+        recipe_id: newRecipeId,
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      }),
+    );
+  });
+
+  it('clears direct-save identity when duplicating a saved public recipe', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipes[0].saved_from_public_id = sourcePublicId;
+    data.records.recipe_references = [
+      {
+        id: '99999999-9999-4999-8999-999999999999',
+        recipe_id: sourceRecipeId,
+        reference_type: 'external_url',
+        publication_id: null,
+        linked_recipe_id: null,
+        display_text: "source-user's Lemon cake",
+        url: `https://recipe-box.example/r/${sourcePublicId}`,
+        position: 0,
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      },
+    ];
+    existing.recipes[0].saved_from_public_id = sourcePublicId;
+    existing.recipes[0].trashed_at = null;
+    existing.recipe_references = [
+      {
+        id: '88888888-8888-4888-8888-888888888888',
+        recipe_id: destinationRecipeId,
+        reference_type: 'external_url',
+        publication_id: null,
+        linked_recipe_id: null,
+        display_text: "source-user's Lemon cake",
+        url: `https://recipe-box.example/r/${sourcePublicId}`,
+        position: 0,
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      },
+    ];
+
+    const plan = planImport(
+      data,
+      existing,
+      { [`recipe:${sourceRecipeId}`]: { action: 'duplicate', targetId: destinationRecipeId } },
+      () => newRecipeId,
+    );
+
+    expect(plan.records.recipes[0]).toMatchObject({
+      id: newRecipeId,
+      saved_from_public_id: null,
+    });
+    expect(plan.records.recipe_references).toContainEqual(
+      expect.objectContaining({
+        recipe_id: newRecipeId,
+        is_protected_source: true,
+        source_public_id: sourcePublicId,
+      }),
+    );
+  });
+
+  it('rejects an active imported direct-save marker that already exists in the account', () => {
+    const { data, existing } = createInput();
+    data.scope = { type: 'recipe', id: sourceRecipeId };
+    data.records.recipes[0].saved_from_public_id = sourcePublicId;
+    existing.recipes = [
+      {
+        id: destinationRecipeId,
+        publication_id: destinationPublicationId,
+        name: 'Other recipe',
+        saved_from_public_id: sourcePublicId,
+        trashed_at: null,
+      },
+    ];
+
+    expect(() => planImport(data, existing, {})).toThrow(/direct save|saved copy|public source/i);
   });
 
   it('clears an out-of-scope recipe link when the display name is ambiguous', () => {

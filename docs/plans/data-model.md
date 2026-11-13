@@ -54,7 +54,7 @@ event. Updates and events are excluded from account reset and database bundles.
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, derived total time, notes, primary publication and location, optional online recipe URL, privacy, and public-link ID. |
+| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, derived total time, notes, primary publication and location, optional online recipe URL, privacy, public-link ID, and optional `saved_from_public_id` direct-save marker. |
 | Recipe time entry | An ordered recipe-owned duration in whole minutes linked to one account-managed Time Type. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
@@ -103,6 +103,13 @@ columns.
 - Every recipe has one primary publication. Each account has one permanent,
   system-managed Recipe Tin collection publication for recipes without an
   external publication source; Tin recipes have no publication location.
+- `saved_from_public_id` identifies a recipe created by directly saving a
+  public recipe; protected source attribution remains a separate immutable
+  recipe reference. An account may have only one active recipe per non-null
+  direct-save marker. Trashed recipes do not block a fresh direct save, while
+  restoring a marked recipe is rejected if another active copy now exists.
+  Explicit duplication and import conflict resolution by Duplicate preserve
+  protected attribution but clear the direct-save marker.
 - Recipes and publications each have many account-owned tags through the
   `recipe_tags` and `publication_tags` many-to-many tables. An assignment's
   account must match both its parent record and tag; duplicate assignments are

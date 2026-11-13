@@ -103,7 +103,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v11; future
+array contains only the normalized product fields selected for v12; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -164,8 +164,9 @@ adds the optional paired Makes quantity and thing. Version 9 adds ingredient
 nutrition profiles and measure equivalents plus recipe-level and
 recipe-ingredient nutrition overrides. Version 10 adds protected public-copy
 source identity to recipe references. Version 11 adds ordered recipe time
-entries with their Time Type references. Versions 1 through 10 import with
-their existing compatibility rules; older
+entries with their Time Type references. Version 12 adds the optional
+`saved_from_public_id` direct-save marker to recipe records. Versions 1 through
+11 import with their existing compatibility rules; older
 media rows treat their full and thumbnail files as the retained source.
 
 A v1 import synthesizes one `Main` set per recipe and assigns that recipe's
@@ -204,8 +205,15 @@ non-null component values to entries of their matching seeded types; if no
 component value exists but Total Time is present, import creates one Cook
 entry. When component values exist, their sum determines the imported total.
 
+Version 12 requires every recipe record to include `saved_from_public_id`,
+either null or a UUID matching exactly one protected source reference on that
+recipe. Versions 1 through 11 normalize the marker to null. A faithful import
+preserves a valid marker, but rejects an active marker that conflicts with
+another active copy in the destination account; choosing Duplicate clears the
+marker while retaining protected source attribution.
+
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 11, verify all file sizes and checksums before
+accept only versions 1 through 12, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

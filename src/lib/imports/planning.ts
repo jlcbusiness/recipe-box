@@ -239,6 +239,13 @@ export function planImport(
   ).filter((match) => match.kind === 'recipe');
   const importedRecipes: ExportRecord[] = [];
   const locationReferences: ExportRecord[] = [];
+  const activeDirectSaveSources = new Set(
+    rowsFrom(existing, 'recipes')
+      .filter(
+        (recipe) => recipe.trashed_at == null && typeof recipe.saved_from_public_id === 'string',
+      )
+      .map((recipe) => String(recipe.saved_from_public_id).toLocaleLowerCase()),
+  );
   for (const recipe of incoming.records.recipes) {
     const sourceId = String(recipe.id);
     if (omittedRecipeIds.has(sourceId)) continue;
@@ -271,6 +278,21 @@ export function planImport(
       keptRecipeIds,
     );
     if (result.action !== 'keep') {
+      const savedFromPublicId =
+        result.action === 'duplicate' ? null : (recipe.saved_from_public_id ?? null);
+      if (
+        savedFromPublicId !== null &&
+        recipe.trashed_at == null &&
+        activeDirectSaveSources.has(String(savedFromPublicId).toLocaleLowerCase()) &&
+        !rowsFrom(existing, 'recipes').some(
+          (existingRecipe) =>
+            String(existingRecipe.id) === String(result.id) &&
+            String(existingRecipe.saved_from_public_id ?? '').toLocaleLowerCase() ===
+              String(savedFromPublicId).toLocaleLowerCase(),
+        )
+      ) {
+        throw new Error('A direct saved copy of this public source is already active.');
+      }
       const selectedPublicationId = destinationPublicationIds[sourceId];
       const targetRecipe =
         result.action === 'replace'
@@ -338,6 +360,7 @@ export function planImport(
         ...location,
         id: result.id,
         name: result.action === 'duplicate' ? `${String(recipe.name)} (Imported)` : recipe.name,
+        saved_from_public_id: savedFromPublicId,
         publication_id: publicationId,
         food_type_id: mappedId('recipe_picklist_values', recipe.food_type_id, 'food type'),
         verdict_id: mappedId('recipe_picklist_values', recipe.verdict_id, 'verdict'),
@@ -612,12 +635,10 @@ export function planImport(
         const sourcePublicId = String(record.source_public_id).toLocaleLowerCase();
         const existingReference = existingProtectedReferences.find(
           (reference) =>
+            String(reference.recipe_id) === String(recipeId) &&
             String(reference.source_public_id ?? '').toLocaleLowerCase() === sourcePublicId,
         );
         if (existingReference) {
-          if (String(existingReference.recipe_id) !== String(recipeId)) {
-            throw new Error('This public source is already saved in another Recipe Tin recipe.');
-          }
           return [{ ...existingReference }];
         }
       }
@@ -642,15 +663,16 @@ export function planImport(
   const plannedProtectedSources = new Set(
     records.recipe_references
       .filter((reference) => reference.is_protected_source === true)
-      .map((reference) => String(reference.source_public_id).toLocaleLowerCase()),
+      .map(
+        (reference) =>
+          `${String(reference.recipe_id)}:${String(reference.source_public_id).toLocaleLowerCase()}`,
+      ),
   );
   for (const reference of existingProtectedReferences) {
-    if (
-      plannedRecipeIds.has(String(reference.recipe_id)) &&
-      !plannedProtectedSources.has(String(reference.source_public_id).toLocaleLowerCase())
-    ) {
+    const key = `${String(reference.recipe_id)}:${String(reference.source_public_id).toLocaleLowerCase()}`;
+    if (plannedRecipeIds.has(String(reference.recipe_id)) && !plannedProtectedSources.has(key)) {
       records.recipe_references.push({ ...reference });
-      plannedProtectedSources.add(String(reference.source_public_id).toLocaleLowerCase());
+      plannedProtectedSources.add(key);
     }
   }
   const nextReferencePosition = new Map<string, number>();

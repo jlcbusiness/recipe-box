@@ -190,6 +190,14 @@ question. Its output is a decision-log entry, not shipped code.
   missing measure dimension; without one, both measures may be explicit.
   The approved brief also aligns nutrition calculations with this precedence.
 
+### Phase 12: Recipe copying
+
+- **DLC 36 (implemented in app version 1.10.0):**
+  [Duplicate recipes](slices/dlc/dlc-36-duplicate-recipes.md) adds an
+  authenticated private-copy workflow with an editable name and destination.
+  Protected source attribution remains distinct from the direct-public-save
+  marker.
+
 ## Completion Rule
 
 A slice is complete only when its stated demonstration works, the automated

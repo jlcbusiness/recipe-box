@@ -68,6 +68,7 @@ test('ingredient Settings saves and clears nutrition in the shared pane @e2e @a1
 
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const section = page.getByRole('region', { name: 'Ingredients' });
     await section.getByRole('button', { name: 'Ingredients', exact: true }).click();
     const trigger = section.getByRole('button', { name: `Nutrition for ${ingredientName}` });
@@ -192,6 +193,7 @@ test('database bundles round-trip nutrition profiles and measure equivalents @e2
 
     await signIn(page, sourceUser.email, sourceUser.password);
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const ingredientSection = page.getByRole('region', { name: 'Ingredients' });
     await ingredientSection.getByRole('button', { name: 'Ingredients', exact: true }).click();
     await ingredientSection
@@ -310,6 +312,7 @@ test('database bundles round-trip nutrition profiles and measure equivalents @e2
     await expect(destinationDataManagement.getByRole('status')).toHaveText('Import complete.');
 
     await destinationPage.goto('/settings');
+    await destinationPage.getByRole('tab', { name: 'Recipe data' }).click();
     const importedIngredientSection = destinationPage.getByRole('region', {
       name: 'Ingredients',
     });
@@ -866,6 +869,14 @@ test('recipe nutrition inherits ingredient defaults and edits per-serving values
     }>;
     expect(recipeState?.public_id).toBeTruthy();
     if (recipeState.is_private) {
+      const usernameUpdate = await request.post(
+        `${config.apiUrl}/rest/v1/rpc/set_public_username`,
+        {
+          headers,
+          data: { p_public_username: `nutrition-${user.id.slice(0, 8)}` },
+        },
+      );
+      expect(usernameUpdate.ok(), await usernameUpdate.text()).toBeTruthy();
       const publishResponse = await request.post(
         `${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`,
         {

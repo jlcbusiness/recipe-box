@@ -44,12 +44,9 @@ async function findExistingCopy(
 ) {
   const { data: recipe, error } = await admin
     .from('recipes')
-    .select(
-      'id, recipe_references!recipe_references_account_id_recipe_id_fkey!inner(source_public_id,is_protected_source)',
-    )
+    .select('id')
     .eq('account_id', accountId)
-    .eq('recipe_references.source_public_id', publicId)
-    .eq('recipe_references.is_protected_source', true)
+    .eq('saved_from_public_id', publicId)
     .is('trashed_at', null)
     .maybeSingle();
   if (error) {

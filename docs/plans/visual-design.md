@@ -266,8 +266,11 @@ The Makes heading labels its value, so show only the quantity and authored thing
 in the value. The public title has no separate
 Makes heading and retains the inline label. Private recipe detail places alphabetized tag chips beneath the heading,
 with a compact action toolbar below. The toolbar orders immediate Star and
-Heart stamp toggles before share and privacy controls, **Print & Download**,
-Export, **Page Settings**, and Edit. Star and Heart are independent of State.
+Heart stamp toggles before share and privacy controls, **Page Settings**,
+**Print & Download**, Export, Duplicate, and Edit. Page Settings uses the
+filled treatment of Print & Download; Duplicate uses the outlined treatment of
+Edit. Star and Heart are independent of State. Duplicate sits immediately
+before Edit.
 At desktop widths, keep the title alongside the action toolbar only when the
 title can retain at least as much width as the toolbar; otherwise wrap the
 toolbar below the title. Keep the visual gap between Star and Heart equal to the
@@ -285,12 +288,16 @@ and state, with visible focus and no reliance on color alone. Neither marker is
 shown on public recipe pages.
 Keep the desktop actions compact rather than pushing them to the far edge. On
 mobile, use even 4px gaps between the six first-row actions and keep Can Link
-60px wide, with equal spacing around its label and switch.
-Place the marker toggles on a second row with Star centered under Page Settings
-and Heart under Edit. Retain the toolbar when the recipe has no tags. Give the
-line vertical margins matching the action spacing. Show marker error feedback
-below the action row, but do not show pending or success notices. Marker stamps
-have no visible word labels or word-based tooltips.
+60px wide, with equal spacing around its label and switch. Put Page Settings
+in the former Duplicate slot before Edit, and put Duplicate in the former Page
+Settings slot immediately to the right of Heart on the second row. Swap their
+filled and outlined treatments along with their positions. Retain the toolbar
+when the recipe has no tags.
+The Duplicate dialog gives Name and Publication bold labels above full-width
+controls, each within its own bordered field area with clear spacing.
+Give the line vertical margins matching the action spacing. Show marker error
+feedback below the action row, but do not show pending or success notices.
+Marker stamps have no visible word labels or word-based tooltips.
 At 640px and below, the output trigger uses a Download icon and the accessible
 name and tooltip `Download`; it continues to open the same Print, HTML, PNG,
 and PDF menu. Wider layouts retain the printer icon and `Print & Download`
@@ -305,12 +312,12 @@ is ready, matching private Print. The shared area stays within the viewport at
 narrow mobile widths.
 Recipe Export keeps its existing retryable status behavior.
 Icon buttons are 36px square; on mobile, their hit areas expand to 48px without
-changing their visible size. On mobile, the linkable privacy switch uses the
-two-line label `Can` / `Link` so the full action toolbar fits on one row at
-standard phone widths. The toolbar wraps without horizontal overflow when the
-available width is too narrow or the switch is in its Private state. Recipe Tin recipes use the
-attribution `In the Recipe Tin`; the Tin is a Library entry, not a separate
-navigation destination.
+changing their visible size. On mobile, keep the privacy switch 72px wide in
+both Linkable and Private states. Show the two-line label `Can` / `Link` when
+Linkable and keep the `Private` label visible when private. Wrap the toolbar
+without horizontal overflow at narrow viewports. Recipe Tin
+recipes use the attribution `In the Recipe Tin`; the Tin is a Library entry,
+not a separate navigation destination.
 On mobile recipe detail, Download and Page Settings menus open centered below
 the action toolbar and remain within the viewport.
 Recipe titles and major detail section headings use 16pt (about 21.33px). The
@@ -1581,11 +1588,14 @@ headers horizontally within their visible columns while keeping all headers
 vertically centered.
 
 On desktop, the private recipe-detail toolbar places Star and Heart to the left
-of its share, privacy, print, export, settings, and edit actions. On mobile,
-use even 4px gaps between the six actions, keep Can Link at a compact 60px
-width with equal spacing around its label and switch, and place
-the markers on a second row, with Star aligned under Page Settings and Heart
-under Edit.
+of its share, privacy, settings, print, export, duplicate, and edit actions.
+Page Settings uses the filled treatment of Print & Download; Duplicate uses
+the outlined treatment of Edit. Duplicate sits immediately before Edit. On
+mobile, use even 4px gaps between the six first-row actions, keep Can Link at a
+compact 60px width with equal spacing around its label and switch, and put
+Page Settings before Edit in the first row. Put the markers on a second row
+with Duplicate immediately to the right of Heart, swapping the mobile action
+positions and treatments.
 Marker feedback appears below the action row rather than overlapping adjacent
 controls. Column resize handles retain their existing hit area and show one
 centered line.

@@ -38,7 +38,7 @@ function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -530,6 +530,7 @@ describe('import bundle validation', () => {
         makes_quantity: null,
         makes_thing: null,
         nutrition_overrides: {},
+        saved_from_public_id: null,
         total_time_minutes: 0,
       },
     ]);
@@ -765,7 +766,7 @@ describe('import bundle validation', () => {
 
   it('validates image checksums from streamed metadata without image buffers', () => {
     const allEntries = createBundleEntries({
-      recipe: { id: recipeId, name: 'Lemon cake' },
+      recipe: { id: recipeId, name: 'Lemon cake', total_time_minutes: 0 },
       includeImages: true,
     });
     const entries = new Map([...allEntries].filter(([path]) => !path.startsWith('images/')));
@@ -1157,7 +1158,7 @@ describe('import bundle validation', () => {
 
     const bundle = validateImportBundleFiles(entries);
     const recipe = bundle.data.records.recipes[0];
-    expect(bundle.data.schema_version).toBe(11);
+    expect(bundle.data.schema_version).toBe(12);
     expect(recipe).not.toHaveProperty('prep_time_minutes');
     expect(recipe.total_time_minutes).toBe(40);
     expect(bundle.data.records.recipe_time_entries).toHaveLength(2);
@@ -1211,7 +1212,6 @@ describe('import bundle validation', () => {
         ],
       },
     });
-
     expect(validateImportBundleFiles(entries).data.records.recipe_time_entries).toEqual([
       {
         id: timeEntryId,
@@ -1221,6 +1221,111 @@ describe('import bundle validation', () => {
         position: 0,
       },
     ]);
+  });
+
+  it('backfills v11 direct-save identity as null and preserves valid v12 markers', () => {
+    const sourcePublicId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const reference = {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      recipe_id: recipeId,
+      reference_type: 'external_url',
+      publication_id: null,
+      display_text: "source-user's Lemon cake",
+      url: `https://recipe-box.example/r/${sourcePublicId}`,
+      position: 0,
+      linked_recipe_id: null,
+      is_protected_source: true,
+      source_public_id: sourcePublicId,
+    };
+    const legacy = validateImportBundleFiles(
+      createBundleEntries({
+        schemaVersion: 11,
+        recipe: { id: recipeId, name: 'Lemon cake', total_time_minutes: 0 },
+        records: { recipe_references: [reference] },
+      }),
+    );
+    expect(legacy.data.records.recipes[0]?.saved_from_public_id).toBeNull();
+
+    const current = validateImportBundleFiles(
+      createBundleEntries({
+        schemaVersion: 12,
+        recipe: {
+          id: recipeId,
+          name: 'Lemon cake',
+          saved_from_public_id: sourcePublicId,
+          total_time_minutes: 0,
+        },
+        records: { recipe_references: [reference] },
+      }),
+    );
+    expect(current.data.records.recipes[0]?.saved_from_public_id).toBe(sourcePublicId);
+  });
+
+  it('rejects a direct-save marker without matching protected source attribution', () => {
+    const entries = createBundleEntries({
+      schemaVersion: 12,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        saved_from_public_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      },
+    });
+
+    expect(() => validateImportBundleFiles(entries)).toThrow(/direct save|source attribution/i);
+  });
+
+  it('allows the same protected source attribution on separate recipes', () => {
+    const sourcePublicId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const reference = (id: string, linkedRecipeId: string) => ({
+      id,
+      recipe_id: linkedRecipeId,
+      reference_type: 'external_url',
+      publication_id: null,
+      display_text: "source-user's Lemon cake",
+      url: `https://recipe-box.example/r/${sourcePublicId}`,
+      position: 0,
+      linked_recipe_id: null,
+      is_protected_source: true,
+      source_public_id: sourcePublicId,
+    });
+    const entries = createBundleEntries({
+      schemaVersion: 12,
+      scope: { type: 'database' },
+      records: {
+        recipes: [
+          {
+            id: recipeId,
+            name: 'Lemon cake',
+            saved_from_public_id: sourcePublicId,
+            total_time_minutes: 0,
+            makes_quantity: null,
+            makes_thing: null,
+            nutrition_overrides: {},
+            score: null,
+            is_starred: false,
+            is_hearted: false,
+          },
+          {
+            id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            name: 'Lemon cake (Copy)',
+            saved_from_public_id: null,
+            total_time_minutes: 0,
+            makes_quantity: null,
+            makes_thing: null,
+            nutrition_overrides: {},
+            score: null,
+            is_starred: false,
+            is_hearted: false,
+          },
+        ],
+        recipe_references: [
+          reference('dddddddd-dddd-4ddd-8ddd-dddddddddddd', recipeId),
+          reference('ffffffff-ffff-4fff-8fff-ffffffffffff', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'),
+        ],
+      },
+    });
+
+    expect(validateImportBundleFiles(entries).data.records.recipe_references).toHaveLength(2);
   });
 
   it('rejects protected source metadata whose stable URL does not match its public ID', () => {

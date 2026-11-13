@@ -101,3 +101,41 @@
 - Repository Markdown lint still reports 30 unrelated errors. The full
   `git diff --check` reports trailing whitespace in the pre-existing
   `.github/prompts/update.prompt.md` edit; that file was not changed here.
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd (partial)
+
+- Resumed the DLC 35 stream and read its checklist/current status plus the
+  legacy Settings editor, public payload projection, and related E2E patterns.
+- Added a legacy-pair E2E that seeds an explicit equivalent before adding
+  trusted density, verifies saving is blocked until a source is chosen, and
+  checks the chosen source is persisted without changing density.
+- Added a Guest/public E2E that configures private equivalents, publishes a
+  Count recipe, and verifies the private values are absent from returned HTML
+  and rendered controls.
+- Initial focused runs exposed test setup issues: direct settings mutations
+  required a page reload, the public test needed the Recipe data tab, and the
+  derived-status element made a broad status locator ambiguous. Updated the
+  setup/assertions and reran successfully.
+- Ran focused Playwright tests for both specs on Chromium and Fold 6: 2 passed
+  per project. `npm run typecheck`, scoped Biome check, and focused
+  `git diff --check` passed.
+- This entry covers only the 2026-11-12 acceptance-coverage follow-up, not the
+  earlier DLC 35 implementation trace.
+## 2026-11-12 — Full-suite verification (session `55a5aef2-c5f1-44fb-ad69-976e9f10efbd`)
+
+- `npm test`: unit phase passed (653/653); E2E phase reported 380 passed, 52
+  failed, and 10 skipped, so the chained accessibility phase did not run.
+- `npm run test:a11y`: 100 passed, 25 failed, and 1 skipped.
+- `npm run build`: passed.
+- Isolated the measure-equivalent database bundle E2E after its full-suite
+  timeout. The error context showed Settings remained on Preferences; selected
+  the Recipe data tab in the source and destination workflows.
+- The nutrition public-output E2E failed because its test user had no public
+  username. Added the existing `set_public_username` RPC setup before publish.
+- Focused nutrition/settings/database-bundle E2Es on Chromium and Fold 6:
+  5 passed, 1 expected Fold 6 skip. `npx biome check
+  tests/e2e/nutrition.spec.ts` and `npm run typecheck` passed.
+- Untriaged E2E and accessibility failures remain; no conclusion was reached
+  about whether they are related to DLC 35.
+
+Last recorded action: focused nutrition and equivalent E2Es passed on both
+projects, with typecheck and scoped Biome passing.

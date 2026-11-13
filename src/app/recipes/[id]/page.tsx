@@ -4,7 +4,12 @@ import { notFound } from 'next/navigation';
 import type { MediaAssetDisplay } from '../../../lib/media/data';
 import { getRecipePhotos } from '../../../lib/media/data';
 import type { RecipeIngredient } from '../../../lib/recipes/data';
-import { getRecipe, getRecipePicklists, recipeStateLabels } from '../../../lib/recipes/data';
+import {
+  getPublications,
+  getRecipe,
+  getRecipePicklists,
+  recipeStateLabels,
+} from '../../../lib/recipes/data';
 import {
   defaultInstructionEmphasis,
   getInstructionEmphasisColor,
@@ -31,6 +36,7 @@ import { OfflineSnapshotCapture } from '../../offline-snapshot-capture';
 import { RecipeActionFeedbackProvider } from '../../recipe-action-feedback';
 import { TagChips } from '../../tags/tag-controls';
 import { InstructionList } from '../instruction-list';
+import { RecipeDuplicateAction } from '../recipe-duplicate-action';
 import { RecipeMarkerActions } from '../recipe-marker-actions';
 import { RecipeOutputActions } from '../recipe-output-actions';
 import {
@@ -235,10 +241,11 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   const { id } = await params;
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
-  const [recipe, picklists, photos] = await Promise.all([
+  const [recipe, picklists, photos, publications] = await Promise.all([
     getRecipe(supabase, id),
     getRecipePicklists(supabase),
     getRecipePhotos(supabase, id),
+    authData.user ? getPublications(supabase) : Promise.resolve([]),
   ]);
   let volumeSystem: MeasurementSystemPreference = 'us_customary';
   let weightSystem: MeasurementSystemPreference = 'us_customary';
@@ -454,6 +461,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                     />
                   }
                   isPublic={false}
+                />
+                <RecipeDuplicateAction
+                  recipeId={recipe.id}
+                  recipeName={recipe.name}
+                  sourcePublicationId={recipe.publication?.id ?? null}
+                  publications={publications}
                 />
                 <Link
                   aria-label="Edit"
