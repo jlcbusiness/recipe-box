@@ -33,6 +33,7 @@ function createScopedArchive(
   data.records.publications = publications;
   data.records.recipes = recipes.map((recipe) => ({
     ...recipe,
+    saved_from_public_id: recipe.saved_from_public_id ?? null,
     total_time_minutes: recipe.total_time_minutes ?? 0,
   }));
   data.records.media_assets = mediaAssets;

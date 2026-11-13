@@ -2016,6 +2016,7 @@ test('image management panes stage covers and immediately manage decorative reci
       await summaryLayout.evaluate((element) => {
         element.style.width = '584px';
       });
+      const summaryBounds = await summaryLayout.boundingBox();
       const constrainedFeatureBounds = await page.locator('.recipe-photo-feature').boundingBox();
       const constrainedFeatureImageBounds = await featureImage.boundingBox();
       const metadataBounds = await page
@@ -2030,20 +2031,19 @@ test('image management panes stage covers and immediately manage decorative reci
       );
       const actionBounds = await page.locator('.recipe-detail-heading-actions').boundingBox();
       const titleBounds = await page.locator('.recipe-detail-title').boundingBox();
-      const titleTextBounds = await titleElement.boundingBox();
+      expect(summaryBounds).not.toBeNull();
       expect(metadataBounds).not.toBeNull();
       expect(actionBounds).not.toBeNull();
       expect(titleBounds).not.toBeNull();
-      expect(titleTextBounds).not.toBeNull();
       expect(constrainedFeatureBounds).not.toBeNull();
       expect(constrainedFeatureImageBounds).not.toBeNull();
       if (
+        !summaryBounds ||
         !metadataBounds ||
         !constrainedFeatureBounds ||
         !constrainedFeatureImageBounds ||
         !actionBounds ||
-        !titleBounds ||
-        !titleTextBounds
+        !titleBounds
       ) {
         throw new Error('Expected desktop recipe summary and title controls to be visible');
       }
@@ -2054,7 +2054,10 @@ test('image management panes stage covers and immediately manage decorative reci
       );
       expect(Math.abs(constrainedFeatureImageBounds.y - titleBounds.y)).toBeLessThanOrEqual(4);
       expect(constrainedFeatureImageBounds.width).toBeLessThan(featureImageBounds?.width ?? 0);
-      expect(actionBounds.width).toBeLessThanOrEqual(titleTextBounds.width + 1);
+      expect(actionBounds.x).toBeGreaterThanOrEqual(summaryBounds.x - 1);
+      expect(actionBounds.x + actionBounds.width).toBeLessThanOrEqual(
+        summaryBounds.x + summaryBounds.width + 1,
+      );
       expect(actionBounds.x + actionBounds.width).toBeLessThanOrEqual(
         (page.viewportSize()?.width ?? 0) - 8,
       );

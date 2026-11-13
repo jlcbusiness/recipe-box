@@ -175,7 +175,11 @@ test('Settings manages recipe picklist values as an ordered list @e2e @a11y', as
     expect(await page.evaluate(() => window.scrollY)).toBe(initialWindowScrollY);
     await page.keyboard.press('Escape');
     await page.mouse.up();
-    await firstReorder.scrollIntoViewIfNeeded();
+    if ((page.viewportSize()?.width ?? 0) <= 720) {
+      await firstReorder.evaluate((handle) => handle.scrollIntoView({ block: 'center' }));
+    } else {
+      await firstReorder.scrollIntoViewIfNeeded();
+    }
     const reorderBounds = await firstReorder.boundingBox();
     const secondRowBounds = await secondRow.boundingBox();
     expect(firstValue).not.toBe('');
@@ -567,6 +571,7 @@ test('picklist management is owner-scoped and keeps protected occasion semantics
     ]);
 
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const settingsSection = page.getByRole('region', { name: 'Picklists' });
     await settingsSection.getByRole('button', { name: 'Picklists' }).click();
     await settingsSection
@@ -583,6 +588,7 @@ test('picklist management is owner-scoped and keeps protected occasion semantics
     await expect(replacementPicker).toBeVisible();
     await replacementPicker.click();
     await expect(page.getByRole('listbox').getByRole('option').first()).toBeVisible();
+    await page.keyboard.press('Escape');
     await page.getByRole('heading', { name: 'Settings' }).click();
     await expect(deleteFoodPane).toHaveCount(0);
     await settingsSection

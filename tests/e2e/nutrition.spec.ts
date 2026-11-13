@@ -989,6 +989,7 @@ test('recipe nutrition uses a saved Count average after loading a fresh editor @
 
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const section = page.getByRole('region', { name: 'Ingredients' });
     await section.getByRole('button', { name: 'Ingredients', exact: true }).click();
     await section.getByRole('button', { name: `Measure equivalent for ${ingredientName}` }).click();
@@ -1023,6 +1024,7 @@ test('recipe nutrition uses a saved Count average after loading a fresh editor @
     );
 
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const updatedSection = page.getByRole('region', { name: 'Ingredients' });
     await updatedSection.getByRole('button', { name: 'Ingredients', exact: true }).click();
     await updatedSection

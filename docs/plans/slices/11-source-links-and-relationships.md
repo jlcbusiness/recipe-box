@@ -62,9 +62,9 @@ Fold 6.
   example, `#roast-chicken`). The recipe name remains the saved display text and
   detail-mode link label; editing the token clears the link until another
   recipe is selected.
-- On desktop, the Pairs With input has a 3-inch minimum and aligns its right
-  edge with the Rest time input. The Recipe Name field has a 3-inch minimum and
-  grows with its text, capped by the available form and viewport width.
+- On desktop, the Pairs With input has a 3-inch minimum and a 50% row maximum.
+  The Recipe Name field has a 3-inch minimum and grows with its text, capped by
+  the available form and viewport width.
 - A trashed recipe target remains as display text without an active link.
   Restoring it reactivates the link. Permanently purging a linked target
   detaches it while retaining its last display text. Purging the source recipe

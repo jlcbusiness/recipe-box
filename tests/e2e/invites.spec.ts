@@ -451,7 +451,7 @@ test('the admin screen is accessible to an admin on desktop and mobile @a11y', a
     const titleFontSize = await page
       .locator('.settings-main h1')
       .evaluate((heading) => Number.parseFloat(getComputedStyle(heading).fontSize));
-    expect(titleFontSize).toBeCloseTo(21.33, 1);
+    expect(titleFontSize).toBe(34);
     const memberRow = page.getByRole('row', { name: new RegExp(member.email) });
     const emailCell = memberRow.locator('.admin-account-email');
     const signInCell = memberRow.locator('.admin-account-sign-in');

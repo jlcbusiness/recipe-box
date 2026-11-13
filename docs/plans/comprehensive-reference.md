@@ -877,9 +877,7 @@ preserved.
   `#roast-chicken`. The saved pairing keeps the readable recipe name and linked
   recipe ID; detail mode renders that name as the link text. Editing the token
   clears the link until another recipe is selected.
-- On desktop, the Pairs With input is at least 3 inches wide and its right edge
-  aligns with the Rest time input. Its available width is recalculated when
-  layout dimensions change.
+- On desktop, the Pairs With input has a 3-inch minimum and a 50% row maximum.
 - Autocomplete returns only active recipes owned by the signed-in account. A
   trashed target remains as display text without a link; restoring it makes the
   link active again. Purging a target detaches the link but preserves its last

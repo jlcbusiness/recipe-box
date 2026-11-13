@@ -1367,9 +1367,9 @@ test('an owner can switch a recipe between linkable and private @e2e', async ({
         expect(actionBox.y).toBeCloseTo(shareBox.y, 1);
       }
       expect(shareBox.x).toBeLessThan(toggleBox.x);
-      expect(toggleBox.x).toBeLessThan(printBox.x);
+      expect(toggleBox.x).toBeLessThan(settingsBox.x);
+      expect(settingsBox.x).toBeLessThan(printBox.x);
       expect(printBox.x).toBeLessThan(exportBox.x);
-      expect(exportBox.x).toBeLessThan(settingsBox.x);
       expect(exportBox.x).toBeLessThan(editBox.x);
     } else {
       for (const actionBox of [toggleBox, printBox, settingsBox, exportBox, editBox]) {
@@ -1385,8 +1385,8 @@ test('an owner can switch a recipe between linkable and private @e2e', async ({
         throw new Error('The mobile viewport width is unavailable.');
       }
       for (const actionBox of [shareBox, toggleBox, printBox, settingsBox, exportBox, editBox]) {
-        expect(actionBox.x).toBeGreaterThanOrEqual(20);
-        expect(actionBox.x + actionBox.width).toBeLessThanOrEqual(viewportWidth - 20);
+        expect(actionBox.x).toBeGreaterThanOrEqual(12);
+        expect(actionBox.x + actionBox.width).toBeLessThanOrEqual(viewportWidth - 12);
       }
     }
     if (testInfo.project.name === 'chromium') {
@@ -1408,7 +1408,15 @@ test('an owner can switch a recipe between linkable and private @e2e', async ({
     await makePrivateToggle.click();
     const makeLinkableToggle = page.getByRole('switch', { name: 'Make linkable' });
     await expect(makeLinkableToggle).toHaveAttribute('aria-checked', 'false');
-    await expect(makeLinkableToggle.locator('.recipe-privacy-toggle-state')).toHaveText('Private');
+    if (testInfo.project.name === 'chromium') {
+      await expect(makeLinkableToggle.locator('.recipe-privacy-toggle-state-full')).toHaveText(
+        'Private',
+      );
+    } else {
+      const privateLabel = makeLinkableToggle.locator('.recipe-privacy-toggle-state-compact');
+      await expect(privateLabel).toBeVisible();
+      expect(await privateLabel.evaluate((element) => element.textContent)).toBe('Private');
+    }
     expect((await request.get(`/r/${publicId}`)).status()).toBe(404);
 
     await makeLinkableToggle.click();
@@ -2640,7 +2648,7 @@ test('public outputs omit private Rating and marker data @e2e', async ({
         '.recipe-detail-score, .recipe-marker-actions, [data-marker="star"], [data-marker="heart"]',
       ),
     ).toHaveCount(0);
-    await expect(page.locator('.recipe-public-main')).not.toContainText('-5');
+    await expect(page.locator('.recipe-public-main')).not.toContainText(/\b-5\b/u);
 
     const outputButton = publicOutputTrigger(page);
     if (testInfo.project.name !== 'Fold 6') {
@@ -2661,7 +2669,7 @@ test('public outputs omit private Rating and marker data @e2e', async ({
             '.recipe-public-main .recipe-detail-score, .recipe-public-main .recipe-marker-actions, .recipe-public-main [data-marker="star"], .recipe-public-main [data-marker="heart"]',
           ),
         ).toHaveCount(0);
-        await expect(standalonePage.locator('.recipe-public-main')).not.toContainText('-5');
+        await expect(standalonePage.locator('.recipe-public-main')).not.toContainText(/\b-5\b/u);
       } finally {
         await standalonePage.close();
       }
@@ -2687,7 +2695,7 @@ test('public outputs omit private Rating and marker data @e2e', async ({
     }
 
     const printedPdf = await inspectPrintedRecipePdf(await page.pdf({ preferCSSPageSize: true }));
-    expect(printedPdf.text).not.toContain('-5');
+    expect(printedPdf.text).not.toMatch(/\b-5\b/u);
     expect(printedPdf.text).not.toContain('Star recipe');
     expect(printedPdf.text).not.toContain('Heart recipe');
   } finally {

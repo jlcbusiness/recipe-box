@@ -289,37 +289,6 @@ export function RecipeRelationshipsEditor({
     index: number;
   } | null>(null);
 
-  useEffect(() => {
-    const pairingRows = pairingRowsRef.current;
-    const restTimeInput = document.getElementById('rest_time_minutes');
-    const pairingEditor = pairingRows?.closest<HTMLElement>('.recipe-relationship-editor');
-    if (!pairingRows || !restTimeInput || !pairingEditor) {
-      return;
-    }
-
-    const updatePairingMaxWidth = () => {
-      const width =
-        restTimeInput.getBoundingClientRect().right - pairingRows.getBoundingClientRect().left;
-      if (width > 0) {
-        pairingEditor.style.setProperty('--pairing-field-max-width', `${width}px`);
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(updatePairingMaxWidth);
-    const timeFields = restTimeInput.closest('.recipe-time-fields');
-    if (timeFields) {
-      resizeObserver.observe(timeFields);
-    }
-    resizeObserver.observe(pairingRows);
-    window.addEventListener('resize', updatePairingMaxWidth);
-    updatePairingMaxWidth();
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', updatePairingMaxWidth);
-    };
-  }, []);
-
   const serializedReferences: SerializedReference[] = [];
   for (const reference of references) {
     if (reference.is_protected_source) {

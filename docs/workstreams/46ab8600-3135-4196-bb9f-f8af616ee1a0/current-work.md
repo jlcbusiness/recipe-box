@@ -100,27 +100,59 @@
   group passed on Chromium and Fold 6 (5 passed, 1 expected Fold 6 skip).
   Scoped Biome and typecheck passed. The other broad-suite failures remain
   untriaged, so their relation to DLC 35 is undetermined.
+- 2026-11-12: Fixed the source-links geometry test after the configurable-time
+  editor removed the fixed Rest input it used as an alignment anchor. Removed
+  the now-dead measurement effect, documented the current desktop 3-inch
+  minimum/50%-row maximum, and verified the source-links E2E on Chromium and
+  Fold 6. Typecheck, focused TypeScript Biome, and `git diff --check` passed.
+  A broader Biome check including `recipe-media.css` still reports diagnostics
+  elsewhere in that stylesheet. Other broad-suite failures remain.
+- 2026-11-12: Reproduced the public offline-cache E2E failure on both projects:
+  the test created a private recipe and visited its stable public ID. Added the
+  existing public-username and visibility setup before navigation; both
+  projects now pass. The media cleanup queue E2E also passes on both projects
+  without changes, so that prior failure did not reproduce in isolation.
+- 2026-11-12: The complete measurements E2E file reproduced two failures on
+  both projects: its text-width assertion contradicted the established
+  suggestion-sized Preparation editor. Updated the test to check the actual
+  3mm input/control gap and click that gap; all 8 measurement tests now pass
+  on both projects. Focused Biome passes. The passing run logged one
+  non-failing Next destination-stream write error; its cause remains unknown.
+- 2026-11-12: The reported-fixes E2E timeout came from using the private
+  `Make private` switch on a public recipe and opening a nonexistent public
+  Print menu; corrected the fixture to publish the recipe and use the public
+  Print action. The complete reported-fixes file passes all four cases across
+  Chromium and Fold 6. The complete recipe-search file passes 31 tests with
+  one existing Fold 6 skip.
+- 2026-11-12: The accessibility rerun exposed stale checks for the Settings
+  heading size and hidden dialog buttons in a mobile toolbar row count. The
+  admin test now expects the responsive 34px heading, and the export test
+  measures visible actions only; both focused cases pass on both projects.
+  The full accessibility suite passes 125 tests with one skip.
+- 2026-11-12: The full E2E rerun exposed three remaining test issues. The
+  saved Count-average test now opens Recipe data on both Settings visits; the
+  public Rating check matches the numeric token so a test username cannot
+  cause a false positive; and the Fold 6 offline failure passed both in
+  isolation and in the full offline spec. A final full E2E run passes 432
+  tests with 10 skips. The full unit suite passes 653 tests, typecheck and
+  production build pass, `npm run lint` exits successfully with 171 advisory
+  warnings, and `git diff --check` passes. Non-failing Next.js stream-abort
+  messages still appear during E2E execution; their cause remains unknown.
 
 ## Save Point
 
-- Goal: deliver Count and Things measure equivalents with trusted-density precedence.
-- Status: implemented; app version 1.9.0 selected, and the legacy-pair,
-  Guest/public, and nutrition database-bundle acceptance paths are verified
-  on Chromium and Fold 6. The repository-wide E2E and accessibility runs still
-  report untriaged failures.
+- Goal: deliver Count and Things measure equivalents with trusted-density precedence and clear the repository-wide test failures uncovered during validation.
+- Status: DLC 35 and the repository-wide suite cleanup are complete. All
+  full unit, E2E, and accessibility suites pass; only expected skips remain.
 - Repository/branch: `/home/joshlamont/Code/recipe-box`, `main`.
-- Current step: requested validation is complete; no DLC 35-specific check is
-  pending.
-- Last verified result: full unit phase 653/653 passed; the E2E phase reported
-  380 passed, 52 failed, and 10 skipped; separate accessibility run reported
-  100 passed, 25 failed, and 1 skipped. The production build, typecheck,
-  scoped Biome, and focused DLC 35 nutrition/equivalent E2Es passed. Remaining
-  broad-suite failures are not yet triaged.
-- Next action: none for DLC 35 validation; the untriaged repository-wide
-  failures are a separate follow-up.
+- Current step: report verified results; no test failures remain.
+- Last verified result: 653 unit tests, 432 E2E tests, and 125 accessibility
+  tests passed; there are 10 expected E2E skips and 1 expected accessibility
+  skip. Production build, typecheck, `npm run lint` (with 171 advisory
+  warnings), and `git diff --check` pass. Next.js stream-abort messages remain
+  non-failing and unexplained.
+- Next action: none unless new failures are reported.
 - Checklist: [checklist.md](./checklist.md)
 - Trace: [trace.md](./trace.md) — session
-  `55a5aef2-c5f1-44fb-ad69-976e9f10efbd`; latest action: focused nutrition,
-  database-bundle, and public-nutrition E2Es passed on Chromium and Fold 6;
-  typecheck, scoped Biome, and production build passed. Broad-suite failures
-  remain untriaged.
+  `55a5aef2-c5f1-44fb-ad69-976e9f10efbd`; latest action: final full E2E,
+  accessibility, and unit suites passed with expected skips.

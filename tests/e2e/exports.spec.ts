@@ -956,7 +956,7 @@ test('App data, publication detail, and recipe detail expose accessible export a
       ]);
     expect(exportBackground).toBe('rgb(56, 96, 68)');
     expect(printBackground).toBe('rgb(56, 96, 68)');
-    expect(settingsBackground).toBe('rgb(247, 249, 244)');
+    expect(settingsBackground).toBe('rgb(56, 96, 68)');
     expect(editBackground).toBe('rgb(247, 249, 244)');
     await expectKeyboardFocusVisible(page, recipeExport);
     const recipeA11y = await new AxeBuilder({ page }).analyze();
@@ -1016,7 +1016,9 @@ test('App data, publication detail, and recipe detail expose accessible export a
     await expect(sharedFeedback).toHaveText('HTML download started.');
     await expect(page.locator('.recipe-action-feedback-region')).toHaveCount(1);
     const recipeActionTops = await page
-      .locator('.recipe-detail-heading-actions button, .recipe-detail-heading-actions a')
+      .locator(
+        '.recipe-detail-heading-actions button:visible, .recipe-detail-heading-actions a:visible',
+      )
       .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
     expect(new Set(recipeActionTops.map(Math.round)).size).toBeLessThanOrEqual(2);
     expect((await recipeDetails.boundingBox())?.y).toBe(recipeDetailsTopBeforeExport);

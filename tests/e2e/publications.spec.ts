@@ -1159,7 +1159,7 @@ test('an owner can create a publication, assign a recipe, and return it to the R
   request,
 }, testInfo) => {
   const user = await createTestUser(request);
-  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
+  const { apiUrl, anonKey, serviceRoleKey } = await getLocalSupabaseConfig();
 
   try {
     await signIn(page, user.email, user.password);
@@ -1231,7 +1231,8 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     await page.getByLabel('ISBN').fill('9780306406157');
     await expect(page.getByLabel('ISBN')).toHaveValue('978-0-306-40615-7');
     const isbnInput = page.getByLabel('ISBN');
-    await isbnInput.fill('0-306-40615-3');
+    await isbnInput.fill('');
+    await isbnInput.pressSequentially('0306406153');
     await expect(isbnInput).toHaveValue('0-306-40615-3');
     await page.getByLabel('Retailer URL').fill('www.books.example.test/home-cook');
     await savePublication.click();
@@ -1299,6 +1300,26 @@ test('an owner can create a publication, assign a recipe, and return it to the R
 
     await expect(page.getByRole('heading', { name: 'Roasted tomato soup' })).toBeVisible();
     const recipeUrl = page.url();
+    const recipeId = new URL(recipeUrl).pathname.split('/').at(-1);
+    expect(recipeId).toBeTruthy();
+    const [recipeRecord, timeEntries] = await Promise.all([
+      request.get(`${apiUrl}/rest/v1/recipes?select=id,total_time_minutes&id=eq.${recipeId}`, {
+        headers: {
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+      }),
+      request.get(`${apiUrl}/rest/v1/recipe_time_entries?select=id&recipe_id=eq.${recipeId}`, {
+        headers: {
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+      }),
+    ]);
+    expect(recipeRecord.ok(), await recipeRecord.text()).toBeTruthy();
+    expect(timeEntries.ok(), await timeEntries.text()).toBeTruthy();
+    expect(await timeEntries.json()).toEqual([]);
+    expect(await recipeRecord.json()).toEqual([{ id: recipeId, total_time_minutes: 0 }]);
     await page.getByRole('link', { name: 'Edit' }).click();
     await page.getByRole('button', { name: 'Manage recipe photos' }).click();
     const recipePhotoDialog = page.getByRole('dialog', { name: 'Manage recipe photos' });
@@ -1334,7 +1355,7 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     );
     await page.getByRole('button', { name: 'Choose List columns' }).click();
     const requiredNameOption = page.locator('.explorer-list-preferences-required');
-    await expect(requiredNameOption).toHaveCSS('justify-content', 'flex-start');
+    await expect(requiredNameOption).toHaveCSS('justify-content', /^(?:flex|flow)-start$/u);
     const requiredNameBounds = await requiredNameOption.boundingBox();
     const alwaysShownBounds = await requiredNameOption.locator('span').boundingBox();
     expect(requiredNameBounds).not.toBeNull();
@@ -1473,9 +1494,7 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     await expect(publicationGridCard.locator('strong')).toHaveText('Roasted tomato soup');
     const publicationGridTitleBounds = await publicationGridCard.locator('strong').boundingBox();
     expect(publicationGridTitleBounds?.height).toBeGreaterThan(0);
-    await expect(publicationGridCard.locator('.find-recipes-grid-metadata')).toContainText(
-      'No total time',
-    );
+    await expect(publicationGridCard.locator('.find-recipes-grid-metadata')).toContainText('0 min');
     const mobileGridCardHeight = await publicationGridCard.evaluate(
       (card) => card.getBoundingClientRect().height,
     );

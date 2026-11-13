@@ -139,3 +139,79 @@
 
 Last recorded action: focused nutrition and equivalent E2Es passed on both
 projects, with typecheck and scoped Biome passing.
+
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd
+
+- `npx playwright test tests/e2e/source-links.spec.ts --project=chromium
+  --project='Fold 6'`: initially failed on Chromium because the replacement
+  geometry target was the full-width time-fields container; Fold 6 passed.
+- Updated the source-links geometry contract to the desktop 3-inch minimum and
+  50% row maximum, removed the unused Rest-input measurement effect, and
+  updated the Slice 11, visual-design, and comprehensive-reference wording.
+- Re-ran the source-links E2E on Chromium and Fold 6: 2 passed.
+- `npm run typecheck`: passed.
+- Biome including `recipe-media.css` reported existing diagnostics elsewhere
+  in that stylesheet. After correcting formatting in the edited E2E file,
+  focused Biome for the changed TypeScript files passed.
+- `git diff --check`: passed.
+
+Last recorded action: source-links E2E, typecheck, focused TypeScript Biome,
+and whitespace checks passed; remaining suite failures are pending.
+
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued
+
+- `npx playwright test tests/e2e/offline.spec.ts --grep "public recipe pages
+  are excluded from private offline storage" --project=chromium
+  --project='Fold 6'`: initially failed on both projects with "Recipe
+  unavailable"; the fixture had not made its recipe public.
+- Added the existing public username and `set_recipe_privacy` setup to the
+  test fixture, then reran the same test: 2 passed.
+- `npx playwright test tests/e2e/media.spec.ts --grep "media cleanup requires
+  authorization and drains queued missing objects" --project=chromium
+  --project='Fold 6'`: 2 passed without changes.
+
+Last recorded action: offline public-cache E2E passes after correcting its
+privacy setup, and the media cleanup queue E2E passes without changes.
+
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued
+
+- `npx playwright test tests/e2e/measurements.spec.ts --project=chromium
+  --project='Fold 6'`: initially failed the Preparation text-width assertion
+  on both projects; the measured width included space reserved for the
+  longest suggestion.
+- Updated the geometry checks to verify the 3mm gap between the suggestion
+  editor and inline controls, and to click within that actual gap.
+- Reran the full measurement spec: 8 passed across Chromium and Fold 6.
+- `npx biome check tests/e2e/measurements.spec.ts`: passed.
+- The passing Playwright run logged a Next destination-stream write error;
+  tests still passed and the error has not been diagnosed.
+
+Last recorded action: all measurement E2Es and focused Biome passed; one
+non-failing Next destination-stream error remains unexplained.
+
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued
+
+- `npx playwright test tests/e2e/recipe-search.spec.ts --workers=1`: 31 passed,
+  1 expected skip.
+- `npx playwright test tests/e2e/reported-fixes.spec.ts --workers=1`: 4 passed
+  across Chromium and Fold 6 after correcting the public-recipe action setup.
+- `npm run test:a11y -- --workers=1`: initial run had three stale assertions.
+  Updated the admin mobile heading expectation to the 34px responsive rule and
+  limited the recipe-action row check to visible controls. The full rerun passed
+  125 tests with 1 expected skip.
+- The first final E2E rerun had three failures among 442 tests. Updated the
+  Count-average test to select Recipe data in Settings, changed the private
+  Rating assertion to match a numeric token (avoiding a username substring),
+  and verified the offline transition by rerunning the failing case and the
+  complete offline file (18 passed across both projects).
+- `npm run test:unit`: bootstrap tests 8/8 and Vitest 653/653 passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- After formatting the three flagged test files, `npm run lint` passed with 171
+  advisory warnings; `git diff --check` passed.
+- Final `npm run test:e2e -- --workers=1`: 432 passed, 10 expected skips, no
+  failures. E2E logs still include non-failing Next.js stream errors, including
+  an `ECONNRESET` abort; the cause remains unverified.
+
+Last recorded action: full unit, E2E, and accessibility suites pass with only
+expected skips; build, typecheck, lint, and whitespace checks pass.

@@ -186,9 +186,9 @@ immediately before Once-a-year-rich and So-so. Reason is a single-line field.
 - A selected Pairs With recipe appears in edit mode as a normalized `#slug`
   token, such as `#roast-chicken`. The saved display text and view-mode link
   label remain the readable recipe name.
-- The desktop Pairs With input has a 3-inch minimum and ends at the right edge
-  of the Rest time input. The desktop Reference field has a 3-inch minimum and
-  a 50% row maximum; its Type column fits the picker.
+- The desktop Pairs With input has a 3-inch minimum and a 50% row maximum. The
+  desktop Reference field has a 3-inch minimum and a 50% row maximum; its Type
+  column fits the picker.
 - On mobile, the Reference Type column fits the picker instead of reserving a
   wider empty track. The field begins after the normal grid gap.
 

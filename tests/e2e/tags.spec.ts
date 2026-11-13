@@ -118,6 +118,7 @@ test('Settings exposes an accessible Tags catalog section @e2e @a11y', async ({
   try {
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     await page.waitForLoadState('networkidle');
 
     const section = page.getByRole('region', { name: 'Tags' });
@@ -221,6 +222,7 @@ test('Settings searches tags, adds a search result, and scrolls its 4x4 color ca
 
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const section = page.getByRole('region', { name: 'Tags' });
     const toggle = section.getByRole('button', { name: 'Edit tags' });
     await toggle.click();
@@ -315,6 +317,7 @@ test('Settings merges a chosen survivor and deletes unused tags without replacem
   try {
     await signIn(page, user.email, user.password);
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     await page.waitForLoadState('networkidle');
     const section = page.getByRole('region', { name: 'Tags' });
     await section.getByRole('button', { name: 'Edit tags' }).click();
@@ -400,6 +403,7 @@ test('recipes create tags inline and use shared pastel colors @e2e @a11y', async
     await expect(detailTags.getByRole('listitem').first()).toHaveText('Weeknight');
 
     await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     await page.waitForLoadState('networkidle');
     const catalog = page.getByRole('region', { name: 'Tags' });
     await catalog.getByRole('button', { name: 'Edit tags' }).click();
@@ -545,6 +549,7 @@ test('recipes can assign, edit, and remove private tags @e2e @a11y', async ({ pa
     }));
     expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
     await page.goto('/settings');
+    await page.getByRole('tab', { name: 'Recipe data' }).click();
     const settingsTags = page.getByRole('region', { name: 'Tags' });
     await settingsTags.getByRole('button', { name: 'Edit tags' }).click();
     await settingsTags.getByRole('button', { name: 'Delete Weeknight' }).click();

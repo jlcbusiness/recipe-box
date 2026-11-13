@@ -531,6 +531,22 @@ test('public recipe pages are excluded from private offline storage @e2e', async
     user,
     `Public cache exclusion ${randomUUID()}`,
   );
+  const publicUsername = `test-${user.id.slice(0, 8)}`;
+  const usernameUpdate = await request.post(`${config.apiUrl}/rest/v1/rpc/set_public_username`, {
+    headers: ownerHeaders(config, user),
+    data: { p_public_username: publicUsername },
+  });
+  expect(usernameUpdate.ok(), await usernameUpdate.text()).toBeTruthy();
+  const publish = await request.post(`${config.apiUrl}/rest/v1/rpc/set_recipe_privacy`, {
+    headers: ownerHeaders(config, user),
+    data: {
+      p_recipe_id: recipe.id,
+      p_expected_version: recipe.version,
+      p_is_private: false,
+      p_public_username: publicUsername,
+    },
+  });
+  expect(publish.ok(), await publish.text()).toBeTruthy();
   const publicId = await getPublicId(request, config, recipe.id);
 
   try {

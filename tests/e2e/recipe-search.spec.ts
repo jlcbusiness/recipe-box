@@ -3018,7 +3018,12 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       .getByRole('button', { name: 'Searchable Coriander Ingredient' })
       .click();
     await page.keyboard.press('Escape');
+    await page.mouse.move(0, 0);
     const lastRule = filterRows.nth(2);
+    if ((page.viewportSize()?.width ?? 0) <= 700) {
+      await lastRule.getByRole('button', { name: 'Expand filter 3' }).click();
+      await expect(lastRule).toHaveAttribute('data-mobile-expanded', 'true');
+    }
     const [
       ruleBounds,
       removeBounds,

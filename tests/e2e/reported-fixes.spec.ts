@@ -101,6 +101,11 @@ test('recipe sections share bounded gutters and nested instructions preserve pho
     await instruction.fill(`+photo${photoCode}-w800\n${text}`);
     await page.getByRole('button', { name: 'Save recipe', exact: true }).click();
     await expect(page).toHaveURL(recipeUrl);
+    await page.getByRole('switch', { name: 'Make linkable' }).click();
+    const usernameDialog = page.getByRole('dialog', { name: 'Choose a public username' });
+    await usernameDialog.getByLabel('Public username').fill(`reported-${user.id.slice(0, 8)}`);
+    await usernameDialog.getByRole('button', { name: 'Save username & publish' }).click();
+    await expect(usernameDialog).toBeHidden();
     for (const width of [900, 761, 760, 641, 640, 639, 560, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       const toggle = page.getByRole('switch', { name: 'Make private' });
@@ -210,9 +215,12 @@ test('recipe sections share bounded gutters and nested instructions preserve pho
       });
     }
     await page.setViewportSize({ width: 1920, height: 1080 });
-    const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Print & Download' }).click();
+    const downloadPromise = page.waitForEvent('download', { timeout: 10_000 });
+    await page.getByRole('button', { name: 'Download', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+    await expect(page.locator('.recipe-output-feedback-success')).toHaveText(
+      'HTML download started.',
+    );
     const download = await downloadPromise;
     const path = await download.path();
     if (!path) throw new Error('Expected standalone HTML download.');
@@ -233,8 +241,7 @@ test('recipe sections share bounded gutters and nested instructions preserve pho
     } finally {
       await output.close();
     }
-    await page.getByRole('button', { name: 'Print & Download' }).click();
-    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+    await page.getByRole('button', { name: 'Print', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-reported-fixes-print', 'true');
   } finally {
     await deleteTestUser(request, user);

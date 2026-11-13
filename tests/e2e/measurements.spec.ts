@@ -470,30 +470,22 @@ test('preparation choices reveal inline divided portions and cubed Size @e2e @a1
     await saltPreparation.fill('divided');
     const dividedInputBounds = await saltPreparation.evaluate((input) => {
       const preparationInput = input as HTMLInputElement;
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
       const controls = preparationInput
         .closest('.recipe-preparation-editor')
         ?.querySelector('.recipe-preparation-controls');
-      if (!context || !controls) return null;
+      if (!controls) return null;
       const inputBounds = preparationInput.getBoundingClientRect();
       const controlsBounds = controls.getBoundingClientRect();
-      const style = getComputedStyle(preparationInput);
-      context.font = style.font;
-      const textWidth = context.measureText(preparationInput.value).width;
+      const gap = controlsBounds.left - inputBounds.right;
       return {
-        extraWidth: inputBounds.width - textWidth,
-        clickX: inputBounds.left + Number.parseFloat(style.paddingLeft) + textWidth + 8,
+        gap,
+        clickX: inputBounds.right + gap / 2,
         clickY: inputBounds.top + inputBounds.height / 2,
-        beforeControls:
-          inputBounds.left + Number.parseFloat(style.paddingLeft) + textWidth + 8 <
-          controlsBounds.left,
       };
     });
-    expect(dividedInputBounds).not.toBeNull();
-    expect(dividedInputBounds?.extraWidth).toBeLessThanOrEqual(10);
-    expect(dividedInputBounds?.beforeControls).toBe(true);
     if (!dividedInputBounds) throw new Error('Preparation controls were not rendered.');
+    const cssPixelsPerMillimeter = 96 / 25.4;
+    expect(dividedInputBounds.gap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
     await page.mouse.click(dividedInputBounds.clickX, dividedInputBounds.clickY);
     await expect(page.getByRole('listbox')).toHaveCount(0);
     await saltPreparation.focus();
@@ -577,7 +569,6 @@ test('preparation choices reveal inline divided portions and cubed Size @e2e @a1
           amountUnitGap: unit.getBoundingClientRect().left - amount.getBoundingClientRect().right,
         };
       });
-    const cssPixelsPerMillimeter = 96 / 25.4;
     expect(dividedSpacing.preparationGap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
     expect(dividedSpacing.amountUnitGap).toBeCloseTo(2 * cssPixelsPerMillimeter, 1);
     const portionPreparationTops = await saltPreparationCell
@@ -636,18 +627,18 @@ test('preparation choices reveal inline divided portions and cubed Size @e2e @a1
     await carrotPreparationCell.click();
     const carrotPreparation = page.getByRole('combobox', { name: 'Preparation, row 2' });
     await carrotPreparation.fill('cubed');
-    const cubedInputExtraWidth = await carrotPreparation.evaluate((input) => {
+    const cubedPreparationGap = await carrotPreparation.evaluate((input) => {
       const preparationInput = input as HTMLInputElement;
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      if (!context) return Number.NaN;
-      context.font = getComputedStyle(preparationInput).font;
-      return (
-        preparationInput.getBoundingClientRect().width -
-        context.measureText(preparationInput.value).width
-      );
+      const controls = preparationInput
+        .closest('.recipe-preparation-editor')
+        ?.querySelector('.recipe-preparation-controls');
+      if (!controls) return null;
+      return controls.getBoundingClientRect().left - preparationInput.getBoundingClientRect().right;
     });
-    expect(cubedInputExtraWidth).toBeLessThanOrEqual(10);
+    if (cubedPreparationGap === null) {
+      throw new Error('Cubed Size controls were not rendered.');
+    }
+    expect(cubedPreparationGap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
     await page.getByRole('option', { name: 'cubed', exact: true }).click();
     await carrotPreparation.press('Enter');
     await clickPreparationWhitespace(2);

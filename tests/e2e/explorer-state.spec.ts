@@ -1187,25 +1187,52 @@ test('Find Recipes exposes all recipe columns beside the view controls @e2e', as
   const config = await getLocalSupabaseConfig();
 
   try {
+    await saveExplorerState(request, config, user, 'recipes-find', {
+      schema_version: 2,
+      display_preferences: {
+        visible_columns: ['state'],
+        column_widths: { name: 300, state: 120 },
+      },
+      filters: [],
+      sort: 'name',
+      direction: 'asc',
+      view: 'details',
+    });
     await signIn(page, user.email, user.password);
     await page.goto('/recipes/find?view=details');
 
     const columnButton = page.getByRole('button', { name: 'Choose List columns' });
     const viewButton = page.getByRole('button', { name: 'Switch to List view' });
+    await expect(columnButton).toBeVisible();
+    await expect(viewButton).toBeVisible();
+    await expect
+      .poll(async () => {
+        const [columnBox, viewBox] = await Promise.all([
+          columnButton.boundingBox(),
+          viewButton.boundingBox(),
+        ]);
+        return columnBox !== null && viewBox !== null;
+      })
+      .toBe(true);
     const columnButtonBox = await columnButton.boundingBox();
     const viewButtonBox = await viewButton.boundingBox();
     expect(columnButtonBox).not.toBeNull();
     expect(viewButtonBox).not.toBeNull();
     expect(Math.abs((columnButtonBox?.y ?? 0) - (viewButtonBox?.y ?? 0))).toBeLessThanOrEqual(4);
-    expect(columnButtonBox?.x).toBeGreaterThan(viewButtonBox?.x ?? 0);
-    await expect(viewButton).toHaveCSS('border-left-width', '1px');
+    expect(Math.abs((columnButtonBox?.x ?? 0) - (viewButtonBox?.x ?? 0))).toBeLessThanOrEqual(
+      columnButtonBox?.width ?? 0,
+    );
+    await expect(viewButton).toHaveCSS(
+      'border-left-width',
+      (page.viewportSize()?.width ?? 0) <= 720 ? '0px' : '1px',
+    );
 
     await columnButton.click();
     for (const field of [
       'Main Ingredients',
       'Date Added',
       'Date Changed',
-      'Cook Time',
+      'Total Time',
       'Pairs With',
     ]) {
       await expect(page.getByRole('checkbox', { name: field, exact: true })).toBeVisible();

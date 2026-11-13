@@ -41,3 +41,27 @@
 - [x] Rerun the focused nutrition/settings/database-bundle E2Es on Chromium and
   Fold 6: 5 passed and 1 desktop-only test was skipped on Fold 6.
 - [x] Run the production build, typecheck, and scoped Biome check; all passed.
+
+## Repository-wide suite cleanup follow-up
+
+- [x] Replace the source-links geometry check that depended on the removed
+  fixed Rest input; the test now verifies the current 3-inch minimum and 50%
+  row maximum. Both browser projects pass.
+- [x] Fix the offline public-cache test setup to publish its recipe before
+  visiting its public link; both browser projects pass.
+- [x] Recheck the media cleanup queue E2E on both browser projects; it passes
+  without further changes.
+- [x] Update the measurement geometry assertions to verify the current
+  suggestion-sized editor and its 3mm control gap; all measurement E2Es pass
+  on both browser projects.
+- [x] Reproduce and resolve the mobile media action width and Cook Time
+  explorer column failures.
+- [x] Reproduce and resolve the recipe-picklist, recipe-search,
+  reported-fixes, and accessibility failures/timeouts.
+- [x] Resolve the final full-E2E failures: select the Recipe data Settings tab
+  in the saved Count-average test, check for the exact private Rating token
+  rather than a username substring, and verify offline cache eviction.
+- [x] Rerun the full unit, E2E, and accessibility suites, then verify the
+  production build, typecheck, lint, and whitespace checks. Final results:
+  653 unit tests, 432 E2E tests, and 125 accessibility tests passed; the
+  remaining 10 E2E and 1 accessibility skips are expected.

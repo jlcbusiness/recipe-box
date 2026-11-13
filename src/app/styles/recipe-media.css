@@ -113,7 +113,7 @@
       "photo heading"
       "photo details";
     grid-template-columns:
-      minmax(0, min(var(--recipe-photo-row-width), calc(100% - 392px - 32px)))
+      minmax(0, min(var(--recipe-photo-row-width), calc(100% - 436px - 32px)))
       minmax(0, 1fr);
     column-gap: 32px;
   }
@@ -2307,7 +2307,7 @@ section.recipe-detail-section .recipe-relationship-list a {
 
 @media (min-width: 641px) {
   .recipe-pairing-row {
-    grid-template-columns: minmax(3in, var(--pairing-field-max-width, 50%)) minmax(0, 1fr) 28px;
+    grid-template-columns: minmax(3in, 50%) minmax(0, 1fr) 28px;
   }
 
   .recipe-pairing-row .recipe-relationship-remove {

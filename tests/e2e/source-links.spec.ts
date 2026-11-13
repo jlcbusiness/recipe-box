@@ -506,7 +506,7 @@ test('recipe source links save atomically and remain recoverable through Trash @
     await expect(page.getByText('Green salad')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'References' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Roast chicken' })).toHaveCount(2);
-    await expect(page.getByText('Cooking Book', { exact: true })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Cooking Book' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Cooking Book' })).toHaveCount(0);
     await expect(
       page.getByRole('link', { name: 'https://recipes.example.test/herbed-potatoes' }),
@@ -620,14 +620,7 @@ test('recipe source links save atomically and remain recoverable through Trash @
         throw new Error('Expected the pairing row to have layout bounds');
       }
       expect(pairingFieldBounds.width).toBeGreaterThanOrEqual(3 * 96);
-      const restTimeBounds = await page.locator('#rest_time_minutes').boundingBox();
-      if (!restTimeBounds) {
-        throw new Error('Expected the Rest time field to have layout bounds');
-      }
-      expect(pairingFieldBounds.x + pairingFieldBounds.width).toBeCloseTo(
-        restTimeBounds.x + restTimeBounds.width,
-        0,
-      );
+      expect(pairingFieldBounds.width).toBeLessThanOrEqual(pairingRowBounds.width / 2 + 1);
     }
     expect(pairingRemoveBounds.width).toBe(28);
     expect(pairingRemoveBounds.height).toBe(28);
