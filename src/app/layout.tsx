@@ -1,6 +1,7 @@
 import '@fontsource-variable/dm-sans';
 import 'react-advanced-cropper/dist/style.css';
 import './globals.css';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata } from 'next';
 import { appVersion } from '../lib/app-version';
 import { PwaRegistration } from './pwa-registration';
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body>
         <PwaRegistration />
         {children}
+        <SpeedInsights />
         <footer aria-label="Application version" className="app-version-footer" role="contentinfo">
           Recipe Box v{appVersion}
         </footer>
