@@ -56,6 +56,7 @@ import {
   type NutrientValues,
   roundNutrientValues,
 } from '../../lib/recipes/nutrition-rules';
+import { normalizePicklistMatchText } from '../../lib/recipes/picklist-rules';
 import {
   clearConditionalValuesForStateChange,
   formatRecipeDuration,
@@ -136,7 +137,6 @@ function SinglePicklist({
   invalid = false,
   onOpenChange,
   onChange,
-  onAddOption,
 }: {
   label: string;
   name: string;
@@ -149,7 +149,6 @@ function SinglePicklist({
   invalid?: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onChange: (value: string) => void;
-  onAddOption?: (value: string) => Promise<{ valueId?: string; error?: string }>;
 }) {
   const selectedOption = options.find((option) => option.value === value);
 
@@ -163,7 +162,6 @@ function SinglePicklist({
         label={label}
         measureLabel={placeholder}
         menuClassName={menuClassName}
-        onAddOption={onAddOption}
         onOpenChange={onOpenChange}
         onSelect={onChange}
         open={isOpen}
@@ -180,6 +178,83 @@ function SinglePicklist({
         </span>
       </Picklist>
       <input name={name} type="hidden" value={value} />
+    </div>
+  );
+}
+
+function FoodTypePicklist({
+  value,
+  options,
+  onOpenChange,
+  onChange,
+  onAddOption,
+}: {
+  value: string;
+  options: SinglePicklistOption[];
+  onOpenChange: (isOpen: boolean) => void;
+  onChange: (value: string) => void;
+  onAddOption: (value: string) => Promise<{ valueId?: string; error?: string }>;
+}) {
+  const [addError, setAddError] = useState('');
+  const selectedOption = options.find((option) => option.value === value);
+
+  async function selectSuggestion(rawValue: string) {
+    setAddError('');
+    const existingOption = options.find(
+      (option) => normalizePicklistMatchText(option.label) === normalizePicklistMatchText(rawValue),
+    );
+    if (existingOption) {
+      onChange(existingOption.value);
+      onOpenChange(false);
+      return;
+    }
+
+    const result = await onAddOption(rawValue);
+    if (result.error || !result.valueId) {
+      setAddError(result.error ?? 'Food Type could not be added. Try again.');
+      return;
+    }
+    onChange(result.valueId);
+    onOpenChange(false);
+  }
+
+  return (
+    <div
+      className="recipe-field recipe-single-picklist"
+      onFocusCapture={() => onOpenChange(true)}
+      onBlurCapture={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (!nextTarget || !event.currentTarget.contains(nextTarget as Node)) {
+          onOpenChange(false);
+        }
+      }}
+    >
+      <span>Food Type</span>
+      <SuggestionCellEditor
+        label="Food Type"
+        options={options.map((option) => option.label)}
+        value={selectedOption?.label ?? ''}
+        onCommit={() => {}}
+        onSelectSuggestion={(suggestion) => {
+          void selectSuggestion(suggestion);
+        }}
+        onCancel={() => onOpenChange(false)}
+        onDraftChange={() => {
+          if (addError) {
+            setAddError('');
+          }
+        }}
+        resetOnCancel
+        syncValue
+        focusOnMount={false}
+        allowTabToSelectAdd={false}
+      />
+      {addError && (
+        <p className="recipe-form-error" role="alert">
+          {addError}
+        </p>
+      )}
+      <input name="food_type_id" type="hidden" value={value} />
     </div>
   );
 }
@@ -1240,16 +1315,12 @@ export function RecipeForm({
           />
         </div>
         <div className="recipe-form-fields recipe-classification-fields">
-          <SinglePicklist
-            label="Food Type"
-            name="food_type_id"
+          <FoodTypePicklist
             value={foodTypeId}
-            placeholder="Select Food Type"
             options={valuesFor('food_type').map((value) => ({
               value: value.id,
               label: value.display_value,
             }))}
-            isOpen={openPicklist === 'food_type'}
             onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'food_type' : null)}
             onChange={setFoodTypeId}
             onAddOption={(value) => addPicklistOption('food_type', value)}

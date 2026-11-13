@@ -337,9 +337,24 @@ async function runMigrationTest() {
 
   const invalidSize = await apiAttempt(
     `${config.apiUrl}/rest/v1/recipe_ingredients?id=eq.${migratedRows[0].id}`,
-    { method: 'PATCH', headers: service, body: { size_value: 2, size_unit: 'in' } },
+    {
+      method: 'PATCH',
+      headers: service,
+      body: { preparation: 'minced', size_value: 2, size_unit: 'in' },
+    },
   );
-  assert.equal(invalidSize.ok, false, 'Size should require cubed preparation');
+  assert.equal(invalidSize.ok, false, 'Size should require a supported preparation');
+  for (const preparation of ['diced', 'sliced']) {
+    const supportedSize = await apiAttempt(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?id=eq.${migratedRows[0].id}`,
+      {
+        method: 'PATCH',
+        headers: service,
+        body: { preparation, size_value: 2, size_unit: 'in' },
+      },
+    );
+    assert.equal(supportedSize.ok, true, `Size should be allowed for ${preparation} preparation`);
+  }
 
   const invalidRatio = await apiAttempt(
     `${config.apiUrl}/rest/v1/recipe_ingredients?id=eq.${otherSetRow.id}`,
@@ -382,7 +397,7 @@ async function runMigrationTest() {
       ingredient_name: null,
       is_main: false,
       detail: '',
-      preparation: 'cubed',
+      preparation: index === 0 ? 'cubed' : 'diced',
       portion_one_ratio: index === 0 ? 0.25 : 0.5,
       size_value: index === 0 ? 1.5 : 2.5,
       size_unit: index === 0 ? 'in' : 'cm',
@@ -427,18 +442,19 @@ async function runMigrationTest() {
   assert.ok(savedRecipeId);
 
   const savedRows = await apiCall(
-    `${config.apiUrl}/rest/v1/recipe_ingredients?select=id,ingredient_set_id,portion_one_ratio,size_value,size_unit&recipe_id=eq.${savedRecipeId}&order=position`,
+    `${config.apiUrl}/rest/v1/recipe_ingredients?select=id,ingredient_set_id,preparation,portion_one_ratio,size_value,size_unit&recipe_id=eq.${savedRecipeId}&order=position`,
     { headers: service },
   );
   assert.deepEqual(
-    savedRows.map(({ portion_one_ratio, size_value, size_unit }) => ({
+    savedRows.map(({ preparation, portion_one_ratio, size_value, size_unit }) => ({
+      preparation,
       portion_one_ratio,
       size_value,
       size_unit,
     })),
     [
-      { portion_one_ratio: 0.25, size_value: 1.5, size_unit: 'in' },
-      { portion_one_ratio: 0.5, size_value: 2.5, size_unit: 'cm' },
+      { preparation: 'cubed', portion_one_ratio: 0.25, size_value: 1.5, size_unit: 'in' },
+      { preparation: 'diced', portion_one_ratio: 0.5, size_value: 2.5, size_unit: 'cm' },
     ],
   );
   assert.deepEqual(
@@ -470,6 +486,7 @@ async function runMigrationTest() {
     p_name: 'Updated portion fixture',
     p_ingredient_rows: savePayload.p_ingredient_rows.map((row, index) => ({
       ...row,
+      preparation: index === 0 ? 'sliced' : 'diced',
       portion_one_ratio: index === 0 ? 0.75 : 0.25,
     })),
   };
@@ -486,6 +503,8 @@ async function runMigrationTest() {
   assert.equal(updatedHistory[1].before_data.ingredients[0].portion_one_ratio, 0.25);
   assert.equal(updatedHistory[1].before_data.ingredients[1].size_unit, 'cm');
   assert.equal(updatedHistory[1].after_data.ingredients[0].portion_one_ratio, 0.75);
+  assert.equal(updatedHistory[1].after_data.ingredients[0].preparation, 'sliced');
+  assert.equal(updatedHistory[1].after_data.ingredients[0].size_unit, 'in');
 
   const invalidPortionMention = await apiAttempt(`${config.apiUrl}/rest/v1/recipe_steps`, {
     method: 'POST',

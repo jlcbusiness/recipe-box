@@ -132,6 +132,13 @@ while retaining the existing single-image viewer without gallery navigation.
   duplication while preserving protected source attribution and distinguishing
   a duplicate from a direct public save.
 
+### Phase 13: Recipe editor entry
+
+- **DLC 37 (implemented in app version 1.11.0):**
+  [Recipe metadata typeahead and ingredient Size](dlc-37-recipe-metadata-picklist-typeahead.md)
+  adds searchable explicit-add metadata suggestions, Size for Cubed, Diced,
+  and Sliced preparations, and populated-dimension selection for divided rows.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for

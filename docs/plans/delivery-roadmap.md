@@ -198,6 +198,13 @@ question. Its output is a decision-log entry, not shipped code.
   Protected source attribution remains distinct from the direct-public-save
   marker.
 
+### Phase 13: Recipe editor entry
+
+- **DLC 37 (implemented in app version 1.11.0):**
+  [Recipe metadata typeahead and ingredient Size](slices/dlc/dlc-37-recipe-metadata-picklist-typeahead.md)
+  adds searchable explicit-add metadata suggestions, Size for Cubed, Diced,
+  and Sliced preparations, and populated-dimension selection for divided rows.
+
 ## Completion Rule
 
 A slice is complete only when its stated demonstration works, the automated

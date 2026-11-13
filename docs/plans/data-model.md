@@ -59,7 +59,7 @@ event. Updates and events are excluded from account reset and database bundles.
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
-| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, measurements, optional two-portion ratio, optional cubed Size, an optional recipe-only nutrition serving-size basis, and per-field nutrition overrides with their serving-size basis. |
+| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, measurements, optional two-portion ratio, optional Size for cubed/diced/sliced preparations, an optional recipe-only nutrition serving-size basis, and per-field nutrition overrides with their serving-size basis. |
 | Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to one recipe ingredient row and optionally one of its two portions. |
@@ -167,8 +167,9 @@ columns.
 - A divided row stores its first-portion ratio; the second portion uses the
   complement, and existing measurements remain the canonical total. Only
   scalar Unit, Count, and Things measurements divide.
-- Size is a positive value with unit `in` or `cm`, allowed only for `cubed`
-  Preparation. An absent Size has both value and unit null.
+- Size is a positive value with unit `in` or `cm`, allowed only for `cubed`,
+  `diced`, or `sliced` Preparation. An absent Size has both value and unit
+  null.
 - Ingredient mentions reference a particular recipe ingredient row, never an
   unstructured word in instruction text. A divided-row mention may store
   ordinal 1 or 2; a null ordinal refers to the whole row.

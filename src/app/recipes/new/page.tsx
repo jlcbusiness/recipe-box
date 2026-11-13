@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import {
   getIngredients,
   getPreparationOptions,
@@ -16,6 +17,11 @@ export default async function NewRecipePage({
 }) {
   const { publication: requestedPublicationId } = await searchParams;
   const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    redirect('/');
+  }
+
   const [picklists, ingredients, preparationOptions, publications, recipeOptions, tags] =
     await Promise.all([
       getRecipePicklists(supabase),

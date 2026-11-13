@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
 import type { RecipePicklistValue } from '../../lib/recipes/data';
+import { normalizePicklistMatchText } from '../../lib/recipes/picklist-rules';
 import styles from './multi-picklist.module.css';
 
 export type RecipeMultiSelectCategory = 'meal_type' | 'cuisine' | 'equipment';
@@ -47,13 +48,15 @@ export function MultiPicklist({
 }: MultiPicklistProps) {
   const [localSelectedOptionIds, setLocalSelectedOptionIds] = useState(selectedIds);
   const selectedOptionIds = onSelectionChange ? selectedIds : localSelectedOptionIds;
-  const [addDraft, setAddDraft] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [addError, setAddError] = useState('');
   const [isAdding, startAddTransition] = useTransition();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLFieldSetElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const addSuggestionRef = useRef<HTMLButtonElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
-  const focusOptionOnOpenRef = useRef(false);
+  const focusSearchOnOpenRef = useRef(false);
   const [triggerLabelWidth, setTriggerLabelWidth] = useState(0);
   const selectedValues = values.filter((value) => selectedOptionIds.includes(value.id));
   const longestOption = values.reduce(
@@ -67,10 +70,21 @@ export function MultiPicklist({
     : (selectedValues[0]?.display_value ?? emptyLabel);
   const accessibleSelection = selectedValues.map((value) => value.display_value).join(', ');
   const optionsId = controlId ? `${controlId}-options` : `${category}-options`;
+  const normalizedQuery = normalizePicklistMatchText(searchQuery);
+  const filteredValues = normalizedQuery
+    ? values.filter((value) =>
+        normalizePicklistMatchText(value.display_value).includes(normalizedQuery),
+      )
+    : values;
+  const hasExactMatch = values.some(
+    (value) => normalizePicklistMatchText(value.display_value) === normalizedQuery,
+  );
+  const addValue = searchQuery.trim().replace(/\s+/gu, ' ');
+  const canAddQuery = Boolean(normalizedQuery) && !hasExactMatch && Boolean(onAddOption);
 
   useEffect(() => {
     if (!isOpen) {
-      setAddDraft('');
+      setSearchQuery('');
       setAddError('');
     }
   }, [isOpen]);
@@ -84,17 +98,11 @@ export function MultiPicklist({
   }, [filterMode]);
 
   useLayoutEffect(() => {
-    if (!isOpen || !focusOptionOnOpenRef.current) {
+    if (!isOpen || !focusSearchOnOpenRef.current) {
       return;
     }
-    focusOptionOnOpenRef.current = false;
-    const selectedOption = menuRef.current?.querySelector<HTMLButtonElement>(
-      'button[data-multi-option="true"][aria-pressed="true"]',
-    );
-    const firstOption = menuRef.current?.querySelector<HTMLButtonElement>(
-      'button[data-multi-option="true"]',
-    );
-    (selectedOption ?? firstOption)?.focus();
+    focusSearchOnOpenRef.current = false;
+    searchInputRef.current?.focus();
   }, [isOpen]);
 
   function selectOption(valueId: string) {
@@ -115,22 +123,19 @@ export function MultiPicklist({
   }
 
   function submitAddOption() {
-    if (!onAddOption || isAdding) {
+    if (!onAddOption || isAdding || !canAddQuery) {
       return;
     }
-    const rawValue = addDraft.trim();
-    if (!rawValue) {
-      setAddError(`Enter a ${label.toLocaleLowerCase()} value before adding.`);
-      return;
-    }
+    searchInputRef.current?.focus();
     setAddError('');
     startAddTransition(async () => {
-      const result = await onAddOption(addDraft);
+      const result = await onAddOption(searchQuery);
       if (result.error || !result.valueId) {
         setAddError(result.error ?? `${label} could not be added. Try again.`);
         return;
       }
-      setAddDraft('');
+      searchInputRef.current?.focus();
+      setSearchQuery('');
       selectOption(result.valueId);
     });
   }
@@ -147,17 +152,11 @@ export function MultiPicklist({
 
     event.preventDefault();
     if (isOpen) {
-      const selectedOption = menuRef.current?.querySelector<HTMLButtonElement>(
-        'button[data-multi-option="true"][aria-pressed="true"]',
-      );
-      const firstOption = menuRef.current?.querySelector<HTMLButtonElement>(
-        'button[data-multi-option="true"]',
-      );
-      (selectedOption ?? firstOption)?.focus();
+      searchInputRef.current?.focus();
       return;
     }
 
-    focusOptionOnOpenRef.current = true;
+    focusSearchOnOpenRef.current = true;
     onToggle();
   }
 
@@ -184,6 +183,18 @@ export function MultiPicklist({
         ? Math.min(currentIndex + 1, options.length - 1)
         : Math.max(currentIndex - 1, 0);
     options[nextIndex]?.focus();
+  }
+
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'ArrowDown') {
+      return;
+    }
+
+    event.preventDefault();
+    const firstOption = menuRef.current?.querySelector<HTMLButtonElement>(
+      'button[data-multi-option="true"]',
+    );
+    (firstOption ?? (canAddQuery ? addSuggestionRef.current : null))?.focus();
   }
 
   return (
@@ -248,7 +259,25 @@ export function MultiPicklist({
             id={optionsId}
             ref={menuRef}
           >
-            {values.map((value) => {
+            <div className={styles.searchRow}>
+              <input
+                aria-label={`Search ${label}`}
+                autoComplete="off"
+                className={styles.searchInput}
+                ref={searchInputRef}
+                readOnly={isAdding}
+                type="text"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  if (addError) {
+                    setAddError('');
+                  }
+                }}
+                onKeyDown={handleSearchKeyDown}
+              />
+            </div>
+            {filteredValues.map((value) => {
               const isSelected = selectedOptionIds.includes(value.id);
               return (
                 <button
@@ -267,54 +296,23 @@ export function MultiPicklist({
                 </button>
               );
             })}
-            {onAddOption && (
-              <>
-                <div className={styles.addRow}>
-                  <input
-                    aria-label={`Add ${label}`}
-                    autoComplete="off"
-                    className={styles.addInput}
-                    placeholder={`Add ${label}…`}
-                    size={8}
-                    type="text"
-                    value={addDraft}
-                    onChange={(event) => {
-                      setAddDraft(event.target.value);
-                      if (addError) {
-                        setAddError('');
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        submitAddOption();
-                      } else if (event.key === 'Escape') {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setAddDraft('');
-                        setAddError('');
-                        onClose();
-                        triggerRef.current?.focus();
-                      }
-                    }}
-                  />
-                  <button
-                    aria-label={`Add ${label}`}
-                    className={styles.addButton}
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={submitAddOption}
-                  >
-                    +
-                  </button>
-                </div>
-                {addError && (
-                  <p className={styles.addError} role="alert">
-                    {addError}
-                  </p>
-                )}
-              </>
+            {canAddQuery && (
+              <button
+                aria-label={`Add "${addValue}"`}
+                className={styles.addSuggestion}
+                disabled={isAdding}
+                ref={addSuggestionRef}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={submitAddOption}
+              >
+                Add "{addValue}"
+              </button>
+            )}
+            {addError && (
+              <p className={styles.addError} role="alert">
+                {addError}
+              </p>
             )}
           </fieldset>
         )}

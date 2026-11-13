@@ -5964,33 +5964,65 @@ test('owners can create Equipment, Food Type, Meal Type, and Cuisine values in t
     await page.getByLabel('Name').fill('DLC 25 editor workflow recipe');
 
     const foodTypeTrigger = page.getByRole('combobox', { name: 'Food Type', exact: true });
-    await foodTypeTrigger.click();
-    const addFoodTypeInput = page.getByRole('textbox', { name: 'Add Food Type' });
-    await expect(addFoodTypeInput).toBeVisible();
-    await addFoodTypeInput.fill('Unconfirmed food type');
-    await addFoodTypeInput.press('Escape');
+    const foodTypeBounds = await foodTypeTrigger.boundingBox();
+    const mealTypeBounds = await page
+      .getByRole('button', { name: 'Meal Type: Select' })
+      .boundingBox();
+    const cuisineBounds = await page.getByRole('button', { name: 'Cuisine: Select' }).boundingBox();
+    expect(foodTypeBounds?.height).toBe(mealTypeBounds?.height);
+    expect(foodTypeBounds?.height).toBe(cuisineBounds?.height);
+    await foodTypeTrigger.fill('Unconfirmed food type');
+    await expect(page.getByRole('option', { name: /Add.*Unconfirmed food type/u })).toBeVisible();
+    const viewport = page.viewportSize();
+    const foodTypeMenu = page.getByRole('listbox');
+    const foodTypeMenuBounds = await foodTypeMenu.boundingBox();
+    expect(viewport).not.toBeNull();
+    expect(foodTypeMenuBounds?.x).toBeGreaterThanOrEqual(0);
+    expect((foodTypeMenuBounds?.x ?? 0) + (foodTypeMenuBounds?.width ?? 0)).toBeLessThanOrEqual(
+      viewport?.width ?? 0,
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await foodTypeTrigger.press('Escape');
     await expect(page.getByRole('listbox')).toHaveCount(0);
+    await expect(foodTypeTrigger).not.toHaveValue('Unconfirmed food type');
 
-    await foodTypeTrigger.click();
-    await expect(page.getByRole('option', { name: 'Unconfirmed food type' })).toHaveCount(0);
-    await page.getByRole('textbox', { name: 'Add Food Type' }).fill('  Savory   Galette  ');
-    await page.getByRole('textbox', { name: 'Add Food Type' }).press('Enter');
-    await expect(page.getByRole('listbox')).toHaveCount(0);
-    await expect(foodTypeTrigger).toContainText('Savory Galette');
+    await foodTypeTrigger.fill('  Savory   Galette  ');
+    await page.getByRole('option', { name: /Add.*Savory Galette/u }).click();
+    await expect(foodTypeTrigger).toHaveValue('Savory Galette');
     await expect(page).toHaveURL(/\/recipes\/new$/);
+    await foodTypeTrigger.fill('  savory   GALETTE  ');
+    await expect(page.getByRole('option', { name: 'Savory Galette', exact: true })).toBeVisible();
+    await expect(page.getByRole('option', { name: /Add.*savory.*GALETTE/u })).toHaveCount(0);
+    await foodTypeTrigger.press('Escape');
 
     await page.getByRole('button', { name: 'Equipment: Select' }).click();
     const equipmentMenu = page.getByRole('group', { name: 'Equipment options' });
-    const addEquipmentInput = equipmentMenu.getByRole('textbox', { name: 'Add Equipment' });
-    await addEquipmentInput.fill('Carbon steel wok');
-    await addEquipmentInput.press('Enter');
+    const equipmentSearch = equipmentMenu.getByRole('textbox', { name: 'Search Equipment' });
+    await equipmentSearch.fill('Carbon steel wok');
+    const equipmentMenuBounds = await equipmentMenu.boundingBox();
+    expect(equipmentMenuBounds?.x).toBeGreaterThanOrEqual(0);
+    expect(
+      (equipmentMenuBounds?.x ?? 0) + (equipmentMenuBounds?.width ?? 0),
+    ).toBeLessThanOrEqual(viewport?.width ?? 0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await equipmentMenu.getByRole('button', { name: /Add.*Carbon steel wok/u }).click();
     const wokOption = equipmentMenu.getByRole('button', { name: 'Carbon steel wok', exact: true });
     await expect(wokOption).toHaveAttribute('aria-pressed', 'true');
-    await addEquipmentInput.fill('  carbon   STEEL wok ');
-    await equipmentMenu.getByRole('button', { name: 'Add Equipment' }).click();
+    await equipmentSearch.fill('  carbon   STEEL wok ');
     await expect(
       equipmentMenu.getByRole('button', { name: 'Carbon steel wok', exact: true }),
     ).toHaveCount(1);
+    await expect(
+      equipmentMenu.getByRole('button', { name: /Add.*carbon.*STEEL wok/u }),
+    ).toHaveCount(0);
+    await wokOption.click();
+    await expect(wokOption).toHaveAttribute('aria-pressed', 'false');
+    await wokOption.click();
+    await expect(wokOption).toHaveAttribute('aria-pressed', 'true');
     const openMenuA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
@@ -5999,8 +6031,8 @@ test('owners can create Equipment, Food Type, Meal Type, and Cuisine values in t
 
     await page.getByRole('button', { name: 'Meal Type: Select' }).click();
     const mealTypeMenu = page.getByRole('group', { name: 'Meal Type options' });
-    await mealTypeMenu.getByRole('textbox', { name: 'Add Meal Type' }).fill('Late night');
-    await mealTypeMenu.getByRole('button', { name: 'Add Meal Type' }).click();
+    await mealTypeMenu.getByRole('textbox', { name: 'Search Meal Type' }).fill('Late night');
+    await mealTypeMenu.getByRole('button', { name: /Add.*Late night/u }).click();
     await expect(
       mealTypeMenu.getByRole('button', { name: 'Late night', exact: true }),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -6008,8 +6040,8 @@ test('owners can create Equipment, Food Type, Meal Type, and Cuisine values in t
 
     await page.getByRole('button', { name: 'Cuisine: Select' }).click();
     const cuisineMenu = page.getByRole('group', { name: 'Cuisine options' });
-    await cuisineMenu.getByRole('textbox', { name: 'Add Cuisine' }).fill('Peruvian Nikkei');
-    await cuisineMenu.getByRole('textbox', { name: 'Add Cuisine' }).press('Enter');
+    await cuisineMenu.getByRole('textbox', { name: 'Search Cuisine' }).fill('Peruvian Nikkei');
+    await cuisineMenu.getByRole('button', { name: /Add.*Peruvian Nikkei/u }).click();
     await expect(
       cuisineMenu.getByRole('button', { name: 'Peruvian Nikkei', exact: true }),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -6065,7 +6097,7 @@ test('owners can create Equipment, Food Type, Meal Type, and Cuisine values in t
     await expect(unorderedList.locator('li').nth(1).locator('strong')).toHaveText('onion');
 
     await page.getByRole('link', { name: 'Edit' }).click();
-    await expect(page.getByRole('combobox', { name: 'Food Type', exact: true })).toContainText(
+    await expect(page.getByRole('combobox', { name: 'Food Type', exact: true })).toHaveValue(
       'Savory Galette',
     );
     await expect(page.getByRole('button', { name: /Equipment:.*Carbon steel wok/ })).toBeVisible();

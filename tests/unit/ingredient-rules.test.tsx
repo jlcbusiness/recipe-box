@@ -6,6 +6,7 @@ import {
   getIngredientDisplayInputForPortion,
   getIngredientDisplayParts,
   getPortionDisplayAmounts,
+  getPortionMeasurementType,
   getPortionRatio,
   moveIngredientRow,
   moveIngredientRowTo,
@@ -86,6 +87,40 @@ describe('ingredient row rules', () => {
     ).toBe('1 ⅓ cups');
   });
 
+  it('uses only populated dimensions for divided portions and falls back when one is cleared', () => {
+    const measurements = [
+      { measurement_type: 'volume' as const, amount_min: 2, amount_max: null },
+      { measurement_type: 'weight' as const, amount_min: null, amount_max: null },
+    ];
+
+    expect(getPortionMeasurementType(measurements, 'weight')).toBe('volume');
+    expect(getPortionMeasurementType(measurements)).toBe('volume');
+    expect(
+      getPortionMeasurementType([
+        { measurement_type: 'volume', amount_min: null, amount_max: null },
+        { measurement_type: 'weight', amount_min: 8, amount_max: null },
+      ]),
+    ).toBe('weight');
+    expect(
+      getPortionMeasurementType(
+        [
+          { measurement_type: 'volume', amount_min: 2, amount_max: null },
+          { measurement_type: 'weight', amount_min: 8, amount_max: null },
+        ],
+        'weight',
+      ),
+    ).toBe('weight');
+    expect(
+      getPortionMeasurementType(
+        [
+          { measurement_type: 'volume', amount_min: 2, amount_max: null },
+          { measurement_type: 'weight', amount_min: 8, amount_max: null },
+        ],
+        'volume',
+      ),
+    ).toBe('volume');
+  });
+
   it('allows scalar Unit, Count, and Things measurements but rejects ranges and Feel', () => {
     const scalar = (
       measurement_type: 'volume' | 'weight' | 'count' | 'informal' | 'unmeasured',
@@ -126,16 +161,18 @@ describe('ingredient row rules', () => {
     ).not.toBeNull();
   });
 
-  it('requires positive Size in inches or centimeters only for cubed preparation', () => {
-    expect(validateIngredientSize('cubed', '1.25', 'in')).toBeNull();
-    expect(validateIngredientSize('Cubed', '.5', 'cm')).toBeNull();
-    expect(validateIngredientSize('cubed', '', '')).toBeNull();
-    expect(validateIngredientSize('cubed', '0', 'in')).not.toBeNull();
-    expect(validateIngredientSize('cubed', '-1', 'in')).not.toBeNull();
-    expect(validateIngredientSize('cubed', '1/2', 'in')).not.toBeNull();
-    expect(validateIngredientSize('cubed', '1', '')).not.toBeNull();
-    expect(validateIngredientSize('cubed', '', 'cm')).toBeNull();
-    expect(validateIngredientSize('sliced', '1', 'cm')).not.toBeNull();
+  it('requires positive Size in inches or centimeters for cubed, diced, and sliced preparation', () => {
+    for (const preparation of ['cubed', 'diced', 'sliced']) {
+      expect(validateIngredientSize(preparation, '1.25', 'in')).toBeNull();
+      expect(validateIngredientSize(preparation, '.5', 'cm')).toBeNull();
+      expect(validateIngredientSize(preparation, '', '')).toBeNull();
+      expect(validateIngredientSize(preparation, '0', 'in')).not.toBeNull();
+      expect(validateIngredientSize(preparation, '-1', 'in')).not.toBeNull();
+      expect(validateIngredientSize(preparation, '1/2', 'in')).not.toBeNull();
+      expect(validateIngredientSize(preparation, '1', '')).not.toBeNull();
+      expect(validateIngredientSize(preparation, '', 'cm')).toBeNull();
+    }
+    expect(validateIngredientSize('minced', '1', 'cm')).not.toBeNull();
   });
 
   it('keeps exactly one empty row after populated rows', () => {
@@ -460,7 +497,7 @@ describe('ingredient row rules', () => {
     ]);
   });
 
-  it('serializes division ratio and cubed Size without replacing canonical measurements', () => {
+  it('serializes division ratio and Size without replacing canonical measurements', () => {
     expect(
       serializeIngredientRows([
         {
@@ -528,11 +565,16 @@ describe('ingredient row rules', () => {
     expect(
       serializeIngredientRows([{ ...rows[0], preparation: 'cubed', sizeUnit: 'cm' }])[0],
     ).toMatchObject({ size_value: null, size_unit: null });
+    for (const preparation of ['cubed', 'diced', 'sliced']) {
+      expect(
+        serializeIngredientRows([{ ...rows[0], preparation, sizeValue: '1', sizeUnit: 'cm' }])[0],
+      ).toMatchObject({ preparation, size_value: 1, size_unit: 'cm' });
+    }
     expect(() =>
       serializeIngredientRows([
-        { ...rows[0], sizeValue: '1', sizeUnit: 'cm', preparation: 'sliced' },
+        { ...rows[0], sizeValue: '1', sizeUnit: 'cm', preparation: 'minced' },
       ]),
-    ).toThrow('Size is available only when Preparation is cubed.');
+    ).toThrow('Size is available only when Preparation is cubed, diced, or sliced.');
   });
 
   it('serializes measurements inside their ingredient row', () => {

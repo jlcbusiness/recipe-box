@@ -439,6 +439,7 @@ test('preparation choices reveal inline divided portions and cubed Size @e2e @a1
     await page.getByRole('listbox').getByRole('option', { name: 'cup', exact: true }).click();
     const weightUnit = grid.locator('.recipe-measurement-weight-trigger');
     await expect(weightUnit).toBeVisible();
+    await weightUnit.focus();
     const weightUnitRightEdge = await weightUnit.evaluate((unit) => {
       const preparationCell = unit.closest('tr')?.querySelector('td:nth-last-child(2)');
       if (!preparationCell) return null;
@@ -764,6 +765,81 @@ test('preparation choices reveal inline divided portions and cubed Size @e2e @a1
   }
 });
 
+test('Diced and Sliced preserve Size while other preparations clear it @e2e @a11y @measurements', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 902, height: 900 });
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Diced and sliced Size recipe');
+
+    const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+    await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+    const ingredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
+    await ingredient.fill('Carrot');
+    await ingredient.press('Enter');
+    await ingredient.press('Enter');
+
+    const preparationCell = grid.locator('[aria-label="Preparation, row 1"]');
+    const clickPreparationWhitespace = async () => {
+      const point = await preparationCell.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const x = bounds.right - 4;
+        const y = bounds.top + bounds.height / 2;
+        return { x, y, hitsCell: document.elementFromPoint(x, y) === element };
+      });
+      expect(point.hitsCell).toBe(true);
+      await page.mouse.click(point.x, point.y);
+    };
+    const choosePreparation = async (value: string) => {
+      const currentPreparation = preparationCell.locator('.recipe-ingredient-cell-value');
+      if ((await currentPreparation.textContent())?.trim()) {
+        await currentPreparation.click();
+      } else {
+        await preparationCell.click();
+      }
+      const editor = page.getByRole('combobox', { name: 'Preparation, row 1' });
+      await editor.fill(value);
+      await page.getByRole('option', { name: value, exact: true }).click();
+      await editor.press('Enter');
+      await clickPreparationWhitespace();
+    };
+
+    await choosePreparation('cubed');
+    const size = page.getByRole('textbox', { name: 'Size, row 1' });
+    await expect(size).toBeVisible();
+    await size.fill('0.5');
+    await page
+      .getByRole('button', { name: 'Size unit, row 1: in. Activate to switch to cm' })
+      .click();
+    await choosePreparation('diced');
+    await expect(size).toHaveValue('0.5');
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Diced and sliced Size recipe' })).toBeVisible();
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('diced 0.5 cm');
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await choosePreparation('sliced');
+    await expect(size).toHaveValue('0.5');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Diced and sliced Size recipe' })).toBeVisible();
+    await expect(page.locator('.recipe-ingredient-list')).toContainText('sliced 0.5 cm');
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await choosePreparation('minced');
+    await expect(size).toHaveCount(0);
+    await choosePreparation('sliced');
+    await expect(size).toHaveValue('');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('owners enter, view, edit, and reload measurements on desktop and mobile @e2e @a11y @measurements', async ({
   page,
   request,
@@ -1044,7 +1120,9 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await expect(page.getByRole('dialog', { name: 'Ingredient details' })).toBeVisible();
     const mobilePane = page.getByRole('dialog', { name: 'Ingredient details' });
     await expect(
-      mobilePane.locator(':scope > .recipe-mobile-picker-field > span, :scope > label > span'),
+      mobilePane.locator(
+        ':scope > .recipe-mobile-picker-field > .recipe-mobile-ingredient-heading > span, :scope > .recipe-mobile-picker-field > span, :scope > label > span',
+      ),
     ).toHaveText(['Ingredient', 'Specifics', 'Amount', 'Preparation']);
     const overflowingFields = await mobilePane.evaluate((element) => {
       const paneBounds = element.getBoundingClientRect();

@@ -2462,6 +2462,11 @@
   white-space: nowrap;
 }
 
+.recipe-form .recipe-single-picklist .ingredient-cell-input {
+  height: 36px;
+  min-height: 36px;
+}
+
 .recipe-single-picklist:has(input[name="score"]) .recipe-picklist-trigger {
   gap: 4px;
   padding-inline: 5px;
@@ -3516,7 +3521,7 @@
 }
 
 .recipe-form .recipe-ingredient-mobile-popover .recipe-mobile-preparation-field {
-  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   column-gap: calc(6px + 1mm);
 }
@@ -3818,13 +3823,51 @@
   width: min(380px, calc(100vw - 40px));
   min-width: 0;
   overflow-x: hidden;
-  overflow-y: auto;
-  gap: 8px;
+  overflow-y: hidden;
+  gap: 6px;
   border: 1px solid var(--line);
   border-radius: 3px;
-  padding: 12px 24px 12px 12px;
+  padding: 12px;
   background: white;
   box-shadow: 0 6px 18px rgb(36 40 32 / 18%);
+}
+
+.recipe-mobile-ingredient-heading {
+  position: relative;
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  padding-right: 48px;
+}
+
+.recipe-mobile-ingredient-heading > span {
+  flex: 1 1 auto;
+}
+
+.recipe-ingredient-mobile-popover-close {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 3px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.recipe-ingredient-mobile-popover-close:hover {
+  background: var(--tin-wash);
+  color: var(--ink);
+}
+
+.recipe-ingredient-mobile-popover-close:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
 }
 
 .recipe-mobile-measurement-field {

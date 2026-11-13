@@ -80,6 +80,32 @@ export type IngredientDisplayOptions = {
   aliasPinch?: boolean;
 };
 
+export function isSizePreparation(preparation: string): boolean {
+  return ['cubed', 'diced', 'sliced'].includes(preparation.trim().toLocaleLowerCase());
+}
+
+export function getPortionMeasurementType(
+  measurements: readonly Pick<
+    MeasurementPayload,
+    'measurement_type' | 'amount_min' | 'amount_max'
+  >[],
+  preferredType?: MeasurementType,
+): MeasurementType | undefined {
+  const types = ['volume', 'weight', 'count', 'informal'] as const;
+  const hasScalarAmount = (type: (typeof types)[number]) =>
+    measurements.some(
+      (measurement) =>
+        measurement.measurement_type === type &&
+        measurement.amount_min !== null &&
+        measurement.amount_max === null,
+    );
+
+  return (
+    types.find((type) => type === preferredType && hasScalarAmount(type)) ??
+    types.find(hasScalarAmount)
+  );
+}
+
 export function getPortionRatio(firstAmount: number, total: number): number | null {
   if (
     !Number.isFinite(firstAmount) ||
@@ -187,8 +213,8 @@ export function validateIngredientSize(
   if (!value) {
     return null;
   }
-  if (preparation.trim().toLocaleLowerCase() !== 'cubed') {
-    return 'Size is available only when Preparation is cubed.';
+  if (!isSizePreparation(preparation)) {
+    return 'Size is available only when Preparation is cubed, diced, or sliced.';
   }
   if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/u.test(value) || !Number.isFinite(Number(value))) {
     return 'Enter a positive decimal Size.';

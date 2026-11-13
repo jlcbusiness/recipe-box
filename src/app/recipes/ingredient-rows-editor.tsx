@@ -9,8 +9,10 @@ import type { IngredientRowDraft, IngredientRowPayload } from '../../lib/recipes
 import {
   allocatePortions,
   formatIngredientDisplay,
+  getPortionMeasurementType,
   getPortionRatio,
   isEmptyIngredientRow,
+  isSizePreparation,
   moveIngredientRow,
   validateIngredientSize,
   validatePortionMeasurements,
@@ -22,7 +24,6 @@ import {
 import {
   formatQuantity,
   formatQuantityInput,
-  type MeasurementType,
   parseQuantityInput,
   serializeMeasurements,
   volumeUnits,
@@ -36,6 +37,7 @@ import {
   type NutritionFieldOverride,
   type NutritionIngredientInput,
 } from '../../lib/recipes/nutrition-rules';
+import { normalizePicklistMatchText } from '../../lib/recipes/picklist-rules';
 import { createUuid } from '../../lib/uuid';
 import {
   NutritionPane,
@@ -94,13 +96,19 @@ function updateIngredientRow(
   return rows.map((row) => (row.id === rowId ? { ...row, ...update } : row));
 }
 
+function hasMeasurementAmount(row: IngredientRowDraft, type: 'volume' | 'weight'): boolean {
+  return row.measurements.some(
+    (measurement) => measurement.type === type && Boolean(measurement.quantity.trim()),
+  );
+}
+
 function preparationMetadata(preparation: string) {
   const normalized = preparation.trim().toLocaleLowerCase();
   return {
     ...(normalized === 'divided'
       ? {}
       : { portionOneRatio: null, portionOneAmount: undefined, portionMeasurementType: undefined }),
-    ...(normalized === 'cubed' ? {} : { sizeValue: '', sizeUnit: '' }),
+    ...(isSizePreparation(normalized) ? {} : { sizeValue: '', sizeUnit: '' }),
   };
 }
 
@@ -258,12 +266,6 @@ function getNutritionInputForRow(
   };
 }
 
-function firstDivisibleMeasurement(row: IngredientRowDraft): MeasurementType | undefined {
-  return (['volume', 'weight', 'count', 'informal'] as const).find((type) =>
-    row.measurements.some((measurement) => measurement.type === type),
-  );
-}
-
 function PortionEditor({
   row,
   rowNumber,
@@ -282,7 +284,10 @@ function PortionEditor({
     serializedMeasurements = [];
   }
   const canDivide = validatePortionMeasurements(serializedMeasurements, 0.5) === null;
-  const selectedType = row.portionMeasurementType ?? firstDivisibleMeasurement(row);
+  const selectedType = getPortionMeasurementType(
+    serializedMeasurements,
+    row.portionMeasurementType,
+  );
   const measurement = serializedMeasurements.find((item) => item.measurement_type === selectedType);
   const total = measurement?.amount_min ?? null;
   const parsedFirst =
@@ -390,7 +395,7 @@ function IngredientSizeEditor({
   rowNumber: number;
   onChange: (update: Pick<IngredientRowDraft, 'sizeValue' | 'sizeUnit'>) => void;
 }) {
-  if (preparation.trim().toLocaleLowerCase() !== 'cubed') {
+  if (!isSizePreparation(preparation)) {
     return null;
   }
   const error = validateIngredientSize(
@@ -455,7 +460,7 @@ function PreparationControls({
   const normalized = preparation.trim().toLocaleLowerCase();
   const showPortions = normalized === 'divided';
 
-  if (!showPortions && normalized !== 'cubed') {
+  if (!showPortions && !isSizePreparation(normalized)) {
     return null;
   }
 
@@ -464,7 +469,7 @@ function PreparationControls({
       {showPortions && (
         <PortionEditor row={row} picklists={picklists} rowNumber={rowNumber} onChange={onChange} />
       )}
-      {normalized === 'cubed' && (
+      {isSizePreparation(normalized) && (
         <IngredientSizeEditor
           preparation={preparation}
           sizeValue={row.sizeValue ?? ''}
@@ -548,11 +553,12 @@ export function SuggestionCellEditor({
   const skipBlurCommit = useRef(false);
   const listId = useId();
   const normalizedOptions = uniqueOptions(options);
+  const normalizedDraft = normalizePicklistMatchText(draft);
   const matchingOptions = normalizedOptions.filter((option) =>
-    option.toLocaleLowerCase().includes(draft.trim().toLocaleLowerCase()),
+    normalizePicklistMatchText(option).includes(normalizedDraft),
   );
   const isExactMatch = normalizedOptions.some(
-    (option) => option.toLocaleLowerCase() === draft.trim().toLocaleLowerCase(),
+    (option) => normalizePicklistMatchText(option) === normalizedDraft,
   );
   const suggestions = hasTyped
     ? [...matchingOptions, ...(draft.trim() && !isExactMatch ? [`Add "${draft.trim()}"`] : [])]
@@ -974,18 +980,22 @@ function MobileIngredientEditor({
     const naturalHeight = popover.scrollHeight + popover.offsetHeight - popover.clientHeight;
     const margin = 8;
     const gap = 4;
+    const viewportHeight = window.innerHeight;
     const belowSpace = Math.max(0, window.innerHeight - anchorBounds.bottom - gap - margin);
     const aboveSpace = Math.max(0, anchorBounds.top - gap - margin);
-    const placeAbove = naturalHeight > belowSpace && aboveSpace > belowSpace;
-    const availableSpace = placeAbove ? aboveSpace : belowSpace;
-    const maxHeight = Math.min(naturalHeight, availableSpace);
+    const fitsBelow = naturalHeight <= belowSpace;
+    const fitsAbove = naturalHeight <= aboveSpace;
+    const maxHeight = Math.max(0, viewportHeight - margin * 2);
     const width = Math.min(popoverBounds.width, window.innerWidth - margin * 2);
+    const top = fitsBelow
+      ? anchorBounds.bottom + gap
+      : fitsAbove
+        ? anchorBounds.top - naturalHeight - gap
+        : Math.max(margin, Math.min(anchorBounds.top, viewportHeight - maxHeight - margin));
 
     setPosition({
       left: Math.max(margin, Math.min(anchorBounds.left, window.innerWidth - width - margin)),
-      top: placeAbove
-        ? Math.max(margin, anchorBounds.top - maxHeight - gap)
-        : Math.min(anchorBounds.bottom + gap, window.innerHeight - margin - maxHeight),
+      top,
       maxHeight,
     });
   }, [anchorElement]);
@@ -1053,6 +1063,11 @@ function MobileIngredientEditor({
     });
   }
 
+  function closeEditor() {
+    onClose();
+    anchorElement.focus();
+  }
+
   return (
     <div
       aria-label="Ingredient details"
@@ -1070,7 +1085,7 @@ function MobileIngredientEditor({
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault();
-          onClose();
+          closeEditor();
         } else if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
           event.preventDefault();
           submit();
@@ -1078,8 +1093,18 @@ function MobileIngredientEditor({
       }}
       role="dialog"
     >
-      <div className="recipe-mobile-picker-field">
-        <span>Ingredient</span>
+      <div className="recipe-mobile-picker-field recipe-mobile-ingredient-field">
+        <div className="recipe-mobile-ingredient-heading">
+          <span>Ingredient</span>
+          <button
+            aria-label="Close ingredient editor"
+            className="recipe-ingredient-mobile-popover-close"
+            type="button"
+            onClick={closeEditor}
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
+        </div>
         <SuggestionCellEditor
           label="Ingredient"
           options={ingredients.map((ingredient) => ingredient.name)}
@@ -1128,7 +1153,11 @@ function MobileIngredientEditor({
           density={densityForName(ingredientName)}
           validate={validateMeasurements}
           onChange={updateMobileMeasurements}
-          onUnitFocus={setPortionMeasurementType}
+          onUnitFocus={(type) => {
+            if (hasMeasurementAmount({ ...row, measurements }, type)) {
+              setPortionMeasurementType(type);
+            }
+          }}
           onCommitRow={submit}
         />
       </div>
@@ -1893,9 +1922,14 @@ export function IngredientRowsEditor({
         picklists={picklists}
         density={density}
         validate={validateMeasurements}
-        onUnitFocus={(type) =>
-          commitRows(updateIngredientRow(rowsRef.current, row.id, { portionMeasurementType: type }))
-        }
+        onUnitFocus={(type) => {
+          const currentRow = rowsRef.current.find((item) => item.id === row.id) ?? row;
+          if (hasMeasurementAmount(currentRow, type)) {
+            commitRows(
+              updateIngredientRow(rowsRef.current, row.id, { portionMeasurementType: type }),
+            );
+          }
+        }}
         onChange={(measurements) =>
           commitRows(updateIngredientRow(rowsRef.current, row.id, { measurements }))
         }

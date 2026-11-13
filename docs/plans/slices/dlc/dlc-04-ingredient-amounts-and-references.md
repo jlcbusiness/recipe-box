@@ -14,8 +14,9 @@ set membership unambiguous in instruction references.
 - Ingredient rows own their existing measurement rows. Scaling and unit
   conversion derive reader values without changing the saved base amount.
 - `Specifics` is qualitative detail, and `Preparation` is addable text;
-  `cubed` and `divided` also trigger their structured Size or portion controls
-  in the editor. `divided` remains an existing Feel phrase for Feel amounts.
+  `cubed`, `diced`, `sliced`, and `divided` also trigger their structured Size
+  or portion controls in the editor. `divided` remains an existing Feel phrase
+  for Feel amounts.
 - A structured instruction mention targets one stable recipe-ingredient ID.
   Its readable form is `#<slug>`; it carries neither a portion nor a set label.
 - DLC 03 already provides stable ingredient-set IDs and row membership.
@@ -32,8 +33,8 @@ reinterpreted.
 
 - Add explicit ratio-allocation semantics for divided ingredients without
   replacing or rewriting their existing base measurements.
-- Add numeric Size and inch/centimeter unit fields for cubed ingredients while
-  preserving existing Specifics and Preparation values.
+- Add numeric Size and inch/centimeter unit fields for Cubed, Diced, and Sliced
+  ingredients while preserving existing Specifics and Preparation values.
 - Enforce one canonical ingredient row per set and represent repeated uses as
   portions, with references that distinguish sets and portions.
 - Carry the meaning through scaling, unit conversion, private and public
@@ -64,8 +65,8 @@ reinterpreted.
 - Only scalar numeric totals can be divided: Unit, Count, and Things values.
   Ranges and Feel phrases cannot be divided. New size values are positive
   decimals in inches or centimeters, stored in the chosen unit and formatted
-  with the existing recipe-quantity rules; Size appears only with `cubed`
-  Preparation.
+  with the existing recipe-quantity rules; Size appears only with `cubed`,
+  `diced`, or `sliced` Preparation.
 - An ingredient can appear at most once in a set. To use it more than once in
   that set, add portions to that one row; another occurrence belongs in a
   different set. Each row owns an independent total and independent division:
@@ -112,7 +113,7 @@ reinterpreted.
   divided.
 - Store `size_value` and `size_unit` on the ingredient row. Both are null when
   Size is absent; otherwise the value is positive and the unit is `in` or
-  `cm`. Size is valid only when Preparation is `cubed`.
+  `cm`. Size is valid only when Preparation is `cubed`, `diced`, or `sliced`.
 - Preserve whole-row markers as
   `[[ingredient:<row-id>|<slug>]]`. A portion marker adds its fixed ordinal,
   `[[ingredient:<row-id>:<1-or-2>|<slug>]]`, and the mention projection stores
@@ -139,9 +140,12 @@ reinterpreted.
   metric centimeter decimals), with the existing `cubed` Preparation before
   the Size value.
 - The first-portion amount must be positive and less than the total. The
-  computed remainder is read-only. For dual-measurement rows, the existing
-  underlined unit control selects which dimension supplies the entered amount;
-  there is no additional heading or new unit field.
+  computed remainder is read-only. For dual-measurement rows, an underlined
+  unit control selects a dimension only when that dimension has an amount. If
+  only one dimension is populated, use it regardless of focus; an empty
+  focused dimension cannot override it. Fall back to the populated dimension
+  if the remembered dimension becomes empty. There is no additional heading or
+  new unit field.
 - Migration preflight stops before changing schema or data if it finds
   same-set duplicate canonical ingredients. Owners must resolve them
   explicitly; no existing rows are silently merged or removed.
@@ -170,9 +174,10 @@ reinterpreted.
   and let them wrap at the existing responsive boundary.
 - Selecting `divided` in Preparation reveals compact inline controls for the
   first-use amount, its current measurement unit, and the read-only remainder;
-  do not show a standalone Divide checkbox. Selecting `cubed` reveals the Size
-  input and an underlined `in`/`cm` toggle in Preparation. Make changing Preparation and
-  editing these controls available by keyboard, pointer, and touch, with
+  do not show a standalone Divide checkbox. Selecting `cubed`, `diced`, or
+  `sliced` reveals the Size input and an underlined `in`/`cm` toggle in
+  Preparation. Make changing Preparation and editing these controls available
+  by keyboard, pointer, and touch, with
   visible focus and announced validation. The dual-measure dimension is chosen
   through the existing underlined unit control without a new heading.
 - Keep instruction autocomplete keyboard-operable and viewport-bounded. Its

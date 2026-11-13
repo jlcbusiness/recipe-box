@@ -144,10 +144,11 @@ and full-width metadata groups.
 
 ### Picklist behavior
 
-Single-choice Food Type, State, Verdict, and Enthusiasm controls use custom
-anchored dropdowns with the same trigger height as multi-picklists. Menus open
-below and align to their own trigger on desktop and mobile. Meal Type, Cuisine,
-and Equipment use the recipe-specific `MultiPicklist` module and a narrow
+State, Verdict, and Enthusiasm controls use custom anchored dropdowns with the
+same trigger height as multi-picklists. Menus open below and align to their own
+trigger on desktop and mobile. Food Type uses an editable single-select
+combobox. Meal Type, Cuisine, and Equipment use the recipe-specific
+`MultiPicklist` module and a narrow
 trigger whose width is reserved for the longest option including its checkmark,
 so selecting or clearing an option cannot resize it. Standard triggers and
 menus fit the longest entry plus 1mm, then add only required indicator and
@@ -159,11 +160,13 @@ background; color is supplementary to the checkmark, never the only selection
 signal. The picker does not display native checkboxes or blue text-selection
 highlighting. Multi-select groups use fieldset/legend semantics and options
 expose their pressed state.
-Food Type, Equipment, Meal Type, and Cuisine menus end with a labeled Add
-input and compact Add button. Text remains uncommitted until Enter or Add;
-Escape and menu close discard it. Confirming creates or reuses a normalized,
-account-owned value and selects it in the recipe draft, while recipe saving
-remains a separate explicit action.
+Food Type filters its suggestions as a person types and offers one explicit
+Add suggestion when the query has no normalized exact match. Meal Type, Cuisine,
+and Equipment keep a labeled search input and toggle buttons, with an explicit
+Add button for unmatched text. Typing remains draft-only; Escape and menu close
+discard the query. Confirmed Add creates or reuses a normalized, account-owned
+value and selects it in the recipe draft, while recipe saving remains a
+separate explicit action.
 Single- and multi-picklist labels share the same 13px bold typography. Trigger
 text stays regular-weight whether selected or not, so neither control type
 looks heavier by default.
@@ -892,11 +895,13 @@ edit/popover.
 Selecting `divided` in the Preparation cell reveals a compact first-portion
 input, its current measurement unit, and the computed remainder as read-only
 inline controls. There is no standalone Divide checkbox. For dual
-volume/weight rows, activating the existing underlined unit control selects
-which dimension supplies the first amount. Selecting `cubed` reveals a
-separate Size input and underlined `in`/`cm` toggle in the Preparation cell.
-Desktop keeps both control groups on the same line as Preparation; mobile
-wraps them below the picker in the existing row editor.
+volume/weight rows, focusing an underlined unit control selects that dimension
+only if its amount is populated. If just one amount exists, use it regardless
+of focus; an empty dimension cannot override it, and clearing the remembered
+dimension falls back to the remaining amount. Selecting `cubed`, `diced`, or
+`sliced` reveals a separate Size input and underlined `in`/`cm` toggle in the
+Preparation cell. Desktop keeps both control groups on the same line as
+Preparation; mobile wraps them below the picker in the existing row editor.
 
 The desktop Amount interaction has one fixed category picker—**Unit**, **Count**,
 **Things**, or **Feel**—and a single adjacent Amount area. The picker is only
@@ -941,18 +946,22 @@ section keeps its category, quantity, and unit controls in a compact wrapping
 line; paired Unit dimensions remain together when space permits. Its pane is
 wide enough for fractional paired values at the supported mobile width, with
 short quantity padding and deliberate amount-to-unit spacing. Picklists,
-overlay placement, and the 48px Submit hit area adapt to the viewport; the page
-does not scroll horizontally.
+overlay placement, and the 48px Submit hit area adapt to the viewport so the
+complete editor fits in one pane without internal scrolling. The 48px Close
+button shares the Ingredient heading row, dismisses without submitting, and
+returns focus to the row trigger; the page does not scroll horizontally.
 The Amount section keeps its category, quantity, and unit controls. Selecting
 `divided` in Preparation reveals the first-portion input, current unit, and
-read-only remainder directly below the Preparation picker. Selecting `cubed`
-reveals Size and its underlined `in`/`cm` toggle in that same section. Both
-groups stay below the picker in the existing row pane and remain usable without
-page-level horizontal overflow. In recipe readers and print, display `cubed`
-before its formatted Size value.
-Food Type, Equipment, Meal Type, and Cuisine menus place the labeled Add input
-and compact Add button at the bottom of the open menu. Keep both menu and input
-within the viewport; confirmation updates the selected draft value without
+read-only remainder directly below the Preparation picker. Selecting `cubed`,
+`diced`, or `sliced` reveals Size and its underlined `in`/`cm` toggle in that
+same section. Both groups stay below the picker in the existing row pane and
+remain usable without page-level horizontal overflow. In recipe readers and
+print, display the preparation before its formatted Size value.
+Food Type uses editable-combobox suggestions; Equipment, Meal Type, and Cuisine
+use a labeled search input, filtered options, and an explicit Add button for
+unmatched text. Food Type remains single-select; the other menus retain
+toggle-button multi-selection. Keep each menu within the viewport and prevent
+horizontal page overflow; confirmed values update the selected draft without
 saving the recipe.
 
 ### Planned direction

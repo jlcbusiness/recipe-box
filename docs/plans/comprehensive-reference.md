@@ -377,9 +377,10 @@ trailing empty row.
    during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , `sliced` ,
    `divided` . Users can add a preparation while editing; saved values appear in future suggestions. Selecting `divided`
    reveals compact first-portion, current-unit, and read-only remainder controls in Preparation; there is no standalone
-   Divide checkbox. Selecting `cubed` reveals the separate Size field and an
-   underlined `in`/`cm` unit toggle there. Desktop keeps either control group
-   beside its Preparation value; mobile wraps them below the picker.
+   Divide checkbox. Selecting `cubed`, `diced`, or `sliced` reveals the
+   separate Size field and an underlined `in`/`cm` unit toggle there. Desktop
+   keeps either control group beside its Preparation value; mobile wraps them
+   below the picker.
 
 ### 3.2 Dual Measurement (Volume + Weight)
 
@@ -510,17 +511,20 @@ uses the complementary ratio. The editor accepts the first portion amount and
 shows the computed remainder read-only; scaling and unit conversion apply to
 the total before the two displayed amounts are derived. Only scalar Unit,
 Count, and Things values divide. Ranges and Feel phrases do not. For rows with
-both volume and weight, the focused existing unit control selects the input
-dimension and the resulting ratio applies to both. In the editor, selecting
-`divided` in Preparation reveals the compact portion controls with the active
-measurement unit; no separate Divide checkbox is used.
+both volume and weight, focusing a unit control selects that dimension only
+when its amount is populated, and the resulting ratio applies to both. If only
+one dimension has an amount, use it regardless of focus; an empty focused
+dimension cannot override it. If the remembered dimension becomes empty, fall
+back to the populated one. In the editor, selecting `divided` in Preparation
+reveals the compact portion controls with the active measurement unit; no
+separate Divide checkbox is used.
 
-Cubed ingredients may have a separate positive numeric Size with unit `in` or
-`cm`. Both Size fields are null when absent; Size is valid only when
-Preparation is `cubed`. Readers and print format the value using the recipe
-quantity formatter and display `cubed` before the Size value. Selecting
-`cubed` in the editor reveals the Size field and underlined unit toggle in the
-Preparation section.
+Cubed, diced, and sliced ingredients may have a separate positive numeric Size
+with unit `in` or `cm`. Both Size fields are null when absent; Size is valid
+only with those preparations. Readers and print format the value using the
+recipe quantity formatter and display the preparation before the Size value.
+Selecting any of the three preparations in the editor reveals the Size field
+and underlined unit toggle in the Preparation section.
 
 ### 3.8 Nutrition and Measure Equivalents
 
@@ -1238,10 +1242,15 @@ placeholder sections, tabs, or links for work that is not implemented.
 ### 8.1 Centralized Picklist Management
 
 Picklist catalogs are managed in Settings to prevent duplicate, misspelled, or
-orphaned options. Equipment, Food Type, Meal Type, and Cuisine also support
-confirmed inline value creation from their open recipe-editor menus:
+orphaned options. The open recipe-editor menus for Equipment, Food Type, Meal
+Type, and Cuisine have type-to-search suggestions. Focusing search shows the
+ordered catalog, and typing filters it case-insensitively by substring. Food
+Type remains a single-select editable combobox; the other three remain
+multi-select menus with `aria-pressed` toggle buttons.
 
 - Typing is draft-only. Escape or closing the menu discards unconfirmed text.
+- A non-empty query that has no normalized exact match offers one explicit Add
+  suggestion; typing or leaving unmatched text never creates a value.
 - Confirming with Enter or the Add button trims outer whitespace, collapses
   internal whitespace runs to one space, preserves entered casing, and matches
   existing values case-insensitively within the signed-in account and category.
@@ -2042,7 +2051,9 @@ History events are recorded on save (never on individual keystrokes):
   [Ingredient editing](#43-manual-reordering) for row focus progression and
   mobile behavior.
 - Mobile uses a one-column ingredient list and a compact row editor popover.
-  Keep its controls compact and accessible.
+  Keep the full editor and Submit visible without internal scrolling. The 48px
+  Close control shares the Ingredient heading row, dismisses without submitting,
+  and returns focus to the row trigger.
 - Custom cell editors, suggestions, and popovers require focused keyboard,
   screen-reader, and automated accessibility tests.
 
