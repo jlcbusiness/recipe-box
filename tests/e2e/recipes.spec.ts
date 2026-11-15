@@ -5385,7 +5385,7 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
             ingredient_set_id: defaultSetId,
             ingredient_name: 'Salt',
             is_main: false,
-            detail: '',
+            detail: 'fine sea salt',
             preparation: 'finely ground, then portioned',
             measurements: [],
           },
@@ -5566,6 +5566,22 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
         }
         return content.getBoundingClientRect().top - heading.getBoundingClientRect().bottom;
       });
+    const measureIngredientTypography = () =>
+      page
+        .locator('.recipe-ingredient-first-table .recipe-reader-specifics')
+        .first()
+        .evaluate((specifics) => {
+          const cell = specifics.closest('th');
+          const name = cell?.querySelector('.recipe-reader-table-name');
+          const table = specifics.closest('table');
+          if (!(cell instanceof HTMLElement) || !(name instanceof HTMLElement) || !table) {
+            throw new Error('Expected an Ingredient-first name and its details.');
+          }
+          return {
+            name: Number.parseFloat(getComputedStyle(name).fontSize),
+            specifics: Number.parseFloat(getComputedStyle(specifics).fontSize),
+          };
+        });
     const assertNoHorizontalOverflowAt = async (width: number) => {
       await page.setViewportSize({ width, height: 900 });
       const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -5641,6 +5657,10 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
         ingredientColumnBounds.x + ingredientColumnBounds.width / 2,
       );
     }
+    const desktopIngredientTypography = await measureIngredientTypography();
+    await expect(
+      page.locator('.recipe-ingredient-first-table .recipe-reader-specifics').first(),
+    ).toHaveCSS('font-weight', '400');
     for (const width of [761, 900]) {
       await assertNoHorizontalOverflowAt(width);
     }
@@ -5719,6 +5739,12 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     await expect(
       table.locator('tbody .recipe-ingredient-column-preparation').first(),
     ).toBeVisible();
+    await expect(table.locator('.recipe-reader-specifics').first()).toHaveCSS('font-weight', '400');
+    const mobileIngredientTypography = await measureIngredientTypography();
+    expect(desktopIngredientTypography.name / mobileIngredientTypography.name).toBeCloseTo(1.5, 2);
+    expect(
+      desktopIngredientTypography.specifics / mobileIngredientTypography.specifics,
+    ).toBeCloseTo(1.5, 2);
     const mobileTableBounds = await table.boundingBox();
     const mobileIngredientColumnBounds = await page
       .getByRole('region', { name: 'Ingredients', exact: true })

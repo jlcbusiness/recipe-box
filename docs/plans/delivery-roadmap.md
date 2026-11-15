@@ -3,7 +3,7 @@
 > **Reference Note:** For the complete catalog of all requirements, edge cases,
 > UI behaviors, and design discussions, see [comprehensive reference](comprehensive-reference.md).
 
-The current product baseline is **v1.13.0**. Unscheduled improvements and
+The current product baseline is **v1.13.1**. Unscheduled improvements and
 verification follow-ups remain in the [deferred-work inventory](discussion/later.md);
 they are not blockers to this release.
 
@@ -216,11 +216,11 @@ question. Its output is a decision-log entry, not shipped code.
 
 ### Phase 15: Division and preparation refinements
 
-- **DLC 39 (implemented in app version 1.13.0):**
+- **DLC 39 (implemented in app version 1.13.1):**
   [Division and Fractional Size](slices/dlc/dlc-39-division-and-fractional-size.md)
-  abbreviates six common division ratios in the Ingredient-first reader, adds a
-  whole-ingredient mention option for divided rows, and accepts fractional
-  inch sizes for Cubed, Diced, and Sliced ingredients.
+  applies six common ratio shorthands to metric measures in both reader
+  presentations, adds a whole-ingredient mention option for divided rows, and
+  accepts fractional inch sizes for Cubed, Diced, and Sliced ingredients.
 
 ## Completion Rule
 

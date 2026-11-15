@@ -419,7 +419,7 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
 test('legacy divided Preparation loads as Divide and remains editable @e2e @measurements', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   const owner = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
   const ownerHeaders = {
@@ -1040,6 +1040,8 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     await expect(divideCell.locator('.recipe-ingredient-portion-label')).toHaveText('divided');
     await expect(divideCell).toContainText('⅔ : ⅓');
     await expect(divideCell).not.toContainText('cup');
+    await expect(divideCell).toHaveCSS('text-align', 'center');
+    await expect(preparationText).toHaveCSS('text-align', 'left');
     const [desktopDivideLabelBounds, desktopDivideValueBounds] = await Promise.all([
       divideCell.locator('.recipe-ingredient-portion-label').boundingBox(),
       divideCell.locator('.recipe-ingredient-portion-breakdown').boundingBox(),
@@ -1049,13 +1051,14 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     expect(desktopDivideValueBounds?.y).toBeGreaterThanOrEqual(
       (desktopDivideLabelBounds?.y ?? 0) + (desktopDivideLabelBounds?.height ?? 0),
     );
-
     const mobileDivideNote = preparationCell.locator('.recipe-ingredient-portion-note-divided');
     for (const width of [760, 390, 320]) {
       await page.setViewportSize({ width, height: 844 });
       await expect(chickpeaName).toHaveCSS('font-variant-caps', 'all-small-caps');
       await expect(divideCell).toBeHidden();
       await expect(mobileDivideNote).toContainText('divide ⅔ : ⅓');
+      await expect(mobileDivideNote).toHaveCSS('text-align', 'center');
+      await expect(preparationText).toHaveCSS('text-align', 'left');
       await expect(page.getByRole('columnheader', { name: 'divided' })).toHaveCount(0);
       const mobileTableTextLayout = await ingredientTable.evaluate((table) => {
         const contentSelectors = [

@@ -1011,6 +1011,9 @@ Preparation columns, and its natural table width is the row-width basis for
 the same sizing rule. Count, informal, and unmeasured values appear in Volume
 when no dimensional measurement is present; Volume and Weight remain separate.
 Render Ingredient-first ingredient names in small caps on desktop and mobile.
+On desktop, increase the ingredient names and their Specifics by 50% while
+preserving their relative size. Render Specifics at normal weight; leave mobile
+font sizing unchanged.
 On desktop, add a Divide column only when a row has a division. Keep its
 “divided” column header accessible but visually hidden, and put “divided” on
 the first line of each divided cell above the formatted portion pair. Omit
@@ -1031,7 +1034,9 @@ At 760px and below, use Ingredient, Amount, and Prep columns. Stack Volume and
 Weight in Amount when both exist, and keep the existing Prep header. A divided
 row shows its preparation first, followed by a comma when present, then
 `divide a : b` in the same cell without repeated units, a new column, or a
-subheading. When no divisions exist, do not add any Divide column or content.
+subheading. Center the desktop Divide column and the mobile Divide note while
+keeping Preparation left-aligned. When no divisions exist, do not add any
+Divide column or content.
 Hide Amount or Prep when empty across the recipe. Keep at least 8px between
 mobile column content and use remaining available width only while ingredient
 row content stays unwrapped. Size columns intrinsically; keep the table’s outer

@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented in app version 1.13.0.
+Implemented in app version 1.13.1.
 
 ## Source and references
 
