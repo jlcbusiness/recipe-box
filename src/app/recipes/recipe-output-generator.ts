@@ -132,6 +132,17 @@ const outputStyles = `
     text-decoration: none !important;
   }
   .recipe-output-column table { width: 100%; border-collapse: collapse; }
+  .recipe-output-column .recipe-ingredient-first-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+  .recipe-output-column .recipe-ingredient-first-table {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
   .recipe-output-column th, .recipe-output-column td {
     padding: 2px 4px;
     border-bottom: 1px solid #d5d7d1;

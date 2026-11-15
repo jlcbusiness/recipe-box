@@ -9,7 +9,8 @@
 - [x] Add automated coverage for expression parsing, time-entry persistence
   and history, Settings management, outputs, imports, and Explorer behavior.
 - [x] Implement account-scoped configurable time entries, Time Types, arithmetic entry, and the derived total.
-- [x] Verify focused unit, database, typecheck, Settings, recipe-time, import, public-copy, and trash/restore/purge behavior.
+- [x] Verify focused unit, database, typecheck, Settings, recipe-time, import,
+  public-copy, and trash/restore/purge behavior.
 - [x] Align time-entry reordering with the shared drag-grip and keyboard-reorder pattern.
 - [x] Replace the prominent Add time button with a full-width italic add-time row.
 - [x] Update the design contracts and verify desktop/mobile time-row behavior.
@@ -17,7 +18,8 @@
 - [x] Show one aligned Minutes/Time Type header and verify menu sizing and row geometry.
 - [x] Update the design contracts and focused browser coverage for the Time Type refinement.
 - [x] Align Total under the minute column, constrain minute and Time Type widths, and show Total as a grouped integer.
-- [x] Put remove actions beside Time Type fields at every viewport and align minute and Time Type controls vertically on mobile.
+- [x] Put remove actions beside Time Type fields at every viewport and align
+  minute and Time Type controls vertically on mobile.
 - [x] Consolidate to one Save action after Instructions and immediately before Time.
 - [x] Compare all 51 legacy-shaped synthetic-owner fixture recipes to current
   entries and totals without resetting the active local database. No separate

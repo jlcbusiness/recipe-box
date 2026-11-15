@@ -6,11 +6,55 @@ import {
   type MeasurementSystem,
   type MeasurementSystemPreference,
   type MeasurementType,
+  parseQuantityInput,
   volumeUnits,
   weightUnits,
 } from './measurement-rules';
 
 export type MeasurementDimension = 'volume' | 'weight';
+
+export type ReadablePortionPair = {
+  measurementType: MeasurementDimension;
+  first: string;
+  second: string;
+};
+
+function parsedDisplayAmount(value: string) {
+  const parsed = parseQuantityInput(value);
+  return parsed?.maximum === null ? parsed.minimum : null;
+}
+
+function wholeNumberCount(pair: ReadablePortionPair) {
+  return [pair.first, pair.second].filter((value) => {
+    const amount = parsedDisplayAmount(value);
+    return amount !== null && Number.isInteger(amount);
+  }).length;
+}
+
+function displayedAmountSum(pair: ReadablePortionPair) {
+  return (parsedDisplayAmount(pair.first) ?? 0) + (parsedDisplayAmount(pair.second) ?? 0);
+}
+
+export function chooseReadablePortionPair<T extends ReadablePortionPair>(
+  candidates: readonly T[],
+): T | undefined {
+  return [...candidates].sort((left, right) => {
+    const wholeNumberDifference = wholeNumberCount(right) - wholeNumberCount(left);
+    if (wholeNumberDifference !== 0) {
+      return wholeNumberDifference;
+    }
+
+    const sumDifference = displayedAmountSum(left) - displayedAmountSum(right);
+    if (sumDifference !== 0) {
+      return sumDifference;
+    }
+
+    if (left.measurementType === right.measurementType) {
+      return 0;
+    }
+    return left.measurementType === 'volume' ? -1 : 1;
+  })[0];
+}
 
 export type RecipeScale =
   | { mode: 'servings'; baseServings: number | null; targetServings: number }

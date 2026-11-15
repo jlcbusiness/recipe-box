@@ -857,9 +857,11 @@ The Recipe Tin list is a compact table with Name, Food Type, State, and Opinion
 columns; mobile hides Food Type and State. Recipe details show metadata, the
 ordered ingredient list, and notes. The desktop ingredient editor uses a
 keyboard-operable table with a trailing blank row, compact cell editors, and a
-separate control rail. Its visible order is Ingredient, Specifics, Amount, and
-Preparation. The Amount heading spans a compact Type control and its matching
-amount controls; it does not introduce database-shaped subheaders.
+separate control rail. Its visible order is Ingredient, Specifics, Amount,
+Preparation, and Divide. The recipe form can use up to 1200px on desktop so
+these columns have room without compressing the existing amount controls. The
+Amount heading spans a compact Type control and its matching amount controls;
+it does not introduce database-shaped subheaders.
 
 Ingredient rows open compact cell editors. Ingredient and Preparation open
 their full picklists on activation; typing filters options and offers an
@@ -867,7 +869,9 @@ add-new suggestion when there is no exact match. The Main checkbox and 12px
 drag handle sit outside the table. A compact Main rail heading and visible help
 explain its main-ingredient search purpose; each checkbox also has an accessible
 description. Empty Preparation editors retain a usable content-fit width based
-on their suggestions rather than collapsing to an empty character. Recipe-edit
+on their suggestions rather than collapsing to an empty character. On mobile,
+the Preparation input fits its widest suggestion or draft plus padding instead
+of filling the row. Recipe-edit
 Cancel and Delete actions align to the left below the form. Keep an 18px gap
 above the footer divider, separate from its 18px padding below, so Add reference
 does not sit directly on the divider.
@@ -892,16 +896,18 @@ in the editor. Neither path introduces autosave. Committing focuses the trailing
 submits the row popover on mobile. Escape closes a listbox or cancels the active
 edit/popover.
 
-Selecting `divided` in the Preparation cell reveals a compact first-portion
-input, its current measurement unit, and the computed remainder as read-only
-inline controls. There is no standalone Divide checkbox. For dual
-volume/weight rows, focusing an underlined unit control selects that dimension
-only if its amount is populated. If just one amount exists, use it regardless
-of focus; an empty dimension cannot override it, and clearing the remembered
-dimension falls back to the remaining amount. Selecting `cubed`, `diced`, or
-`sliced` reveals a separate Size input and underlined `in`/`cm` toggle in the
-Preparation cell. Desktop keeps both control groups on the same line as
-Preparation; mobile wraps them below the picker in the existing row editor.
+Divide is edited in its own cell, independently from Preparation. Its
+first-portion input is always visible: blank means not divided, entering an
+amount stages the division, and clearing the amount removes it. Show the current
+measurement unit and read-only remainder only when an amount is entered. For
+dual volume/weight rows, focusing an underlined unit
+control selects that dimension only if its amount is populated. If just one
+amount exists, use it regardless of focus; an empty dimension cannot override
+it, and clearing the remembered dimension falls back to the remaining amount.
+The chosen dimension is not persisted; Save stores one ratio that applies to
+both dimensions. Selecting `cubed`, `diced`, or `sliced` reveals a separate
+Size input and underlined `in`/`cm` toggle in the Preparation cell. On mobile,
+the existing row pane presents Preparation and Divide as separate fields.
 
 The desktop Amount interaction has one fixed category picker—**Unit**, **Count**,
 **Things**, or **Feel**—and a single adjacent Amount area. The picker is only
@@ -941,7 +947,7 @@ The mobile Recipe Tin list shows Name and Opinion. Recipe details show the
 recipe title, metadata, ordered time entries in their own subsection, ingredients,
 and notes. Ingredient editing uses a one-column list with the Main checkbox and
 a pale 24px drag grip in a slim rail. Tapping a row opens a compact popover for
-Ingredient, Specifics, Amount, and Preparation in that order. The Amount
+Ingredient, Specifics, Amount, Preparation, and Divide in that order. The Amount
 section keeps its category, quantity, and unit controls in a compact wrapping
 line; paired Unit dimensions remain together when space permits. Its pane is
 wide enough for fractional paired values at the supported mobile width, with
@@ -950,13 +956,14 @@ overlay placement, and the 48px Submit hit area adapt to the viewport so the
 complete editor fits in one pane without internal scrolling. The 48px Close
 button shares the Ingredient heading row, dismisses without submitting, and
 returns focus to the row trigger; the page does not scroll horizontally.
-The Amount section keeps its category, quantity, and unit controls. Selecting
-`divided` in Preparation reveals the first-portion input, current unit, and
-read-only remainder directly below the Preparation picker. Selecting `cubed`,
-`diced`, or `sliced` reveals Size and its underlined `in`/`cm` toggle in that
-same section. Both groups stay below the picker in the existing row pane and
-remain usable without page-level horizontal overflow. In recipe readers and
-print, display the preparation before its formatted Size value.
+The Amount section keeps its category, quantity, and unit controls. Divide is
+a separate field in the row pane, with an always-visible first-portion input:
+blank means not divided, and clearing the value removes the staged division.
+Preparation no longer controls whether an ingredient is divided. Selecting
+`cubed`, `diced`, or `sliced` reveals Size and its underlined `in`/`cm` toggle
+in the Preparation field. Both Divide and Size controls remain usable without
+page-level horizontal overflow. In recipe readers and print, display the
+preparation before its formatted Size value.
 Food Type uses editable-combobox suggestions; Equipment, Meal Type, and Cuisine
 use a labeled search input, filtered options, and an explicit Add button for
 unmatched text. Food Type remains single-select; the other menus retain
@@ -981,34 +988,71 @@ interruption tolerance, legibility, and one-handed operation.
 
 Recipe detail offers Standard and Ingredient-first presentations. Standard
 keeps ingredient rows in saved order and renders Amount, lowercase Specifics
-and ingredient name, then Preparation. Both presentations keep Ingredients
+and ingredient name, then Preparation. Keep canonical catalog names title-cased;
+recipe views display all multiword ingredient names in lowercase without
+changing saved values. Both presentations keep Ingredients
 beside Instructions on desktop. Size the Ingredients track to the larger of the
 widest Standard ingredient row plus 1mm or the natural width of the Ingredients
 heading and toolbar plus 4mm; Instructions uses the remaining space.
+On mobile Standard view, keep the amount, specifics, and ingredient name
+left-aligned, and keep the full entry on that line whenever it fits. If it
+doesn't, keep Preparation and Size with the primary text when they fit; put
+Divide on a compact, right-aligned line. If they don't fit, move Preparation,
+Size, and Divide together to a compact, right-aligned continuation. Don't add
+paragraph spacing, and keep the divided label and portion pair unbroken. Keep
+the continuation's first line about one-quarter of the text size below the
+preceding line, with the same line-to-line spacing after it. Use a compact 1.05
+row line-height and a 1.0 continuation line-height. Keep the existing desktop
+presentation.
 Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
 Preparation columns, and its natural table width is the row-width basis for
 the same sizing rule. Count, informal, and unmeasured values appear in Volume
 when no dimensional measurement is present; Volume and Weight remain separate.
-At 760px and below, hide any Volume, Weight, or Preparation column that has no
-content anywhere in the recipe.
+Render Ingredient-first ingredient names in small caps on desktop and mobile.
+On desktop, add a Divide column only when a row has a division. Keep its
+“divided” column header accessible but visually hidden, and put “divided” on
+the first line of each divided cell above the formatted portion pair. Omit
+units and size the column to the widest pair, including `8 8/8 : 8 8/8`. For
+dual measures, choose the displayed portion pair by counting whole-number
+formatted amounts; ties use the smaller sum of displayed amounts, then Volume.
+This display-only choice is recomputed after scaling or unit changes.
+At 760px and below, use Ingredient, Amount, and Prep columns. Stack Volume and
+Weight in Amount when both exist, and keep the existing Prep header. A divided
+row shows its preparation first, followed by a comma when present, then
+`divide a : b` in the same cell without repeated units, a new column, or a
+subheading. When no divisions exist, do not add any Divide column or content.
+Hide Amount or Prep when empty across the recipe. Keep at least 8px between
+mobile column content and use remaining available width only while ingredient
+row content stays unwrapped. Size columns intrinsically; keep the table’s outer
+edges flush and contain any wider no-wrap table in its existing horizontal
+scroll region. Keep the mobile Divide label and portion pair on one line. Leave
+at least 3px between stacked Volume and Weight values. In Standard view and
+print, label the separate value “divided” to distinguish it from Preparation.
 Ingredient-first rows alternate a light-tin shade for readability; the other
 rows and ingredient-set dividers remain unshaded in private and public reader
 views. Printed ingredient-first output retains the light-tin shading, gives the
 first ingredient after each set divider the same neutral top rule as the other
-ingredient rows, and leaves the dividers unshaded.
+ingredient rows, and leaves the dividers unshaded. Standard view and print
+label Divide separately from Preparation.
 The first ingredient group starts at the same vertical offset below the shared
 heading in both presentations.
 Specifics display indented and fully lowercase beneath the ingredient name.
-Cells are left-aligned with no more than 3mm between columns on desktop and 1mm
-on mobile. Mobile headers shorten to Vol, Wt, and Prep. At 760px and below,
-Ingredients and Instructions stack vertically and the table fills the
-Ingredients section. On narrower desktop widths, constrain the Ingredients
-track to the available reader width and keep any table overflow local rather
-than allowing page-level horizontal overflow. In mobile Ingredient-first view,
-show divided portion ratios on a separate line beneath the “divided” label;
-preserve inline formatting on desktop and in Standard view. The desktop reader initializes
-from the saved account default, while mobile starts Ingredient-first. A
-reader's explicit change is transient.
+Cells are left-aligned with no more than 3mm between columns on desktop and at
+least 8px between mobile column content, with no wrapping within a row. At 760px and below, Ingredients and
+Instructions stack vertically
+and the table fills the Ingredients section. On narrower desktop widths,
+constrain the Ingredients track to the available reader width and keep any
+table overflow local rather than allowing page-level horizontal overflow.
+Mobile Ingredient-first uses Ingredient, Amount, and Prep columns, with Volume
+and Weight stacked in Amount when both exist. In a divided row, show
+`divide a : b` below Preparation in the same Prep cell, without another
+column, heading, or repeated units. Desktop uses a conditional Divide column;
+when both measures exist, choose the formatted portion pair with the most
+whole-number amounts, then the smaller sum, then Volume. Recompute that
+display-only choice after scaling or unit changes. Standard view and print
+label the value “divided” separately from Preparation. The desktop reader initializes from
+the saved account default, while mobile starts Ingredient-first. A reader's
+explicit change is transient.
 
 Ingredient sets are visually quiet: a one-set recipe retains its current list
 without a set label. Multiple non-empty sets stay in set order and use a thin
@@ -1019,16 +1063,16 @@ Compact Presentation, Sort, Scale, and device wake-lock icon buttons match the
 Add reference and Add pairing controls: 36px high, with their existing widths
 retained. The toolbar shares the first heading line with Ingredients and orders
 the controls as sort direction, Sort, Presentation, Scale, and Screen Lock. The
-control group starts directly after the heading rather than being pushed to the
-far edge. The sort-direction button keeps its slot when hidden and disabled on
-wider layouts; the slot collapses on mobile so visible controls align with the
-heading. The Screen Lock control follows Scale at the standard mobile toolbar
-gap. The lowercase, normal-size italic summary sits directly below Ingredients
-and reflects the current presentation and sort, for example
-`first, alphabetical`. When the title, summary, and toolbar do not fit together,
-keep the title and summary at their natural width and wrap the toolbar below the
-summary. At 760px and below, always place the toolbar on its own row below the
-summary. When the screen wake lock is active, the summary adds `screen lock on`.
+control group stays right-aligned with the Ingredients heading row, independent
+of the summary text width. The sort-direction button keeps its slot when hidden
+and disabled on wider layouts; the slot collapses on mobile so visible controls
+align with the heading. The Screen Lock control follows Scale at the standard
+mobile toolbar gap. The lowercase, normal-size italic summary sits directly
+below the heading row and reflects the current presentation and sort, for
+example `first, alphabetical`. Its text does not determine the heading row's
+width. At 760px and below, always place the toolbar on its own row below the
+summary, right-aligned with the heading row. When the screen wake lock is
+active, the summary adds `screen lock on`.
 Wake-lock failure and release warnings appear in a popup anchored to the Screen
 Lock control, without adding a line to the page.
 Each click cycles to the next presentation or

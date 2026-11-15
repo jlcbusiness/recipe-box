@@ -59,6 +59,7 @@ import {
   type NutritionEquivalent,
 } from '../../lib/recipes/nutrition-rules';
 import {
+  chooseReadablePortionPair,
   getScaleMultiplier,
   type IngredientPresentation,
   type IngredientSortDirection,
@@ -188,7 +189,10 @@ export function RecipeInstructionMention({
           ingredient.portion_one_ratio,
           portionOrdinal,
         );
-  const parts = getIngredientDisplayParts(portionedDisplayIngredient, { aliasPinch: true });
+  const parts = getIngredientDisplayParts(portionedDisplayIngredient, {
+    aliasPinch: true,
+    lowercaseMultiwordName: true,
+  });
   const amount =
     [parts.amount, parts.unmeasuredPhrase].filter(Boolean).join(' ') || 'No amount listed';
   const isOpen = isPinned || ((isHovered || isFocused) && !escapeDismissed);
@@ -802,6 +806,7 @@ export function RecipeReader({
   const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>({});
   const [wakeStatus, setWakeStatus] = useState('');
   const previousRecipeIdRef = useRef(recipeId);
+  const standardIngredientListRef = useRef<HTMLOListElement | null>(null);
 
   useLayoutEffect(() => {
     if (
@@ -811,6 +816,108 @@ export function RecipeReader({
       setPresentation('ingredient_first');
     }
   }, []);
+
+  useLayoutEffect(() => {
+    if (presentation !== 'standard') return;
+    const list = standardIngredientListRef.current;
+    if (!list) return;
+
+    let frame = 0;
+    const updateWrapModes = () => {
+      const isMobile =
+        typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 760px)').matches;
+      if (!isMobile) {
+        list.querySelectorAll<HTMLElement>('.recipe-ingredient-name').forEach((entry) => {
+          delete entry.dataset.mobileWrap;
+          entry.closest<HTMLElement>('li')?.style.removeProperty('--standard-mobile-wrap-shift');
+        });
+        return;
+      }
+
+      list.querySelectorAll<HTMLElement>('.recipe-ingredient-name').forEach((entry) => {
+        delete entry.dataset.mobileWrap;
+        const row = entry.closest<HTMLElement>('li');
+        row?.style.removeProperty('--standard-mobile-wrap-shift');
+        const continuation = entry.querySelector<HTMLElement>('.recipe-ingredient-continuation');
+        if (!continuation || entry.clientWidth === 0) return;
+
+        const portion = continuation.querySelector<HTMLElement>('.recipe-ingredient-portion-note');
+        const previousWhiteSpace = entry.style.whiteSpace;
+        const previousContinuationWhiteSpace = continuation.style.whiteSpace;
+        const previousPortionDisplay = portion?.style.display ?? '';
+        entry.style.whiteSpace = 'nowrap';
+        continuation.style.whiteSpace = 'nowrap';
+        if (portion) portion.style.display = 'none';
+        const primaryAndPreparationWidth = entry.scrollWidth;
+        if (portion) portion.style.display = previousPortionDisplay;
+        const fullWidth = entry.scrollWidth;
+        const availableWidth = entry.clientWidth;
+        entry.style.whiteSpace = previousWhiteSpace;
+        continuation.style.whiteSpace = previousContinuationWhiteSpace;
+
+        if (fullWidth > availableWidth) {
+          entry.dataset.mobileWrap =
+            portion && primaryAndPreparationWidth <= availableWidth ? 'divide' : 'continuation';
+        }
+
+        const wrapMode = entry.dataset.mobileWrap;
+        const primary = entry.querySelector<HTMLElement>('.recipe-ingredient-primary');
+        const precedingText =
+          wrapMode === 'divide'
+            ? (entry.querySelector<HTMLElement>('.recipe-ingredient-preparation') ?? primary)
+            : primary;
+        const continuedText = wrapMode === 'divide' ? portion : continuation;
+        if (!wrapMode || !row || !precedingText || !continuedText) return;
+
+        const getLineTops = (element: HTMLElement) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const tops: number[] = [];
+          for (const rect of Array.from(range.getClientRects())) {
+            if (rect.width > 0 && tops.every((top) => Math.abs(top - rect.top) > 4)) {
+              tops.push(rect.top);
+            }
+          }
+          return tops.sort((first, second) => first - second);
+        };
+        const precedingLineTops = getLineTops(precedingText);
+        const continuedLineTops = getLineTops(continuedText);
+        const textHeight = Number.parseFloat(window.getComputedStyle(entry).fontSize);
+        if (
+          precedingLineTops.length === 0 ||
+          continuedLineTops.length === 0 ||
+          !Number.isFinite(textHeight)
+        ) {
+          return;
+        }
+
+        const lineDistance = continuedLineTops[0] - precedingLineTops[precedingLineTops.length - 1];
+        const shift = textHeight * 1.25 - lineDistance;
+        if (Math.abs(shift) > 0.5) {
+          row.style.setProperty('--standard-mobile-wrap-shift', `${shift}px`);
+        }
+      });
+    };
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updateWrapModes);
+    };
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleUpdate);
+    const mutationObserver = new MutationObserver(scheduleUpdate);
+
+    resizeObserver?.observe(list);
+    mutationObserver.observe(list, { childList: true, characterData: true, subtree: true });
+    window.addEventListener('resize', scheduleUpdate);
+    updateWrapModes();
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+      mutationObserver.disconnect();
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, [presentation]);
 
   useEffect(() => {
     if (previousRecipeIdRef.current !== recipeId) {
@@ -972,7 +1079,10 @@ export function RecipeReader({
       unitSystems,
       unitOverrides: unitOverrides[ingredient.id],
     });
-    const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
+    const parts = getIngredientDisplayParts(displayIngredient, {
+      aliasPinch: true,
+      lowercaseMultiwordName: true,
+    });
     ingredientFirstColumnPresence.volume ||= parts.measurements.some(
       (measurement) =>
         measurement.measurementType === 'volume' ||
@@ -1024,7 +1134,10 @@ export function RecipeReader({
             ingredient.portion_one_ratio,
             portionOrdinal,
           );
-    const parts = getIngredientDisplayParts(portionedIngredient, { aliasPinch: true });
+    const parts = getIngredientDisplayParts(portionedIngredient, {
+      aliasPinch: true,
+      lowercaseMultiwordName: true,
+    });
     const equivalent = preserveStoredUnits ? null : getResolvedMeasureEquivalent(ingredient);
     const sourceMeasurement = ingredient.measurements.find(
       (candidate) =>
@@ -1192,7 +1305,7 @@ export function RecipeReader({
             ...displayIngredient,
             measurements: [{ ...measurement, amount_min: amount, amount_max: null }],
           },
-          { aliasPinch: true },
+          { aliasPinch: true, lowercaseMultiwordName: true },
         ).measurements[0];
       const first = getParts(portions[0]);
       const second = getParts(portions[1]);
@@ -1204,16 +1317,36 @@ export function RecipeReader({
       return null;
     }
 
-    const showUnits = portionMeasurements.length > 1;
+    const hasDualMeasurements =
+      portionMeasurements.some(({ measurementType }) => measurementType === 'volume') &&
+      portionMeasurements.some(({ measurementType }) => measurementType === 'weight');
+    const readablePairs = portionMeasurements.flatMap((measurement) =>
+      measurement.measurementType === 'volume' || measurement.measurementType === 'weight'
+        ? [
+            {
+              measurementType: measurement.measurementType,
+              first: measurement.first.quantity || measurement.first.unitLabel || '',
+              second: measurement.second.quantity || measurement.second.unitLabel || '',
+            },
+          ]
+        : [],
+    );
+    const selectedPair = hasDualMeasurements ? chooseReadablePortionPair(readablePairs) : undefined;
+    const visiblePortionMeasurements = selectedPair
+      ? portionMeasurements.filter(
+          ({ measurementType }) => measurementType === selectedPair.measurementType,
+        )
+      : portionMeasurements;
+    const showUnits = !hasDualMeasurements && visiblePortionMeasurements.length > 1;
     return (
       <span className="recipe-ingredient-portion-breakdown">
-        {portionMeasurements.map(({ measurementType, first, second }, index) => (
+        {visiblePortionMeasurements.map(({ measurementType, first, second }, index) => (
           <Fragment key={measurementType}>
             {index > 0 && ' / '}
-            {renderFractionGlyphs(first.quantity)}
+            {renderFractionGlyphs(first.quantity || first.unitLabel || '')}
             {showUnits && first.unitLabel && ` ${first.unitLabel}`}
             {' : '}
-            {renderFractionGlyphs(second.quantity)}
+            {renderFractionGlyphs(second.quantity || second.unitLabel || '')}
             {showUnits && second.unitLabel && ` ${second.unitLabel}`}
           </Fragment>
         ))}
@@ -1254,13 +1387,12 @@ export function RecipeReader({
         displaySourceIngredient,
         displayOptions,
       );
-      const parts = getIngredientDisplayParts(displayIngredient, { aliasPinch: true });
+      const parts = getIngredientDisplayParts(displayIngredient, {
+        aliasPinch: true,
+        lowercaseMultiwordName: true,
+      });
       const checked = Boolean(checkedIngredients[ingredient.id]);
       const portionBreakdown = renderPortionBreakdown(ingredient, displayIngredient);
-      const isDividedPreparation = parts.preparation?.toLocaleLowerCase() === 'divided';
-      const portionNoteClassName = isDividedPreparation
-        ? 'recipe-ingredient-portion-note recipe-ingredient-portion-note-divided'
-        : 'recipe-ingredient-portion-note';
 
       if (presentation === 'ingredient_first') {
         const hasDimensionalMeasurement = parts.measurements.some(
@@ -1270,10 +1402,14 @@ export function RecipeReader({
         const hasVolumeMeasurement = parts.measurements.some(
           (measurement) => measurement.measurementType === 'volume',
         );
+        const hasWeightMeasurement = parts.measurements.some(
+          (measurement) => measurement.measurementType === 'weight',
+        );
         const hasOtherMeasurement = parts.measurements.some(
           (measurement) =>
             measurement.measurementType === 'count' || measurement.measurementType === 'informal',
         );
+        const preparationText = [parts.preparation, parts.size].filter(Boolean).join(' ');
         const otherMeasurements = renderPortions(ingredient, displayIngredient, defaultIngredient, [
           'count',
           'informal',
@@ -1333,27 +1469,49 @@ export function RecipeReader({
                 <td className="recipe-ingredient-column-weight" />
               </>
             )}
-            <td className="recipe-ingredient-column-preparation">
-              <span
-                className={
-                  isDividedPreparation ? 'recipe-ingredient-preparation-divided' : undefined
-                }
-              >
-                {[parts.preparation, parts.size].filter(Boolean).join(' ')}
-              </span>
-              {portionBreakdown && (
-                <span className={portionNoteClassName}>
-                  {parts.preparation ? (
-                    ' '
-                  ) : (
+            <td className="recipe-ingredient-column-amount-mobile">
+              {(hasOtherMeasurement || hasVolumeMeasurement || parts.unmeasuredPhrase) && (
+                <span className="recipe-reader-mobile-volume">
+                  {hasOtherMeasurement && otherMeasurements}
+                  {hasOtherMeasurement && hasVolumeMeasurement && ' / '}
+                  {hasVolumeMeasurement &&
+                    renderPortions(ingredient, displayIngredient, defaultIngredient, ['volume'])}
+                  {parts.unmeasuredPhrase && (
                     <>
-                      <span className="recipe-ingredient-portion-label">divided</span>{' '}
+                      {(hasOtherMeasurement || hasVolumeMeasurement) && ' / '}
+                      {parts.unmeasuredPhrase}
                     </>
                   )}
+                </span>
+              )}
+              {hasWeightMeasurement && (
+                <span className="recipe-reader-mobile-weight">
+                  {renderPortions(ingredient, displayIngredient, defaultIngredient, ['weight'])}
+                </span>
+              )}
+            </td>
+            <td className="recipe-ingredient-column-preparation">
+              <span className="recipe-ingredient-preparation-text">{preparationText}</span>
+              {portionBreakdown && preparationText && (
+                <span className="recipe-reader-mobile-preparation-comma">,</span>
+              )}
+              {portionBreakdown && (
+                <span className="recipe-ingredient-portion-note recipe-ingredient-portion-note-divided recipe-reader-mobile-divide-note">
+                  <span className="recipe-ingredient-portion-label">divide</span>{' '}
                   <span className="recipe-ingredient-portion-values">{portionBreakdown}</span>
                 </span>
               )}
             </td>
+            {hasDivisions && (
+              <td className="recipe-ingredient-column-divide">
+                {portionBreakdown && (
+                  <>
+                    <span className="recipe-ingredient-portion-label">divided</span>{' '}
+                    {portionBreakdown}
+                  </>
+                )}
+              </td>
+            )}
           </tr>
         );
       }
@@ -1362,17 +1520,36 @@ export function RecipeReader({
         <li data-checked={cookMode && checked ? 'true' : undefined} key={ingredient.id}>
           {cookMode && renderIngredientCheck(ingredient)}
           <span className="recipe-ingredient-name">
-            {parts.measurements.length > 0 && (
-              <>{renderPortions(ingredient, displayIngredient, defaultIngredient)} </>
+            <span className="recipe-ingredient-primary">
+              {parts.measurements.length > 0 && (
+                <>{renderPortions(ingredient, displayIngredient, defaultIngredient)} </>
+              )}
+              {[parts.specifics, parts.name].filter(Boolean).join(' ')}
+              {parts.unmeasuredPhrase && ` ${parts.unmeasuredPhrase}`}
+            </span>
+            {(parts.size || parts.preparation) && (
+              <span className="recipe-ingredient-continuation-separator">, </span>
             )}
-            {[parts.specifics, parts.name].filter(Boolean).join(' ')}
-            {parts.unmeasuredPhrase && ` ${parts.unmeasuredPhrase}`}
-            {(parts.size || parts.preparation) &&
-              `, ${[parts.preparation, parts.size].filter(Boolean).join(' ')}`}
-            {portionBreakdown && (
-              <span className="recipe-ingredient-portion-note">
-                {parts.preparation ? ' ' : ', divided '}
-                {portionBreakdown}
+            {(parts.size || parts.preparation || portionBreakdown) && (
+              <span
+                className={`recipe-ingredient-continuation${
+                  parts.size || parts.preparation
+                    ? ' recipe-ingredient-continuation-has-preparation'
+                    : ''
+                }`}
+              >
+                {(parts.size || parts.preparation) && (
+                  <span className="recipe-ingredient-preparation">
+                    {[parts.preparation, parts.size].filter(Boolean).join(' ')}
+                  </span>
+                )}
+                {portionBreakdown && (
+                  <span className="recipe-ingredient-portion-note">
+                    <span className="recipe-ingredient-portion-separator">, </span>
+                    <span className="recipe-ingredient-portion-label">divided</span>{' '}
+                    {portionBreakdown}
+                  </span>
+                )}
               </span>
             )}
           </span>
@@ -1381,6 +1558,8 @@ export function RecipeReader({
     });
   }
 
+  const hasDivisions = ingredients.some((ingredient) => ingredient.portion_one_ratio != null);
+
   function renderIngredientGroups() {
     if (ingredientGroups.length <= 1) {
       return renderIngredientRows();
@@ -1388,7 +1567,7 @@ export function RecipeReader({
     return ingredientGroups.flatMap(({ set, ingredients: groupIngredients }) => [
       presentation === 'ingredient_first' ? (
         <tr className="recipe-ingredient-set-divider" key={`set-${set.id}`}>
-          <th colSpan={cookMode ? 5 : 4} scope="rowgroup">
+          <th colSpan={4 + Number(cookMode) + Number(hasDivisions)} scope="rowgroup">
             <h3>{set.label}</h3>
           </th>
         </tr>
@@ -1424,6 +1603,7 @@ export function RecipeReader({
   const SortIcon = currentSort.Icon;
   const DirectionIcon = sortDirection === 'ascending' ? ArrowUp : ArrowDown;
   const hasSortDirection = sortMode === 'alphabetical' || sortMode === 'size';
+  const ingredientHeaderClass = hasDivisions ? ' visually-hidden' : '';
   const presentationSummary = presentation === 'ingredient_first' ? 'first' : 'standard';
   const ingredientFirstTableClasses = [
     'recipe-ingredient-table',
@@ -1542,33 +1722,68 @@ export function RecipeReader({
                 <col className="recipe-ingredient-column-ingredient" />
                 <col className="recipe-ingredient-column-volume" />
                 <col className="recipe-ingredient-column-weight" />
+                <col className="recipe-ingredient-column-amount-mobile" />
                 <col className="recipe-ingredient-column-preparation" />
+                {hasDivisions && <col className="recipe-ingredient-column-divide" />}
               </colgroup>
               <thead className="visually-hidden">
                 <tr>
-                  {cookMode && <td aria-hidden="true" className="recipe-cook-checkbox-heading" />}
-                  <th className="recipe-ingredient-column-ingredient" scope="col">
+                  {cookMode && (
+                    <td
+                      aria-hidden="true"
+                      className={`recipe-cook-checkbox-heading${ingredientHeaderClass}`}
+                    />
+                  )}
+                  <th
+                    className={`recipe-ingredient-column-ingredient${ingredientHeaderClass}`}
+                    scope="col"
+                  >
                     Ingredient
                   </th>
-                  <th className="recipe-ingredient-column-volume" scope="col">
+                  <th
+                    className={`recipe-ingredient-column-volume${ingredientHeaderClass}`}
+                    scope="col"
+                  >
                     <span className="recipe-reader-label-desktop">Volume</span>
                     <span className="recipe-reader-label-mobile">Vol</span>
                   </th>
-                  <th className="recipe-ingredient-column-weight" scope="col">
+                  <th
+                    className={`recipe-ingredient-column-weight${ingredientHeaderClass}`}
+                    scope="col"
+                  >
                     <span className="recipe-reader-label-desktop">Weight</span>
                     <span className="recipe-reader-label-mobile">Wt</span>
                   </th>
-                  <th className="recipe-ingredient-column-preparation" scope="col">
+                  <th
+                    className={`recipe-ingredient-column-amount-mobile${ingredientHeaderClass}`}
+                    scope="col"
+                  >
+                    Amount
+                  </th>
+                  <th
+                    className={`recipe-ingredient-column-preparation${ingredientHeaderClass}`}
+                    scope="col"
+                  >
                     <span className="recipe-reader-label-desktop">Preparation</span>
                     <span className="recipe-reader-label-mobile">Prep</span>
                   </th>
+                  {hasDivisions && (
+                    <th
+                      className="recipe-ingredient-column-divide recipe-ingredient-column-divide-header"
+                      scope="col"
+                    >
+                      divided
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>{renderIngredientGroups()}</tbody>
             </table>
           </section>
         ) : (
-          <ol className="recipe-ingredient-list">{renderIngredientGroups()}</ol>
+          <ol className="recipe-ingredient-list" ref={standardIngredientListRef}>
+            {renderIngredientGroups()}
+          </ol>
         )}
       </section>
       {instructions}

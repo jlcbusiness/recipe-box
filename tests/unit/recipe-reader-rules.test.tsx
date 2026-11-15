@@ -17,6 +17,7 @@ import {
   type MeasurementSystemPreference,
 } from '../../src/lib/recipes/measurement-rules';
 import {
+  chooseReadablePortionPair,
   convertUnitAmount,
   getScaleMultiplier,
   scaleAmountRange,
@@ -27,6 +28,41 @@ import {
 afterEach(() => {
   cleanup();
   Reflect.deleteProperty(navigator, 'wakeLock');
+});
+
+it('shows only the more readable measurement pair in Ingredient-first view', () => {
+  render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeReader
+        defaultPresentation="standard"
+        ingredients={[
+          {
+            ...ingredientRow('dual-row', 'Flour', 0, [
+              amount('volume', 1, 'cup'),
+              amount('weight', 100, 'g'),
+            ]),
+            portion_one_ratio: 0.5,
+          },
+        ]}
+        recipeId="recipe-id"
+        serves={4}
+        steps={[]}
+        volumeSystem="us_customary"
+        weightSystem="metric"
+      />
+    </RecipeReaderProvider>,
+  );
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+    }),
+  );
+
+  const divideCell = screen
+    .getByRole('row', { name: /flour/u })
+    .querySelector('.recipe-ingredient-column-divide');
+  expect(divideCell?.textContent).toBe('divided 50 : 50');
 });
 
 const flour: IngredientDisplayInput = {
@@ -118,6 +154,27 @@ function instructionStep(position: number, contentMarkdown: string): RecipeInstr
 }
 
 describe('recipe reader measurement rules', () => {
+  it('chooses a divided pair by whole-number count, displayed sum, then Volume', () => {
+    expect(
+      chooseReadablePortionPair([
+        { measurementType: 'volume', first: '½', second: '½' },
+        { measurementType: 'weight', first: '50', second: '50' },
+      ])?.measurementType,
+    ).toBe('weight');
+    expect(
+      chooseReadablePortionPair([
+        { measurementType: 'volume', first: '1', second: '1' },
+        { measurementType: 'weight', first: '50', second: '50' },
+      ])?.measurementType,
+    ).toBe('volume');
+    expect(
+      chooseReadablePortionPair([
+        { measurementType: 'weight', first: '1', second: '1' },
+        { measurementType: 'volume', first: '1', second: '1' },
+      ])?.measurementType,
+    ).toBe('volume');
+  });
+
   it('shows both equivalents and switches each measurement slot back to Count independently', () => {
     const lemon: RecipeIngredient = {
       ...ingredientRow('lemon-row', 'Lemon', 0, [amount('count', 1)]),
@@ -272,7 +329,7 @@ describe('recipe reader measurement rules', () => {
               position: 0,
               is_main: false,
               detail: '',
-              preparation: 'cubed',
+              preparation: 'sliced',
               portion_one_ratio: 0.25,
               size_value: 1.25,
               size_unit: 'in',
@@ -299,19 +356,97 @@ describe('recipe reader measurement rules', () => {
       </RecipeReaderProvider>,
     );
 
-    expect(screen.getByRole('listitem').textContent).toContain('4 carrot, cubed 1 ¼ in');
-    expect(screen.getByRole('listitem').textContent).toContain('1 : 3');
-    expect(screen.getByRole('listitem').textContent).toContain('cubed 1 ¼ in');
-
+    expect(screen.getByRole('listitem').textContent).toContain('4 carrot, sliced 1 ¼ in');
+    expect(screen.getByRole('listitem').textContent).toContain('divided 1 : 3');
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Ingredient view: Standard. Activate for Ingredient-first.',
       }),
     );
     const ingredientRow = screen.getByRole('row', { name: /carrot/u });
-    expect(ingredientRow.textContent).toContain('4');
-    expect(ingredientRow.textContent).toContain('1 : 3');
-    expect(ingredientRow.textContent).toContain('cubed 1 ¼ in');
+    expect(screen.getByRole('columnheader', { name: 'divided' })).toBeDefined();
+    expect(
+      ingredientRow.querySelector('.recipe-ingredient-column-preparation')?.textContent,
+    ).toContain('sliced 1 ¼ in');
+    const divideCell = ingredientRow.querySelector('.recipe-ingredient-column-divide');
+    expect(divideCell?.querySelector('.recipe-ingredient-portion-label')?.textContent).toBe(
+      'divided',
+    );
+    expect(divideCell?.textContent).toContain('1 : 3');
+  });
+
+  it('renders a separate Divide value for readers that preserve stored measurements', () => {
+    render(
+      <RecipeReaderProvider serves={4}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[
+            {
+              ...ingredientRow('public-carrot', 'Carrot', 0, [amount('count', 4)]),
+              preparation: 'sliced',
+              portion_one_ratio: 0.25,
+            },
+          ]}
+          preserveStoredUnits
+          recipeId="public-recipe-id"
+          serves={4}
+          steps={[]}
+          volumeSystem="us_customary"
+          weightSystem="us_customary"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('listitem').textContent).toContain('sliced');
+    expect(screen.getByRole('listitem').textContent).toContain('divided 1 : 3');
+    expect(screen.queryByRole('combobox')).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+      }),
+    );
+    const row = screen.getByRole('row', { name: /carrot/u });
+    expect(screen.getByRole('columnheader', { name: 'divided' })).toBeDefined();
+    expect(row.querySelector('.recipe-ingredient-preparation-text')?.textContent).toBe('sliced');
+    expect(row.querySelector('.recipe-ingredient-column-divide')?.textContent).toBe(
+      'divided 1 : 3',
+    );
+  });
+
+  it('renders legacy Preparation=divided as a separate Divide value', () => {
+    render(
+      <RecipeReaderProvider serves={2}>
+        <RecipeReader
+          defaultPresentation="standard"
+          ingredients={[
+            {
+              ...ingredientRow('legacy-row', 'Onion', 0, [amount('count', 2)]),
+              preparation: 'divided',
+              portion_one_ratio: 0.5,
+            },
+          ]}
+          recipeId="recipe-id"
+          serves={2}
+          steps={[]}
+          volumeSystem="us_customary"
+          weightSystem="us_customary"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(
+      screen.getByRole('listitem').querySelector('.recipe-ingredient-portion-label')?.textContent,
+    ).toBe('divided');
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+      }),
+    );
+    const row = screen.getByRole('row', { name: /onion/u });
+    expect(row.querySelector('.recipe-ingredient-preparation-text')?.textContent).toBe('');
+    expect(row.querySelector('.recipe-ingredient-column-divide')?.textContent).toBe(
+      'divided 1 : 1',
+    );
   });
 
   it.each(canonicalUnitCases)(
@@ -1007,9 +1142,44 @@ describe('recipe reader views', () => {
     );
 
     expect(screen.getByRole('table', { name: 'Recipe ingredients' })).toBeTruthy();
+    expect(screen.queryByRole('columnheader', { name: 'divided' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'For the sauce' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'For the filling' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Unused section' })).toBeNull();
+  });
+
+  it('extends Ingredient-first section dividers across the conditional Divide column', () => {
+    const rows = [
+      {
+        ...ingredientRow('sauce-row', 'Tomato', 0, [amount('count', 2)]),
+        ingredient_set_id: 'set-sauce',
+        portion_one_ratio: 0.5,
+      },
+      { ...ingredientRow('filling-row', 'Onion', 1), ingredient_set_id: 'set-filling' },
+    ];
+    const ingredientSets = [
+      { id: 'set-sauce', label: 'For the sauce', position: 0 },
+      { id: 'set-filling', label: 'For the filling', position: 1 },
+    ];
+
+    render(
+      <RecipeReaderProvider serves={null}>
+        <RecipeReader
+          defaultPresentation="ingredient_first"
+          ingredients={rows}
+          ingredientSets={ingredientSets}
+          recipeId="recipe-id"
+          serves={null}
+          steps={[]}
+          volumeSystem="us_customary"
+          weightSystem="us_customary"
+        />
+      </RecipeReaderProvider>,
+    );
+
+    expect(screen.getByRole('columnheader', { name: 'divided' })).toBeDefined();
+    const dividerHeading = screen.getByRole('heading', { name: 'For the filling' });
+    expect(dividerHeading.closest('tr')?.querySelector('th')?.colSpan).toBe(5);
   });
 
   it('switches presentations and sorts rows without changing their entered order', () => {
@@ -1055,10 +1225,10 @@ describe('recipe reader views', () => {
         (cell) =>
           cell.querySelector('.recipe-reader-label-desktop')?.textContent ?? cell.textContent,
       ),
-    ).toEqual(['Ingredient', 'Volume', 'Weight', 'Preparation']);
+    ).toEqual(['Ingredient', 'Volume', 'Weight', 'Amount', 'Preparation']);
     expect(
       headers.map((cell) => cell.querySelector('.recipe-reader-label-mobile')?.textContent ?? ''),
-    ).toEqual(['', 'Vol', 'Wt', 'Prep']);
+    ).toEqual(['', 'Vol', 'Wt', '', 'Prep']);
     const renderedRows = Array.from(table.querySelectorAll('tbody tr'));
     const sugarRow = renderedRows.find((row) =>
       row.querySelector('th')?.textContent?.includes('sugar'),
@@ -1076,32 +1246,32 @@ describe('recipe reader views', () => {
       name: 'Sort ingredients: Order Entered. Activate for Appears in Instructions.',
     });
     fireEvent.click(sort);
-    expect(Array.from(table.querySelectorAll('tbody tr')).map((row) => row.textContent)).toEqual([
-      'sugar2',
-      'flour1 cup',
-      'saltto taste',
-    ]);
+    expect(
+      Array.from(table.querySelectorAll('tbody tr')).map((row) =>
+        row.querySelector('th')?.textContent?.trim(),
+      ),
+    ).toEqual(['sugar', 'flour', 'salt']);
 
     fireEvent.click(sort);
-    expect(Array.from(table.querySelectorAll('tbody tr')).map((row) => row.textContent)).toEqual([
-      'flour1 cup',
-      'saltto taste',
-      'sugar2',
-    ]);
+    expect(
+      Array.from(table.querySelectorAll('tbody tr')).map((row) =>
+        row.querySelector('th')?.textContent?.trim(),
+      ),
+    ).toEqual(['flour', 'salt', 'sugar']);
     fireEvent.click(screen.getByRole('button', { name: 'Sort ascending' }));
-    expect(Array.from(table.querySelectorAll('tbody tr')).map((row) => row.textContent)).toEqual([
-      'sugar2',
-      'saltto taste',
-      'flour1 cup',
-    ]);
+    expect(
+      Array.from(table.querySelectorAll('tbody tr')).map((row) =>
+        row.querySelector('th')?.textContent?.trim(),
+      ),
+    ).toEqual(['sugar', 'salt', 'flour']);
 
     fireEvent.click(sort);
     fireEvent.click(sort);
-    expect(Array.from(table.querySelectorAll('tbody tr')).map((row) => row.textContent)).toEqual([
-      'flour1 cup',
-      'saltto taste',
-      'sugar2',
-    ]);
+    expect(
+      Array.from(table.querySelectorAll('tbody tr')).map((row) =>
+        row.querySelector('th')?.textContent?.trim(),
+      ),
+    ).toEqual(['flour', 'salt', 'sugar']);
     expect(rows.map((row) => row.position)).toEqual(originalPositions);
   });
 

@@ -323,7 +323,9 @@ test('publication history is owner-only and returns to its active publication @e
   }
 });
 
-test('multi-recipe catalog rewrites retain each recipe before snapshot', async ({ request }) => {
+test('multi-recipe catalog rewrites retain each recipe before snapshot @e2e', async ({
+  request,
+}) => {
   const owner = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
 
@@ -395,7 +397,7 @@ test('multi-recipe catalog rewrites retain each recipe before snapshot', async (
   }
 });
 
-test('recipe history retains publication names across reassignment', async ({ request }) => {
+test('recipe history retains publication names across reassignment @e2e', async ({ request }) => {
   const owner = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
 
@@ -451,7 +453,7 @@ test('recipe history retains publication names across reassignment', async ({ re
   }
 });
 
-test('active records with no retained events show a compact empty state', async ({
+test('active records with no retained events show a compact empty state @e2e', async ({
   page,
   request,
 }) => {

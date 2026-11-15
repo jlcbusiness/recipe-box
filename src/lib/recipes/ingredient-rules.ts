@@ -78,10 +78,20 @@ export type IngredientDisplayParts = {
 
 export type IngredientDisplayOptions = {
   aliasPinch?: boolean;
+  lowercaseMultiwordName?: boolean;
 };
 
 export function isSizePreparation(preparation: string): boolean {
   return ['cubed', 'diced', 'sliced'].includes(preparation.trim().toLocaleLowerCase());
+}
+
+export function normalizeLegacyDividedPreparation(
+  preparation: string,
+  portionOneRatio: number | null,
+): string {
+  return preparation.trim().toLocaleLowerCase() === 'divided' && portionOneRatio != null
+    ? ''
+    : preparation;
 }
 
 export function getPortionMeasurementType(
@@ -233,6 +243,7 @@ export function isEmptyIngredientRow(row: IngredientRowDraft): boolean {
     !row.detail.trim() &&
     !row.preparation.trim() &&
     row.portionOneRatio == null &&
+    row.portionOneAmount === undefined &&
     !row.sizeValue?.trim() &&
     !row.sizeUnit?.trim() &&
     row.measurements.length === 0
@@ -282,12 +293,18 @@ export function getIngredientDisplayParts(
 ): IngredientDisplayParts {
   const name = ingredient.ingredient_name.trim();
   const detail = ingredient.detail.trim();
-  const preparation = ingredient.preparation.trim();
+  const rawPreparation = ingredient.preparation.trim();
+  const preparation = rawPreparation.toLocaleLowerCase() === 'divided' ? '' : rawPreparation;
   const size =
     ingredient.size_value != null && ingredient.size_unit
       ? `${formatQuantity(ingredient.size_value, ingredient.size_unit === 'cm' ? 'metric' : 'us_customary')} ${ingredient.size_unit}`
       : null;
-  const displayName = /^[\p{Lu}][\p{Ll}]+$/u.test(name) ? lowercaseFirst(name) : name;
+  const displayName =
+    options.lowercaseMultiwordName && /\s/u.test(name)
+      ? name.toLocaleLowerCase()
+      : /^[\p{Lu}][\p{Ll}]+$/u.test(name)
+        ? lowercaseFirst(name)
+        : name;
   const displayedMeasurements = [...(ingredient.measurements ?? [])]
     .filter((measurement) => measurement.measurement_type !== 'unmeasured')
     .sort((left, right) => {
@@ -481,21 +498,26 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
     const preparation = row.preparation.trim();
     const measurements = serializeMeasurements(row.measurements);
     let portionOneRatio = row.portionOneRatio ?? null;
+    const hasPortionAmount = Boolean(row.portionOneAmount?.trim());
     const sizeValue = row.sizeValue?.trim() ?? '';
     const sizeUnit = sizeValue ? (row.sizeUnit?.trim() ?? '') : '';
 
-    if (portionOneRatio !== null && row.portionOneAmount !== undefined) {
-      const firstAmount = parseQuantityInput(row.portionOneAmount);
+    if (row.portionOneAmount !== undefined) {
+      const firstAmount = hasPortionAmount ? parseQuantityInput(row.portionOneAmount ?? '') : null;
       const measurement = measurements.find(
         (item) => item.measurement_type === row.portionMeasurementType,
       );
       portionOneRatio =
-        firstAmount && firstAmount.maximum === null && measurement?.amount_min !== null
-          ? getPortionRatio(firstAmount.minimum, measurement?.amount_min ?? 0)
+        firstAmount &&
+        firstAmount.maximum === null &&
+        measurement?.amount_min !== null &&
+        measurement?.amount_min !== undefined
+          ? getPortionRatio(firstAmount.minimum, measurement.amount_min)
           : null;
-      if (portionOneRatio === null) {
-        throw new Error('Enter a first portion greater than zero and less than the total.');
-      }
+    }
+
+    if (hasPortionAmount && portionOneRatio === null) {
+      throw new Error('Enter a first portion greater than zero and less than the total.');
     }
 
     if (portionOneRatio !== null) {

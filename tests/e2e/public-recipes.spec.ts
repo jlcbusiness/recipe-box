@@ -2397,6 +2397,7 @@ test('print continues an oversized ingredient column while standalone formats fa
             document.createElement('td'),
             document.createElement('td'),
             document.createElement('td'),
+            document.createElement('td'),
           );
           tableBody.append(row);
         }
@@ -2878,6 +2879,12 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: 'Public cooking view' })).toBeVisible();
+    const privateCarrot = page
+      .locator('.recipe-ingredient-list li, .recipe-ingredient-table tbody tr')
+      .filter({ hasText: 'Carrot' })
+      .first();
+    await expect(privateCarrot).toContainText('divided');
+    await expect(privateCarrot).toContainText('1 : 3');
     await page.getByRole('link', { name: 'Edit' }).click();
     await expect(page).toHaveURL(`/recipes/${recipe.id}/edit`);
     await expect(page.getByLabel('Makes quantity')).toHaveValue('3');
@@ -3051,6 +3058,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     );
     expect(privateDefaultPdf.width).toBeGreaterThan(privateDefaultPdf.height);
     expect(privateDefaultPdf.imageOperations).toBe(1);
+    expect(privateDefaultPdf.text).toContain('divided');
+    expect(privateDefaultPdf.text).toContain('1 : 3');
     for (const { x, width, text } of privateDefaultPdf.textBounds.filter(
       ({ text }) => text.trim().length > 0,
     )) {
@@ -3130,6 +3139,12 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     await expect(page.locator('.recipe-public-makes-inline')).toContainText('Makes 3 baby cakes');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-size', '16px');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-weight', '400');
+    const publicCarrot = page
+      .locator('.recipe-ingredient-list li, .recipe-ingredient-first-table tbody tr')
+      .filter({ hasText: 'Carrot' })
+      .first();
+    await expect(publicCarrot).toContainText('divided');
+    await expect(publicCarrot).toContainText('1 : 3');
     const publicScaleButton = page.getByRole('button', { name: 'Scale recipe' });
     await publicScaleButton.click();
     const publicScalePane = page.getByRole('dialog', { name: 'Scale recipe' });
@@ -3169,6 +3184,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(publicHtml).not.toContain('Private note sentinel');
     expect(publicHtml).toContain('recipe-public-makes-inline');
     expect(publicHtml).toContain('3 baby cakes');
+    expect(publicHtml).toContain('divided');
+    expect(publicHtml.replaceAll('<!-- -->', '')).toContain('1 : 3');
 
     const publicPngDownloadPromise = page.waitForEvent('download');
     await outputButton.click();
@@ -3266,6 +3283,8 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(publicDefaultPdf.width).toBeGreaterThan(publicDefaultPdf.height);
     expect(publicDefaultPdf.imageOperations).toBe(1);
     expect(publicDefaultPdf.text).toContain('Public cooking view');
+    expect(publicDefaultPdf.text).toContain('divided');
+    expect(publicDefaultPdf.text).toContain('1 : 3');
     expect(publicDefaultPdf.text).not.toContain('No instruction photos');
     await page.emulateMedia({ media: 'screen' });
     await settingsButton.click();

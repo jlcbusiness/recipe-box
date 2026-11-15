@@ -75,6 +75,7 @@
   Reran `npm run test:e2e -- tests/e2e/account-settings.spec.ts --workers=1`;
   all 4 Chromium and Fold 6 tests passed. Reran `npm run lint` and
   `git diff --check`; both passed.
+
 ## 2026-11-11 — App data layout follow-up (session 626131e5-5a28-43d6-90cd-9eddeedde4d3)
 
 - Updated the Account menu spacing and App data action order, centering the
@@ -85,6 +86,7 @@
 - Ran changed-file `npx biome check`: passed with 39 CSS warnings.
 - Captured and inspected the App data screenshots at desktop and 307px mobile.
 - Ran `git diff --check`: passed.
+
 ## 2026-11-11 — Account menu spacing refinement (session 626131e5-5a28-43d6-90cd-9eddeedde4d3)
 
 - The user selected 32px link rows after clarifying that 48px still looked like
@@ -96,6 +98,7 @@
 - Captured and inspected the Fold 6 Account menu screenshot; the link rows are
   32px apart.
 - Ran `git diff --check`: passed.
+
 ## 2026-11-11 — Account menu Sign out gap (session 626131e5-5a28-43d6-90cd-9eddeedde4d3)
 
 - Added 8px between the App data link and Sign out button; preserved the 32px

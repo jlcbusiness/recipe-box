@@ -202,8 +202,9 @@ checks before recording delivery as complete.
   1,280px widths. A simulated keyboard visual viewport verifies pane bounds.
   Numbering required updating the old mobile Field-at-row-left assertion;
   it now asserts the number rail and its 1mm separation from Field.
-- [Database acceptance](../../../../scripts/test-dlc13-advanced-rules.mjs)
-  covers aliases, precedence, unknown-value NOT, leaf validation, owner and
+- [Database acceptance](../../../../scripts/test-dlc13-advanced-rules.mjs),
+  run with `npm run test:advanced-rules`, covers aliases, precedence,
+  unknown-value NOT, leaf validation, owner and
   publication isolation, exact token/text/nesting/UTF-8 boundaries, facets,
   external filters, remembered state, and pagination. Local migration
   `20261212000000` was applied without a database reset.

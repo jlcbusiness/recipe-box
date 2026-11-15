@@ -319,9 +319,9 @@ same type. Time values remain minutes in storage.
 
 An ingredient and its quantities are permanently tied together in a single
 relational row. The desktop edit table displays Ingredient, Specifics, Amount,
-and Preparation values in that order; the Main checkbox and 12px drag handle
-sit in a narrow control rail outside the table. The table always has one
-trailing empty row.
+Preparation, and Divide values in that order; the Main checkbox and 12px drag
+handle sit in a narrow control rail outside the table. The table always has
+one trailing empty row.
 
 1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon
    in lemon bars). Populates the recipe's `Main Ingredients` index used by the Query **Main Ingredient** field and
@@ -374,13 +374,12 @@ trailing empty row.
    recipe view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for
    butter), `Brummel & Brown` (for margarine).
 6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or
-   during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , `sliced` ,
-   `divided` . Users can add a preparation while editing; saved values appear in future suggestions. Selecting `divided`
-   reveals compact first-portion, current-unit, and read-only remainder controls in Preparation; there is no standalone
-   Divide checkbox. Selecting `cubed`, `diced`, or `sliced` reveals the
-   separate Size field and an underlined `in`/`cm` unit toggle there. Desktop
-   keeps either control group beside its Preparation value; mobile wraps them
-   below the picker.
+   during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , and `sliced` .
+   Users can add a preparation while editing; saved values appear in future suggestions. Selecting `cubed`, `diced`,
+   or `sliced` reveals the separate Size field and an underlined `in`/`cm` unit toggle there.
+7. **Divide:** An optional two-portion allocation independent of Preparation. The Divide field uses the existing first-
+   portion input and read-only remainder; it stores one ratio and its complement. Division values are not preparation
+   suggestions.
 
 ### 3.2 Dual Measurement (Volume + Weight)
 
@@ -515,9 +514,23 @@ both volume and weight, focusing a unit control selects that dimension only
 when its amount is populated, and the resulting ratio applies to both. If only
 one dimension has an amount, use it regardless of focus; an empty focused
 dimension cannot override it. If the remembered dimension becomes empty, fall
-back to the populated one. In the editor, selecting `divided` in Preparation
-reveals the compact portion controls with the active measurement unit; no
-separate Divide checkbox is used.
+back to the populated one. The selected dimension is an editing aid only; Save
+persists one dimensionless ratio, not a preferred display dimension. In Edit,
+Divide is a separate field from Preparation. Existing rows whose Preparation
+is `divided` load with that value in Divide and an empty Preparation.
+
+Readers calculate each populated dimension's two displayed portion amounts
+from the shared ratio after scaling and unit conversion. For a dual-measure
+row, show one pair: choose the dimension whose formatted pair contains more
+whole-number amounts; if tied, choose the pair with the smaller sum of
+displayed amounts; if still tied, choose Volume. Re-evaluate this
+display-only choice when scaling or unit preferences change. The Divide cell
+does not repeat units. Ingredient-first desktop omits the Divide column when
+no row is divided and otherwise sizes it for the portion pair (including
+`8 8/8 : 8 8/8`). Mobile uses the existing Prep cell for a second line labeled
+`Divide a : b`; when Volume and Weight are both present, stack both totals in
+Amount and show the one selected portion pair from the readability rule above.
+Standard view and print label the division separately from Preparation.
 
 Cubed, diced, and sliced ingredients may have a separate positive numeric Size
 with unit `in` or `cm`. Both Size fields are null when absent; Size is valid
@@ -608,7 +621,8 @@ The recipe card supports two distinct view presentations. This is a reader/devic
 Inspired by work items and classical cookbooks:
 
 - **Ingredient-row reading order:** Amount, Ingredient (and Specifics), then
-  Preparation, following conventional recipe-book notation such as
+  Preparation, followed by a separately labeled Divide value when present,
+  following conventional recipe-book notation such as
   `1 cup all-purpose flour, sifted`.
 - **Desktop layout:** The structured ingredient area sits alongside the
   instruction column. Give Ingredients a stable 46% reader-grid track and let
@@ -622,25 +636,28 @@ Inspired by work items and classical cookbooks:
 
 Organized by how a cook actually operates in the kitchen ("get the item, check the amount, prep it"):
 
-- **Column 1: Ingredient** (with Specifics rendered as a distinct subtitle beneath the name).
-- **Column 2: Amount** (quantity and unit, formatted as volume / weight if dual).
-- **Column 3: Preparation** (diced, melted, minced, etc.).
-- In mobile Ingredient-First view, put divided portion ratios on a separate
-  line below the `divided` label. Keep desktop Ingredient-First and Standard
-  presentation inline.
+- **Ingredient:** Specifics render as a distinct subtitle beneath the name.
+- **Amount:** Desktop keeps Volume and Weight separate. On mobile, use one
+  Amount column and stack Volume above Weight when both are present.
+- **Preparation:** Diced, melted, minced, and other processing instructions.
+- **Divide:** A conditional desktop column, omitted when no row is divided.
+  Mobile keeps the existing Prep column and places `Divide a : b` on a second
+  line without adding a column or subheading. For dual measures, the displayed
+  pair follows the readability rule in § 3.7.
 
 ```text
-+---------------------------+----------------+---------------+
-| Ingredient                | Amount         | Preparation   |
-+---------------------------+----------------+---------------+
-| flour                     | 1 cup / 120 g  |               |
-|   all-purpose             |                |               |
-| eggs                      | 2              |               |
-|   large                   |                |               |
-| onion                     | 1              | diced         |
-| coconut milk              | 14 oz          |               |
-| salt                      | to taste       |               |
-+---------------------------+----------------+---------------+
++---------------------------+----------------+---------------+--------+
+| Ingredient                | Amount         | Preparation   | Divide |
++---------------------------+----------------+---------------+--------+
+| flour                     | 1 cup / 120 g  |               |        |
+|   all-purpose             |                |               |        |
+| eggs                      | 2              |               |        |
+|   large                   |                |               |        |
+| onion                     | 1              | diced         |        |
+| butter                    | 2 cups         | softened      | 1 : 1  |
+| coconut milk              | 14 oz          |               |        |
+| salt                      | to taste       |               |        |
++---------------------------+----------------+---------------+--------+
 ```
 
 - **Defaults:**

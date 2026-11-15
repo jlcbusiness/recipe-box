@@ -139,6 +139,14 @@ while retaining the existing single-image viewer without gallery navigation.
   adds searchable explicit-add metadata suggestions, Size for Cubed, Diced,
   and Sliced preparations, and populated-dimension selection for divided rows.
 
+### Phase 14: Separate Divide from Preparation
+
+- **DLC 38 (implemented in app version 1.12.0):**
+  [Separate Divide from Preparation](dlc-38-separate-divide-from-preparation.md)
+  makes division independent from Preparation, adds a conditional desktop
+  Divide column, and gives mobile a compact labeled second line without adding
+  another column.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for

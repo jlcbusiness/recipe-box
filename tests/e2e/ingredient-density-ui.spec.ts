@@ -242,7 +242,7 @@ test('Measure equivalents derive the other dimension from trusted density @e2e @
       .locator('.recipe-ingredient-list li, .recipe-ingredient-first-table tbody tr')
       .filter({ hasText: ingredientName })
       .first();
-    await expect(recipeIngredient).toContainText('Density Equivalent Lemon');
+    await expect(recipeIngredient).toContainText('density equivalent lemon');
     await expect(recipeIngredient).toContainText('1');
     await page
       .getByRole('combobox', {

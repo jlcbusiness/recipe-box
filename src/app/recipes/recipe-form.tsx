@@ -21,11 +21,12 @@ import type {
   RecipeState,
   TagOption,
 } from '../../lib/recipes/data';
-import type { IngredientRowDraft } from '../../lib/recipes/ingredient-rules';
 import {
   getPortionDisplayAmounts,
   getPortionRatio,
+  type IngredientRowDraft,
   isEmptyIngredientRow,
+  normalizeLegacyDividedPreparation,
   serializeIngredientRows,
 } from '../../lib/recipes/ingredient-rules';
 import {
@@ -315,7 +316,7 @@ export function RecipeForm({
         ingredientName: row.ingredient_name,
         isMain: row.is_main,
         detail: row.detail,
-        preparation: row.preparation,
+        preparation: normalizeLegacyDividedPreparation(row.preparation, row.portion_one_ratio),
         portionOneRatio: row.portion_one_ratio,
         sizeValue: row.size_value == null ? '' : String(row.size_value),
         sizeUnit: row.size_unit ?? '',

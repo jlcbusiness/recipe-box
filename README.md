@@ -1,8 +1,8 @@
 # Recipe Box
 
 Recipe Box is a private recipe library built with Next.js and Supabase. The
-current local app includes authentication, account isolation, recipe metadata,
-ordered ingredient rows, and validated measurements. Product features are
+current local app includes authentication, account isolation, recipe editing
+and reading, an organized library, and validated measurements. Product features are
 delivered in the order described by the
 [delivery roadmap](docs/plans/delivery-roadmap.md).
 
@@ -11,7 +11,9 @@ delivered in the order described by the
 - Create, edit, and view recipes with state, metadata picklists, servings,
   component times, equipment, and Markdown notes.
 - Add, reorder, and remove account-owned ingredient rows. Desktop uses a
-  keyboard-operable table; mobile uses a focused row editor pane.
+  keyboard-operable table; mobile uses a focused row editor pane. Preparation,
+  Size, and Divide are independent ingredient fields; divided portions remain
+  separately labeled in recipe views and print.
 - Enter one ingredient amount category: **Unit**, **Count**, **Things**, or
   **Feel**. Unit accepts optional volume and weight pairs; the other categories
   expose only their applicable controls.
@@ -22,6 +24,9 @@ delivered in the order described by the
 - Manage publication covers and up to 12 recipe photos with private uploads,
   signed display, and reversible per-image framing. Images show the full source
   by default; saved framing is reused across their display surfaces.
+- Find and organize recipes across the Library and search views, then share
+  selected recipes through public links or use print, download, and offline
+  reading.
 
 See the [comprehensive reference](docs/plans/comprehensive-reference.md) for
 implemented behavior and later-slice direction, and the
@@ -125,7 +130,7 @@ Select **Create new project** and wait for it to finish provisioning.
 
 In the downloaded project folder, install dependencies and sign in to the
 Supabase CLI included with the project. The repository pins Supabase CLI
-`2.121.0` as a development dependency, so `npm install` installs it locally;
+`3.1.0` as a development dependency, so `npm install` installs it locally;
 you do not need to install the CLI globally. `npx supabase` runs this
 repository's pinned version.
 
@@ -409,7 +414,7 @@ and [Supabase pricing](https://supabase.com/pricing) before choosing a plan.
 
 ## Prerequisites
 
-- Node.js 20.9 or newer and npm.
+- Node.js 26.x and npm, as required by `package.json`.
 - Docker Engine or another Docker-compatible runtime, running locally.
 - Git.
 
@@ -513,7 +518,7 @@ npm run supabase:stop
 
 ## Verify changes
 
-Run the focused unit suite or the complete automated test gate:
+Run the focused unit suite or the main application test gate:
 
 ```bash
 npm run test:unit
@@ -532,6 +537,17 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+For the SQL acceptance tests, start the local Supabase stack without resetting
+it, then run:
+
+```bash
+npm run supabase:start
+npm run test:database
+```
+
+`npm run test:database` runs the pgTAP files in `supabase/tests/`; each file
+wraps its changes in a transaction and rolls them back.
 
 ## Environment and secrets
 

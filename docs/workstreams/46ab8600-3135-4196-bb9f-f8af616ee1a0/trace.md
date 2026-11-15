@@ -101,6 +101,7 @@
 - Repository Markdown lint still reports 30 unrelated errors. The full
   `git diff --check` reports trailing whitespace in the pre-existing
   `.github/prompts/update.prompt.md` edit; that file was not changed here.
+
 ## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd (partial)
 
 - Resumed the DLC 35 stream and read its checklist/current status plus the
@@ -120,6 +121,7 @@
   `git diff --check` passed.
 - This entry covers only the 2026-11-12 acceptance-coverage follow-up, not the
   earlier DLC 35 implementation trace.
+
 ## 2026-11-12 — Full-suite verification (session `55a5aef2-c5f1-44fb-ad69-976e9f10efbd`)
 
 - `npm test`: unit phase passed (653/653); E2E phase reported 380 passed, 52
@@ -158,7 +160,7 @@ projects, with typecheck and scoped Biome passing.
 Last recorded action: source-links E2E, typecheck, focused TypeScript Biome,
 and whitespace checks passed; remaining suite failures are pending.
 
-## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued — offline and media
 
 - `npx playwright test tests/e2e/offline.spec.ts --grep "public recipe pages
   are excluded from private offline storage" --project=chromium
@@ -173,7 +175,7 @@ and whitespace checks passed; remaining suite failures are pending.
 Last recorded action: offline public-cache E2E passes after correcting its
 privacy setup, and the media cleanup queue E2E passes without changes.
 
-## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued — measurements
 
 - `npx playwright test tests/e2e/measurements.spec.ts --project=chromium
   --project='Fold 6'`: initially failed the Preparation text-width assertion
@@ -189,7 +191,7 @@ privacy setup, and the media cleanup queue E2E passes without changes.
 Last recorded action: all measurement E2Es and focused Biome passed; one
 non-failing Next destination-stream error remains unexplained.
 
-## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued
+## 2026-11-12 — Session 55a5aef2-c5f1-44fb-ad69-976e9f10efbd continued — search and accessibility
 
 - `npx playwright test tests/e2e/recipe-search.spec.ts --workers=1`: 31 passed,
   1 expected skip.

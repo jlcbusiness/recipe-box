@@ -1128,6 +1128,16 @@
     padding-right: 4mm;
   }
 
+  .recipe-reader-heading-main {
+    position: relative;
+    padding-bottom: 1.2em;
+  }
+
+  .recipe-reader-subtitle {
+    position: absolute;
+    inset: 36px 0 auto;
+  }
+
   .recipe-ingredient-list {
     width: max-content;
     max-width: 100%;
@@ -1142,18 +1152,30 @@
   flex: 0 0 auto;
   flex-wrap: nowrap;
   justify-content: flex-start;
-  margin-left: 0;
+  margin-left: auto;
   gap: 8px;
 }
 
 .recipe-reader-controls .recipe-sort-direction[aria-hidden="true"] {
-  display: none;
+  visibility: hidden;
 }
 
 @media (max-width: 760px) {
   .recipe-reader-controls {
     flex-basis: 100%;
     justify-content: flex-end;
+  }
+
+  .recipe-reader-controls .recipe-sort-direction[aria-hidden="true"] {
+    display: none;
+  }
+
+  .recipe-reader-heading-main {
+    padding-bottom: 0;
+  }
+
+  .recipe-reader-subtitle {
+    position: static;
   }
 }
 
@@ -1165,10 +1187,6 @@
 
   .recipe-reader-title {
     flex-basis: 100%;
-  }
-
-  .recipe-reader-controls {
-    margin-left: 0;
   }
 }
 
@@ -1421,6 +1439,28 @@
   overflow-wrap: anywhere;
 }
 
+.recipe-ingredient-first-table .recipe-ingredient-column-amount-mobile {
+  display: none;
+}
+
+.recipe-ingredient-first-table .recipe-ingredient-column-divide {
+  white-space: nowrap;
+}
+
+.recipe-ingredient-first-table .recipe-ingredient-column-divide .recipe-ingredient-portion-label {
+  display: block;
+}
+
+.recipe-reader-mobile-preparation-comma {
+  display: none;
+}
+
+.recipe-ingredient-first-table .recipe-reader-mobile-volume,
+.recipe-ingredient-first-table .recipe-reader-mobile-weight,
+.recipe-ingredient-first-table .recipe-reader-mobile-divide-note {
+  display: none;
+}
+
 .recipe-ingredient-first-table-cook-mode {
   margin-left: 0;
 }
@@ -1492,6 +1532,11 @@
 .recipe-reader-table-name,
 .recipe-reader-specifics {
   display: block;
+}
+
+.recipe-ingredient-first-table .recipe-reader-table-name {
+  font-variant-caps: all-small-caps;
+  text-transform: none;
 }
 
 .recipe-reader-specifics {
@@ -2402,6 +2447,50 @@ section.recipe-detail-section .recipe-relationship-list a {
     display: block;
   }
 
+  .recipe-reading-standard .recipe-ingredient-list > li:not(.recipe-ingredient-set-divider) {
+    line-height: 1.05;
+  }
+
+  .recipe-reading-standard .recipe-ingredient-name {
+    display: block;
+  }
+
+  .recipe-reading-standard .recipe-ingredient-continuation {
+    white-space: normal;
+  }
+
+  .recipe-reading-standard .recipe-ingredient-portion-note {
+    white-space: nowrap;
+  }
+
+  .recipe-reading-standard
+    .recipe-ingredient-name[data-mobile-wrap="divide"]
+    .recipe-ingredient-portion-note {
+    display: block;
+    line-height: 1;
+    margin-top: var(--standard-mobile-wrap-shift, 0px);
+    text-align: right;
+  }
+
+  .recipe-reading-standard
+    .recipe-ingredient-name[data-mobile-wrap="divide"]
+    .recipe-ingredient-portion-separator,
+  .recipe-reading-standard
+    .recipe-ingredient-name[data-mobile-wrap="continuation"]
+    .recipe-ingredient-continuation:not(.recipe-ingredient-continuation-has-preparation)
+    .recipe-ingredient-portion-separator {
+    display: none;
+  }
+
+  .recipe-reading-standard
+    .recipe-ingredient-name[data-mobile-wrap="continuation"]
+    .recipe-ingredient-continuation {
+    display: block;
+    line-height: 1;
+    margin-top: var(--standard-mobile-wrap-shift, 0px);
+    text-align: right;
+  }
+
   .recipe-reading-standard,
   .recipe-reading-ingredient_first {
     display: block;
@@ -2409,11 +2498,23 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .recipe-ingredient-first-table {
     margin-left: 0;
+    min-width: max-content;
     table-layout: auto;
+  }
+
+  .recipe-ingredient-first-table tbody tr[data-ingredient-stripe] > th,
+  .recipe-ingredient-first-table tbody tr[data-ingredient-stripe] > td {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  .recipe-ingredient-first-table .recipe-reader-table-name {
+    overflow-wrap: normal;
   }
 
   .recipe-ingredient-first-table-scroll {
     width: 100%;
+    padding-inline-end: 0;
   }
 
   .recipe-ingredient-first-table-cook-mode {
@@ -2439,7 +2540,39 @@ section.recipe-detail-section .recipe-relationship-list a {
 
   .private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table th,
   .private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table td {
-    padding-right: 1mm;
+    padding-right: 8px;
+  }
+
+  .private-content
+    .recipes-main
+    .recipe-reading-layout
+    .recipe-ingredient-first-table
+    .recipe-ingredient-column-preparation,
+  .private-content
+    .recipes-main
+    .recipe-reading-layout
+    .recipe-ingredient-first-table-hide-preparation-mobile
+    .recipe-ingredient-column-amount-mobile,
+  .private-content
+    .recipes-main
+    .recipe-reading-layout
+    .recipe-ingredient-first-table
+    .recipe-ingredient-set-divider
+    > th {
+    padding-right: 0;
+  }
+
+  .recipe-reading-layout .recipe-ingredient-first-table th,
+  .recipe-reading-layout .recipe-ingredient-first-table td {
+    padding-right: 8px;
+  }
+
+  .recipe-reading-layout .recipe-ingredient-first-table .recipe-ingredient-column-preparation,
+  .recipe-reading-layout
+    .recipe-ingredient-first-table-hide-preparation-mobile
+    .recipe-ingredient-column-amount-mobile,
+  .recipe-reading-layout .recipe-ingredient-first-table .recipe-ingredient-set-divider > th {
+    padding-right: 0;
   }
 
   .recipe-ingredient-first-table-hide-volume-mobile .recipe-ingredient-column-volume,
@@ -2448,7 +2581,35 @@ section.recipe-detail-section .recipe-relationship-list a {
     display: none;
   }
 
-  .recipe-ingredient-first-table .recipe-ingredient-portion-label,
+  .recipe-ingredient-first-table .recipe-ingredient-column-volume,
+  .recipe-ingredient-first-table .recipe-ingredient-column-weight,
+  .recipe-ingredient-first-table .recipe-ingredient-column-divide {
+    display: none;
+  }
+
+  .recipe-ingredient-first-table col.recipe-ingredient-column-amount-mobile {
+    display: table-column;
+  }
+
+  .recipe-ingredient-first-table .recipe-ingredient-column-amount-mobile {
+    display: table-cell;
+  }
+
+  .recipe-ingredient-first-table .recipe-reader-mobile-volume,
+  .recipe-ingredient-first-table .recipe-reader-mobile-weight,
+  .recipe-ingredient-first-table .recipe-reader-mobile-divide-note {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .recipe-ingredient-first-table .recipe-reader-mobile-preparation-comma {
+    display: inline;
+  }
+
+  .recipe-ingredient-first-table .recipe-reader-mobile-volume + .recipe-reader-mobile-weight {
+    margin-top: 3px;
+  }
+
   .recipe-ingredient-first-table .recipe-ingredient-portion-note-divided {
     display: block;
   }

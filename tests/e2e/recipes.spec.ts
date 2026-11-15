@@ -1912,7 +1912,6 @@ test('recipe multiselect stays anchored and hides measurement text @e2e', async 
     await expect(equipmentOptions).toBeVisible();
     const foodTypeTrigger = page.getByRole('combobox', { name: 'Food Type', exact: true });
     await foodTypeTrigger.focus();
-    await page.keyboard.press('Enter');
     const foodTypeOptions = page.getByRole('listbox');
     await expect(foodTypeOptions).toHaveCount(1);
     await expect(equipmentOptions).toBeHidden();
@@ -1970,6 +1969,9 @@ test('recipe multiselect stays anchored and hides measurement text @e2e', async 
     await equipmentTrigger.focus();
     await page.keyboard.press('Space');
     await expect(equipmentMenu).toBeVisible();
+    const equipmentSearch = page.getByRole('textbox', { name: 'Search Equipment' });
+    await expect(equipmentSearch).toBeFocused();
+    await page.keyboard.press('ArrowDown');
     await expect(firstEquipmentOption).toBeFocused();
     const secondEquipmentOption = equipmentMenu.getByRole('button').nth(1);
     await page.keyboard.press('ArrowDown');
@@ -2614,8 +2616,6 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
       saveRowBounds,
       instructionsBounds,
       timeSectionBounds,
-      foodTypeBounds,
-      mealTypeBounds,
     ] = await Promise.all([
       cancelLink.boundingBox(),
       deleteButton.boundingBox(),
@@ -2623,8 +2623,6 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
       saveRow.boundingBox(),
       page.locator('.recipe-instruction-section').boundingBox(),
       page.locator('.recipe-time-fieldset').boundingBox(),
-      page.locator('.recipe-classification-fields .recipe-picklist-trigger').nth(0).boundingBox(),
-      page.locator('.recipe-classification-fields .recipe-picklist-trigger').nth(1).boundingBox(),
     ]);
     expect(cancelBounds).not.toBeNull();
     expect(deleteBounds).not.toBeNull();
@@ -2632,11 +2630,11 @@ test('recipe edit swaps Save and Delete actions across desktop and mobile @e2e',
     expect(saveRowBounds).not.toBeNull();
     expect(instructionsBounds).not.toBeNull();
     expect(timeSectionBounds).not.toBeNull();
-    expect(foodTypeBounds).not.toBeNull();
-    expect(mealTypeBounds).not.toBeNull();
     expect(
-      (mealTypeBounds?.x ?? 0) - ((foodTypeBounds?.x ?? 0) + (foodTypeBounds?.width ?? 0)),
-    ).toBeCloseTo(8, 0);
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ),
+    ).toBe(true);
     expect((saveBounds?.x ?? 0) + (saveBounds?.width ?? 0)).toBeCloseTo(
       (saveRowBounds?.x ?? 0) + (saveRowBounds?.width ?? 0),
       0,
@@ -3231,9 +3229,6 @@ test('divided ingredient suggestions insert stable references to each portion @e
       await page.getByRole('option', { name: 'Count', exact: true }).click();
       await editor.getByRole('textbox', { name: 'Count amount, row 1' }).fill('4');
 
-      const preparation = editor.getByRole('combobox', { name: 'Preparation', exact: true });
-      await preparation.fill('divided');
-      await page.getByRole('option', { name: 'divided', exact: true }).click();
       await editor.getByRole('textbox', { name: 'First portion, row 1' }).fill('1');
       await editor.getByRole('button', { name: 'Submit' }).click();
       rowId = await mobileGrid
@@ -3251,11 +3246,7 @@ test('divided ingredient suggestions insert stable references to each portion @e
       await page.getByRole('option', { name: 'Count', exact: true }).click();
       await page.getByRole('textbox', { name: 'Count amount, row 1' }).fill('4');
 
-      await grid.getByRole('cell', { name: 'Preparation, row 1' }).click();
-      const preparation = page.getByRole('combobox', { name: 'Preparation, row 1' });
-      await preparation.fill('divided');
-      await page.getByRole('option', { name: 'divided', exact: true }).click();
-      await preparation.press('Enter');
+      await grid.getByRole('cell', { name: 'Divide, row 1' }).click();
       await page.getByRole('textbox', { name: 'First portion, row 1' }).fill('1');
 
       rowId = await grid
@@ -4526,6 +4517,17 @@ test('recipe detail print matches the active presentation @e2e', async ({
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 844 });
       await expect(screenLockButton).toBeVisible();
+      const sortDirection = page.locator('.recipe-sort-direction');
+      const sortDirectionBounds = await sortDirection.boundingBox();
+      const isSortDirectionHidden = (await sortDirection.getAttribute('aria-hidden')) === 'true';
+      if (width > 760) {
+        expect(sortDirectionBounds).not.toBeNull();
+        if (isSortDirectionHidden) {
+          await expect(sortDirection).toHaveCSS('visibility', 'hidden');
+        }
+      } else if (isSortDirectionHidden) {
+        expect(sortDirectionBounds).toBeNull();
+      }
       const toolbarBounds = await Promise.all(
         [readerSortButton, presentationButton, scaleButton, screenLockButton].map((button) =>
           button.boundingBox(),
@@ -4872,10 +4874,13 @@ test('recipe detail print matches the active presentation @e2e', async ({
     const printedSpecifics = printedIngredientRow.locator('.recipe-reader-specifics');
     await expect(printedSpecifics).toHaveText('all-purpose');
     await expect(printedSpecifics).toHaveCSS('text-transform', 'none');
-    const printedIngredientCells = printedIngredientRow.locator('td');
-    await expect(printedIngredientCells).toHaveCount(3);
-    await expect(printedIngredientCells.nth(0)).toContainText('12 TBSP');
-    await expect(printedIngredientCells.nth(1)).toContainText('2 ⅛ oz');
+    await expect(printedIngredientRow.locator('.recipe-ingredient-column-divide')).toHaveCount(0);
+    const printedAmountCell = printedIngredientRow.locator(
+      '.recipe-ingredient-column-amount-mobile',
+    );
+    await expect(printedAmountCell).toBeVisible();
+    await expect(printedAmountCell).toContainText('12 TBSP');
+    await expect(printedAmountCell).toContainText('2 ⅛ oz');
     await outputButton.click();
     await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
@@ -4902,8 +4907,8 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(page.getByText('Serve warm.')).toBeVisible();
     await expect(page.getByText('Mix flour.')).toBeVisible();
     await expect(printedIngredientRow.locator('th')).toContainText('flour');
-    await expect(printedIngredientCells.nth(0)).toContainText('12 TBSP');
-    await expect(printedIngredientCells.nth(1)).toContainText('2 ⅛ oz');
+    await expect(printedIngredientRow).toContainText('12 TBSP');
+    await expect(printedIngredientRow).toContainText('2 ⅛ oz');
     await expect(page.locator('.recipe-detail-section').first()).toHaveCSS('break-inside', 'avoid');
     const pdf = await page.pdf();
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -5064,15 +5069,19 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     );
 
     const ingredientsHeading = page.getByRole('heading', { name: 'Ingredients' });
-    const titleBounds = await page.locator('.recipe-reader-title').boundingBox();
     const controls = page.locator('.recipe-reader-controls');
+    const headingMainBounds = await page.locator('.recipe-reader-heading-main').boundingBox();
     const headingBounds = await ingredientsHeading.boundingBox();
     const controlsBounds = await controls.boundingBox();
-    expect(titleBounds).not.toBeNull();
+    expect(headingMainBounds).not.toBeNull();
     expect(headingBounds).not.toBeNull();
     expect(controlsBounds).not.toBeNull();
-    if (titleBounds && controlsBounds) {
-      expect(controlsBounds.x - (titleBounds.x + titleBounds.width)).toBeLessThanOrEqual(12);
+    if (headingMainBounds && controlsBounds) {
+      expect(
+        Math.abs(
+          controlsBounds.x + controlsBounds.width - (headingMainBounds.x + headingMainBounds.width),
+        ),
+      ).toBeLessThanOrEqual(1);
     }
 
     const unitPicker = page.getByRole('combobox', { name: 'Change Salt volume unit' });
@@ -5099,28 +5108,23 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       .getByRole('heading', { name: 'Ingredients', exact: true })
       .boundingBox();
     const mobileTitleBounds = await page.locator('.recipe-reader-title').boundingBox();
-    const mobileSortBounds = await page
-      .getByRole('button', { name: /^Sort ingredients:/ })
-      .boundingBox();
-    const mobileLastControlBounds = await page
-      .locator('.recipe-reader-controls > :last-child')
-      .boundingBox();
+    const mobileHeadingMainBounds = await page.locator('.recipe-reader-heading-main').boundingBox();
+    const mobileControlsBounds = await page.locator('.recipe-reader-controls').boundingBox();
     expect(mobileHeadingBounds).not.toBeNull();
     expect(mobileTitleBounds).not.toBeNull();
-    expect(mobileSortBounds).not.toBeNull();
-    expect(mobileLastControlBounds).not.toBeNull();
-    if (mobileHeadingBounds && mobileSortBounds) {
-      const sortButtonCenter = mobileSortBounds.y + mobileSortBounds.height / 2;
-      const headingCenter = mobileHeadingBounds.y + mobileHeadingBounds.height / 2;
-      if (Math.abs(sortButtonCenter - headingCenter) <= 1) {
-        const headingGap = mobileSortBounds.x - (mobileHeadingBounds.x + mobileHeadingBounds.width);
-        expect(headingGap).toBeGreaterThanOrEqual(0);
-        expect(headingGap).toBeLessThanOrEqual(12);
-      } else if (mobileTitleBounds && mobileLastControlBounds) {
-        const titleRight = mobileTitleBounds.x + mobileTitleBounds.width;
-        const controlsRight = mobileLastControlBounds.x + mobileLastControlBounds.width;
-        expect(Math.abs(controlsRight - titleRight)).toBeLessThanOrEqual(1);
-      }
+    expect(mobileHeadingMainBounds).not.toBeNull();
+    expect(mobileControlsBounds).not.toBeNull();
+    if (mobileTitleBounds && mobileHeadingMainBounds && mobileControlsBounds) {
+      expect(mobileControlsBounds.y).toBeGreaterThanOrEqual(
+        mobileTitleBounds.y + mobileTitleBounds.height,
+      );
+      expect(
+        Math.abs(
+          mobileControlsBounds.x +
+            mobileControlsBounds.width -
+            (mobileHeadingMainBounds.x + mobileHeadingMainBounds.width),
+        ),
+      ).toBeLessThanOrEqual(1);
     }
     await page
       .getByRole('button', { name: /Ingredient view:.*Activate for Ingredient-first/ })
@@ -5229,6 +5233,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       .getByRole('heading', { name: 'Ingredients', exact: true })
       .boundingBox();
     const narrowTitleBounds = await page.locator('.recipe-reader-title').boundingBox();
+    const narrowHeadingMainBounds = await page.locator('.recipe-reader-heading-main').boundingBox();
     const narrowControlsBounds = await page.locator('.recipe-reader-controls').boundingBox();
     const narrowSortBounds = await page
       .getByRole('button', { name: /^Sort ingredients:/ })
@@ -5239,20 +5244,29 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
     const narrowLockBounds = await page.getByRole('switch', { name: 'Cook mode' }).boundingBox();
     expect(narrowHeadingBounds).not.toBeNull();
     expect(narrowTitleBounds).not.toBeNull();
+    expect(narrowHeadingMainBounds).not.toBeNull();
     expect(narrowControlsBounds).not.toBeNull();
     expect(narrowSortBounds).not.toBeNull();
     expect(narrowScaleBounds).not.toBeNull();
     expect(narrowLockBounds).not.toBeNull();
     if (
       narrowTitleBounds &&
+      narrowHeadingMainBounds &&
       narrowControlsBounds &&
       narrowSortBounds &&
       narrowScaleBounds &&
       narrowLockBounds
     ) {
-      const titleRight = narrowTitleBounds.x + narrowTitleBounds.width;
-      const controlsRight = narrowControlsBounds.x + narrowControlsBounds.width;
-      expect(Math.abs(controlsRight - titleRight)).toBeLessThanOrEqual(1);
+      expect(narrowControlsBounds.y).toBeGreaterThanOrEqual(
+        narrowTitleBounds.y + narrowTitleBounds.height,
+      );
+      expect(
+        Math.abs(
+          narrowControlsBounds.x +
+            narrowControlsBounds.width -
+            (narrowHeadingMainBounds.x + narrowHeadingMainBounds.width),
+        ),
+      ).toBeLessThanOrEqual(1);
       expect(
         Math.abs(narrowLockBounds.x - (narrowScaleBounds.x + narrowScaleBounds.width) - 4),
       ).toBeLessThanOrEqual(1);
@@ -5557,15 +5571,18 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
       const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(documentWidth).toBeLessThanOrEqual(width);
     };
-    const readerTitleBounds = await page.locator('.recipe-reader-title').boundingBox();
+    const readerHeadingMainBounds = await page.locator('.recipe-reader-heading-main').boundingBox();
     const readerControlsBounds = await page.locator('.recipe-reader-controls').boundingBox();
-    expect(readerTitleBounds).not.toBeNull();
+    expect(readerHeadingMainBounds).not.toBeNull();
     expect(readerControlsBounds).not.toBeNull();
-    if (readerTitleBounds && readerControlsBounds) {
+    if (readerHeadingMainBounds && readerControlsBounds) {
       expect(
-        readerControlsBounds.x - (readerTitleBounds.x + readerTitleBounds.width),
-      ).toBeLessThanOrEqual(12);
-      expect(Math.abs(readerControlsBounds.y - readerTitleBounds.y)).toBeLessThanOrEqual(1);
+        Math.abs(
+          readerControlsBounds.x +
+            readerControlsBounds.width -
+            (readerHeadingMainBounds.x + readerHeadingMainBounds.width),
+        ),
+      ).toBeLessThanOrEqual(1);
     }
     await expect(readerSummary).toHaveCSS('margin-top', '0px');
     await expect(readerSummary).toHaveCSS('margin-bottom', '0px');
@@ -5573,6 +5590,37 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
       await presentation.click();
     }
     await expect(page.locator('.recipe-reading-ingredient_first')).toHaveCSS('display', 'grid');
+    const headingMainBoundsAfterPresentation = await page
+      .locator('.recipe-reader-heading-main')
+      .boundingBox();
+    expect(headingMainBoundsAfterPresentation).not.toBeNull();
+    const headingRightAfterSortChange = headingMainBoundsAfterPresentation
+      ? headingMainBoundsAfterPresentation.x + headingMainBoundsAfterPresentation.width
+      : null;
+    const readerSortButton = page.getByRole('button', { name: /^Sort ingredients:/ });
+    for (const summary of [
+      'first, appears in instructions',
+      'first, alphabetical',
+      'first, by size',
+      'first, order entered',
+    ]) {
+      await readerSortButton.click();
+      await expect(readerSummary).toHaveText(summary);
+      const currentHeadingMainBounds = await page
+        .locator('.recipe-reader-heading-main')
+        .boundingBox();
+      const currentControlsBounds = await page.locator('.recipe-reader-controls').boundingBox();
+      expect(currentHeadingMainBounds).not.toBeNull();
+      expect(currentControlsBounds).not.toBeNull();
+      if (currentHeadingMainBounds && currentControlsBounds) {
+        const headingRight = currentHeadingMainBounds.x + currentHeadingMainBounds.width;
+        const controlsRight = currentControlsBounds.x + currentControlsBounds.width;
+        expect(Math.abs(controlsRight - headingRight)).toBeLessThanOrEqual(1);
+        if (headingRightAfterSortChange !== null) {
+          expect(Math.abs(headingRight - headingRightAfterSortChange)).toBeLessThanOrEqual(1);
+        }
+      }
+    }
     const ingredientColumnBounds = await page
       .getByRole('region', { name: 'Ingredients', exact: true })
       .boundingBox();
@@ -5664,7 +5712,10 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     const table = page.getByRole('table', { name: 'Recipe ingredients' });
     await expect(table.locator('thead .recipe-ingredient-column-weight')).toBeHidden();
     await expect(table.locator('tbody .recipe-ingredient-column-weight').first()).toBeHidden();
-    await expect(table.locator('tbody .recipe-ingredient-column-volume').first()).toBeVisible();
+    await expect(table.locator('tbody .recipe-ingredient-column-volume').first()).toBeHidden();
+    await expect(
+      table.locator('tbody .recipe-ingredient-column-amount-mobile').first(),
+    ).toBeVisible();
     await expect(
       table.locator('tbody .recipe-ingredient-column-preparation').first(),
     ).toBeVisible();
@@ -5695,18 +5746,32 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
       expect(mobileControls.y).toBeGreaterThanOrEqual(mobileSubtitle.y + mobileSubtitle.height);
     }
     const mobileCellSpacing = await table
-      .locator('tbody td')
+      .locator('tbody tr')
       .first()
-      .evaluate((cell) => {
-        const style = getComputedStyle(cell);
+      .evaluate((row) => {
+        const nameCell = row.querySelector('th[scope="row"]');
+        const amountCell = row.querySelector('td.recipe-ingredient-column-amount-mobile');
+        const preparationCell = row.querySelector('td.recipe-ingredient-column-preparation');
+        if (
+          !(nameCell instanceof HTMLElement) ||
+          !(amountCell instanceof HTMLElement) ||
+          !(preparationCell instanceof HTMLElement)
+        ) {
+          throw new Error('Expected the mobile ingredient, amount, and preparation cells.');
+        }
+        const nameStyle = getComputedStyle(nameCell);
+        const amountStyle = getComputedStyle(amountCell);
+        const preparationStyle = getComputedStyle(preparationCell);
         return {
-          left: Number.parseFloat(style.paddingLeft),
-          right: Number.parseFloat(style.paddingRight),
-          alignment: style.textAlign,
+          left: Number.parseFloat(nameStyle.paddingLeft),
+          internalGap: Number.parseFloat(amountStyle.paddingRight),
+          right: Number.parseFloat(preparationStyle.paddingRight),
+          alignment: amountStyle.textAlign,
         };
       });
     expect(mobileCellSpacing.left).toBe(0);
-    expect(mobileCellSpacing.right).toBeLessThanOrEqual(96 / 25.4 + 0.1);
+    expect(mobileCellSpacing.internalGap).toBeGreaterThanOrEqual(8);
+    expect(mobileCellSpacing.right).toBe(0);
     expect(mobileCellSpacing.alignment).toBe('left');
     await page.screenshot({
       path: testInfo.outputPath('reader-ingredient-first-mobile.png'),
@@ -5719,24 +5784,26 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     const directionBoundsBefore = await direction.boundingBox();
     const sortBoundsBefore = await sort.boundingBox();
     const presentationBoundsBefore = await presentation.boundingBox();
-    const isNarrowViewport = (page.viewportSize()?.width ?? 0) <= 760;
     expect(directionBoundsBefore).toBeNull();
     await expect(direction).toHaveCSS('display', 'none');
     expect(sortBoundsBefore).not.toBeNull();
     expect(presentationBoundsBefore).not.toBeNull();
-    const expectReaderControlsGap = async () => {
-      const titleBounds = await page.locator('.recipe-reader-title').boundingBox();
+    const expectReaderControlsAlignment = async () => {
+      const headingMainBounds = await page.locator('.recipe-reader-heading-main').boundingBox();
       const controlsBounds = await page.locator('.recipe-reader-controls').boundingBox();
-      expect(titleBounds).not.toBeNull();
+      expect(headingMainBounds).not.toBeNull();
       expect(controlsBounds).not.toBeNull();
-      if (titleBounds && controlsBounds) {
-        const gap = isNarrowViewport
-          ? controlsBounds.y - (titleBounds.y + titleBounds.height)
-          : controlsBounds.x - (titleBounds.x + titleBounds.width);
-        expect(Math.abs(gap - 12)).toBeLessThanOrEqual(1);
+      if (headingMainBounds && controlsBounds) {
+        expect(
+          Math.abs(
+            controlsBounds.x +
+              controlsBounds.width -
+              (headingMainBounds.x + headingMainBounds.width),
+          ),
+        ).toBeLessThanOrEqual(1);
       }
     };
-    await expectReaderControlsGap();
+    await expectReaderControlsAlignment();
     await expect(sort).toHaveAttribute(
       'title',
       'Sort: Order Entered; next Appears in Instructions',
@@ -5762,7 +5829,7 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     expect(directionBoundsAfter).not.toBeNull();
     expect(sortBoundsAfter).not.toBeNull();
     expect(presentationBoundsAfter).not.toBeNull();
-    await expectReaderControlsGap();
+    await expectReaderControlsAlignment();
     if (directionBoundsAfter && sortBoundsAfter && presentationBoundsAfter) {
       expect(directionBoundsAfter.x).toBeLessThan(sortBoundsAfter.x);
       expect(sortBoundsAfter.x).toBeLessThan(presentationBoundsAfter.x);
@@ -5781,7 +5848,7 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
     sortIcons.add((await sort.locator('svg').getAttribute('class')) ?? '');
     await expect(sort.locator('svg')).toHaveClass(/lucide-hash/);
     await expect(page.locator('.recipe-reader-subtitle')).toHaveText('first, by size');
-    await expectReaderControlsGap();
+    await expectReaderControlsAlignment();
     await sort.click();
     await expect(sort).toHaveAttribute(
       'title',
@@ -6003,9 +6070,9 @@ test('owners can create Equipment, Food Type, Meal Type, and Cuisine values in t
     await equipmentSearch.fill('Carbon steel wok');
     const equipmentMenuBounds = await equipmentMenu.boundingBox();
     expect(equipmentMenuBounds?.x).toBeGreaterThanOrEqual(0);
-    expect(
-      (equipmentMenuBounds?.x ?? 0) + (equipmentMenuBounds?.width ?? 0),
-    ).toBeLessThanOrEqual(viewport?.width ?? 0);
+    expect((equipmentMenuBounds?.x ?? 0) + (equipmentMenuBounds?.width ?? 0)).toBeLessThanOrEqual(
+      viewport?.width ?? 0,
+    );
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);

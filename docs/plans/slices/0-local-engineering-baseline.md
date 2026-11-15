@@ -78,6 +78,8 @@ accessibility. Read-only lists remain semantic HTML.
 - `npm run dev:local` starts the local Supabase stack, resets its database, and
   starts Next.js.
 - `npm test` runs all three automated test suites.
+- `npm run test:database` runs the pgTAP acceptance files against the local
+  Supabase stack without resetting it.
 - `npm run lint` and `npm run typecheck` validate source and types.
 - `npx playwright install chromium` installs the browser used by end-to-end
   and accessibility tests.
@@ -93,6 +95,7 @@ accessibility. Read-only lists remain semantic HTML.
   seed script; no domain tables or sample recipe records are introduced in this
   slice.
 - Unit, end-to-end, and axe accessibility tests pass through `npm test`.
+- Local pgTAP acceptance tests pass through `npm run test:database`.
 - Lint and TypeScript checks pass, and no production secret is committed.
 - The accessible controls and ingredient-grid approach is recorded in this
   brief, the comprehensive reference, and the decision log.

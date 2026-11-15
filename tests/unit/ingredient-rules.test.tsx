@@ -10,6 +10,7 @@ import {
   getPortionRatio,
   moveIngredientRow,
   moveIngredientRowTo,
+  normalizeLegacyDividedPreparation,
   serializeIngredientRows,
   validateIngredientRowUniqueness,
   validateIngredientSize,
@@ -121,6 +122,12 @@ describe('ingredient row rules', () => {
     ).toBe('volume');
   });
 
+  it('moves legacy Divide metadata out of Preparation without changing real preparation text', () => {
+    expect(normalizeLegacyDividedPreparation('divided', 0.25)).toBe('');
+    expect(normalizeLegacyDividedPreparation('sliced', 0.25)).toBe('sliced');
+    expect(normalizeLegacyDividedPreparation('divided', null)).toBe('divided');
+  });
+
   it('allows scalar Unit, Count, and Things measurements but rejects ranges and Feel', () => {
     const scalar = (
       measurement_type: 'volume' | 'weight' | 'count' | 'informal' | 'unmeasured',
@@ -213,6 +220,20 @@ describe('ingredient row rules', () => {
         preparation: 'Sifted',
       }),
     ).toBe('white flour, sifted');
+  });
+
+  it('lowercases multiword names only when recipe display requests it', () => {
+    const ingredient = {
+      ingredient_name: 'Chickpea Flour',
+      detail: '',
+      preparation: '',
+    };
+
+    expect(getIngredientDisplayParts(ingredient).name).toBe('Chickpea Flour');
+    expect(getIngredientDisplayParts(ingredient, { lowercaseMultiwordName: true }).name).toBe(
+      'chickpea flour',
+    );
+    expect(formatIngredientDisplay(ingredient)).toBe('Chickpea Flour');
   });
 
   it('formats structured cubed Size in its saved unit', () => {
@@ -497,12 +518,12 @@ describe('ingredient row rules', () => {
     ]);
   });
 
-  it('serializes division ratio and Size without replacing canonical measurements', () => {
+  it('serializes division ratio independently of Preparation and Size', () => {
     expect(
       serializeIngredientRows([
         {
           ...rows[0],
-          preparation: 'cubed',
+          preparation: 'sliced',
           portionOneRatio: 0.25,
           sizeValue: '1.25',
           sizeUnit: 'cm',
@@ -525,7 +546,7 @@ describe('ingredient row rules', () => {
         ingredient_name: null,
         is_main: true,
         detail: 'yellow',
-        preparation: 'cubed',
+        preparation: 'sliced',
         portion_one_ratio: 0.25,
         size_value: 1.25,
         size_unit: 'cm',
@@ -545,23 +566,24 @@ describe('ingredient row rules', () => {
     expect(() => serializeIngredientRows([{ ...rows[0], portionOneRatio: 0.25 }])).toThrow(
       'Only scalar Unit, Count, and Things amounts can be divided.',
     );
-    expect(() =>
+    expect(
       serializeIngredientRows([
         {
           ...rows[0],
-          preparation: 'divided',
+          preparation: 'sliced',
+          portionOneAmount: '',
           measurements: [
             {
-              id: 'measurement-volume',
-              type: 'volume',
-              quantity: '2',
-              unitCode: 'cup',
+              id: 'measurement-count',
+              type: 'count',
+              quantity: '4',
+              unitCode: '',
               picklistValueId: '',
             },
           ],
         },
-      ]),
-    ).toThrow('Enter a first portion greater than zero and less than the total.');
+      ])[0],
+    ).toMatchObject({ portion_one_ratio: null });
     expect(
       serializeIngredientRows([{ ...rows[0], preparation: 'cubed', sizeUnit: 'cm' }])[0],
     ).toMatchObject({ size_value: null, size_unit: null });

@@ -125,11 +125,11 @@ Excluded:
 - Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
   Preparation columns. Count, informal, and unmeasured values appear in Volume
   when no dimensional measurement is present. Specifics appears lowercase and
-  indented under the ingredient name. Mobile abbreviates the measurement
-  headers to Vol, Wt, and Prep, and omits any of these columns when it is empty
-  across the recipe. In mobile Ingredient-first view, display divided portion
-  ratios on a separate line beneath the “divided” label; preserve inline
-  formatting on desktop and in Standard view.
+  indented under the ingredient name. DLC 38 updates the reader contract:
+  desktop adds a conditional Divide column; mobile stacks Volume and Weight in
+  Amount and shows `Divide a : b` below Preparation in its existing column.
+  The selected portion pair for dual measures follows the display-readability
+  rule in the [DLC 38 brief](dlc/dlc-38-separate-divide-from-preparation.md).
   Keep paired measurements together and retain current scaling, unit conversion,
   preparation, and print formatting.
 - Cook mode is an icon-only switch in the Ingredients toolbar. While active,

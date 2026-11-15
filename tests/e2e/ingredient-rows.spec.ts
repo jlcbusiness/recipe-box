@@ -903,7 +903,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
       (amountHeader?.x ?? 0) + 1,
     );
     const emptyPlaceholder = grid.getByRole('cell', { name: 'Add ingredient row' });
-    await expect(emptyPlaceholder).toHaveAttribute('colspan', '7');
+    await expect(emptyPlaceholder).toHaveAttribute('colspan', '8');
     await expect(ingredientRows.first().getByRole('cell')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Add ingredient row' })).toHaveCount(0);
     await expect(
@@ -923,7 +923,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(grid.getByRole('combobox', { name: 'Ingredient, row 1' })).toHaveCount(0);
 
     await emptyPlaceholder.click();
-    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(7);
+    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(8);
     const firstIngredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
     await expect(firstIngredient).toHaveAttribute('type', 'text');
     await expect(firstIngredient).not.toHaveAttribute('list', /.+/);
@@ -975,8 +975,14 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     const firstPreparationCell = grid.locator('[aria-label="Preparation, row 1"]');
     await expect(firstPreparationCell).toBeFocused();
     await page.keyboard.press('Tab');
+    const firstDivideCell = grid.locator('[aria-label="Divide, row 1"]');
+    const firstPortion = grid.getByRole('textbox', { name: 'First portion, row 1' });
+    await expect(firstPortion).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(firstNutrition).toBeFocused();
     await expect(firstNutrition).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Shift+Tab');
+    await expect(firstPortion).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(firstPreparationCell).toBeFocused();
     await page.keyboard.press('c');
@@ -1000,7 +1006,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     );
     await page.keyboard.press('Tab');
     await expect(grid.locator('[aria-label="Preparation, row 1"]')).toHaveText('crushed');
-    await expect(grid.getByRole('cell', { name: 'Add ingredient row' })).toBeFocused();
+    await expect(firstDivideCell).toBeFocused();
 
     const mainCheckbox = page.getByRole('checkbox', { name: 'Main, row 1' });
     await mainCheckbox.focus();
@@ -1046,14 +1052,14 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await page.keyboard.press('Enter');
     await page.locator('[aria-label="Ingredient, row 2"]').focus();
     await page.keyboard.press('Control+ArrowUp');
-    await expect(page.locator('.recipe-ingredient-editor [aria-live="polite"]')).toHaveText(
-      'Tomato moved to row 1.',
-    );
+    await expect(
+      page.locator('.recipe-ingredient-editor p.visually-hidden[aria-live="polite"]'),
+    ).toHaveText('Tomato moved to row 1.');
     await expect(ingredientRows.nth(0)).toContainText('Tomato');
     await page.keyboard.press('Control+ArrowDown');
-    await expect(page.locator('.recipe-ingredient-editor [aria-live="polite"]')).toHaveText(
-      'Tomato moved to row 2.',
-    );
+    await expect(
+      page.locator('.recipe-ingredient-editor p.visually-hidden[aria-live="polite"]'),
+    ).toHaveText('Tomato moved to row 2.');
     await expect(ingredientRows.nth(1)).toContainText('Tomato');
     const dragHandle = page.getByRole('button', { name: 'Reorder ingredient row 1' });
     await dragByPointer(page, dragHandle, ingredientRows.nth(1).getByRole('cell').first());
@@ -1449,11 +1455,13 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await editor.getByRole('textbox', { name: 'Specifics' }).fill('Yellow');
     const preparation = editor.getByRole('combobox', { name: 'Preparation' });
     const preparationBounds = await preparation.boundingBox();
-    expect(preparationBounds?.width).toBeGreaterThan(200);
+    expect(preparationBounds?.width).toBeLessThan(200);
+    await expect(preparation).toHaveClass(/is-fit-content/u);
     await expect(preparation).not.toHaveAttribute('list', /.+/);
     await preparation.focus();
     await expect(page.getByRole('listbox')).toBeVisible();
     await expect(page.getByRole('option', { name: 'chopped', exact: true })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'divided', exact: true })).toHaveCount(0);
     await expect(page.getByRole('option', { name: /^Add / })).toHaveCount(0);
     await preparation.fill('dic');
     await expect(page.getByRole('listbox')).toBeVisible();
@@ -1465,23 +1473,22 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     expect((optionBounds?.y ?? 0) + (optionBounds?.height ?? 0)).toBeLessThanOrEqual(520);
     await preparationOption.click();
     await expect(preparation).toHaveValue('diced');
-    await preparation.fill('divided');
-    await page.getByRole('option', { name: 'divided', exact: true }).click();
     const firstPortion = editor.getByRole('textbox', { name: 'First portion, row 1' });
     await expect(firstPortion).toBeVisible();
+    await expect(editor.getByRole('checkbox', { name: 'Divide ingredient row 1' })).toHaveCount(0);
     await expect(firstPortion).toHaveCSS('width', '48px');
     await expect(firstPortion).toHaveCSS('height', '34px');
     await expect(firstPortion).toHaveCSS('text-align', 'center');
-    await expect(editor.locator('.recipe-preparation-unit')).toHaveText('cup');
+    await expect(editor.locator('.recipe-portion-unit')).toHaveText('cup');
     await expect(editor.getByRole('status', { name: 'Second portion, row 1' })).toBeEmpty();
-    const dividedPreparationBounds = await preparation.boundingBox();
-    const dividedControlsBounds = await editor
-      .locator('.recipe-preparation-controls')
-      .boundingBox();
-    expect(dividedPreparationBounds?.width).toBeGreaterThan(200);
-    expect(dividedControlsBounds?.y).toBeGreaterThanOrEqual(
-      (dividedPreparationBounds?.y ?? 0) + (dividedPreparationBounds?.height ?? 0),
-    );
+    await expect(preparation).toHaveValue('diced');
+    const divideFieldBounds = await editor.locator('.recipe-mobile-divide-field').boundingBox();
+    const dividedControlsBounds = await editor.locator('.recipe-divide-editor').boundingBox();
+    expect(divideFieldBounds).not.toBeNull();
+    expect(dividedControlsBounds?.x).toBeGreaterThanOrEqual(divideFieldBounds?.x ?? 0);
+    expect(
+      (dividedControlsBounds?.x ?? 0) + (dividedControlsBounds?.width ?? 0),
+    ).toBeLessThanOrEqual((divideFieldBounds?.x ?? 0) + (divideFieldBounds?.width ?? 0));
     await expectEditorToFit();
     await firstPortion.fill('0.5');
     await expect(editor.getByRole('status', { name: 'Second portion, row 1' })).toHaveText('1 cup');
@@ -1496,7 +1503,6 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     expect(Math.max(...portionControlTops) - Math.min(...portionControlTops)).toBeLessThanOrEqual(
       1,
     );
-    await expect(page.getByRole('checkbox', { name: 'Divide ingredient row 1' })).toHaveCount(0);
     const dividedPopoverA11y = await new AxeBuilder({ page })
       .include('.recipe-ingredient-mobile-popover')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -1528,7 +1534,8 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     }
     const sizePreparationBounds = await preparation.boundingBox();
     const sizeControlsBounds = await editor.locator('.recipe-preparation-controls').boundingBox();
-    expect(sizePreparationBounds?.width).toBeGreaterThan(200);
+    expect(sizePreparationBounds?.width).toBeLessThan(200);
+    await expect(preparation).toHaveClass(/is-fit-content/u);
     expect(sizeControlsBounds?.y).toBeGreaterThanOrEqual(
       (sizePreparationBounds?.y ?? 0) + (sizePreparationBounds?.height ?? 0),
     );

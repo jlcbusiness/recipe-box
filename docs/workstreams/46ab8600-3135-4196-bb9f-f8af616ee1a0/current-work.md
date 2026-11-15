@@ -141,7 +141,9 @@
 
 ## Save Point
 
-- Goal: deliver Count and Things measure equivalents with trusted-density precedence and clear the repository-wide test failures uncovered during validation.
+- Goal: deliver Count and Things measure equivalents with trusted-density
+  precedence and clear the repository-wide test failures uncovered during
+  validation.
 - Status: DLC 35 and the repository-wide suite cleanup are complete. All
   full unit, E2E, and accessibility suites pass; only expected skips remain.
 - Repository/branch: `/home/joshlamont/Code/recipe-box`, `main`.

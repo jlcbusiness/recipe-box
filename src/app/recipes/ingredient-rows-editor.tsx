@@ -53,7 +53,6 @@ const defaultPreparationOptions = [
   'crushed',
   'cubed',
   'diced',
-  'divided',
   'melted',
   'minced',
   'room temperature',
@@ -61,7 +60,7 @@ const defaultPreparationOptions = [
   'sliced',
 ];
 
-type IngredientField = 'ingredientName' | 'detail' | 'preparation';
+type IngredientField = 'ingredientName' | 'detail' | 'preparation' | 'divide';
 type IngredientEditorEntry =
   | { kind: 'section'; key: string; section: IngredientSetDraft; sectionIndex: number }
   | { kind: 'ingredient'; key: string; row: IngredientRowDraft; rowIndex: number }
@@ -105,9 +104,6 @@ function hasMeasurementAmount(row: IngredientRowDraft, type: 'volume' | 'weight'
 function preparationMetadata(preparation: string) {
   const normalized = preparation.trim().toLocaleLowerCase();
   return {
-    ...(normalized === 'divided'
-      ? {}
-      : { portionOneRatio: null, portionOneAmount: undefined, portionMeasurementType: undefined }),
     ...(isSizePreparation(normalized) ? {} : { sizeValue: '', sizeUnit: '' }),
   };
 }
@@ -293,12 +289,28 @@ function PortionEditor({
   const parsedFirst =
     row.portionOneAmount === undefined ? null : parseQuantityInput(row.portionOneAmount);
   const firstAmount =
-    parsedFirst?.maximum === null && parsedFirst
-      ? parsedFirst.minimum
+    row.portionOneAmount !== undefined
+      ? parsedFirst?.maximum === null && parsedFirst
+        ? parsedFirst.minimum
+        : null
       : total != null && row.portionOneRatio != null
         ? total * row.portionOneRatio
         : null;
-  const ratio = firstAmount !== null && total !== null ? getPortionRatio(firstAmount, total) : null;
+  const ratio =
+    canDivide && firstAmount !== null && total !== null
+      ? getPortionRatio(firstAmount, total)
+      : null;
+  const hasDivision =
+    row.portionOneAmount === undefined
+      ? row.portionOneRatio != null
+      : row.portionOneAmount.trim().length > 0;
+  const divisionError = hasDivision
+    ? !canDivide
+      ? 'Only scalar Unit, Count, and Things amounts can be divided.'
+      : ratio === null
+        ? 'Enter a first portion greater than zero and less than the total.'
+        : null
+    : null;
   const portions = ratio === null || total === null ? null : allocatePortions(total, ratio);
   const measurementDraft = row.measurements.find((item) => item.type === selectedType);
   const measurementSystem =
@@ -321,64 +333,74 @@ function PortionEditor({
       : '';
   const remainderParts = remainderText.split(/([½⅓⅔¼¾⅛⅜⅝⅞])/u);
 
-  if (!canDivide) {
-    return (
-      <span className="recipe-preparation-control-error" role="alert">
-        Only scalar Unit, Count, and Things amounts can be divided.
-      </span>
-    );
-  }
-
   return (
-    <fieldset aria-label={`Portion controls, row ${rowNumber}`} className="recipe-portion-editor">
-      <input
-        aria-label={`First portion, row ${rowNumber}`}
-        aria-invalid={row.portionOneAmount !== undefined && ratio === null}
-        className="recipe-portion-input"
-        inputMode="text"
-        value={
-          row.portionOneAmount ??
-          (row.portionOneRatio != null && total != null
-            ? formatQuantityInput(String(total * row.portionOneRatio))
-            : '')
-        }
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-        onChange={(event) => {
-          const value = event.target.value;
-          const parsed = parseQuantityInput(value);
-          const nextRatio =
-            parsed?.maximum === null && total !== null
-              ? getPortionRatio(parsed.minimum, total)
-              : null;
-          onChange({
-            portionOneAmount: value,
-            portionOneRatio: nextRatio ?? row.portionOneRatio,
-            portionMeasurementType: selectedType,
-          });
-        }}
-      />
-      {unitLabel && <span className="recipe-preparation-unit">{unitLabel}</span>}
-      <span aria-hidden="true" className="recipe-portion-separator">
-        :
-      </span>
-      <span
-        aria-label={`Second portion, row ${rowNumber}`}
-        aria-live="polite"
-        className="recipe-portion-remainder"
-        role="status"
-      >
-        {remainderParts.map((part) =>
-          /^[½⅓⅔¼¾⅛⅜⅝⅞]$/u.test(part) ? (
-            <span className="recipe-portion-fraction" key={part}>
-              {part}
-            </span>
-          ) : (
-            part
-          ),
+    <>
+      <fieldset aria-label={`Portion controls, row ${rowNumber}`} className="recipe-portion-editor">
+        <input
+          aria-label={`First portion, row ${rowNumber}`}
+          aria-invalid={hasDivision && ratio === null}
+          className="recipe-portion-input"
+          inputMode="text"
+          value={
+            row.portionOneAmount ??
+            (row.portionOneRatio != null && total != null
+              ? formatQuantityInput(String(total * row.portionOneRatio))
+              : '')
+          }
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (!value.trim()) {
+              onChange({
+                portionOneAmount: undefined,
+                portionOneRatio: null,
+                portionMeasurementType: undefined,
+              });
+              return;
+            }
+            const parsed = parseQuantityInput(value);
+            const nextRatio =
+              canDivide && parsed?.maximum === null && total !== null
+                ? getPortionRatio(parsed.minimum, total)
+                : null;
+            onChange({
+              portionOneAmount: value,
+              portionOneRatio: nextRatio,
+              portionMeasurementType: selectedType,
+            });
+          }}
+        />
+        {unitLabel && <span className="recipe-portion-unit">{unitLabel}</span>}
+        {hasDivision && (
+          <span aria-hidden="true" className="recipe-portion-separator">
+            :
+          </span>
         )}
-      </span>
-    </fieldset>
+        <span
+          aria-label={`Second portion, row ${rowNumber}`}
+          aria-live="polite"
+          className="recipe-portion-remainder"
+          role="status"
+        >
+          {hasDivision &&
+            remainderParts.map((part) =>
+              /^[½⅓⅔¼¾⅛⅜⅝⅞]$/u.test(part) ? (
+                <span className="recipe-portion-fraction" key={part}>
+                  {part}
+                </span>
+              ) : (
+                part
+              ),
+            )}
+        </span>
+      </fieldset>
+      {divisionError && (
+        <span className="recipe-preparation-control-error" role="alert">
+          {divisionError}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -447,37 +469,47 @@ function IngredientSizeEditor({
 function PreparationControls({
   row,
   preparation,
-  picklists,
   rowNumber,
   onChange,
 }: {
   row: IngredientRowDraft;
   preparation: string;
-  picklists: RecipePicklistValue[];
   rowNumber: number;
   onChange: (update: Partial<IngredientRowDraft>) => void;
 }) {
   const normalized = preparation.trim().toLocaleLowerCase();
-  const showPortions = normalized === 'divided';
 
-  if (!showPortions && !isSizePreparation(normalized)) {
+  if (!isSizePreparation(normalized)) {
     return null;
   }
 
   return (
     <div className="recipe-preparation-controls">
-      {showPortions && (
-        <PortionEditor row={row} picklists={picklists} rowNumber={rowNumber} onChange={onChange} />
-      )}
-      {isSizePreparation(normalized) && (
-        <IngredientSizeEditor
-          preparation={preparation}
-          sizeValue={row.sizeValue ?? ''}
-          sizeUnit={row.sizeUnit ?? ''}
-          rowNumber={rowNumber}
-          onChange={onChange}
-        />
-      )}
+      <IngredientSizeEditor
+        preparation={preparation}
+        sizeValue={row.sizeValue ?? ''}
+        sizeUnit={row.sizeUnit ?? ''}
+        rowNumber={rowNumber}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+function DivideFieldEditor({
+  row,
+  rowNumber,
+  picklists,
+  onChange,
+}: {
+  row: IngredientRowDraft;
+  rowNumber: number;
+  picklists: RecipePicklistValue[];
+  onChange: (update: Partial<IngredientRowDraft>) => void;
+}) {
+  return (
+    <div className="recipe-divide-editor">
+      <PortionEditor row={row} picklists={picklists} rowNumber={rowNumber} onChange={onChange} />
     </div>
   );
 }
@@ -851,7 +883,6 @@ function PreparationCellEditor({
   row,
   rowNumber,
   options,
-  picklists,
   initialCharacter,
   onCommit,
   onEnterCommit,
@@ -862,7 +893,6 @@ function PreparationCellEditor({
   row: IngredientRowDraft;
   rowNumber: number;
   options: string[];
-  picklists: RecipePicklistValue[];
   initialCharacter?: string;
   onCommit: (value: string) => void;
   onEnterCommit: (value: string) => void;
@@ -893,7 +923,6 @@ function PreparationCellEditor({
       <PreparationControls
         row={row}
         preparation={preparation}
-        picklists={picklists}
         rowNumber={rowNumber}
         onChange={onChange}
       />
@@ -1068,6 +1097,16 @@ function MobileIngredientEditor({
     anchorElement.focus();
   }
 
+  const divideRow: IngredientRowDraft = {
+    ...row,
+    measurements,
+    portionOneRatio,
+    portionOneAmount,
+    portionMeasurementType,
+    sizeValue,
+    sizeUnit,
+  };
+
   return (
     <div
       aria-label="Ingredient details"
@@ -1167,6 +1206,7 @@ function MobileIngredientEditor({
           label="Preparation"
           options={preparationOptions}
           placement="above"
+          fitContent
           focusOnMount={false}
           value={preparation}
           onDraftChange={setPreparation}
@@ -1195,23 +1235,23 @@ function MobileIngredientEditor({
           onCancel={() => {}}
         />
         <PreparationControls
-          row={{
-            ...row,
-            measurements,
-            portionOneRatio,
-            portionOneAmount,
-            portionMeasurementType,
-            sizeValue,
-            sizeUnit,
-          }}
+          row={divideRow}
           preparation={preparation}
-          picklists={picklists}
           rowNumber={rowNumber}
           onChange={(update) => {
             updateMobilePortion(update);
             if (update.sizeValue !== undefined) setSizeValue(update.sizeValue);
             if (update.sizeUnit !== undefined) setSizeUnit(update.sizeUnit);
           }}
+        />
+      </div>
+      <div className="recipe-mobile-picker-field recipe-mobile-divide-field">
+        <span>Divide</span>
+        <DivideFieldEditor
+          row={divideRow}
+          rowNumber={rowNumber}
+          picklists={picklists}
+          onChange={updateMobilePortion}
         />
       </div>
       <button className="recipe-ingredient-submit" type="button" onClick={submit}>
@@ -1582,6 +1622,11 @@ export function IngredientRowsEditor({
     }
 
     if (field === 'preparation') {
+      pendingFocusCell.current = { rowId: persistedRowId, field: 'divide' };
+      return;
+    }
+
+    if (field === 'divide') {
       const nextRow = rowsRef.current[currentIndex + 1];
       pendingFocusCell.current = nextRow ? { rowId: nextRow.id, field: 'ingredientName' } : null;
     }
@@ -1692,7 +1737,11 @@ export function IngredientRowsEditor({
       const field = target.dataset.field as IngredientField | undefined;
       if (field) {
         event.preventDefault();
-        setActiveCell({ rowId, field });
+        if (field === 'divide') {
+          target.querySelector<HTMLInputElement>('.recipe-portion-input')?.focus();
+        } else {
+          setActiveCell({ rowId, field });
+        }
       }
     } else if (
       event.target instanceof HTMLTableCellElement &&
@@ -1702,7 +1751,7 @@ export function IngredientRowsEditor({
       !event.altKey
     ) {
       const field = target.dataset.field as IngredientField | undefined;
-      if (field) {
+      if (field && field !== 'divide') {
         event.preventDefault();
         setActiveCell({ rowId, field, initialCharacter: event.key });
       }
@@ -1713,7 +1762,7 @@ export function IngredientRowsEditor({
     ...defaultPreparationOptions,
     ...preparationOptions,
     ...draftRows.map((row) => row.preparation),
-  ]);
+  ]).filter((option) => option.toLocaleLowerCase() !== 'divided');
   function nutritionStatus(row: IngredientRowDraft) {
     const result = calculateRecipeNutrition(
       [getNutritionInputForRow(row, ingredients, picklists)],
@@ -1809,13 +1858,19 @@ export function IngredientRowsEditor({
 
   function renderDesktopCell(row: IngredientRowDraft, rowIndex: number, field: IngredientField) {
     const fieldLabel =
-      field === 'ingredientName' ? 'Ingredient' : field === 'detail' ? 'Specifics' : 'Preparation';
+      field === 'ingredientName'
+        ? 'Ingredient'
+        : field === 'detail'
+          ? 'Specifics'
+          : field === 'preparation'
+            ? 'Preparation'
+            : 'Divide';
     const isActive = activeCell?.rowId === row.id && activeCell.field === field;
     const initialCharacter =
       activeCell?.rowId === row.id && activeCell.field === field
         ? activeCell.initialCharacter
         : undefined;
-    const displayValue = row[field];
+    const displayValue = field === 'divide' ? '' : row[field];
 
     return (
       <td
@@ -1828,7 +1883,7 @@ export function IngredientRowsEditor({
         data-field={field}
         data-row-id={row.id}
         key={field}
-        tabIndex={isActive ? -1 : 0}
+        tabIndex={isActive || field === 'divide' ? -1 : 0}
         onMouseDown={() => {
           pendingClickCell.current = { rowId: row.id, field };
         }}
@@ -1848,7 +1903,14 @@ export function IngredientRowsEditor({
         }}
         onKeyDown={handleGridKeyDown}
       >
-        {isActive && field === 'ingredientName' ? (
+        {field === 'divide' ? (
+          <DivideFieldEditor
+            row={row}
+            rowNumber={rowIndex + 1}
+            picklists={picklists}
+            onChange={(update) => commitRows(updateIngredientRow(rowsRef.current, row.id, update))}
+          />
+        ) : isActive && field === 'ingredientName' ? (
           <SuggestionCellEditor
             label={`${fieldLabel}, row ${rowIndex + 1}`}
             options={ingredients.map((ingredient) => ingredient.name)}
@@ -1864,7 +1926,6 @@ export function IngredientRowsEditor({
             row={row}
             rowNumber={rowIndex + 1}
             options={prepOptions}
-            picklists={picklists}
             initialCharacter={initialCharacter}
             onCancel={() => setActiveCell(null)}
             onCommit={(value) => commitCell(row.id, field, value, 'tab')}
@@ -1878,7 +1939,6 @@ export function IngredientRowsEditor({
             <PreparationControls
               row={row}
               preparation={row.preparation}
-              picklists={picklists}
               rowNumber={rowIndex + 1}
               onChange={(update) =>
                 commitRows(updateIngredientRow(rowsRef.current, row.id, update))
@@ -2331,6 +2391,7 @@ export function IngredientRowsEditor({
               <col className="recipe-ingredient-type-col" />
               <col className="recipe-ingredient-measurements-col" />
               <col className="recipe-ingredient-preparation-col" />
+              <col className="recipe-ingredient-divide-col" />
               <col className="recipe-ingredient-nutrition-col" />
               <col className="recipe-ingredient-actions-col" />
             </colgroup>
@@ -2344,6 +2405,7 @@ export function IngredientRowsEditor({
                   Amount
                 </th>
                 <th scope="col">Preparation</th>
+                <th scope="col">Divide</th>
                 <th className="recipe-ingredient-nutrition-header" scope="col" title="Nutrition">
                   <Salad aria-hidden="true" size={16} />
                   <span className="visually-hidden">Nutrition</span>
@@ -2376,7 +2438,7 @@ export function IngredientRowsEditor({
                               : undefined,
                       }}
                     >
-                      <th colSpan={7} scope="rowgroup">
+                      <th colSpan={8} scope="rowgroup">
                         {renderSectionHeading(entry.section, entry.sectionIndex)}
                       </th>
                     </tr>
@@ -2419,7 +2481,7 @@ export function IngredientRowsEditor({
                       <td
                         aria-label="Add ingredient row"
                         className="recipe-ingredient-value-cell is-empty"
-                        colSpan={7}
+                        colSpan={8}
                         data-field="ingredientName"
                         data-row-id={row.id}
                         tabIndex={activeCell?.rowId === row.id ? -1 : 0}
@@ -2443,6 +2505,7 @@ export function IngredientRowsEditor({
                         {renderDesktopCell(row, index, 'detail')}
                         {renderMeasurementCell(row, index)}
                         {renderDesktopCell(row, index, 'preparation')}
+                        {renderDesktopCell(row, index, 'divide')}
                         <td className="recipe-ingredient-nutrition-cell">
                           {!isEmptyIngredientRow(row) &&
                             renderNutritionButton(row, 'recipe-ingredient-desktop-nutrition')}
@@ -2478,7 +2541,7 @@ export function IngredientRowsEditor({
                         : undefined,
                 }}
               >
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <button
                     className="recipe-ingredient-set-add"
                     type="button"

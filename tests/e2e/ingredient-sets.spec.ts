@@ -603,8 +603,11 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       await expect(ingredientFirstTable.locator('thead')).toHaveClass(/visually-hidden/u);
       const ingredientHeaders = ingredientFirstTable.getByRole('columnheader');
       const isMobile = (page.viewportSize()?.width ?? 1280) <= 760;
-      await expect(ingredientHeaders).toHaveCount(isMobile ? 1 : 4);
-      if (!isMobile) {
+      await expect(ingredientHeaders).toHaveCount(isMobile ? 2 : 4);
+      if (isMobile) {
+        await expect(ingredientHeaders.nth(0)).toHaveText('Ingredient');
+        await expect(ingredientHeaders.nth(1)).toHaveText('Amount');
+      } else {
         await expect(ingredientHeaders.nth(0)).toHaveText('Ingredient');
         await expect(ingredientHeaders.nth(1)).toContainText('Volume');
         await expect(ingredientHeaders.nth(2)).toContainText('Weight');
@@ -615,6 +618,15 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       const tableSection = page
         .locator('.recipe-ingredient-first-table tr.recipe-ingredient-set-divider')
         .first();
+      const [tableBounds, tableSectionBounds] = await Promise.all([
+        ingredientFirstTable.boundingBox(),
+        tableSection.locator('th').boundingBox(),
+      ]);
+      expect(tableBounds).not.toBeNull();
+      expect(tableSectionBounds).not.toBeNull();
+      expect(
+        Math.abs((tableSectionBounds?.width ?? 0) - (tableBounds?.width ?? 0)),
+      ).toBeLessThanOrEqual(1);
       await expect(tableSection).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
       await expect(tableSection.locator('th')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
       const tableSectionPadding = await tableSection.locator('th').evaluate((element) => {

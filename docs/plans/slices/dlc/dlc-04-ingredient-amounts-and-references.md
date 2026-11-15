@@ -5,6 +5,10 @@ database migration, history, and bundle v3 support are implemented. Unit,
 typecheck, build, documentation lint, isolated migration, and browser checks
 pass.
 
+**Current UI note:** DLC 38 supersedes this brief's Preparation-driven Divide
+controls and reader presentation. The portion math, supported measurement
+types, canonical totals, and instruction-reference semantics remain unchanged.
+
 This slice depends on ingredient sets in DLC 03 and should let a cook understand
 how an ingredient is divided across uses, while making repeated ingredients and
 set membership unambiguous in instruction references.

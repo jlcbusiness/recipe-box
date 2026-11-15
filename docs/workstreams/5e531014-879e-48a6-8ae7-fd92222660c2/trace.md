@@ -29,18 +29,33 @@
 - Ran `git diff --check` after recording this rationale; it passed.
 - Last recorded action: successful `git diff --check` after recording the
   latest discussion rationale.
+
 ## 2026-11-10 — Continued verification (session 5e531014-879e-48a6-8ae7-fd92222660c2; partial)
 
-- `supabase test db supabase/tests/dlc33_recipe_times.test.sql --local` — passed 22 checks, including save/history, account-scoped Time Types, trash/restore retention, and purge cascade.
+- `supabase test db supabase/tests/dlc33_recipe_times.test.sql --local` —
+  passed 22 checks, including save/history, account-scoped Time Types,
+  trash/restore retention, and purge cascade.
 - `npx vitest run` on the eight focused time, Explorer, export, import, and public-copy test files — passed 133 tests.
 - `npm run typecheck` — passed.
-- Focused Playwright checks — passed recipe-time calculation/save, Time Type Settings and picklist management, and database import create/replacement with preserved time entries and derived totals.
-- The Settings E2E timeout showed the test stayed on the Preferences tab. Updated the two Settings picklist tests to open Recipe data; both then passed.
-- The import E2E exposed an ambiguous `recipe_id` in the patched import function. Added guarded local migration follow-ups `20261223060000` and `20261223070000`; the final import E2E passed. Local migration listing showed both versions applied.
+- Focused Playwright checks — passed recipe-time calculation/save, Time Type
+  Settings and picklist management, and database import create/replacement
+  with preserved time entries and derived totals.
+- The Settings E2E timeout showed the test stayed on the Preferences tab.
+  Updated the two Settings picklist tests to open Recipe data; both then
+  passed.
+- The import E2E exposed an ambiguous `recipe_id` in the patched import
+  function. Added guarded local migration follow-ups `20261223060000` and
+  `20261223070000`; the final import E2E passed. Local migration listing
+  showed both versions applied.
 - `npx biome check tests/e2e/import-commit.spec.ts tests/e2e/recipe-picklists.spec.ts` and `git diff --check` — passed.
-- Earlier verification from the summarized session: public-copy E2E passed after its SQL validation fix; standalone browser screenshot access was refused. The legacy backfill has not been exercised against a pre-migration snapshot, and the broader public-header/Find Recipes E2E failures were not resolved here.
+- Earlier verification from the summarized session: public-copy E2E passed
+  after its SQL validation fix; standalone browser screenshot access was
+  refused. The legacy backfill has not been exercised against a pre-migration
+  snapshot, and the broader public-header/Find Recipes E2E failures were not
+  resolved here.
 
-This trace section covers the resumed verification and final focused checks, not every implementation command from the earlier work summarized in chat.
+This trace section covers the resumed verification and final focused checks,
+not every implementation command from the earlier work summarized in chat.
 
 ## 2026-11-11 — Time-row UI refinement (session 5e531014-879e-48a6-8ae7-fd92222660c2)
 
@@ -58,6 +73,7 @@ This trace section covers the resumed verification and final focused checks, not
 - Markdown lint still reports issues in the existing prompt and earlier trace
   entries. The DLC 33 reference lines and checklist lines flagged in the first
   run were wrapped; the workstream trace issues remain unchanged.
+
 ## Session 5e531014-879e-48a6-8ae7-fd92222660c2 — 2026-11-11
 
 - Read the current visual-design and DLC 33 interaction contracts and the
@@ -104,6 +120,7 @@ This trace section covers the resumed verification and final focused checks, not
   The browser draft was not saved.
 
 *** End of File
+
 ## Session 7277b4f8-63fb-4d5e-b257-6f7491601f9e — 2026-11-11
 
 - Read the active recipe form and existing ingredient/preparation suggestion
@@ -114,9 +131,13 @@ This trace section covers the resumed verification and final focused checks, not
 - Updated the time-row markup and CSS so desktop remove actions follow the
   Time Type field and narrow screens retain the far-edge action. Added focused
   geometry assertions and updated the visual-design and DLC 33 contracts.
-- `npx playwright test tests/e2e/recipes.spec.ts --grep "recipe time entries calculate, validate, and save in order"` — 2 passed (Chromium and Fold 6).
+- `npx playwright test tests/e2e/recipes.spec.ts --grep "recipe time entries calculate, validate, and save in order"`
+  — 2 passed (Chromium and Fold 6).
 - `npm run typecheck` — passed.
-- `npx biome check --diagnostic-level=error --max-diagnostics=100 src/app/recipes/recipe-form.tsx src/app/styles/recipe-workspace.css tests/e2e/recipes.spec.ts` — passed after applying the formatter's suggested line wrap.
+- `npx biome check --diagnostic-level=error --max-diagnostics=100
+  src/app/recipes/recipe-form.tsx src/app/styles/recipe-workspace.css
+  tests/e2e/recipes.spec.ts` — passed after applying the formatter's suggested
+  line wrap.
 - `git diff --check` — passed.
 - Live browser checks at 855x900 and 384x915 confirmed the 8px desktop gap,
   shared mobile field centers, and narrow-screen action position; screenshots
@@ -127,8 +148,10 @@ This trace section covers the resumed verification and final focused checks, not
 - Updated the responsive time-row layout so remove actions remain beside the
   Time Type field on mobile. Updated the visual contract, DLC 33 brief, and
   E2E geometry assertion.
-- `npx playwright test tests/e2e/recipes.spec.ts --grep "recipe time entries calculate, validate, and save in order"` — 2 passed (Chromium and Fold 6).
-- `npx biome check --diagnostic-level=error --max-diagnostics=100 src/app/styles/recipe-workspace.css tests/e2e/recipes.spec.ts` — passed.
+- `npx playwright test tests/e2e/recipes.spec.ts --grep "recipe time entries calculate, validate, and save in order"`
+  — 2 passed (Chromium and Fold 6).
+- `npx biome check --diagnostic-level=error --max-diagnostics=100
+  src/app/styles/recipe-workspace.css tests/e2e/recipes.spec.ts` — passed.
 - `git diff --check` — passed.
 - Inspected the recipe form and live page: one Save button is after metadata
   and another is in the Time section's Total row. Asked the user which action
@@ -141,9 +164,16 @@ This trace section covers the resumed verification and final focused checks, not
   the Total row. Updated the visual contract and DLC 33 brief.
 - Updated the recipe-time test to check one Save button and its position at
   desktop/mobile widths, and updated the edit and ingredient-row layout tests.
-- `npx playwright test tests/e2e/recipes.spec.ts tests/e2e/ingredient-rows.spec.ts --grep 'recipe time entries calculate, validate, and save in order|recipe edit swaps Save and Delete actions across desktop and mobile|desktop rows reorder by pointer and Ctrl\\+Arrow and reload'` — 5 passed, 1 skipped (the desktop-only ingredient-table test on Fold 6).
+- `npx playwright test tests/e2e/recipes.spec.ts
+  tests/e2e/ingredient-rows.spec.ts --grep
+  'recipe time entries calculate, validate, and save in order|recipe edit swaps
+  Save and Delete actions across desktop and mobile|desktop rows reorder by
+  pointer and Ctrl\\+Arrow and reload'` — 5 passed, 1 skipped (the desktop-only
+  ingredient-table test on Fold 6).
 - `npm run typecheck` — passed.
-- `npx biome check --diagnostic-level=error --max-diagnostics=100 src/app/recipes/recipe-form.tsx src/app/styles/recipe-workspace.css tests/e2e/recipes.spec.ts tests/e2e/ingredient-rows.spec.ts` — passed.
+- `npx biome check --diagnostic-level=error --max-diagnostics=100
+  src/app/recipes/recipe-form.tsx src/app/styles/recipe-workspace.css
+  tests/e2e/recipes.spec.ts tests/e2e/ingredient-rows.spec.ts` — passed.
 - `git diff --check` — passed.
 - Live desktop/mobile checks confirmed exactly one Save button between
   Instructions and Time, the remove action beside Time Type, and no horizontal
@@ -201,11 +231,23 @@ This trace section covers the resumed verification and final focused checks, not
 
 ## 2026-11-11 — Session 5e531014-879e-48a6-8ae7-fd92222660c2
 
-- Focused public-recipe action E2E runs exposed stale desktop/mobile assertions. Updated alignment checks to use the public content gutter, waited for the mobile two-column grid after resize, and aligned Settings with Print/Download. The focused test passed.
+- Focused public-recipe action E2E runs exposed stale desktop/mobile
+  assertions. Updated alignment checks to use the public content gutter,
+  waited for the mobile two-column grid after resize, and aligned Settings
+  with Print/Download. The focused test passed.
 - Ran `tests/e2e/public-recipes.spec.ts` and `tests/e2e/recipe-search.spec.ts` on Chromium: 31 passed.
-- Ran the same specs on Fold 6: 29 passed, 1 skipped, 1 failed. The remaining failure is the separate Advanced Rules Clear All color assertion; its observed background matches the `:hover` rule, and no unrelated UI change was made.
-- `npm run typecheck` passed. Applied Biome formatting, then `npx biome check tests/e2e/public-recipes.spec.ts` and `git diff --check` passed.
-- Stopped the test server, stopped and removed the isolated `recipe-box-dlc33-e2e` Supabase containers and volumes, and removed the copied project and task-specific E2E output folders. Verified port 3001, containers, and volumes were stopped; the active local database was not reset.
+- Ran the same specs on Fold 6: 29 passed, 1 skipped, 1 failed. The remaining
+  failure is the separate Advanced Rules Clear All color assertion; its
+  observed background matches the `:hover` rule, and no unrelated UI change
+  was made.
+- `npm run typecheck` passed. Applied Biome formatting, then
+  `npx biome check tests/e2e/public-recipes.spec.ts` and `git diff --check`
+  passed.
+- Stopped the test server, stopped and removed the isolated
+  `recipe-box-dlc33-e2e` Supabase containers and volumes, and removed the
+  copied project and task-specific E2E output folders. Verified port 3001,
+  containers, and volumes were stopped; the active local database was not
+  reset.
 
 ## 2026-11-11 — Version and CLI updates (session 5e531014-879e-48a6-8ae7-fd92222660c2)
 

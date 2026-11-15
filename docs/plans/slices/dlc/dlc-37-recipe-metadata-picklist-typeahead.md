@@ -2,6 +2,10 @@
 
 **Status:** Implemented in app version 1.11.0.
 
+**Current UI note:** DLC 38 supersedes the Preparation-based Divide control
+placement and reader display described here. The populated-dimension selection
+and shared-ratio behavior remain unchanged.
+
 ## Outcome
 
 The recipe editor's existing entry patterns work consistently across recipe

@@ -166,7 +166,9 @@ columns.
   scaling changes only the displayed quantity.
 - A divided row stores its first-portion ratio; the second portion uses the
   complement, and existing measurements remain the canonical total. Only
-  scalar Unit, Count, and Things measurements divide.
+  scalar Unit, Count, and Things measurements divide. The editor's selected
+  Volume or Weight dimension is used to enter the first amount but is not
+  persisted; one ratio applies to both populated dimensions.
 - Size is a positive value with unit `in` or `cm`, allowed only for `cubed`,
   `diced`, or `sliced` Preparation. An absent Size has both value and unit
   null.
