@@ -377,6 +377,7 @@ one trailing empty row.
    during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , and `sliced` .
    Users can add a preparation while editing; saved values appear in future suggestions. Selecting `cubed`, `diced`,
    or `sliced` reveals the separate Size field and an underlined `in`/`cm` unit toggle there.
+   Positive inch Size values also accept simple and mixed fractions; centimeters remain decimal-only.
 7. **Divide:** An optional two-portion allocation independent of Preparation. The Divide field uses the existing first-
    portion input and read-only remainder; it stores one ratio and its complement. Division values are not preparation
    suggestions.
@@ -530,14 +531,24 @@ no row is divided and otherwise sizes it for the portion pair (including
 `8 8/8 : 8 8/8`). Mobile uses the existing Prep cell for a second line labeled
 `Divide a : b`; when Volume and Weight are both present, stack both totals in
 Amount and show the one selected portion pair from the readability rule above.
-Standard view and print label the division separately from Preparation.
+For the ratios `1 : 1`, `1 : 2`, `1 : 3`, `1 : 4`, `2 : 3`, and `3 : 4`,
+show the reduced ratio instead of the formatted portion pair only when the
+selected displayed pair uses metric units. Determine eligibility from the
+units after scaling and conversion; for dual Volume/Weight rows, use the
+existing readable-pair selection. Apply the shorthand in both Standard and
+Ingredient-first reader views on desktop and mobile. Customary, count,
+informal, unmeasured, and other ratios keep their formatted portion pair.
+Print follows the active reader presentation and inherits the same display.
+The shorthand never changes amounts or instruction mention popups.
 
 Cubed, diced, and sliced ingredients may have a separate positive numeric Size
 with unit `in` or `cm`. Both Size fields are null when absent; Size is valid
 only with those preparations. Readers and print format the value using the
 recipe quantity formatter and display the preparation before the Size value.
 Selecting any of the three preparations in the editor reveals the Size field
-and underlined unit toggle in the Preparation section.
+and underlined unit toggle in the Preparation section. Inch input accepts
+positive decimals, simple fractions, and mixed fractions; centimeter input
+remains decimal-only. Fractions are stored as their numeric equivalents.
 
 ### 3.8 Nutrition and Measure Equivalents
 
@@ -873,11 +884,15 @@ preserved.
     below the title.
   - **Structured Tracking:** Only confirmed selections create a structured foreign-key link to the ingredient row. Plain
     text does not trigger instruction-appearance sorting.
-  - Divided rows offer one autocomplete option for each portion and no whole-row
-    option. Each option shows its amount; equal amounts also show `1st` or
-    `2nd`. The set label appears only when that canonical ingredient occurs in
-    multiple sets. Readable slugs always include set identity even when the
-    visible label omits it.
+  - Divided rows offer one autocomplete option for each portion and one
+    **whole** option labeled `<ingredient> (whole)`. Portion options show their
+    amount; equal amounts also show `1st` or `2nd`. A whole mention has a null
+    portion ordinal and its popup shows the full scaled and converted amount
+    with its unit. Non-divided rows keep one whole-row option. The set label
+    appears only when that canonical ingredient occurs in multiple sets;
+    readable slugs always include set identity even when the visible label
+    omits it. A divided whole-row token ends in `-whole`, such as
+    `#carrot-main-whole`.
 
 ### 5.2 Recipe-to-Recipe Links ("Pairs With")
 

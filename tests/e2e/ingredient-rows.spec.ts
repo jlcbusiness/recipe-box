@@ -1525,12 +1525,16 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     });
     await expect(sizeUnitCm).toHaveText('cm');
     await expect(sizeUnitCm).toHaveCSS('height', '34px');
+    await expect(size).toHaveAttribute('inputmode', 'decimal');
     await size.fill('0.5');
+    await sizeUnitCm.click();
+    await expect(size).toHaveAttribute('inputmode', 'text');
+    await size.fill('1 1/2');
     for (const preparationName of ['diced', 'sliced', 'cubed']) {
       await preparation.fill(preparationName);
       await page.getByRole('option', { name: preparationName, exact: true }).click();
       await expect(size).toBeVisible();
-      await expect(size).toHaveValue('0.5');
+      await expect(size).toHaveValue('1 1/2');
     }
     const sizePreparationBounds = await preparation.boundingBox();
     const sizeControlsBounds = await editor.locator('.recipe-preparation-controls').boundingBox();

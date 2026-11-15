@@ -85,6 +85,17 @@ export function isSizePreparation(preparation: string): boolean {
   return ['cubed', 'diced', 'sliced'].includes(preparation.trim().toLocaleLowerCase());
 }
 
+export function parseIngredientSizeValue(value: string, unit: string): number | null {
+  const normalized = value.trim();
+  const decimal = /^(?:\d+(?:\.\d+)?|\.\d+)$/u.test(normalized);
+  const fraction = /^(?:\d+\/\d+|\d+\s+\d+\/\d+)$/u.test(normalized);
+  if (!(unit === 'in' ? decimal || fraction : unit === 'cm' && decimal)) {
+    return null;
+  }
+  const parsed = parseQuantityInput(normalized);
+  return parsed?.maximum === null ? parsed.minimum : null;
+}
+
 export function normalizeLegacyDividedPreparation(
   preparation: string,
   portionOneRatio: number | null,
@@ -226,11 +237,13 @@ export function validateIngredientSize(
   if (!isSizePreparation(preparation)) {
     return 'Size is available only when Preparation is cubed, diced, or sliced.';
   }
-  if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/u.test(value) || !Number.isFinite(Number(value))) {
-    return 'Enter a positive decimal Size.';
-  }
-  if (Number(value) <= 0 || !['in', 'cm'].includes(unit)) {
+  if (!['in', 'cm'].includes(unit)) {
     return 'Enter a positive Size in inches or centimeters.';
+  }
+  if (parseIngredientSizeValue(value, unit) === null) {
+    return unit === 'in'
+      ? 'Enter a positive decimal, fraction, or mixed number Size.'
+      : 'Enter a positive decimal Size.';
   }
   return null;
 }
@@ -561,7 +574,7 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
       detail,
       preparation,
       portion_one_ratio: portionOneRatio,
-      size_value: sizeValue ? Number(sizeValue) : null,
+      size_value: sizeValue ? parseIngredientSizeValue(sizeValue, sizeUnit) : null,
       size_unit: sizeUnit ? (sizeUnit as 'in' | 'cm') : null,
       nutrition_serving_size_override: row.nutritionServingSizeOverride ?? null,
       nutrition_overrides: row.nutritionOverrides ?? {},

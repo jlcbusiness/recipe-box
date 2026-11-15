@@ -1,4 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { expect, type Page, test } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
+import { getRecipe } from '../../src/lib/recipes/data';
 import {
   createTestUser,
   deleteTestUser,
@@ -53,7 +56,13 @@ function recipePayload(
   };
 }
 
-function ingredientRow(id: string, name: string, amount?: number) {
+function ingredientRow(
+  id: string,
+  name: string,
+  amount?: number,
+  unitCode = 'tbsp',
+  measurementType: 'volume' | 'weight' = 'volume',
+) {
   return {
     recipe_ingredient_id: id,
     ingredient_id: null,
@@ -64,10 +73,10 @@ function ingredientRow(id: string, name: string, amount?: number) {
     measurements: amount
       ? [
           {
-            measurement_type: 'volume',
+            measurement_type: measurementType,
             amount_min: amount,
             amount_max: null,
-            unit_code: 'tbsp',
+            unit_code: unitCode,
             picklist_value_id: null,
           },
         ]
@@ -82,6 +91,142 @@ function instructionStep(id: string, position: number, content: string, plainTex
 function headers(user: TestUser, apiKey: string) {
   return { apikey: apiKey, Authorization: `Bearer ${user.accessToken}` };
 }
+
+async function signIn(page: Page, email: string, password: string) {
+  await page.goto('/');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+}
+
+test('whole ingredient mention and metric ratios preserve reader amounts @e2e @instructions', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ingredientId = randomUUID();
+  const customaryIngredientId = randomUUID();
+  const ingredientSetId = randomUUID();
+  const stepId = randomUUID();
+
+  try {
+    const preferenceResponse = await request.patch(
+      `${config.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+        data: { volume_system: 'us_customary', weight_system: 'metric' },
+      },
+    );
+    expect(preferenceResponse.ok(), await preferenceResponse.text()).toBeTruthy();
+    const wholeMarker = `[[ingredient:${ingredientId}|butter-main-whole]]`;
+    const createdResponse = await request.post(
+      `${config.apiUrl}/rest/v1/rpc/save_recipe_with_ingredient_sets`,
+      {
+        headers: headers(owner, config.anonKey),
+        data: {
+          ...recipePayload(
+            'Whole ingredient mention recipe',
+            [
+              {
+                ...ingredientRow(ingredientId, 'Butter', 8, 'g', 'weight'),
+                ingredient_set_id: ingredientSetId,
+                position: 0,
+                portion_one_ratio: 0.25,
+              },
+              {
+                ...ingredientRow(customaryIngredientId, 'Olive oil', 8, 'cup'),
+                ingredient_set_id: ingredientSetId,
+                position: 1,
+                portion_one_ratio: 0.25,
+              },
+            ],
+            [instructionStep(stepId, 0, `Use ${wholeMarker}.`, 'Use #butter-main-whole.')],
+          ),
+          p_publication_id: null,
+          p_publication_page: null,
+          p_recipe_url: null,
+          p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+          p_tag_ids: [],
+          p_ingredient_sets: [{ id: ingredientSetId, label: 'Main', position: 0 }],
+        },
+      },
+    );
+    expect(createdResponse.ok(), await createdResponse.text()).toBeTruthy();
+    const [{ id: recipeId }] = await createdResponse.json();
+    const savedIngredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?select=recipe_id,portion_one_ratio&id=eq.${ingredientId}`,
+      { headers: headers(owner, config.anonKey) },
+    );
+    expect(await savedIngredientResponse.json()).toEqual([
+      { recipe_id: recipeId, portion_one_ratio: 0.25 },
+    ]);
+    const readerClient = createClient(config.apiUrl, config.anonKey, {
+      global: { headers: { Authorization: `Bearer ${owner.accessToken}` } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const loadedRecipe = await getRecipe(readerClient, recipeId);
+    expect(loadedRecipe?.ingredients[0]?.portion_one_ratio).toBe(0.25);
+
+    await signIn(page, owner.email, owner.password);
+    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
+    await page.goto(`/recipes/${recipeId}`);
+    const presentation = page.getByRole('button', { name: /^Ingredient view:/ });
+    const isMobile = (page.viewportSize()?.width ?? 1280) <= 760;
+    if (isMobile) {
+      await expect(page.locator('.recipe-reading-ingredient_first')).toBeVisible();
+    } else {
+      if ((await presentation.getAttribute('title'))?.startsWith('Ingredient view: Standard;')) {
+        await presentation.click();
+      }
+      await expect(presentation).toHaveAttribute(
+        'title',
+        'Ingredient view: Ingredient-first; next Standard',
+      );
+    }
+    const row = page.getByRole('row', { name: /butter/iu });
+    const customaryRow = page.getByRole('row', { name: /olive oil/iu });
+    if (isMobile) {
+      await expect(row.locator('.recipe-reader-mobile-divide-note')).toContainText('divide 1 : 3');
+      await expect(customaryRow.locator('.recipe-reader-mobile-divide-note')).toContainText(
+        'divide 2 : 6',
+      );
+    } else {
+      await expect(row.locator('.recipe-ingredient-column-divide')).toContainText('divided 1 : 3');
+      await expect(customaryRow.locator('.recipe-ingredient-column-divide')).toContainText(
+        'divided 2 : 6',
+      );
+    }
+    await presentation.click();
+    await expect(presentation).toHaveAttribute(
+      'title',
+      'Ingredient view: Standard; next Ingredient-first',
+    );
+    const standardList = page.locator('.recipe-ingredient-list');
+    const butterListItem = standardList.locator('li').filter({ hasText: /butter/iu });
+    const customaryListItem = standardList.locator('li').filter({ hasText: /olive oil/iu });
+    await expect(butterListItem).toContainText('divided 1 : 3');
+    await expect(customaryListItem).toContainText('divided 2 : 6');
+    await page.emulateMedia({ media: 'print' });
+    await expect(butterListItem).toContainText('divided 1 : 3');
+    await expect(customaryListItem).toContainText('divided 2 : 6');
+    await page.emulateMedia({ media: 'screen' });
+
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+
+    const mentions = page.locator('.recipe-instruction-mention');
+    await expect(mentions).toHaveCount(1);
+    await mentions.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('8 g');
+  } finally {
+    await deleteTestUser(request, owner);
+  }
+});
 
 test('instruction mention rows stay ordered, owner-scoped, and atomic across recipe saves @e2e @instructions', async ({
   request,

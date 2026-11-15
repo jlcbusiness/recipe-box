@@ -449,7 +449,7 @@ export function buildIngredientMentionOptions(
 
     const [firstAmount, secondAmount] = row.portionAmounts;
     const equalAmounts = firstAmount === secondAmount;
-    return row.portionAmounts.map((amount, index) => {
+    const portionOptions = row.portionAmounts.map((amount, index) => {
       const portionOrdinal = (index + 1) as 1 | 2;
       const portionLabel = equalAmounts
         ? `${portionOrdinal === 1 ? '1st' : '2nd'} ${amount}`
@@ -462,6 +462,16 @@ export function buildIngredientMentionOptions(
         slug: `${baseSlug}-${portionOrdinal}`,
       };
     });
+    return [
+      ...portionOptions,
+      {
+        recipeIngredientId: row.id,
+        ingredientSetId: row.setId,
+        portionOrdinal: null,
+        label: `${rowLabel} (whole)`,
+        slug: `${baseSlug}-whole`,
+      },
+    ];
   });
 }
 

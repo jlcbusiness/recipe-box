@@ -172,10 +172,13 @@ describe('ingredient row rules', () => {
     for (const preparation of ['cubed', 'diced', 'sliced']) {
       expect(validateIngredientSize(preparation, '1.25', 'in')).toBeNull();
       expect(validateIngredientSize(preparation, '.5', 'cm')).toBeNull();
+      expect(validateIngredientSize(preparation, '1/2', 'in')).toBeNull();
+      expect(validateIngredientSize(preparation, '1 1/2', 'in')).toBeNull();
+      expect(validateIngredientSize(preparation, '1/2', 'cm')).not.toBeNull();
+      expect(validateIngredientSize(preparation, '1-2', 'in')).not.toBeNull();
       expect(validateIngredientSize(preparation, '', '')).toBeNull();
       expect(validateIngredientSize(preparation, '0', 'in')).not.toBeNull();
       expect(validateIngredientSize(preparation, '-1', 'in')).not.toBeNull();
-      expect(validateIngredientSize(preparation, '1/2', 'in')).not.toBeNull();
       expect(validateIngredientSize(preparation, '1', '')).not.toBeNull();
       expect(validateIngredientSize(preparation, '', 'cm')).toBeNull();
     }
@@ -591,6 +594,11 @@ describe('ingredient row rules', () => {
       expect(
         serializeIngredientRows([{ ...rows[0], preparation, sizeValue: '1', sizeUnit: 'cm' }])[0],
       ).toMatchObject({ preparation, size_value: 1, size_unit: 'cm' });
+      expect(
+        serializeIngredientRows([
+          { ...rows[0], preparation, sizeValue: '1 1/2', sizeUnit: 'in' },
+        ])[0],
+      ).toMatchObject({ preparation, size_value: 1.5, size_unit: 'in' });
     }
     expect(() =>
       serializeIngredientRows([

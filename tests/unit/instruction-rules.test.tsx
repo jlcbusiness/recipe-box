@@ -100,6 +100,39 @@ describe('instruction mention rules', () => {
     ).toBe(`Add [[ingredient:${butterId}:2|butter-sauce-main-2]].`);
   });
 
+  it('links a typed whole-ingredient slug for a divided row', () => {
+    const mentionOptions = buildIngredientMentionOptions([
+      {
+        id: butterId,
+        ingredientId: butterId,
+        name: 'Butter Sauce',
+        setId: 'main',
+        setLabel: 'Main',
+        portionAmounts: ['1 tbsp', '2 tbsp'],
+      },
+    ]);
+
+    expect(mentionOptions).toContainEqual({
+      recipeIngredientId: butterId,
+      ingredientSetId: 'main',
+      portionOrdinal: null,
+      label: 'Butter Sauce (whole)',
+      slug: 'butter-sauce-main-whole',
+    });
+    expect(
+      updateInstructionMarkdownFromEditor('', 'Use #butter-sauce-main-whole.', [], mentionOptions),
+    ).toBe(`Use [[ingredient:${butterId}|butter-sauce-main-whole]].`);
+    expect(
+      parseIngredientMentions(`Use [[ingredient:${butterId}|butter-sauce-main-whole]].`),
+    ).toEqual([
+      {
+        recipeIngredientId: butterId,
+        slug: 'butter-sauce-main-whole',
+        portionOrdinal: null,
+      },
+    ]);
+  });
+
   it('leaves an ambiguous short portion slug literal', () => {
     const mentionOptions = buildIngredientMentionOptions([
       {
@@ -327,6 +360,12 @@ describe('instruction mention rules', () => {
         slug: 'salt-sauce-2',
       },
       {
+        label: 'Salt (whole)',
+        recipeIngredientId: '44444444-4444-4444-8444-444444444444',
+        portionOrdinal: null,
+        slug: 'salt-sauce-whole',
+      },
+      {
         label: 'Sugar (Main) (1st 1 cup)',
         recipeIngredientId: '55555555-5555-4555-8555-555555555555',
         portionOrdinal: 1,
@@ -339,6 +378,12 @@ describe('instruction mention rules', () => {
         slug: 'sugar-main-2',
       },
       {
+        label: 'Sugar (Main) (whole)',
+        recipeIngredientId: '55555555-5555-4555-8555-555555555555',
+        portionOrdinal: null,
+        slug: 'sugar-main-whole',
+      },
+      {
         label: 'Sugar (Sauce) (1 tbsp)',
         recipeIngredientId: '66666666-6666-4666-8666-666666666666',
         portionOrdinal: 1,
@@ -349,6 +394,12 @@ describe('instruction mention rules', () => {
         recipeIngredientId: '66666666-6666-4666-8666-666666666666',
         portionOrdinal: 2,
         slug: 'sugar-sauce-2',
+      },
+      {
+        label: 'Sugar (Sauce) (whole)',
+        recipeIngredientId: '66666666-6666-4666-8666-666666666666',
+        portionOrdinal: null,
+        slug: 'sugar-sauce-whole',
       },
     ]);
   });

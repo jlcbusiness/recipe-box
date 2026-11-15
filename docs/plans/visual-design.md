@@ -908,6 +908,8 @@ The chosen dimension is not persisted; Save stores one ratio that applies to
 both dimensions. Selecting `cubed`, `diced`, or `sliced` reveals a separate
 Size input and underlined `in`/`cm` toggle in the Preparation cell. On mobile,
 the existing row pane presents Preparation and Divide as separate fields.
+Inches accept decimal, simple-fraction, and mixed-fraction Size input; keep
+slash entry available on the mobile keyboard. Centimeters remain decimal-only.
 
 The desktop Amount interaction has one fixed category picker—**Unit**, **Count**,
 **Things**, or **Feel**—and a single adjacent Amount area. The picker is only
@@ -1015,7 +1017,16 @@ the first line of each divided cell above the formatted portion pair. Omit
 units and size the column to the widest pair, including `8 8/8 : 8 8/8`. For
 dual measures, choose the displayed portion pair by counting whole-number
 formatted amounts; ties use the smaller sum of displayed amounts, then Volume.
-This display-only choice is recomputed after scaling or unit changes.
+This display-only choice is recomputed after scaling or unit changes. For
+ratios `1 : 1`, `1 : 2`, `1 : 3`, `1 : 4`, `2 : 3`, and `3 : 4`, show the
+reduced ratio instead of the portion pair only when the selected displayed
+portion pair uses metric units. Determine eligibility from the unit after
+scaling and conversion. For dual Volume/Weight rows, use the existing readable
+pair selection. Apply this rule in both Standard and Ingredient-first views;
+customary, count, informal, unmeasured, and other ratios keep their formatted
+portion pair. Print follows the active reader presentation and inherits its
+display. This shorthand does not change portion calculations or instruction
+mention popups.
 At 760px and below, use Ingredient, Amount, and Prep columns. Stack Volume and
 Weight in Amount when both exist, and keep the existing Prep header. A divided
 row shows its preparation first, followed by a comma when present, then
@@ -1128,6 +1139,9 @@ mentions remain readable inline buttons. Hover and keyboard focus reveal the
 current scaled and converted amount in one square popup above the mention,
 clamped to the visual viewport, with a strong background and small pointer
 tail; click or tap pins it, and Escape or outside interaction dismisses it.
+For a divided ingredient, portion mentions show the actual portion amount and
+unit, while the `whole` mention shows the full amount and unit; neither uses
+the reader's metric-only reduced-ratio shorthand.
 The popup contains no nested tooltip and does not print. Scaling
 controls retain the active scale and unit choices for print. Serves and Makes
 stay in recipe metadata and update only after scale submission; Makes scales

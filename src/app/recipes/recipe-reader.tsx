@@ -60,6 +60,7 @@ import {
 } from '../../lib/recipes/nutrition-rules';
 import {
   chooseReadablePortionPair,
+  getCommonPortionRatioLabel,
   getScaleMultiplier,
   type IngredientPresentation,
   type IngredientSortDirection,
@@ -96,6 +97,12 @@ function getReaderViewportBounds() {
     width: viewport?.width ?? window.innerWidth,
     height: viewport?.height ?? window.innerHeight,
   };
+}
+
+function isMetricMeasurementUnit(measurementType: MeasurementType, unitCode: string | null) {
+  const units =
+    measurementType === 'volume' ? volumeUnits : measurementType === 'weight' ? weightUnits : [];
+  return units.find((unit) => unit.code === unitCode)?.system === 'metric';
 }
 
 function renderFractionGlyphs(value: string): ReactNode {
@@ -1310,7 +1317,14 @@ export function RecipeReader({
       const first = getParts(portions[0]);
       const second = getParts(portions[1]);
       return first && second
-        ? [{ measurementType: measurement.measurement_type, first, second }]
+        ? [
+            {
+              measurementType: measurement.measurement_type,
+              unitCode: measurement.unit_code,
+              first,
+              second,
+            },
+          ]
         : [];
     });
     if (portionMeasurements.length === 0) {
@@ -1337,6 +1351,16 @@ export function RecipeReader({
           ({ measurementType }) => measurementType === selectedPair.measurementType,
         )
       : portionMeasurements;
+    const metricPortionPair =
+      visiblePortionMeasurements.length > 0 &&
+      visiblePortionMeasurements.every(({ measurementType, unitCode }) =>
+        isMetricMeasurementUnit(measurementType, unitCode),
+      );
+    const commonRatioLabel = metricPortionPair ? getCommonPortionRatioLabel(firstRatio) : null;
+    if (commonRatioLabel) {
+      return <span className="recipe-ingredient-portion-breakdown">{commonRatioLabel}</span>;
+    }
+
     const showUnits = !hasDualMeasurements && visiblePortionMeasurements.length > 1;
     return (
       <span className="recipe-ingredient-portion-breakdown">

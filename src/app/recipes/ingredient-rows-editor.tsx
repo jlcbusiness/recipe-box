@@ -14,6 +14,7 @@ import {
   isEmptyIngredientRow,
   isSizePreparation,
   moveIngredientRow,
+  parseIngredientSizeValue,
   validateIngredientSize,
   validatePortionMeasurements,
 } from '../../lib/recipes/ingredient-rules';
@@ -201,7 +202,7 @@ function formatDraftIngredient(
     ingredient_name: row.ingredientName,
     detail: row.detail,
     preparation: row.preparation,
-    size_value: row.sizeValue?.trim() ? Number(row.sizeValue) : null,
+    size_value: parseIngredientSizeValue(row.sizeValue ?? '', row.sizeUnit ?? ''),
     size_unit: row.sizeUnit === 'in' || row.sizeUnit === 'cm' ? row.sizeUnit : null,
     measurements: row.measurements.flatMap((measurement) => {
       if (!measurement.type) {
@@ -436,7 +437,7 @@ function IngredientSizeEditor({
         aria-label={`Size, row ${rowNumber}`}
         aria-invalid={Boolean(error) || undefined}
         className="recipe-inline-size-input"
-        inputMode="decimal"
+        inputMode={activeUnit === 'in' ? 'text' : 'decimal'}
         type="text"
         value={sizeValue}
         onClick={(event) => event.stopPropagation()}

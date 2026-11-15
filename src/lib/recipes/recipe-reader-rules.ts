@@ -19,6 +19,22 @@ export type ReadablePortionPair = {
   second: string;
 };
 
+const commonPortionRatios = [
+  { portionOneRatio: 1 / 2, label: '1 : 1' },
+  { portionOneRatio: 1 / 3, label: '1 : 2' },
+  { portionOneRatio: 1 / 4, label: '1 : 3' },
+  { portionOneRatio: 1 / 5, label: '1 : 4' },
+  { portionOneRatio: 2 / 5, label: '2 : 3' },
+  { portionOneRatio: 3 / 7, label: '3 : 4' },
+] as const;
+
+export function getCommonPortionRatioLabel(portionOneRatio: number): string | null {
+  return (
+    commonPortionRatios.find((ratio) => Math.abs(ratio.portionOneRatio - portionOneRatio) <= 1e-8)
+      ?.label ?? null
+  );
+}
+
 function parsedDisplayAmount(value: string) {
   const parsed = parseQuantityInput(value);
   return parsed?.maximum === null ? parsed.minimum : null;

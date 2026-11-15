@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  RecipeInstructionMention,
   RecipeMakesValue,
   RecipeReader,
   RecipeReaderProvider,
@@ -27,6 +28,7 @@ import {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   Reflect.deleteProperty(navigator, 'wakeLock');
 });
 
@@ -53,6 +55,7 @@ it('shows only the more readable measurement pair in Ingredient-first view', () 
     </RecipeReaderProvider>,
   );
 
+  expect(screen.getByRole('listitem').textContent).toContain('divided 1 : 1');
   fireEvent.click(
     screen.getByRole('button', {
       name: 'Ingredient view: Standard. Activate for Ingredient-first.',
@@ -62,7 +65,214 @@ it('shows only the more readable measurement pair in Ingredient-first view', () 
   const divideCell = screen
     .getByRole('row', { name: /flour/u })
     .querySelector('.recipe-ingredient-column-divide');
-  expect(divideCell?.textContent).toBe('divided 50 : 50');
+  expect(divideCell?.textContent).toBe('divided 1 : 1');
+});
+
+it.each([
+  [1 / 2, '1 : 1'],
+  [1 / 3, '1 : 2'],
+  [1 / 4, '1 : 3'],
+  [1 / 5, '1 : 4'],
+  [2 / 5, '2 : 3'],
+  [3 / 7, '3 : 4'],
+] as const)('shows the common metric ratio %s as %s in both reader views', (ratio, label) => {
+  render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeReader
+        defaultPresentation="standard"
+        ingredients={[
+          {
+            ...ingredientRow('ratio-row', 'Flour', 0, [amount('weight', 100, 'g')]),
+            portion_one_ratio: ratio,
+          },
+        ]}
+        recipeId="recipe-id"
+        serves={4}
+        steps={[]}
+        volumeSystem="us_customary"
+        weightSystem="metric"
+      />
+    </RecipeReaderProvider>,
+  );
+
+  expect(screen.getByRole('listitem').textContent).toContain(`divided ${label}`);
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+    }),
+  );
+  const row = screen.getByRole('row', { name: /flour/u });
+  expect(row.querySelector('.recipe-ingredient-column-divide')?.textContent).toBe(
+    `divided ${label}`,
+  );
+  expect(row.querySelector('.recipe-reader-mobile-divide-note')?.textContent).toContain(
+    `divide ${label}`,
+  );
+});
+
+it('uses the converted metric display unit to select ratio shorthand', () => {
+  render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeReader
+        defaultPresentation="standard"
+        ingredients={[
+          {
+            ...ingredientRow('ratio-row', 'Flour', 0, [amount('volume', 8, 'cup')]),
+            portion_one_ratio: 0.25,
+          },
+        ]}
+        recipeId="recipe-id"
+        serves={4}
+        steps={[]}
+        volumeSystem="metric"
+        weightSystem="us_customary"
+      />
+    </RecipeReaderProvider>,
+  );
+
+  expect(screen.getByRole('listitem').textContent).toContain('divided 1 : 3');
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+    }),
+  );
+  expect(
+    screen.getByRole('row', { name: /flour/u }).querySelector('.recipe-ingredient-column-divide')
+      ?.textContent,
+  ).toBe('divided 1 : 3');
+});
+
+it('keeps customary portion amounts in both reader views', () => {
+  render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeReader
+        defaultPresentation="standard"
+        ingredients={[
+          {
+            ...ingredientRow('ratio-row', 'Flour', 0, [amount('volume', 8, 'cup')]),
+            portion_one_ratio: 0.25,
+          },
+        ]}
+        recipeId="recipe-id"
+        serves={4}
+        steps={[]}
+        volumeSystem="us_customary"
+        weightSystem="us_customary"
+      />
+    </RecipeReaderProvider>,
+  );
+
+  expect(screen.getByRole('listitem').textContent).toContain('divided 2 : 6');
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+    }),
+  );
+  expect(
+    screen.getByRole('row', { name: /flour/u }).querySelector('.recipe-ingredient-column-divide')
+      ?.textContent,
+  ).toBe('divided 2 : 6');
+});
+
+it('keeps the customary pair when it is selected from dual measures', () => {
+  render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeReader
+        defaultPresentation="standard"
+        ingredients={[
+          {
+            ...ingredientRow('ratio-row', 'Flour', 0, [
+              amount('volume', 8, 'cup'),
+              amount('weight', 7, 'g'),
+            ]),
+            portion_one_ratio: 0.25,
+          },
+        ]}
+        recipeId="recipe-id"
+        serves={4}
+        steps={[]}
+        volumeSystem="us_customary"
+        weightSystem="metric"
+      />
+    </RecipeReaderProvider>,
+  );
+
+  expect(screen.getByRole('listitem').textContent).toContain('divided 2 : 6');
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Ingredient view: Standard. Activate for Ingredient-first.',
+    }),
+  );
+  expect(
+    screen.getByRole('row', { name: /flour/u }).querySelector('.recipe-ingredient-column-divide')
+      ?.textContent,
+  ).toBe('divided 2 : 6');
+});
+
+it('keeps uncommon ratios as displayed portion amounts in Ingredient-first view', () => {
+  render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeReader
+        defaultPresentation="ingredient_first"
+        ingredients={[
+          {
+            ...ingredientRow('ratio-row', 'Flour', 0, [amount('count', 100)]),
+            portion_one_ratio: 0.3,
+          },
+        ]}
+        recipeId="recipe-id"
+        serves={4}
+        steps={[]}
+        volumeSystem="us_customary"
+        weightSystem="us_customary"
+      />
+    </RecipeReaderProvider>,
+  );
+
+  expect(
+    screen.getByRole('row', { name: /flour/u }).querySelector('.recipe-ingredient-column-divide')
+      ?.textContent,
+  ).toBe('divided 30 : 70');
+});
+
+it('shows actual amounts in divided instruction mention popups', () => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const ingredient = {
+    ...ingredientRow('butter-row', 'Butter', 0, [amount('volume', 4, 'cup')]),
+    portion_one_ratio: 0.25,
+  };
+  const unitSystems = { volume: 'us_customary', weight: 'us_customary' } as const;
+  const { rerender } = render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeInstructionMention
+        displayName="Butter"
+        ingredient={ingredient}
+        portionOrdinal={1}
+        unitSystems={unitSystems}
+      />
+    </RecipeReaderProvider>,
+  );
+
+  fireEvent.mouseEnter(screen.getByRole('button', { name: 'Butter' }));
+  expect(screen.getByRole('tooltip').textContent).toBe('1 cup');
+
+  rerender(
+    <RecipeReaderProvider serves={4}>
+      <RecipeInstructionMention
+        displayName="Butter"
+        ingredient={ingredient}
+        unitSystems={unitSystems}
+      />
+    </RecipeReaderProvider>,
+  );
+  fireEvent.mouseEnter(screen.getByRole('button', { name: 'Butter' }));
+  expect(screen.getByRole('tooltip').textContent).toBe('4 cups');
 });
 
 const flour: IngredientDisplayInput = {
@@ -338,7 +548,7 @@ describe('recipe reader measurement rules', () => {
                   id: 'carrot-count',
                   position: 0,
                   measurement_type: 'count',
-                  amount_min: 4,
+                  amount_min: 8,
                   amount_max: null,
                   unit_code: null,
                   picklist_value_id: null,
@@ -356,8 +566,8 @@ describe('recipe reader measurement rules', () => {
       </RecipeReaderProvider>,
     );
 
-    expect(screen.getByRole('listitem').textContent).toContain('4 carrot, sliced 1 ¼ in');
-    expect(screen.getByRole('listitem').textContent).toContain('divided 1 : 3');
+    expect(screen.getByRole('listitem').textContent).toContain('8 carrot, sliced 1 ¼ in');
+    expect(screen.getByRole('listitem').textContent).toContain('divided 2 : 6');
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Ingredient view: Standard. Activate for Ingredient-first.',
@@ -372,7 +582,7 @@ describe('recipe reader measurement rules', () => {
     expect(divideCell?.querySelector('.recipe-ingredient-portion-label')?.textContent).toBe(
       'divided',
     );
-    expect(divideCell?.textContent).toContain('1 : 3');
+    expect(divideCell?.textContent).toContain('2 : 6');
   });
 
   it('renders a separate Divide value for readers that preserve stored measurements', () => {
@@ -382,7 +592,7 @@ describe('recipe reader measurement rules', () => {
           defaultPresentation="standard"
           ingredients={[
             {
-              ...ingredientRow('public-carrot', 'Carrot', 0, [amount('count', 4)]),
+              ...ingredientRow('public-carrot', 'Carrot', 0, [amount('count', 8)]),
               preparation: 'sliced',
               portion_one_ratio: 0.25,
             },
@@ -398,7 +608,7 @@ describe('recipe reader measurement rules', () => {
     );
 
     expect(screen.getByRole('listitem').textContent).toContain('sliced');
-    expect(screen.getByRole('listitem').textContent).toContain('divided 1 : 3');
+    expect(screen.getByRole('listitem').textContent).toContain('divided 2 : 6');
     expect(screen.queryByRole('combobox')).toBeNull();
     fireEvent.click(
       screen.getByRole('button', {
@@ -409,7 +619,7 @@ describe('recipe reader measurement rules', () => {
     expect(screen.getByRole('columnheader', { name: 'divided' })).toBeDefined();
     expect(row.querySelector('.recipe-ingredient-preparation-text')?.textContent).toBe('sliced');
     expect(row.querySelector('.recipe-ingredient-column-divide')?.textContent).toBe(
-      'divided 1 : 3',
+      'divided 2 : 6',
     );
   });
 
