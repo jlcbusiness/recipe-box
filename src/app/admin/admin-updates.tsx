@@ -37,8 +37,15 @@ import {
 
 const kindOptions: PicklistOption[] = [
   { value: 'fix', label: 'Fix' },
+  { value: 'change', label: 'Change' },
   { value: 'feature', label: 'Feature' },
 ];
+
+const kindLabels: Record<AdminUpdateKind, string> = {
+  fix: 'Fix',
+  change: 'Change',
+  feature: 'Feature',
+};
 
 type UpdateEditor = {
   id: string | null;
@@ -96,9 +103,7 @@ function getReorderableRows(): HTMLElement[] {
 }
 
 function UpdateKindTag({ kind }: { kind: AdminUpdateKind }) {
-  return (
-    <span className={`admin-update-kind-tag is-${kind}`}>{kind === 'fix' ? 'Fix' : 'Feature'}</span>
-  );
+  return <span className={`admin-update-kind-tag is-${kind}`}>{kindLabels[kind]}</span>;
 }
 
 export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
@@ -594,7 +599,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     const kind = currentEditor.kind;
     if (!kind) {
       queuedInlineEditorRef.current = null;
-      setError('Choose Fix or Feature before saving.');
+      setError('Choose Fix, Change, or Feature before saving.');
       return;
     }
     if (updateId !== null && currentEditor.revision === null) {
@@ -933,7 +938,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
           <Picklist
             className="admin-update-type-picker"
             disabled={pending}
-            label={kind === 'fix' ? 'Fix' : kind === 'feature' ? 'Feature' : '+ Add tag'}
+            label={kind ? kindLabels[kind] : '+ Add tag'}
             options={kindOptions}
             scope={scope}
             showArrow={false}

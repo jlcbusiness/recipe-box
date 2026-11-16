@@ -223,7 +223,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
   const admin = await createAdminTestUser(request);
 
   try {
-    const runId = Date.now().toString();
+    const runId = `${Date.now()}-${testInfo.project.name.replace(/\s/gu, '-')}`;
     const initialText = `Track compact update editing ${runId}.`;
     const initialBody = `${initialText}\n\n- Keep nested lists\n  - readable`;
     const savedBody = `${initialBody}\n  - keyboard item`;
@@ -252,14 +252,10 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await addField.press('Enter');
     await page.keyboard.type('keyboard item');
     const typePicker = addRow.getByRole('combobox', { name: '+ Add tag' });
-    const fixOption = page.getByRole('option', { name: 'Fix', exact: true });
-    if (testInfo.project.name === 'Fold 6') {
-      await typePicker.tap();
-      await fixOption.tap();
-    } else {
-      await typePicker.click();
-      await fixOption.click();
-    }
+    await typePicker.focus();
+    await typePicker.press('ArrowDown');
+    await typePicker.press('ArrowDown');
+    await typePicker.press('Enter');
     await expect(page.locator('.admin-updates [role="status"]')).toHaveText('Update added.');
     await expect(addField).toHaveValue('');
 
@@ -268,7 +264,32 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     });
     await expect(savedRow).toHaveCount(1);
     await expect(savedRow.locator('textarea')).toHaveValue(savedBody);
-    await expect(savedRow.getByText('Fix', { exact: true })).toBeVisible();
+    await expect(savedRow.getByText('Change', { exact: true })).toBeVisible();
+    const changeContrast = await savedRow
+      .locator('.admin-update-kind-tag')
+      .evaluate((element: HTMLElement) => {
+        const luminance = (color: string) => {
+          const channels = color.match(/[\d.]+/gu);
+          if (!channels || channels.length < 3) {
+            throw new Error(`Could not read the computed color: ${color}`);
+          }
+          const [red, green, blue] = channels
+            .slice(0, 3)
+            .map(Number)
+            .map((value) => {
+              const channel = value / 255;
+              return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+            });
+          return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+        };
+        const style = getComputedStyle(element);
+        const foreground = luminance(style.color);
+        const background = luminance(style.backgroundColor);
+        return (
+          (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+        );
+      });
+    expect(changeContrast).toBeGreaterThanOrEqual(4.5);
     await expect(page.locator('.admin-updates [role="status"]')).not.toBeEmpty();
     const updateId = await savedRow.locator('[data-update-done]').getAttribute('data-update-done');
     expect(updateId).toBeTruthy();
@@ -299,6 +320,10 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     }
     await page.screenshot({ path: testInfo.outputPath('admin-updates-desktop.png') });
 
+    await page.reload();
+    await expect(page.getByRole('tabpanel', { name: 'Updates' })).toBeVisible();
+    await expect(savedRow.getByRole('combobox', { name: 'Change' })).toBeVisible();
+
     const textField = row.getByRole('textbox', { name: 'Update text' });
     await textField.click();
     await textField.fill(`Discard this draft ${runId}.`);
@@ -306,7 +331,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await expect(textField).toHaveValue(savedBody);
     await textField.click();
     await textField.fill(editedText);
-    const currentTypePicker = row.getByRole('combobox', { name: 'Fix' });
+    const currentTypePicker = row.getByRole('combobox', { name: 'Change' });
     const featureOption = page.getByRole('option', { name: 'Feature', exact: true });
     if (testInfo.project.name === 'Fold 6') {
       await currentTypePicker.tap();
@@ -493,7 +518,7 @@ test('admins can reorder incomplete updates with pointer, touch, and keyboard @e
 }, testInfo) => {
   test.setTimeout(60_000);
   const admin = await createAdminTestUser(request);
-  const runId = Date.now().toString();
+  const runId = `${Date.now()}-${testInfo.project.name.replace(/\s/gu, '-')}`;
   const first = `First update ${runId} with a longer note to verify wrapped rows keep their position during reorder.`;
   const second = `Second update ${runId}`;
   const third = `Third update ${runId}`;

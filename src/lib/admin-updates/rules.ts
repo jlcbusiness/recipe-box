@@ -1,4 +1,4 @@
-export type AdminUpdateKind = 'fix' | 'feature';
+export type AdminUpdateKind = 'fix' | 'change' | 'feature';
 
 export type AdminUpdate = {
   id: string;
@@ -16,7 +16,7 @@ export type AdminUpdate = {
 const SEMVER_CORE_PATTERN = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?![\s\S])/u;
 
 export function isAdminUpdateKind(value: unknown): value is AdminUpdateKind {
-  return value === 'fix' || value === 'feature';
+  return value === 'fix' || value === 'change' || value === 'feature';
 }
 
 export function normalizeAdminUpdateBody(value: string): string {

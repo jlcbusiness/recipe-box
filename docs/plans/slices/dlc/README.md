@@ -147,6 +147,20 @@ while retaining the existing single-image viewer without gallery navigation.
   Divide column, and gives mobile a compact labeled second line without adding
   another column.
 
+### Phase 15: Division and preparation refinements
+
+- **DLC 39 (implemented in app version 1.13.1):**
+  [Division and Fractional Size](dlc-39-division-and-fractional-size.md)
+  applies metric ratio shorthands in both reader presentations, adds a
+  whole-ingredient mention option for divided rows, and accepts fractional
+  inch sizes for Cubed, Diced, and Sliced ingredients.
+
+### Phase 16: Admin Updates classification
+
+- **DLC 40 (implemented in app version 1.14.0):**
+  [Admin Update Change Classification](dlc-40-admin-update-change-type.md)
+  adds Change as a third required classification alongside Fix and Feature.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for

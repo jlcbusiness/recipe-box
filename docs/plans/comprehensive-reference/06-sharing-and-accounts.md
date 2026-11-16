@@ -246,9 +246,10 @@ delete Admin accounts or transfer Owner status.
 
 ### 10.6 Administrator-managed Updates
 
-> **Current implementation (DLC 28).** Local and linked migrations, database tests,
-> administrator workflows, and responsive browser checks are recorded in the
-> [DLC 28 brief](slices/dlc/dlc-28-admin-updates.md).
+> **Current implementation (DLC 28, extended by DLC 40).** Local and linked
+> migrations, database tests, administrator workflows, and responsive browser
+> checks are recorded in the [DLC 28 brief](slices/dlc/dlc-28-admin-updates.md)
+> and [DLC 40 brief](slices/dlc/dlc-40-admin-update-change-type.md).
 
 - The admin-only Settings tabs **App admin** and **Updates** contain account
   invitations/management and the global Updates tracker, respectively. Updates
@@ -266,13 +267,15 @@ delete Admin accounts or transfer Owner status.
   saves its valid draft; Escape discards it. Invalid or failed saves retain the
   draft in the row, and switching rows saves a valid draft before opening the
   next one.
-- Choosing Fix or Feature while the top draft contains text creates the entry
-  immediately. With no text, the type remains staged in the draft; saved-row
-  type changes continue to save through the inline editor.
+- Choosing Fix, Change, or Feature while the top draft contains text creates
+  the entry immediately. With no text, the type remains staged in the draft;
+  saved-row type changes continue to save through the inline editor.
 - Each saved entry has Markdown body text and exactly one required
-  classification: **Fix** or **Feature**. No unclassified entry can be
-  submitted, and an existing classification can be changed but not cleared.
-  Additional classifications are not included.
+  classification: **Fix**, **Change**, or **Feature**. Fix identifies a
+  correction to unintended behavior, Change a deliberate modification to
+  existing behavior, and Feature a new capability. No unclassified entry can
+  be submitted, and an existing classification can be changed but not cleared.
+  No additional classifications are included.
 - Entry text supports safe common Markdown formatting and lists, but not raw
   HTML, images, recipe-specific tokens, or recipe autocomplete behavior.
 - The **Done** column appears first. An incomplete entry is represented by a

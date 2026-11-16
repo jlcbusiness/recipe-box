@@ -3,7 +3,7 @@
 > **Reference Note:** For the complete catalog of all requirements, edge cases,
 > UI behaviors, and design discussions, see [comprehensive reference](comprehensive-reference.md).
 
-The current product baseline is **v1.13.2**. Unscheduled improvements and
+The current product baseline is **v1.14.0**. Unscheduled improvements and
 verification follow-ups remain in the [deferred-work inventory](discussion/later.md);
 they are not blockers to this release.
 
@@ -221,6 +221,12 @@ question. Its output is a decision-log entry, not shipped code.
   applies six common ratio shorthands to metric measures in both reader
   presentations, adds a whole-ingredient mention option for divided rows, and
   accepts fractional inch sizes for Cubed, Diced, and Sliced ingredients.
+
+### Phase 16: Admin Updates classification
+
+- **DLC 40 (implemented in app version 1.14.0):**
+  [Admin Update Change Classification](slices/dlc/dlc-40-admin-update-change-type.md)
+  adds Change as a third required classification alongside Fix and Feature.
 
 ## Completion Rule
 

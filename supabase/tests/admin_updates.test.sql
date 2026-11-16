@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(52);
+select plan(56);
 
 insert into auth.users (
   id,
@@ -152,6 +152,15 @@ select is(
   '28000000-0000-4000-8000-000000000001'::uuid,
   'audit event records the authenticated admin'
 );
+select lives_ok(
+  $$select public.admin_update_create('Change the existing behavior', 'change')$$,
+  'an admin can create an update classified as Change'
+);
+select is(
+  (select kind from public.app_updates where body_markdown = 'Change the existing behavior'),
+  'change',
+  'Change classification is stored'
+);
 select throws_ok(
   $$select public.admin_update_create('Invalid type', 'tweak')$$,
   '22023',
@@ -175,9 +184,24 @@ select lives_ok(
     (select id from public.app_updates where body_markdown = 'Fix the first issue'),
     1,
     'Fix the first issue more clearly',
-    'feature'
+    'change'
   )$$,
   'an admin can edit content and classification'
+);
+select is(
+  (select kind from public.app_updates where body_markdown = 'Fix the first issue more clearly'),
+  'change',
+  'an admin can change an existing classification to Change'
+);
+select is(
+  (select count(*)::integer
+   from public.admin_update_events
+   where update_id = (
+     select id from public.app_updates where body_markdown = 'Fix the first issue more clearly'
+   )
+     and event_type = 'classification_changed'),
+  1,
+  'changing to Change appends a classification audit event'
 );
 select is(
   (select revision from public.app_updates where body_markdown = 'Fix the first issue more clearly'),

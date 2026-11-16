@@ -407,7 +407,7 @@ export async function createAdminUpdate(
     return { error: bodyError };
   }
   if (!isAdminUpdateKind(kind)) {
-    return { error: 'Choose Fix or Feature before submitting.' };
+    return { error: 'Choose Fix, Change, or Feature before submitting.' };
   }
 
   const access = await getAdminUpdatesClient();
@@ -447,7 +447,7 @@ export async function editAdminUpdate(
     return { error: bodyError };
   }
   if (!isAdminUpdateKind(kind)) {
-    return { error: 'Choose Fix or Feature before submitting.' };
+    return { error: 'Choose Fix, Change, or Feature before submitting.' };
   }
 
   const access = await getAdminUpdatesClient();

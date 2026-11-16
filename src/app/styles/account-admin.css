@@ -647,6 +647,11 @@
   color: #35451f;
 }
 
+.admin-update-kind-tag.is-change {
+  background: #eee7f4;
+  color: #41325f;
+}
+
 .admin-update-kind-tag.is-feature {
   background: #deeff5;
   color: #173d50;

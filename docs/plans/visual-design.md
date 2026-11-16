@@ -13,7 +13,7 @@
     - [Serves and times](#serves-and-times)
     - [Recipe list, detail, and headings](#recipe-list-detail-and-headings)
     - [Account menu](#account-menu)
-    - [App admin and Updates (DLC 28 / DLC 34)](#app-admin-and-updates-dlc-28--dlc-34)
+    - [App admin and Updates (DLC 28 / DLC 34 / DLC 40)](#app-admin-and-updates-dlc-28--dlc-34--dlc-40)
   - [Settings (Slice 14A)](#settings-slice-14a)
     - [Current implementation](#current-implementation)
   - [Settings (Slice 14B)](#settings-slice-14b)
@@ -426,7 +426,7 @@ compact, while labeled rows, picklist triggers, popup options, standalone
 actions, and compact inline action hit areas retain touch targets of at least
 48px.
 
-### App admin and Updates (DLC 28 / DLC 34)
+### App admin and Updates (DLC 28 / DLC 34 / DLC 40)
 
 The admin-only Settings tab **App admin** contains the existing invitation and
 account-management workflows. **Updates** is its own Settings tab and contains
@@ -447,16 +447,17 @@ grip-to-text gap, spanning the full row height without covering the checkbox
 or text field.
 Completed entries show their version in a small, borderless 8pt label centered
 in the Done column and cannot be reordered. **Fix** uses a high-contrast olive
-treatment and **Feature** uses a high-contrast light-blue treatment.
+treatment, **Change** a high-contrast plum treatment, and **Feature** a
+high-contrast light-blue treatment.
 
 Clicking a text field edits it in place. Leaving the row saves a valid draft;
 Escape discards the draft. The top field promotes entered text into an update
 row, and each saved row retains an empty field above it for the next update.
-The required type picker is a compact **+ Add tag** pill until Fix or Feature
-is chosen; it can also change the type of a saved entry. Choosing a type while
-the top draft contains text creates the entry immediately; with no text, the
-type remains staged in the draft. No add, edit, archive, or restore action
-buttons or explanatory helper text are shown. A small eye/eye-off control hides
+The required type picker is a compact **+ Add tag** pill until Fix, Change, or
+Feature is chosen; it can also change the type of a saved entry. Choosing a
+type while the top draft contains text creates the entry immediately; with no
+text, the type remains staged in the draft. No add, edit, archive, or restore
+action buttons or explanatory helper text are shown. A small eye/eye-off control hides
 or reveals completed entries; its icon reflects current visibility (crossed
 eye when hidden, open eye when visible), and incomplete entries are always
 visible. Each saved entry ends with an icon-only X that opens a confirmation
@@ -486,8 +487,8 @@ dialogs are centered in the visual viewport. Mobile rows preserve
 the compact left-center-right layout without page-level horizontal scrolling.
 Touch targets for tabs, checkboxes, type selection, the visibility control, and
 the delete action are at least 48px while their visible controls remain
-compact. The Fix and Feature text/fill pairs exceed the 4.5:1 WCAG AA contrast
-threshold.
+compact. The Fix, Change, and Feature text/fill pairs exceed the 4.5:1 WCAG AA contrast
+threshold. Change uses a `#eee7f4` fill and `#41325f` text.
 
 ## Settings (Slice 14A)
 

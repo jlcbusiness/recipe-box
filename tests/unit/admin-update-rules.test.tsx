@@ -38,8 +38,9 @@ describe('admin update validation and ordering', () => {
     expect(getAdminUpdateBodyError(` ${'a'.repeat(5_000)} `)).toBeNull();
   });
 
-  it('allows exactly Fix and Feature as entry kinds', () => {
+  it('allows exactly Fix, Change, and Feature as entry kinds', () => {
     expect(isAdminUpdateKind('fix')).toBe(true);
+    expect(isAdminUpdateKind('change')).toBe(true);
     expect(isAdminUpdateKind('feature')).toBe(true);
     expect(isAdminUpdateKind('tweak')).toBe(false);
     expect(isAdminUpdateKind('')).toBe(false);
