@@ -9,9 +9,9 @@ authority; this brief resolves its Slice 16 implementation details.
 
 - [Delivery roadmap](../delivery-roadmap.md), Slice 16
 - [First-draft specification](../first-draft-spec.md), Views and Sorting
-- [Comprehensive reference § 4](../comprehensive-reference.md#4-ingredient-presentation-and-sorting)
-- [Comprehensive reference § 8.3](../comprehensive-reference.md#83-personal-preferences)
-- [Comprehensive reference § 13](../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference § 4](../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting)
+- [Comprehensive reference § 8.3](../comprehensive-reference/05-settings-and-taxonomies.md#84-personal-preferences)
+- [Comprehensive reference § 13](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
 - [Data model](../data-model.md), Core Entities and Configuration Boundaries
 - [Visual design guide](../visual-design.md), Ingredient Presentation and Mobile
 - [Decision log](../decision-log.md)

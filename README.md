@@ -48,6 +48,11 @@ SMTP. Check its current plan and pricing before signing up.
 Docker is not needed to deploy the hosted app. It is needed only if you also
 want to run the local Supabase development stack.
 
+To move an existing production Supabase project to another region, use the
+[Supabase region-migration runbook](docs/development/supabase-region-migration.md).
+The project must be migrated to a new Supabase project; its region cannot be
+changed in place.
+
 ### 1. Copy the source into a new GitHub repository
 
 1. Create a [GitHub account](https://docs.github.com/en/account-and-profile/how-tos/account-management/creating-an-account-on-github),

@@ -4,7 +4,7 @@
 Magazine model was revised during Slice 11; implementation follow-up is
 required to consolidate issue records into Magazine titles and move issue
 details onto recipes. The current product contract is in the
-[comprehensive reference](../comprehensive-reference.md#62-magazine-titles-recipe-locations-and-online-urls).
+[comprehensive reference](../comprehensive-reference/04-publications-and-search.md#62-magazine-titles-recipe-locations-and-online-urls).
 The scope, verified constraints, and acceptance details below document what
 Slice 9 originally shipped; they are not the target requirements for revised
 Magazine behavior.
@@ -18,10 +18,10 @@ listings, uploaded covers, or the full Library explorer.
 
 The product authority is
 [comprehensive reference](../comprehensive-reference.md), especially
-[§ 2, Recipe Card and Metadata](../comprehensive-reference.md#2-recipe-card-and-metadata),
-[§ 6, Publications, Magazine Handling, and The Recipe Tin](../comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin),
-[§ 12, Change History and Forensic Audit](../comprehensive-reference.md#12-change-history-and-forensic-audit),
-and [§ 13, Interaction, Keyboard-First Design, and Accessibility](../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility).
+[§ 2, Recipe Card and Metadata](../comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata),
+[§ 6, Publications, Magazine Handling, and The Recipe Tin](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin),
+[§ 12, Change History and Forensic Audit](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit),
+and [§ 13, Interaction, Keyboard-First Design, and Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility).
 Related boundaries are in the
 [first-draft specification](../first-draft-spec.md),
 [data model](../data-model.md),

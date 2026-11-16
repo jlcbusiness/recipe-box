@@ -10,11 +10,11 @@ simplification, allowing a recipe to retain mixed units such as
 
 - [DLC roadmap](README.md), Phase 5
 - [First-draft specification](../../first-draft-spec.md), Ingredients
-- [Comprehensive reference, § 3.5](../../comprehensive-reference.md#35-unit-display-preferences)
-- [Comprehensive reference, § 4: Ingredient presentation](../../comprehensive-reference.md#4-ingredient-presentation-and-sorting)
-- [Comprehensive reference, § 8.3: Personal preferences](../../comprehensive-reference.md#83-personal-preferences)
-- [Comprehensive reference, § 9.3: Public recipe experience](../../comprehensive-reference.md#93-public-recipe-experience)
-- [Comprehensive reference, § 13: Accessibility](../../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 3.5](../../comprehensive-reference/02-ingredients-and-presentation.md#35-unit-display-preferences)
+- [Comprehensive reference, § 4: Ingredient presentation](../../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting)
+- [Comprehensive reference, § 8.4: Personal preferences](../../comprehensive-reference/05-settings-and-taxonomies.md#84-personal-preferences)
+- [Comprehensive reference, § 9.3: Public recipe experience](../../comprehensive-reference/06-sharing-and-accounts.md#93-public-recipe-experience)
+- [Comprehensive reference, § 13: Accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
 - [Data model](../../data-model.md), Configuration Boundaries
 - [Design philosophy](../../design-philosophy.md) and
   [visual design guide](../../visual-design.md), Settings and recipe reading

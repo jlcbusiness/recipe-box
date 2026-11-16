@@ -7,9 +7,9 @@
 - [DLC roadmap](README.md), Phase 7
 - [DLC 30: Safe Public Recipe Publishing](dlc-30-safe-public-recipe-publishing.md)
 - [First-draft specification](../../first-draft-spec.md), Sharing and Authentication
-- [Comprehensive reference, § 6](../../comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
-- [Comprehensive reference, § 9](../../comprehensive-reference.md#9-sharing-privacy-urls-and-image-delivery)
-- [Comprehensive reference, § 11](../../comprehensive-reference.md#11-import-export-and-backup-bundles)
+- [Comprehensive reference, § 6](../../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
+- [Comprehensive reference, § 9](../../comprehensive-reference/06-sharing-and-accounts.md#9-sharing-privacy-urls-and-image-delivery)
+- [Comprehensive reference, § 11](../../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
 - [Data model](../../data-model.md), Ownership, Relationship Rules, and Required Future Detail
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide](../../visual-design.md), Public Recipe View and Data Management

@@ -7,7 +7,7 @@ transactional behavior that preserves recipe rows and their instruction links.
 ## References
 
 - [Delivery roadmap](../delivery-roadmap.md), Slice 14C
-- [Comprehensive reference § 8.1](../comprehensive-reference.md#81-centralized-picklist-management)
+- [Comprehensive reference § 8.1](../comprehensive-reference/05-settings-and-taxonomies.md#81-centralized-picklist-management)
 - [Data model](../data-model.md), Core Entities and Configuration Boundaries
 - [Visual design guide](../visual-design.md#settings-slice-14c), Settings
 - [Decision log](../decision-log.md)

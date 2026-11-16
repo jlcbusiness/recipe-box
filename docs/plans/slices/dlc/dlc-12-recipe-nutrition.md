@@ -15,10 +15,10 @@ ingredient-based calculation.
 ## References
 
 - [DLC 12 source request](../../../../.github/prompts/slice.prompt.md)
-- [Comprehensive reference § 3: Ingredient rows and measurements](../../comprehensive-reference.md#3-ingredient-rows-measurements-and-density)
-- [Comprehensive reference § 8: Settings](../../comprehensive-reference.md#8-settings-taxonomies-and-picklists)
-- [Comprehensive reference § 9: Public recipe experience](../../comprehensive-reference.md#9-sharing-privacy-urls-and-image-delivery)
-- [Comprehensive reference § 11: Bundles](../../comprehensive-reference.md#11-import-export-and-backup-bundles)
+- [Comprehensive reference § 3: Ingredient rows and measurements](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density)
+- [Comprehensive reference § 8: Settings](../../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
+- [Comprehensive reference § 9: Public recipe experience](../../comprehensive-reference/06-sharing-and-accounts.md#9-sharing-privacy-urls-and-image-delivery)
+- [Comprehensive reference § 11: Bundles](../../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
 - [Data model](../../data-model.md)
 - [DLC 11: Makes and servings](dlc-11-yield-and-servings.md)
 - [Slice 6: Measurements](../6-measurements.md)

@@ -9,8 +9,8 @@ product authority; this brief resolves its Slice 15 implementation details.
 
 - [Delivery roadmap](../delivery-roadmap.md), Slice 15
 - [First-draft specification](../first-draft-spec.md), Ingredients
-- [Comprehensive reference § 3.3](../comprehensive-reference.md#33-trusted-ingredient-density)
-- [Comprehensive reference § 8.2](../comprehensive-reference.md#82-trusted-density-registry)
+- [Comprehensive reference § 3.3](../comprehensive-reference/02-ingredients-and-presentation.md#33-trusted-ingredient-density)
+- [Comprehensive reference § 8.2](../comprehensive-reference/05-settings-and-taxonomies.md#82-trusted-densities)
 - [Data model](../data-model.md), Core Entities and Configuration Boundaries
 - [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Settings
 - [Decision log](../decision-log.md)

@@ -11,9 +11,9 @@ existing Publication references remain visible as static legacy text.
 
 The product authority is
 [comprehensive reference](../comprehensive-reference.md), especially
-[§ 5.2, Pairs With](../comprehensive-reference.md#52-recipe-to-recipe-links-pairs-with),
-[§ 5.3, References](../comprehensive-reference.md#53-references-section),
-and [§ 6.2, Magazine Titles, Recipe Locations, and Online URLs](../comprehensive-reference.md#62-magazine-titles-recipe-locations-and-online-urls).
+[§ 5.2, Pairs With](../comprehensive-reference/03-instructions-and-links.md#52-recipe-to-recipe-links-pairs-with),
+[§ 5.3, References](../comprehensive-reference/03-instructions-and-links.md#53-references-section),
+and [§ 6.2, Magazine Titles, Recipe Locations, and Online URLs](../comprehensive-reference/04-publications-and-search.md#62-magazine-titles-recipe-locations-and-online-urls).
 Also consult the [first-draft specification](../first-draft-spec.md),
 [data model](../data-model.md), [visual design guide](../visual-design.md),
 and [decision log](../decision-log.md).

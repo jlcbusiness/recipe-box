@@ -12,7 +12,8 @@ unresolved product, security, or data decision blocks a sound implementation.
 1. Read the repository instructions and `AGENTS.md`. Follow the roadmap's
   **Mandatory Slice Preparation** and **Completion Rule**.
 2. Read `first-draft-spec.md`, then the selected roadmap row and its relevant
-  sections of `comprehensive-reference.md`, `data-model.md`,
+  canonical topic page(s) in `docs/plans/comprehensive-reference/`, using
+  `comprehensive-reference.md` as the index, alongside `data-model.md`,
   `visual-design.md`, and `decision-log.md`.
 3. Inspect the closest implemented slice, its tests, and the actual owning
   components or data path. Verify current behavior in the app when it affects

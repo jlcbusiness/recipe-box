@@ -8,12 +8,12 @@ publication covers and recipe photos. It extends the existing private
 
 - [Delivery roadmap](../delivery-roadmap.md), slice 12
 - [First-draft specification](../first-draft-spec.md)
-- [Comprehensive reference, § 2.3: Recipe photos](../comprehensive-reference.md#23-recipe-photos)
-- [Comprehensive reference, § 6: Publications and the Recipe Tin](../comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
-- [Comprehensive reference, § 9.4: Secure image delivery](../comprehensive-reference.md#94-secure-image-delivery)
-- [Comprehensive reference, § 12: Change history](../comprehensive-reference.md#12-change-history-and-forensic-audit)
-- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference.md#16-testability-and-test-first-delivery)
+- [Comprehensive reference, § 2.3: Recipe photos](../comprehensive-reference/01-recipe-card-and-metadata.md#23-recipe-photos)
+- [Comprehensive reference, § 6: Publications and the Recipe Tin](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
+- [Comprehensive reference, § 9.5: Secure image delivery](../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
+- [Comprehensive reference, § 12: Change history](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
+- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
 - [Data model boundary](../data-model.md)
 - [Visual design guide](../visual-design.md), including publication cover fallbacks
 - [Decision log](../decision-log.md)

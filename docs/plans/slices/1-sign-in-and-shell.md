@@ -8,9 +8,9 @@ recipe, publication, picklist, or other product domain tables.
 
 - [Delivery roadmap](../delivery-roadmap.md), slice 1
 - [First-draft specification](../first-draft-spec.md)
-- [Comprehensive reference, § 10: Authentication](../comprehensive-reference.md#10-authentication-and-account-setup)
-- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference.md#16-testability-and-test-first-delivery)
+- [Comprehensive reference, § 10: Authentication](../comprehensive-reference/06-sharing-and-accounts.md#10-authentication-and-account-setup)
+- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
 - [Data model boundary](../data-model.md)
 - [Visual design guide](../visual-design.md)
 - [Decision log](../decision-log.md)

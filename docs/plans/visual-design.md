@@ -56,13 +56,13 @@
 - [Decision log](decision-log.md) for accepted choices and rationale.
 - [Delivery roadmap](delivery-roadmap.md) for slice order and progress.
 - [Comprehensive reference](comprehensive-reference.md) for full requirements;
-  relevant sections: [metadata](comprehensive-reference.md#24-recipe-metadata-entry-presentation),
-  [ingredient presentation](comprehensive-reference.md#4-ingredient-presentation-and-sorting),
-  [recipe relationships](comprehensive-reference.md#52-recipe-to-recipe-links-pairs-with),
-  [references](comprehensive-reference.md#53-references-section),
-  [publications](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin),
-  [queries](comprehensive-reference.md#7-queries-search-and-library-explorer), and
-  [accessibility](comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility).
+  relevant sections: [metadata](comprehensive-reference/01-recipe-card-and-metadata.md#24-recipe-metadata-entry-presentation),
+  [ingredient presentation](comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting),
+  [recipe relationships](comprehensive-reference/03-instructions-and-links.md#52-recipe-to-recipe-links-pairs-with),
+  [references](comprehensive-reference/03-instructions-and-links.md#53-references-section),
+  [publications](comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin),
+  [queries](comprehensive-reference/04-publications-and-search.md#7-queries-search-and-library-explorer), and
+  [accessibility](comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility).
 - [Slice 17: Find recipes](slices/17-find-recipes.md) for search and explorer
   behavior.
 

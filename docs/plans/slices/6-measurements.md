@@ -2,7 +2,7 @@
 
 This brief defines quantity entry, persistence, and display for recipe ingredient
 rows. The product authority is [the comprehensive reference](../comprehensive-reference.md),
-especially [§ 3, Ingredient Rows, Measurements, and Density](../comprehensive-reference.md#3-ingredient-rows-measurements-and-density).
+especially [§ 3, Ingredient Rows, Measurements, and Density](../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density).
 Related boundaries are in the [data model](../data-model.md),
 [visual design guide](../visual-design.md),
 [delivery roadmap](../delivery-roadmap.md), and

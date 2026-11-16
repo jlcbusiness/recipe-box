@@ -161,8 +161,8 @@ automated and physical-device checks pass.
 
 - [Delivery roadmap, DLC ordering](README.md)
 - [Image pipeline](../12-images.md)
-- [Comprehensive reference, recipe photos](../../comprehensive-reference.md#23-recipe-photos)
-- [Comprehensive reference, secure image delivery](../../comprehensive-reference.md#94-secure-image-delivery)
+- [Comprehensive reference, recipe photos](../../comprehensive-reference/01-recipe-card-and-metadata.md#23-recipe-photos)
+- [Comprehensive reference, secure image delivery](../../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
 - [Data model boundary](../../data-model.md)
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide, recipe photos](../../visual-design.md)

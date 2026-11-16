@@ -6,10 +6,13 @@ Hello!
 
 - Read the planning docs in `#plans`:
   - `#file:delivery-roadmap.md` to identify the target slice and its demonstrable outcome
-  - `#file:first-draft-spec.md`, `#file:comprehensive-reference.md`, `#file:data-model.md`,
+  - `#file:first-draft-spec.md`, `#file:comprehensive-reference.md` (the
+    canonical reference index; open the relevant topic page in
+    `docs/plans/comprehensive-reference/`), `#file:data-model.md`,
     `#file:visual-design.md`, and `#file:decision-log.md`
   - recent slice briefs in `docs/plans/slices/` that touch adjacent data or UI surfaces
-- Verify every field, operator, and rule against `#file:comprehensive-reference.md` and the current database
+- Verify every field, operator, and rule against the relevant canonical topic
+  page linked from `#file:comprehensive-reference.md` and the current database
   schema/code.
   - Do not infer unmentioned fields or behaviors.
   - If the docs and code disagree or leave a product choice ambiguous, stop and ask before locking it into the brief.

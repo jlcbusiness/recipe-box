@@ -4,10 +4,10 @@
 > structures, picklist taxonomies, and relationship behaviors, see
 > [comprehensive reference](comprehensive-reference.md), specifically:
 >
-> - [comprehensive-reference.md § 2 (Recipe Metadata)](comprehensive-reference.md#2-recipe-card-and-metadata)
-> - [comprehensive-reference.md § 3 (Ingredients & Measurements)](comprehensive-reference.md#3-ingredient-rows-measurements-and-density)
-> - [comprehensive-reference.md § 6 (Publications & Recipe Tin)](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
-> - [comprehensive-reference.md § 8 (Settings & Taxonomies)](comprehensive-reference.md#8-settings-taxonomies-and-picklists)
+> - [comprehensive-reference.md § 2 (Recipe Metadata)](comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata)
+> - [comprehensive-reference.md § 3 (Ingredients & Measurements)](comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density)
+> - [comprehensive-reference.md § 6 (Publications & Recipe Tin)](comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
+> - [comprehensive-reference.md § 8 (Settings & Taxonomies)](comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
 
 ## Purpose
 
@@ -35,7 +35,7 @@ Admin who can demote/delete Admin accounts and transfer Owner status). A
 signed-in User may be a Guest while accessing another User's public recipe.
 Admins can grant Admin access; only the Owner can demote or delete Admin
 accounts or transfer Owner status. See
-[comprehensive-reference.md § 10.0](comprehensive-reference.md#100-role-terminology-and-current-implementation-boundary).
+[comprehensive-reference.md § 10.0](comprehensive-reference/06-sharing-and-accounts.md#100-role-terminology-and-current-implementation-boundary).
 
 Slice 1 first implements this boundary with the minimal Account record linked
 to the authenticated user's identity. It is intentionally the only

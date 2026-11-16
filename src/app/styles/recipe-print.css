@@ -1,0 +1,190 @@
+.recipe-public-title-actions > .recipe-icon-action {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+}
+
+@media print {
+  @page {
+    size: letter landscape;
+    margin: 0.25in;
+
+    @bottom-right {
+      color: #596057;
+      content: "Page " counter(page) " of " counter(pages);
+      font:
+        8pt "DM Sans Variable",
+        sans-serif;
+    }
+  }
+
+  html,
+  body {
+    min-height: 0;
+    background: white;
+    background-image: none;
+    color: #171914;
+  }
+
+  .private-shell {
+    display: block;
+    min-height: 0;
+  }
+
+  .private-shell .private-nav,
+  .recipe-screen-only,
+  .recipe-public-title-actions,
+  .offline-page-status {
+    display: none;
+  }
+
+  .recipe-reader-unit-trigger {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    cursor: default;
+    text-decoration: none;
+  }
+
+  .private-content.private-content-wide {
+    display: block;
+    padding: 0;
+  }
+
+  .private-content main.recipes-main {
+    display: block;
+    width: 100%;
+    padding: 0;
+  }
+
+  .recipe-detail-heading {
+    margin-bottom: 18px;
+  }
+
+  .recipe-photo-gallery {
+    display: none !important;
+  }
+
+  .private-content main.recipes-main .recipe-summary-layout {
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .private-content main.recipes-main .recipe-summary-layout-with-photos {
+    display: block;
+  }
+
+  .image-viewer-dialog {
+    display: none !important;
+  }
+
+  .no-instruction-photos .recipe-instruction-photo {
+    display: none;
+  }
+
+  .recipe-public-overview {
+    display: block;
+  }
+
+  .recipe-photo-feature-image {
+    max-height: 1.5in;
+  }
+
+  .recipe-detail-section {
+    width: 100%;
+    margin-top: 18px;
+    border-color: #a3a69f;
+    padding-top: 12px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .recipe-print-metadata {
+    width: 100%;
+    margin-top: 0;
+    border: 0;
+    padding: 0;
+  }
+
+  .recipe-print-metadata > h2 {
+    display: none;
+  }
+
+  .recipe-print-metadata .recipe-metadata,
+  .recipe-print-metadata-times .recipe-time-list,
+  .recipe-public-summary .recipe-time-list {
+    gap: 4px 14px;
+  }
+
+  .recipe-print-metadata .recipe-metadata > div,
+  .recipe-print-metadata-times .recipe-time-list > div,
+  .recipe-public-summary .recipe-time-list > div {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .recipe-print-metadata .recipe-metadata dd,
+  .recipe-print-metadata-times .recipe-time-list dd,
+  .recipe-public-summary .recipe-time-list dd {
+    margin: 0;
+  }
+
+  .recipe-print-metadata-times .recipe-time-list > .recipe-total-time:not(:only-child)::after,
+  .recipe-public-summary .recipe-time-list > .recipe-total-time:not(:only-child)::after {
+    right: -0.5px;
+  }
+
+  .recipe-print-metadata .recipe-detail-classification {
+    margin-top: 4px;
+  }
+
+  .recipe-print-metadata-times {
+    margin-top: 4px;
+  }
+
+  .recipe-reading-layout {
+    width: 100%;
+    margin-top: 18px;
+    margin-inline: 0;
+  }
+
+  .recipe-reading-layout > .recipe-detail-section {
+    margin-top: 0;
+  }
+
+  .recipe-reading-layout [data-checked="true"] {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .recipe-detail-section h2 {
+    margin-bottom: 10px;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .recipe-metadata dt,
+  .recipe-trash-list th {
+    color: #444;
+    text-transform: none;
+  }
+
+  .recipe-ingredient-list li,
+  .recipe-instruction-list li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .recipe-instruction-list li + li {
+    margin-top: 8px;
+  }
+
+  .recipe-instruction-link {
+    color: inherit;
+    text-decoration: none;
+  }
+}

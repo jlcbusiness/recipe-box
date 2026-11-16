@@ -8,12 +8,12 @@ instructions, tags, public URLs, or recipe photos.
 
 - [Delivery roadmap](../delivery-roadmap.md), slice 4
 - [First-draft specification](../first-draft-spec.md), Recipes
-- [Comprehensive reference, § 2: Recipe metadata and time](../comprehensive-reference.md#2-recipe-card-and-metadata)
-- [Comprehensive reference, § 6: Recipe Tin](../comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin)
-- [Comprehensive reference, § 8: Picklists](../comprehensive-reference.md#8-settings-taxonomies-and-picklists)
-- [Comprehensive reference, § 12: History](../comprehensive-reference.md#12-change-history-and-forensic-audit)
-- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference.md#16-testability-and-test-first-delivery)
+- [Comprehensive reference, § 2: Recipe metadata and time](../comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata)
+- [Comprehensive reference, § 6: Recipe Tin](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
+- [Comprehensive reference, § 8: Picklists](../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
+- [Comprehensive reference, § 12: History](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
+- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
 - [Data model boundary](../data-model.md)
 - [Visual design guide](../visual-design.md)
 - [Decision log](../decision-log.md)

@@ -19,9 +19,9 @@ equivalents.
 ## References
 
 - [Update-slice request](../../../../.github/prompts/update.prompt.md)
-- [Comprehensive reference § 3: Ingredient rows, measurements, and density](../../comprehensive-reference.md#3-ingredient-rows-measurements-and-density)
-- [Comprehensive reference § 8.2: Trusted density registry](../../comprehensive-reference.md#82-trusted-density-registry)
-- [Comprehensive reference § 8.3: Nutrition and measure equivalents](../../comprehensive-reference.md#83-nutrition-and-measure-equivalents)
+- [Comprehensive reference § 3: Ingredient rows, measurements, and density](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density)
+- [Comprehensive reference § 8.2: Trusted density registry](../../comprehensive-reference/05-settings-and-taxonomies.md#82-trusted-densities)
+- [Comprehensive reference § 8.3: Nutrition and measure equivalents](../../comprehensive-reference/05-settings-and-taxonomies.md#83-nutrition-and-measure-equivalents)
 - [Data model](../../data-model.md)
 - [Visual design guide](../../visual-design.md), especially Ingredient Presentation and Accessibility
 - [Decision log](../../decision-log.md)

@@ -8,10 +8,10 @@ user-directed deletion.
 
 The product authority is
 [comprehensive reference](../comprehensive-reference.md), especially
-[§ 4, Ingredient Presentation and Sorting](../comprehensive-reference.md#4-ingredient-presentation-and-sorting),
-[§ 6.6, Trash, Restore, and Purge](../comprehensive-reference.md#66-trash-restore-and-purge),
-[§ 12, Change History and Forensic Audit](../comprehensive-reference.md#12-change-history-and-forensic-audit),
-and [§ 13, Interaction, Keyboard-First Design, and Accessibility](../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility).
+[§ 4, Ingredient Presentation and Sorting](../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting),
+[§ 6.6, Trash, Restore, and Purge](../comprehensive-reference/04-publications-and-search.md#66-trash-restore-and-purge),
+[§ 12, Change History and Forensic Audit](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit),
+and [§ 13, Interaction, Keyboard-First Design, and Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility).
 Related boundaries are in the
 [first-draft specification](../first-draft-spec.md),
 [data model](../data-model.md),

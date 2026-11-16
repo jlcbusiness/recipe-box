@@ -1,0 +1,147 @@
+.recipe-form input,
+.recipe-form select,
+.recipe-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  border: 1px solid var(--control-border);
+  border-radius: 3px;
+  padding: 4px 7px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+
+.recipe-form input[type="number"],
+.recipe-form input[inputmode="numeric"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  text-align: center;
+}
+
+.recipe-form .recipe-time-field > span,
+.recipe-form label[for="serves"] > span {
+  text-align: center;
+}
+
+.recipe-form input[type="number"]::-webkit-inner-spin-button,
+.recipe-form input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.recipe-form select.recipe-compact-select {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 36px;
+}
+
+.recipe-form input[name="name"] {
+  width: min(26rem, 100%);
+  min-height: 36px;
+}
+
+@media (min-width: 641px) {
+  .recipe-name-media-row > .media-manager-photos {
+    margin-left: auto;
+  }
+
+  .recipe-form .recipe-name-field {
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: min(100%, calc(100vw - 40px));
+  }
+
+  .recipe-form .recipe-name-field input {
+    width: auto;
+    min-width: 3in;
+    max-width: 100%;
+  }
+}
+
+.recipe-form input[name="serves"] {
+  width: 6ch;
+  min-height: 36px;
+}
+
+.recipe-form .recipe-makes-field {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.recipe-form .recipe-makes-field > legend {
+  padding: 0;
+  text-align: center;
+}
+
+.recipe-makes-inputs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.recipe-form input[name="makes_quantity"] {
+  flex: 0 0 4ch;
+  width: 4ch;
+  min-height: 36px;
+  padding-inline: 4px;
+}
+
+.recipe-form input[name="makes_thing"] {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  min-height: 36px;
+}
+
+.recipe-form input[name="reason"] {
+  width: min(24rem, 100%);
+  min-height: 36px;
+}
+
+.recipe-form textarea[name="notes_markdown"] {
+  width: 100%;
+}
+
+.recipe-form input[name="occasion_details"] {
+  width: min(36rem, 100%);
+  min-height: 36px;
+}
+
+.recipe-single-picklist > span:first-child {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.recipe-picklist-trigger {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 3px;
+  padding: 5px 7px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.find-recipes-form .recipe-filter-value-trigger,
+.find-recipes-form .recipe-filter-builder .recipe-picklist-trigger {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  min-height: 36px;
+  font-size: 16px;
+}
+
+.find-recipes-form .recipe-filter-builder .recipe-filter-value-trigger {
+  height: auto;
+}

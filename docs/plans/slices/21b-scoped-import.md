@@ -6,7 +6,7 @@
 
 - [Slice 21: Import](21-import.md)
 - [First-draft specification](../first-draft-spec.md), Import, Export, Lifecycle, and History
-- [Comprehensive reference, § 11](../comprehensive-reference.md#11-import-export-and-backup-bundles)
+- [Comprehensive reference, § 11](../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
 - [Portable bundle format](../import-export-format.md)
 - [Slice 20: Export](20-export.md)
 - [Data model](../data-model.md)

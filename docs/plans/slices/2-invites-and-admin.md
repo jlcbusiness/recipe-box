@@ -8,9 +8,9 @@ lifecycle; no parallel invitation-token table is introduced.
 
 - [Delivery roadmap](../delivery-roadmap.md), slice 2
 - [First-draft specification](../first-draft-spec.md), Sharing and Authentication
-- [Comprehensive reference, § 10: Authentication](../comprehensive-reference.md#10-authentication-and-account-setup)
-- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference.md#16-testability-and-test-first-delivery)
+- [Comprehensive reference, § 10: Authentication](../comprehensive-reference/06-sharing-and-accounts.md#10-authentication-and-account-setup)
+- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
 - [Data model boundary](../data-model.md)
 - [Visual design guide](../visual-design.md)
 - [Decision log](../decision-log.md)
@@ -29,7 +29,7 @@ can then sign in. Non-admin users cannot send invitations or alter admin status.
 
 ## Role terminology follow-up
 
-Use the [role definitions in the comprehensive reference](../comprehensive-reference.md#100-role-terminology-and-current-implementation-boundary):
+Use the [role definitions in the comprehensive reference](../comprehensive-reference/06-sharing-and-accounts.md#100-role-terminology-and-current-implementation-boundary):
 Guest, User, Admin, and Owner are distinct terms. This slice's verified
 implementation initially stored only `is_admin` and allowed Admin promotion.
 Migration `20261108000000_add_account_owner_role.sql` adds the `is_owner` role,

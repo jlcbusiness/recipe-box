@@ -176,16 +176,16 @@ empty dimension override the populated one.
 - No changes to recipe metadata fields, single-/multi-select meaning, Settings
   catalog management, other picklists, or recipe-save transaction behavior.
 - After implementation, update the older inline-add interaction wording in the
-  [comprehensive reference](../../comprehensive-reference.md#81-centralized-picklist-management),
+  [comprehensive reference](../../comprehensive-reference/05-settings-and-taxonomies.md#81-centralized-picklist-management),
   [visual design guide](../../visual-design.md#picklist-behavior), and
   [decision log](../../decision-log.md) to match the verified behavior.
 - Update the Size contract in the [data model](../../data-model.md), the
-  [comprehensive reference](../../comprehensive-reference.md#37-divided-portions-and-size),
+  [comprehensive reference](../../comprehensive-reference/02-ingredients-and-presentation.md#37-divided-portions-and-size),
   [visual design guide](../../visual-design.md#ingredient-presentation), and
   [decision log](../../decision-log.md) from Cubed-only to Cubed, Diced, and
   Sliced.
 - Update divided-measurement guidance in the [comprehensive
-  reference](../../comprehensive-reference.md#37-divided-portions-and-size),
+  reference](../../comprehensive-reference/02-ingredients-and-presentation.md#37-divided-portions-and-size),
   [DLC 04 brief](dlc-04-ingredient-amounts-and-references.md), and
   [decision log](../../decision-log.md) to say that focusing an empty
   measurement dimension cannot override the populated dimension.

@@ -256,9 +256,9 @@ retain readable text and see the image in its recipe context.
 ## References
 
 - [DLC brainstorm](../../discussion/dlc.md)
-- [Comprehensive reference, § 5: Instructions and mentions](../../comprehensive-reference.md#5-instructions-autocomplete-and-recipe-linking)
-- [Comprehensive reference, § 8.3: Personal preferences](../../comprehensive-reference.md#83-personal-preferences)
-- [Comprehensive reference, § 9.4: Secure image delivery](../../comprehensive-reference.md#94-secure-image-delivery)
+- [Comprehensive reference, § 5: Instructions and mentions](../../comprehensive-reference/03-instructions-and-links.md#5-instructions-autocomplete-and-recipe-linking)
+- [Comprehensive reference, § 8.4: Personal preferences](../../comprehensive-reference/05-settings-and-taxonomies.md#84-personal-preferences)
+- [Comprehensive reference, § 9.5: Secure image delivery](../../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
 - [Data model](../../data-model.md)
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide](../../visual-design.md)

@@ -112,7 +112,7 @@ Item 2 includes this exact authored step:
 The nested entries render as peers. The referenced screenshot renders small.
 [The Markdown parser](../../../src/lib/recipes/instruction-markdown.ts)
 accepts leading whitespace but stores a flat list of inline-token arrays.
-[Instruction-photo CSS](../../../src/app/styles/recipe-media.css) caps
+[Instruction-photo CSS](../../../src/app/styles/recipe-instruction-display.css) caps
 desktop photos at `min(55%, 20rem)`, independently of the requested width.
 These are confirmed implementation constraints, not yet a full diagnosis of
 every output surface.

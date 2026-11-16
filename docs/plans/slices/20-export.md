@@ -7,9 +7,9 @@ publication, or one recipe. It does not import or modify source records.
 
 - [Delivery roadmap](../delivery-roadmap.md), Slice 20
 - [First-draft specification](../first-draft-spec.md), Import, Export, Lifecycle, and History
-- [Comprehensive reference, § 11: Import, Export, and Backup Bundles](../comprehensive-reference.md#11-import-export-and-backup-bundles)
-- [Comprehensive reference, § 9.4: Secure Image Delivery](../comprehensive-reference.md#94-secure-image-delivery)
-- [Comprehensive reference, § 12: Change History and Forensic Audit](../comprehensive-reference.md#12-change-history-and-forensic-audit)
+- [Comprehensive reference, § 11: Import, Export, and Backup Bundles](../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
+- [Comprehensive reference, § 9.5: Secure Image Delivery](../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
+- [Comprehensive reference, § 12: Change History and Forensic Audit](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
 - [Data model](../data-model.md), Ownership, Relationship Rules, and Configuration Boundaries
 - [Design philosophy](../design-philosophy.md), Information Hierarchy and Interaction
 - [Visual design guide](../visual-design.md), Account menu and Settings (Slice 14A)

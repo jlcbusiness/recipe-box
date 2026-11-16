@@ -8,7 +8,7 @@ the nutrition tables used by the public loader.
 
 - [DLC roadmap](README.md), Phase 7
 - [First-draft specification](../../first-draft-spec.md), Sharing and Authentication
-- [Comprehensive reference, § 9](../../comprehensive-reference.md#9-sharing-privacy-urls-and-image-delivery)
+- [Comprehensive reference, § 9](../../comprehensive-reference/06-sharing-and-accounts.md#9-sharing-privacy-urls-and-image-delivery)
 - [Data model](../../data-model.md), Ownership, Core Entities, and Required Future Detail
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide](../../visual-design.md), Recipe Detail and Public Recipe View

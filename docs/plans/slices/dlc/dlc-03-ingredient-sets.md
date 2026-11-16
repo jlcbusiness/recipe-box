@@ -113,12 +113,12 @@ or introduce set catalogs in Settings.
 
 ## References
 
-- [Comprehensive reference, § 3](../../comprehensive-reference.md#3-ingredient-rows-measurements-and-density)
-- [Comprehensive reference, § 4](../../comprehensive-reference.md#4-ingredient-presentation-and-sorting)
-- [Comprehensive reference, § 5](../../comprehensive-reference.md#5-instructions-autocomplete-and-recipe-linking)
-- [Comprehensive reference, § 9](../../comprehensive-reference.md#9-sharing-privacy-urls-and-image-delivery)
-- [Comprehensive reference, § 11](../../comprehensive-reference.md#11-import-export-and-backup-bundles)
-- [Comprehensive reference, § 12](../../comprehensive-reference.md#12-change-history-and-forensic-audit)
+- [Comprehensive reference, § 3](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density)
+- [Comprehensive reference, § 4](../../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting)
+- [Comprehensive reference, § 5](../../comprehensive-reference/03-instructions-and-links.md#5-instructions-autocomplete-and-recipe-linking)
+- [Comprehensive reference, § 9](../../comprehensive-reference/06-sharing-and-accounts.md#9-sharing-privacy-urls-and-image-delivery)
+- [Comprehensive reference, § 11](../../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
+- [Comprehensive reference, § 12](../../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
 - [Data model](../../data-model.md)
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide, Ingredient Presentation](../../visual-design.md#ingredient-presentation)

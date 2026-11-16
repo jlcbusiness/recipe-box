@@ -1,10 +1,11 @@
 # Recipe Box First-Draft Specification
 
-> **Document authority:** [comprehensive reference](comprehensive-reference.md)
-> is the master document. This spec is the high-level strategy summary and must
-> always defer to it. If the two disagree, the reference wins and this spec is
-> corrected. Read this spec first, then open only the reference sections the
-> current work needs.
+> **Document authority:** The [comprehensive reference](comprehensive-reference.md)
+> and its linked topic pages are the canonical product requirements. This spec
+> is the high-level strategy summary and must always defer to that reference
+> series. If they disagree, the canonical reference wins and this spec is
+> corrected. Read this spec first, then open only the topic pages the current
+> work needs.
 
 | Topic | Planning document | Use it for |
 | ----- | ----------------- | ---------- |
@@ -19,7 +20,7 @@
 
 Recipe Box is a private, relational recipe application with database-backed
 links, configurable data, and Azure DevOps-style information density.
-See [comprehensive-reference.md § 1](comprehensive-reference.md#1-product-vision-and-paradigm).
+See [comprehensive-reference.md § 1](comprehensive-reference/00-foundations-and-delivery.md#1-product-vision-and-paradigm).
 
 It is a TypeScript web application built with Next.js and React on Vercel.
 Supabase Postgres provides relational data, authentication, and search.
@@ -54,7 +55,7 @@ allergen modeling, collaboration, cooking history, and native mobile clients.
 Each recipe has an internal ID and a random public-link ID. It has zero or one
 primary publication. A recipe without one belongs in the Recipe Tin and may be
 assigned a publication later.
-See [comprehensive-reference.md § 2](comprehensive-reference.md#2-recipe-card-and-metadata).
+See [comprehensive-reference.md § 2](comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata).
 
 Recipes include name, primary publication, publication location, an optional
 online recipe URL, food type
@@ -96,12 +97,12 @@ Verdict, or Reason:
 Changing State clears the Verdict, Enthusiasm, Occasion detail, and Reason
 values that no longer apply. Recipes can also carry photos; the add-photo
 mechanism is defined in the Images slice
-(see [comprehensive-reference.md § 2.3](comprehensive-reference.md#23-recipe-photos)).
+(see [comprehensive-reference.md § 2.3](comprehensive-reference/01-recipe-card-and-metadata.md#23-recipe-photos)).
 
 ### Ingredients
 
 An ingredient and its measurements are one ordered row.
-See [comprehensive-reference.md § 3](comprehensive-reference.md#3-ingredient-rows-measurements-and-density).
+See [comprehensive-reference.md § 3](comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density).
 The desktop edit table is:
 
 | Ingredient | Specifics | Amount | Preparation |
@@ -178,7 +179,7 @@ grams. Those recipe-level choices are not saved to the recipe.
 ### Instructions And Relationships
 
 Instructions are ordered markdown blocks, and notes are markdown too.
-See [comprehensive-reference.md § 5](comprehensive-reference.md#5-instructions-autocomplete-and-recipe-linking).
+See [comprehensive-reference.md § 5](comprehensive-reference/03-instructions-and-links.md#5-instructions-autocomplete-and-recipe-linking).
 Typing `#` starts ingredient-link autocomplete. A bare `#` shows ingredients
 already on the recipe; typing a query searches the account-wide ingredient
 catalog, including when `#` is inserted directly before an existing word.
@@ -203,7 +204,7 @@ References do not change the primary-publication rule.
 ### Views And Sorting
 
 Ingredient presentation is a viewer preference, not recipe data.
-See [comprehensive-reference.md § 4](comprehensive-reference.md#4-ingredient-presentation-and-sorting).
+See [comprehensive-reference.md § 4](comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting).
 
 - Standard lists each ingredient as Amount, Ingredient (with Specifics), then
   Preparation, beside the instructions.
@@ -225,7 +226,7 @@ other non-drag controls providing the equivalent operation.
 Publication types are Book, Magazine, Site, and the reserved Recipe Tin
 collection. Each account has one permanent Tin; it is not offered in normal
 publication creation and cannot be edited or deleted by the User.
-See [comprehensive-reference.md § 6](comprehensive-reference.md#6-publications-magazine-handling-and-the-recipe-tin).
+See [comprehensive-reference.md § 6](comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin).
 The Library supports List and Grid views, compact type and sort picklists, a
 direct icon toggle for View, and sorting by Date Added and Date Changed. Mobile
 List rows show a type icon and a single-line truncated title; mobile Grid cards
@@ -278,13 +279,13 @@ supports optional Advanced Rules logic over numbered rules, staged through
 an Add pane and executed by the main apply action. A visual nested-group
 builder is excluded; named or pinned saved views remain deferred. Ordinary
 all-rules-AND filters remain available for on-the-fly lookup. See
-[comprehensive-reference.md § 7](comprehensive-reference.md#7-queries-search-and-library-explorer).
+[comprehensive-reference.md § 7](comprehensive-reference/04-publications-and-search.md#7-queries-search-and-library-explorer).
 Full-text search covers names, notes, ingredients, instructions, publications,
 and authors.
 
 Settings manages ingredients, tags, food types, meal types, cuisines, equipment, verdicts,
 enthusiasm, informal units, unmeasured phrases, and other picklists.
-See [comprehensive-reference.md § 8](comprehensive-reference.md#8-settings-taxonomies-and-picklists).
+See [comprehensive-reference.md § 8](comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists).
 Values can be
 added, modified, deleted, or merged. Deleting an in-use value requires choosing
 a replacement; optional fields may instead be explicitly cleared, but
@@ -297,8 +298,8 @@ mention style.
 Recipes are private by default and have stable random URLs. Existing recipes
 are private unless the User explicitly republishes them; their URLs remain
 unchanged.
-See [comprehensive-reference.md § 9](comprehensive-reference.md#9-sharing-privacy-urls-and-image-delivery)
-and [comprehensive-reference.md § 10](comprehensive-reference.md#10-authentication-and-account-setup).
+See [comprehensive-reference.md § 9](comprehensive-reference/06-sharing-and-accounts.md#9-sharing-privacy-urls-and-image-delivery)
+and [comprehensive-reference.md § 10](comprehensive-reference/06-sharing-and-accounts.md#10-authentication-and-account-setup).
 A Private toggle limits
 viewing to the signed-in User whose account contains the recipe while
 preserving the URL. Anyone accessing a public recipe link is a Guest for that
@@ -333,7 +334,7 @@ Admin accounts or transfer Owner status. A transfer makes the recipient the
 new Owner and leaves the former Owner as an Admin. Invites are emailed, and
 accepting one verifies the email address. Account roles use `is_admin` and
 `is_owner`, with exactly one Owner; see
-[comprehensive-reference.md § 10.0](comprehensive-reference.md#100-role-terminology-and-current-implementation-boundary).
+[comprehensive-reference.md § 10.0](comprehensive-reference/06-sharing-and-accounts.md#100-role-terminology-and-current-implementation-boundary).
 Development keeps sign-up open, with no verification, through a per-environment
 switch.
 
@@ -348,8 +349,8 @@ and checksums. History is excluded. These exports are the only backup
 mechanism; Supabase backups are not used. The Account menu links to App data,
 which shows the last export date and reminds the user when it is more than 30
 days old.
-See [comprehensive-reference.md § 11](comprehensive-reference.md#11-import-export-and-backup-bundles)
-and [comprehensive-reference.md § 12](comprehensive-reference.md#12-change-history-and-forensic-audit).
+See [comprehensive-reference.md § 11](comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
+and [comprehensive-reference.md § 12](comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit).
 
 - App data provides Export database and Import database.
 - The Library provides Export publication and Import publication beside New
@@ -376,7 +377,7 @@ explicitly excluded from the first release.
 The first release includes semantic controls and labels, keyboard-first desktop
 operation, visible focus, sufficient contrast, touch-sized mobile controls, and
 no drag-and-drop-only workflows. Baseline accessibility is not deferred.
-See [comprehensive-reference.md § 13](comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility).
+See [comprehensive-reference.md § 13](comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility).
 
 ## Testability and delivery
 
@@ -385,11 +386,11 @@ focused automated tests before its production code. The test suite covers unit
 logic, database and service boundaries, end-to-end user workflows, and
 accessibility for each screen. A manual demonstration is evidence that a slice
 works, not a substitute for automated acceptance coverage. See
-[comprehensive-reference.md § 16](comprehensive-reference.md#16-testability-and-test-first-delivery).
+[comprehensive-reference.md § 16](comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery).
 
 ## Deferred Work
 
-See [comprehensive-reference.md § 15](comprehensive-reference.md#15-deferred-features-catalog).
+See [comprehensive-reference.md § 15](comprehensive-reference/00-foundations-and-delivery.md#15-deferred-features-catalog).
 
 - URL, text, photo, and OCR import.
 - Ingredient aliases and normalization.

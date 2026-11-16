@@ -101,8 +101,8 @@ Verify the navigation at 641px and 640px as well as representative 1280px and
 
 ## References
 
-- [Comprehensive reference: metadata picklists](../../comprehensive-reference.md#24-recipe-metadata-entry-presentation)
-- [Comprehensive reference: keyboard and accessibility](../../comprehensive-reference.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference: metadata picklists](../../comprehensive-reference/01-recipe-card-and-metadata.md#24-recipe-metadata-entry-presentation)
+- [Comprehensive reference: keyboard and accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide](../../visual-design.md)
 - [Decision log](../../decision-log.md)
