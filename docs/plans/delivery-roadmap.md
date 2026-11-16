@@ -3,7 +3,7 @@
 > **Reference Note:** For the complete catalog of all requirements, edge cases,
 > UI behaviors, and design discussions, see [comprehensive reference](comprehensive-reference.md).
 
-The current product baseline is **v1.13.1**. Unscheduled improvements and
+The current product baseline is **v1.13.2**. Unscheduled improvements and
 verification follow-ups remain in the [deferred-work inventory](discussion/later.md);
 they are not blockers to this release.
 

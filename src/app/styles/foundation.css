@@ -593,6 +593,36 @@ a {
   font-weight: 700;
 }
 
+.route-loading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.route-loading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  opacity: 0;
+  /* Delay so quick navigations do not flash the message. */
+  animation: route-loading-appear 0.2s ease-out 0.25s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading p {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+@keyframes route-loading-appear {
+  to {
+    opacity: 1;
+  }
+}
+
 .admin-table-scroll {
   width: 100%;
   min-width: 0;

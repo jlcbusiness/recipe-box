@@ -2105,6 +2105,11 @@ the authenticated `/app` entry opens the Library.
 
 Both account controls open the same menu with the email and Sign out action.
 
+Private-shell destinations use client-side navigation so switching sections
+does not reload the document. While route content loads, keep the shell usable
+and show a centered, muted `Loading…` status in a busy main landmark. Do not
+animate this status for users who request reduced motion.
+
 ---
 
 ## 14. Technology Stack and Hosting Architecture

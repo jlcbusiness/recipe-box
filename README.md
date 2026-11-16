@@ -171,6 +171,12 @@ These commands create the app schema, storage buckets, and database rules from
 the repository. Review the dry-run output before applying it. Do not run
 `supabase db reset` against a hosted project; reset is destructive.
 
+After choosing the Supabase project region, open the Vercel project's
+**Settings > Functions** and set its **Function Region** to the same region.
+Recipe Box reads Supabase data while rendering authenticated pages, so matching
+the regions avoids adding cross-region latency to those requests. Redeploy after
+changing the function region.
+
 The migrations grant `service_role` `SELECT` access to `public.accounts`,
 `UPDATE` access to only the `is_admin` and `sign_in_method` columns, and
 `EXECUTE` access to the `public.is_valid_recipe_hidden_columns(text[])`

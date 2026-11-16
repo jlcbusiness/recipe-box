@@ -259,7 +259,15 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     if (testInfo.project.name === 'Fold 6') {
       await page.setViewportSize({ width: 1280, height: 800 });
     }
+    await page.evaluate(() => {
+      Reflect.set(window, '__privateShellNavigationProbe', true);
+    });
     await page.getByRole('link', { name: 'Library' }).click();
+    // Nav links navigate client-side; wait for the Library page before using the shell.
+    await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
+    expect(await page.evaluate(() => Reflect.get(window, '__privateShellNavigationProbe'))).toBe(
+      true,
+    );
     const accountTrigger = page.locator('.account-menu-trigger');
     await expect(accountTrigger).toHaveAttribute('aria-label', `Account options for ${user.email}`);
     await expect(accountTrigger.locator('.account-menu-email')).toHaveText(
@@ -407,6 +415,8 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(mobileLibraryLink).toHaveCSS('border-width', '1px');
     await expect(mobileLibraryLink).toHaveCSS('background-color', 'rgb(237, 244, 233)');
     await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
+    // Streamed metadata briefly clears the title during client-side navigation.
+    await expect(page).toHaveTitle('Recipe Box');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
@@ -415,6 +425,9 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
       .analyze();
     expect(mobileHelpA11y.violations).toEqual([]);
     await page.getByRole('link', { name: 'Library' }).click();
+    // Wait for the client-side navigation to settle before shell assertions.
+    await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
+    await expect(page).toHaveTitle('Recipe Box');
     const mobileNavBounds = await page
       .getByRole('navigation', { name: 'Main navigation' })
       .boundingBox();

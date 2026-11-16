@@ -368,6 +368,12 @@ the viewport, with a navigation strip using the active theme's `--leaf` color
 at 50% opacity over the page and white circular icon controls.
 Give each icon control a descriptive accessible name and tooltip.
 
+Internal private-shell destinations use client-side navigation. Keep the shared
+shell available while route content changes, and provide a centered, muted
+`Loading…` status in a busy main landmark while supported route segments load.
+Delay its fade-in to avoid flashing on fast transitions and disable animation
+when reduced motion is requested.
+
 The Library icon on mobile and label on desktop stay leaf green as a distinct
 destination. On mobile, keep the Library circle on the theme's pale wash surface
 and fill the book faces with a darker mix of that surface and the theme ink.

@@ -1,6 +1,7 @@
 'use client';
 
 import { Archive, CircleHelp, LibraryBig, Search, Settings, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, type ReactNode, useContext, useSyncExternalStore } from 'react';
 import { AccountMenu } from './account-menu';
@@ -108,7 +109,7 @@ export function PrivateShell({
         <nav aria-label="Main navigation" className="private-nav">
           <div className="private-nav-links">
             {mainNavigation.map(({ href, label }) => (
-              <a
+              <Link
                 aria-label={label}
                 aria-current={isCurrent(href) ? 'page' : undefined}
                 href={href}
@@ -128,11 +129,11 @@ export function PrivateShell({
                   <Trash2 aria-hidden="true" className="private-nav-mobile-icon" size={20} />
                 )}
                 <span className="private-nav-link-label">{label}</span>
-              </a>
+              </Link>
             ))}
           </div>
           <div className="private-nav-bottom">
-            <a
+            <Link
               aria-current={isCurrent(helpNavigation.href) ? 'page' : undefined}
               aria-label={helpNavigation.label}
               className="private-nav-utility-link"
@@ -146,9 +147,9 @@ export function PrivateShell({
                 strokeWidth={1.8}
               />
               <span className="private-nav-utility-label">{helpNavigation.label}</span>
-            </a>
+            </Link>
             {settingsNavigation && (
-              <a
+              <Link
                 aria-label={settingsNavigation.label}
                 aria-current={isCurrent(settingsNavigation.href) ? 'page' : undefined}
                 className="private-nav-utility-link"
@@ -157,7 +158,7 @@ export function PrivateShell({
               >
                 <Settings aria-hidden="true" size={17} strokeWidth={1.8} />
                 <span className="private-nav-utility-label">{settingsNavigation.label}</span>
-              </a>
+              </Link>
             )}
             <AccountMenu avatarUrl={profileImageUrl} email={email} initials={initials} />
           </div>

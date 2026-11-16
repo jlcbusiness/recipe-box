@@ -100,6 +100,9 @@ Write these automated tests before the production implementation:
   visible keyboard focus, an accessible sign-out control, and no horizontal
   overflow. Axe reports no WCAG 2 A/AA violations on the sign-in, recovery,
   and private-shell screens.
+- Private-shell navigation uses client-side transitions without replacing the
+  document. Route loading UI exposes an accessible status inside a busy main
+  landmark and respects reduced-motion preferences.
 - The focused database and browser tests run against the local Supabase stack;
   the aggregate `npm test`, `npm run lint`, and `npm run typecheck` commands
   remain green.
