@@ -155,12 +155,16 @@ function buildIngredientEditorEntries(
   rows: IngredientRowDraft[],
 ): IngredientEditorEntry[] {
   return sets.flatMap((section, sectionIndex) => [
-    {
-      kind: 'section' as const,
-      key: `section-${section.id}`,
-      section,
-      sectionIndex,
-    },
+    ...(sets.length > 1
+      ? [
+          {
+            kind: 'section' as const,
+            key: `section-${section.id}`,
+            section,
+            sectionIndex,
+          },
+        ]
+      : []),
     ...rows
       .filter((row) => row.ingredientSetId === section.id)
       .map((row): IngredientEditorEntry => {

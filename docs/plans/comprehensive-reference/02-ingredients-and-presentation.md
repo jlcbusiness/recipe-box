@@ -187,6 +187,9 @@ independent of row order; reader sorting applies within each set. Empty sets do
 not appear in readers. A one-set recipe retains its existing ingredient-list
 appearance; multiple non-empty sets use a thin divider with the set label, not a
 card. Private, public, print, and offline readers use the same grouping.
+In the editor, omit the set heading and title-edit affordance when one set
+remains, without changing its stored label. Show the headings and title-edit
+controls again when multiple sets exist.
 
 Each canonical ingredient can appear at most once within a set. The database
 and recipe-save boundary enforce this rule; the migration checks all recipes,

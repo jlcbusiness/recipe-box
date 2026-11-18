@@ -308,7 +308,7 @@ async function saveRecipeWithSets(
 test('ingredient sections stay simple across reader, editor, and public views @e2e @a11y', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   test.setTimeout(60_000);
   const user = await createTestUser(request);
   const otherUser = await createTestUser(request);
@@ -1305,8 +1305,22 @@ test('ingredient sections stay simple across reader, editor, and public views @e
 
     await page.goto(`/recipes/${recipe.id}/edit`);
     await editorLayout.getByRole('button', { name: 'Remove For the garnish section' }).click();
-    await expect(editorLayout.locator('.recipe-ingredient-set-heading')).toHaveCount(1);
+    await expect(editorLayout.locator('.recipe-ingredient-set-divider')).toHaveCount(0);
+    await expect(editorLayout.locator('.recipe-ingredient-set-heading')).toHaveCount(0);
     await expect(editorLayout.getByRole('button', { name: /Remove .* section/u })).toHaveCount(0);
+    await expect(editorLayout.getByRole('button', { name: /Edit section title/u })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Nutrition', level: 2 })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('one-set-editor.png') });
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page).toHaveURL(`/recipes/${recipe.id}`);
+    const singleSetResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredient_sets?select=id,label,position&recipe_id=eq.${recipe.id}&order=position`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(singleSetResponse.ok(), await singleSetResponse.text()).toBeTruthy();
+    expect(await singleSetResponse.json()).toEqual([
+      { id: fillingSetId, label: 'For the curry', position: 0 },
+    ]);
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: 'For the curry', level: 3 })).toHaveCount(0);
     await expect(

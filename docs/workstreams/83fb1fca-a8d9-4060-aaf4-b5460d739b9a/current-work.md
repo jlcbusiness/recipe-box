@@ -80,25 +80,61 @@
   first-row heights and visible unit-control sizes and passes. Typecheck and
   whitespace checks pass; targeted Biome exits 0 with 18 warnings. Markdown
   lint still reports 24 existing findings outside this workstream's records.
+- 2026-11-18: The user questioned whether Cook-mode checkboxes reserve 48px in
+  shared recipes. Extended the parity test to measure the containing ingredient
+  row after Cook mode is enabled, not just the checkbox wrapper. At 390px and
+  320px, both private and shared rows are at least 48px and match; Chromium and
+  Fold 6 pass. The test passes targeted Biome and whitespace checks. No
+  production CSS change was needed.
+- 2026-11-18: The user selected editor spacing/title behavior (#5/#9) and
+  publication zero-time display (#6) for the next brief set. Created a combined
+  D+H brief and separate E brief, with implementation blocked on the explicit
+  display decisions. The updated intake links both briefs. Targeted Markdown
+  lint and local-link/heading checks pass; full repository Markdown lint still
+  reports 25 findings, including the user-edited slice prompt and unrelated
+  files.
+- 2026-11-18: The user confirmed the 1mm Type-to-Amount minimum and chose to
+  omit zero-time text in both publication Details and Grid. They lacked context
+  for the remaining single-set-title choice, so the options will be explained
+  before requesting that decision. Implementation approval is still pending.
+- 2026-11-18: After the behavior was explained, the user chose to hide the
+  section-title heading when one set remains, while preserving the stored
+  label. All requested display decisions are now settled; implementation
+  approval remains pending.
+- 2026-11-18: The user approved both D+H and E for implementation. Updating the
+  briefs and checklist to reflect approval; next add focused tests before
+  making the three UI changes.
+- 2026-11-18: Implemented the 1mm measurement gap, single-set heading behavior,
+  and zero-time omission in publication Details and Grid. Focused Chromium
+  checks previously passed for the new assertions; measurement and ingredient
+  set checks also passed in Fold 6. A later publication rerun failed at the
+  mobile cell bounding-box assertion before reaching zero-time checks, while
+  another rerun reached the Grid assertion and stalled on subsequent Library
+  navigation. The outcome is intermittent; Fold 6 publication verification
+  remains incomplete. TypeScript passes; targeted Biome exits successfully
+  with 17 warnings. The latest `git diff --check` passes.
+- 2026-11-18: Replaced the publication test's one-shot mobile cell
+  `boundingBox()` reads with polling that waits for both cells and their
+  expected geometry. The standalone flow passed three Chromium repeats and
+  once on Fold 6; targeted Biome, typecheck, and `git diff --check` pass.
+  Chromium emitted non-fatal React streaming warnings on some repeats, but
+  those runs completed successfully.
 
 ## Save Point
 
-- **Goal/status:** Ingredient-first reader parity implementation and focused
-  verification are complete.
+- **Goal/status:** Package B, D+H, and E implementation and focused validation
+  are complete.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** No implementation steps remain in the selected parity
-  package.
-- **Last verified:** The focused private/shared Playwright test passed in
-  Chromium and Fold 6 at 1280px, 390px, and 320px. It verifies matching cell
-  padding, line-height, vertical alignment, stripe borders, row heights, and
-  responsive unit-control targets. Typecheck and `git diff --check` passed;
-  targeted Biome exited 0 with 18 warnings. Markdown lint reported 24
-  repository findings outside this workstream's records.
-- **Next action:** None; implementation is complete.
+- **Current step:** Focused validation is complete.
+- **Last verified:** The publication flow passed three Chromium repeats and
+  once on Fold 6 after the mobile geometry assertion was made retryable.
+  Targeted Biome, `npm run typecheck`, and `git diff --check` passed. Chromium
+  emitted non-fatal React streaming warnings on some repeats.
+- **Next action:** None for this slice; broader end-to-end testing is optional.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); session
-  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; last action: focused Playwright
-  run for responsive unit-control and row-height parity, followed by final
-  targeted validation.
-- **Trace boundary:** The implementation and verification actions are recorded
-  below; earlier preparation history remains partial.
+  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; last action: standalone publication
+  Playwright repeats and Fold 6 run, targeted Biome, TypeScript, and final
+  whitespace check.
+- **Trace boundary:** This checkpoint records the recent implementation and
+  verification actions; earlier preparation history remains partial.

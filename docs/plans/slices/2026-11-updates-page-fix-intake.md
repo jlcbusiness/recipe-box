@@ -1,7 +1,8 @@
 # November 2026 Updates Fixes: Brief and Split Proposal
 
-**Status: Package B is implemented and verified. The remaining packages are
-proposals and are not authorized for implementation.**
+**Status: Packages B, D+H, and E are implemented. Chromium checks pass; the
+Fold 6 publication test did not reach the zero-time assertions. Other packages
+remain proposals.**
 
 ## Outcome and recommendation
 
@@ -11,8 +12,9 @@ present, and identify the product decisions needed before implementation.
 
 These entries do not share one demonstrable outcome, so they were split into the
 work packages below. **Ingredient-first reader parity** (#2 and #3) was selected,
-briefed, approved, and implemented as the first package. The other packages
-remain proposals; each needs its own selection, brief, and approval.
+briefed, approved, and implemented as the first package. Packages D+H and E
+have since been selected, briefed, approved, and implemented. The other
+packages remain proposals; each needs its own selection, brief, and approval.
 
 ## Source and original notes
 
@@ -145,53 +147,31 @@ package is density-only or requires a shared expression-entry contract.
   invalid expression is announced without persisting a rounded or fallback
   value.
 
-### D. Measurement type-to-amount spacing (#5)
+### D. Recipe editor spacing and single-set labels (#5 and #9)
 
-**Status:** Open. The recipe editor's current E2E test asserts that the gap
-between the type control and Volume amount is at most 9px, so a zero gap still
-passes. It also verifies the controls stay on one line at 901px. See the
-[measurement editor](../../../src/app/recipes/measurement-editor.tsx) and
-[existing geometry assertions](../../../tests/e2e/measurements.spec.ts).
+**Status:** Implemented and verified in Chromium and Fold 6. The user confirmed
+a 1mm minimum gap and chose to hide the editor heading when one set remains,
+while preserving the stored label. Both fixes are local to the recipe editor
+and do not require a schema change.
+See the
+[combined recipe-editor brief](./2026-11-recipe-editor-spacing-and-sections.md).
 
-**Proposed outcome:** The type selector and first amount field have a visible,
-consistent separation without making the desktop measurement row wrap or
-overflow.
-
-**Acceptance criteria:**
-
-- At the existing 901px desktop test width, the measured gap is at least 1mm
-  (approximately 3.8 CSS px) and no more than the existing 9px upper bound.
-- The desktop controls remain on one line and the mobile layout remains usable
-  without page-level horizontal overflow.
-- Extend the current geometry test with a positive lower bound; keep the
-  existing selector, amount, keyboard, and validation behavior.
+- **#5, Measurement Type-to-Amount spacing:** The E2E test currently sets only
+  a 9px upper bound, so zero still passes. The brief proposes a positive 1mm
+  minimum while preserving the one-line layout at 901px.
+- **#9, Single-set title editing:** The reader already hides a label for one
+  non-empty set, but the editor still renders an editable title button for one
+  set. The brief preserves the required stored label and asks whether the
+  editor should show it as static text or hide the heading.
 
 ### E. Hide zero total-time labels (#6)
 
-**Status:** Open on one confirmed surface; already handled on others. Private
-and public recipe detail builders omit non-positive time totals/entries, and
-the private recipe finder also omits a zero total. The publication recipe
-explorer still renders `0 min` when `total_time_minutes` is zero; its E2E test
-currently expects that output. See the
-[publication recipe explorer](../../../src/app/publications/[id]/recipe-explorer.tsx#L560),
-[existing test](../../../tests/e2e/publications.spec.ts#L1497), and
-[private recipe finder](../../../src/app/recipes/find/page.tsx#L880).
-
-**Proposed outcome:** A zero total is not presented as a duration in the
-publication recipe explorer; positive durations remain visible. Other already
-correct surfaces are unchanged.
-
-**Open decision:** For a zero total, should the publication card omit the time
-entirely (matching the private finder), or display “No total time” (the current
-publication card text for a `null` value)? In either case, it must not display
-`0 min`.
-
-**Acceptance criteria after that choice:**
-
-- Browser tests cover zero, null, and positive totals in the publication
-  recipe explorer and verify the chosen no-time wording and unchanged positive
-  duration.
-- Keep detail-page and private finder behavior unchanged.
+**Status:** Implemented and verified in Chromium. The user chose to omit the
+duration portion for zero in publication Details and Grid. The Fold 6
+publication test did not reach these assertions. Zero was shown as `0 min` in
+both views; the simple List view does not show duration. Other recipe detail
+and finder surfaces already omit non-positive totals. See the
+[publication zero-time brief](./2026-11-publication-zero-time.md).
 
 ### F. Natural Things display and addable Things units (#7 and #10)
 
@@ -263,45 +243,19 @@ Markdown.
 - Browser tests cover editing, saving, validation/error retention, and
   private/shared rendering at desktop and mobile widths.
 
-### H. Single-set section-title editing (#9)
-
-**Status:** Partially satisfied. The reader already suppresses a label when a
-recipe has one non-empty set, as required by [DLC 03](./dlc/dlc-03-ingredient-sets.md).
-The recipe editor still renders an editable title button for a single set.
-Existing section-title E2E coverage exercises multi-set recipes but does not
-assert the single-set editor behavior.
-
-**Proposed interpretation:** Keep the required stored label and show it as
-non-editable text while the recipe has one set. Enable title editing when a
-second set exists. If a recipe returns to one set, preserve its remaining
-label but remove the rename affordance. This changes neither the set schema
-nor the reader's existing one-set appearance.
-
-**Open decision:** Confirm that the request targets the editor's rename
-affordance. If it refers only to reader headings, that behavior is already
-implemented and this package can be closed.
-
-**Acceptance criteria after confirmation:**
-
-- Browser tests verify the single-set title is not editable, adding a second
-  set enables editing, removing back to one set disables it again, and the
-  remaining label is preserved.
-- Existing multi-set rename, keyboard focus, validation, and save behavior
-  continue to pass.
-
 ## Suggested split and review gate
 
-These are eight packages after grouping the two Ingredient-first notes and the
-two Things notes. They should not be implemented as one slice. Advance one
-approved package at a time; update the canonical reference and visual guide
-only for behavior that is approved and verified. Do not start production
-changes until the user selects the package and resolves its listed open
-decision(s).
+These are seven packages after grouping fixes #2/#3, #5/#9, and #7/#10.
+Packages B, D+H, and E are implemented; the other packages remain proposals.
+The updated
+[slice prompt](../../../.github/prompts/slice.prompt.md) permits grouping
+smaller fixes when they do not require significant restructuring. D+H share
+the recipe editor, require no schema change, and retain separate acceptance
+checks. Their behavior choices and approval are recorded in the briefs.
 
-The recommended first package is **B. Ingredient-first reader parity (#2/#3)**.
-Packages **C**, **E**, **F**, and **H** have explicit product decisions to
-settle first. Package **G** is larger because it adds persisted recipe data and
-must be briefed independently.
+Package **G** remains larger because it adds persisted recipe data and must be
+briefed independently. Packages **C** and **F** also have explicit product
+decisions; D+H and E have review decisions recorded in their briefs.
 
 ## Preparation references
 

@@ -1390,7 +1390,7 @@ export function RecipeForm({
         />
         <div className="recipe-nutrition-editor">
           <div className="recipe-nutrition-editor-heading">
-            <h3>Nutrition</h3>
+            {ingredientSets.length > 1 ? <h3>Nutrition</h3> : <h2>Nutrition</h2>}
             <button
               aria-label="Edit recipe nutrition"
               aria-describedby={

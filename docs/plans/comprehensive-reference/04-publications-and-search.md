@@ -316,6 +316,8 @@ and a single-line mobile list:
   and List columns form one connected 40px group, with a visible divider
   between View and List columns. Keep publication actions separate, with equal
   8px gaps above 340px, reducing uniformly to 4px at 340px and below without
-  horizontal overflow.
+  horizontal overflow. Show Total Time only when positive: leave its Details
+  cell blank at zero, and omit the separator and duration from Grid metadata.
+  Positive durations and the existing null fallbacks remain unchanged.
 
 ---

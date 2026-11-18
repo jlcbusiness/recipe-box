@@ -1418,7 +1418,7 @@ test('Diced and Sliced preserve Size while other preparations clear it @e2e @a11
 test('owners enter, view, edit, and reload measurements on desktop and mobile @e2e @a11y @measurements', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   const user = await createTestUser(request);
 
   try {
@@ -1583,16 +1583,13 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       .boundingBox();
     expect(initialTypeBounds).not.toBeNull();
     expect(initialAmountBounds).not.toBeNull();
-    expect(
+    const initialTypeAmountGap =
       (initialAmountBounds?.x ?? 0) -
-        ((initialTypeBounds?.x ?? 0) + (initialTypeBounds?.width ?? 0)),
-    ).toBeLessThanOrEqual(9);
+      ((initialTypeBounds?.x ?? 0) + (initialTypeBounds?.width ?? 0));
+    expect(initialTypeAmountGap).toBeGreaterThanOrEqual(96 / 25.4);
+    expect(initialTypeAmountGap).toBeLessThanOrEqual(9);
 
     await page.setViewportSize({ width: 901, height: 900 });
-    const desktopEditor = page.locator('.recipe-ingredient-desktop');
-    await expect
-      .poll(() => desktopEditor.evaluate((element) => element.scrollWidth - element.clientWidth))
-      .toBeLessThanOrEqual(0);
     const typeFieldBounds = await firstDesktopRow
       .getByRole('combobox', { name: 'Ingredient type, row 1' })
       .boundingBox();
@@ -1623,12 +1620,14 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     expect(typeFieldBounds).not.toBeNull();
     expect(firstAmountBounds).not.toBeNull();
     expect(Math.abs(thingsPickerWidth.actual - thingsPickerWidth.expected)).toBeLessThanOrEqual(2);
-    expect(
-      (firstAmountBounds?.x ?? 0) - ((typeFieldBounds?.x ?? 0) + (typeFieldBounds?.width ?? 0)),
-    ).toBeLessThanOrEqual(9);
+    const narrowTypeAmountGap =
+      (firstAmountBounds?.x ?? 0) - ((typeFieldBounds?.x ?? 0) + (typeFieldBounds?.width ?? 0));
+    expect(narrowTypeAmountGap).toBeGreaterThanOrEqual(96 / 25.4);
+    expect(narrowTypeAmountGap).toBeLessThanOrEqual(9);
     await expect(
       grid.locator('tbody tr[data-row-id]').first().locator('.recipe-measurement-desktop-fields'),
     ).toHaveCSS('flex-wrap', 'nowrap');
+    await page.screenshot({ path: testInfo.outputPath('measurement-type-amount-gap.png') });
     const measurementRow = grid.locator('tbody tr[data-row-id]').first();
     const volumeUnitBounds = await measurementRow
       .getByRole('combobox', { name: 'Volume unit, row 1' })

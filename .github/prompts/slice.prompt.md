@@ -67,8 +67,7 @@ Before production code, create or update a concise brief in
   from actual content and layout constraints.
 - Assumptions and unresolved decisions, separate from requirements.
 
-Keep each slice to one demonstrable outcome; propose a split if the brief needs
-more than one. Record accepted decisions and material deferrals in
+It is recommended that each slice correspond to one demonstrable outcome; propose a split if the brief needs more than one. However, smaller fixes may be grouped together if they don't require any significant restructuring. Record accepted decisions and material deferrals in
 `decision-log.md`.
 
 ## Pause for Review

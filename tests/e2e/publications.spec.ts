@@ -1458,21 +1458,24 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await expect(mobilePublicationRow).toHaveCSS('display', 'flex');
       await expect(mobilePublicationRow).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
       await expect(mobilePublicationRow).toHaveCSS('flex-wrap', 'wrap');
-      await expect(mobilePublicationRow.locator('[data-explorer-column="name"]')).toBeVisible();
-      await expect(mobilePublicationRow.locator('[data-explorer-column="state"]')).toBeVisible();
-      const mobileNameBounds = await mobilePublicationRow
-        .locator('[data-explorer-column="name"]')
-        .boundingBox();
-      const mobileStateBounds = await mobilePublicationRow
-        .locator('[data-explorer-column="state"]')
-        .boundingBox();
-      expect(mobileNameBounds).not.toBeNull();
-      expect(mobileStateBounds).not.toBeNull();
-      if (!mobileNameBounds || !mobileStateBounds) {
-        throw new Error('The publication recipe title and state must be visible on mobile.');
-      }
-      expect(mobileNameBounds.y + mobileNameBounds.height).toBeLessThanOrEqual(mobileStateBounds.y);
-      expect(mobileNameBounds.width).toBeGreaterThan(mobileStateBounds.width);
+      const mobileNameCell = mobilePublicationRow.locator('[data-explorer-column="name"]');
+      const mobileStateCell = mobilePublicationRow.locator('[data-explorer-column="state"]');
+      await expect(mobileNameCell).toBeVisible();
+      await expect(mobileStateCell).toBeVisible();
+      await expect
+        .poll(async () => {
+          const [mobileNameBounds, mobileStateBounds] = await Promise.all([
+            mobileNameCell.boundingBox(),
+            mobileStateCell.boundingBox(),
+          ]);
+          return (
+            mobileNameBounds !== null &&
+            mobileStateBounds !== null &&
+            mobileNameBounds.y + mobileNameBounds.height <= mobileStateBounds.y &&
+            mobileNameBounds.width > mobileStateBounds.width
+          );
+        })
+        .toBe(true);
       await expect(mobilePublicationRow.locator('[data-label]:visible')).toHaveCount(5);
       await expect(mobilePublicationRow.locator('[data-label="Rating"]')).toBeVisible();
       await expect(mobilePublicationRow.locator('[data-label="Publication"]')).toHaveCount(0);
@@ -1486,15 +1489,34 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await expect(mobilePublicationRow.locator('[data-label="Total Time"]')).toBeHidden();
       await expectNoHorizontalOverflow(page);
     }
+    if (testInfo.project.name === 'chromium') {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.getByRole('button', { name: 'Choose List columns' }).click();
+      const totalTimeColumn = page.getByRole('checkbox', { name: 'Total Time', exact: true });
+      await totalTimeColumn.check();
+      const totalTimeCell = page
+        .locator('.publication-recipe-list tbody tr')
+        .first()
+        .locator('[data-explorer-column="total_time_minutes"]');
+      await expect(totalTimeCell).toHaveText('');
+      await page.screenshot({ path: testInfo.outputPath('publication-zero-time-details.png') });
+      await page.keyboard.press('Escape');
+      await page.setViewportSize({ width: 390, height: 844 });
+    }
 
     await page.getByRole('button', { name: 'Switch to List view' }).click();
+    const simpleList = page.locator('.publication-recipe-simple-list');
+    await expect(simpleList).toBeVisible();
+    await expect(simpleList).not.toContainText(/(?:\d+\s+min|No total time)/u);
     await page.getByRole('button', { name: 'Switch to Grid view' }).click();
     const publicationGridCard = page.locator('.find-recipes-grid li').first();
     await expect(publicationGridCard.locator('.find-recipes-card-image')).toBeVisible();
     await expect(publicationGridCard.locator('strong')).toHaveText('Roasted tomato soup');
     const publicationGridTitleBounds = await publicationGridCard.locator('strong').boundingBox();
     expect(publicationGridTitleBounds?.height).toBeGreaterThan(0);
-    await expect(publicationGridCard.locator('.find-recipes-grid-metadata')).toContainText('0 min');
+    const zeroTimeMetadata = publicationGridCard.locator('.find-recipes-grid-metadata');
+    await expect(zeroTimeMetadata).toHaveText('Want to try');
+    await page.screenshot({ path: testInfo.outputPath('publication-zero-time-grid.png') });
     const mobileGridCardHeight = await publicationGridCard.evaluate(
       (card) => card.getBoundingClientRect().height,
     );
@@ -1510,6 +1532,19 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       'text-decoration-line',
       'underline',
     );
+
+    await page.goto(`/recipes/${recipeId}/edit`);
+    const timeSection = page.locator('.recipe-time-fieldset');
+    await timeSection.getByRole('button', { name: 'Add time' }).click();
+    const timeEntry = timeSection.getByRole('group', { name: 'Time entry 1' });
+    await expect(timeEntry.getByRole('combobox', { name: 'Time Type' })).not.toHaveValue('');
+    await timeEntry.getByRole('textbox', { name: 'Minutes' }).fill('30');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Roasted tomato soup' })).toBeVisible();
+    await page.goto(`/publications/${publicationId}`);
+    const gridViewButton = page.getByRole('button', { name: 'Switch to Grid view' });
+    if (await gridViewButton.count()) await gridViewButton.click();
+    await expect(page.locator('.find-recipes-grid-metadata').first()).toContainText('30 min');
 
     await page.getByRole('link', { name: 'Library', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();

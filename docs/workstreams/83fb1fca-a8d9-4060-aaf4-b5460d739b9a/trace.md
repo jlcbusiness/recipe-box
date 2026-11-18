@@ -195,3 +195,57 @@ Last recorded action: focused Chromium/Fold 6 parity checks, with the mobile uni
 - Ran `git diff --check` — passed.
 
 Last recorded action: focused responsive parity test and targeted validation.
+
+## 2026-11-18 shared Cook-mode row space — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- The user questioned whether shared Cook-mode checkboxes force a 48px space.
+- Extended the existing private/shared browser test to measure the ingredient
+  row after enabling Cook mode at mobile widths, and to compare private/shared
+  row heights.
+- Ran the focused Playwright test in Chromium and Fold 6 — both passed at
+  1280px, 390px, and 320px. At mobile widths both private and shared
+  ingredient rows are at least 48px tall and have matching heights.
+- Ran `npx biome check tests/e2e/public-recipes.spec.ts` — passed.
+- Ran `git diff --check` — passed.
+- No production style change was needed based on the local test evidence.
+
+Last recorded action: focused Playwright confirmation of shared mobile
+Cook-mode row space and targeted lint.
+
+## 2026-11-18 — drafting D+H and E briefs (session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a)
+
+- Added the recipe-editor D+H brief and publication zero-time E brief; updated
+  the November intake to link them and record that implementation is not yet
+  approved.
+- Ran `npm run lint:md`; it reported 25 repository findings, including the
+  user-edited slice prompt and existing findings elsewhere.
+- Ran targeted Markdown lint on both briefs and the intake; no findings.
+- Checked local file links and heading anchors in those three documents; all
+  resolve.
+- Updated the checklist and save point with the review decisions still open.
+- Expanded targeted lint to all six task and continuity files; fixed a missing
+  blank line before this trace entry.
+- User confirmed the 1mm measurement-gap minimum and chose to omit zero-time
+  text in publication Details and Grid; the single-set-title presentation
+  remains open pending clarification.
+- Re-ran targeted Markdown lint and local-link checks for the six task and
+  continuity files, plus `git diff --check`; all passed.
+- User chose to hide the single-set editor heading while preserving the stored
+  label. Updated the D+H brief and review state; implementation approval is
+  still pending.
+- Re-ran targeted Markdown lint and `git diff --check` after all behavior
+  choices; both passed.
+- User approved D+H and E for implementation. Updated brief and checklist
+  status; no production code was changed in this approval step.
+## 2026-11-18 — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- `npx playwright test tests/e2e/publications.spec.ts --project=chromium --workers=1 --grep 'an owner can create a publication'`: standalone reruns failed at varying points—an ISBN-format expectation, later navigation timeout after the positive Grid assertion, and most recently the mobile publication name-cell `boundingBox()` assertion before zero-time assertions.
+- Targeted `npx biome check` on changed source and E2E files: exited 0 with 17 warnings, including existing unused import/parameter and CSS specificity/`!important` warnings.
+- `npm run typecheck`: passed.
+- `git diff --check`: passed.
+- Removed temporary publication-navigation logs and the unsuccessful 60-second timeout; retained the zero-time Details and Grid checks and positive Grid-duration check.
+- Final `git diff --check` after updating continuity records: passed.
+- Replaced the single-read mobile cell `boundingBox()` assertions with `expect.poll()` over both cells' boxes and geometry; standalone publication flow passed three Chromium repeats.
+- Standalone publication flow on project `Fold 6`: passed.
+- `npx biome check tests/e2e/publications.spec.ts`: passed.
+- `npm run typecheck` and final `git diff --check`: passed. Chromium logged non-fatal React streaming warnings during some successful repeats.

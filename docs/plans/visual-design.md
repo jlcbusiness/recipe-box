@@ -106,6 +106,10 @@ available editor width, rather than distributing unused viewport width among
 columns. It must reserve enough width for Amount controls and keep Divide
 compact; do not allocate so much space to Divide that measurement values or
 their units are clipped.
+Keep at least a 1mm gap between the desktop Type picker and the first Amount
+field, with the controls remaining on one line at 901px. When one ingredient
+set remains, hide its editor heading and title-edit affordance without changing
+the stored label; show them again for multiple sets.
 
 Edit-form metadata and time controls keep compact row spacing as they wrap.
 View-mode metadata uses consistent 11px vertical spacing between wrapped rows
@@ -1712,8 +1716,11 @@ subject: source composition and intentionally offset saved framing can place the
 visible subject left or right within an otherwise centered frame.
 In publication Grid, state and total time share one compact
 metadata row so the image, title, and metadata each retain their own layout
-space. Preserve the same result data between List and Grid. On desktop, card
-titles underline on hover or keyboard focus.
+space. When total time is zero, keep only the state and omit the separator and
+duration. In publication Details, leave the zero Total Time cell blank. Keep
+positive durations unchanged and retain the existing null fallbacks: `—` in
+Details and `No total time` in Grid. Preserve the same result data between List
+and Grid. On desktop, card titles underline on hover or keyboard focus.
 
 ## Explorer Columns And Widths (Slice 19)
 

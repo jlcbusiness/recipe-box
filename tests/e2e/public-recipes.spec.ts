@@ -1508,6 +1508,7 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
       let privateFirstAmountCellLineHeight: string | null = null;
       let privateFirstStripeRowHeight: number | null = null;
       let privateZucchiniRowHeight: number | null = null;
+      let privateZucchiniRowHeightAfterCook: number | null = null;
       for (const route of routes) {
         await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
         await page.goto(route.path);
@@ -1648,6 +1649,16 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
         expect(Math.abs(geometry.rightGap - 6), JSON.stringify(geometry)).toBeLessThanOrEqual(1);
         if (width <= 760) {
           expect(geometry.targetHeight).toBeGreaterThanOrEqual(48);
+          const rowHeightAfterCook = (await zucchiniRow.boundingBox())?.height ?? null;
+          expect(rowHeightAfterCook).not.toBeNull();
+          if (rowHeightAfterCook !== null) {
+            expect(rowHeightAfterCook).toBeGreaterThanOrEqual(48);
+          }
+          if (route.name === 'private') {
+            privateZucchiniRowHeightAfterCook = rowHeightAfterCook;
+          } else {
+            expect(rowHeightAfterCook).toBe(privateZucchiniRowHeightAfterCook);
+          }
         } else {
           expect(geometry.targetHeight).toBeLessThan(48);
           const rowHeightAfterCook = (await zucchiniRow.boundingBox())?.height ?? null;

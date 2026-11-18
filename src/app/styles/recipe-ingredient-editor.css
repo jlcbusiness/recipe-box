@@ -1241,6 +1241,8 @@
   .recipe-ingredient-desktop
   .recipe-measurement-category
   .recipe-measurement-picklist-trigger {
+  position: relative;
+  left: -4px;
   box-sizing: border-box;
   width: calc(4.6ch + 1mm + 14px);
 }

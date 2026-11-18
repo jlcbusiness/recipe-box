@@ -431,6 +431,8 @@ export async function PublicationRecipeExplorer({
                   return (
                     <tr key={recipe.recipe_id}>
                       {recipeColumns.map(({ key, label }) => {
+                        const isZeroTotalTime =
+                          key === 'total_time_minutes' && details?.[key] === '0';
                         let value = details?.[key] ?? null;
                         if (key === 'name') value = recipe.recipe_name;
                         if (key === 'state') value = recipeStateLabels[recipe.state];
@@ -487,7 +489,7 @@ export async function PublicationRecipeExplorer({
                                 </span>
                                 <span className="publication-recipe-url-full">{value}</span>
                               </a>
-                            ) : (
+                            ) : isZeroTotalTime ? null : (
                               value || '—'
                             )}
                           </td>
@@ -556,10 +558,14 @@ export async function PublicationRecipeExplorer({
                     <strong>{recipe.recipe_name}</strong>
                     <span className="find-recipes-grid-metadata">
                       {recipeStateLabels[recipe.state]}
-                      <span aria-hidden="true"> ~ </span>
-                      {recipe.total_time_minutes === null
-                        ? 'No total time'
-                        : `${recipe.total_time_minutes} min`}
+                      {recipe.total_time_minutes === 0 ? null : (
+                        <>
+                          <span aria-hidden="true"> ~ </span>
+                          {recipe.total_time_minutes === null
+                            ? 'No total time'
+                            : `${recipe.total_time_minutes} min`}
+                        </>
+                      )}
                     </span>
                   </Link>
                 </li>
