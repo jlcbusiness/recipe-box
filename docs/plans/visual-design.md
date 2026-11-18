@@ -1067,10 +1067,12 @@ least 3px between stacked Volume and Weight values. In Standard view and
 print, label the separate value “divided” to distinguish it from Preparation.
 Ingredient-first rows alternate a light-tin shade for readability; the other
 rows and ingredient-set dividers remain unshaded in private and public reader
-views. Printed ingredient-first output retains the light-tin shading, gives the
-first ingredient after each set divider the same neutral top rule as the other
-ingredient rows, and leaves the dividers unshaded. Standard view and print
-label Divide separately from Preparation.
+views. Tinted rows keep neutral 1px rules above and below; private and public
+views use the same cell padding and text line-height. Printed ingredient-first
+output retains the light-tin shading, gives the first ingredient after each
+set divider the same neutral top rule as the other ingredient rows, and leaves
+the dividers unshaded. Standard view and print label Divide separately from
+Preparation.
 The first ingredient group starts at the same vertical offset below the shared
 heading in both presentations.
 Specifics display indented and fully lowercase beneath the ingredient name.
@@ -1131,8 +1133,10 @@ Ingredient column. Exiting mode or changing recipes clears check-off, and
 system-released locks can be reacquired when the document becomes visible.
 Unit labels, including single-letter abbreviations such as `g`, remain
 underlined at rest on desktop and mobile, without depending on hover. In
-desktop and mobile Ingredient-first cook mode, the table stays aligned to the
-section's left edge when the checkbox rail is present. Place the checkbox
+Ingredient-first, unit controls retain 48px hit areas on mobile and stay
+compact on desktop in both private and shared readers. In desktop and mobile
+Ingredient-first cook mode, the table stays aligned to the section's left edge
+when the checkbox rail is present. Place the checkbox
 input 3px from the table edge and 6px from the ingredient text while keeping
 its hit area 48px tall on mobile. On desktop, keep the target compact so Cook
 mode does not expand short ingredient rows. Vertically center Ingredient-first

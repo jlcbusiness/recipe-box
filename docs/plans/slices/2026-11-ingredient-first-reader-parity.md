@@ -10,7 +10,9 @@ contexts; the larger size in the second reference is not acceptable. In Cook
 mode, the checkbox sits 3px from the left border and 6px from the ingredient
 text. Its target stays 48px tall on mobile, while the desktop checkbox remains
 compact and does not expand short ingredient rows. Ingredient-first cells are
-vertically centered in both private and shared tables.
+vertically centered in both private and shared tables, with matching cell
+padding and text line-height plus visible rules around tinted stripe rows.
+Mobile unit controls retain 48px hit areas; desktop controls remain compact.
 
 ## Source requirements and authority
 
@@ -68,6 +70,10 @@ separate presentation component.
   and 6px from the ingredient text.
 - Vertically center all Ingredient-first table cells in private and shared
   readers.
+- Match private/shared Ingredient-first cell padding and text line-height;
+  retain visible top and bottom rules on tinted stripe rows.
+- Keep unit controls at least 48px tall on mobile and compact on desktop in
+  both contexts.
 - Preserve the 48px-tall mobile target, compact desktop rows, mobile table
   alignment, wrapping, and no-overflow behavior. The new 3px/6px spacing
   replaces the previous 21px/1mm checkbox-placement target for this fix.
@@ -104,6 +110,11 @@ overflow.
   48px tall; desktop targets do not force short rows to grow.
 - At desktop and mobile widths, vertically center Ingredient-first cells in
   both private and shared readers.
+- At desktop and mobile widths, assert matching Ingredient-first cell padding
+  and text line-height, zero borders on neutral rows, and 1px top/bottom
+  borders on tinted rows.
+- Assert matching first-row heights and 48px unit-control targets on mobile;
+  desktop unit controls remain compact.
 - At 390px and 320px, retain left alignment and wrapping, meet the new 3px/6px
   spacing, and check for no page-level horizontal overflow.
 - In both contexts, verify Cook-mode checkbox labels, check-off, and continued

@@ -107,6 +107,10 @@ excessive checkbox-to-ingredient gap in either context.
   keep desktop rows compact.
 - Vertically center Ingredient-first table cells in shared views to match
   private views.
+- Match private/shared Ingredient-first cell padding and text line-height;
+  keep the tinted stripe rows' top and bottom rules visible.
+- Keep unit-control hit areas at least 48px on mobile and compact on desktop in
+  private and shared recipes.
 - At desktop and mobile sizes, Playwright compares private/shared typography,
   measures both checkbox gaps, and checks for page-level overflow. Wake-lock
   status, check-off, print, and accessibility behavior remain unchanged.

@@ -285,49 +285,13 @@
 
 .recipe-ingredient-first-table tbody tr[data-ingredient-stripe="even"] > th,
 .recipe-ingredient-first-table tbody tr[data-ingredient-stripe="even"] > td {
-  border-top-color: transparent;
-  border-bottom-color: transparent;
+  border-block: 0;
 }
 
 .recipe-ingredient-first-table tbody tr[data-ingredient-stripe="odd"] > th,
 .recipe-ingredient-first-table tbody tr[data-ingredient-stripe="odd"] > td {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--tin-wash);
-}
-
-.private-content
-  .recipes-main
-  .recipe-reading-layout
-  .recipe-ingredient-first-table
-  tbody
-  tr[data-ingredient-stripe="even"]
-  > th,
-.private-content
-  .recipes-main
-  .recipe-reading-layout
-  .recipe-ingredient-first-table
-  tbody
-  tr[data-ingredient-stripe="even"]
-  > td {
-  border-block: 0;
-}
-
-.private-content
-  .recipes-main
-  .recipe-reading-layout
-  .recipe-ingredient-first-table
-  tbody
-  tr[data-ingredient-stripe="odd"]
-  > th,
-.private-content
-  .recipes-main
-  .recipe-reading-layout
-  .recipe-ingredient-first-table
-  tbody
-  tr[data-ingredient-stripe="odd"]
-  > td {
   border-block: 1px solid var(--line);
+  background: var(--tin-wash);
 }
 
 .recipe-ingredient-set-divider > th > h3,
@@ -411,8 +375,15 @@
 
 .recipe-ingredient-first-table th,
 .recipe-ingredient-first-table td {
+  height: auto;
   overflow-wrap: anywhere;
+  padding: 4px 3mm 4px 0;
+  text-align: left;
   vertical-align: middle;
+}
+
+.recipe-ingredient-first-table tbody td:not(:last-child) {
+  line-height: 1.25;
 }
 
 .recipe-ingredient-first-table .recipe-ingredient-column-amount-mobile {
@@ -446,13 +417,6 @@
   width: 22.333px;
 }
 
-.private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table th,
-.private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table td {
-  height: auto;
-  padding: 4px 3mm 4px 0;
-  text-align: left;
-}
-
 .private-content
   .recipes-main
   .recipe-reading-layout
@@ -468,15 +432,6 @@
   .recipe-ingredient-set-divider
   > th {
   padding-block: 2mm;
-}
-
-.private-content
-  .recipes-main
-  .recipe-reading-layout
-  .recipe-ingredient-first-table
-  tbody
-  td:not(:last-child) {
-  line-height: 1.25;
 }
 
 .private-content

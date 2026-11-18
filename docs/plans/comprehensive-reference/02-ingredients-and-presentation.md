@@ -401,7 +401,11 @@ Vertical growth is preferred to horizontal scrolling.
   checkbox input 3px from the table edge and 6px from the ingredient text,
   preserving a 48px-tall hit area on mobile. Keep the desktop target compact so
   it does not expand short ingredient rows. Vertically center cells in both
-  private and shared Ingredient-first tables.
+  private and shared Ingredient-first tables. Match cell padding and text
+  line-height across both contexts, and keep a neutral 1px rule above and below
+  tinted stripe rows.
+  Keep Ingredient-first unit controls at least 48px tall on mobile and compact
+  on desktop in both contexts.
 - Screen recipe content uses at most 96 CSS pixels of outer gutter on each
   side of the main-content area, excluding navigation. Overview, reading,
   nutrition, Notes, and other section groups share aligned outer edges; internal

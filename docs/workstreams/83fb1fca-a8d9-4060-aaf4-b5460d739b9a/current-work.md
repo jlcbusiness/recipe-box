@@ -66,24 +66,39 @@
   checks. Biome reported seven existing specificity warnings; Markdown lint
   still reports 24 findings, including the existing decision-log line 183
   finding.
+- 2026-11-18: The user reported different shared-table spacing and a missing
+  top rule on tinted rows. Cell padding, text line-height, and stripe borders
+  now match in both routes; editor table styles are scoped to the form to
+  prevent them overriding the private reader. Focused Chromium and Fold 6
+  checks pass. At 390px, diagnostics still measure a one-line tinted row at
+  33px privately and 57px publicly because the shared unit button retains a
+  48px mobile hit area while private CSS compacts it. Awaiting the user's
+  choice on whether to preserve that target or compact the shared control.
+- 2026-11-18: Applied the established mobile-only sizing decision consistently:
+  private and shared unit controls retain a 48px mobile target and stay compact
+  on desktop. The focused Chromium and Fold 6 parity test now verifies matching
+  first-row heights and visible unit-control sizes and passes. Typecheck and
+  whitespace checks pass; targeted Biome exits 0 with 18 warnings. Markdown
+  lint still reports 24 existing findings outside this workstream's records.
 
 ## Save Point
 
-- **Goal/status:** Implement and verify the approved Ingredient-first reader
-  parity brief, including shared/private vertical alignment; complete.
+- **Goal/status:** Ingredient-first reader parity implementation and focused
+  verification are complete.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** Implementation and verification are complete.
-- **Last verified:** The focused private/shared E2E tests passed in Chromium
-  and Fold 6 at 1280px, 390px, and 320px, including mobile table alignment
-  and wrapping, vertically centered table cells, a compact desktop target
-  with unchanged row height, and 48px mobile targets. Typecheck, targeted
-  Biome, and `git diff --check` passed; Biome reported seven specificity
-  warnings. Repository Markdown lint checked 157 files and reported 24
-  existing findings, including the existing decision-log line 183 finding.
-- **Next action:** Await review or direction for another Updates package.
+- **Current step:** No implementation steps remain in the selected parity
+  package.
+- **Last verified:** The focused private/shared Playwright test passed in
+  Chromium and Fold 6 at 1280px, 390px, and 320px. It verifies matching cell
+  padding, line-height, vertical alignment, stripe borders, row heights, and
+  responsive unit-control targets. Typecheck and `git diff --check` passed;
+  targeted Biome exited 0 with 18 warnings. Markdown lint reported 24
+  repository findings outside this workstream's records.
+- **Next action:** None; implementation is complete.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); session
   `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; last action: focused Playwright
-  run for vertical alignment and final validation.
+  run for responsive unit-control and row-height parity, followed by final
+  targeted validation.
 - **Trace boundary:** The implementation and verification actions are recorded
   below; earlier preparation history remains partial.

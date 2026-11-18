@@ -21,3 +21,8 @@
   target behavior.
 - [x] Vertically center Ingredient-first table cells in private and shared
   readers and verify parity.
+- [x] Match private/shared Ingredient-first cell padding, text line-height, and
+  tinted-row boundaries.
+- [x] Apply the mobile-only 48px unit-control target consistently in private
+  and shared readers while keeping desktop controls compact; verify responsive
+  row-height and hit-area parity.

@@ -151,3 +151,47 @@ Last recorded action: responsive Cook-mode test and final validation.
   183 finding. No other findings were reported in this workstream's records.
 
 Last recorded action: focused Playwright run for vertical alignment and final validation.
+
+## 2026-11-18 shared spacing and stripe boundaries — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- Reviewed the private and shared reader screenshots and styles. The private
+  reader used 4px cell padding and explicit zero/1px stripe borders; editor
+  table selectors also leaked into the private reader because they were
+  scoped to `.private-content`, not `.recipe-form`.
+- Moved the shared/private cell padding, text line-height, and tinted-row
+  borders into the common reader rules. Scoped the editor table rules to
+  `.recipe-form`, and extended parity coverage for cell padding, line-height,
+  and stripe borders.
+- The first Playwright run exposed the editor padding override. After scoping
+  it, focused tests passed in Chromium and Fold 6 at 1280px, 390px, and 320px.
+- A temporary 390px row-height assertion measured 33px privately and 57px
+  publicly for a one-line row. Computed styles showed the public unit trigger
+  keeps `min-height: 48px`, while the private-reader override sets it to
+  content height. The diagnostic assertion was removed; the user must decide
+  whether public shared controls should retain that target or match private.
+- Captured and inspected temporary 390px private/shared screenshots; removed
+  both files afterward.
+- `npm run typecheck` and `git diff --check` passed. Targeted Biome exited 0
+  with 16 warnings. `npm run lint:md` checked 157 files and reported 24
+  repository findings; none point to the changed workstream records.
+
+Last recorded action: focused Chromium/Fold 6 parity checks, with the mobile unit-control target awaiting user direction.
+
+## 2026-11-18 responsive unit-control parity — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- Applied the previously selected mobile-only sizing behavior: unit controls
+  have 48px targets on mobile and compact sizing on desktop in both readers.
+- Ran the focused Playwright parity test in Chromium and Fold 6. The first run
+  failed because the measurement selected a hidden desktop unit cell at mobile
+  widths; changed the locator to select a visible trigger and reran.
+- Reran the same Playwright test — both projects passed, including first-row
+  height parity, visible mobile target size, compact desktop size, and the
+  previously covered padding, line-height, alignment, and stripe assertions.
+- Ran `npm run typecheck` — passed.
+- Ran targeted `npx biome check` on the three touched stylesheets and
+  `tests/e2e/public-recipes.spec.ts` — exited 0 with 18 warnings.
+- Ran `npm run lint:md` — checked 157 files and reported 24 findings in
+  existing files outside this workstream's records.
+- Ran `git diff --check` — passed.
+
+Last recorded action: focused responsive parity test and targeted validation.

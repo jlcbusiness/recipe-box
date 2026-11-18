@@ -1499,6 +1499,15 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
       { name: 'shared', path: `/r/${publicId}` },
     ];
     for (const width of [1280, 390, 320]) {
+      let privateIngredientCellSpacing: {
+        paddingTop: string;
+        paddingRight: string;
+        paddingBottom: string;
+        paddingLeft: string;
+      } | null = null;
+      let privateFirstAmountCellLineHeight: string | null = null;
+      let privateFirstStripeRowHeight: number | null = null;
+      let privateZucchiniRowHeight: number | null = null;
       for (const route of routes) {
         await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
         await page.goto(route.path);
@@ -1513,8 +1522,29 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
         }
         const table = page.locator('.recipe-ingredient-first-table');
         await expect(table).toBeVisible();
+        const firstStripeRow = table.locator('tbody tr[data-ingredient-stripe="odd"]').first();
+        const firstStripeRowHeight = (await firstStripeRow.boundingBox())?.height ?? null;
+        const unitTriggerHeight = await firstStripeRow
+          .locator('.recipe-reader-unit-trigger:visible')
+          .first()
+          .evaluate((trigger) => trigger.getBoundingClientRect().height);
+        if (width <= 760) {
+          expect(unitTriggerHeight).toBeGreaterThanOrEqual(48);
+        } else {
+          expect(unitTriggerHeight).toBeLessThan(48);
+        }
+        if (route.name === 'private') {
+          privateFirstStripeRowHeight = firstStripeRowHeight;
+        } else {
+          expect(firstStripeRowHeight).toBe(privateFirstStripeRowHeight);
+        }
         const zucchiniRow = table.locator('tbody tr').filter({ hasText: 'Zucchini' }).first();
         const rowHeightBeforeCook = (await zucchiniRow.boundingBox())?.height ?? null;
+        if (route.name === 'private') {
+          privateZucchiniRowHeight = rowHeightBeforeCook;
+        } else {
+          expect(rowHeightBeforeCook).toBe(privateZucchiniRowHeight);
+        }
         await page.getByRole('switch', { name: 'Cook mode' }).click();
         await expect(page.getByRole('status')).toContainText('wake lock could not be acquired');
         await page.getByRole('button', { name: 'Dismiss screen lock warning' }).click();
@@ -1526,6 +1556,57 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
           .evaluateAll((cells) => cells.map((cell) => getComputedStyle(cell).verticalAlign));
         expect(verticalAlignments.length).toBeGreaterThan(0);
         expect(verticalAlignments.every((alignment) => alignment === 'middle')).toBe(true);
+
+        const ingredientCell = zucchiniRow.locator('.recipe-ingredient-column-ingredient');
+        const ingredientCellSpacing = await ingredientCell.evaluate((cell) => {
+          const style = getComputedStyle(cell);
+          return {
+            paddingTop: style.paddingTop,
+            paddingRight: style.paddingRight,
+            paddingBottom: style.paddingBottom,
+            paddingLeft: style.paddingLeft,
+          };
+        });
+        expect(ingredientCellSpacing.paddingTop, `${route.name} at ${width}px`).toBe('4px');
+        expect(ingredientCellSpacing.paddingBottom).toBe('4px');
+        expect(ingredientCellSpacing.paddingLeft).toBe('0px');
+        const firstAmountCellLineHeight = await firstStripeRow
+          .locator('td:not(.recipe-cook-checkbox-cell):not(:last-child)')
+          .first()
+          .evaluate((cell) => getComputedStyle(cell).lineHeight);
+        if (route.name === 'private') {
+          privateIngredientCellSpacing = ingredientCellSpacing;
+          privateFirstAmountCellLineHeight = firstAmountCellLineHeight;
+        } else {
+          expect(ingredientCellSpacing).toEqual(privateIngredientCellSpacing);
+          expect(firstAmountCellLineHeight).toBe(privateFirstAmountCellLineHeight);
+        }
+
+        const stripeBorders = await table.evaluate((element) => {
+          const oddCell = element.querySelector<HTMLElement>(
+            'tbody tr[data-ingredient-stripe="odd"] > th.recipe-ingredient-column-ingredient',
+          );
+          const evenCell = element.querySelector<HTMLElement>(
+            'tbody tr[data-ingredient-stripe="even"] > th.recipe-ingredient-column-ingredient',
+          );
+          if (!oddCell || !evenCell) {
+            throw new Error('Expected odd and even Ingredient-first stripe rows.');
+          }
+          const oddStyle = getComputedStyle(oddCell);
+          const evenStyle = getComputedStyle(evenCell);
+          return {
+            oddTop: [oddStyle.borderTopWidth, oddStyle.borderTopStyle],
+            oddBottom: [oddStyle.borderBottomWidth, oddStyle.borderBottomStyle],
+            evenTop: [evenStyle.borderTopWidth, evenStyle.borderTopStyle],
+            evenBottom: [evenStyle.borderBottomWidth, evenStyle.borderBottomStyle],
+          };
+        });
+        expect(stripeBorders).toEqual({
+          oddTop: ['1px', 'solid'],
+          oddBottom: ['1px', 'solid'],
+          evenTop: ['0px', 'none'],
+          evenBottom: ['0px', 'none'],
+        });
 
         const geometry = await table.evaluate((element) => {
           const row = Array.from(element.querySelectorAll('tbody tr')).find((candidate) =>

@@ -600,7 +600,7 @@
   text-align: left;
 }
 
-.private-content .recipe-ingredient-table tr th {
+.recipe-form .recipe-ingredient-table tr th {
   height: 36px;
   border-bottom: 1px solid var(--line);
   padding: 0 8px;
@@ -680,7 +680,7 @@
   width: 32px;
 }
 
-.private-content .recipes-main .recipe-ingredient-table tr td {
+.recipe-form .recipe-ingredient-table tr td {
   position: relative;
   height: 48px;
   border-bottom: 1px solid var(--line);
