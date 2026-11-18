@@ -251,22 +251,22 @@
   .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-column,
   .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-heading,
   .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell {
-    width: 21px;
-    min-width: 21px;
+    width: 22.333px;
+    min-width: 22.333px;
   }
 
-  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell {
-    padding-right: 0;
+  .recipe-ingredient-first-table-cook-mode td.recipe-cook-checkbox-cell {
+    padding: 0;
   }
 
   .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell .recipe-cook-checkbox {
-    width: 21px;
-    min-width: 21px;
+    width: 22.333px;
+    min-width: 22.333px;
     justify-content: flex-start;
   }
 
   .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell input {
-    margin-left: 1mm;
+    margin: 0;
   }
 
   .recipe-ingredient-set-divider th,
@@ -281,6 +281,14 @@
     .recipe-ingredient-set-divider
     > th {
     padding-block: 3mm;
+  }
+
+  .private-content
+    .recipes-main
+    .recipe-reading-layout
+    .recipe-ingredient-first-table-cook-mode
+    .recipe-cook-checkbox-cell {
+    padding: 0;
   }
 }
 

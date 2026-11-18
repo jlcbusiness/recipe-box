@@ -1032,9 +1032,9 @@ Preparation columns, and its natural table width is the row-width basis for
 the same sizing rule. Count, informal, and unmeasured values appear in Volume
 when no dimensional measurement is present; Volume and Weight remain separate.
 Render Ingredient-first ingredient names in small caps on desktop and mobile.
-On desktop, increase the ingredient names and their Specifics by 50% while
-preserving their relative size. Render Specifics at normal weight; leave mobile
-font sizing unchanged.
+On desktop, render ingredient names at 18px and their Specifics at 0.92em of
+the name size. Render Specifics at normal weight; leave mobile font sizing
+unchanged.
 On desktop, add a Divide column only when a row has a division. Keep its
 “divided” column header accessible but visually hidden, and put “divided” on
 the first line of each divided cell above the formatted portion pair. Omit
@@ -1130,11 +1130,11 @@ Ingredient-first, active cook mode adds an unlabeled checkbox column before the
 Ingredient column. Exiting mode or changing recipes clears check-off, and
 system-released locks can be reacquired when the document becomes visible.
 Unit labels, including single-letter abbreviations such as `g`, remain
-underlined at rest on desktop and mobile, without depending on hover. In mobile
-Ingredient-first cook mode, the table
-stays aligned to the section's left edge when the checkbox rail is present. The
-checkbox rail is 21px wide, placing the checkbox 1mm from the table edge and
-1mm from the ingredient column while keeping its hit area 48px tall.
+underlined at rest on desktop and mobile, without depending on hover. In
+desktop and mobile Ingredient-first cook mode, the table stays aligned to the
+section's left edge when the checkbox rail is present. Place the checkbox
+input 3px from the table edge and 6px from the ingredient text while keeping
+its hit area 48px tall.
 In the private reader's automatic same-system display, fractions at or above
 `1/4` stay in their current unit unless they equal exactly one smaller unit or
 the immediate smaller unit expresses the amount as a fraction from `1/4` up to

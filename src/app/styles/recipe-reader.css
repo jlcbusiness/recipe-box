@@ -405,14 +405,6 @@
     .recipe-ingredient-first-table
     tbody
     th.recipe-ingredient-column-ingredient {
-    font-size: 1.5em;
-  }
-
-  .private-content
-    .recipe-reading-ingredient_first
-    .recipe-ingredient-first-table
-    tbody
-    th.recipe-ingredient-column-ingredient {
     font-size: 18px;
   }
 }
@@ -450,7 +442,7 @@
 }
 
 .recipe-cook-checkbox-column {
-  width: 32px;
+  width: 22.333px;
 }
 
 .private-content .recipes-main .recipe-reading-layout .recipe-ingredient-first-table th,
@@ -492,21 +484,33 @@
   .recipe-reading-layout
   .recipe-ingredient-first-table
   .recipe-cook-checkbox-heading {
-  width: 32px;
-  min-width: 32px;
+  width: 22.333px;
+  min-width: 22.333px;
   border-bottom-color: transparent;
   padding: 0;
 }
 
 .recipe-cook-checkbox-cell {
-  width: 32px;
-  min-width: 32px;
+  width: 22.333px;
+  min-width: 22.333px;
+  padding: 0;
+}
+
+.recipe-ingredient-first-table-cook-mode td.recipe-cook-checkbox-cell {
+  padding: 0;
 }
 
 .recipe-cook-checkbox-cell .recipe-cook-checkbox {
-  width: 32px;
-  min-width: 32px;
+  width: 22.333px;
+  min-width: 22.333px;
   justify-content: flex-start;
+  padding-inline: 3px 6px;
+}
+
+.recipe-ingredient-first-table-cook-mode
+  .recipe-cook-checkbox-cell
+  + .recipe-ingredient-column-ingredient {
+  padding-left: 0;
 }
 
 .private-content
@@ -514,7 +518,7 @@
   .recipe-reading-layout
   .recipe-ingredient-first-table
   .recipe-cook-checkbox-cell {
-  padding-right: 0;
+  padding: 0;
 }
 
 .recipe-reader-label-mobile {
@@ -556,6 +560,7 @@
 .recipe-cook-checkbox input {
   width: 20px;
   height: 20px;
+  margin: 0;
   accent-color: var(--leaf);
 }
 

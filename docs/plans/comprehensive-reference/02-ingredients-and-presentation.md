@@ -397,9 +397,9 @@ Vertical growth is preferred to horizontal scrolling.
   controls align with the heading. The Screen Lock control follows Scale at the
   standard mobile toolbar gap. In mobile Ingredient-first cook mode, the table
   remains aligned to the section's left edge instead of shifting right to
-  center the added checkbox column. The 21px checkbox rail gives the checkbox
-  1mm clearance from the table edge and ingredient column, with a 48px-tall hit
-  area.
+  center the added checkbox column. At desktop and mobile widths, place the
+  checkbox input 3px from the table edge and 6px from the ingredient text,
+  preserving a 48px-tall hit area.
 - Screen recipe content uses at most 96 CSS pixels of outer gutter on each
   side of the main-content area, excluding navigation. Overview, reading,
   nutrition, Notes, and other section groups share aligned outer edges; internal

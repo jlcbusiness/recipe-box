@@ -1442,6 +1442,173 @@ test('an owner can switch a recipe between linkable and private @e2e', async ({
   }
 });
 
+test('private and shared Ingredient-first readers match text and Cook-mode spacing @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const zucchiniRowId = randomUUID();
+  let publicId: string | null = null;
+
+  try {
+    const recipe = await createRecipe(
+      request,
+      config,
+      user,
+      'Reader parity visual target',
+      undefined,
+      true,
+      [
+        {
+          recipe_ingredient_id: zucchiniRowId,
+          ingredient_id: null,
+          ingredient_name: 'Zucchini',
+          is_main: false,
+          detail: 'fresh',
+          preparation: '',
+          measurements: [],
+        },
+        {
+          recipe_ingredient_id: randomUUID(),
+          ingredient_id: null,
+          ingredient_name: 'Long ingredient name for narrow viewport wrapping',
+          is_main: false,
+          detail: '',
+          preparation: '',
+          measurements: [],
+        },
+      ],
+    );
+    publicId = await getPublicId(request, config, recipe.id);
+
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'wakeLock', {
+        configurable: true,
+        value: {
+          request: async () => {
+            throw new Error('Wake Lock unavailable in this test.');
+          },
+        },
+      });
+    });
+    await signIn(page, user);
+
+    const routes = [
+      { name: 'private', path: `/recipes/${recipe.id}` },
+      { name: 'shared', path: `/r/${publicId}` },
+    ];
+    for (const width of [1280, 390, 320]) {
+      for (const route of routes) {
+        await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
+        await page.goto(route.path);
+        await expect(
+          page.getByRole('heading', { name: /Reader parity visual target/ }),
+        ).toBeVisible();
+
+        if (route.name === 'private' && width === 1280) {
+          await page
+            .getByRole('button', { name: /Ingredient view:.*Activate for Ingredient-first/ })
+            .click();
+        }
+        const table = page.locator('.recipe-ingredient-first-table');
+        await expect(table).toBeVisible();
+        await page.getByRole('switch', { name: 'Cook mode' }).click();
+        await expect(page.getByRole('status')).toContainText('wake lock could not be acquired');
+        await page.getByRole('button', { name: 'Dismiss screen lock warning' }).click();
+        const checkbox = page.getByRole('checkbox', { name: 'Mark Zucchini complete' });
+        await expect(checkbox).toBeVisible();
+        await expect(table.locator('.recipe-reader-specifics')).toContainText('fresh');
+
+        const geometry = await table.evaluate((element) => {
+          const row = Array.from(element.querySelectorAll('tbody tr')).find((candidate) =>
+            candidate
+              .querySelector('.recipe-reader-table-name')
+              ?.textContent?.trim()
+              .toLowerCase()
+              .includes('zucchini'),
+          );
+          const name = row?.querySelector<HTMLElement>('.recipe-reader-table-name');
+          const specifics = row?.querySelector<HTMLElement>('.recipe-reader-specifics');
+          const cell = row?.querySelector<HTMLElement>('.recipe-cook-checkbox-cell');
+          const target = row?.querySelector<HTMLElement>('.recipe-cook-checkbox');
+          const input = row?.querySelector<HTMLInputElement>(
+            '.recipe-cook-checkbox input[type="checkbox"]',
+          );
+          if (!name || !specifics || !cell || !target || !input) {
+            throw new Error('Expected the Zucchini row to expose Cook-mode layout elements.');
+          }
+          const checkboxBounds = input.getBoundingClientRect();
+          const nameBounds = name.getBoundingClientRect();
+          const targetBounds = target.getBoundingClientRect();
+          const cellBounds = cell.getBoundingClientRect();
+          const tableBounds = element.getBoundingClientRect();
+          return {
+            nameFontSize: getComputedStyle(name).fontSize,
+            specificsFontSize: getComputedStyle(specifics).fontSize,
+            leftGap: checkboxBounds.left - tableBounds.left,
+            rightGap: nameBounds.left - checkboxBounds.right,
+            checkboxWidth: checkboxBounds.width,
+            targetHeight: targetBounds.height,
+            targetWidth: targetBounds.width,
+            cellWidth: cellBounds.width,
+            hasNoHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+          };
+        });
+
+        expect(Math.abs(geometry.leftGap - 3)).toBeLessThanOrEqual(1);
+        expect(Math.abs(geometry.rightGap - 6), JSON.stringify(geometry)).toBeLessThanOrEqual(1);
+        expect(geometry.targetHeight).toBeGreaterThanOrEqual(48);
+        expect(Math.abs(geometry.targetWidth - geometry.checkboxWidth - 9)).toBeLessThanOrEqual(1);
+        expect(Math.abs(geometry.cellWidth - geometry.targetWidth)).toBeLessThanOrEqual(1);
+        if (width === 1280) {
+          expect(geometry.nameFontSize).toBe('18px');
+          expect(Number.parseFloat(geometry.specificsFontSize)).toBeCloseTo(16.56, 2);
+        }
+        if (width <= 390) {
+          expect(geometry.hasNoHorizontalOverflow).toBe(true);
+          const [tableBounds, ingredientsBounds] = await Promise.all([
+            table.boundingBox(),
+            page.getByRole('region', { name: 'Ingredients', exact: true }).boundingBox(),
+          ]);
+          expect(tableBounds).not.toBeNull();
+          expect(ingredientsBounds).not.toBeNull();
+          if (tableBounds && ingredientsBounds) {
+            expect(Math.abs(tableBounds.x - ingredientsBounds.x)).toBeLessThanOrEqual(1);
+          }
+          const longIngredientName = table.getByText(
+            'long ingredient name for narrow viewport wrapping',
+            { exact: true },
+          );
+          const nameGeometry = await longIngredientName.evaluate((element) => ({
+            height: element.getBoundingClientRect().height,
+            fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+          }));
+          expect(nameGeometry.height).toBeGreaterThan(nameGeometry.fontSize);
+        }
+
+        await table
+          .locator('tbody tr')
+          .filter({ hasText: 'Zucchini' })
+          .first()
+          .screenshot({
+            path: testInfo.outputPath(`${route.name}-${width}.png`),
+          });
+        await checkbox.check();
+        await expect(checkbox).toBeChecked();
+      }
+    }
+  } finally {
+    await deleteTestUser(request, user);
+    if (publicId) {
+      await request.delete(
+        `${config.apiUrl}/rest/v1/purged_recipe_public_ids?public_id=eq.${publicId}`,
+        { headers: serviceHeaders(config) },
+      );
+    }
+  }
+});
+
 test('public Equipment labels lowercase without changing picklist values @e2e', async ({
   page,
   request,

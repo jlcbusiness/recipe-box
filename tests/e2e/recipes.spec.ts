@@ -5211,9 +5211,7 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       });
     expect(checkboxBounds).not.toBeNull();
     expect(checkboxTargetBounds?.height).toBeGreaterThanOrEqual(48);
-    expect(checkboxTargetBounds?.width).toBeCloseTo(21, 0);
     expect(checkboxCellBounds).not.toBeNull();
-    expect(checkboxCellBounds?.width).toBeCloseTo(21, 0);
     expect(ingredientNameBounds).not.toBeNull();
     expect(tableBounds).not.toBeNull();
     expect(Math.abs(gapAfterLastVisibleCell)).toBeLessThanOrEqual(1);
@@ -5225,12 +5223,19 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       tableBounds
     ) {
       const gapToIngredient = ingredientNameBounds.x - (checkboxBounds.x + checkboxBounds.width);
-      expect(Math.abs(checkboxBounds.x - checkboxTargetBounds.x - 96 / 25.4)).toBeLessThanOrEqual(
+      expect(Math.abs(checkboxBounds.x - checkboxTargetBounds.x - 3)).toBeLessThanOrEqual(1);
+      expect(Math.abs(checkboxTargetBounds.x - checkboxCellBounds.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(checkboxBounds.x - tableBounds.x - 3)).toBeLessThanOrEqual(1);
+      expect(Math.abs(checkboxTargetBounds.width - checkboxBounds.width - 9)).toBeLessThanOrEqual(
         1,
       );
-      expect(Math.abs(checkboxTargetBounds.x - checkboxCellBounds.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(checkboxBounds.x - tableBounds.x - 96 / 25.4)).toBeLessThanOrEqual(1);
-      expect(Math.abs(gapToIngredient - 96 / 25.4)).toBeLessThanOrEqual(1);
+      expect(Math.abs(checkboxCellBounds.width - checkboxTargetBounds.width)).toBeLessThanOrEqual(
+        1,
+      );
+      expect(
+        Math.abs(gapToIngredient - 6),
+        `Ingredient gap: ${gapToIngredient}`,
+      ).toBeLessThanOrEqual(1);
     }
     await expect(
       ingredientFirstTable.locator('.recipe-ingredient-column-preparation').first(),
@@ -5266,6 +5271,38 @@ test('reader controls and cook mode stay usable at narrow widths @e2e @a11y', as
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
     expect((await checkboxTarget.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    const narrowCheckboxBounds = await checkbox.boundingBox();
+    const narrowCheckboxTargetBounds = await checkboxTarget.boundingBox();
+    const narrowCheckboxCellBounds = await checkboxCell.boundingBox();
+    const narrowTableBounds = await ingredientFirstTable.boundingBox();
+    const narrowIngredientNameBounds = await ingredientFirstTable
+      .locator('tbody tr')
+      .first()
+      .locator('.recipe-reader-table-name')
+      .boundingBox();
+    if (
+      narrowCheckboxBounds &&
+      narrowCheckboxTargetBounds &&
+      narrowCheckboxCellBounds &&
+      narrowTableBounds &&
+      narrowIngredientNameBounds
+    ) {
+      expect(
+        Math.abs(narrowCheckboxBounds.x - narrowCheckboxTargetBounds.x - 3),
+      ).toBeLessThanOrEqual(1);
+      expect(Math.abs(narrowCheckboxBounds.x - narrowTableBounds.x - 3)).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(narrowCheckboxTargetBounds.width - narrowCheckboxBounds.width - 9),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(narrowCheckboxCellBounds.width - narrowCheckboxTargetBounds.width),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(
+          narrowIngredientNameBounds.x - (narrowCheckboxBounds.x + narrowCheckboxBounds.width) - 6,
+        ),
+      ).toBeLessThanOrEqual(1);
+    }
     const narrowHeadingBounds = await page
       .getByRole('heading', { name: 'Ingredients', exact: true })
       .boundingBox();
