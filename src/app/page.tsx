@@ -50,6 +50,10 @@ export function HomePageView({
   );
 }
 
+export const metadata = {
+  title: 'Account - Sign In',
+};
+
 export default async function HomePage({
   searchParams,
 }: {

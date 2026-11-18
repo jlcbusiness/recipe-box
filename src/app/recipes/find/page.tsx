@@ -121,6 +121,10 @@ function recipeSortHref(
   return `/recipes/find?${searchParams.toString()}`;
 }
 
+export const metadata = {
+  title: 'Find Recipes',
+};
+
 export default async function FindRecipesPage({ searchParams }: FindRecipesPageProps) {
   const params = await searchParams;
   const supabase = await createClient();

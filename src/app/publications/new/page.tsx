@@ -2,6 +2,10 @@ import { getTags } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
 import { PublicationCreateForm } from '../publication-create-form';
 
+export const metadata = {
+  title: 'Add Publication',
+};
+
 export default async function NewPublicationPage() {
   const supabase = await createClient();
   const tags = await getTags(supabase);

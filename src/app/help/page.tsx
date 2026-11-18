@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
 import { PrivateShell } from '../private-shell';
 
+export const metadata = {
+  title: 'Help',
+};
+
 export default async function HelpPage() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();

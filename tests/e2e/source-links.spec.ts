@@ -757,8 +757,8 @@ test('recipe source links save atomically and remain recoverable through Trash @
     await expect(page.getByRole('heading', { name: 'Herbed potatoes' })).toBeVisible();
     await expect(page.getByText('Garden salad')).toBeVisible();
     await expect(
-      page.getByRole('link', { name: 'https://google.com/roast-chicken' }),
-    ).toHaveAttribute('href', 'https://google.com/roast-chicken');
+      page.getByRole('link', { name: 'https://recipes.example.test/roast-chicken' }),
+    ).toHaveAttribute('href', 'https://recipes.example.test/roast-chicken');
     await expect(page.getByRole('link', { name: 'Roast chicken' })).toHaveCount(4);
 
     const trashLinkedRecipeAgain = await request.post(`${apiUrl}/rest/v1/rpc/trash_recipe`, {
@@ -844,6 +844,65 @@ test('recipe source links save atomically and remain recoverable through Trash @
     expect(await remainingSourceRelationships.json()).toEqual([]);
   } finally {
     await deleteTestUser(request, otherOwner);
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('manual URL labels are saved and displayed as reference links @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const { apiUrl, anonKey, serviceRoleKey } = await getLocalSupabaseConfig();
+  const headers = ownerHeaders(anonKey, owner.accessToken);
+  const recipeName = 'Manual external reference label';
+  const recipeUrl = 'https://www.eatingwell.com/recipe/250459/stovetop-chicken-broccoli-casserole/';
+  const manualLabel = 'Stovetop Chicken & Broccoli Casserole';
+  let recipeId: string | null = null;
+
+  try {
+    const recipe = await createRecipe(request, apiUrl, headers, recipeName);
+    recipeId = recipe.id;
+    await signIn(page, owner.email, owner.password);
+    await page.goto(`/recipes/${recipeId}/edit`);
+    await page.getByRole('button', { name: 'Add reference' }).click();
+    const referenceType = page.getByRole('combobox', { name: 'Reference 1 type' });
+    await referenceType.click();
+    await page
+      .getByRole('listbox', { name: 'Reference 1 type' })
+      .getByRole('option', { name: 'Url' })
+      .click();
+
+    const urlField = page.getByLabel('Reference 1', { exact: true });
+    const labelField = page.getByLabel('Reference 1 label (optional)', { exact: true });
+    await urlField.fill(recipeUrl);
+    await labelField.fill(manualLabel);
+    expect(
+      (await new AxeBuilder({ page }).include('.recipe-reference-row').analyze()).violations,
+    ).toEqual([]);
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    const referenceLink = page.getByRole('link', { name: manualLabel, exact: true });
+    await expect(referenceLink).toHaveAttribute('href', recipeUrl);
+
+    const savedReferences = await request.get(
+      `${apiUrl}/rest/v1/recipe_references?select=display_text,url&recipe_id=eq.${recipeId}&reference_type=eq.external_url`,
+      { headers },
+    );
+    expect(savedReferences.ok(), await savedReferences.text()).toBeTruthy();
+    expect(await savedReferences.json()).toContainEqual({
+      display_text: manualLabel,
+      url: recipeUrl,
+    });
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    await expect(labelField).toHaveValue(manualLabel);
+  } finally {
+    if (recipeId) {
+      await deleteRecipeFixture(request, apiUrl, serviceRoleKey, owner.id, recipeId);
+    }
     await deleteTestUser(request, owner);
   }
 });

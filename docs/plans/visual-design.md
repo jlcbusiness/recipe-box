@@ -101,6 +101,12 @@ text fields capped to a readable line length. Keep about 4px vertical and 7px
 horizontal control padding on desktop; do not add large gaps between compact
 time fields.
 
+The desktop ingredient editor table should size to its content, up to the
+available editor width, rather than distributing unused viewport width among
+columns. It must reserve enough width for Amount controls and keep Divide
+compact; do not allocate so much space to Divide that measurement values or
+their units are clipped.
+
 Edit-form metadata and time controls keep compact row spacing as they wrap.
 View-mode metadata uses consistent 11px vertical spacing between wrapped rows
 and full-width metadata groups.
@@ -135,7 +141,9 @@ and full-width metadata groups.
   left-aligned, and its grouped integer value shares the minute fields' column
   and width. The “Times (min)” heading supplies the unit, so the editor total
   shows `0` when no rows exist. A full-width italic “add time” row appends
-  another entry.
+  another entry. In the Time Type field, the first Enter selects the active
+  suggestion; the next Enter commits a valid type, appends one blank row, and
+  focuses its Minutes input. Tab and blur commit without adding a row.
 - **Group view times:** Put Total Time first in the private and public time
   breakdowns, followed by non-zero entries in saved order. On mobile, give it a
   full-width row above the entries. On desktop, separate it from the entries
@@ -191,7 +199,9 @@ immediately before Once-a-year-rich and So-so. Reason is a single-line field.
   label remain the readable recipe name.
 - The desktop Pairs With input has a 3-inch minimum and a 50% row maximum. The
   desktop Reference field has a 3-inch minimum and a 50% row maximum; its Type
-  column fits the picker.
+  column fits the picker. External URL references stack the required URL and
+  optional manual label in the Reference field, with a short hint explaining
+  that a blank label uses the page title or URL fallback.
 - On mobile, the Reference Type column fits the picker instead of reserving a
   wider empty track. The field begins after the normal grid gap.
 
@@ -260,6 +270,9 @@ to keep the action bar within the available heading width.
 Recipe detail follows the edit-form order but uses a distinct view
 order: State and its active response, optional Rating, Occasion Details when
 present, Serves, Makes, Equipment, Food Type, Meal Type, Cuisine, then Notes.
+Display Equipment labels in lowercase in private and public recipe reading,
+print, and standalone recipe output without changing shared catalog or editor
+labels.
 Total Time leads the separate time breakdown instead of appearing in metadata.
 Center the numeric Rating value beneath its label on desktop and mobile.
 On desktop, Food Type, Meal Type, and Cuisine share their own full-width row.
@@ -999,7 +1012,8 @@ Recipe detail offers Standard and Ingredient-first presentations. Standard
 keeps ingredient rows in saved order and renders Amount, lowercase Specifics
 and ingredient name, then Preparation. Keep canonical catalog names title-cased;
 recipe views display all multiword ingredient names in lowercase without
-changing saved values. Both presentations keep Ingredients
+changing saved values. Recipe readers and print attach `"` to US customary
+Size values (for example, `1 ¼"`); metric Size retains `cm`. Both presentations keep Ingredients
 beside Instructions on desktop. Size the Ingredients track to the larger of the
 widest Standard ingredient row plus 1mm or the natural width of the Ingredients
 heading and toolbar plus 4mm; Instructions uses the remaining space.
@@ -1045,11 +1059,11 @@ subheading. Center the desktop Divide column and the mobile Divide note while
 keeping Preparation left-aligned. When no divisions exist, do not add any
 Divide column or content.
 Hide Amount or Prep when empty across the recipe. Keep at least 8px between
-mobile column content and use remaining available width only while ingredient
-row content stays unwrapped. Size columns intrinsically; keep the table’s outer
-edges flush and contain any wider no-wrap table in its existing horizontal
-scroll region. Keep the mobile Divide label and portion pair on one line. Leave
-at least 3px between stacked Volume and Weight values. In Standard view and
+mobile column content and use the available width to wrap long ingredient names,
+Specifics, amounts, Preparation, and Divide content. Keep the table full-width
+with flush outer edges; do not use a min-content-width table or horizontal
+scroll region. Center mobile Preparation text like the divided note. Leave at
+least 3px between stacked Volume and Weight values. In Standard view and
 print, label the separate value “divided” to distinguish it from Preparation.
 Ingredient-first rows alternate a light-tin shade for readability; the other
 rows and ingredient-set dividers remain unshaded in private and public reader

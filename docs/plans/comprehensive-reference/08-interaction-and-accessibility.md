@@ -73,6 +73,16 @@ stronger circular outline make the state visible without color alone. On
 desktop, its current state also uses an underline. `/` remains the sign-in page;
 the authenticated `/app` entry opens the Library.
 
+### 13.6 Browser document titles
+
+Every app route sets a descriptive browser document title. Start with
+`Recipe Box`, then add the human-readable section and page or record name, such
+as `Recipe Box - Settings - Updates` or
+`Recipe Box - Recipe Tin - Awesome Sauce`. Apply this to signed-in,
+authentication, and public routes. Dynamic recipe pages use the recipe name;
+public recipe titles keep the same brand-first format. Document titles do not
+replace or alter visible page headings.
+
 Both account controls open the same menu with the email and Sign out action.
 
 Private-shell destinations use client-side navigation so switching sections

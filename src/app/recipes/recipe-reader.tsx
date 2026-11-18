@@ -1734,9 +1734,8 @@ export function RecipeReader({
         </div>
         {presentation === 'ingredient_first' ? (
           <section
-            aria-label="Scrollable recipe ingredients"
+            aria-label="Recipe ingredients"
             className="recipe-ingredient-first-table-scroll"
-            style={{ minWidth: 0, overflowX: 'auto' }}
             // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users need a tab stop to scroll this region.
             tabIndex={0}
           >

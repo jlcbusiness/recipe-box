@@ -16,7 +16,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/(?:recipes|publications(?:\/[0-9a-f-]+)?)$/);
+  await expect(page).toHaveURL(/\/(?:app|recipes|publications(?:\/[0-9a-f-]+)?)(?:\?.*)?$/);
 }
 
 async function selectSinglePicklist(
@@ -60,8 +60,10 @@ test('recipe time entries calculate, validate, and save in order @e2e', async ({
 
   try {
     await signIn(page, user.email, user.password);
-    await page.getByRole('link', { name: 'Recipe Tin', exact: true }).click();
+    await page.goto('/recipes');
+    await expect(page).toHaveURL(/\/publications\/[0-9a-f-]+$/);
     await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
+    await expect(page).toHaveTitle('Recipe Box - Recipe Tin');
     await page.getByRole('link', { name: 'Add Recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
     const timeSection = page.locator('.recipe-time-fieldset');
@@ -124,6 +126,9 @@ test('recipe time entries calculate, validate, and save in order @e2e', async ({
     const firstEntry = timeSection.getByRole('group', { name: 'Time entry 1' });
     const firstMinutes = firstEntry.getByRole('textbox', { name: 'Minutes' });
     const firstTimeType = firstEntry.getByRole('combobox', { name: 'Time Type' });
+    const initialTimeType = await firstTimeType.inputValue();
+    expect(initialTimeType).not.toBe('');
+    await expect(firstMinutes).toHaveValue('');
     await firstTimeType.focus();
     const timeTypeMenu = page.getByRole('listbox');
     await expect(timeTypeMenu.getByRole('option')).toHaveCount(9);
@@ -140,31 +145,48 @@ test('recipe time entries calculate, validate, and save in order @e2e', async ({
       timeTypeMenu.getByRole('option', { name: 'Add "Coo"', exact: true }),
     ).toBeVisible();
     await firstTimeType.fill('Cook');
-    await page.getByRole('option', { name: 'Cook', exact: true }).click();
+    await firstTimeType.press('Enter');
+    await expect(timeSection.getByRole('group')).toHaveCount(1);
+    await expect(firstTimeType).toHaveValue('Cook');
+    await firstTimeType.press('Enter');
+    await expect(timeSection.getByRole('group')).toHaveCount(2);
     await expect(timeSection.locator('.recipe-time-entry-headers')).toBeVisible();
     await expect(timeSection.locator('.recipe-time-entry-headers')).toContainText('Minutes');
     await expect(timeSection.locator('.recipe-time-entry-headers')).toContainText('Time Type');
+    const secondEntry = timeSection.getByRole('group', { name: 'Time entry 2' });
+    const secondMinutes = secondEntry.getByRole('textbox', { name: 'Minutes' });
+    const secondTimeType = secondEntry.getByRole('combobox', { name: 'Time Type' });
+    await expect(secondTimeType).toHaveValue(initialTimeType);
+    await expect(secondMinutes).toHaveValue('');
+    await expect(secondMinutes).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
+    await expect(page).toHaveURL(/\/recipes\/new(?:\?.*)?$/);
     await firstMinutes.fill('20 / 3');
     await firstMinutes.press('Tab');
     await expect(firstMinutes).toHaveValue('7');
     await expect(totalTime).toHaveText('7');
 
-    await addTimeButton.click();
-    const secondEntry = timeSection.getByRole('group', { name: 'Time entry 2' });
-    const secondMinutes = secondEntry.getByRole('textbox', { name: 'Minutes' });
-    const secondTimeType = secondEntry.getByRole('combobox', { name: 'Time Type' });
     await secondTimeType.fill('Stea');
     await secondTimeType.press('Tab');
+    await expect(timeSection.getByRole('group')).toHaveCount(2);
     await expect(secondTimeType).toHaveValue('Stea');
-    await expect(secondEntry.getByRole('alert')).toHaveText(
-      'Choose a Time Type or select its Add suggestion.',
-    );
+    await expect(
+      secondEntry.getByText('Choose a Time Type or select its Add suggestion.', { exact: true }),
+    ).toBeVisible();
     await secondTimeType.focus();
     await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(9);
     await secondTimeType.fill('Steam');
     await expect(page.getByRole('option', { name: 'Add "Steam"', exact: true })).toBeVisible();
     await page.getByRole('option', { name: 'Add "Steam"', exact: true }).click();
     await expect(secondTimeType).toHaveValue('Steam');
+    await secondTimeType.fill('Cook');
+    await secondTimeType.press('Tab');
+    await expect(secondTimeType).toHaveValue('Cook');
+    await expect(timeSection.getByRole('group')).toHaveCount(2);
+    await secondTimeType.fill('Steam');
+    await secondTimeType.evaluate((input: HTMLInputElement) => input.blur());
+    await expect(secondTimeType).toHaveValue('Steam');
+    await expect(timeSection.getByRole('group')).toHaveCount(2);
     await secondMinutes.fill('8 * (3 + 2)');
     await secondMinutes.press('Tab');
     await expect(secondMinutes).toHaveValue('40');
@@ -4191,9 +4213,10 @@ test('recipe detail print matches the active presentation @e2e', async ({
   const ingredientSetId = randomUUID();
 
   try {
-    const [prepTimeTypeId, cookTimeTypeId] = await Promise.all([
+    const [prepTimeTypeId, cookTimeTypeId, equipmentId] = await Promise.all([
       getPicklistId(request, config, user, 'time_type', 'Prep'),
       getPicklistId(request, config, user, 'time_type', 'Cook'),
+      getPicklistId(request, config, user, 'equipment', 'Medium skillet'),
     ]);
     const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`, {
       headers: {
@@ -4214,7 +4237,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
         p_notes_markdown: 'Serve warm.',
         p_meal_type_ids: [],
         p_cuisine_ids: [],
-        p_equipment_ids: [],
+        p_equipment_ids: [equipmentId],
         p_ingredient_rows: [
           {
             recipe_ingredient_id: ingredientRowId,
@@ -4385,11 +4408,20 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(volumePicker).toContainText('Metric');
     await page.addInitScript(() => {
       window.print = () => {
+        const metadata = document.querySelector<HTMLElement>('.recipe-output-metadata');
+        const equipmentLabel = Array.from(metadata?.querySelectorAll('dt') ?? []).find(
+          (label) => label.textContent?.trim() === 'Equipment',
+        );
+        const equipmentValue =
+          equipmentLabel?.parentElement?.querySelector('dd')?.textContent?.trim() ?? '';
+        window.top?.document.documentElement.setAttribute('data-print-equipment', equipmentValue);
         window.top?.document.documentElement.setAttribute('data-print-requested', 'true');
       };
     });
     await page.goto(recipePath);
     await expect(page.getByRole('heading', { name: 'A recipe to print' })).toBeVisible();
+    await expect(page.locator('.recipe-print-metadata')).toContainText('medium skillet');
+    await expect(page.locator('.recipe-print-metadata')).not.toContainText('Medium skillet');
     const presentationButton = page.getByRole('button', { name: /^Ingredient view:/ });
     const initialPresentation =
       (page.viewportSize()?.width ?? 1280) <= 760 ? 'Ingredient-first' : 'Standard';
@@ -4451,6 +4483,8 @@ test('recipe detail print matches the active presentation @e2e', async ({
       throw new Error('Expected the default HTML download to have a file path.');
     const defaultHtml = await readFile(defaultHtmlPath, 'utf8');
     expect(defaultHtml.replace(/<!--[\s\S]*?-->/g, '')).toContain('Serves 4');
+    expect(defaultHtml).toContain('medium skillet');
+    expect(defaultHtml).not.toContain('Medium skillet');
     expect(defaultHtml).not.toContain('Want to try');
     expect(defaultHtml).not.toContain('Serve warm.');
 
@@ -4467,6 +4501,8 @@ test('recipe detail print matches the active presentation @e2e', async ({
     const privateHtml = await readFile(privateHtmlPath, 'utf8');
     expect(privateHtml).toContain('Want to try');
     expect(privateHtml).toContain('Serve warm.');
+    expect(privateHtml).toContain('medium skillet');
+    expect(privateHtml).not.toContain('Medium skillet');
 
     await page.reload();
     await settingsButton.click();
@@ -4884,6 +4920,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await outputButton.click();
     await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
+    await expect(page.locator('html')).toHaveAttribute('data-print-equipment', 'medium skillet');
     await expect(page.locator('.recipe-output-feedback-success')).toHaveText('Print request sent.');
     await expect(outputButton).toBeEnabled();
     const printFrame = page.locator('iframe[title="Recipe print document"]');
@@ -5793,12 +5830,42 @@ test('recipe reader sorts transiently and cooks without changing saved rows @e2e
           internalGap: Number.parseFloat(amountStyle.paddingRight),
           right: Number.parseFloat(preparationStyle.paddingRight),
           alignment: amountStyle.textAlign,
+          preparationAlignment: preparationStyle.textAlign,
         };
       });
     expect(mobileCellSpacing.left).toBe(0);
     expect(mobileCellSpacing.internalGap).toBeGreaterThanOrEqual(8);
     expect(mobileCellSpacing.right).toBe(0);
     expect(mobileCellSpacing.alignment).toBe('left');
+    expect(mobileCellSpacing.preparationAlignment).toBe('center');
+    const mobileLongName = await table
+      .locator('tbody th[scope="row"] .recipe-reader-table-name')
+      .first()
+      .evaluate((name) => {
+        const cell = name.closest('th');
+        const ingredientTable = name.closest('table');
+        if (!(cell instanceof HTMLElement) || !(ingredientTable instanceof HTMLTableElement)) {
+          throw new Error('Expected the mobile ingredient name cell and table.');
+        }
+        const originalName = name.textContent ?? '';
+        const originalHeight = cell.getBoundingClientRect().height;
+        name.textContent = `${originalName} ${'unbreakable'.repeat(12)}`;
+        const result = {
+          cellClientWidth: cell.clientWidth,
+          cellScrollWidth: cell.scrollWidth,
+          cellHeight: cell.getBoundingClientRect().height,
+          originalHeight,
+          tableClientWidth: ingredientTable.clientWidth,
+          tableScrollWidth: ingredientTable.scrollWidth,
+        };
+        name.textContent = originalName;
+        return result;
+      });
+    expect(mobileLongName.cellHeight).toBeGreaterThan(mobileLongName.originalHeight);
+    expect(mobileLongName.cellScrollWidth).toBeLessThanOrEqual(mobileLongName.cellClientWidth + 1);
+    expect(mobileLongName.tableScrollWidth).toBeLessThanOrEqual(
+      mobileLongName.tableClientWidth + 1,
+    );
     await page.screenshot({
       path: testInfo.outputPath('reader-ingredient-first-mobile.png'),
       fullPage: true,
@@ -6170,7 +6237,8 @@ test('owners can create Equipment, Food Type, Meal Type, and Cuisine values in t
     await expect(
       page.getByRole('heading', { name: 'DLC 25 editor workflow recipe' }),
     ).toBeVisible();
-    await expect(page.locator('.recipe-metadata').first()).toContainText('Carbon steel wok');
+    await expect(page).toHaveTitle('Recipe Box - DLC 25 editor workflow recipe');
+    await expect(page.locator('.recipe-metadata').first()).toContainText('carbon steel wok');
     await expect(page.locator('.recipe-detail-classification')).toContainText('Savory Galette');
     await expect(page.locator('.recipe-detail-classification')).toContainText('Late night');
     await expect(page.locator('.recipe-detail-classification')).toContainText('Peruvian Nikkei');

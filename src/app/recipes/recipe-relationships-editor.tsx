@@ -300,7 +300,7 @@ export function RecipeRelationshipsEditor({
     } else if (reference.reference_type === 'external_url' && reference.url?.trim()) {
       serializedReferences.push({
         ...reference,
-        display_text: reference.url.trim(),
+        display_text: reference.display_text.trim(),
         publication_id: null,
       });
     } else if (reference.reference_type === 'printed_citation' && reference.display_text.trim()) {
@@ -660,29 +660,56 @@ export function RecipeRelationshipsEditor({
                     )}
                   </div>
                 ) : reference.reference_type === 'external_url' ? (
-                  <label className="recipe-field recipe-reference-field recipe-reference-field-fill">
-                    <span className="visually-hidden">Reference {index + 1}</span>
-                    <input
-                      aria-label={`Reference ${index + 1}`}
-                      required
-                      inputMode="url"
-                      type="text"
-                      value={reference.url ?? ''}
-                      onChange={(event) =>
-                        setReferences((current) =>
-                          current.map((entry) =>
-                            entry.id === reference.id
-                              ? {
-                                  ...entry,
-                                  url: event.target.value,
-                                  display_text: event.target.value,
-                                }
-                              : entry,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
+                  <div className="recipe-reference-fields">
+                    <label className="recipe-field recipe-reference-field recipe-reference-field-fill">
+                      <span className="visually-hidden">Reference {index + 1} URL</span>
+                      <input
+                        aria-label={`Reference ${index + 1}`}
+                        required
+                        inputMode="url"
+                        type="text"
+                        value={reference.url ?? ''}
+                        onChange={(event) =>
+                          setReferences((current) =>
+                            current.map((entry) =>
+                              entry.id === reference.id
+                                ? { ...entry, url: event.target.value }
+                                : entry,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="recipe-field recipe-reference-field recipe-reference-field-fill">
+                      <span className="visually-hidden">
+                        Reference {index + 1} label (optional)
+                      </span>
+                      <input
+                        aria-describedby={`reference-${reference.id}-label-help`}
+                        aria-label={`Reference ${index + 1} label (optional)`}
+                        placeholder="Manual label (optional)"
+                        type="text"
+                        value={
+                          reference.display_text === reference.url ? '' : reference.display_text
+                        }
+                        onChange={(event) =>
+                          setReferences((current) =>
+                            current.map((entry) =>
+                              entry.id === reference.id
+                                ? { ...entry, display_text: event.target.value }
+                                : entry,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <p
+                      className="recipe-reference-label-help"
+                      id={`reference-${reference.id}-label-help`}
+                    >
+                      Leave blank to use the page title, or URL if lookup fails.
+                    </p>
+                  </div>
                 ) : (
                   <label className="recipe-field recipe-reference-field recipe-reference-field-fill">
                     <span className="visually-hidden">Reference {index + 1}</span>

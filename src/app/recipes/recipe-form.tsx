@@ -362,6 +362,7 @@ export function RecipeForm({
         typeError: '',
       })) ?? [],
   );
+  const pendingTimeMinutesFocusRef = useRef<string | null>(null);
   const [timeEntriesError, setTimeEntriesError] = useState('');
   const [timeEntriesAnnouncement, setTimeEntriesAnnouncement] = useState('');
   const timeFieldsRef = useRef<HTMLDivElement>(null);
@@ -513,6 +514,18 @@ export function RecipeForm({
     setAvailablePicklists(picklists);
   }, [picklists]);
 
+  useLayoutEffect(() => {
+    const entryId = pendingTimeMinutesFocusRef.current;
+    if (!entryId) return;
+    if (!timeEntries.some((entry) => entry.id === entryId)) return;
+
+    const minutesInput = document.getElementById(`time-expression-${entryId}`);
+    if (!(minutesInput instanceof HTMLInputElement)) return;
+
+    pendingTimeMinutesFocusRef.current = null;
+    minutesInput.focus({ preventScroll: true });
+  }, [timeEntries]);
+
   useEffect(() => {
     if (actionState?.recipeVersion !== undefined) {
       setSavedRecipeVersion(actionState.recipeVersion);
@@ -613,19 +626,22 @@ export function RecipeForm({
     );
   }
 
-  function commitTimeType(entryId: string, rawValue: string) {
+  function commitTimeType(entryId: string, rawValue: string): boolean {
     const value = rawValue.trim();
     const option = timeTypeOptions.find(
       (item) => item.label.toLocaleLowerCase() === value.toLocaleLowerCase(),
     );
     if (!value) {
       updateTimeEntry(entryId, { timeTypeId: '', typeError: '' });
+      return false;
     } else if (option) {
       updateTimeEntry(entryId, { timeTypeId: option.value, typeError: '' });
+      return true;
     } else {
       updateTimeEntry(entryId, {
         typeError: 'Choose a Time Type or select its Add suggestion.',
       });
+      return false;
     }
   }
 
@@ -694,11 +710,15 @@ export function RecipeForm({
     setTimeEntriesAnnouncement(`Time entry moved to position ${order.indexOf(sourceId) + 1}.`);
   }
 
-  function addTimeEntry() {
+  function addTimeEntry(focusMinutes = false) {
+    const entryId = createUuid();
+    if (focusMinutes) {
+      pendingTimeMinutesFocusRef.current = entryId;
+    }
     setTimeEntries((current) => [
       ...current,
       {
-        id: createUuid(),
+        id: entryId,
         timeTypeId: timeTypeOptions[0]?.value ?? '',
         expression: '',
         minutes: null,
@@ -1775,6 +1795,11 @@ export function RecipeForm({
                       label="Time Type"
                       onCancel={() => updateTimeEntry(entry.id, { typeError: '' })}
                       onCommit={(value) => commitTimeType(entry.id, value)}
+                      onEnterCommit={(value) => {
+                        if (commitTimeType(entry.id, value)) {
+                          addTimeEntry(true);
+                        }
+                      }}
                       onSelectSuggestion={(value) => {
                         void selectTimeType(entry.id, value);
                       }}
@@ -1812,7 +1837,7 @@ export function RecipeForm({
             aria-label="Add time"
             className="recipe-time-add-row"
             type="button"
-            onClick={addTimeEntry}
+            onClick={() => addTimeEntry()}
           >
             add time
           </button>

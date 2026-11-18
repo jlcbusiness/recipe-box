@@ -4,6 +4,7 @@ import { createTestUser, deleteTestUser, getLocalMailpitUrl } from '../support/l
 
 test('rejected credentials produce an accessible sign-in error @e2e', async ({ page }) => {
   await page.goto('/');
+  await expect(page).toHaveTitle('Recipe Box - Account - Sign In');
   const faviconResponse = await page.request.get('/favicon.ico');
   expect(faviconResponse.ok()).toBe(true);
   expect(faviconResponse.headers()['content-type']).toContain('image/x-icon');
@@ -50,6 +51,7 @@ test('a user can reset their password through the local recovery email @e2e', as
 
   try {
     await page.goto('/forgot-password');
+    await expect(page).toHaveTitle('Recipe Box - Account - Reset Password');
     await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
     const recoveryA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -131,6 +133,7 @@ test('recovery and reset screens are accessible @a11y', async ({ page, request }
 
   try {
     await page.goto('/forgot-password');
+    await expect(page).toHaveTitle('Recipe Box - Account - Reset Password');
     const recoveryA11y = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
@@ -265,6 +268,7 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await page.getByRole('link', { name: 'Library' }).click();
     // Nav links navigate client-side; wait for the Library page before using the shell.
     await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
+    await expect(page).toHaveTitle('Recipe Box - Library');
     expect(await page.evaluate(() => Reflect.get(window, '__privateShellNavigationProbe'))).toBe(
       true,
     );
@@ -415,8 +419,8 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(mobileLibraryLink).toHaveCSS('border-width', '1px');
     await expect(mobileLibraryLink).toHaveCSS('background-color', 'rgb(237, 244, 233)');
     await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
-    // Streamed metadata briefly clears the title during client-side navigation.
-    await expect(page).toHaveTitle('Recipe Box');
+    // Wait for streamed metadata after client-side navigation.
+    await expect(page).toHaveTitle('Recipe Box - Help');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
@@ -427,7 +431,7 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await page.getByRole('link', { name: 'Library' }).click();
     // Wait for the client-side navigation to settle before shell assertions.
     await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
-    await expect(page).toHaveTitle('Recipe Box');
+    await expect(page).toHaveTitle('Recipe Box - Library');
     const mobileNavBounds = await page
       .getByRole('navigation', { name: 'Main navigation' })
       .boundingBox();

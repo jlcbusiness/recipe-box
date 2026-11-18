@@ -1,6 +1,6 @@
 'use client';
 
-import { type KeyboardEvent, type ReactNode, useRef, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 
 const baseTabs = [
   { id: 'preferences', label: 'Preferences', labelLines: ['Preferences'] },
@@ -30,6 +30,11 @@ export function SettingsTabs({
   const requestedTab = tabs.find((tab) => tab.id === initialTab);
   const [activeTab, setActiveTab] = useState<SettingsTabId>(requestedTab?.id ?? 'preferences');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? 'Preferences';
+    document.title = `Recipe Box - Settings - ${activeLabel}`;
+  }, [activeTab, tabs]);
 
   function activateTab(tabId: SettingsTabId) {
     setActiveTab(tabId);

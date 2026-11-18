@@ -189,7 +189,7 @@ function createSnapshot() {
           reference_type: 'external_url',
           publication_id: null,
           linked_recipe_id: null,
-          display_text: "source-user's Lemon cake",
+          display_text: 'Stovetop Chicken & Broccoli Casserole',
           url: `https://recipe-box.example/r/${sourcePublicId}`,
           position: 0,
           is_protected_source: true,
@@ -279,6 +279,7 @@ describe('export rules', () => {
     expect(output.records.recipe_references[0]).toMatchObject({
       is_protected_source: true,
       source_public_id: sourcePublicId,
+      display_text: 'Stovetop Chicken & Broccoli Casserole',
     });
     expect(output.records.recipes[0]).toMatchObject({ saved_from_public_id: sourcePublicId });
     expect(output.records.recipes[0]).toMatchObject({ total_time_minutes: 40 });

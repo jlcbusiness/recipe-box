@@ -310,7 +310,7 @@ export function getIngredientDisplayParts(
   const preparation = rawPreparation.toLocaleLowerCase() === 'divided' ? '' : rawPreparation;
   const size =
     ingredient.size_value != null && ingredient.size_unit
-      ? `${formatQuantity(ingredient.size_value, ingredient.size_unit === 'cm' ? 'metric' : 'us_customary')} ${ingredient.size_unit}`
+      ? `${formatQuantity(ingredient.size_value, ingredient.size_unit === 'cm' ? 'metric' : 'us_customary')}${ingredient.size_unit === 'in' ? '"' : ' cm'}`
       : null;
   const displayName =
     options.lowercaseMultiwordName && /\s/u.test(name)

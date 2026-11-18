@@ -566,7 +566,7 @@ describe('recipe reader measurement rules', () => {
       </RecipeReaderProvider>,
     );
 
-    expect(screen.getByRole('listitem').textContent).toContain('8 carrot, sliced 1 ¼ in');
+    expect(screen.getByRole('listitem').textContent).toContain('8 carrot, sliced 1 ¼"');
     expect(screen.getByRole('listitem').textContent).toContain('divided 2 : 6');
     fireEvent.click(
       screen.getByRole('button', {
@@ -577,7 +577,7 @@ describe('recipe reader measurement rules', () => {
     expect(screen.getByRole('columnheader', { name: 'divided' })).toBeDefined();
     expect(
       ingredientRow.querySelector('.recipe-ingredient-column-preparation')?.textContent,
-    ).toContain('sliced 1 ¼ in');
+    ).toContain('sliced 1 ¼"');
     const divideCell = ingredientRow.querySelector('.recipe-ingredient-column-divide');
     expect(divideCell?.querySelector('.recipe-ingredient-portion-label')?.textContent).toBe(
       'divided',

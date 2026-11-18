@@ -369,7 +369,9 @@
 }
 
 .recipe-form .recipe-ingredient-desktop .recipe-ingredient-table {
-  table-layout: fixed;
+  width: fit-content;
+  max-width: 100%;
+  table-layout: auto;
 }
 
 .recipe-ingredient-first-table {
@@ -390,6 +392,7 @@
     width: max-content;
     max-width: 100%;
     padding-inline-end: 1mm;
+    overflow-x: auto;
   }
 
   .recipe-ingredient-first-table {

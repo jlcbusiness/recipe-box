@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
 import { CompleteInviteForm, GoogleInviteForm } from './complete-invite-form';
 
+export const metadata = {
+  title: 'Account - Complete Account Setup',
+};
+
 export default async function CompleteInvitePage() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();

@@ -514,17 +514,124 @@ test('legacy divided Preparation loads as Divide and remains editable @e2e @meas
   }
 });
 
+test('Ingredient-first wraps long ingredient names and measurements @e2e @measurements', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ownerHeaders = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${owner.accessToken}`,
+  };
+  const ingredientName = 'Caramelized shallots with white wine and fresh thyme';
+  const specificsText = 'with several very finely chopped leaves of fresh thyme';
+  const preparationText = 'finely diced, slowly simmered with white wine, and cooled completely';
+
+  try {
+    const saveResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: ownerHeaders,
+      data: recipePayload('Long ingredient layout', [
+        {
+          ingredient_id: null,
+          ingredient_name: ingredientName,
+          is_main: true,
+          detail: specificsText,
+          preparation: preparationText,
+          portion_one_ratio: 0.25,
+          measurements: [
+            {
+              measurement_type: 'volume',
+              amount_min: 1234567.5,
+              amount_max: null,
+              unit_code: 'tbsp',
+              picklist_value_id: null,
+            },
+          ],
+        },
+      ]),
+    });
+    expect(saveResponse.ok(), await saveResponse.text()).toBeTruthy();
+    const [recipe] = (await saveResponse.json()) as { id: string }[];
+    if (!recipe) throw new Error('Expected the long ingredient fixture to be saved.');
+
+    const seedDividedRatio = await request.patch(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?recipe_id=eq.${recipe.id}`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+        data: { portion_one_ratio: 0.25 },
+      },
+    );
+    expect(seedDividedRatio.ok(), await seedDividedRatio.text()).toBeTruthy();
+
+    await signIn(page, owner.email, owner.password);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(`/recipes/${recipe.id}`);
+    await expect(page.getByRole('heading', { name: 'Long ingredient layout' })).toBeVisible();
+    const table = page.locator('.recipe-ingredient-first-table');
+    const row = table.locator('tbody tr[data-ingredient-stripe]').first();
+    const ingredient = row.locator('.recipe-reader-table-name');
+    const specifics = row.locator('.recipe-reader-specifics');
+    const amount = row.locator('.recipe-reader-mobile-volume');
+    const preparation = row.locator('.recipe-ingredient-preparation-text');
+    const divide = row.locator('.recipe-reader-mobile-divide-note');
+    await expect(ingredient).toContainText('caramelized shallots');
+    await expect(specifics).toContainText(specificsText.toLocaleLowerCase());
+    await expect(preparation).toHaveText(preparationText);
+    await expect(divide).toContainText('divide');
+    expect(((await amount.textContent()) ?? '').replace(/\D/gu, '')).toContain('1234567');
+
+    for (const width of [320, 390, 540, 760, 761]) {
+      await page.setViewportSize({ width, height: 844 });
+      if (width <= 760) {
+        await expect(table).toBeVisible();
+        const tableWidth = await table.evaluate((element) => ({
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+        }));
+        expect(tableWidth.scrollWidth).toBeLessThanOrEqual(tableWidth.clientWidth);
+        await expect(preparation).toHaveCSS('text-align', 'center');
+        for (const text of [ingredient, specifics, amount, preparation, divide]) {
+          expect(await getTextLineTops(text).then((tops) => tops.length)).toBeGreaterThan(1);
+        }
+        if (width <= 390) {
+          await expect(divide).toBeVisible();
+        }
+      } else {
+        const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
+        const presentationLabel = await presentationToggle.getAttribute('aria-label');
+        if (presentationLabel?.startsWith('Ingredient view: Ingredient-first')) {
+          await presentationToggle.click();
+        }
+        await expect(page.locator('.recipe-ingredient-list')).toBeVisible();
+      }
+      if (width <= 760) {
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true);
+      }
+    }
+  } finally {
+    await deleteTestUser(request, owner);
+  }
+});
+
 test('Preparation and Divide stay independent while Size remains tied to Preparation @e2e @a11y @measurements', async ({
   page,
   request,
 }) => {
   const user = await createTestUser(request);
+  const longSpecifics = 'freshly cracked and sifted into several very fine layers before use';
 
   try {
     await signIn(page, user.email, user.password);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/recipes/new');
     const recipeForm = page.locator('.recipe-form');
+    await expect(recipeForm).toBeVisible();
     const formWidth = (await recipeForm.boundingBox())?.width ?? 0;
     expect(formWidth).toBeGreaterThanOrEqual(1190);
     expect(formWidth).toBeLessThanOrEqual(1200);
@@ -553,6 +660,12 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     await salt.fill('Salt');
     await salt.press('Enter');
     await salt.press('Enter');
+    const saltSpecificsCell = grid.locator('[aria-label="Specifics, row 1"]');
+    await saltSpecificsCell.click();
+    const saltSpecifics = page.getByRole('textbox', { name: 'Specifics, row 1' });
+    await saltSpecifics.fill(longSpecifics);
+    await saltSpecifics.press('Tab');
+    await expect(saltSpecificsCell).toHaveText(longSpecifics);
     await page.getByRole('textbox', { name: 'Volume amount, row 1' }).fill('1');
     await page.getByRole('combobox', { name: 'Volume unit, row 1' }).click();
     await page.getByRole('listbox').getByRole('option', { name: 'cup', exact: true }).click();
@@ -821,8 +934,12 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     await expect(page.getByRole('heading', { name: 'Preparation controls recipe' })).toBeVisible();
     const ingredientList = page.locator('.recipe-ingredient-list');
     const standardRows = ingredientList.locator('li:not(.recipe-ingredient-set-divider)');
-    await expect(ingredientList).toContainText('1 cup salt, sliced');
-    await expect(ingredientList).toContainText('1 cup salt, sliced, divided ⅔ : ⅓');
+    await expect(ingredientList).toContainText(
+      '1 cup freshly cracked and sifted into several very fine layers before use salt, sliced',
+    );
+    await expect(ingredientList).toContainText(
+      '1 cup freshly cracked and sifted into several very fine layers before use salt, sliced, divided ⅔ : ⅓',
+    );
     await expect(ingredientList).toContainText('divided ⅔ : ⅓');
     await expect(ingredientList).not.toContainText('1st');
     await expect(ingredientList).not.toContainText('2nd');
@@ -848,7 +965,7 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     const mobileStandardContinuation = mobileStandardIngredient.locator(
       '.recipe-ingredient-continuation',
     );
-    await expect(mobileStandardIngredient).not.toHaveAttribute('data-mobile-wrap');
+    await expect(mobileStandardIngredient).toHaveAttribute('data-mobile-wrap', 'continuation');
     await expect(mobileStandardPrimary).toHaveCSS('text-align', 'start');
     await expect(
       mobileStandardIngredient.locator('.recipe-ingredient-continuation-separator'),
@@ -859,7 +976,7 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     await expect(mobileStandardContinuation).toContainText('sliced');
     await expect(mobileStandardContinuation).toContainText('divided');
     const mobileSaltLineTops = await getTextLineTops(mobileStandardIngredient);
-    expect(mobileSaltLineTops).toHaveLength(1);
+    expect(mobileSaltLineTops.length).toBeGreaterThan(1);
     const mobileChickpea = standardRows.nth(1).locator('.recipe-ingredient-name');
     const mobileThyme = standardRows.nth(2).locator('.recipe-ingredient-name');
     const [
@@ -1052,13 +1169,13 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
       (desktopDivideLabelBounds?.y ?? 0) + (desktopDivideLabelBounds?.height ?? 0),
     );
     const mobileDivideNote = preparationCell.locator('.recipe-ingredient-portion-note-divided');
-    for (const width of [760, 390, 320]) {
+    for (const width of [760, 540, 390, 320]) {
       await page.setViewportSize({ width, height: 844 });
       await expect(chickpeaName).toHaveCSS('font-variant-caps', 'all-small-caps');
       await expect(divideCell).toBeHidden();
       await expect(mobileDivideNote).toContainText('divide ⅔ : ⅓');
       await expect(mobileDivideNote).toHaveCSS('text-align', 'center');
-      await expect(preparationText).toHaveCSS('text-align', 'left');
+      await expect(preparationText).toHaveCSS('text-align', 'center');
       await expect(page.getByRole('columnheader', { name: 'divided' })).toHaveCount(0);
       const mobileTableTextLayout = await ingredientTable.evaluate((table) => {
         const contentSelectors = [
@@ -1123,46 +1240,57 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
 
         return { wrapped, minimumColumnGap: Math.min(...gaps) };
       });
-      expect(mobileTableTextLayout.wrapped).toEqual([]);
+      expect(mobileTableTextLayout.wrapped).toContain(longSpecifics);
       expect(mobileTableTextLayout.minimumColumnGap).toBeGreaterThanOrEqual(8);
-      if (width === 320) {
-        const scrollMetrics = await page
-          .locator('.recipe-ingredient-first-table-scroll')
-          .evaluate((container) => {
-            const maxScroll = container.scrollWidth - container.clientWidth;
-            if (maxScroll > 0) {
-              container.scrollLeft = container.scrollWidth;
-            }
-            return { maxScroll, scrollLeft: container.scrollLeft };
-          });
-        if (scrollMetrics.maxScroll > 0) {
-          expect(scrollMetrics.scrollLeft).toBeGreaterThan(0);
-          const preparationVisible = await page
-            .locator('.recipe-ingredient-first-table-scroll')
-            .evaluate((container) => {
-              const preparation = container.querySelector(
-                'tbody tr[data-ingredient-stripe] .recipe-ingredient-column-preparation',
-              );
-              if (!preparation) {
-                return false;
-              }
-              const preparationBounds = preparation.getBoundingClientRect();
-              const containerBounds = container.getBoundingClientRect();
-              return (
-                preparationBounds.right > containerBounds.left &&
-                preparationBounds.left < containerBounds.right
-              );
-            });
-          expect(preparationVisible).toBe(true);
-          await page.locator('.recipe-ingredient-first-table-scroll').evaluate((container) => {
-            container.scrollLeft = 0;
-          });
-        }
-      }
+      const tableScrollMetrics = await page
+        .locator('.recipe-ingredient-first-table-scroll')
+        .evaluate((container) => {
+          const table = container.querySelector('table');
+          return {
+            maxScroll: container.scrollWidth - container.clientWidth,
+            scrollLeft: container.scrollLeft,
+            containerWidth: container.getBoundingClientRect().width,
+            containerClientWidth: container.clientWidth,
+            containerScrollWidth: container.scrollWidth,
+            tableWidth: table?.getBoundingClientRect().width ?? null,
+            tableClientWidth: table?.clientWidth ?? null,
+            tableScrollWidth: table?.scrollWidth ?? null,
+            overflowingDescendants: table
+              ? Array.from(table.querySelectorAll<HTMLElement>('*'))
+                  .map((element) => {
+                    const bounds = element.getBoundingClientRect();
+                    return {
+                      tagName: element.tagName,
+                      className: typeof element.className === 'string' ? element.className : '',
+                      text: element.textContent?.trim().slice(0, 100) ?? '',
+                      clientWidth: element.clientWidth,
+                      scrollWidth: element.scrollWidth,
+                      right: bounds.right,
+                      tableRight: table.getBoundingClientRect().right,
+                    };
+                  })
+                  .filter(
+                    (element) =>
+                      element.clientWidth > 0 &&
+                      (element.scrollWidth > element.clientWidth ||
+                        element.right > (element.tableRight ?? 0) + 0.5),
+                  )
+                  .slice(0, 8)
+              : [],
+          };
+        });
+      expect(
+        tableScrollMetrics.maxScroll,
+        `Ingredient table overflow at ${width}px: ${JSON.stringify(tableScrollMetrics)}`,
+      ).toBeLessThanOrEqual(0);
+      expect(tableScrollMetrics.scrollLeft).toBe(0);
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
     }
+    await page.setViewportSize({ width: 761, height: 844 });
+    await expect(divideCell).toBeVisible();
+    await expect(preparationText).toHaveCSS('text-align', 'left');
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(preparationCell).toContainText('sliced,');
     const mobileCellSpacing = await saltRow.evaluate((row) =>

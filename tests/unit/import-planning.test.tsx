@@ -163,7 +163,7 @@ describe('database import planning', () => {
         reference_type: 'external_url',
         publication_id: null,
         linked_recipe_id: null,
-        display_text: 'Original source',
+        display_text: 'Stovetop Chicken & Broccoli Casserole',
         url: 'https://example.test/recipe',
         position: 0,
       },
@@ -174,7 +174,9 @@ describe('database import planning', () => {
       destinationPublicationIds: { [sourceRecipeId]: destinationPublicationId },
     });
     expect(plan.records.recipe_references).toHaveLength(1);
-    expect(plan.records.recipe_references[0].display_text).toBe('Original source');
+    expect(plan.records.recipe_references[0].display_text).toBe(
+      'Stovetop Chicken & Broccoli Casserole',
+    );
   });
   it('requires an explicit choice for every matched root', () => {
     const { data, existing } = createInput();

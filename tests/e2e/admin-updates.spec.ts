@@ -241,6 +241,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await appAdminTab.press('ArrowRight');
     await expect(updatesTab).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tabpanel', { name: 'Updates' })).toBeVisible();
+    await expect(page).toHaveTitle('Recipe Box - Settings - Updates');
     await expect(page.getByRole('button', { name: 'Add update' })).toHaveCount(0);
     await expect(page.getByText('Done', { exact: true })).toBeVisible();
     await expect(page.getByText('Type', { exact: true })).toBeVisible();

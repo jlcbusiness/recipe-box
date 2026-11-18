@@ -203,7 +203,7 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
     const renderedIngredients = page.locator('.recipe-ingredient-list, .recipe-ingredient-table');
-    await expect(renderedIngredients).toContainText('cubed 1 ¼ in');
+    await expect(renderedIngredients).toContainText('cubed 1 ¼"');
     await expect(renderedIngredients).toContainText('divided');
     await expect(renderedIngredients).toContainText('1 : 3');
     await waitForCachedRecipe(page, `Offline recipe ${recipeId}`);
@@ -220,7 +220,7 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
 
     await recipeLink.click();
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
-    await expect(renderedIngredients).toContainText('cubed 1 ¼ in');
+    await expect(renderedIngredients).toContainText('cubed 1 ¼"');
     await expect(renderedIngredients).toContainText('divided');
     await expect(renderedIngredients).toContainText('1 : 3');
     await expect(page.getByRole('status')).toContainText('Offline copy');

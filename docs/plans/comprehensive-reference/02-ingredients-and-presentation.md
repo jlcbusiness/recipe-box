@@ -237,6 +237,9 @@ Cubed, diced, and sliced ingredients may have a separate positive numeric Size
 with unit `in` or `cm`. Both Size fields are null when absent; Size is valid
 only with those preparations. Readers and print format the value using the
 recipe quantity formatter and display the preparation before the Size value.
+US customary Size output uses an attached double quote instead of `in`
+(for example, `1 ¼"`); metric output keeps the `cm` suffix. The editor continues
+to show the existing `in`/`cm` unit choices.
 Selecting any of the three preparations in the editor reveals the Size field
 and underlined unit toggle in the Preparation section. Inch input accepts
 positive decimals, simple fractions, and mixed fractions; centimeter input
@@ -347,6 +350,12 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
   Mobile keeps the existing Prep column and places `Divide a : b` on a second
   line without adding a column or subheading. For dual measures, the displayed
   pair follows the readability rule in § 3.7.
+
+At mobile widths, Ingredient-first cell content wraps to the available width;
+long ingredient names, specifics, amounts, and Preparation do not force a
+min-content-width table. The table and page do not scroll horizontally.
+Preparation text in the mobile Prep cell is centered like the divided note.
+Vertical growth is preferred to horizontal scrolling.
 
 ```text
 +---------------------------+----------------+---------------+--------+

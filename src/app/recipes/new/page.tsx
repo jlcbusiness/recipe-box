@@ -10,6 +10,10 @@ import {
 import { createClient } from '../../../lib/supabase/server';
 import { RecipeForm } from '../recipe-form';
 
+export const metadata = {
+  title: 'Add Recipe',
+};
+
 export default async function NewRecipePage({
   searchParams,
 }: {

@@ -26,6 +26,10 @@ import { SettingsTabs } from './settings-tabs';
 import { TagCatalogManager } from './tag-catalog-manager';
 import { UnitPreferences } from './unit-preferences';
 
+export const metadata = {
+  title: 'Settings - Preferences',
+};
+
 export default async function SettingsPage({
   searchParams,
 }: {

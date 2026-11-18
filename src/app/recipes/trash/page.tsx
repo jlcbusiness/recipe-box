@@ -23,6 +23,10 @@ const publicationTypeLabels = {
   collection: 'Recipe Tin',
 } as const;
 
+export const metadata = {
+  title: 'Trash',
+};
+
 export default async function TrashPage({ searchParams }: TrashPageProps) {
   const [{ status }, supabase] = await Promise.all([searchParams, createClient()]);
   const [recipes, publications] = await Promise.all([

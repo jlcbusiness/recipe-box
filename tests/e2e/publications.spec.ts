@@ -1141,7 +1141,7 @@ test('Library Explorer keeps its empty state accessible on mobile @e2e @a11y', a
     expect(emptyA11y.violations).toEqual([]);
     await page.getByRole('link', { name: 'Switch to List view' }).click();
     await expect(page).toHaveURL(/view=list/);
-    await expect(page).toHaveTitle('Recipe Box');
+    await expect(page).toHaveTitle('Recipe Box - Library');
     await expect(emptyState).toBeVisible();
     const emptyGridA11y = await new AxeBuilder({ page }).analyze();
     expect(emptyGridA11y.violations).toEqual([]);

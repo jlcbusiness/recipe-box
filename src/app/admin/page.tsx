@@ -1,6 +1,10 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
 
+export const metadata = {
+  title: 'Settings - App admin',
+};
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();

@@ -1,6 +1,6 @@
 {
   "name": "recipe-box",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "private": true,
   "engines": {
     "node": "26.x"
@@ -51,6 +51,7 @@
     "lucide-react": "1.52.0",
     "markdown-it": "14.3.3",
     "next": "16.4.6",
+    "parse5": "8.0.1",
     "react": "19.3.0",
     "react-advanced-cropper": "0.20.1",
     "react-dom": "19.3.0",

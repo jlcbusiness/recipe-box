@@ -128,6 +128,7 @@ async function createRecipe(
   plainTextSuffix = instructionSuffix,
   makes?: { quantity: number; thing: string },
   publishAutomatically = true,
+  equipmentIds: string[] = [],
 ) {
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
@@ -174,7 +175,7 @@ async function createRecipe(
         p_notes_markdown: 'Private note sentinel',
         p_meal_type_ids: [],
         p_cuisine_ids: [],
-        p_equipment_ids: [],
+        p_equipment_ids: equipmentIds,
         p_ingredient_rows: ingredientRowId
           ? [
               {
@@ -1438,6 +1439,100 @@ test('an owner can switch a recipe between linkable and private @e2e', async ({
         { headers: serviceHeaders(config) },
       );
     }
+  }
+});
+
+test('public Equipment labels lowercase without changing picklist values @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const equipmentName = 'Medium skillet';
+
+  try {
+    const picklistQuery = new URLSearchParams({
+      select: 'id,value',
+      account_id: `eq.${user.id}`,
+      category: 'eq.equipment',
+      value: `eq.${equipmentName}`,
+    });
+    const picklistResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?${picklistQuery}`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(picklistResponse.ok(), await picklistResponse.text()).toBeTruthy();
+    const [equipment] = (await picklistResponse.json()) as Array<{ id: string; value: string }>;
+    if (!equipment) throw new Error('Expected the seeded Equipment picklist value.');
+    expect(equipment.value).toBe(equipmentName);
+
+    const recipe = await createRecipe(
+      request,
+      config,
+      user,
+      'Public equipment casing',
+      undefined,
+      false,
+      [],
+      '',
+      '',
+      undefined,
+      true,
+      [equipment.id],
+    );
+    const publicId = await getPublicId(request, config, recipe.id);
+    await page.addInitScript(() => {
+      window.print = () => {
+        const metadata = document.querySelector<HTMLElement>('.recipe-output-metadata');
+        const equipmentLabel = Array.from(metadata?.querySelectorAll('dt') ?? []).find(
+          (label) => label.textContent?.trim() === 'Equipment',
+        );
+        const equipmentValue =
+          equipmentLabel?.parentElement?.querySelector('dd')?.textContent?.trim() ?? '';
+        window.top?.document.documentElement.setAttribute('data-print-equipment', equipmentValue);
+        window.top?.document.documentElement.setAttribute('data-print-requested', 'true');
+      };
+    });
+    await page.goto(`/r/${publicId}`);
+    const equipmentSection = page.getByRole('region', { name: 'Equipment', exact: true });
+    await expect(equipmentSection.getByRole('listitem')).toHaveText('medium skillet');
+    await requestPublicPrint(page);
+    await expect(page.locator('html')).toHaveAttribute('data-print-equipment', 'medium skillet');
+
+    const htmlDownloadPromise = page.waitForEvent('download');
+    await publicOutputTrigger(page).click();
+    await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+    const htmlDownload = await htmlDownloadPromise;
+    const htmlPath = await htmlDownload.path();
+    if (!htmlPath) throw new Error('Expected the public HTML download to have a file path.');
+    const standalone = await page.context().newPage();
+    try {
+      await standalone.setContent(await readFile(htmlPath, 'utf8'));
+      const equipmentValue = standalone
+        .locator('.recipe-output-metadata dt')
+        .filter({ hasText: 'Equipment' })
+        .locator('..')
+        .locator('dd');
+      await expect(equipmentValue).toHaveText('medium skillet');
+      await expect(standalone.locator('.recipe-output-metadata')).not.toContainText(
+        'Medium skillet',
+      );
+    } finally {
+      await standalone.close();
+    }
+
+    const storedPicklistResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?${picklistQuery}`,
+      { headers: ownerHeaders(config, user) },
+    );
+    expect(storedPicklistResponse.ok(), await storedPicklistResponse.text()).toBeTruthy();
+    const [storedEquipment] = (await storedPicklistResponse.json()) as Array<{
+      id: string;
+      value: string;
+    }>;
+    expect(storedEquipment).toEqual(equipment);
+  } finally {
+    await deleteTestUser(request, user);
   }
 });
 
@@ -3135,7 +3230,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
         name: 'Public cooking view - serves 4 · Makes 3 baby cakes',
       }),
     ).toBeVisible();
-    await expect(page).toHaveTitle('Public cooking view | Recipe Box');
+    await expect(page).toHaveTitle('Recipe Box - Public cooking view');
     await expect(page.locator('.recipe-public-makes-inline')).toContainText('Makes 3 baby cakes');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-size', '16px');
     await expect(page.locator('.recipe-public-serves-inline')).toHaveCSS('font-weight', '400');
@@ -3519,7 +3614,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       'salt',
     );
     await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
-      'cubed 1 ¼ in',
+      'cubed 1 ¼"',
     );
     await expect(page.locator('.recipe-ingredient-list, .recipe-ingredient-table')).toContainText(
       '1 : 3',
@@ -3631,7 +3726,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       ),
     );
     expect(printedTokenColors.every(({ color, parentColor }) => color === parentColor)).toBe(true);
-    await expect(ingredientContent).toContainText('cubed 1 ¼ in');
+    await expect(ingredientContent).toContainText('cubed 1 ¼"');
     await expect(ingredientContent).toContainText('2 : 6');
     const publicNoPhotosPdf = await inspectPrintedRecipePdf(
       await page.pdf({ preferCSSPageSize: true }),

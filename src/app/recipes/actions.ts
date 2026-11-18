@@ -8,6 +8,7 @@ import {
 } from '../../lib/accounts/public-username-rules';
 import { normalizeHttpUrl } from '../../lib/publications/validation';
 import type { RecipeState } from '../../lib/recipes/data';
+import { resolveExternalReferenceTitles } from '../../lib/recipes/external-reference-title';
 import type { IngredientRowPayload } from '../../lib/recipes/ingredient-rules';
 import {
   type IngredientSetDraft,
@@ -156,8 +157,7 @@ function parseRecipeRelationships(formData: FormData): RecipeRelationshipsPayloa
           id: reference.id,
           reference_type:
             reference.reference_type as RecipeRelationshipsPayload['references'][number]['reference_type'],
-          display_text:
-            reference.reference_type === 'external_url' ? (url ?? '') : reference.display_text,
+          display_text: reference.display_text,
           linked_recipe_id: reference.linked_recipe_id,
           publication_id: reference.publication_id,
           url,
@@ -439,6 +439,40 @@ export async function saveRecipe(
     return { error: 'Enter a valid HTTP(S) URL.' };
   }
 
+  let relationshipsForSave = relationships;
+  if (relationships.references.some((reference) => reference.reference_type === 'external_url')) {
+    let existingReferences: {
+      id: string;
+      url: string | null;
+      display_text: string;
+      is_protected_source: boolean;
+      source_public_id: string | null;
+    }[] = [];
+    if (recipeId) {
+      const { data: storedReferences, error: storedReferencesError } = await supabase
+        .from('recipe_references')
+        .select('id, url, display_text, is_protected_source, source_public_id')
+        .eq('account_id', authData.user.id)
+        .eq('recipe_id', recipeId)
+        .eq('reference_type', 'external_url');
+      if (storedReferencesError) {
+        console.error('Unable to verify recipe references before saving.', {
+          code: storedReferencesError.code,
+        });
+        return { error: 'Unable to verify recipe references. Reload and try again.' };
+      }
+      existingReferences = storedReferences ?? [];
+    }
+
+    relationshipsForSave = {
+      ...relationships,
+      references: await resolveExternalReferenceTitles(
+        relationships.references,
+        existingReferences,
+      ),
+    };
+  }
+
   const { data, error } = await supabase.rpc('save_recipe_with_time_entries', {
     p_recipe_id: recipeId,
     p_expected_version: expectedVersion,
@@ -463,7 +497,7 @@ export async function saveRecipe(
     p_publication_id: optionalId(formData, 'publication_id'),
     p_publication_page: formText(formData, 'publication_page') || null,
     p_recipe_url: recipeUrl,
-    p_recipe_relationships: relationships,
+    p_recipe_relationships: relationshipsForSave,
     p_tag_ids: selectedIds(formData, 'tag_ids'),
     p_ingredient_sets: ingredientSets,
     p_score: state === 'tried' ? parsedScore : null,

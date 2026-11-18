@@ -7,7 +7,10 @@ import { appVersion } from '../lib/app-version';
 import { PwaRegistration } from './pwa-registration';
 
 export const metadata: Metadata = {
-  title: 'Recipe Box',
+  title: {
+    default: 'Recipe Box',
+    template: 'Recipe Box - %s',
+  },
   description: 'A local workspace for the recipes you keep.',
   icons: { icon: '/favicon.ico' },
 };

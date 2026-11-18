@@ -239,7 +239,7 @@ describe('ingredient row rules', () => {
     expect(formatIngredientDisplay(ingredient)).toBe('Chickpea Flour');
   });
 
-  it('formats structured cubed Size in its saved unit', () => {
+  it('formats US Size with a quote and keeps centimeters spaced', () => {
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Carrot',
@@ -248,7 +248,18 @@ describe('ingredient row rules', () => {
         size_value: 1.25,
         size_unit: 'in',
       }),
-    ).toBe('carrot, cubed 1 ¼ in');
+    ).toBe('carrot, cubed 1 ¼"');
+    for (const preparation of ['diced', 'sliced']) {
+      expect(
+        formatIngredientDisplay({
+          ingredient_name: 'Carrot',
+          detail: '',
+          preparation,
+          size_value: 1.25,
+          size_unit: 'in',
+        }),
+      ).toBe(`carrot, ${preparation} 1 ¼"`);
+    }
     expect(
       formatIngredientDisplay({
         ingredient_name: 'Carrot',

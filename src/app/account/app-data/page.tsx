@@ -7,6 +7,10 @@ import { DatabaseImportAction } from '../../settings/database-import-action';
 
 const resetErrorCodes = ['google', 'provider', 'unavailable'];
 
+export const metadata = {
+  title: 'Settings - App Data',
+};
+
 export default async function AppDataPage({
   searchParams,
 }: {

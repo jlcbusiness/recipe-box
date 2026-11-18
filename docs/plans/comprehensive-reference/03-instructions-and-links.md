@@ -183,6 +183,23 @@ In recipe detail and edit, References follows Notes, which follows Pairs With. T
   be created or selected in the current editor.
 - External URL values accept a host without a scheme, such as `google.com`,
   and normalize it to HTTPS. Only HTTP and HTTPS URLs are accepted.
+- When a new External URL reference is added or its URL changes, Save attempts
+  a bounded lookup of the page's document title. Store the title as
+  `display_text` and keep the normalized URL separately; recipe readers use
+  the title as link text. If lookup fails or finds no usable title, Save
+  succeeds and the normalized URL remains the visible fallback. Unchanged
+  references and protected source references are not fetched or rewritten.
+  The editor also offers an optional manual label: a non-empty label takes
+  precedence over lookup, while a blank label keeps the automatic behavior.
+  Unchanged references retain their saved text unless the user clears the
+  label, in which case the URL is shown.
+  Fetch only public HTTP(S) pages, with a 2-second total budget and at most 5
+  title lookups per recipe Save; remaining new URLs use the fallback. Follow at
+  most 3 redirects, allow standard ports, and read no more than 256 KiB per
+  response. Validate resolved addresses and every redirect target against
+  non-public address ranges, including the actual connection target. Do not
+  forward cookies, credentials, or application session headers; parse plain
+  title text without rendering fetched markup.
 - Detail mode renders Pairs With and References as unordered lists. The
   Magazine recipe URL is labeled `Url`; on mobile edit it appears below the
   free-text Citation field.

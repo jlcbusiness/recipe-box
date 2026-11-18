@@ -54,6 +54,15 @@ type RecipeDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
+export async function generateMetadata({ params }: RecipeDetailPageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const recipe = await getRecipe(supabase, id);
+  return {
+    title: recipe ? recipe.name : 'Recipe not found',
+  };
+}
+
 function renderMarkdown(value: string) {
   const occurrences = new Map<string, number>();
   return value.split(/(\*\*[^*]+\*\*)/g).map((part) => {
@@ -334,7 +343,8 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         (valueId) =>
           picklists.find((value) => value.id === valueId && value.category === category)?.value,
       )
-      .filter((value): value is string => Boolean(value));
+      .filter((value): value is string => Boolean(value))
+      .map((value) => (category === 'equipment' ? value.toLocaleLowerCase() : value));
   const response =
     recipe.state === 'want_to_try'
       ? ['Enthusiasm', valueFor(recipe.enthusiasm_id)]

@@ -18,6 +18,22 @@ const publicationTypeLabels = {
   collection: 'Recipe Tin',
 } as const;
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: publication, error } = await supabase
+    .from('publications')
+    .select('name, trashed_at')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) throw new Error('Unable to load this publication.');
+  return {
+    title:
+      publication && publication.trashed_at === null ? publication.name : 'Publication not found',
+  };
+}
+
 export default async function PublicationPage({
   params,
   searchParams,

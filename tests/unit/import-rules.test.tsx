@@ -1102,7 +1102,7 @@ describe('import bundle validation', () => {
       recipe_id: recipeId,
       reference_type: 'external_url',
       publication_id: null,
-      display_text: "source-user's Lemon cake",
+      display_text: 'Stovetop Chicken & Broccoli Casserole',
       url: `https://recipe-box.example/r/${sourcePublicId}`,
       position: 0,
       linked_recipe_id: null,
@@ -1121,6 +1121,7 @@ describe('import bundle validation', () => {
       is_protected_source: true,
       source_public_id: sourcePublicId,
       url: sourceReference.url,
+      display_text: 'Stovetop Chicken & Broccoli Casserole',
     });
 
     const legacyEntries = createBundleEntries({

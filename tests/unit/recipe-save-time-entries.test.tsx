@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as externalReferenceTitles from '../../src/lib/recipes/external-reference-title';
 
 const { createClient, redirect, revalidatePath } = vi.hoisted(() => ({
   createClient: vi.fn(),
@@ -33,6 +34,10 @@ function createFormData(
 }
 
 describe('recipe save time entries', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     const rpc = vi.fn().mockResolvedValue({ data: [{ id: recipeId, version: 1 }], error: null });
@@ -120,6 +125,103 @@ describe('recipe save time entries', () => {
         source_public_id: null,
       },
     ]);
+  });
+
+  it('saves an automatically resolved page title with the normalized URL', async () => {
+    const resolveTitles = externalReferenceTitles.resolveExternalReferenceTitles;
+    const lookup = vi.fn(async () => ({
+      title: 'Stovetop Chicken & Broccoli Casserole',
+      reason: null,
+    }));
+    vi.spyOn(externalReferenceTitles, 'resolveExternalReferenceTitles').mockImplementation(
+      (references, storedReferences) => resolveTitles(references, storedReferences, lookup),
+    );
+    const referenceId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const formData = createFormData([], {
+      site_listing: null,
+      pairings: [],
+      references: [
+        {
+          id: referenceId,
+          reference_type: 'external_url',
+          display_text: '',
+          linked_recipe_id: null,
+          publication_id: null,
+          url: 'https://EXAMPLE.test/chicken',
+        },
+      ],
+    });
+
+    await expect(saveRecipe(undefined, formData)).resolves.toEqual({ recipeId });
+
+    expect(lookup).toHaveBeenCalledWith('https://example.test/chicken', expect.any(AbortSignal));
+    const supabase = await createClient.mock.results[0]?.value;
+    expect(supabase.rpc.mock.calls[0]?.[1].p_recipe_relationships.references).toEqual([
+      {
+        id: referenceId,
+        reference_type: 'external_url',
+        display_text: 'Stovetop Chicken & Broccoli Casserole',
+        linked_recipe_id: null,
+        publication_id: null,
+        url: 'https://example.test/chicken',
+        is_protected_source: false,
+        source_public_id: null,
+      },
+    ]);
+  });
+
+  it.each([
+    ['timeout', { title: null, reason: 'timeout' }],
+    ['blocked destination', { title: null, reason: 'blocked_address' }],
+    ['invalid response', { title: null, reason: 'non_html' }],
+    ['missing title', { title: null, reason: 'missing_title' }],
+  ] as const)('saves with URL fallback after a %s lookup failure', async (_failure, result) => {
+    const resolveTitles = externalReferenceTitles.resolveExternalReferenceTitles;
+    const lookup = vi.fn(async () => result);
+    vi.spyOn(externalReferenceTitles, 'resolveExternalReferenceTitles').mockImplementation(
+      (references, storedReferences) => resolveTitles(references, storedReferences, lookup),
+    );
+    const referenceId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const normalizedUrl = 'https://example.test/recipe';
+    const formData = createFormData([], {
+      site_listing: null,
+      pairings: [],
+      references: [
+        {
+          id: referenceId,
+          reference_type: 'external_url',
+          display_text: '',
+          linked_recipe_id: null,
+          publication_id: null,
+          url: 'https://EXAMPLE.test/recipe',
+        },
+      ],
+    });
+
+    await expect(saveRecipe(undefined, formData)).resolves.toEqual({ recipeId });
+
+    const supabase = await createClient.mock.results[0]?.value;
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'save_recipe_with_time_entries',
+      expect.objectContaining({
+        p_recipe_relationships: {
+          site_listing: null,
+          pairings: [],
+          references: [
+            {
+              id: referenceId,
+              reference_type: 'external_url',
+              display_text: normalizedUrl,
+              linked_recipe_id: null,
+              publication_id: null,
+              url: normalizedUrl,
+              is_protected_source: false,
+              source_public_id: null,
+            },
+          ],
+        },
+      }),
+    );
   });
 
   it('rejects inconsistent protected source metadata before calling the save RPC', async () => {

@@ -43,6 +43,7 @@ test('Settings keeps preference and recipe tabs with URL and keyboard state @e2e
   try {
     await signIn(page, user.email, user.password);
     await page.goto('/settings');
+    await expect(page).toHaveTitle('Recipe Box - Settings - Preferences');
 
     const tabList = page.getByRole('tablist', { name: 'Settings areas' });
     const preferencesTab = tabList.getByRole('tab', { name: 'Preferences' });
@@ -88,6 +89,7 @@ test('Settings keeps preference and recipe tabs with URL and keyboard state @e2e
     await recipeDataTab.click();
     await expect(recipeDataTab).toHaveAttribute('aria-selected', 'true');
     await expect(recipeDataPanel).toBeVisible();
+    await expect(page).toHaveTitle('Recipe Box - Settings - Recipe data');
     await expect(page).toHaveURL(/\/settings\?tab=recipe-data$/);
     expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
     await expect(recipeDataPanel.getByRole('region', { name: 'Picklists' })).toBeVisible();
@@ -993,6 +995,11 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
   request,
 }, testInfo) => {
   const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${user.accessToken}`,
+  };
 
   try {
     await signIn(page, user.email, user.password);
@@ -1102,6 +1109,22 @@ test('Settings manages the ingredient catalog with accessible inline controls @e
     await expect.poll(() => category.evaluate((select) => select.matches(':open'))).toBe(false);
     await page.keyboard.press('Escape');
     await expect(category).not.toBeFocused();
+    await category.selectOption('equipment');
+    const equipmentResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?select=display_value&account_id=eq.${user.id}&category=eq.equipment&order=sort_order.asc&limit=1`,
+      { headers },
+    );
+    expect(equipmentResponse.ok(), await equipmentResponse.text()).toBeTruthy();
+    const [equipment] = (await equipmentResponse.json()) as Array<{ display_value: string }>;
+    if (!equipment) throw new Error('Expected a seeded Equipment picklist value.');
+    const equipmentPicklist = page.getByRole('list', { name: 'Equipment', exact: true });
+    await expect(
+      equipmentPicklist.getByRole('button', {
+        name: `Edit ${equipment.display_value}`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await category.selectOption('food_type');
     const picklist = page.getByRole('list', { name: 'Food Type' });
     await expectListScrollWindow(picklist, 424);
     await picklistToggle.click();

@@ -222,22 +222,38 @@ function renderInstructionBlocks(
 }
 
 export default function PublicRecipePage(props: PublicRecipePageProps) {
+  const documentTitle =
+    props.state === 'active'
+      ? `Recipe Box - ${props.recipe.name}`
+      : `Recipe Box - ${
+          props.state === 'gone'
+            ? 'Recipe removed'
+            : props.state === 'error'
+              ? 'Unable to load recipe'
+              : 'Recipe unavailable'
+        }`;
+
   if (props.state !== 'active') {
     return (
-      <main className="recipes-main recipe-public-main">
-        <section className="recipe-detail-section" aria-labelledby="public-status-title">
-          <h1 id="public-status-title">
-            {props.state === 'gone' ? 'Recipe no longer available' : 'Recipe unavailable'}
-          </h1>
-          <p>
-            {props.state === 'gone'
-              ? 'This recipe is no longer available.'
-              : props.state === 'error'
-                ? 'This recipe could not be loaded. Please try again later.'
-                : 'This recipe is currently unavailable.'}
-          </p>
-        </section>
-      </main>
+      <>
+        <Head>
+          <title>{documentTitle}</title>
+        </Head>
+        <main className="recipes-main recipe-public-main">
+          <section className="recipe-detail-section" aria-labelledby="public-status-title">
+            <h1 id="public-status-title">
+              {props.state === 'gone' ? 'Recipe no longer available' : 'Recipe unavailable'}
+            </h1>
+            <p>
+              {props.state === 'gone'
+                ? 'This recipe is no longer available.'
+                : props.state === 'error'
+                  ? 'This recipe could not be loaded. Please try again later.'
+                  : 'This recipe is currently unavailable.'}
+            </p>
+          </section>
+        </main>
+      </>
     );
   }
 
@@ -280,7 +296,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
   return (
     <main className="recipes-main recipe-public-main" aria-labelledby="page-title">
       <Head>
-        <title>{`${recipe.name} | Recipe Box`}</title>
+        <title>{documentTitle}</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
       <RecipeReaderProvider serves={recipe.serves}>
@@ -352,7 +368,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                     <h2 id="equipment-title">Equipment</h2>
                     <ul className="recipe-relationship-list">
                       {recipe.equipment.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item}>{item.toLocaleLowerCase()}</li>
                       ))}
                     </ul>
                   </section>

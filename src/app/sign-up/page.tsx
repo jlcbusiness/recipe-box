@@ -1,6 +1,10 @@
 import { isSelfSignupAllowed } from '../../lib/auth/signup-mode';
 import { SignUpForm } from './sign-up-form';
 
+export const metadata = {
+  title: 'Account - Create Account',
+};
+
 export default function SignUpPage() {
   const selfSignupAllowed = isSelfSignupAllowed();
 

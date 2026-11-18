@@ -68,7 +68,10 @@ const recipe: PublicRecipePayload = {
   },
   pairings: ['Tea'],
   references: [
-    { display_text: 'Original source', href: 'https://example.test/cake' },
+    {
+      display_text: 'Stovetop Chicken & Broccoli Casserole',
+      href: 'https://example.test/cake',
+    },
     { display_text: 'Printed note', href: null },
   ],
 };
@@ -141,7 +144,7 @@ describe('public recipe copy payload', () => {
       expect.arrayContaining([
         expect.objectContaining({
           reference_type: 'external_url',
-          display_text: 'Original source',
+          display_text: 'Stovetop Chicken & Broccoli Casserole',
           url: 'https://example.test/cake',
         }),
         expect.objectContaining({

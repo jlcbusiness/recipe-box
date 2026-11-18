@@ -617,7 +617,7 @@
 }
 
 .recipe-ingredient-name-col {
-  width: 17%;
+  width: 15%;
 }
 
 .recipe-ingredient-type-col {
@@ -626,11 +626,12 @@
 
 /* Amount is the only non-percentage column, so it absorbs the fixed-width columns. */
 .recipe-ingredient-measurements-col {
-  width: calc(30% - 100px - (32px + 2mm));
+  width: calc(38% - 100px - (32px + 2mm));
 }
 
 .recipe-ingredient-detail-col {
-  width: 12%;
+  width: 14%;
+  min-width: 100px;
 }
 
 .recipe-ingredient-preparation-col {
@@ -638,7 +639,7 @@
 }
 
 .recipe-ingredient-divide-col {
-  width: 24%;
+  width: 16%;
 }
 
 /* 32px button plus 1mm on each side. */

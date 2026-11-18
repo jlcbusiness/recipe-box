@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '../../../lib/supabase/server';
 import { PublicUsernameSettings } from '../../settings/public-username';
 
+export const metadata = {
+  title: 'Settings - Username',
+};
+
 export default async function UsernamePage() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();

@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
 import { ResetPasswordForm } from './form';
 
+export const metadata = {
+  title: 'Account - Choose New Password',
+};
+
 export default async function ResetPasswordPage() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();

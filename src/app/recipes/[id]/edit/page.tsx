@@ -19,6 +19,15 @@ type EditRecipePageProps = {
   searchParams: Promise<{ saved?: string }>;
 };
 
+export async function generateMetadata({ params }: EditRecipePageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const recipe = await getRecipe(supabase, id);
+  return {
+    title: recipe ? `${recipe.name} - Edit` : 'Edit Recipe',
+  };
+}
+
 export default async function EditRecipePage({ params, searchParams }: EditRecipePageProps) {
   const [{ id }, { saved }] = await Promise.all([params, searchParams]);
   const supabase = await createClient();

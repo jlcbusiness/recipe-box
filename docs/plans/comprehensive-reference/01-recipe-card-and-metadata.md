@@ -34,6 +34,10 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Tags**                | Multi-select account-owned tags                | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle             | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17.                                                                                                                                                                                                                       |
 | **Notes**               | Markdown text                                  | Multi-line text                                                                                                                  | Captured gotchas, recipe tweaks, variations, and improvement observations.                                                                                                                                                                                                                                                                                             |
 
+Recipe reading, public, print, and standalone recipe outputs display assigned
+Equipment labels in lowercase. This is presentation-only; the shared catalog,
+Settings, search labels, and saved assignment IDs retain their existing values.
+
 ### 2.2 Time Tracking and Overlapping Times
 
 Recipes can have any number of ordered time entries. Each entry has a

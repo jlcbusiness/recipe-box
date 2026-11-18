@@ -896,9 +896,12 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
       .getByRole('columnheader', { name: 'Specifics' })
       .boundingBox();
     const amountHeader = await grid.getByRole('columnheader', { name: 'Amount' }).boundingBox();
+    const divideHeader = await grid.getByRole('columnheader', { name: 'Divide' }).boundingBox();
     expect(specificsHeader).not.toBeNull();
     expect(amountHeader).not.toBeNull();
+    expect(divideHeader).not.toBeNull();
     expect(specificsHeader?.width ?? 0).toBeGreaterThan(90);
+    expect(amountHeader?.width ?? 0).toBeGreaterThan(divideHeader?.width ?? 0);
     expect((specificsHeader?.x ?? 0) + (specificsHeader?.width ?? 0)).toBeLessThanOrEqual(
       (amountHeader?.x ?? 0) + 1,
     );

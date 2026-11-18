@@ -1,5 +1,9 @@
 import { ForgotPasswordForm } from './form';
 
+export const metadata = {
+  title: 'Account - Reset Password',
+};
+
 export default function ForgotPasswordPage() {
   return (
     <div className="workspace-shell">

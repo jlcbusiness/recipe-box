@@ -3,6 +3,21 @@ import { notFound } from 'next/navigation';
 import { createClient } from '../../../../lib/supabase/server';
 import { type HistoryEventRow, HistoryEvents } from '../../../history/history-events';
 
+export async function generateMetadata({ params }: PageProps<'/publications/[id]/history'>) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: publication, error } = await supabase
+    .from('publications')
+    .select('name')
+    .eq('id', id)
+    .is('trashed_at', null)
+    .maybeSingle();
+
+  if (error) throw new Error('Unable to load publication history.');
+  const publicationTitle = publication?.name ?? 'Publication not found';
+  return { title: `${publicationTitle} - History` };
+}
+
 export default async function PublicationHistoryPage({
   params,
 }: PageProps<'/publications/[id]/history'>) {

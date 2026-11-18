@@ -3,6 +3,22 @@ import { notFound } from 'next/navigation';
 import { createClient } from '../../../../lib/supabase/server';
 import { type HistoryEventRow, HistoryEvents } from '../../../history/history-events';
 
+export async function generateMetadata({ params }: PageProps<'/recipes/[id]/history'>) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: recipe, error } = await supabase
+    .from('recipes')
+    .select('name')
+    .eq('id', id)
+    .is('trashed_at', null)
+    .maybeSingle();
+
+  if (error) throw new Error('Unable to load recipe history.');
+  return {
+    title: recipe ? `${recipe.name} - History` : 'Recipe history',
+  };
+}
+
 export default async function RecipeHistoryPage({ params }: PageProps<'/recipes/[id]/history'>) {
   const { id } = await params;
   const supabase = await createClient();

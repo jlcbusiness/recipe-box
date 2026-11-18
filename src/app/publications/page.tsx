@@ -35,6 +35,10 @@ function publicationType(value: string): PublicationType | undefined {
     : undefined;
 }
 
+export const metadata = {
+  title: 'Library',
+};
+
 export default async function LibraryPage({
   searchParams,
 }: {
