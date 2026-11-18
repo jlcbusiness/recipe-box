@@ -103,7 +103,10 @@ excessive checkbox-to-ingredient gap in either context.
 - The user's first visual reference is the intended Ingredient-first text
   size; the larger second reference is not acceptable.
 - In Cook mode, the checkbox is 3px from the left border and 6px from the
-  ingredient text in private and shared views; retain a 48px-tall target.
+  ingredient text in private and shared views; retain a 48px mobile target and
+  keep desktop rows compact.
+- Vertically center Ingredient-first table cells in shared views to match
+  private views.
 - At desktop and mobile sizes, Playwright compares private/shared typography,
   measures both checkbox gaps, and checks for page-level overflow. Wake-lock
   status, check-off, print, and accessibility behavior remain unchanged.

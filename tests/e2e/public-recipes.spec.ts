@@ -1513,12 +1513,19 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
         }
         const table = page.locator('.recipe-ingredient-first-table');
         await expect(table).toBeVisible();
+        const zucchiniRow = table.locator('tbody tr').filter({ hasText: 'Zucchini' }).first();
+        const rowHeightBeforeCook = (await zucchiniRow.boundingBox())?.height ?? null;
         await page.getByRole('switch', { name: 'Cook mode' }).click();
         await expect(page.getByRole('status')).toContainText('wake lock could not be acquired');
         await page.getByRole('button', { name: 'Dismiss screen lock warning' }).click();
         const checkbox = page.getByRole('checkbox', { name: 'Mark Zucchini complete' });
         await expect(checkbox).toBeVisible();
         await expect(table.locator('.recipe-reader-specifics')).toContainText('fresh');
+        const verticalAlignments = await zucchiniRow
+          .locator('th, td')
+          .evaluateAll((cells) => cells.map((cell) => getComputedStyle(cell).verticalAlign));
+        expect(verticalAlignments.length).toBeGreaterThan(0);
+        expect(verticalAlignments.every((alignment) => alignment === 'middle')).toBe(true);
 
         const geometry = await table.evaluate((element) => {
           const row = Array.from(element.querySelectorAll('tbody tr')).find((candidate) =>
@@ -1558,7 +1565,17 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
 
         expect(Math.abs(geometry.leftGap - 3)).toBeLessThanOrEqual(1);
         expect(Math.abs(geometry.rightGap - 6), JSON.stringify(geometry)).toBeLessThanOrEqual(1);
-        expect(geometry.targetHeight).toBeGreaterThanOrEqual(48);
+        if (width <= 760) {
+          expect(geometry.targetHeight).toBeGreaterThanOrEqual(48);
+        } else {
+          expect(geometry.targetHeight).toBeLessThan(48);
+          const rowHeightAfterCook = (await zucchiniRow.boundingBox())?.height ?? null;
+          expect(rowHeightBeforeCook).not.toBeNull();
+          expect(rowHeightAfterCook).not.toBeNull();
+          if (rowHeightBeforeCook !== null && rowHeightAfterCook !== null) {
+            expect(Math.abs(rowHeightAfterCook - rowHeightBeforeCook)).toBeLessThanOrEqual(1);
+          }
+        }
         expect(Math.abs(geometry.targetWidth - geometry.checkboxWidth - 9)).toBeLessThanOrEqual(1);
         expect(Math.abs(geometry.cellWidth - geometry.targetWidth)).toBeLessThanOrEqual(1);
         if (width === 1280) {

@@ -53,22 +53,37 @@
   6; typecheck, Biome, and whitespace checks passed. Repository Markdown lint
   still reports 24 existing findings, including the decision-log line outside
   the new entry; none are in this workstream's records.
+- 2026-11-18: The user clarified that Cook-mode's 48px target is for mobile,
+  not desktop. Ingredient-first checkboxes now use compact desktop height and
+  retain 48px height on mobile. Private/shared tests passed at 1280px, 390px,
+  and 320px, including unchanged desktop row height; related contracts were
+  updated. Typecheck, Biome, and whitespace checks passed. Repository Markdown
+  lint still reports 24 existing findings.
+- 2026-11-18: The user reported that shared Ingredient-first table text was
+  not vertically centered. The new parity assertion reproduced the mismatch;
+  applying middle alignment to the shared table-cell rule fixed it. Focused
+  Chromium and Fold 6 tests passed, as did typecheck, Biome, and whitespace
+  checks. Biome reported seven existing specificity warnings; Markdown lint
+  still reports 24 findings, including the existing decision-log line 183
+  finding.
 
 ## Save Point
 
 - **Goal/status:** Implement and verify the approved Ingredient-first reader
-  parity brief; complete.
+  parity brief, including shared/private vertical alignment; complete.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
 - **Current step:** Implementation and verification are complete.
 - **Last verified:** The focused private/shared E2E tests passed in Chromium
   and Fold 6 at 1280px, 390px, and 320px, including mobile table alignment
-  and wrapping. Typecheck, targeted Biome, and `git diff --check` passed.
-  Repository Markdown lint checked 157 files and reported 24 existing
-  findings; none are in this workstream's records.
+  and wrapping, vertically centered table cells, a compact desktop target
+  with unchanged row height, and 48px mobile targets. Typecheck, targeted
+  Biome, and `git diff --check` passed; Biome reported seven specificity
+  warnings. Repository Markdown lint checked 157 files and reported 24
+  existing findings, including the existing decision-log line 183 finding.
 - **Next action:** Await review or direction for another Updates package.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); session
   `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; last action: focused Playwright
-  rerun and final validation.
+  run for vertical alignment and final validation.
 - **Trace boundary:** The implementation and verification actions are recorded
   below; earlier preparation history remains partial.

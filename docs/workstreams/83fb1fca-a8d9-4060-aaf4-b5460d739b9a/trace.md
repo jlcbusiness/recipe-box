@@ -109,3 +109,45 @@ preparation history remains partial.
   No findings were reported in this workstream's records.
 
 Last recorded action: focused Playwright rerun and final validation.
+
+## 2026-11-18 mobile-only Cook-mode target — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- The user clarified that the 48px Cook-mode target is for mobile, not desktop.
+  Scoped compact desktop sizing to the Ingredient-first table; the 48px mobile
+  target remains. Standard view is unchanged.
+- Updated the parity brief, visual guide, comprehensive reference, Slice 16,
+  Updates intake, and decision log.
+- Ran the focused private/shared parity test in Chromium and Fold 6:
+
+  ```sh
+  npx playwright test tests/e2e/public-recipes.spec.ts \
+    --grep "private and shared Ingredient-first readers match text and Cook-mode spacing" \
+    --project=chromium --project="Fold 6"
+  ```
+
+  Both tests passed. At 1280px they verify the compact target and unchanged row
+  height; at 390px and 320px they verify 48px targets and mobile layout.
+- `npm run typecheck` and `git diff --check` passed. Biome exited successfully
+  with seven `noDescendingSpecificity` warnings in the stylesheet.
+- `npm run lint:md` checked 157 files and reported 24 existing findings,
+  including the decision-log line 183 finding outside the new entry. No
+  findings were reported in this workstream's records.
+
+Last recorded action: responsive Cook-mode test and final validation.
+
+## 2026-11-18 shared table vertical alignment — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- Added a parity assertion that checks computed vertical alignment for all
+  cells in the tested Ingredient-first row in both private and shared readers.
+- Ran the focused Playwright test in Chromium. It failed on the shared table's
+  alignment assertion, confirming the reported mismatch.
+- Added `vertical-align: middle` to the common Ingredient-first table-cell rule
+  and removed the redundant private-only alignment declaration. Updated the
+  slice, visual, comprehensive, intake, and decision-log contracts.
+- Reran the focused Playwright test in Chromium and Fold 6; both passed.
+- `npm run typecheck`, targeted Biome, and `git diff --check` passed. Biome
+  reported seven `noDescendingSpecificity` warnings. `npm run lint:md` checked
+  157 files and reported 24 findings, including the existing decision-log line
+  183 finding. No other findings were reported in this workstream's records.
+
+Last recorded action: focused Playwright run for vertical alignment and final validation.

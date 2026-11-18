@@ -133,10 +133,11 @@ Excluded:
   Keep paired measurements together and retain current scaling, unit conversion,
   preparation, and print formatting.
 - Cook mode is an icon-only switch in the Ingredients toolbar. While active,
-  each ingredient has a labeled native checkbox with a 48px-high hit area;
-  Ingredient-first adds an unlabeled checkbox column before Ingredient. At
-  desktop and mobile widths, place the checkbox input 3px from the table edge
-  and 6px from the ingredient text.
+  each ingredient has a labeled native checkbox. In Ingredient-first mode, its
+  target is 48px high on mobile and compact on desktop; that mode adds an
+  unlabeled checkbox column before Ingredient. At desktop and mobile widths,
+  place the checkbox input 3px from the table edge and 6px from the ingredient
+  text.
   Checked rows have a visible check and subdued strike-through. Announce
   wake-lock active, unavailable, and failed states through a polite status;
   allow the warning to be dismissed. Cook controls do not appear in print.

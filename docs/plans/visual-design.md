@@ -1134,7 +1134,9 @@ underlined at rest on desktop and mobile, without depending on hover. In
 desktop and mobile Ingredient-first cook mode, the table stays aligned to the
 section's left edge when the checkbox rail is present. Place the checkbox
 input 3px from the table edge and 6px from the ingredient text while keeping
-its hit area 48px tall.
+its hit area 48px tall on mobile. On desktop, keep the target compact so Cook
+mode does not expand short ingredient rows. Vertically center Ingredient-first
+table cells in both private and shared readers.
 In the private reader's automatic same-system display, fractions at or above
 `1/4` stay in their current unit unless they equal exactly one smaller unit or
 the immediate smaller unit expresses the amount as a fraction from `1/4` up to

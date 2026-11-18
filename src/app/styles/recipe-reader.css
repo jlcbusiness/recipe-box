@@ -412,6 +412,7 @@
 .recipe-ingredient-first-table th,
 .recipe-ingredient-first-table td {
   overflow-wrap: anywhere;
+  vertical-align: middle;
 }
 
 .recipe-ingredient-first-table .recipe-ingredient-column-amount-mobile {
@@ -450,7 +451,6 @@
   height: auto;
   padding: 4px 3mm 4px 0;
   text-align: left;
-  vertical-align: middle;
 }
 
 .private-content
@@ -503,6 +503,7 @@
 .recipe-cook-checkbox-cell .recipe-cook-checkbox {
   width: 22.333px;
   min-width: 22.333px;
+  height: auto;
   justify-content: flex-start;
   padding-inline: 3px 6px;
 }
@@ -555,6 +556,12 @@
   justify-content: center;
   vertical-align: middle;
   cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .recipe-ingredient-first-table-cook-mode .recipe-cook-checkbox-cell .recipe-cook-checkbox {
+    height: 48px;
+  }
 }
 
 .recipe-cook-checkbox input {

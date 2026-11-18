@@ -16,3 +16,8 @@
 - [x] Verify desktop/mobile behavior, mobile table alignment/wrapping,
   wake-lock preservation, and screenshots.
 - [x] Reconcile verified behavior with the visual guide and decision log.
+- [x] Keep the 48px Cook-mode target mobile-only and preserve desktop row height.
+- [x] Update the slice, visual, and comprehensive contracts for the clarified
+  target behavior.
+- [x] Vertically center Ingredient-first table cells in private and shared
+  readers and verify parity.

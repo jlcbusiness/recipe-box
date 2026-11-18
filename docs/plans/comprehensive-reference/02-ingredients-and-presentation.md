@@ -399,7 +399,9 @@ Vertical growth is preferred to horizontal scrolling.
   remains aligned to the section's left edge instead of shifting right to
   center the added checkbox column. At desktop and mobile widths, place the
   checkbox input 3px from the table edge and 6px from the ingredient text,
-  preserving a 48px-tall hit area.
+  preserving a 48px-tall hit area on mobile. Keep the desktop target compact so
+  it does not expand short ingredient rows. Vertically center cells in both
+  private and shared Ingredient-first tables.
 - Screen recipe content uses at most 96 CSS pixels of outer gutter on each
   side of the main-content area, excluding navigation. Overview, reading,
   nutrition, Notes, and other section groups share aligned outer edges; internal
