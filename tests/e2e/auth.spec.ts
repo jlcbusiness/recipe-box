@@ -205,6 +205,23 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await helpLink.click();
     await expect(page.getByRole('heading', { name: 'Help' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Instruction encoding' })).toBeVisible();
+    const thingsHelp = page.getByRole('region', { name: 'Things amounts' });
+    await expect(thingsHelp).toBeVisible();
+    await expect(thingsHelp).toContainText(/enter a to explicitly choose an article/u);
+    await expect(thingsHelp).toContainText(/Entering 1 stays numeric/u);
+    await expect(thingsHelp).toContainText(/Use 1 bunch when you mean one specific bunch/u);
+    await expect(thingsHelp).toContainText(/a bunch can also mean “a lot\.”/u);
+    await expect(thingsHelp).toContainText(/effective Things amount is exactly one/u);
+    await expect(thingsHelp).toContainText(/Standard view uses “of”/u);
+    await expect(thingsHelp).toContainText(/Ingredients-First omits “of”/u);
+    await expect(thingsHelp).toContainText(/type its name and choose Add/u);
+    await expect(thingsHelp).toContainText(/assignment to the recipe remains a draft/u);
+    const thingsHelpScreenshot = testInfo.outputPath('things-amounts-help.png');
+    await page.screenshot({ path: thingsHelpScreenshot, fullPage: true });
+    await testInfo.attach('things-amounts-help', {
+      path: thingsHelpScreenshot,
+      contentType: 'image/png',
+    });
     const resetHelp = page.getByRole('region', { name: 'Backups and account reset' });
     await expect(resetHelp).toContainText(
       /Export database downloads a ZIP backup of your content and settings/u,

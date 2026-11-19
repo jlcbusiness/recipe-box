@@ -1,8 +1,8 @@
 # November 2026 Input Consistency Overview (#4, #7, #10)
 
-**Status:** Coordination overview. Numeric Arithmetic (#4) is approved and
-being implemented. Things Wording and Addable Units (#7 and #10) is separately
-approved but deferred until arithmetic verification is complete.
+**Status:** Coordination overview. Numeric Arithmetic (#4) and Things Wording
+and Addable Units (#7 and #10) were separately approved, implemented, and
+verified.
 
 ## Outcome
 
@@ -124,10 +124,9 @@ following surfaces; do not limit the implementation to whole-number fields.
   wording, standalone `a`, and inline unit addition with its persisted marker.
   See the [Things brief](./2026-11-things-units.md).
 
-Each brief has its own acceptance criteria and approval. Numeric Arithmetic is
-approved and in progress. The Things slice reuses the arithmetic parser
-boundary but does not expand the arithmetic slice's completion gate; its
-implementation remains deferred.
+Each brief has its own acceptance criteria and approval. Both implementation
+slices are complete: Things reuses the arithmetic parser boundary without
+expanding the arithmetic slice's completion gate.
 
 ## Behavior contract
 

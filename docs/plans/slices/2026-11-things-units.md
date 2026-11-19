@@ -1,6 +1,7 @@
 # November 2026 Things Wording and Addable Units (#7 and #10)
 
-**Status:** Approved for implementation; implementation and focused verification in progress.
+**Status:** Implemented and verified with focused unit, migration/database,
+and browser tests.
 
 ## Outcome
 
@@ -28,11 +29,10 @@ supporting an explicitly entered standalone `a` for one Thing.
 
 ## Existing behavior and nearest patterns
 
-Standard Things output does not consistently include “of”. The Things picker
-is Settings-managed but has no inline Add option, and the recipe picklist
-action does not currently allow `informal_unit`. The existing addable
-suggestion pattern and revision-checked picklist lifecycle are the patterns to
-reuse.
+Before this slice, Standard Things output did not consistently include “of”.
+The Things picker was Settings-managed but had no inline Add option, and the
+recipe picklist action did not allow `informal_unit`. The implementation reuses
+the addable suggestion pattern and revision-checked picklist lifecycle.
 
 Recipe measurements are numeric and scale. The measurement RPC accepts an
 explicit key allowlist, and public copies use a separate measurement payload;
@@ -67,6 +67,8 @@ an authored `a` marker must be explicitly carried through both.
   is handled as a Things literal before expression evaluation; `a` inside an
   expression is invalid. No arithmetic beyond this integration is part of
   this slice.
+- Help explains the explicit `a` choice versus numeric `1`, scaling behavior,
+  Standard and Ingredients-First wording, and how to add a Things unit.
 
 ## Data, migration, and failure boundaries
 
@@ -101,10 +103,13 @@ an authored `a` marker must be explicitly carried through both.
 - Focused browser tests cover keyboard search, inline Add/reuse, duplicate or
   concurrent additions, visible failures, draft-only recipe assignment,
   cancellation, standard/mobile text entry of `a`, and private/shared output.
+  The authenticated Help test checks the amount guidance and verifies the
+  page remains accessible and overflow-free at desktop and narrow mobile
+  widths.
 
-## Review gate
+## Completion
 
-This is the separate Things implementation slice; the arithmetic brief has its
-own completion gate. Do not implement until this brief is approved. Update the
-canonical comprehensive reference and data-model contracts alongside the
-implementation.
+This separate Things implementation slice was approved and completed after the
+Numeric Arithmetic work. The canonical comprehensive reference, data-model
+contracts, and Help page were updated alongside implementation; focused
+verification passed.

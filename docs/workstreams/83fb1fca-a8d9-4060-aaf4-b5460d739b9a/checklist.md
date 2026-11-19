@@ -112,3 +112,9 @@
   and mobile editor field order with focused regression tests.
 - [x] Update the visual-design, comprehensive ingredient, and DLC 38 contracts
   and pass the focused browser, typecheck, lint, and whitespace checks.
+- [x] Add Help guidance for explicit `a` versus numeric `1`, scaling, reader
+  wording, and adding Things units.
+- [x] Verify the authenticated Help section, accessibility, and overflow at
+  desktop and narrow mobile widths, and inspect both screenshots.
+- [x] Reconcile the Updates intake, Numeric Arithmetic and Things briefs,
+  input-consistency overview, and publication zero-time status.

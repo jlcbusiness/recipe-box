@@ -592,3 +592,36 @@ this session.
 Last recorded action: completed the focused checks, restored generated type
 references, and updated the checklist and save point. This section covers the
 Preparation/Size and Type-spacing follow-up; earlier history remains partial.
+
+## 2026-11-19 — Things Help and status reconciliation — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- The integrated browser redirected `/help` to sign-in, so the existing
+  authenticated Help test was used for rendered verification. Added a
+  sibling **Things amounts** section using the Help page's existing labeled
+  sections and paragraph layout. It explains explicit `a` versus numeric `1`,
+  the `1 bunch` distinction, scaling, Standard/Ingredients-First wording, and
+  inline unit addition.
+- Extended `tests/e2e/auth.spec.ts` to assert the Help copy and attach
+  full-page screenshots. The focused run passed in Chromium and Fold 6;
+  existing accessibility and no-overflow assertions also passed. Inspected
+  desktop and 307px Fold 6 screenshots. The first run failed because its
+  quote-punctuation assertion did not match the page's sentence punctuation;
+  corrected the assertion before the passing runs.
+- Updated the Updates intake, Numeric Arithmetic brief, Things brief,
+  input-consistency overview, publication zero-time brief, and visual design
+  contract to match completed implementation and verification. Added the
+  Help work to the checklist and save point.
+- `npm run typecheck` passed after restoring `.next` references.
+  `npx biome check --max-diagnostics=100 src/app/help/page.tsx
+  tests/e2e/auth.spec.ts` passed. Targeted Markdown lint checked nine files;
+  its 10 findings are in older trace entries, with none in updated sections.
+  `git diff --check` passed.
+- The E2E run regenerated `.next-e2e` references in `next-env.d.ts`; restored
+  the normal `.next` references and verified typecheck. The `dev:test` process
+  exited with the test runner. A separate `npm run dev` process remained and
+  was left untouched. Inspected screenshots and removed the exact temporary
+  output directory created for this verification.
+
+Last recorded action: completed Help/browser and documentation verification,
+restored generated Next references, and cleaned the temporary test output.
+This section covers the Things Help addition and intake status reconciliation.

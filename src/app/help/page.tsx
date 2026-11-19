@@ -125,6 +125,26 @@ export default async function HelpPage() {
             per-serving value of a saved recipe override.
           </p>
         </section>
+        <section aria-labelledby="things-amounts-title">
+          <h2 id="things-amounts-title">Things amounts</h2>
+          <p>
+            When a Things amount is one, enter <code>a</code> to explicitly choose an article, such
+            as <code>a dash</code>. Entering <code>1</code> stays numeric; it is not automatically
+            changed to <code>a</code>. Use <code>1 bunch</code> when you mean one specific bunch,
+            since <code>a bunch</code> can also mean “a lot.”
+          </p>
+          <p>
+            The saved amount remains numeric and scales normally. Readers show <code>a</code> only
+            when the effective Things amount is exactly one. Standard view uses “of” (
+            <code>a dash of salt</code>); Ingredients-First omits “of” (<code>a dash</code>) because
+            the ingredient appears in its own column.
+          </p>
+          <p>
+            To add a Things unit that is not listed, type its name and choose Add. That adds the
+            unit to your account&apos;s Things picklist; its assignment to the recipe remains a
+            draft until you save the recipe.
+          </p>
+        </section>
         <section aria-labelledby="account-reset-title">
           <h2 id="account-reset-title">Backups and account reset</h2>
           <p>

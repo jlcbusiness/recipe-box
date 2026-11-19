@@ -1,6 +1,6 @@
 # November 2026 Numeric Arithmetic (#4)
 
-**Status:** Approved; implementation in progress.
+**Status:** Implemented and verified with focused unit and browser tests.
 
 ## Outcome
 
@@ -103,7 +103,6 @@ belong to the separate
 
 ## Implementation state
 
-This brief is independent of the Things wording and picklist brief. Arithmetic
-implementation is underway; the Things slice remains deferred until arithmetic
-verification is complete. The C+F overview remains the shared record of why
-these related fixes were prepared together.
+This brief was implemented and verified independently of the Things wording
+and picklist brief. The C+F overview remains the shared record of why these
+related fixes were prepared together.

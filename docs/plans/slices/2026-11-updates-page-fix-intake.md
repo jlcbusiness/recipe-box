@@ -1,8 +1,8 @@
 # November 2026 Updates Fixes: Brief and Split Proposal
 
-**Status: Packages A, B, D+H, E, and G are implemented and verified in
-Chromium and Fold 6. C+F remains an intake grouping with two separate review
-briefs.**
+**Status: All ten Fix entries have been implemented. Focused verification
+passed for the six work packages; browser projects and viewports vary by the
+package acceptance criteria. C+F has two completed implementation briefs.**
 
 ## Outcome and recommendation
 
@@ -99,7 +99,7 @@ The shared reader is the right reuse point; the current font-size divergence
 is not a pattern to preserve. The accepted reference is implemented as 18px
 desktop names with 0.92em Specifics; mobile font sizing remains unchanged.
 
-**Proposed outcome:** Ingredient-first names and Specifics have consistent
+**Implemented outcome:** Ingredient-first names and Specifics have consistent
 typography in private and shared recipes, and Cook mode does not leave an
 excessive checkbox-to-ingredient gap in either context.
 
@@ -122,22 +122,23 @@ excessive checkbox-to-ingredient gap in either context.
 
 ### C+F. Numeric input consistency and Things units (#4, #7, and #10)
 
-**Status:** Grouped for coordination, split into two reviewable implementation
-briefs. Neither is approved for implementation.
+**Status:** The two separate briefs were approved, implemented, and verified
+with focused unit, migration/database, and browser coverage.
 
-- **C, Numeric Arithmetic (#4):** extend exact arithmetic to every editable
-  numeric input, update time expressions, use the standard mobile text
-  keyboard, and preserve legacy ranges. See the
+- **C, Numeric Arithmetic (#4):** exact arithmetic now applies to editable
+  numeric inputs, including time expressions, with the standard mobile text
+  keyboard and legacy-range preservation. See the
   [Numeric Arithmetic brief](./2026-11-numeric-arithmetic.md).
-- **F, Things Wording and Addable Units (#7 and #10):** support natural “of”
-  wording, inline add/reuse, and explicit standalone `a` with a persisted
-  marker. Show `a` only in Things presentation; converted Volume/Weight values
-  remain numeric. See the [Things brief](./2026-11-things-units.md).
+- **F, Things Wording and Addable Units (#7 and #10):** natural “of” wording,
+  inline add/reuse, and an explicit persisted `a` marker are implemented.
+  `a` appears only in Things presentation; converted Volume/Weight values
+  remain numeric. Help explains when to use `a` versus `1`. See the
+  [Things brief](./2026-11-things-units.md).
 
 The [input-consistency overview](./2026-11-numeric-input-consistency.md)
 records their shared rationale, complete numeric-field inventory, and
-cross-cutting decisions. Separate briefs keep their acceptance and approval
-gates clear.
+cross-cutting decisions. Each brief's separate acceptance criteria and
+approval gate has been completed.
 
 ### D. Recipe editor spacing and single-set labels (#5 and #9)
 
@@ -148,13 +149,13 @@ and do not require a schema change.
 See the
 [combined recipe-editor brief](./2026-11-recipe-editor-spacing-and-sections.md).
 
-- **#5, Measurement Type-to-Amount spacing:** The E2E test currently sets only
-  a 9px upper bound, so zero still passes. The brief proposes a positive 1mm
-  minimum while preserving the one-line layout at 901px.
-- **#9, Single-set title editing:** The reader already hides a label for one
-  non-empty set, but the editor still renders an editable title button for one
-  set. The brief preserves the required stored label and asks whether the
-  editor should show it as static text or hide the heading.
+- **#5, Measurement Type-to-Amount spacing:** The editor enforces and tests a
+  positive 1mm minimum while preserving the one-line layout where controls fit.
+  At constrained desktop widths, Size controls wrap below Preparation so its
+  input remains usable.
+- **#9, Single-set title editing:** When one set remains, the editor hides the
+  heading and rename action while preserving the saved label. Multi-set
+  editing behavior remains unchanged.
 
 ### E. Hide zero total-time labels (#6)
 
@@ -166,42 +167,28 @@ Other recipe detail and finder surfaces already omit non-positive totals. See th
 
 ### F. Natural Things display and addable Things units (#7 and #10)
 
-**Status:** Open; the display and editor behaviors belong together as one
-Things workflow. Current standard formatting produces `1 bunch herbs`; a
-preconfigured `Pinch of` value is a special case and already produces wording
-such as `1-2 pinches of herbs`. The Things selector in
-[`MeasurementEditor`](../../../src/app/recipes/measurement-editor.tsx) has no
-Add option. The editor's server-side `createOrGetRecipePicklistValue` allowlist
-excludes `informal_unit`, although the category is already Settings-managed.
-The existing [`SuggestionCellEditor`](../../../src/app/recipes/ingredient-rows-editor.tsx)
-and recipe-picklist action are the closest addable-picklist patterns.
+**Status:** Implemented and verified. Things amounts use natural Standard
+wording, the explicit `a` marker, and inline Add/reuse while retaining numeric
+scaling and account-managed units.
 
-**Contract and proposed outcome:** Things units remain account-managed and
-numeric amounts remain numeric for scaling and conversion. Standard reading
-renders natural unit phrases with “of” where needed, pluralizes from the
-existing maximum-quantity rule, and never duplicates “of” when a saved unit
-already contains it. Recipe editing can add or reuse a Things unit inline;
-the catalog addition follows the existing picklist revision/conflict and
-authorization rules, while recipe assignment remains a draft until Save.
-Update Help with the approved article/amount rule.
+**Implemented outcome:** Standard includes “of” where needed and never
+duplicates it; Ingredients-First omits trailing “of” because the ingredient
+has its own column. Authors explicitly enter `a` for a single Things amount
+when they want the article; typed `1` remains numeric. Readers display `a`
+only when the effective Things amount is exactly one. Adding a unit updates
+the account picklist, while assignment remains a draft until recipe Save. The
+Help page explains the `a` versus `1` choice, scaling, view-specific wording,
+and inline unit addition.
 
-**Open decision:** The note requests an option for `a` but also says some
-one-unit Things should retain the numeral. Choose whether `a` is an explicit
-per-row display choice or an automatic display rule with a numeric override.
-The proposed safe invariant is that the stored quantity remains numeric and
-`a` is shown only when the displayed scalar amount is exactly one; confirm
-whether that is the intended behavior after scaling.
+**Confirmed decision:** `a` is an explicit per-row choice, not an automatic
+replacement for `1`. For example, use `1 bunch` when you mean one specific
+bunch; `a bunch` can also mean “a lot.” The stored amount remains numeric, and
+an equivalent Volume or Weight value is shown numerically.
 
-**Acceptance criteria after that choice:**
-
-- Unit tests cover singular/plural Things, ranges (using their maximum),
-  labels with and without a built-in “of,” the chosen `a` behavior, and scaled
-  values without changing stored quantities.
-- Browser tests cover keyboard search, explicit Add/reuse, duplicate or
-  concurrent catalog additions, visible failures, draft-only recipe
-  assignment, and Help text.
-- Private, shared, print, and offline reader output preserve the existing
-  privacy and public allow-list contracts.
+**Verification:** Focused unit, migration/database, and browser coverage
+passed for the behavior and persistence boundaries in the
+[Things brief](./2026-11-things-units.md). The authenticated Help test checks
+the guidance, accessibility, and overflow at desktop and narrow mobile widths.
 
 ### G. Alternate-ingredient note field (#8)
 
@@ -230,8 +217,8 @@ import, print output, and offline HTML output at representative viewports.
 ## Suggested split and review gate
 
 These are six intake groupings after grouping fixes #2/#3, #5/#9, and #4/#7/#10.
-C+F has two separately reviewable implementation briefs. Packages A, B, D+H,
-E, and G are implemented; C and F remain open.
+C+F has two separately reviewable implementation briefs. Packages A, B, C, F,
+D+H, E, and G are implemented and verified.
 The updated
 [slice prompt](../../../.github/prompts/slice.prompt.md) permits grouping
 smaller fixes when they do not require significant restructuring. D+H share
@@ -239,9 +226,9 @@ the recipe editor, require no schema change, and retain separate acceptance
 checks. Their behavior choices and approval are recorded in the briefs.
 
 Package **G** was implemented separately because it adds persisted recipe
-data. C+F remains grouped as a coherent input-consistency effort, but its
-arithmetic and Things implementations are separate outcomes with separate
-approval gates.
+data. C+F remains grouped as a coherent input-consistency effort, with
+arithmetic and Things recorded in separate completed briefs and approval
+gates.
 
 ## Preparation references
 

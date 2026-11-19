@@ -887,6 +887,10 @@ The Help page's **Backups and account reset** section explains that ZIP
 backups exclude recipe and publication history, what reset removes and
 preserves, the effect on public links and downloaded files, offline-device
 timing, and delayed managed-file cleanup.
+The **Things amounts** section explains the explicit `a` choice versus numeric
+`1`, how scaling affects its display, Standard and Ingredients-First wording,
+and how to add a Things unit. Verify the Help page at desktop and narrow mobile
+widths without horizontal overflow.
 
 ## Desktop
 

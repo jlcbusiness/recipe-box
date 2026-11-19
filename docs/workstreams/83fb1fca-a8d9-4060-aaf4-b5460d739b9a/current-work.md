@@ -274,32 +274,40 @@
   current-work entry, or new trace entry. Restored generated `next-env.d.ts`
   references. The Playwright `dev:test` server is absent; the separate
   `npm run dev` process was left untouched.
+- 2026-11-19: Added the missing Things amounts Help section. It explains the
+  explicit `a` choice versus numeric `1`, why `1 bunch` can be preferable,
+  scaling behavior, Standard/Ingredients-First wording, and inline unit
+  addition. The authenticated Help browser test verifies the copy and
+  accessibility/overflow at 1280px and the narrow Fold 6 viewport; both
+  Chromium and Fold 6 passed, and both screenshots were inspected. Reconciled
+  the intake, Numeric Arithmetic and Things briefs, input-consistency overview,
+  and publication zero-time brief with completed verification. TypeScript,
+  Biome, and whitespace checks pass. Targeted Markdown lint found no issues in
+  updated sections; 10 existing findings remain in older trace entries. The
+  first test run exposed a punctuation-only regex mismatch; correcting it made
+  both browser projects pass.
 
 ## Save Point
 
-- **Goal/status:** Packages A, B, D+H, E, Numeric Arithmetic (#4), Things
-  Wording and Addable Units (#7/#10), and package G (#8) are implemented and
-  verified. The Note-order, mobile Ingredient-first row-height, and desktop
-  Divide-spacing/left-alignment and Preparation/Size-spacing follow-ups are
-  complete. C and F remain open.
+- **Goal/status:** All ten reported Fix entries are implemented and verified:
+  A, B, C (#4), F (#7/#10), D+H, E, and G. The Help guidance and all package
+  status records are reconciled. The reader and editor layout follow-ups are
+  complete.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** The reader and ingredient-editor layout follow-ups are
-  complete; C and F remain the unselected packages.
-- **Last verified:** Three focused Chromium tests pass, covering the
-  Preparation/Size responsive layout, measurement editing, and balanced
-  Preparation gaps. The narrow (902px) and wide (1210px) screenshots were
-  inspected; the 1210px and 1410px gap assertions pass. TypeScript and
-  `git diff --check` pass. Biome exits successfully with 33 warnings. Targeted
-  Markdown lint reports 10 existing findings in older trace entries, but none
-  in the updated contracts or new continuity entries; full Markdown lint still
-  reports 35 findings elsewhere. Generated `next-env.d.ts` references were
+- **Current step:** The intake and all implementation briefs are complete.
+- **Last verified:** The Help test passed in Chromium and Fold 6 at desktop and
+  narrow mobile widths, including copy, accessibility, and overflow
+  assertions; both full-page screenshots were inspected. TypeScript, targeted
+  Biome, and `git diff --check` pass. Targeted Markdown lint reports 10
+  existing findings in older trace entries, with none in updated sections.
+  The E2E run regenerated `next-env.d.ts`; its normal `.next` references were
   restored. Playwright's `dev:test` process is absent; the separate
-  `npm run dev` process was not stopped.
-- **Next action:** No further work is required for these layout follow-ups.
-  Wait for selection of C or F.
+  `npm run dev` process remains untouched.
+- **Next action:** No remaining implementation or verification action is
+  tracked for the November Updates Fixes intake.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); session
   `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; latest section records the
-  Preparation/Size responsive follow-up.
+  Things amounts Help and status reconciliation.
 - **Trace boundary:** The latest section records this follow-up; earlier
   history remains partial.

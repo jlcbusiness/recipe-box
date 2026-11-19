@@ -1,7 +1,6 @@
 # November 2026 Hide zero total-time labels (#6)
 
-**Status: Implemented and verified in Chromium. Fold 6 publication validation
-remains incomplete because the browser test did not reach the zero-time checks.**
+**Status: Implemented and verified in Chromium and Fold 6.**
 
 ## Outcome
 
@@ -78,5 +77,5 @@ unchanged: Details uses `—`, and Grid uses `No total time`.
 
 ## Review gate
 
-The zero-total display treatment is implemented and verified in Chromium. No
-data, migration, filter, or sort changes were made.
+The zero-total display treatment is implemented and verified in Chromium and
+Fold 6. No data, migration, filter, or sort changes were made.
