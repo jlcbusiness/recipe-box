@@ -157,6 +157,7 @@ function createSnapshot() {
           recipe_id: firstRecipeId,
           ingredient_id: firstIngredientId,
           ingredient_set_id: firstSetId,
+          alternate_note: 'or half and half',
           portion_one_ratio: 0.25,
           size_value: 1.5,
           size_unit: 'in',
@@ -281,10 +282,13 @@ function createSnapshot() {
 }
 
 describe('export rules', () => {
-  it('exports protected source identity, direct-save identity, time entries, and Things markers in schema version 13', () => {
+  it('exports alternative notes, protected source identity, times, and Things markers in schema version 14', () => {
     const output = buildPortableData(createSnapshot(), { type: 'recipe', id: firstRecipeId });
 
-    expect(output.schema_version).toBe(13);
+    expect(output.schema_version).toBe(14);
+    expect(output.records.recipe_ingredients[0]).toMatchObject({
+      alternate_note: 'or half and half',
+    });
     expect(output.records.recipe_references[0]).toMatchObject({
       is_protected_source: true,
       source_public_id: sourcePublicId,
@@ -345,6 +349,7 @@ describe('export rules', () => {
       { id: firstSetId, recipe_id: firstRecipeId, label: 'Main', position: 0 },
     ]);
     expect(output.records.recipe_ingredients[0]).toMatchObject({
+      alternate_note: 'or half and half',
       portion_one_ratio: 0.25,
       size_value: 1.5,
       size_unit: 'in',
@@ -474,7 +479,7 @@ describe('export rules', () => {
       { type: 'database' },
     );
 
-    expect(output.schema_version).toBe(13);
+    expect(output.schema_version).toBe(14);
     expect(output.account_preferences).toMatchObject({
       volume_system: 'recipe',
       weight_system: 'recipe',
@@ -494,7 +499,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(13);
+    expect(manifest.schema_version).toBe(14);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

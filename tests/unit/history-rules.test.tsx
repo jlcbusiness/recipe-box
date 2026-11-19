@@ -27,6 +27,7 @@ describe('history event formatting', () => {
               id: 'ingredient-row-secret-id',
               ingredient_id: 'ingredient-secret-id',
               name: 'Potato',
+              alternate_note: 'using cream',
               preparation: 'quartered',
               measurements: [
                 {
@@ -61,6 +62,7 @@ describe('history event formatting', () => {
               id: 'ingredient-row-secret-id',
               ingredient_id: 'ingredient-secret-id',
               name: 'Potato',
+              alternate_note: 'using milk',
               preparation: 'quartered',
               measurements: [
                 {
@@ -98,8 +100,8 @@ describe('history event formatting', () => {
     });
     expect(entry.changes).toContainEqual({
       label: 'Ingredients',
-      before: 'Potato (4), quartered',
-      after: 'Potato (6), quartered',
+      before: 'Potato (4) (using cream), quartered',
+      after: 'Potato (6) (using milk), quartered',
     });
     expect(entry.changes).toContainEqual({
       label: 'Instructions',

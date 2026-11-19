@@ -105,11 +105,20 @@ The desktop ingredient editor table should size to its content, up to the
 available editor width, rather than distributing unused viewport width among
 columns. It must reserve enough width for Amount controls and keep Divide
 compact; do not allocate so much space to Divide that measurement values or
-their units are clipped.
+their units are clipped. When entered, the complete Divide input, unit,
+separator, and read-only remainder stay left-aligned inside the Divide cell
+with compact internal spacing; the remainder must not intrude into Alternative
+/ note. At wide desktop widths, keep the gaps on either side of Preparation
+balanced by allocating unused width to Alternative / note rather than leaving
+it after the last Amount control.
 Keep at least a 1mm gap between the desktop Type picker and the first Amount
-field, with the controls remaining on one line at 901px. When one ingredient
-set remains, hide its editor heading and title-edit affordance without changing
-the stored label; show them again for multiple sets.
+field and keep the gap at no more than 9px, with the controls remaining on one
+line at 901px. When Size controls are present, keep a 3mm gap between them and
+the visible Preparation input. At desktop widths from 761px through 1199px,
+place Size controls below Preparation so its input remains usable; at 1200px
+and wider, keep the controls inline when they fit. When one ingredient set
+remains, hide its editor heading and title-edit affordance without changing the
+stored label; show them again for multiple sets.
 
 Edit-form metadata and time controls keep compact row spacing as they wrap.
 View-mode metadata uses consistent 11px vertical spacing between wrapped rows
@@ -888,9 +897,11 @@ columns; mobile hides Food Type and State. Recipe details show metadata, the
 ordered ingredient list, and notes. The desktop ingredient editor uses a
 keyboard-operable table with a trailing blank row, compact cell editors, and a
 separate control rail. Its visible order is Ingredient, Specifics, Amount,
-Preparation, and Divide. The recipe form can use up to 1200px on desktop so
+Preparation, Divide, and Alternative / note. The recipe form can use up to 1200px on desktop so
 these columns have room without compressing the existing amount controls. The
-Amount heading spans a compact Type control and its matching amount controls;
+shared column widths must remain stable when an inline editor opens, including
+for long cell values; editing one row must not shift other rows.
+The Amount heading spans a compact Type control and its matching amount controls;
 it does not introduce database-shaped subheaders.
 
 Ingredient rows open compact cell editors. Ingredient and Preparation open
@@ -982,8 +993,8 @@ choices, not visible List columns. Configurable columns remain future work.
 The mobile Recipe Tin list shows Name and Opinion. Recipe details show the
 recipe title, metadata, ordered time entries in their own subsection, ingredients,
 and notes. Ingredient editing uses a one-column list with the Main checkbox and
-a pale 24px drag grip in a slim rail. Tapping a row opens a compact popover for
-Ingredient, Specifics, Amount, Preparation, and Divide in that order. The Amount
+a pale 24px drag grip in a slim rail. Tapping a row opens a compact popover for Ingredient, Specifics, Amount,
+Preparation, Divide, and Alternative / note in that order. The Amount
 section keeps its category, quantity, and unit controls in a compact wrapping
 line; paired Unit dimensions remain together when space permits. Its pane is
 wide enough for fractional paired values at the supported mobile width, with
@@ -1023,8 +1034,10 @@ interruption tolerance, legibility, and one-handed operation.
 ### Current implementation
 
 Recipe detail offers Standard and Ingredient-first presentations. Standard
-keeps ingredient rows in saved order and renders Amount, lowercase Specifics
-and ingredient name, then Preparation. Keep canonical catalog names title-cased;
+keeps ingredient rows in saved order and renders Amount, lowercase Specifics,
+ingredient name, any Feel phrase, Preparation, Size, and Divide. A non-empty
+Alternative / note follows the other row content in parentheses. Keep
+canonical catalog names title-cased;
 recipe views display all multiword ingredient names in lowercase without
 changing saved values. Recipe readers and print attach `"` to US customary
 Size values (for example, `1 ¼"`); metric Size retains `cm`. Both presentations keep Ingredients
@@ -1034,9 +1047,10 @@ heading and toolbar plus 4mm; Instructions uses the remaining space.
 On mobile Standard view, keep the amount, specifics, and ingredient name
 left-aligned, and keep the full entry on that line whenever it fits. If it
 doesn't, keep Preparation and Size with the primary text when they fit; put
-Divide on a compact, right-aligned line. If they don't fit, move Preparation,
-Size, and Divide together to a compact, right-aligned continuation. Don't add
-paragraph spacing, and keep the divided label and portion pair unbroken. Keep
+Divide and Alternative / note together on a compact, right-aligned line. If
+they don't fit, move Preparation, Size, Divide, and Alternative / note
+together to a compact, right-aligned continuation. Don't add paragraph
+spacing, and keep the divided label and portion pair unbroken. Keep
 the continuation's first line about one-quarter of the text size below the
 preceding line, with the same line-to-line spacing after it. Use a compact 1.05
 row line-height and a 1.0 continuation line-height. Keep the existing desktop
@@ -1045,6 +1059,8 @@ Ingredient-first uses a semantic table with Ingredient, Volume, Weight, and
 Preparation columns, and its natural table width is the row-width basis for
 the same sizing rule. Count, informal, and unmeasured values appear in Volume
 when no dimensional measurement is present; Volume and Weight remain separate.
+Show a non-empty Alternative / note on its own line below Specifics, or
+directly below the ingredient name when Specifics is empty.
 Render Ingredient-first ingredient names in small caps on desktop and mobile.
 On desktop, render ingredient names at 18px and their Specifics at 0.92em of
 the name size. Render Specifics at normal weight; leave mobile font sizing
@@ -1076,9 +1092,11 @@ Hide Amount or Prep when empty across the recipe. Keep at least 8px between
 mobile column content and use the available width to wrap long ingredient names,
 Specifics, amounts, Preparation, and Divide content. Keep the table full-width
 with flush outer edges; do not use a min-content-width table or horizontal
-scroll region. Center mobile Preparation text like the divided note. Leave at
-least 3px between stacked Volume and Weight values. In Standard view and
-print, label the separate value “divided” to distinguish it from Preparation.
+scroll region. Collapse unused desktop-only tracks without shifting the visible
+Ingredient, Amount, and Prep columns. Center mobile Preparation text like the
+divided note. Leave at least 3px between stacked Volume and Weight values. In
+Standard view and print, label the separate value “divided” to distinguish it
+from Preparation.
 Ingredient-first rows alternate a light-tin shade for readability; the other
 rows and ingredient-set dividers remain unshaded in private and public reader
 views. Tinted rows keep neutral 1px rules above and below; private and public

@@ -174,6 +174,7 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
         ingredient_name: 'Basil',
         is_main: true,
         detail: 'fresh',
+        alternate_note: '  or Thai basil  ',
         preparation: 'chopped',
       },
       {
@@ -181,6 +182,7 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
         ingredient_name: 'Sea salt',
         is_main: false,
         detail: '',
+        alternate_note: '',
         preparation: 'to taste',
       },
     ];
@@ -203,7 +205,7 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
     const basil = ingredients.find((ingredient: { name: string }) => ingredient.name === 'Basil');
 
     const rowsResponse = await request.get(
-      `${config.apiUrl}/rest/v1/recipe_ingredients?select=position,ingredient_id,is_main,detail,preparation&recipe_id=eq.${created.id}&order=position.asc`,
+      `${config.apiUrl}/rest/v1/recipe_ingredients?select=position,ingredient_id,is_main,detail,alternate_note,preparation&recipe_id=eq.${created.id}&order=position.asc`,
       { headers: ownerHeaders },
     );
     expect(await rowsResponse.json()).toEqual([
@@ -212,6 +214,7 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
         ingredient_id: basil.id,
         is_main: true,
         detail: 'fresh',
+        alternate_note: 'or Thai basil',
         preparation: 'chopped',
       },
       {
@@ -219,6 +222,7 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
         ingredient_id: ingredients[1].id,
         is_main: false,
         detail: '',
+        alternate_note: '',
         preparation: 'to taste',
       },
     ]);
@@ -358,13 +362,21 @@ test('ingredient rows are owner-scoped, ordered, and atomic @e2e @ingredientRows
       before_data: null,
       after_data: {
         ingredients: [
-          { name: 'Basil', is_main: true, detail: 'fresh', preparation: 'chopped' },
+          {
+            name: 'Basil',
+            is_main: true,
+            detail: 'fresh',
+            alternate_note: 'or Thai basil',
+            preparation: 'chopped',
+          },
           { name: 'Sea Salt', is_main: false, detail: '', preparation: 'to taste' },
         ],
       },
     });
     expect(history[1].before_data.ingredients).toHaveLength(2);
     expect(history[1].after_data.ingredients[0].name).toBe('Sea Salt');
+    expect(history[1].before_data.ingredients[0].alternate_note).toBe('or Thai basil');
+    expect(history[1].after_data.ingredients[1].alternate_note).toBe('or Thai basil');
   } finally {
     await deleteTestUser(request, other);
     await deleteTestUser(request, owner);
@@ -906,7 +918,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
       (amountHeader?.x ?? 0) + 1,
     );
     const emptyPlaceholder = grid.getByRole('cell', { name: 'Add ingredient row' });
-    await expect(emptyPlaceholder).toHaveAttribute('colspan', '8');
+    await expect(emptyPlaceholder).toHaveAttribute('colspan', '9');
     await expect(ingredientRows.first().getByRole('cell')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Add ingredient row' })).toHaveCount(0);
     await expect(
@@ -926,7 +938,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(grid.getByRole('combobox', { name: 'Ingredient, row 1' })).toHaveCount(0);
 
     await emptyPlaceholder.click();
-    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(8);
+    await expect(ingredientRows.first().getByRole('cell')).toHaveCount(9);
     const firstIngredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
     await expect(firstIngredient).toHaveAttribute('type', 'text');
     await expect(firstIngredient).not.toHaveAttribute('list', /.+/);
@@ -952,6 +964,7 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await grid.locator('[aria-label="Ingredient, row 1"]').focus();
     await page.keyboard.press('Tab');
     const firstDetailCell = grid.locator('[aria-label="Specifics, row 1"]');
+    const firstAlternativeNoteCell = grid.locator('[aria-label="Alternative / note, row 1"]');
     await expect(firstDetailCell).toBeFocused();
     const firstTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
     const firstNutrition = grid.getByRole('button', { name: /^Nutrition for Basil/ });
@@ -982,8 +995,22 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     const firstPortion = grid.getByRole('textbox', { name: 'First portion, row 1' });
     await expect(firstPortion).toBeFocused();
     await page.keyboard.press('Tab');
+    await expect(firstAlternativeNoteCell).toBeFocused();
+    await page.keyboard.press('o');
+    const firstAlternativeNote = page.getByRole('textbox', {
+      name: 'Alternative / note, row 1',
+    });
+    await expect(firstAlternativeNote).toBeFocused();
+    await expect(firstAlternativeNote).toHaveValue('o');
+    await firstAlternativeNote.pressSequentially('r a long replacement made from fresh Thai basil');
+    await page.keyboard.press('Tab');
     await expect(firstNutrition).toBeFocused();
+    await expect(firstAlternativeNoteCell).toHaveText(
+      'or a long replacement made from fresh Thai basil',
+    );
     await expect(firstNutrition).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Shift+Tab');
+    await expect(firstAlternativeNoteCell).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(firstPortion).toBeFocused();
     await page.keyboard.press('Shift+Tab');
@@ -1049,6 +1076,24 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(thirdIngredient).toHaveValue('Onion');
     await page.keyboard.press('Enter');
     await expect(ingredientRows).toHaveCount(4);
+    const readGridGeometry = () =>
+      grid.evaluate((table) => {
+        const elements = [table, ...table.querySelectorAll('thead th, tbody tr[data-row-id] > td')];
+        return elements.map((element) => {
+          const { height, width, x, y } = element.getBoundingClientRect();
+          return [x, y, width, height].map((value) => Math.round(value * 100) / 100);
+        });
+      });
+    const noteCell = grid.locator('[aria-label="Alternative / note, row 1"]');
+    const noteEditor = page.getByRole('textbox', { name: 'Alternative / note, row 1' });
+    for (const width of [1024, 1210]) {
+      await page.setViewportSize({ width, height: 768 });
+      const gridGeometryBeforeNoteClick = await readGridGeometry();
+      await noteCell.click();
+      await expect(noteEditor).toBeFocused();
+      expect(await readGridGeometry()).toEqual(gridGeometryBeforeNoteClick);
+      await page.keyboard.press('Escape');
+    }
     await grid.locator('[aria-label="Specifics, row 2"]').click();
     const secondDetail = page.getByRole('textbox', { name: 'Specifics, row 2' });
     await secondDetail.fill('ripe');
@@ -1273,7 +1318,9 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(page.getByRole('heading', { name: 'Keyboard ingredient rows' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Ingredients' })).toBeVisible();
     await expect(page.locator('.recipe-ingredient-list')).toContainText('ripe tomato');
-    await expect(page.locator('.recipe-ingredient-list')).toContainText('fresh basil, chopped');
+    await expect(page.locator('.recipe-ingredient-list')).toContainText(
+      'fresh basil, chopped (or a long replacement made from fresh Thai basil)',
+    );
     await expect(page.locator('.recipe-ingredient-list')).toContainText('onion');
     await page.getByRole('link', { name: 'Edit' }).click();
     const reloadedGrid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
@@ -1284,6 +1331,9 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(reloadedGrid.locator('[aria-label="Specifics, row 1"]')).toHaveText('ripe');
     await expect(reloadedGrid.locator('[aria-label="Preparation, row 1"]')).toHaveText('');
     await expect(reloadedGrid.locator('[aria-label="Specifics, row 2"]')).toHaveText('fresh');
+    await expect(reloadedGrid.locator('[aria-label="Alternative / note, row 2"]')).toHaveText(
+      'or a long replacement made from fresh Thai basil',
+    );
     await expect(reloadedGrid.locator('[aria-label="Preparation, row 2"]')).toHaveText('chopped');
     await expect(page.getByRole('checkbox', { name: 'Main, row 1' })).not.toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'Main, row 2' })).toBeChecked();
@@ -1456,6 +1506,14 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await editor.getByRole('textbox', { name: 'Volume amount, row 1' }).fill('1 1/2');
     await editor.getByRole('textbox', { name: 'Weight amount, row 1' }).fill('1 1/2');
     await editor.getByRole('textbox', { name: 'Specifics' }).fill('Yellow');
+    const mobileAlternativeNote = editor.getByRole('textbox', { name: 'Alternative / note' });
+    await mobileAlternativeNote.fill('or feta');
+    const mobileDivideBounds = await editor.locator('.recipe-mobile-divide-field').boundingBox();
+    const mobileNoteBounds = await mobileAlternativeNote.boundingBox();
+    expect(mobileDivideBounds).not.toBeNull();
+    expect(mobileNoteBounds?.y).toBeGreaterThanOrEqual(
+      (mobileDivideBounds?.y ?? 0) + (mobileDivideBounds?.height ?? 0),
+    );
     const preparation = editor.getByRole('combobox', { name: 'Preparation' });
     const preparationBounds = await preparation.boundingBox();
     expect(preparationBounds?.width).toBeLessThan(200);
@@ -1528,7 +1586,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     });
     await expect(sizeUnitCm).toHaveText('cm');
     await expect(sizeUnitCm).toHaveCSS('height', '34px');
-    await expect(size).toHaveAttribute('inputmode', 'decimal');
+    await expect(size).toHaveAttribute('inputmode', 'text');
     await size.fill('0.5');
     await sizeUnitCm.click();
     await expect(size).toHaveAttribute('inputmode', 'text');
@@ -1615,7 +1673,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await page.getByRole('option', { name: 'diced', exact: true }).click();
     await editor.getByRole('button', { name: 'Submit' }).click();
 
-    await expect(mobileList).toContainText('yellow cheese, diced');
+    await expect(mobileList).toContainText('yellow cheese (or feta), diced');
     await expect(editor).toBeHidden();
     const mobileDelete = mobileList.getByRole('button', { name: 'Delete ingredient row 1' });
     await expect(mobileDelete).toBeVisible();
@@ -1736,7 +1794,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await expect(mobileRows.first()).toContainText(
       'white flour, stone-ground and finely milled for pastry baking flour, sifted',
     );
-    await expect(mobileRows.nth(1)).toContainText('yellow cheese, diced');
+    await expect(mobileRows.nth(1)).toContainText('yellow cheese (or feta), diced');
     await expect(sourceRow).toHaveCSS('transform', 'none');
     await expect(stableDisplacedRow).toHaveCSS('transform', 'none');
     const finalSourceBounds = await sourceRow.boundingBox();
@@ -1952,7 +2010,7 @@ test('mobile ingredient entry uses a compact row popover @e2e @a11y @ingredientR
     await expect(mobileList).not.toContainText(
       'white flour, stone-ground and finely milled for pastry baking flour, sifted',
     );
-    await expect(mobileList).toContainText('yellow cheese, diced');
+    await expect(mobileList).toContainText('yellow cheese (or feta), diced');
     const axeResults = await new AxeBuilder({ page })
       .include('.recipe-ingredient-mobile')
       .analyze();

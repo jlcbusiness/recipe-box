@@ -32,6 +32,7 @@ const recipe: PublicRecipePayload = {
       position: 0,
       is_main: true,
       detail: 'zest and juice',
+      alternate_note: 'or orange',
       preparation: '',
       portion_one_ratio: null,
       size_value: null,
@@ -130,6 +131,7 @@ describe('public recipe copy payload', () => {
       ingredient_id: null,
       ingredient_name: 'Lemon',
       ingredient_set_id: payload.recipe.p_ingredient_sets[0]?.id,
+      alternate_note: 'or orange',
     });
   });
 

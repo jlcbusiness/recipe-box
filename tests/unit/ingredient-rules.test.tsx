@@ -233,6 +233,36 @@ describe('ingredient row rules', () => {
     ).toBe('white flour, sifted');
   });
 
+  it('trims and renders the alternative note after the ingredient and before Preparation', () => {
+    const serialized = serializeIngredientRows([
+      {
+        ...rows[0],
+        detail: 'Whole',
+        alternateNote: '  or half and half  ',
+        preparation: 'softened',
+      },
+    ]);
+
+    expect(serialized[0]?.alternate_note).toBe('or half and half');
+    expect(
+      formatIngredientDisplay({
+        ingredient_name: 'Milk',
+        detail: 'Whole',
+        alternate_note: serialized[0]?.alternate_note,
+        preparation: 'softened',
+        measurements: [
+          {
+            measurement_type: 'unmeasured',
+            amount_min: null,
+            amount_max: null,
+            unit_code: null,
+            picklist_value: 'To taste',
+          },
+        ],
+      }),
+    ).toBe('whole milk (or half and half) to taste, softened');
+  });
+
   it('lowercases multiword names only when recipe display requests it', () => {
     const ingredient = {
       ingredient_name: 'Chickpea Flour',
@@ -565,6 +595,7 @@ describe('ingredient row rules', () => {
         ingredient_name: null,
         is_main: true,
         detail: 'yellow',
+        alternate_note: '',
         preparation: 'diced',
         portion_one_ratio: null,
         size_value: null,
@@ -580,6 +611,7 @@ describe('ingredient row rules', () => {
         ingredient_name: 'Sea salt',
         is_main: false,
         detail: '',
+        alternate_note: '',
         preparation: 'to taste',
         portion_one_ratio: null,
         size_value: null,
@@ -619,6 +651,7 @@ describe('ingredient row rules', () => {
         ingredient_name: null,
         is_main: true,
         detail: 'yellow',
+        alternate_note: '',
         preparation: 'sliced',
         portion_one_ratio: 0.25,
         size_value: 1.25,
@@ -702,6 +735,7 @@ describe('ingredient row rules', () => {
         ingredient_name: null,
         is_main: true,
         detail: 'yellow',
+        alternate_note: '',
         preparation: 'diced',
         portion_one_ratio: null,
         size_value: null,

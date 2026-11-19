@@ -617,7 +617,7 @@
 }
 
 .recipe-ingredient-name-col {
-  width: 15%;
+  width: 14%;
 }
 
 .recipe-ingredient-type-col {
@@ -626,20 +626,36 @@
 
 /* Amount is the only non-percentage column, so it absorbs the fixed-width columns. */
 .recipe-ingredient-measurements-col {
-  width: calc(38% - 100px - (32px + 2mm));
+  width: calc(35% - 100px - (32px + 2mm));
 }
 
 .recipe-ingredient-detail-col {
-  width: 14%;
+  width: 12%;
   min-width: 100px;
 }
 
+.recipe-ingredient-alternate-note-col {
+  width: 12%;
+}
+
 .recipe-ingredient-preparation-col {
-  width: 17%;
+  width: 15%;
 }
 
 .recipe-ingredient-divide-col {
-  width: 16%;
+  width: 12%;
+}
+
+@media (min-width: 1200px) {
+  .recipe-ingredient-table:not(:has(.recipe-measurement-input-wrap.is-density-derived-long))
+    .recipe-ingredient-measurements-col {
+    width: 196px;
+  }
+
+  .recipe-ingredient-table:not(:has(.recipe-measurement-input-wrap.is-density-derived-long))
+    .recipe-ingredient-alternate-note-col {
+    width: calc(100% - 14% - 12% - 15% - 12% - 68px - 196px - (32px + 2mm) - 32px);
+  }
 }
 
 /* 32px button plus 1mm on each side. */
@@ -649,7 +665,7 @@
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
   .recipe-ingredient-name-col {
-  width: 15%;
+  width: 14%;
 }
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
@@ -658,18 +674,23 @@
 }
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
+  .recipe-ingredient-alternate-note-col {
+  width: 12%;
+}
+
+.recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
   .recipe-ingredient-measurements-col {
-  width: calc(41.5% - 100px - (32px + 2mm));
+  width: calc(37.5% - 100px - (32px + 2mm));
 }
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
   .recipe-ingredient-preparation-col {
-  width: 18%;
+  width: 16%;
 }
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
   .recipe-ingredient-divide-col {
-  width: 15%;
+  width: 10%;
 }
 
 .recipe-ingredient-actions-col {
@@ -921,7 +942,7 @@
 
 .recipe-preparation-editor > .ingredient-cell-editor {
   flex: 0 1 auto;
-  width: max-content;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -933,6 +954,17 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
+}
+
+@media (min-width: 761px) and (max-width: 1199px) {
+  .recipe-ingredient-desktop .recipe-preparation-editor {
+    flex-wrap: wrap;
+  }
+
+  .recipe-ingredient-desktop .recipe-preparation-editor > .ingredient-cell-editor {
+    flex: 0 1 100%;
+    width: 100%;
+  }
 }
 
 .recipe-divide-editor {
@@ -968,6 +1000,14 @@
   gap: 2mm;
   border: 0;
   padding: 0;
+}
+
+.recipe-form .recipe-ingredient-desktop .recipe-divide-editor {
+  justify-content: flex-start;
+}
+
+.recipe-form .recipe-ingredient-desktop fieldset.recipe-portion-editor {
+  gap: 1mm;
 }
 
 .recipe-portion-amount {
@@ -1241,8 +1281,6 @@
   .recipe-ingredient-desktop
   .recipe-measurement-category
   .recipe-measurement-picklist-trigger {
-  position: relative;
-  left: -4px;
   box-sizing: border-box;
   width: calc(4.6ch + 1mm + 14px);
 }

@@ -20,6 +20,7 @@ export type IngredientRowDraft = {
   ingredientName: string;
   isMain: boolean;
   detail: string;
+  alternateNote?: string;
   preparation: string;
   measurements: MeasurementDraft[];
   portionOneRatio?: number | null;
@@ -38,6 +39,7 @@ export type IngredientRowPayload = {
   ingredient_name: string | null;
   is_main: boolean;
   detail: string;
+  alternate_note: string;
   preparation: string;
   portion_one_ratio: number | null;
   size_value: number | null;
@@ -50,6 +52,7 @@ export type IngredientRowPayload = {
 export type IngredientDisplayInput = {
   ingredient_name: string;
   detail: string;
+  alternate_note?: string;
   preparation: string;
   portion_one_ratio?: number | null;
   size_value?: number | null;
@@ -67,6 +70,7 @@ export type IngredientDisplayInput = {
 export type IngredientDisplayParts = {
   name: string;
   specifics: string | null;
+  alternateNote: string | null;
   amount: string;
   measurements: {
     quantity: string;
@@ -268,6 +272,7 @@ export function isEmptyIngredientRow(row: IngredientRowDraft): boolean {
     !row.ingredientName.trim() &&
     !row.isMain &&
     !row.detail.trim() &&
+    !row.alternateNote?.trim() &&
     !row.preparation.trim() &&
     row.portionOneRatio == null &&
     row.portionOneAmount === undefined &&
@@ -320,6 +325,7 @@ export function getIngredientDisplayParts(
 ): IngredientDisplayParts {
   const name = ingredient.ingredient_name.trim();
   const detail = ingredient.detail.trim();
+  const alternateNote = ingredient.alternate_note?.trim() ?? '';
   const rawPreparation = ingredient.preparation.trim();
   const preparation = rawPreparation.toLocaleLowerCase() === 'divided' ? '' : rawPreparation;
   const size =
@@ -416,6 +422,7 @@ export function getIngredientDisplayParts(
   return {
     name: displayName,
     specifics: detail ? detail.toLocaleLowerCase() : null,
+    alternateNote: alternateNote || null,
     amount: amountText,
     measurements: displayedMeasurements,
     unmeasuredPhrase: unmeasuredPhrase ? lowercaseFirst(unmeasuredPhrase.trim()) : null,
@@ -452,9 +459,12 @@ export function formatIngredientDisplay(ingredient: IngredientDisplayInput): str
   const parts = getIngredientDisplayParts(ingredient);
   const mainText = [parts.specifics, parts.name].filter(Boolean).join(' ');
   const measuredText = [parts.amount, mainText].filter(Boolean).join(' ');
-  const displayText = parts.unmeasuredPhrase
-    ? `${measuredText} ${parts.unmeasuredPhrase}`
+  const qualifiedText = parts.alternateNote
+    ? `${measuredText} (${parts.alternateNote})`
     : measuredText;
+  const displayText = parts.unmeasuredPhrase
+    ? `${qualifiedText} ${parts.unmeasuredPhrase}`
+    : qualifiedText;
   const preparationText = [parts.preparation, parts.size].filter(Boolean).join(' ');
   return preparationText ? `${displayText}, ${preparationText}` : displayText;
 }
@@ -540,6 +550,7 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
   for (const row of rows) {
     const ingredientName = row.ingredientName.trim();
     const detail = row.detail.trim();
+    const alternateNote = row.alternateNote?.trim() ?? '';
     const preparation = row.preparation.trim();
     const measurements = serializeMeasurements(row.measurements);
     let portionOneRatio = row.portionOneRatio ?? null;
@@ -588,6 +599,7 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
       if (
         row.isMain ||
         detail ||
+        alternateNote ||
         preparation ||
         portionOneRatio !== null ||
         sizeValue ||
@@ -606,6 +618,7 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
       ingredient_name: row.ingredientId ? null : ingredientName,
       is_main: row.isMain,
       detail,
+      alternate_note: alternateNote,
       preparation,
       portion_one_ratio: portionOneRatio,
       size_value: sizeValue ? parseIngredientSizeValue(sizeValue, sizeUnit) : null,

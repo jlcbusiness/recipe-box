@@ -469,29 +469,43 @@ function validateData(
                 !(
                   schemaVersion < 9 &&
                   ['nutrition_serving_size_override', 'nutrition_overrides'].includes(field)
-                ),
+                ) &&
+                !(schemaVersion < 14 && field === 'alternate_note'),
             )
           : table === 'recipe_ingredient_measurements'
             ? portableRecordFields[table].filter(
                 (field) => schemaVersion >= 13 || field !== 'amount_is_a',
               )
             : table === 'recipe_step_mentions' && schemaVersion < 3
-            ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
-            : table === 'media_assets'
-              ? portableRecordFields[table].filter(
-                  (field) =>
-                    (schemaVersion >= 4 || field !== 'crop') &&
-                    (schemaVersion >= 7 ||
-                      !['source_full_path', 'source_thumbnail_path', 'source_byte_size'].includes(
-                        field,
-                      )),
-                )
-              : portableRecordFields[table],
+              ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
+              : table === 'media_assets'
+                ? portableRecordFields[table].filter(
+                    (field) =>
+                      (schemaVersion >= 4 || field !== 'crop') &&
+                      (schemaVersion >= 7 ||
+                        !['source_full_path', 'source_thumbnail_path', 'source_byte_size'].includes(
+                          field,
+                        )),
+                  )
+                : portableRecordFields[table],
     );
     for (const [index, item] of (records[table] as unknown[]).entries()) {
       const record = asRecord(item, `The ${table} record at index ${index}`);
       if (Object.keys(record).some((field) => !allowedFields.has(field))) {
         throw new Error(`The ${table} record contains an unsupported field.`);
+      }
+    }
+  }
+
+  if (schemaVersion < 14) {
+    records.recipe_ingredients = (records.recipe_ingredients as ExportRecord[]).map((row) => ({
+      ...row,
+      alternate_note: '',
+    }));
+  } else {
+    for (const ingredient of records.recipe_ingredients as ExportRecord[]) {
+      if (typeof ingredient.alternate_note !== 'string') {
+        throw new Error('The bundle contains an invalid ingredient alternative note.');
       }
     }
   }

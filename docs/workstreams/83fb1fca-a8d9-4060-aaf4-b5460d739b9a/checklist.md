@@ -77,3 +77,38 @@
   mobile viewports; identify the active tab panel as the constraining box.
 - [x] Make the Updates tracker/list fill the Settings content track, and verify
   width, overflow, and existing controls with desktop/mobile browser tests.
+- [x] Resolve package G's note semantics and exact Standard/Ingredient-first
+  formatting with the user.
+- [x] Trace the new ingredient field through editing, save/history, public
+  projection, print/offline output, and import/export.
+- [x] Add the distinct optional ingredient field and propagate it through every
+  supported recipe-data lifecycle.
+- [x] Add focused unit, migration, lifecycle, and browser coverage, including
+  desktop/mobile editing and both reader presentations.
+- [x] Update the package G brief and canonical product/data-model contracts.
+- [x] Verify the migration, relevant lifecycle tests, browser behavior,
+  typecheck, lint, and worktree.
+- [x] Reproduce and correct the reported table expansion when activating a
+  long Alternative / note value; verify stable geometry at 1024px and 1210px.
+- [x] Move Alternative / note to the final editor field and after Divide in
+  Standard view; verify editor and reader ordering.
+- [x] Correct the narrow mobile Ingredient-first layout, including section
+  divider spans and collapsed desktop-only tracks; verify normal and Cook
+  modes plus desktop layout.
+- [x] Update the reader contracts and regression tests, then run focused unit,
+  browser, typecheck, lint, and whitespace checks.
+- [x] Prevent collapsed mobile reader tracks from inflating ingredient rows
+  and stack the Divide label above its portions.
+- [x] Keep the complete desktop Divide editor group left-aligned within its
+  cell with compact internal spacing.
+- [x] Update the relevant reader/editor contracts and verify the desktop
+  Divide layout and mobile row geometry with focused Playwright tests.
+- [x] Balance the desktop gaps around Preparation at 1210px and 1410px while
+  preserving left-aligned Divide controls and their containment.
+- [x] Keep Preparation usable at constrained desktop widths by stacking Size
+  controls below it from 761px through 1199px, while retaining the inline
+  layout on wider screens.
+- [x] Align the Type picker with Amount and verify Preparation/Size spacing
+  and mobile editor field order with focused regression tests.
+- [x] Update the visual-design, comprehensive ingredient, and DLC 38 contracts
+  and pass the focused browser, typecheck, lint, and whitespace checks.

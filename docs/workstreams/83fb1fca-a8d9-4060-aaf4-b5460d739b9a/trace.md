@@ -367,4 +367,228 @@ Cook-mode row space and targeted lint.
 
 Last recorded action: inspected responsive screenshots and removed temporary
 files; the test server is no longer running.
+
+## 2026-11-18 — package G discovery — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- Resumed the same workstream after package A and read its save point and
+  checklist. The user selected the final open candidate, G (#8).
+- Read the G intake contract and the original Updates entry. It requests a
+  separate optional field, distinct from Specifics and Preparation, rendered
+  after the ingredient in Standard view and with Specifics in Ingredient-first
+  view; its proposed lifecycle includes save/history, public sharing, print,
+  offline, and recipe import/export.
+- Inspected current ingredient draft/payload types, serializer, editor row and
+  reader composition, recipe save validation, database save/history code, and
+  public/export projections. No product files were changed.
+- The examples differ in view-specific treatment of the alternative phrase.
+  Asked the user whether the stored value should be verbatim Notes or a
+  substitution value formatted as “(or …)” in Standard and “, or …” in
+  Ingredient-first.
+
+Last recorded action: user clarified verbatim qualifier text, presentation,
+and the proposed “Alternative / note” editor label.
+
+## 2026-11-18 — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a — package G completion
+
+- Implemented the separate ingredient note across editor, persistence,
+  history, public projections/copy, readers, and portable import/export.
+  Added migration `20261228000000_add_recipe_ingredient_alternate_notes.sql`.
+- Updated the G intake and the visual-design, comprehensive-reference,
+  data-model, first-draft, and decision-log contracts.
+- `npx vitest run` on the nine focused unit files — 178 tests passed.
+- `npm run typecheck` — passed.
+- Targeted Playwright coverage across `ingredient-rows`, `measurements`,
+  `import-commit`, and `public-recipes` — 13 passed, one desktop-only Fold 6
+  skip. It verified trimmed save/history data, mobile/desktop editing,
+  private/shared reader output, import, print, and offline HTML.
+- `npx biome format --write` formatted five changed files. The final
+  diagnostic-level error check passed; the earlier full check reported
+  pre-existing CSS specificity warnings.
+- `git diff --check` — passed. `npm run lint:md` reported 35 findings in
+  existing prompt, decision-log, and workstream text; none were in the
+  updated package G contracts.
+- The integrated browser remained signed out. Playwright behavior and
+  geometry assertions ran at desktop/mobile sizes, but manual screenshot
+  inspection was not performed.
+
+Last recorded action: package G lifecycle, responsive UI, shared rendering,
+print/offline output, and transfer paths verified.
+
+## 2026-11-18 — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a — final validation
+
+- `npm run lint:md` — 35 findings remain in pre-existing prompt, decision-log,
+  and workstream text; none are in the updated package G contracts.
+- Full targeted Biome check — 27 files, no errors, 20 warnings.
+- `npm run typecheck` and `git diff --check` passed after restoring the
+  Next-generated `next-env.d.ts` imports to their original `.next/dev` paths.
+- Stopped the local `npm run dev` process associated with shell session `374`.
+- Final `git status --short` no longer lists the Playwright-generated
+  `next-env.d.ts` change.
+
+Last recorded action: final validation completed and the local dev server was stopped.
+
+## 2026-11-18 — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a — Note expansion report
+
+- Compared the supplied screenshots: the first is 1024px wide and the second
+  is 1210px wide, so their column widths are not a same-viewport comparison.
+- Ran the desktop ingredient-row Playwright flow with a temporary geometry
+  assertion around Note activation at 1024px and 1210px. Table, header, and
+  row-cell geometry remained unchanged at each fixed viewport.
+- Removed the exploratory assertion; no product code change was made.
+- Stopped the remaining local dev server and verified port 3000 no longer
+  responds. Restored the Playwright-generated `next-env.d.ts` paths.
+
+Last recorded action: awaiting clarification on whether the reported expansion is horizontal, vertical, or both.
+
+## 2026-11-18 — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a — long-cell layout fix
+
+- With a long populated Note value, the temporary Playwright geometry
+  assertion failed at 1210px: activating the cell redistributed table and
+  header widths and changed cells across the ingredient rows.
+- Changed the editor table override in `recipe-reader.css` from automatic to
+  fixed layout while retaining its content-fit width and 100% maximum.
+- The final desktop Playwright flow passed with geometry assertions at 1024px
+  and 1210px. The screenshot at 1210px shows the long value stays in its cell
+  without shifting the other rows.
+- Updated the visual-design contract with the shared-column stability rule.
+- `npm run typecheck`, the targeted Biome error-level check, and
+  `git diff --check` passed. Markdown lint still reports 35 existing findings;
+  none are in the new design-contract wording.
+- Stopped local Next.js servers, restored `next-env.d.ts`, and removed the
+  temporary screenshot.
+
+Last recorded action: long-cell editing geometry passed at both target desktop widths.
 *** End of File
+
+## 2026-11-18 — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a — mobile Ingredient-first follow-up
+
+- Updated editor and Standard-view ordering for Alternative / note.
+- Ran focused Playwright checks for editor keyboard order, the mobile editor
+  popover, and the 342px Ingredient-first reader in normal and Cook modes; all
+  three passed.
+- The mobile reader check confirmed the table fills its content region, visible
+  cells meet the width threshold, and the page has no horizontal overflow. The
+  captured screenshot was inspected.
+- The same browser test also resized to 1280px and verified full divider spans
+  with no page-level horizontal overflow.
+- Corrected Ingredient-first section divider `colSpan` to match the table's
+  full column count and collapsed hidden mobile table tracks so visible cells
+  keep their intended columns.
+- Ran `npx vitest run tests/unit/recipe-reader-rules.test.tsx`; 72 tests passed.
+  Ran `npm run typecheck`; it passed. `git diff --check` passed.
+- Targeted Biome completed with 42 warnings and no errors. The repository
+  Markdown script reported 35 findings outside the two updated product
+  contracts.
+- Restored Playwright-generated `next-env.d.ts` references. Process inspection
+  found no remaining test app server.
+- Final Markdown and whitespace checks confirmed the new contract/checkpoint
+  content adds no further findings. Temporary lint logs and generated test
+  screenshots were removed.
+
+Last recorded action: completed the final Markdown and whitespace checks and
+removed the temporary verification artifacts. The trace for this continuation
+covers the Note-order/mobile-layout follow-up, not unrelated work earlier in
+this session.
+
+## Session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a — 2026-11-18 Divide layout follow-up
+
+- `npx playwright test tests/e2e/recipes.spec.ts` (desktop Divide test) —
+  passed at 1210px; captured and inspected the desktop Divide editor.
+- Centered the full desktop Divide control group and reduced its internal gap
+  to 1mm. The browser assertion verifies the group stays centered in its cell.
+- Updated the divided-ingredient mention test for the documented whole
+  ingredient option alongside the two portion options. The desktop Divide,
+  mention, and mobile Ingredient-first tests pass in Chromium.
+- Corrected measurement-test geometry to use the Playwright bounding-box
+  shape and to accept descendants in Preparation-cell hit testing. The broader
+  Preparation/Divide test now reaches a Preparation/Size spacing assertion
+  (3mm expected; 5.58px observed). The responsive measurement test reaches a
+  Type-to-Amount maximum assertion (9px expected; 10.42px observed). Neither
+  behavior was changed as part of this Divide/mobile work.
+- TypeScript, targeted Biome lint, targeted Markdown lint, and whitespace
+  checks pass. `biome check` still reports a formatter mismatch in
+  `recipes.spec.ts` outside this follow-up.
+- Restored generated `next-env.d.ts` references, stopped the recipe-box test
+  server, and removed the specific temporary test and lint-output files.
+
+## Session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a — 2026-11-18 Divide left-alignment correction
+
+- The user’s screenshot showed that centering made empty and populated Divide
+  controls start at different horizontal positions. Changed the desktop rule
+  back to `flex-start`; the full portion editor remains one fieldset.
+- Expanded the 1210px Playwright test to check both an entered division and an
+  empty division with a unit. Both controls start within 1px of the Divide
+  cell’s content edge and remain fully inside the cell; inspected the updated
+  screenshot.
+- The narrow mobile Ingredient-first regression test passed after the
+  desktop-only alignment change.
+- TypeScript, targeted Biome lint, targeted Markdown lint, and
+  `git diff --check` passed.
+- Restored the generated Next type references, stopped the recipe-box test
+  server, and removed the screenshots and lint output created by these checks.
+
+## 2026-11-18 — desktop Preparation gap balancing — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- The same desktop ingredient editor table was the closest working reference;
+  its overall pattern remained appropriate, but the Amount-to-Preparation gap
+  exceeded the Preparation-to-Divide gap.
+- Fixed the wide-screen Amount column at 196px and assigned remaining table
+  width to Alternative / note. Updated the visual-design and comprehensive
+  ingredient contracts to require balanced gaps around Preparation.
+- Command:
+
+  ```sh
+  npx playwright test tests/e2e/recipes.spec.ts \
+    --project=chromium --grep "desktop Divide portion controls stay left-aligned within their column" \
+    --workers=1
+  ```
+
+  Passed; the test checks gap balance within 2px at 1210px and 1410px and
+  verifies blank/populated Divide controls remain left-aligned and contained.
+  Inspected the 1410px screenshot.
+- `npm run typecheck` passed. Full Biome check passed with 32 existing
+  warnings. Targeted Markdown lint passed for both changed contracts and the
+  new trace section. `npm run lint:md` still reports 35 existing findings
+  elsewhere; `git diff --check` passed.
+- Re-ran the existing Preparation/Size and Type-to-Amount browser checks; both
+  still fail at the previously recorded expectations (3mm versus 5.58px, and
+  a 9px maximum versus 10.42px). These are separate spacing assertions and
+  remain out of scope.
+- Restored generated `next-env.d.ts` references. Stopped the Playwright server
+  and confirmed only a separate, pre-existing Next server remained.
+
+Last recorded action: updated the workstream records after stopping the
+Playwright test server and confirming its process tree exited. This trace
+covers the desktop gap-balancing follow-up, not unrelated work earlier in
+this session.
+
+## 2026-11-19 — Preparation/Size responsive follow-up — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- The accepted desktop gap-balancing change left two existing measurement
+  assertions failing. At 902px, inline Size controls consumed nearly all of
+  the Preparation cell; the input collapsed to 5.75px. At 1024px, the Type
+  picker's `left: -4px` offset made its gap from Amount 10.42px, over the 9px
+  maximum.
+- Wrapped Size controls below Preparation from 761px through 1199px, preserving
+  the input and the 3mm vertical gap; the existing inline arrangement remains
+  at 1200px and wider. Removed the Type picker offset. Updated browser coverage
+  for narrow and wide layouts and the mobile Alternative / note field order,
+  and updated the visual-design, comprehensive ingredient, and DLC 38
+  contracts.
+- The focused Chromium run passed three tests covering Preparation/Size,
+  measurement editing, and balanced Preparation gaps. Inspected the 902px and
+  1210px screenshots. `npm run typecheck` passed. `npx biome check
+  --max-diagnostics=100 tests/e2e/measurements.spec.ts
+  tests/e2e/recipes.spec.ts` exited 0 with 33 warnings. Targeted Markdown lint
+  found 10 existing findings in older trace entries, with none in the updated
+  contracts, checklist, current-work entry, or this new trace entry.
+  `git diff --check` passed.
+- Restored `next-env.d.ts` from generated `.next-e2e` imports to its normal
+  `.next` references. The Playwright configuration uses `npm run dev:test`;
+  no such process remained. A separate `npm run dev` process was still
+  present and was not stopped. No generated screenshot or `error-context.md`
+  files matching this follow-up were found in the repository.
+
+Last recorded action: completed the focused checks, restored generated type
+references, and updated the checklist and save point. This section covers the
+Preparation/Size and Type-spacing follow-up; earlier history remains partial.

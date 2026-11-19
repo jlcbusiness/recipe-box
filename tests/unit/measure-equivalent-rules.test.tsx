@@ -14,6 +14,7 @@ const ingredient: RecipeIngredient = {
   position: 0,
   is_main: false,
   detail: '',
+  alternate_note: '',
   preparation: 'juiced',
   portion_one_ratio: null,
   size_value: null,

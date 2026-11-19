@@ -99,8 +99,11 @@ Preparation value.
 - Desktop Edit retains the current table and keyboard behavior, adding a
   separate Divide field beside Preparation. Keep the recipe form up to 1200px
   wide on desktop so the added field and existing amount controls have room;
-  mobile retains the current row-pane flow and touch targets. The first-portion
-  input is always available, and only a nonblank amount records a division.
+  at widths from 761px through 1199px, place Size controls below Preparation
+  so the input remains usable, with 3mm between them. At 1200px and wider, keep
+  Size inline when it fits. Mobile retains the current row-pane flow and touch
+  targets. The first-portion input is always available, and only a nonblank
+  amount records a division.
 - Ingredient-first uses a semantic **Divide** column on desktop. Keep the
   “divided” column header accessible but visually hidden, and put “divided”
   above each row’s portion pair. When no row is divided, omit the column and
@@ -159,7 +162,9 @@ Preparation value.
   first-portion input has no checkbox and does not divide the row, and clearing
   it clears the staged ratio without changing Preparation. Size remains tied to
   Preparation; divide controls retain current scalar validation, dual-measure
-  selection, keyboard behavior, focus, and mobile pane fit. Verify Cancel
+  selection, keyboard behavior, focus, and mobile pane fit. At narrow and wide
+  desktop widths, Preparation and Size remain usable with 3mm separation.
+  Verify Cancel
   discards the staged division and that the desktop recipe form can use 1200px
   at a wide viewport. `tests/e2e/recipes.spec.ts` verifies ingredient references
   use the separate Divide field. `tests/e2e/measurements.spec.ts` verifies a

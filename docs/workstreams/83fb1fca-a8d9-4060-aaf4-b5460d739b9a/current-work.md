@@ -189,25 +189,117 @@
   after waiting for its streamed heading and tablist before running axe.
   Inspected desktop and mobile screenshots. Typecheck and `git diff --check`
   pass; Biome reports five existing CSS specificity warnings.
+- 2026-11-18: The user selected package G (#8), the alternate-ingredient note
+  field. Initial code mapping confirms that this requires a separate field
+  beyond existing Specifics/Preparation and broad save/history, reader,
+  public, print/offline, duplicate, and import/export propagation. The user
+  clarified that this is verbatim free text that can express an alternative
+  or another qualifier: Standard appends it in parentheses after the
+  ingredient; Ingredient-first puts it on a separate line below Specifics,
+  or directly below the name when Specifics is empty. The editor label will
+  be “Alternative / note.”
+- 2026-11-18: Completed package G with a distinct trimmed note field, schema-14
+  portable export, and legacy-import default. Focused unit tests passed (178),
+  TypeScript passed, and browser coverage passed in Chromium and Fold 6 for
+  save/history, editing, private/shared readers, database import, print, and
+  offline HTML. The integrated browser remained signed out, so I did not
+  manually inspect screenshots; responsive content and geometry assertions
+  passed in the browser tests.
+- 2026-11-18: Final validation passed TypeScript and whitespace checks after
+  restoring the Next-generated `next-env.d.ts` imports; the local dev server
+  was stopped. Full Biome completed without errors (20 warnings), and Markdown
+  lint still reports 35 findings, none in the updated package G contracts.
+- 2026-11-18: The user reported that activating Alternative / note expands all
+  ingredient rows. The supplied screenshots are 1024px and 1210px wide;
+  fixed-viewport Chromium geometry checks at both widths found no change to the
+  table, headers, or row cells on activation. Removed the exploratory
+  assertion; no product code changed. Awaiting clarification whether expansion
+  means width, row height, or both.
+- 2026-11-18: The user clarified that clicking long populated cells triggers
+  horizontal expansion. A long Note value reproduced changes to the table,
+  headers, and row cells at 1210px. Changing the editor table from automatic
+  to fixed layout prevents the shift; the final Playwright check verifies
+  stable geometry at 1024px and 1210px. The visual-design contract now
+  requires stable shared columns while editing.
+- 2026-11-18: Moved Alternative / note to the end of editor rows and after
+  Divide in Standard view. The mobile Ingredient-first test exposed hidden
+  desktop tracks collapsing the Amount and Preparation cells and an incorrect
+  section-heading column span. Collapsing unused tracks and spanning the full
+  table grid restores usable mobile columns; Chromium checks pass at 342px in
+  normal and Cook modes. At 1280px, divider spans are correct and the page has
+  no horizontal overflow; the captured mobile screenshot was inspected. The
+  visual and comprehensive contracts now describe this mobile behavior.
+- 2026-11-18: Fixed the follow-up mobile row-height issue by preventing
+  collapsed desktop cells from contributing wrapped content, and stacked the
+  mobile Divide label above its values. The first desktop adjustment centered
+  the complete Divide input/unit/separator/remainder group with a compact 1mm
+  internal gap. Its focused 1210px desktop geometry test and mobile
+  row-height/layout test pass;
+  the divided-ingredient mention test now correctly includes its documented
+  whole-ingredient option and also passes. TypeScript, targeted Biome lint,
+  targeted Markdown lint, and whitespace checks pass. Two other measurement
+  assertions remain failing at Type-to-Amount spacing and Preparation/Size
+  spacing; these were not traced to the Divide/mobile changes. The test server
+  was stopped and generated Next type references were restored.
+- 2026-11-18: The user reported that the centered Divide contents were no longer
+  left-aligned and that blank and populated rows started at different
+  positions. Changed the desktop editor back to left alignment and expanded
+  the regression test to cover both row states. At 1210px, both groups start
+  within 1px of the Divide cell's content edge and remain fully inside it; the
+  updated screenshot was inspected. The narrow mobile Ingredient-first test
+  still passes. TypeScript, targeted Biome lint, targeted Markdown lint, and
+  whitespace checks pass; the test server was stopped and generated Next type
+  references were restored.
+- 2026-11-18: Continued from the same desktop ingredient-editor table, the
+  closest working reference for this layout. Its compact column pattern still
+  fit the workflow, but the gap before Preparation was visibly wider than the
+  gap after it. Fixed the wide-screen Amount column at 196px and let
+  Alternative / note absorb the remaining width. Playwright now verifies the
+  two gaps differ by no more than 2px at 1210px and 1410px, while blank and
+  populated Divide controls remain left-aligned and inside their cell. The
+  1410px screenshot was inspected; the design contracts were updated. The
+  unrelated Preparation/Size and Type-to-Amount assertions still fail at
+  5.58px versus 3mm and 10.42px versus a 9px maximum, respectively.
+- 2026-11-19: The user accepted the balanced desktop spacing and asked to
+  update the relevant contracts and tests and resolve test issues. At 902px,
+  the Preparation cell could not fit both its input and inline Size controls;
+  wrapping Size below Preparation at 761–1199px keeps the input usable while
+  retaining the inline layout at 1200px and wider. Removing the Type picker
+  offset aligns it with Amount. Updated geometry tests cover 3mm spacing in
+  both layouts, a usable input, and the mobile Alternative / note field order.
+  Three focused Chromium tests pass, and the 902px and 1210px screenshots were
+  inspected. TypeScript and whitespace checks pass; Biome exits successfully
+  with 33 warnings. Targeted Markdown lint reports 10 existing findings in
+  older trace entries, with none in the updated contracts, checklist,
+  current-work entry, or new trace entry. Restored generated `next-env.d.ts`
+  references. The Playwright `dev:test` server is absent; the separate
+  `npm run dev` process was left untouched.
 
 ## Save Point
 
-- **Goal/status:** Packages B, D+H, E, Numeric Arithmetic (#4), Things Wording
-  and Addable Units (#7/#10), and package A are implemented and verified.
-  Package G (#8) remains unstarted.
+- **Goal/status:** Packages A, B, D+H, E, Numeric Arithmetic (#4), Things
+  Wording and Addable Units (#7/#10), and package G (#8) are implemented and
+  verified. The Note-order, mobile Ingredient-first row-height, and desktop
+  Divide-spacing/left-alignment and Preparation/Size-spacing follow-ups are
+  complete. C and F remain open.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** Package A is complete; wait for direction on the next
-  package.
-- **Last verified:** The admin Updates flow and the Settings tabs/keyboard
-  accessibility flow passed in Chromium and Fold 6. Width assertions cover
-  the Settings track at 1280px and responsive widths of 641px, 640px, 473px,
-  and 390px. `npm run typecheck` and `git diff --check` passed; targeted
-  Biome exited 0 with five existing specificity warnings.
-- **Next action:** Wait for the user to select whether to begin package G
-  (#8), alternate-ingredient notes.
+- **Current step:** The reader and ingredient-editor layout follow-ups are
+  complete; C and F remain the unselected packages.
+- **Last verified:** Three focused Chromium tests pass, covering the
+  Preparation/Size responsive layout, measurement editing, and balanced
+  Preparation gaps. The narrow (902px) and wide (1210px) screenshots were
+  inspected; the 1210px and 1410px gap assertions pass. TypeScript and
+  `git diff --check` pass. Biome exits successfully with 33 warnings. Targeted
+  Markdown lint reports 10 existing findings in older trace entries, but none
+  in the updated contracts or new continuity entries; full Markdown lint still
+  reports 35 findings elsewhere. Generated `next-env.d.ts` references were
+  restored. Playwright's `dev:test` process is absent; the separate
+  `npm run dev` process was not stopped.
+- **Next action:** No further work is required for these layout follow-ups.
+  Wait for selection of C or F.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); session
-  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; latest section records package A
-  implementation and verification.
-- **Trace boundary:** The latest section records package A; earlier
-  implementation history remains partial.
+  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; latest section records the
+  Preparation/Size responsive follow-up.
+- **Trace boundary:** The latest section records this follow-up; earlier
+  history remains partial.

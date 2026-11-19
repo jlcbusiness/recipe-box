@@ -202,6 +202,7 @@ function parseIngredientRows(formData: FormData): IngredientRowPayload[] | null 
         (row.ingredient_name !== null && typeof row.ingredient_name !== 'string') ||
         typeof row.is_main !== 'boolean' ||
         typeof row.detail !== 'string' ||
+        typeof row.alternate_note !== 'string' ||
         typeof row.preparation !== 'string' ||
         !(
           row.nutrition_serving_size_override === null ||

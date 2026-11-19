@@ -95,11 +95,13 @@ function formatIngredient(value: unknown): string | null {
     ? value.measurements.map(formatMeasurement).filter((item): item is string => item !== null)
     : [];
   const quantity = measurements.length > 0 ? ` (${measurements.join(' / ')})` : '';
+  const alternateNote = typeof value.alternate_note === 'string' ? value.alternate_note.trim() : '';
   const detail = typeof value.detail === 'string' ? value.detail.trim() : '';
   const preparation = typeof value.preparation === 'string' ? value.preparation.trim() : '';
+  const alternative = alternateNote ? ` (${alternateNote})` : '';
   const specifics = detail ? `, ${detail.toLocaleLowerCase()}` : '';
   const handling = preparation ? `, ${preparation.toLocaleLowerCase()}` : '';
-  return `${name}${quantity}${specifics}${handling}`;
+  return `${name}${quantity}${alternative}${specifics}${handling}`;
 }
 
 function formatPicklists(value: unknown): string | null {

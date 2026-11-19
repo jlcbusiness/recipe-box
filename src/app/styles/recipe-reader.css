@@ -335,7 +335,7 @@
 .recipe-form .recipe-ingredient-desktop .recipe-ingredient-table {
   width: fit-content;
   max-width: 100%;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .recipe-ingredient-first-table {
@@ -482,7 +482,8 @@
 }
 
 .recipe-reader-table-name,
-.recipe-reader-specifics {
+.recipe-reader-specifics,
+.recipe-ingredient-first-table .recipe-reader-alternative-note {
   display: block;
 }
 
@@ -491,15 +492,21 @@
   text-transform: none;
 }
 
-.recipe-reader-specifics {
+.recipe-reader-specifics,
+.recipe-ingredient-first-table .recipe-reader-alternative-note {
   margin-left: 0.75em;
   color: var(--muted);
   font-size: 0.92em;
   text-transform: none;
 }
 
-.recipe-ingredient-first-table .recipe-reader-specifics {
+.recipe-ingredient-first-table .recipe-reader-specifics,
+.recipe-ingredient-first-table .recipe-reader-alternative-note {
   font-weight: 400;
+}
+
+.recipe-reader-alternative-note {
+  font-variant-caps: normal;
 }
 
 .recipe-cook-checkbox {

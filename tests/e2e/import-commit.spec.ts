@@ -180,6 +180,7 @@ test('database import commit is privileged, versioned, history-aware, and atomic
         position: 0,
         is_main: true,
         detail: '',
+        alternate_note: 'or pecans',
         preparation: '',
       },
     ],
@@ -286,10 +287,16 @@ test('database import commit is privileged, versioned, history-aware, and atomic
         request,
         config,
         'recipe_ingredients',
-        `select=id,ingredient_set_id&id=eq.${recipeIngredientId}`,
+        `select=id,ingredient_set_id,alternate_note&id=eq.${recipeIngredientId}`,
         ownerHeaders(config, owner),
       ),
-    ).toEqual([{ id: recipeIngredientId, ingredient_set_id: ingredientSetId }]);
+    ).toEqual([
+      {
+        id: recipeIngredientId,
+        ingredient_set_id: ingredientSetId,
+        alternate_note: 'or pecans',
+      },
+    ]);
     expect(
       await selectRows(
         request,

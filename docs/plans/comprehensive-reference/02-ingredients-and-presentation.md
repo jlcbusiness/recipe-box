@@ -11,9 +11,9 @@
 
 An ingredient and its quantities are permanently tied together in a single
 relational row. The desktop edit table displays Ingredient, Specifics, Amount,
-Preparation, and Divide values in that order; the Main checkbox and 12px drag
-handle sit in a narrow control rail outside the table. The table always has
-one trailing empty row.
+Preparation, Divide, and Alternative / note values in that order; the
+Main checkbox and 12px drag handle sit in a narrow control rail outside the
+table. The table always has one trailing empty row.
 
 1. **Main (Checkbox):** Checked if this ingredient defines the essence of the dish (e.g., chicken in chicken soup, lemon
    in lemon bars). Populates the recipe's `Main Ingredients` index used by the Query **Main Ingredient** field and
@@ -64,28 +64,49 @@ one trailing empty row.
      package) are not seeded.
    - **Feel Picker:** Approved culinary phrases: `to taste` , `as needed` , `for garnish` , `to serve` , `divided` .
      Feel is stored using the existing Unmeasured measurement type and phrase list.
-   - On desktop, the edit column order is Ingredient, Specifics, Amount, Preparation. Type has its own cell and all
-     quantity/unit controls share one Amount cell. Unit displays volume and weight amount/unit pairs separated by a
-     slash; Count, Things, and Feel display only their relevant controls. Keep controls on one line and constrain the
-     table to available width, switching to the mobile row list at narrow widths. One left-aligned Amount header spans
-     Type and the Amount cell without subheaders. Quantity inputs start at two characters wide, grow with their
-     contents, and center their text; Things and Feel picklists use short `Unit` and `Phrase` prompts. The weight-unit
-     picker uses compact horizontal padding. On mobile, the editor field order is Ingredient, Specifics, Amount,
-     Preparation; Type, quantity, and unit controls share a compact wrapping line, and paired Unit dimensions may wrap
-     as needed without page-level horizontal scrolling.
+   - On desktop, the edit column order is Ingredient, Specifics, Amount,
+     Preparation, Divide, and Alternative / note. Type has its own cell and all quantity/unit
+     controls share one Amount cell. Unit displays volume and weight amount/unit
+     pairs separated by a slash; Count, Things, and Feel display only their
+     relevant controls. Keep controls on one line and constrain the table to
+     available width, switching to the mobile row list at narrow widths.
+     Align the Type picker with the Amount heading, with a 1mm to 9px gap
+     before the first Amount input. When Preparation reveals Size controls,
+     keep a 3mm gap after the visible Preparation input. At desktop widths from
+     761px through 1199px, place Size controls below Preparation; at 1200px and
+     wider, keep them inline when they fit.
+     At wide desktop widths, allocate unused width to Alternative / note so the
+     gaps on either side of Preparation stay balanced. Keep Divide controls
+     left-aligned and within their column. One
+     left-aligned Amount header spans Type and the Amount cell without
+     subheaders. Quantity inputs start at two characters wide, grow with their
+     contents, and center their text; Things and Feel picklists use short
+     `Unit` and `Phrase` prompts. The weight-unit picker uses compact
+     horizontal padding. On mobile, the editor field order is Ingredient,
+     Specifics, Amount, Preparation, Divide, and Alternative / note; Type,
+     quantity, and unit controls share a compact wrapping line, and paired Unit
+     dimensions may wrap as needed without page-level horizontal scrolling.
 5. **Specifics (Text):** Qualitative ingredient specification. Displayed in lowercase after the amount in
    recipe view. Examples: `all-purpose` (for flour), `large` (for eggs), `full-fat` (for coconut milk), `unsalted` (for
    butter), `Brummel & Brown` (for margarine).
-6. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or
+6. **Alternative / note (Free text):** An optional note for an alternative
+   ingredient or another qualifier. Trim surrounding whitespace, preserve the
+   authored wording, and keep it separate from Specifics and Preparation.
+   Standard places it in parentheses after the other row content, including
+   any Feel phrase, Preparation, Size, and Divide.
+   Ingredient-first places it on its own line below Specifics, or directly
+   below the name when Specifics is empty.
+7. **Preparation (Addable single-value suggestions):** Processing instructions performed on the ingredient before or
    during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , and `sliced` .
    Users can add a preparation while editing; saved values appear in future suggestions. Selecting `cubed`, `diced`,
    or `sliced` reveals the separate Size field and an underlined `in`/`cm` unit toggle there.
    Positive inch Size values also accept simple and mixed fractions;
    centimeters remain decimal-only. Both accept expressions under the shared
    [numeric arithmetic contract](../slices/2026-11-numeric-arithmetic.md).
-7. **Divide:** An optional two-portion allocation independent of Preparation. The Divide field uses the existing first-
-   portion input and read-only remainder; it stores one ratio and its complement. Division values are not preparation
-   suggestions.
+8. **Divide:** An optional two-portion allocation independent of Preparation. The Divide field uses the existing first-
+   portion input and read-only remainder; it stores one ratio and its complement. In the desktop editor, keep the full
+   input, unit, separator, and remainder left-aligned within the Divide cell with compact spacing; the remainder must not
+   intrude into Alternative / note. Division values are not preparation suggestions.
 
 ### 3.2 Dual Measurement (Volume + Weight)
 
@@ -379,8 +400,9 @@ Organized by how a cook actually operates in the kitchen ("get the item, check t
 At mobile widths, Ingredient-first cell content wraps to the available width;
 long ingredient names, specifics, amounts, and Preparation do not force a
 min-content-width table. The table and page do not scroll horizontally.
-Preparation text in the mobile Prep cell is centered like the divided note.
-Vertical growth is preferred to horizontal scrolling.
+Collapse unused desktop-only tracks without shifting the visible Ingredient,
+Amount, and Prep columns. Preparation text in the mobile Prep cell is centered
+like the divided note. Vertical growth is preferred to horizontal scrolling.
 
 ```text
 +---------------------------+----------------+---------------+--------+

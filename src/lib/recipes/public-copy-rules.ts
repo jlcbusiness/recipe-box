@@ -34,6 +34,7 @@ type CopyIngredientRow = {
   position: number;
   is_main: boolean;
   detail: string;
+  alternate_note: string;
   preparation: string;
   portion_one_ratio: number | null;
   size_value: number | null;
@@ -176,6 +177,7 @@ export function buildPublicRecipeCopyPayload(
     position,
     is_main: ingredient.is_main,
     detail: ingredient.detail,
+    alternate_note: ingredient.alternate_note,
     preparation: ingredient.preparation,
     portion_one_ratio: ingredient.portion_one_ratio,
     size_value: ingredient.size_value,

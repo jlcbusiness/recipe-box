@@ -59,7 +59,7 @@ event. Updates and events are excluded from account reset and database bundles.
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
-| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, measurements, optional two-portion ratio, optional Size for cubed/diced/sliced preparations, an optional recipe-only nutrition serving-size basis, and per-field nutrition overrides with their serving-size basis. |
+| Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, an optional trimmed plain-text alternate note, preparation, measurements, optional two-portion ratio, optional Size for cubed/diced/sliced preparations, an optional recipe-only nutrition serving-size basis, and per-field nutrition overrides with their serving-size basis. |
 | Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. Things may also carry an `amount_is_a` marker for an explicitly entered lowercase `a` representing exactly one; it is not inferred from numeric `1`. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to one recipe ingredient row and optionally one of its two portions. |
@@ -131,6 +131,11 @@ columns.
   rows across sets remain independent. Version 1 imports synthesize a `Main`
   set; version 3 bundles preserve portion and Size fields while versions 1 and
   2 default them to null.
+- A recipe ingredient's optional `alternate_note` is trimmed free text, stored
+  as an empty string when blank. It remains separate from Specifics and
+  Preparation and follows the ingredient through save history, public recipe
+  data, and portable import/export. Portable schema version 14 includes the
+  field; older bundles import it as empty.
 - A recipe ingredient can have one displayed category: Unit, Count, Things, or
   Feel. Unit maps to the stored volume and/or weight records; Things maps to an
   informal record and Feel maps to an unmeasured record. A Unit row can contain

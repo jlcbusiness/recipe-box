@@ -1,8 +1,8 @@
 # November 2026 Updates Fixes: Brief and Split Proposal
 
-**Status: Packages B, D+H, and E are implemented and verified in Chromium and
-Fold 6. C+F remains an intake grouping but now has two separate review briefs;
-A and G remain proposals.**
+**Status: Packages A, B, D+H, E, and G are implemented and verified in
+Chromium and Fold 6. C+F remains an intake grouping with two separate review
+briefs.**
 
 ## Outcome and recommendation
 
@@ -13,10 +13,12 @@ present, and identify the product decisions needed before implementation.
 These entries do not all share one demonstrable outcome, so they were split into
 the work packages below. **Ingredient-first reader parity** (#2 and #3) was
 selected, briefed, approved, and implemented as the first package. Packages
-D+H and E have since been selected, briefed, approved, and implemented. The
-user grouped C and F as input consistency. Review identified distinct
-demonstrations and data boundaries, so they now have separate implementation
-briefs under one intake grouping; neither is approved for implementation.
+D+H, E, and A have since been selected, approved, implemented, and verified.
+G was selected and clarified as a distinct persisted note field, then
+implemented and verified. The user grouped C and F as input consistency.
+Review identified distinct demonstrations and data boundaries, so they now
+have separate implementation briefs under one intake grouping; neither is
+approved for implementation.
 
 ## Source and original notes
 
@@ -203,51 +205,43 @@ whether that is the intended behavior after scaling.
 
 ### G. Alternate-ingredient note field (#8)
 
-**Status:** Open; this is a data-model feature, not a formatting-only fix.
-Ingredient rows currently have Specifics and Preparation but no separate
-alternate-ingredient note. The current reader places those fields differently
-in Standard and Ingredient-first views, so putting alternatives in Specifics
-cannot satisfy the requested Standard order.
+**Status:** Implemented and verified in Chromium and Fold 6. Ingredient rows
+now have a distinct “Alternative / note” free-text field. The note is trimmed
+at save and remains separate from Specifics and Preparation.
 
-**Proposed outcome:** A recipe ingredient can store an optional plain-text
-alternate/detail note. In Standard view it appears immediately after the
-ingredient and before any Feel phrase. In Ingredient-first view it joins
-Specifics in the ingredient cell, comma-separated as requested. Existing
-Specifics and Preparation retain their meanings and positions.
+**Implemented outcome:** Standard places a non-empty note in parentheses after
+the other row content, including any Feel phrase, Preparation, Size, and
+Divide. Ingredient-first places it on its own line below Specifics, or directly
+below the name when Specifics is empty. The wording is preserved; the note is
+not merged into Specifics.
 
-**Data and lifecycle scope:** Add a distinct recipe-ingredient field and carry
-it through explicit save, version/history snapshots, public recipe projection,
-print and offline output, and every supported import/export bundle scope.
-Public output exposes it only where that recipe's existing public ingredient
-data is exposed. Do not overload Specifics or encode the note in free-form
-Markdown.
+**Data and lifecycle:** `recipe_ingredients.alternate_note` is included in
+recipe save and history snapshots, public recipe projection/copy, print and
+offline HTML, and portable exports (schema version 14). Older bundles import
+an empty note. Public output exposes the note only with the recipe's existing
+public ingredient data.
 
-**Acceptance criteria:**
-
-- Unit tests cover empty/trimmed notes and exact composition/order in both
-  reader formats, including Feel phrases and Preparation.
-- Focused migration, save/history, import/export, public projection, print, and
-  offline tests prove the note survives the existing recipe lifecycle and does
-  not change unrelated ingredient data.
-- Browser tests cover editing, saving, validation/error retention, and
-  private/shared rendering at desktop and mobile widths.
+**Verified behavior:** Focused unit tests cover trimming, formatting order,
+reader output, history text, public projection/copy, schema-14 export, and
+schema-13 import compatibility. Browser tests verify desktop/mobile editing,
+save/reload/history, private/shared Ingredient-first rendering, database
+import, print output, and offline HTML output at representative viewports.
 
 ## Suggested split and review gate
 
 These are six intake groupings after grouping fixes #2/#3, #5/#9, and #4/#7/#10.
-C+F has two separately reviewable implementation briefs. Packages B, D+H, and
-E are implemented; C, F, A, and G still need their respective review and
-approval gates.
+C+F has two separately reviewable implementation briefs. Packages A, B, D+H,
+E, and G are implemented; C and F remain open.
 The updated
 [slice prompt](../../../.github/prompts/slice.prompt.md) permits grouping
 smaller fixes when they do not require significant restructuring. D+H share
 the recipe editor, require no schema change, and retain separate acceptance
 checks. Their behavior choices and approval are recorded in the briefs.
 
-Package **G** remains larger because it adds persisted recipe data and must be
-briefed independently. C+F remains grouped as a coherent input-consistency
-effort, but its arithmetic and Things implementations are separate outcomes
-with separate briefs and approval gates.
+Package **G** was implemented separately because it adds persisted recipe
+data. C+F remains grouped as a coherent input-consistency effort, but its
+arithmetic and Things implementations are separate outcomes with separate
+approval gates.
 
 ## Preparation references
 
@@ -261,5 +255,5 @@ with separate briefs and approval gates.
 - [Decision log](../decision-log.md)
 - [Completed November reported-fixes brief](./2026-11-reported-fixes.md)
 
-No product tests were run for this documentation and research pass. No
-production code, migration, or local/hosted database was changed.
+This intake began as a research pass; implementation and verification status
+for each package is recorded above.

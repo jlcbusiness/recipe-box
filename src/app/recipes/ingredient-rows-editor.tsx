@@ -64,7 +64,7 @@ const defaultPreparationOptions = [
   'sliced',
 ];
 
-type IngredientField = 'ingredientName' | 'detail' | 'preparation' | 'divide';
+type IngredientField = 'ingredientName' | 'detail' | 'alternateNote' | 'preparation' | 'divide';
 type IngredientEditorEntry =
   | { kind: 'section'; key: string; section: IngredientSetDraft; sectionIndex: number }
   | { kind: 'ingredient'; key: string; row: IngredientRowDraft; rowIndex: number }
@@ -78,6 +78,7 @@ function createEmptyIngredientRow(id = createUuid(), ingredientSetId = ''): Ingr
     ingredientName: '',
     isMain: false,
     detail: '',
+    alternateNote: '',
     preparation: '',
     measurements: [],
   };
@@ -208,6 +209,7 @@ function formatDraftIngredient(
   return formatIngredientDisplay({
     ingredient_name: row.ingredientName,
     detail: row.detail,
+    alternate_note: row.alternateNote ?? '',
     preparation: row.preparation,
     size_value: parseIngredientSizeValue(row.sizeValue ?? '', row.sizeUnit ?? ''),
     size_unit: row.sizeUnit === 'in' || row.sizeUnit === 'cm' ? row.sizeUnit : null,
@@ -669,6 +671,7 @@ function MobileIngredientEditor({
 }) {
   const [ingredientName, setIngredientName] = useState(row.ingredientName);
   const [detail, setDetail] = useState(row.detail);
+  const [alternateNote, setAlternateNote] = useState(row.alternateNote ?? '');
   const [preparation, setPreparation] = useState(row.preparation);
   const [measurements, setMeasurements] = useState(row.measurements);
   const [portionOneRatio, setPortionOneRatio] = useState(row.portionOneRatio ?? null);
@@ -797,6 +800,7 @@ function MobileIngredientEditor({
         )?.id ?? null,
       ingredientName: ingredientName.trim(),
       detail: detail.trim(),
+      alternateNote: alternateNote.trim(),
       preparation: preparation.trim(),
       measurements: measurementsRef.current,
       portionOneRatio,
@@ -883,6 +887,7 @@ function MobileIngredientEditor({
                 )?.id ?? null,
               ingredientName: nextName,
               detail: detail.trim(),
+              alternateNote: alternateNote.trim(),
               preparation: preparation.trim(),
               measurements: nextMeasurements,
               portionOneRatio,
@@ -939,6 +944,7 @@ function MobileIngredientEditor({
                 )?.id ?? null,
               ingredientName: ingredientName.trim(),
               detail: detail.trim(),
+              alternateNote: alternateNote.trim(),
               preparation: value.trim(),
               measurements,
               portionOneRatio,
@@ -971,6 +977,15 @@ function MobileIngredientEditor({
           onChange={updateMobilePortion}
         />
       </div>
+      <label>
+        <span>Alternative / note</span>
+        <input
+          placeholder="or half and half; using milk"
+          type="text"
+          value={alternateNote}
+          onChange={(event) => setAlternateNote(event.target.value)}
+        />
+      </label>
       <button className="recipe-ingredient-submit" type="button" onClick={submit}>
         Submit
       </button>
@@ -1581,15 +1596,17 @@ export function IngredientRowsEditor({
         ? 'Ingredient'
         : field === 'detail'
           ? 'Specifics'
-          : field === 'preparation'
-            ? 'Preparation'
-            : 'Divide';
+          : field === 'alternateNote'
+            ? 'Alternative / note'
+            : field === 'preparation'
+              ? 'Preparation'
+              : 'Divide';
     const isActive = activeCell?.rowId === row.id && activeCell.field === field;
     const initialCharacter =
       activeCell?.rowId === row.id && activeCell.field === field
         ? activeCell.initialCharacter
         : undefined;
-    const displayValue = field === 'divide' ? '' : row[field];
+    const displayValue = field === 'divide' ? '' : (row[field] ?? '');
 
     return (
       <td
@@ -2112,6 +2129,7 @@ export function IngredientRowsEditor({
               <col className="recipe-ingredient-measurements-col" />
               <col className="recipe-ingredient-preparation-col" />
               <col className="recipe-ingredient-divide-col" />
+              <col className="recipe-ingredient-alternate-note-col" />
               <col className="recipe-ingredient-nutrition-col" />
               <col className="recipe-ingredient-actions-col" />
             </colgroup>
@@ -2126,6 +2144,7 @@ export function IngredientRowsEditor({
                 </th>
                 <th scope="col">Preparation</th>
                 <th scope="col">Divide</th>
+                <th scope="col">Alternative / note</th>
                 <th className="recipe-ingredient-nutrition-header" scope="col" title="Nutrition">
                   <Salad aria-hidden="true" size={16} />
                   <span className="visually-hidden">Nutrition</span>
@@ -2158,7 +2177,7 @@ export function IngredientRowsEditor({
                               : undefined,
                       }}
                     >
-                      <th colSpan={8} scope="rowgroup">
+                      <th colSpan={9} scope="rowgroup">
                         {renderSectionHeading(entry.section, entry.sectionIndex)}
                       </th>
                     </tr>
@@ -2201,7 +2220,7 @@ export function IngredientRowsEditor({
                       <td
                         aria-label="Add ingredient row"
                         className="recipe-ingredient-value-cell is-empty"
-                        colSpan={8}
+                        colSpan={9}
                         data-field="ingredientName"
                         data-row-id={row.id}
                         tabIndex={activeCell?.rowId === row.id ? -1 : 0}
@@ -2226,6 +2245,7 @@ export function IngredientRowsEditor({
                         {renderMeasurementCell(row, index)}
                         {renderDesktopCell(row, index, 'preparation')}
                         {renderDesktopCell(row, index, 'divide')}
+                        {renderDesktopCell(row, index, 'alternateNote')}
                         <td className="recipe-ingredient-nutrition-cell">
                           {!isEmptyIngredientRow(row) &&
                             renderNutritionButton(row, 'recipe-ingredient-desktop-nutrition')}
@@ -2261,7 +2281,7 @@ export function IngredientRowsEditor({
                         : undefined,
                 }}
               >
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <button
                     className="recipe-ingredient-set-add"
                     type="button"

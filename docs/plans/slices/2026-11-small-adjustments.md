@@ -47,9 +47,12 @@ Implementation began after the user approved this brief.
   Prep columns, but wrap long names, specifics, measurements, and Preparation
   text to the available width. Do not retain a min-content-width table or an
   inner horizontal-scroll region. Page and table content must not scroll
-  horizontally; vertical growth is acceptable.
+  horizontally; vertical growth should come only from visible content, not
+  collapsed desktop-only cells.
 - Center the mobile Preparation text in the Prep cell, matching the existing
-  centered divided note. Keep the Prep header and desktop layout unchanged.
+  centered divided note. Put the mobile `divide` label on its own line, with
+  the portion pair directly below it. Keep the Prep header and desktop layout
+  unchanged.
 - Preserve ingredient/measurement meaning, scaling, division, sort behavior,
   ingredient sets, and the active reader presentation.
 
@@ -64,7 +67,8 @@ Implementation began after the user approved this brief.
   Preparation, and divided values at 320px, 390px, an intermediate mobile
   width, 760px, and 761px. Through 760px, assert that both the document and
   Ingredient-first table fit their containers without horizontal scrolling,
-  that text wraps, and that the mobile Preparation text is centered. At 761px,
+  that text wraps, that collapsed tracks do not inflate row heights, and that
+  the mobile Preparation text and divided label/value layout are correct. At 761px,
   verify the desktop presentation and layout remain unchanged; the
   no-horizontal-scroll assertion does not apply to Standard view at that width.
 - Reuse the reader and Size test patterns in

@@ -135,6 +135,7 @@ export function buildPublicRecipePayload(
       position: ingredient.position,
       is_main: ingredient.is_main,
       detail: ingredient.detail,
+      alternate_note: ingredient.alternate_note,
       preparation: ingredient.preparation,
       portion_one_ratio: ingredient.portion_one_ratio,
       size_value: ingredient.size_value,

@@ -1466,6 +1466,7 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
           ingredient_name: 'Zucchini',
           is_main: false,
           detail: 'fresh',
+          alternate_note: 'or summer squash',
           preparation: '',
           measurements: [],
         },
@@ -1540,6 +1541,9 @@ test('private and shared Ingredient-first readers match text and Cook-mode spaci
           expect(firstStripeRowHeight).toBe(privateFirstStripeRowHeight);
         }
         const zucchiniRow = table.locator('tbody tr').filter({ hasText: 'Zucchini' }).first();
+        await expect(zucchiniRow.locator('.recipe-reader-alternative-note')).toHaveText(
+          'or summer squash',
+        );
         const rowHeightBeforeCook = (await zucchiniRow.boundingBox())?.height ?? null;
         if (route.name === 'private') {
           privateZucchiniRowHeight = rowHeightBeforeCook;
@@ -1852,7 +1856,18 @@ test('public recipe output actions create standalone files and keep settings tra
       'Standalone output view',
       undefined,
       true,
-      [],
+      [
+        {
+          recipe_ingredient_id: randomUUID(),
+          ingredient_id: null,
+          ingredient_name: 'Coconut milk',
+          is_main: false,
+          detail: 'full-fat',
+          alternate_note: 'or half and half',
+          preparation: '',
+          measurements: [],
+        },
+      ],
       ' Bake at F!350 for =45m=.',
       ' Bake at 350°F for 45m.',
     );
@@ -1886,6 +1901,9 @@ test('public recipe output actions create standalone files and keep settings tra
         );
         const ingredientDetails = document.querySelector<HTMLElement>(
           '.recipe-output-ingredient-column .recipe-reader-specifics',
+        );
+        const ingredientAlternativeNote = document.querySelector<HTMLElement>(
+          '.recipe-output-ingredient-column .recipe-reader-alternative-note',
         );
         const groupHeading = document.querySelector<HTMLElement>(
           '.recipe-output-ingredient-column .recipe-ingredient-set-divider h3',
@@ -1937,6 +1955,10 @@ test('public recipe output actions create standalone files and keep settings tra
           ingredientDetails
             ? `${getComputedStyle(ingredientDetails).display},${getComputedStyle(ingredientDetails).marginTop}`
             : '',
+        );
+        topDocument?.documentElement.setAttribute(
+          'data-print-ingredient-alternative-note',
+          ingredientAlternativeNote?.textContent?.trim() ?? '',
         );
         topDocument?.documentElement.setAttribute(
           'data-print-ingredient-name-weight',
@@ -2165,6 +2187,7 @@ test('public recipe output actions create standalone files and keep settings tra
     expect(html).toContain('Fold ');
     expect(html).toContain('flour');
     expect(html).toContain(' into batter.');
+    expect(html).toContain('or half and half');
     expect(html).toContain('350°F');
     expect(html).not.toContain('Private note sentinel');
     expect(html).not.toContain('Time Breakdown');
@@ -2177,6 +2200,9 @@ test('public recipe output actions create standalone files and keep settings tra
       await expect(standaloneReader).toBeVisible();
       await expect(standalonePage.locator('.recipe-instruction-list')).toContainText(
         'Fold flour into batter.',
+      );
+      await expect(standalonePage.locator('.recipe-reader-alternative-note')).toHaveText(
+        'or half and half',
       );
       expect(await standaloneReader.evaluate((element) => getComputedStyle(element).display)).toBe(
         'grid',
@@ -2360,6 +2386,10 @@ test('public recipe output actions create standalone files and keep settings tra
     await expect(page.locator('html')).toHaveAttribute(
       'data-print-ingredient-details-style',
       'block,2px',
+    );
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-print-ingredient-alternative-note',
+      'or half and half',
     );
     await expect(page.locator('html')).toHaveAttribute('data-print-ingredient-name-weight', '500');
     await expect(page.locator('html')).toHaveAttribute(

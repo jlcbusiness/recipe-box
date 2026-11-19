@@ -740,7 +740,7 @@ test('Ingredient-first wraps long ingredient names and measurements @e2e @measur
 test('Preparation and Divide stay independent while Size remains tied to Preparation @e2e @a11y @measurements', async ({
   page,
   request,
-}) => {
+}, testInfo) => {
   const user = await createTestUser(request);
   const longSpecifics = 'freshly cracked and sifted into several very fine layers before use';
 
@@ -763,7 +763,8 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
         const bounds = element.getBoundingClientRect();
         const x = bounds.right - 4;
         const y = bounds.top + bounds.height / 2;
-        return { x, y, hitsCell: document.elementFromPoint(x, y) === element };
+        const hit = document.elementFromPoint(x, y);
+        return { x, y, hitsCell: hit === element || (hit !== null && element.contains(hit)) };
       });
       expect(point.hitsCell).toBe(true);
       await page.mouse.click(point.x, point.y);
@@ -853,6 +854,25 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     await expect(page.getByRole('status', { name: 'Second portion, row 1' })).toHaveText('⅔ cup');
     await expect(saltDivideCell).toContainText('cup');
     await expect(portionSeparator).toHaveText(':');
+    const portionEditorBounds = await saltDivideCell
+      .locator('.recipe-portion-editor')
+      .boundingBox();
+    const divideCellContentBounds = await saltDivideCell.evaluate((cell) => {
+      const bounds = cell.getBoundingClientRect();
+      const style = getComputedStyle(cell);
+      return {
+        left: bounds.left + Number.parseFloat(style.paddingLeft),
+        right: bounds.right - Number.parseFloat(style.paddingRight),
+      };
+    });
+    expect(portionEditorBounds).not.toBeNull();
+    if (!portionEditorBounds) {
+      throw new Error('Expected the Divide portion controls to have a visible layout box.');
+    }
+    expect(portionEditorBounds.x).toBeGreaterThanOrEqual(divideCellContentBounds.left - 1);
+    expect(portionEditorBounds.x + portionEditorBounds.width).toBeLessThanOrEqual(
+      divideCellContentBounds.right + 1,
+    );
     await expect(portionSeparator).toHaveCSS('font-size', '12px');
     await expect(portionSeparator).toHaveCSS('font-weight', '700');
     const portionUnitAndSeparatorCenters = await saltDivideCell
@@ -898,7 +918,7 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
           amountUnitGap: unit.getBoundingClientRect().left - amount.getBoundingClientRect().right,
         };
       });
-    expect(dividedSpacing.amountUnitGap).toBeCloseTo(2 * cssPixelsPerMillimeter, 1);
+    expect(dividedSpacing.amountUnitGap).toBeCloseTo(cssPixelsPerMillimeter, 1);
     const portionDivideTops = await saltDivideCell
       .locator('.recipe-divide-editor')
       .evaluate((editor) =>
@@ -950,16 +970,19 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     const flourPreparation = page.getByRole('combobox', { name: 'Preparation, row 2' });
     await flourPreparation.fill('cubed');
     const cubedPreparationGap = await flourPreparation.evaluate((input) => {
-      const preparationInput = input as HTMLInputElement;
-      const controls = preparationInput
+      const controls = input
         .closest('.recipe-preparation-editor')
         ?.querySelector('.recipe-preparation-controls');
       if (!controls) return null;
-      return controls.getBoundingClientRect().left - preparationInput.getBoundingClientRect().right;
+      return controls.getBoundingClientRect().top - input.getBoundingClientRect().bottom;
     });
     if (cubedPreparationGap === null) {
       throw new Error('Cubed Size controls were not rendered.');
     }
+    const cubedPreparationWidth = await flourPreparation.evaluate(
+      (input) => input.getBoundingClientRect().width,
+    );
+    expect(cubedPreparationWidth).toBeGreaterThan(60);
     expect(cubedPreparationGap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
     await page.getByRole('option', { name: 'cubed', exact: true }).click();
     await flourPreparation.press('Enter');
@@ -989,18 +1012,6 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
       });
     expect(sizeUnitFontDifference).toBeCloseTo((2 * 96) / 72, 1);
     await expect(sizeUnitIn).toHaveCSS('text-decoration-line', 'underline');
-    const sizePreparationTops = await flourPreparationCell
-      .locator('.recipe-preparation-editor')
-      .evaluate((editor) =>
-        Array.from(editor.children).map((element) => {
-          const bounds = element.getBoundingClientRect();
-          return bounds.top + bounds.height / 2;
-        }),
-      );
-    expect(sizePreparationTops).toHaveLength(2);
-    expect(Math.max(...sizePreparationTops) - Math.min(...sizePreparationTops)).toBeLessThanOrEqual(
-      1,
-    );
     const cubedSpacing = await flourPreparationCell
       .locator('.recipe-preparation-editor')
       .evaluate((editor) => {
@@ -1013,12 +1024,39 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
         }
         return {
           preparationGap:
-            controls.getBoundingClientRect().left - preparation.getBoundingClientRect().right,
+            controls.getBoundingClientRect().top - preparation.getBoundingClientRect().bottom,
           sizeUnitGap: unit.getBoundingClientRect().left - size.getBoundingClientRect().right,
         };
       });
     expect(cubedSpacing.preparationGap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
     expect(cubedSpacing.sizeUnitGap).toBeCloseTo(2 * cssPixelsPerMillimeter, 1);
+    await page.screenshot({
+      path: testInfo.outputPath('preparation-size-controls-narrow-desktop.png'),
+    });
+
+    await page.setViewportSize({ width: 1210, height: 900 });
+    const widePreparationSpacing = await flourPreparationCell
+      .locator('.recipe-preparation-editor')
+      .evaluate((editor) => {
+        const preparation = editor.querySelector('.recipe-ingredient-cell-value');
+        const controls = editor.querySelector('.recipe-preparation-controls');
+        if (!preparation || !controls) {
+          return { preparationGap: Number.NaN, preparationWidth: Number.NaN };
+        }
+        const preparationBounds = preparation.getBoundingClientRect();
+        const controlsBounds = controls.getBoundingClientRect();
+        return {
+          preparationGap: controlsBounds.left - preparationBounds.right,
+          preparationWidth: preparationBounds.width,
+        };
+      });
+    expect(widePreparationSpacing.preparationWidth).toBeGreaterThan(20);
+    expect(widePreparationSpacing.preparationGap).toBeCloseTo(3 * cssPixelsPerMillimeter, 1);
+    await page.screenshot({
+      path: testInfo.outputPath('preparation-size-controls-wide-desktop.png'),
+    });
+    await page.setViewportSize({ width: 902, height: 900 });
+
     await sizeUnitIn.click();
     const sizeUnitCm = page.getByRole('button', {
       name: 'Size unit, row 2: cm. Activate to switch to in',
@@ -1444,6 +1482,7 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
       const preparationBounds = preparation.getBoundingClientRect();
       return {
         labelTop: labelBounds.top,
+        labelBottom: labelBounds.bottom,
         preparationBottom: preparationBounds.bottom,
         divideTop: note.getBoundingClientRect().top,
         valuesTop: values.getBoundingClientRect().top,
@@ -1452,9 +1491,7 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     expect(mobileLineGeometry.divideTop).toBeGreaterThanOrEqual(
       mobileLineGeometry.preparationBottom,
     );
-    expect(
-      Math.abs(mobileLineGeometry.valuesTop - mobileLineGeometry.labelTop),
-    ).toBeLessThanOrEqual(1);
+    expect(mobileLineGeometry.valuesTop).toBeGreaterThanOrEqual(mobileLineGeometry.labelBottom);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -1710,6 +1747,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       'Amount',
       'Preparation',
       'Divide',
+      'Alternative / note',
       'Nutrition',
       'Row actions',
     ]);
@@ -1792,7 +1830,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       'text',
     );
     await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveValue('1 1/2');
-    await expect(grid.locator('tbody tr[data-row-id]').first().locator('td')).toHaveCount(8);
+    await expect(grid.locator('tbody tr[data-row-id]').first().locator('td')).toHaveCount(9);
     await expect(grid.locator('tbody tr[data-row-id]').first().locator('td').nth(0)).toHaveCSS(
       'height',
       '48px',
@@ -2014,7 +2052,14 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       mobilePane.locator(
         ':scope > .recipe-mobile-picker-field > .recipe-mobile-ingredient-heading > span, :scope > .recipe-mobile-picker-field > span, :scope > label > span',
       ),
-    ).toHaveText(['Ingredient', 'Specifics', 'Amount', 'Preparation', 'Divide']);
+    ).toHaveText([
+      'Ingredient',
+      'Specifics',
+      'Amount',
+      'Preparation',
+      'Divide',
+      'Alternative / note',
+    ]);
     const overflowingFields = await mobilePane.evaluate((element) => {
       const paneBounds = element.getBoundingClientRect();
       const contentRight =
@@ -2302,6 +2347,7 @@ test('ingredient amount and amount-type controls support Arrow open-and-advance,
 
     await page.setViewportSize({ width: 1024, height: 900 });
     const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+    const firstTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
 
     await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
     const firstIngredient = page.getByRole('combobox', { name: 'Ingredient, row 1' });
@@ -2309,8 +2355,6 @@ test('ingredient amount and amount-type controls support Arrow open-and-advance,
     await firstIngredient.press('Tab');
     await expect(grid.locator('[aria-label="Specifics, row 1"]')).toBeFocused();
     await page.keyboard.press('Tab');
-
-    const firstTypePicker = page.getByRole('combobox', { name: 'Ingredient type, row 1' });
     await expect(firstTypePicker).toBeFocused();
     await expect(firstTypePicker).toHaveText('Unit');
 

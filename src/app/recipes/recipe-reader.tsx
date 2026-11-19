@@ -1480,6 +1480,9 @@ export function RecipeReader({
                   {parts.specifics.toLocaleLowerCase()}
                 </span>
               )}
+              {parts.alternateNote && (
+                <span className="recipe-reader-alternative-note">{parts.alternateNote}</span>
+              )}
             </th>
             {hasDimensionalMeasurement ? (
               <>
@@ -1577,7 +1580,7 @@ export function RecipeReader({
             {(parts.size || parts.preparation) && (
               <span className="recipe-ingredient-continuation-separator">, </span>
             )}
-            {(parts.size || parts.preparation || portionBreakdown) && (
+            {(parts.size || parts.preparation || portionBreakdown || parts.alternateNote) && (
               <span
                 className={`recipe-ingredient-continuation${
                   parts.size || parts.preparation
@@ -1597,6 +1600,12 @@ export function RecipeReader({
                     {portionBreakdown}
                   </span>
                 )}
+                {parts.alternateNote && (
+                  <>
+                    {' '}
+                    <span className="recipe-reader-alternative-note">({parts.alternateNote})</span>
+                  </>
+                )}
               </span>
             )}
           </span>
@@ -1614,7 +1623,7 @@ export function RecipeReader({
     return ingredientGroups.flatMap(({ set, ingredients: groupIngredients }) => [
       presentation === 'ingredient_first' ? (
         <tr className="recipe-ingredient-set-divider" key={`set-${set.id}`}>
-          <th colSpan={4 + Number(cookMode) + Number(hasDivisions)} scope="rowgroup">
+          <th colSpan={5 + Number(cookMode) + Number(hasDivisions)} scope="rowgroup">
             <h3>{set.label}</h3>
           </th>
         </tr>

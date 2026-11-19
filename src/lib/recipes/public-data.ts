@@ -99,6 +99,7 @@ type IngredientRow = Pick<
   | 'position'
   | 'is_main'
   | 'detail'
+  | 'alternate_note'
   | 'preparation'
   | 'portion_one_ratio'
   | 'size_value'
@@ -264,7 +265,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
     supabase
       .from('recipe_ingredients')
       .select(
-        'id, ingredient_id, ingredient_set_id, position, is_main, detail, preparation, portion_one_ratio, size_value, size_unit, nutrition_serving_size_override, nutrition_overrides',
+        'id, ingredient_id, ingredient_set_id, position, is_main, detail, alternate_note, preparation, portion_one_ratio, size_value, size_unit, nutrition_serving_size_override, nutrition_overrides',
       )
       .eq('account_id', recipeRow.account_id)
       .eq('recipe_id', recipeRow.id)

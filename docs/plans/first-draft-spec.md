@@ -105,16 +105,17 @@ An ingredient and its measurements are one ordered row.
 See [comprehensive-reference.md § 3](comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density).
 The desktop edit table is:
 
-| Ingredient | Specifics | Amount | Preparation |
-| ---------- | --------- | ------ | ----------- |
-| Canonical ingredient | Optional text | Type plus category-specific controls | Addable single-value suggestion |
+| Ingredient | Specifics | Amount | Preparation | Divide | Alternative / note |
+| ---------- | --------- | ------ | ----------- | ------ | ------------------- |
+| Canonical ingredient | Optional text | Type plus category-specific controls | Addable single-value suggestion | Optional allocation | Optional free text |
 
 The Main checkbox and a compact drag handle sit in a rail beside the table.
 Desktop starts with one trailing empty row; activating a value opens a compact
 cell editor. The left-aligned Amount header spans the compact Type picker and
 the adjacent category controls. Mobile shows one ingredient column and opens a
-compact row pane for Ingredient, Specifics, Amount, and Preparation when
-tapped. The Main checkbox is edit-only and is not a table column.
+compact row pane for Ingredient, Specifics, Amount, Preparation, Divide, and
+Alternative / note when tapped. The Main checkbox is edit-only and is not a
+table column.
 
 The Main checkbox builds the searchable main-ingredient index. It does not need
 to appear in read-only recipe views.

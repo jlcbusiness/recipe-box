@@ -38,7 +38,7 @@ function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -1159,7 +1159,7 @@ describe('import bundle validation', () => {
 
     const bundle = validateImportBundleFiles(entries);
     const recipe = bundle.data.records.recipes[0];
-    expect(bundle.data.schema_version).toBe(13);
+    expect(bundle.data.schema_version).toBe(14);
     expect(recipe).not.toHaveProperty('prep_time_minutes');
     expect(recipe.total_time_minutes).toBe(40);
     expect(bundle.data.records.recipe_time_entries).toHaveLength(2);
@@ -1174,6 +1174,48 @@ describe('import bundle validation', () => {
         .filter((value) => value.category === 'time_type')
         .map((value) => value.value),
     ).toEqual(['Prep', 'Cook']);
+  });
+
+  it('adds an empty alternative note when importing schema version 13', () => {
+    const setId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const ingredientId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const rowId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const entries = createBundleEntries({
+      schemaVersion: 13,
+      scope: { type: 'recipe', id: recipeId },
+      recipe: {
+        id: recipeId,
+        name: 'Milk drink',
+        publication_id: null,
+        saved_from_public_id: null,
+        total_time_minutes: 0,
+      },
+      records: {
+        ingredients: [{ id: ingredientId, name: 'Milk' }],
+        recipe_ingredient_sets: [{ id: setId, recipe_id: recipeId, label: 'Main', position: 0 }],
+        recipe_ingredients: [
+          {
+            id: rowId,
+            recipe_id: recipeId,
+            ingredient_id: ingredientId,
+            ingredient_set_id: setId,
+            position: 0,
+            is_main: false,
+            detail: 'whole',
+            preparation: '',
+            portion_one_ratio: null,
+            size_value: null,
+            size_unit: null,
+            nutrition_serving_size_override: null,
+            nutrition_overrides: {},
+          },
+        ],
+      },
+    });
+
+    expect(
+      validateImportBundleFiles(entries).data.records.recipe_ingredients[0]?.alternate_note,
+    ).toBe('');
   });
 
   it('converts a legacy total-only recipe into a Cook entry', () => {
