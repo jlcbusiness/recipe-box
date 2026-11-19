@@ -473,10 +473,18 @@ has a compact leading rail with the completion control and reorder handle
 together, a directly editable text field in the center, and the required type
 pill on the right. Keep the visible inset from the list edge to the checkbox
 about 12 CSS pixels, with about 12 CSS pixels between checkbox and grip and
-between grip and text. Keep the 64px rail and text position unchanged. Extend
-the drag hit area over the blank lane around the grip and through the
-grip-to-text gap, spanning the full row height without covering the checkbox
-or text field.
+between grip and text. Keep the 64px rail and first-row text position unchanged.
+When text stays on the first row, extend the drag hit area over the blank lane
+around the grip and through the grip-to-text gap, spanning the full row height
+without covering the checkbox or text field. When text reflows below the
+controls, limit the drag hit area to the first controls row so it cannot cover
+the text field.
+Measure the textarea's usable text width excluding its horizontal padding. At
+192 CSS pixels or more, keep the text on the first row; below 192 CSS pixels,
+move it to a second row with its visible text start aligned to the checkbox's
+left edge, extending to the row's trailing edge. Completion, reorder,
+classification, and row actions stay on the first row. Reflow follows the
+available text width, not a viewport breakpoint.
 Completed entries show their version in a small, borderless 8pt label centered
 in the Done column and cannot be reordered. **Fix** uses a high-contrast olive
 treatment, **Change** a high-contrast plum treatment, and **Feature** a

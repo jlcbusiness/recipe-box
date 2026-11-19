@@ -41,6 +41,8 @@ const kindOptions: PicklistOption[] = [
   { value: 'feature', label: 'Feature' },
 ];
 
+const ADMIN_UPDATE_TEXT_REFLOW_THRESHOLD_PX = 192;
+
 const kindLabels: Record<AdminUpdateKind, string> = {
   fix: 'Fix',
   change: 'Change',
@@ -141,6 +143,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
       .filter((update) => update.completed_version === null)
       .map((update) => update.id),
   );
+  const [reflowedRows, setReflowedRows] = useState<Set<string>>(() => new Set());
   const [dropOffsets, setDropOffsets] = useState<Map<string, number>>(() => new Map());
   const [dropCommitPending, setDropCommitPending] = useState(false);
   const [settlingSourceId, setSettlingSourceId] = useState<string | null>(null);
@@ -163,18 +166,73 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
     }
 
     let listWidth = list.getBoundingClientRect().width;
+    const observedElements = new WeakSet<Element>();
+    const updateReflowedRows = () => {
+      const nextRows = new Set<string>();
+      for (const row of list.querySelectorAll<HTMLElement>('.admin-update-row')) {
+        const textarea = row.querySelector<HTMLTextAreaElement>('.admin-update-inline-textarea');
+        if (!textarea) {
+          continue;
+        }
+        const columns = getComputedStyle(row).gridTemplateColumns.trim().split(/\s+/u);
+        const textColumnWidth = Number.parseFloat(columns[1] ?? '');
+        const textareaStyle = getComputedStyle(textarea);
+        const textPadding =
+          Number.parseFloat(textareaStyle.paddingLeft) +
+          Number.parseFloat(textareaStyle.paddingRight) +
+          Number.parseFloat(textareaStyle.borderLeftWidth) +
+          Number.parseFloat(textareaStyle.borderRightWidth);
+        if (
+          Number.isFinite(textColumnWidth) &&
+          textColumnWidth - textPadding < ADMIN_UPDATE_TEXT_REFLOW_THRESHOLD_PX
+        ) {
+          nextRows.add(row.dataset.adminUpdateId ?? 'new');
+        }
+      }
+
+      setReflowedRows((currentRows) => {
+        if (
+          currentRows.size === nextRows.size &&
+          [...currentRows].every((rowId) => nextRows.has(rowId))
+        ) {
+          return currentRows;
+        }
+        return nextRows;
+      });
+    };
+    const observeRows = () => {
+      for (const element of list.querySelectorAll<HTMLElement>(
+        '.admin-update-row, .admin-update-kind',
+      )) {
+        if (!observedElements.has(element)) {
+          observedElements.add(element);
+          observer.observe(element);
+        }
+      }
+    };
     const observer = new ResizeObserver(() => {
       const nextWidth = list.getBoundingClientRect().width;
-      if (nextWidth === listWidth) {
-        return;
+      if (nextWidth !== listWidth) {
+        listWidth = nextWidth;
+        list
+          .querySelectorAll<HTMLTextAreaElement>('.admin-update-inline-textarea')
+          .forEach(resizeTextarea);
       }
-      listWidth = nextWidth;
-      list
-        .querySelectorAll<HTMLTextAreaElement>('.admin-update-inline-textarea')
-        .forEach(resizeTextarea);
+      observeRows();
+      updateReflowedRows();
+    });
+    const mutationObserver = new MutationObserver(() => {
+      observeRows();
+      updateReflowedRows();
     });
     observer.observe(list);
-    return () => observer.disconnect();
+    observeRows();
+    mutationObserver.observe(list, { childList: true, characterData: true, subtree: true });
+    updateReflowedRows();
+    return () => {
+      observer.disconnect();
+      mutationObserver.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -795,7 +853,7 @@ export function AdminUpdates({ updates }: { updates: AdminUpdate[] }) {
 
     return (
       <li
-        className={`admin-update-row${isNew ? ' is-new' : ''}`}
+        className={`admin-update-row${isNew ? ' is-new' : ''}${reflowedRows.has(update?.id ?? 'new') ? ' is-text-reflowed' : ''}`}
         data-admin-update-id={update?.id}
         data-admin-update-reorderable={
           update && update.completed_version === null ? 'true' : undefined

@@ -161,6 +161,44 @@ while retaining the existing single-image viewer without gallery navigation.
   [Admin Update Change Classification](dlc-40-admin-update-change-type.md)
   adds Change as a third required classification alongside Fix and Feature.
 
+### Phase 17: Programmatic access to Admin Updates
+
+- **DLC 41 (implemented; production API verified):**
+  [Programmatic Access to Admin Updates](dlc-41-admin-updates-api.md)
+  provides a read-only, API-key-authenticated REST endpoint for people,
+  scripts, and Copilot without making the tracker public.
+
+### Phase 18: Admin Updates and recipe experience follow-ups
+
+The remaining slices are draft candidates from the Admin Updates backlog,
+ordered approximately by implementation effort. They are not approved or
+scheduled. DLC 42 is implemented and verified.
+
+- **DLC 42 (implemented; app version 1.15.1):**
+  [Admin Update Text Reflow](dlc-42-admin-update-text-reflow.md) moves narrow
+  Update text below its controls based on available text width.
+- **DLC 43 (draft candidate):**
+  [Rating Scale Guidance](dlc-43-rating-scale-guidance.md) explains the
+  existing numeric scale without changing its values.
+- **DLC 44 (draft candidate):**
+  [Recipe Detail Metadata and Rating](dlc-44-recipe-detail-metadata-and-rating.md)
+  reduces detail metadata and proposes a view-mode Rating action.
+- **DLC 45 (draft candidate):**
+  [Prevent Saving an Own Public Recipe](dlc-45-prevent-own-public-recipe-copy.md)
+  blocks redundant copies and explains why.
+- **DLC 46 (draft candidate):**
+  [Nested Library Breadcrumbs](dlc-46-nested-library-breadcrumbs.md) shows
+  paths for pages whose parent is not a main-menu destination.
+- **DLC 47 (draft candidate):**
+  [Publication Type Themes](dlc-47-publication-type-themes.md) gives each
+  publication type a distinct application-wide theme.
+- **DLC 48 (draft candidate):**
+  [Pre-Recipe Preparation Notes](dlc-48-pre-recipe-prep-notes.md) adds a
+  prominent Markdown callout for required advance work.
+- **DLC 49 (draft candidate):**
+  [Made Counter and Last-Made Stamp](dlc-49-made-counter.md) records private
+  daily marks, count, and latest make time.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for
@@ -191,6 +229,11 @@ while retaining the existing single-image viewer without gallery navigation.
   approved migration maps total-only legacy recipes to Cook, derives totals
   from component entries when present, rounds expression results half-up, and
   retains only Total Time in Find Recipes.
+- DLC 43–49 are independent draft candidates. Resolve each brief's open
+  decisions and reconcile approved behavior with the comprehensive reference
+  before implementation. In particular, DLC 43 reopens DLC 10's
+  presentation-only rule for Rating meanings, while DLC 44 changes the
+  currently staged Rating interaction.
 
 ## Existing deferrals not assigned a DLC brief
 

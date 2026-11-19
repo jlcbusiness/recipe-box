@@ -150,3 +150,25 @@
   `git diff --check` passed.
 - Last action: documented the distinction between shell-based REST use and
   direct MCP integration.
+
+## 2026-11-19 — Production privilege fix and API verification (session 98831c0f-905b-430d-981c-39b7feeb148e)
+
+- Inspected the production runtime log for the failed endpoint request; it
+  identified `database_query` with SQLSTATE `42501`. The DLC 28 migration
+  revokes all `app_updates` privileges from `service_role` and grants SELECT
+  only to `authenticated`; the API's server client uses `service_role`.
+- Added `20261229000000_grant_admin_updates_read_service_role.sql`, granting
+  SELECT only on `public.app_updates`. `supabase migration list --remote`
+  showed this as the only pending migration; `supabase db push --dry-run
+  --remote` previewed only that migration.
+- The initial push was blocked by the hosted-mutation consent gate and made
+  no change. After explicit user confirmation, `supabase db push --remote
+  --yes` applied the migration to production.
+- Verified `supabase migration list --remote` reports no local/remote
+  mismatches. Retried the API with the existing key; it returned HTTP 200,
+  JSON, `private, no-store, max-age=0, must-revalidate`, and 42 updates with
+  the documented allow-list field names. The response text and key were not
+  displayed.
+- `git diff --check` passed. No other privileges were granted.
+- Last action: reconciled the roadmap and workstream status with the
+  production verification.

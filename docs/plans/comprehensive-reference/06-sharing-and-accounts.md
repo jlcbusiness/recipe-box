@@ -246,10 +246,11 @@ delete Admin accounts or transfer Owner status.
 
 ### 10.6 Administrator-managed Updates
 
-> **Current implementation (DLC 28, extended by DLC 40).** Local and linked
-> migrations, database tests, administrator workflows, and responsive browser
-> checks are recorded in the [DLC 28 brief](slices/dlc/dlc-28-admin-updates.md)
-> and [DLC 40 brief](slices/dlc/dlc-40-admin-update-change-type.md).
+> **Current implementation (DLC 28, extended by DLC 40 and DLC 42).** Local
+> and linked migrations, database tests, administrator workflows, and
+> responsive browser checks are recorded in the [DLC 28 brief](../slices/dlc/dlc-28-admin-updates.md),
+> [DLC 40](../slices/dlc/dlc-40-admin-update-change-type.md), and
+> [DLC 42](../slices/dlc/dlc-42-admin-update-text-reflow.md) briefs.
 
 - The admin-only Settings tabs **App admin** and **Updates** contain account
   invitations/management and the global Updates tracker, respectively. Updates

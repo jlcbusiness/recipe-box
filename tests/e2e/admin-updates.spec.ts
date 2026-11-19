@@ -76,6 +76,87 @@ async function expectUpdatesUseSettingsTrack(page: import('@playwright/test').Pa
   }
 }
 
+async function getUpdateTextGeometry(page: import('@playwright/test').Page, rowSelector: string) {
+  return page.locator(rowSelector).evaluate((row) => {
+    const textarea = row.querySelector<HTMLTextAreaElement>('.admin-update-inline-textarea');
+    const body = row.querySelector<HTMLElement>('.admin-update-body');
+    const rail = row.querySelector<HTMLElement>('.admin-update-done');
+    const checkbox = row.querySelector<HTMLInputElement>('.admin-update-checkbox-hit-area input');
+    const kind = row.querySelector<HTMLElement>('.admin-update-kind');
+    const deleteAction = row.querySelector<HTMLElement>('.admin-update-delete-action');
+    const list = row.closest<HTMLElement>('.admin-update-list');
+    if (!textarea || !body || !rail || !checkbox || !kind || !list) {
+      throw new Error('Expected the update row text and controls to be rendered.');
+    }
+
+    const fieldStyle = getComputedStyle(textarea);
+    const gridColumns = getComputedStyle(row).gridTemplateColumns.split(/\s+/u);
+    const textTrackWidth = Number.parseFloat(gridColumns[1] ?? '');
+    const horizontalPadding =
+      Number.parseFloat(fieldStyle.paddingLeft) + Number.parseFloat(fieldStyle.paddingRight);
+    const bounds = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, right: rect.right, left: rect.left, bottom: rect.bottom };
+    };
+
+    return {
+      viewportWidth: window.innerWidth,
+      pageWidth: document.documentElement.scrollWidth,
+      listWidth: list.clientWidth,
+      listScrollWidth: list.scrollWidth,
+      row: bounds(row),
+      rail: bounds(rail),
+      checkbox: bounds(checkbox),
+      body: bounds(body),
+      kind: bounds(kind),
+      deleteAction: deleteAction ? bounds(deleteAction) : null,
+      textContentLeft:
+        textarea.getBoundingClientRect().left +
+        Number.parseFloat(fieldStyle.borderLeftWidth) +
+        Number.parseFloat(fieldStyle.paddingLeft),
+      textContentWidth: textTrackWidth - horizontalPadding,
+      textFieldWidth: textarea.getBoundingClientRect().width,
+      textFieldHeight: textarea.clientHeight,
+      textFieldScrollHeight: textarea.scrollHeight,
+      rowPaddingRight: Number.parseFloat(getComputedStyle(row).paddingRight),
+    };
+  });
+}
+
+async function resizeUpdatesListToTextWidth(
+  page: import('@playwright/test').Page,
+  rowSelector: string,
+  targetWidth: number,
+) {
+  await page.locator('.admin-update-list').evaluate(
+    (list, { rowSelector, targetWidth }) => {
+      const row = list.querySelector<HTMLElement>(rowSelector);
+      const textarea = row?.querySelector<HTMLTextAreaElement>('.admin-update-inline-textarea');
+      if (!row || !textarea) {
+        throw new Error('Expected an update row before resizing its list container.');
+      }
+
+      list.style.width = '900px';
+      list.style.maxWidth = 'none';
+      const columns = getComputedStyle(row).gridTemplateColumns.split(/\s+/u);
+      const textTrackWidth = Number.parseFloat(columns[1] ?? '');
+      const fieldStyle = getComputedStyle(textarea);
+      const horizontalPadding =
+        Number.parseFloat(fieldStyle.paddingLeft) + Number.parseFloat(fieldStyle.paddingRight);
+      const textContentWidth = textTrackWidth - horizontalPadding;
+      list.style.width = `${list.getBoundingClientRect().width + targetWidth - textContentWidth}px`;
+    },
+    { rowSelector, targetWidth },
+  );
+
+  await expect
+    .poll(async () => {
+      const geometry = await getUpdateTextGeometry(page, rowSelector);
+      return Math.abs(geometry.textContentWidth - targetWidth);
+    })
+    .toBeLessThan(0.5);
+}
+
 async function addUpdate(
   page: import('@playwright/test').Page,
   body: string,
@@ -134,6 +215,9 @@ async function dragUpdate(
   const handleBounds = await sourceHandle.boundingBox();
   const textBounds = await sourceRow.locator('.admin-update-inline-textarea').boundingBox();
   const sourceRowBounds = await sourceRow.boundingBox();
+  const isTextReflowed = await sourceRow.evaluate((element) =>
+    element.classList.contains('is-text-reflowed'),
+  );
   if (
     !listBounds ||
     !checkboxBounds ||
@@ -152,17 +236,33 @@ async function dragUpdate(
   expect(checkboxInset).toBeLessThanOrEqual(14);
   expect(checkboxToGripGap).toBeGreaterThanOrEqual(12);
   expect(checkboxToGripGap).toBeLessThanOrEqual(14);
-  expect(gripToTextGap).toBe(12);
-  expect(textBounds.x - checkboxHitAreaBounds.x).toBe(64);
   expect(handleBounds.x).toBeCloseTo(checkboxHitAreaBounds.x + 32, 1);
-  expect(handleBounds.x + handleBounds.width).toBeCloseTo(textBounds.x, 1);
   expect(handleBounds.width).toBe(32);
   expect(handleBounds.x).toBeGreaterThanOrEqual(checkboxBounds.x + checkboxBounds.width);
   expect(gripBounds.y - sourceRowBounds.y).toBe(21);
   expect(Math.abs(handleBounds.y - sourceRowBounds.y)).toBeLessThanOrEqual(1);
-  expect(
-    Math.abs(handleBounds.y + handleBounds.height - (sourceRowBounds.y + sourceRowBounds.height)),
-  ).toBeLessThanOrEqual(1);
+  if (isTextReflowed) {
+    const textContentLeft = await sourceRow
+      .locator('.admin-update-inline-textarea')
+      .evaluate((textarea: HTMLTextAreaElement) => {
+        const style = getComputedStyle(textarea);
+        const bounds = textarea.getBoundingClientRect();
+        return (
+          bounds.left +
+          Number.parseFloat(style.borderLeftWidth) +
+          Number.parseFloat(style.paddingLeft)
+        );
+      });
+    expect(Math.abs(textContentLeft - checkboxBounds.x)).toBeLessThanOrEqual(1);
+    expect(handleBounds.y + handleBounds.height).toBeLessThanOrEqual(textBounds.y + 1);
+  } else {
+    expect(gripToTextGap).toBe(12);
+    expect(textBounds.x - checkboxHitAreaBounds.x).toBe(64);
+    expect(handleBounds.x + handleBounds.width).toBeCloseTo(textBounds.x, 1);
+    expect(
+      Math.abs(handleBounds.y + handleBounds.height - (sourceRowBounds.y + sourceRowBounds.height)),
+    ).toBeLessThanOrEqual(1);
+  }
   await expect(sourceRow).toHaveCSS('transform', 'none');
   await expect(targetRow).toHaveCSS('transform', 'none');
   const targetBounds = await targetRow.boundingBox();
@@ -170,7 +270,8 @@ async function dragUpdate(
     throw new Error('Both update reorder targets must be visible.');
   }
   const sourceX = handleBounds.x + handleBounds.width - 1;
-  const sourceY = sourceRowBounds.y + sourceRowBounds.height - 2;
+  const sourceY =
+    Math.min(sourceRowBounds.y + sourceRowBounds.height, handleBounds.y + handleBounds.height) - 2;
   const selectionBeforeDrag = await sourceRow
     .locator('.admin-update-inline-textarea')
     .evaluate((textarea: HTMLTextAreaElement) => [textarea.selectionStart, textarea.selectionEnd]);
@@ -546,6 +647,150 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     }
     await deleteDialog.getByRole('button', { name: 'Delete update', exact: true }).click();
     await expect(row).toHaveCount(0, { timeout: 15_000 });
+  } finally {
+    await deleteTestUser(request, admin);
+  }
+});
+
+test('admins reflow update text by available content width @e2e', async ({
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  const admin = await createAdminTestUser(request);
+  const body = `Reflow ${Date.now()}-${testInfo.project.name}: Keep update text readable when the row width changes.`;
+
+  try {
+    await signInAs(page, admin);
+    await page.goto('/settings?tab=updates');
+    await expect(page.getByRole('tabpanel', { name: 'Updates' })).toBeVisible();
+    await addUpdate(page, body, 'Feature', testInfo.project.name === 'Fold 6');
+
+    const row = updateRow(page, body);
+    const updateId = await row.locator('[data-update-done]').getAttribute('data-update-done');
+    expect(updateId).toBeTruthy();
+    const rowSelector = `.admin-update-row[data-admin-update-id="${updateId}"]`;
+
+    await page.setViewportSize({ width: 1280, height: 844 });
+    await resizeUpdatesListToTextWidth(page, rowSelector, 192);
+    await expect
+      .poll(async () => {
+        const geometry = await getUpdateTextGeometry(page, rowSelector);
+        return Math.abs(geometry.body.top - geometry.kind.top);
+      })
+      .toBeLessThanOrEqual(1);
+    const atThreshold = await getUpdateTextGeometry(page, rowSelector);
+    expect(Math.abs(atThreshold.body.top - atThreshold.kind.top)).toBeLessThanOrEqual(1);
+    await row.screenshot({ path: testInfo.outputPath('admin-update-text-at-threshold.png') });
+
+    await resizeUpdatesListToTextWidth(page, rowSelector, 191);
+    await expect
+      .poll(async () => {
+        const geometry = await getUpdateTextGeometry(page, rowSelector);
+        return geometry.body.top >= geometry.kind.bottom - 1;
+      })
+      .toBe(true);
+    const belowThreshold = await getUpdateTextGeometry(page, rowSelector);
+    expect(belowThreshold.body.top).toBeGreaterThanOrEqual(belowThreshold.kind.bottom - 1);
+    expect(
+      Math.abs(belowThreshold.textContentLeft - belowThreshold.checkbox.left),
+    ).toBeLessThanOrEqual(1);
+    expect(belowThreshold.body.right).toBeCloseTo(
+      belowThreshold.row.right - belowThreshold.rowPaddingRight,
+      1,
+    );
+    expect(belowThreshold.textFieldWidth).toBeGreaterThan(192);
+    await row.screenshot({ path: testInfo.outputPath('admin-update-text-below-threshold.png') });
+
+    await resizeUpdatesListToTextWidth(page, rowSelector, 193);
+    await expect
+      .poll(async () => {
+        const geometry = await getUpdateTextGeometry(page, rowSelector);
+        return Math.abs(geometry.body.top - geometry.kind.top);
+      })
+      .toBeLessThanOrEqual(1);
+    const afterContainerResize = await getUpdateTextGeometry(page, rowSelector);
+    expect(
+      Math.abs(afterContainerResize.body.top - afterContainerResize.kind.top),
+    ).toBeLessThanOrEqual(1);
+
+    await page.locator('.admin-update-list').evaluate((list) => {
+      list.style.removeProperty('width');
+      list.style.removeProperty('max-width');
+    });
+    await page.setViewportSize({ width: 320, height: 844 });
+    await expectUpdatesUseSettingsTrack(page);
+    await expect
+      .poll(async () => {
+        const geometry = await getUpdateTextGeometry(page, rowSelector);
+        return geometry.body.top >= geometry.kind.bottom - 1;
+      })
+      .toBe(true);
+    const narrowGeometry = await getUpdateTextGeometry(page, rowSelector);
+    expect(narrowGeometry.pageWidth).toBeLessThanOrEqual(320);
+    expect(narrowGeometry.listScrollWidth).toBeLessThanOrEqual(narrowGeometry.listWidth);
+    expect(narrowGeometry.body.top).toBeGreaterThanOrEqual(narrowGeometry.kind.bottom - 1);
+    expect(
+      Math.abs(narrowGeometry.textContentLeft - narrowGeometry.checkbox.left),
+    ).toBeLessThanOrEqual(1);
+    expect(narrowGeometry.textContentWidth).toBeLessThan(192);
+    expect(narrowGeometry.textFieldWidth).toBeGreaterThan(0);
+    if (!narrowGeometry.deleteAction) {
+      throw new Error('Expected the saved update delete action at 320px.');
+    }
+    expect(narrowGeometry.deleteAction.top).toBeLessThan(narrowGeometry.body.top);
+    expect(narrowGeometry.kind.right).toBeLessThanOrEqual(
+      narrowGeometry.row.right - narrowGeometry.rowPaddingRight + 1,
+    );
+    expect(narrowGeometry.deleteAction.right).toBeLessThanOrEqual(
+      narrowGeometry.row.right - narrowGeometry.rowPaddingRight + 1,
+    );
+    await row.screenshot({ path: testInfo.outputPath('admin-update-text-reflow-320.png') });
+
+    await expect(row.getByRole('checkbox', { name: /done/i })).toBeVisible();
+    await expect(row.getByRole('button', { name: /Reorder update/ })).toBeVisible();
+    const typePicker = row.getByRole('combobox', { name: 'Feature' });
+    if (testInfo.project.name === 'Fold 6') {
+      await typePicker.tap();
+    } else {
+      await typePicker.click();
+    }
+    await expect(page.getByRole('option', { name: 'Fix', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    const completionCheckbox = row.getByRole('checkbox', { name: /done/i });
+    if (testInfo.project.name === 'Fold 6') {
+      await completionCheckbox.tap();
+    } else {
+      await completionCheckbox.click();
+    }
+    const completionDialog = page.getByRole('dialog', { name: 'Complete update' });
+    await expect(completionDialog).toBeVisible();
+    await completionDialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(completionDialog).toBeHidden();
+
+    const textField = row.getByRole('textbox', { name: 'Update text' });
+    if (testInfo.project.name === 'Fold 6') {
+      await textField.tap();
+    } else {
+      await textField.click();
+    }
+    await textField.fill(`${body} Edited draft.`);
+    await textField.press('Escape');
+    await expect(textField).toHaveValue(body);
+
+    const deleteButton = row.getByRole('button', {
+      name: `Delete update: ${body.slice(0, 80)}`,
+    });
+    if (testInfo.project.name === 'Fold 6') {
+      await deleteButton.tap();
+    } else {
+      await deleteButton.click();
+    }
+    const deleteDialog = page.getByRole('dialog', { name: 'Delete this update?' });
+    await expect(deleteDialog).toBeVisible();
+    await deleteDialog.getByRole('button', { name: 'Delete update', exact: true }).click();
+    await expect(row).toHaveCount(0);
   } finally {
     await deleteTestUser(request, admin);
   }

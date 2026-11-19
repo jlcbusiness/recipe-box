@@ -1,7 +1,6 @@
 # DLC 41: Programmatic Access to Admin Updates
 
-**Status: Implemented. Automated verification passed; local CLI acceptance and
-deployment configuration remain.**
+**Status: Implemented. Automated verification and production API access passed.**
 
 ## Outcome
 
@@ -146,10 +145,11 @@ given to a CLI caller or Copilot.
    mutation path is exposed.
 5. Responses set `Cache-Control: no-store`. Focused automated tests cover
    authorization, output shape, ordering, and database failures.
-6. Manual acceptance from a command line retrieves representative local
-   updates as JSON. Copilot can use the same command/API as a client when its
-   execution environment has the key. The setup guide explains key generation,
-   Vercel Secret configuration, caller environment setup, and rotation.
+6. Manual acceptance from a command line retrieves entries from a configured
+   app instance as JSON. Copilot can use the same command/API as a client when
+   its execution environment has the key. The setup guide explains key
+   generation, Vercel Secret configuration, caller environment setup, and
+   rotation.
    Confirm no key is present in the repository or committed
    shell/configuration files.
 

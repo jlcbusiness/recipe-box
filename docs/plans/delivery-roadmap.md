@@ -3,7 +3,7 @@
 > **Reference Note:** For the complete catalog of all requirements, edge cases,
 > UI behaviors, and design discussions, see [comprehensive reference](comprehensive-reference.md).
 
-The current product baseline is **v1.14.0**. Unscheduled improvements and
+The current product baseline is **v1.15.0**. Unscheduled improvements and
 verification follow-ups remain in the [deferred-work inventory](discussion/later.md);
 they are not blockers to this release.
 
@@ -230,10 +230,20 @@ question. Its output is a decision-log entry, not shipped code.
 
 ### Phase 17: Programmatic access to Admin Updates
 
-- **DLC 41 (implemented; local CLI acceptance pending):**
+- **DLC 41 (implemented; production API verified):**
   [Programmatic Access to Admin Updates](slices/dlc/dlc-41-admin-updates-api.md)
-  proposes a read-only, API-key-authenticated REST endpoint for people,
+  provides a read-only, API-key-authenticated REST endpoint for people,
   scripts, and Copilot, without making the tracker public.
+
+### Phase 18: Admin Updates and recipe experience follow-ups
+
+- **DLC 42 (implemented; app version 1.15.1):**
+  [Admin Update Text Reflow](slices/dlc/dlc-42-admin-update-text-reflow.md)
+  keeps update text readable in narrow containers.
+- **DLC 43–49 (draft candidates):**
+  [DLC roadmap](slices/dlc/README.md#phase-18-admin-updates-and-recipe-experience-follow-ups)
+  records seven remaining proposed slices. They are not approved or scheduled;
+  resolve each brief's open decisions before implementation.
 
 ## Completion Rule
 

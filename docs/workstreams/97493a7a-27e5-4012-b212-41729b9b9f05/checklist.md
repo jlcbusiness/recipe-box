@@ -12,5 +12,6 @@
 - [x] Implement the endpoint, verify its behavior, and reconcile the docs.
 - [x] Add user-facing API setup and usage documentation and link it from the
   hosted setup guide.
-- [ ] Run the documented CLI flow against representative local updates without
-  resetting Supabase or accessing hosted data.
+- [x] Verify the configured API from the command line after applying the
+  production grant migration; inspect response status and shape without
+  displaying update text.

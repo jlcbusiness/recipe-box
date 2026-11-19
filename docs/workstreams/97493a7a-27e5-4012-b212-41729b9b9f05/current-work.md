@@ -59,26 +59,35 @@
 - 2026-11-19: Added a concrete local VS Code setup: enter the key with shell
   echo disabled before launching VS Code, then use Copilot sandbox credential
   masking to inject it only into HTTPS requests to the Recipe Box host.
+- 2026-11-19: Production Vercel logs tied the API 503 to a `database_query`
+  failure with SQLSTATE `42501`. The Admin Updates table migration revokes
+  table privileges from `service_role`, while the API reads through that role.
+  Added a migration granting only `SELECT` on `public.app_updates` to
+  `service_role`; preflight showed it was the sole pending migration.
+- 2026-11-19: After explicit confirmation, applied the grant migration to the
+  linked production Supabase project. Remote migration history now matches
+  local, and the production API returns HTTP 200 with 42 entries, the expected
+  allow-listed fields, and no-store headers. The command output did not include
+  entry text or the API key.
 
 ## Save Point
 
 - Goal: make Admin Updates entries programmatically available through a
   read-only REST endpoint.
-- Status: implementation complete; local CLI acceptance and deployment setup
-  remain.
+- Status: implemented and verified against the production API.
 - Repository/branch: `/home/joshlamont/Code/recipe-box`, `main`.
-- Current step: local CLI acceptance remains pending; do not reset Supabase or
-  access hosted data.
+- Current step: complete; the production grant migration and API response were
+  verified. A separate local-only manual call was not run.
 - Last verified result: six focused route tests pass; `npm run typecheck` and
   targeted Biome checks pass; Markdown lint found no new diagnostics in the
   new API guide or modified docs. The guide now explains Copilot's required
   caller-side environment setup, sandbox credential masking, and the REST/MCP
-  distinction.
-- Next action: run the documented CLI flow against representative local data
-  when the local environment is available. Configure the Vercel Secret and
-  redeploy separately before using the hosted endpoint.
+  distinction. Production migration history matches local; the endpoint
+  returned HTTP 200 with 42 entries and the documented response fields.
+- Next action: none for the approved API slice; retain the local-only call as
+  an optional check if needed.
 - Checklist: [checklist.md](./checklist.md)
 - Trace: [trace.md](./trace.md) — session
   `97493a7a-27e5-4012-b212-41729b9b9f05`; latest entry:
-  implementation verification for session
+  production grant and API verification for session
   `98831c0f-905b-430d-981c-39b7feeb148e`.

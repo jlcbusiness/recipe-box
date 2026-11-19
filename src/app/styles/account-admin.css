@@ -705,6 +705,32 @@
   white-space: nowrap;
 }
 
+.admin-update-row.is-text-reflowed > .admin-update-done {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.admin-update-row.is-text-reflowed > .admin-update-body {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-left: 9px;
+}
+
+.admin-update-row.is-text-reflowed > .admin-update-done > .admin-update-reorder-handle {
+  bottom: auto;
+  height: 44px;
+}
+
+.admin-update-row.is-text-reflowed > .admin-update-kind {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.admin-update-row.is-text-reflowed > .admin-update-delete-action {
+  grid-column: 4;
+  grid-row: 1;
+}
+
 .admin-update-completion-dialog form > label {
   font-size: 13px;
   font-weight: 700;
@@ -943,6 +969,10 @@
 
   .admin-updates button.admin-update-reorder-handle {
     min-height: 48px;
+  }
+
+  .admin-update-row.is-text-reflowed > .admin-update-done > .admin-update-reorder-handle {
+    height: 48px;
   }
 
   .admin-update-checkbox-hit-area {
