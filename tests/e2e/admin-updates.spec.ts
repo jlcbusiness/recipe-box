@@ -40,6 +40,42 @@ async function updateOrder(
   }, expectedBodies);
 }
 
+async function expectUpdatesUseSettingsTrack(page: import('@playwright/test').Page) {
+  const geometry = await page.evaluate(() => {
+    function bounds(selector: string) {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Expected ${selector} to exist.`);
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right };
+    }
+
+    return {
+      viewportWidth: window.innerWidth,
+      pageWidth: document.documentElement.scrollWidth,
+      track: bounds('.settings-main'),
+      panel: bounds('.settings-tab-panel:not([hidden])'),
+      updates: bounds('.admin-updates'),
+      list: bounds('.admin-update-list'),
+    };
+  });
+
+  expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth);
+  for (const [name, element] of Object.entries({
+    panel: geometry.panel,
+    updates: geometry.updates,
+    list: geometry.list,
+  })) {
+    expect(
+      Math.abs(element.left - geometry.track.left),
+      `${name} left edge: ${JSON.stringify(geometry)}`,
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(element.right - geometry.track.right),
+      `${name} right edge: ${JSON.stringify(geometry)}`,
+    ).toBeLessThanOrEqual(1);
+  }
+}
+
 async function addUpdate(
   page: import('@playwright/test').Page,
   body: string,
@@ -320,6 +356,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
       ).toBeLessThanOrEqual(1);
     }
     await page.screenshot({ path: testInfo.outputPath('admin-updates-desktop.png') });
+    await expectUpdatesUseSettingsTrack(page);
 
     await page.reload();
     await expect(page.getByRole('tabpanel', { name: 'Updates' })).toBeVisible();
@@ -402,11 +439,12 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await expect(textField).toHaveValue(editedText);
     await expect(row.getByRole('combobox', { name: 'Feature' })).toBeVisible();
 
-    for (const width of [641, 640, 390]) {
+    for (const width of [641, 640, 473, 390]) {
       await page.setViewportSize({ width, height: 844 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         width,
       );
+      await expectUpdatesUseSettingsTrack(page);
     }
     await expect
       .poll(() =>

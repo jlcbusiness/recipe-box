@@ -455,6 +455,9 @@ Arrow Left/Right and Home/End navigation. The legacy `/admin` route redirects
 Admins to App admin and non-admins to `/recipes`; all server actions continue
 to authorize independently.
 
+The Updates panel, tracker, and list span the available Settings content track
+at desktop and mobile widths, without page-level horizontal overflow.
+
 The Updates tab uses a compact list with **Done** and **Type** headings. A
 persistent blank Markdown field sits at the top for adding entries. Each row
 has a compact leading rail with the completion control and reorder handle

@@ -174,23 +174,40 @@
   tests pass; desktop and mobile screenshots confirm the output. The browser
   test now normalizes its persisted presentation preference before asserting
   Standard output.
+- 2026-11-18: The user selected package A, the full-width Updates tab. Its
+  contract requires the tracker and list to span the Settings content track
+  without changing row behavior. The previous desktop measurement used a
+  mismatched CSS viewport, so the baseline will be remeasured at normalized
+  desktop and mobile widths before choosing a layout fix.
+- 2026-11-18: Completed package A. At a normalized 1280px Chromium viewport,
+  the Settings content track measured 1118px while the active tab panel and
+  Updates list stopped at 407px. Giving `.settings-tab-panel` an explicit
+  100% width makes the panel and its tracker fill the track. Browser
+  assertions verify the panel, tracker, and list within 1 CSS px at desktop
+  and responsive widths, with no page overflow. The admin Updates flow passes
+  in Chromium and Fold 6. The shared Settings tab test also passes in both
+  after waiting for its streamed heading and tablist before running axe.
+  Inspected desktop and mobile screenshots. Typecheck and `git diff --check`
+  pass; Biome reports five existing CSS specificity warnings.
 
 ## Save Point
 
-- **Goal/status:** Packages B, D+H, E, Numeric Arithmetic (#4), and Things
-  Wording and Addable Units (#7/#10) are implemented and verified.
+- **Goal/status:** Packages B, D+H, E, Numeric Arithmetic (#4), Things Wording
+  and Addable Units (#7/#10), and package A are implemented and verified.
+  Package G (#8) remains unstarted.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** The Things implementation and Ingredients-First wording
-  refinement are complete; awaiting selection of the next fix from the intake.
-- **Last verified:** 28 focused ingredient-display unit tests, the Things
-  save/reload Chromium flow, typecheck, and `git diff --check` passed.
-  Desktop and mobile Ingredients-First screenshots were inspected. The local
-  migration, database save/history E2E, and 138 focused unit tests also passed
-  earlier in this slice.
-- **Next action:** Select the next fix to implement, or close this workstream.
+- **Current step:** Package A is complete; wait for direction on the next
+  package.
+- **Last verified:** The admin Updates flow and the Settings tabs/keyboard
+  accessibility flow passed in Chromium and Fold 6. Width assertions cover
+  the Settings track at 1280px and responsive widths of 641px, 640px, 473px,
+  and 390px. `npm run typecheck` and `git diff --check` passed; targeted
+  Biome exited 0 with five existing specificity warnings.
+- **Next action:** Wait for the user to select whether to begin package G
+  (#8), alternate-ingredient notes.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); session
-  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; latest section records Things
-  Ingredients-First wording verification and remaining Markdown lint findings.
-- **Trace boundary:** The latest section records the Things verification;
-  earlier implementation history remains partial.
+  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; latest section records package A
+  implementation and verification.
+- **Trace boundary:** The latest section records package A; earlier
+  implementation history remains partial.

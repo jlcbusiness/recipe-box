@@ -308,6 +308,7 @@
 }
 
 .settings-tab-panel {
+  width: 100%;
   min-width: 0;
 }
 

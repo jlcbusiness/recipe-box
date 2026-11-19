@@ -121,6 +121,8 @@ test('Settings keeps preference and recipe tabs with URL and keyboard state @e2e
     );
 
     await page.goto('/settings');
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Settings areas' })).toBeVisible();
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
   } finally {

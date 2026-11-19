@@ -48,6 +48,9 @@ content into an admin-only **App admin** Settings tab and give the existing
 Updates interface its own admin-only **Updates** Settings tab. Do not retain
 the old Administration menu or private-navigation destination.
 
+The Updates panel, tracker, and list fill the available Settings content track
+at desktop and mobile widths without page-level horizontal overflow.
+
 The current app could not be opened at `localhost:3000` or `localhost:3001`
 during preparation. Review the rendered Account menu, Settings, and admin
 surfaces at desktop and mobile before implementation; use `npm run dev` to

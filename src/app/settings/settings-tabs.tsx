@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 
 const baseTabs = [
@@ -29,12 +30,15 @@ export function SettingsTabs({
   const tabs = adminPanels ? allTabs : baseTabs;
   const requestedTab = tabs.find((tab) => tab.id === initialTab);
   const [activeTab, setActiveTab] = useState<SettingsTabId>(requestedTab?.id ?? 'preferences');
+  const searchParams = useSearchParams();
+  const requestedTabId = searchParams?.get('tab') ?? null;
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
-    const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? 'Preferences';
+    const titleTabId = requestedTabId === activeTab ? requestedTabId : activeTab;
+    const activeLabel = tabs.find((tab) => tab.id === titleTabId)?.label ?? 'Preferences';
     document.title = `Recipe Box - Settings - ${activeLabel}`;
-  }, [activeTab, tabs]);
+  }, [activeTab, requestedTabId, tabs]);
 
   function activateTab(tabId: SettingsTabId) {
     setActiveTab(tabId);

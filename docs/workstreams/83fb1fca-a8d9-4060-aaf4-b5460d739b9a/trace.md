@@ -339,4 +339,32 @@ Cook-mode row space and targeted lint.
 - Inspected generated desktop and mobile Ingredients-First screenshots; both
   show `a <thing>` without “of”. `npm run lint:md` still reports 32 findings
   in existing files, with no new findings in the updated product contracts.
+
+## 2026-11-18 — package A width implementation and verification — session 83fb1fca-a8d9-4060-aaf4-b5460d739b9a
+
+- Reproduced the normalized desktop mismatch in Chromium: the Settings track
+  was 1118px wide, while the active panel, Updates section, and list were
+  407px. The active tab panel was the constraining box.
+- Set `.settings-tab-panel` to `width: 100%` while retaining `min-width: 0`.
+  The existing Updates browser flow now asserts the panel, tracker, and list
+  align with the Settings track within 1 CSS px and that the document does not
+  overflow. It checks the configured desktop view and 641px, 640px, 473px,
+  and 390px widths.
+- Updated the Settings title effect to also react to Next's synchronized
+  `useSearchParams` value after native `history.replaceState`; the admin tab
+  title assertion passes.
+- The first combined Settings/Admin browser run caught the Settings
+  accessibility scan before streamed content appeared. Added waits for the
+  Settings heading and tablist before running axe.
+- `npx playwright test tests/e2e/admin-updates.spec.ts --project=chromium --project="Fold 6" --grep "admins can manage classified updates" --workers=1` — both projects passed.
+- `npx playwright test tests/e2e/settings.spec.ts --project=chromium --project="Fold 6" --grep "Settings keeps preference and recipe tabs with URL and keyboard state" --workers=1` — both projects passed after the stream-aware wait.
+- `npm run typecheck` passed. Targeted Biome exited 0 with five existing CSS specificity warnings. `git diff --check` passed before the final continuity edits.
+- Updated the A package status and width contract in the intake, visual guide,
+  and DLC 34 brief.
+- Re-ran the admin Updates Chromium flow with a temporary output directory,
+  inspected the desktop and mobile screenshots, removed the temporary files,
+  and confirmed the test server was no longer running.
+
+Last recorded action: inspected responsive screenshots and removed temporary
+files; the test server is no longer running.
 *** End of File

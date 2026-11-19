@@ -52,14 +52,12 @@ confirmed the listed entries were unchecked. Only **Fix** entries are included;
 
 ### A. Full-width Updates tab (#1)
 
-**Status:** Open. The prior Playwright inspection found the Updates list much
-narrower than the Settings main content at both inspected sizes. At 473 CSS px,
-the list measured 373px and the main content 421px. The desktop run measured
-400px for the list and 1198px for the main content, but its browser viewport
-had a zoom-scale mismatch; repeat that geometry check with a normalized CSS
-viewport before using the desktop numbers as a baseline. No explicit width cap
-was found on the inspected Updates list styles, so the layout cause still needs
-to be traced before choosing a CSS change.
+**Status:** Implemented and verified. At a normalized 1280px Chromium viewport,
+the Settings content track measured 1118px while the active tab panel and
+Updates list stopped at 407px. The panel was the constraining box; setting
+`.settings-tab-panel` to `width: 100%` makes it and the Updates content fill the
+track. Browser assertions verify the panel, tracker, and list align within 1
+CSS px at desktop and mobile widths, with no page-level horizontal overflow.
 
 **Contract and closest pattern:** DLC 34 says Settings tabs retain full-width,
 unframed sections. The existing Updates tracker is the correct functional
@@ -68,7 +66,7 @@ See [DLC 34](./dlc/dlc-34-account-and-admin-settings.md), the
 [Settings tab implementation](../../../src/app/settings/settings-tabs.tsx),
 and [Updates styles](../../../src/app/styles/account-admin.css).
 
-**Proposed outcome:** The Updates tracker uses the available Settings content
+**Verified outcome:** The Updates tracker uses the available Settings content
 width, like the neighboring full-width Settings sections, without changing its
 row layout or editing behavior.
 
@@ -78,9 +76,10 @@ row layout or editing behavior.
   Settings content track to within 1 CSS px on each side.
 - The page has no horizontal overflow; the list remains readable and its
   existing completion, reorder, edit, and type controls remain usable.
-- Browser tests assert the list-to-content width relationship at representative
-  desktop and mobile viewports. Inspect screenshots at both sizes after the
-  layout cause is identified.
+- Browser tests assert the panel-to-content width relationship at a 1280px
+  desktop viewport and at 641px, 640px, 473px, and 390px, including the
+  configured Fold 6 browser project. Desktop and mobile screenshots are
+  captured and inspected by the existing Updates flow.
 
 ### B. Ingredient-first reader parity in Cook mode (#2 and #3)
 

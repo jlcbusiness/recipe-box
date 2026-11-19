@@ -73,3 +73,7 @@
 - [x] Keep Things wording presentation-specific: Standard includes “of”;
   Ingredients-First omits it, including for saved unit labels ending in “of”;
   verify desktop and mobile output.
+- [x] Measure the Updates content track and tracker at normalized desktop and
+  mobile viewports; identify the active tab panel as the constraining box.
+- [x] Make the Updates tracker/list fill the Settings content track, and verify
+  width, overflow, and existing controls with desktop/mobile browser tests.
