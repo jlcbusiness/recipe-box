@@ -7,6 +7,7 @@ import type {
   PublicationSearchSortKey,
 } from '../../lib/publications/search';
 import type { PublicationType } from '../../lib/recipes/data';
+import { formatGroupedInteger, parseGroupedInteger } from '../../lib/recipes/measurement-rules';
 
 type FilterKind = 'date' | 'number' | 'text';
 
@@ -46,9 +47,11 @@ export function PublicationColumnFilter({
   const containerRef = useRef<HTMLDivElement>(null);
   const remainingFilters = filters.filter((filter) => filter.field !== field);
   const normalizedValue = value.trim();
-  const filterValue = kind === 'number' ? Number(normalizedValue) : normalizedValue;
-  const isValidValue =
-    normalizedValue.length > 0 && (kind !== 'number' || Number.isFinite(filterValue));
+  const parsedNumber = kind === 'number' ? parseGroupedInteger(normalizedValue) : null;
+  const filterValue = kind === 'number' ? parsedNumber : normalizedValue;
+  const invalidNumber =
+    kind === 'number' && normalizedValue.length > 0 && (parsedNumber === null || parsedNumber < 0);
+  const isValidValue = normalizedValue.length > 0 && (kind !== 'number' || !invalidNumber);
 
   useEffect(() => {
     setValue(initialValue(filters, field));
@@ -132,10 +135,17 @@ export function PublicationColumnFilter({
             <span className="sr-only">{label} filter</span>
             <input
               autoComplete="off"
-              inputMode={kind === 'number' ? 'numeric' : undefined}
+              aria-describedby={invalidNumber ? 'publication-column-filter-error' : undefined}
+              aria-invalid={invalidNumber || undefined}
+              inputMode={kind === 'number' ? 'text' : undefined}
               onChange={(event) => setValue(event.target.value)}
+              onBlur={(event) => {
+                if (kind !== 'number') return;
+                const normalized = parseGroupedInteger(event.currentTarget.value);
+                if (normalized !== null) setValue(formatGroupedInteger(normalized));
+              }}
               placeholder={`Filter ${label.toLocaleLowerCase()}`}
-              type={kind === 'date' ? 'date' : kind === 'number' ? 'number' : 'search'}
+              type={kind === 'date' ? 'date' : kind === 'number' ? 'text' : 'search'}
               value={value}
             />
           </label>
@@ -154,11 +164,22 @@ export function PublicationColumnFilter({
               ))}
             </div>
           )}
+          {invalidNumber && (
+            <p
+              className="publication-column-filter-error"
+              id="publication-column-filter-error"
+              role="alert"
+            >
+              Enter a nonnegative whole number or arithmetic expression.
+            </p>
+          )}
           <div className="publication-column-filter-actions">
             <button onClick={() => setValue('')} type="button">
               Clear
             </button>
-            <button type="submit">Apply</button>
+            <button disabled={invalidNumber} type="submit">
+              Apply
+            </button>
           </div>
         </form>
       )}

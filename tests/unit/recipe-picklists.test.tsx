@@ -62,8 +62,8 @@ describe('recipe picklist action', () => {
     });
   });
 
-  it('reports stale revisions and requests a refresh', async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: '40001' } });
+  it.each(['40001', 'PT409'])('reports stale revision %s and requests a refresh', async (code) => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { code } });
     const getUser = vi
       .fn()
       .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
@@ -116,12 +116,12 @@ describe('recipe picklist action', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it('adds a normalized picklist value using the current category revision and returns it', async () => {
+  it('adds a normalized Things unit using the current category revision and returns it', async () => {
     const createdRow = {
       id: '22222222-2222-4222-8222-222222222222',
-      category: 'cuisine' as const,
-      value: 'Peruvian Nikkei',
-      display_value: 'Peruvian Nikkei',
+      category: 'informal_unit' as const,
+      value: 'bunch',
+      display_value: 'bunch',
       sort_order: 8,
       is_protected: false,
     };
@@ -156,18 +156,16 @@ describe('recipe picklist action', () => {
     });
     createClient.mockResolvedValue({ auth: { getUser }, from, rpc });
 
-    await expect(
-      createOrGetRecipePicklistValue('cuisine', '  Peruvian   Nikkei  '),
-    ).resolves.toEqual({
+    await expect(createOrGetRecipePicklistValue('informal_unit', '  bunch  ')).resolves.toEqual({
       value: createdRow,
       created: true,
     });
     expect(rpc).toHaveBeenCalledWith('manage_recipe_picklist', {
       p_action: 'add',
-      p_category: 'cuisine',
+      p_category: 'informal_unit',
       p_expected_revision: 1,
       p_value_id: null,
-      p_value: 'Peruvian Nikkei',
+      p_value: 'bunch',
       p_ordered_ids: [],
       p_source_ids: [],
       p_target_id: null,

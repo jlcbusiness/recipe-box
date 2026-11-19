@@ -3,7 +3,7 @@ import {
   formatQuantityRange,
   type MeasurementDraft,
   type ParsedQuantity,
-  parseQuantityInput,
+  parseMeasurementDraftQuantity,
   volumeUnits,
   weightUnits,
 } from './measurement-rules';
@@ -93,7 +93,7 @@ export function deriveDensityCounterpart(
     return measurements;
   }
 
-  const sourceQuantity = parseQuantityInput(source.quantity);
+  const sourceQuantity = parseMeasurementDraftQuantity(source);
   if (!sourceQuantity || !source.unitCode) {
     if (!target.derivedFromDensity) {
       return measurements;

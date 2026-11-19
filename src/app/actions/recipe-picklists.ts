@@ -14,6 +14,7 @@ export type EditorPicklistCategory =
   | 'meal_type'
   | 'cuisine'
   | 'equipment'
+  | 'informal_unit'
   | 'time_type';
 
 export type RecipePicklistCreateResult = {
@@ -38,6 +39,7 @@ const editorCategories = new Set<EditorPicklistCategory>([
   'meal_type',
   'cuisine',
   'equipment',
+  'informal_unit',
   'time_type',
 ]);
 const actions = new Set(['add', 'rename', 'reorder', 'delete', 'merge']);
@@ -197,6 +199,11 @@ export async function createOrGetRecipePicklistValue(
     const concurrentMatch = await findExisting();
     if (concurrentMatch) {
       return { value: concurrentMatch, created: false };
+    }
+    if (addError.code === '40001' || addError.code === 'PT409') {
+      return {
+        error: 'This picklist changed in another session. The latest values are loading.',
+      };
     }
     return { error: 'Picklist value could not be added. Try again.' };
   }

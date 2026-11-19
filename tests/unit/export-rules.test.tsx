@@ -168,7 +168,16 @@ function createSnapshot() {
         { id: secondSetId, recipe_id: secondRecipeId, label: 'Main', position: 0 },
       ],
       recipe_ingredient_measurements: [
-        { id: 'measurement-cake', recipe_ingredient_id: firstRowId },
+        {
+          id: 'measurement-cake',
+          recipe_ingredient_id: firstRowId,
+          measurement_type: 'informal',
+          amount_min: 1,
+          amount_max: null,
+          unit_code: null,
+          picklist_value_id: 'thing-bunch',
+          amount_is_a: true,
+        },
         { id: 'measurement-soup', recipe_ingredient_id: secondRowId },
       ],
       recipe_steps: [{ id: firstStepId, recipe_id: firstRecipeId }],
@@ -272,10 +281,10 @@ function createSnapshot() {
 }
 
 describe('export rules', () => {
-  it('exports protected source identity, direct-save identity, and time entries in schema version 12', () => {
+  it('exports protected source identity, direct-save identity, time entries, and Things markers in schema version 13', () => {
     const output = buildPortableData(createSnapshot(), { type: 'recipe', id: firstRecipeId });
 
-    expect(output.schema_version).toBe(12);
+    expect(output.schema_version).toBe(13);
     expect(output.records.recipe_references[0]).toMatchObject({
       is_protected_source: true,
       source_public_id: sourcePublicId,
@@ -300,6 +309,9 @@ describe('export rules', () => {
         position: 1,
       },
     ]);
+    expect(output.records.recipe_ingredient_measurements[0]).toMatchObject({
+      amount_is_a: true,
+    });
   });
 
   it('accepts only supported scope shapes and valid record identifiers', () => {
@@ -462,7 +474,7 @@ describe('export rules', () => {
       { type: 'database' },
     );
 
-    expect(output.schema_version).toBe(12);
+    expect(output.schema_version).toBe(13);
     expect(output.account_preferences).toMatchObject({
       volume_system: 'recipe',
       weight_system: 'recipe',
@@ -482,7 +494,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(12);
+    expect(manifest.schema_version).toBe(13);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

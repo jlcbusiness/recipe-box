@@ -95,7 +95,8 @@ test('Measure equivalents derive the other dimension from trusted density @e2e @
     const dialog = page.locator('dialog').filter({ hasText: 'Average measures' });
     const volumeAmount = dialog.getByLabel('Average volume amount');
     const weightAmount = dialog.getByLabel('Average weight amount');
-    await volumeAmount.fill('1');
+    await expect(volumeAmount).toHaveAttribute('inputmode', 'text');
+    await volumeAmount.fill('1 + 0');
     await expect(weightAmount).toHaveValue('120');
     await expect(weightAmount).toHaveAttribute('readonly');
     await expect(dialog.getByRole('status')).toHaveText('Derived from density');
@@ -548,13 +549,23 @@ test('Settings stages, searches, edits, and removes trusted ingredient densities
     const weightUnit = section.getByRole('combobox', { name: 'Weight unit' });
     await expect(volumeUnit).toContainText('cup');
     await expect(weightUnit).toContainText('g');
-    await volumeAmount.fill('1');
+    await expect(volumeAmount).toHaveAttribute('inputmode', 'text');
+    await expect(weightAmount).toHaveAttribute('inputmode', 'text');
+    await volumeAmount.fill('1 + 0');
     await volumeAmount.press('Enter');
     await expect(weightAmount).toBeFocused();
-    await weightAmount.fill('120');
+    await weightAmount.fill('40 * 3');
     await expect(section.getByText('0.507 g/mL')).toBeVisible();
     const saveDensity = section.getByRole('button', { name: 'Save trusted density' });
     const cancelDensity = section.getByRole('button', { name: 'Cancel density entry' });
+    await volumeAmount.fill('1 +');
+    await saveDensity.click();
+    await expect(section.getByRole('status')).toContainText(
+      'Enter positive finite amounts for both Volume and Weight.',
+    );
+    await expect(volumeAmount).toHaveAttribute('aria-invalid', 'true');
+    await volumeAmount.fill('1 + 0');
+    await expect(section.getByRole('status')).toHaveCount(0);
     await expect(saveDensity).toHaveCSS('width', '32px');
     await expect(cancelDensity).toHaveCSS('width', '32px');
     if (testInfo.project.name === 'Fold 6') {

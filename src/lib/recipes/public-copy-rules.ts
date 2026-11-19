@@ -23,6 +23,7 @@ type CopyMeasurement = {
   amount_max: number | null;
   unit_code: string | null;
   picklist_value_id: null;
+  amount_is_a: boolean;
 };
 
 type CopyIngredientRow = {
@@ -187,6 +188,7 @@ export function buildPublicRecipeCopyPayload(
       amount_max: measurement.amount_max,
       unit_code: measurement.unit_code,
       picklist_value_id: null,
+      amount_is_a: measurement.amount_is_a ?? false,
     })),
   }));
   const steps = source.recipe.steps.map((step, position) => {

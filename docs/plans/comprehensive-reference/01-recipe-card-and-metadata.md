@@ -28,8 +28,8 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Occasion Details**    | Free text                                      | Text string describing the occasion                                                                                              | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected.                                                                                                                                                                                                                                                                                   |
 | **Reason**              | Single-line text                               | Text string explaining rejection                                                                                                 | Visible **only** when `State == Will not try`.                                                                                                                                                                                                                                                                                                                         |
 | **Equipment**           | Multi-select picklist                          | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc.       | Settings-managed multi-select dropdown; follows Serves on the State row.                                                                                                                                                                                                                                                                                               |
-| **Serves**              | Optional positive integer                      | Number of people served (e.g., `4`)                                                                                              | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling.                                                                                                                                                                                                                                                                  |
-| **Makes**               | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes`                                                                            | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged.                                                                                                                                                                                        |
+| **Serves**              | Optional positive integer                      | Number of people served (e.g., `4`)                                                                                              | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling. Editable numeric input follows the [Numeric Arithmetic contract](../slices/2026-11-numeric-arithmetic.md).                                                                                                                                                              |
+| **Makes**               | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes`                                                                            | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged. Editable numeric input follows the [Numeric Arithmetic contract](../slices/2026-11-numeric-arithmetic.md).                                                                         |
 | **Nutrition**           | Optional estimated nutrient values             | FDA label nutrients and approved optional vitamins/minerals                                                                      | Shown as an italic sans-serif “Nutrition Per Serving” Nutrition Facts-style list after Notes (left of Notes on desktop) when Serves and nutrition values are available; print and downloads use one compact string. Values are estimates from User-entered ingredient profiles and/or whole-recipe overrides, never an external lookup.                                |
 | **Tags**                | Multi-select account-owned tags                | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle             | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17.                                                                                                                                                                                                                       |
 | **Notes**               | Markdown text                                  | Multi-line text                                                                                                                  | Captured gotchas, recipe tweaks, variations, and improvement observations.                                                                                                                                                                                                                                                                                             |
@@ -50,12 +50,13 @@ same type. Time values remain minutes in storage.
   entries. It is zero when no entries exist. Overlapping activities are not
   discounted. Find Recipes retains Total Time filters and its column, but
   removes the former fixed component-time filters and columns.
-- **Expression Input:** A time value accepts integer literals, `+`, `-`, `*`,
-  `/`, and parentheses with ordinary arithmetic precedence. On blur, replace a
-  valid expression with its nearest whole-minute result; half-minute values
-  round up. Do not save the equation. Invalid, incomplete, negative,
-  divide-by-zero, or out-of-range results remain visible as errors and block
-  save. Never evaluate an expression as JavaScript.
+- **Expression Input:** Time values use the shared exact-arithmetic input
+  contract in the [Numeric Arithmetic brief](../slices/2026-11-numeric-arithmetic.md).
+  Evaluate expressions before field normalization; time values then normalize
+  to the nearest whole minute, with ties away from zero, and retain the
+  existing non-negative validation. Do not save the equation. Invalid,
+  incomplete, negative, divide-by-zero, or out-of-range results remain visible
+  as errors and block save. Never evaluate an expression as JavaScript.
 - **Legacy Migration:** Preserve non-null fixed component values as entries
   with their matching default Time Type. If a recipe has no component values
   but has a manual total, create a Cook entry with that value. If component
@@ -179,8 +180,9 @@ same type. Time values remain minutes in storage.
   Publication. Multi-picklist options have a 30px minimum height on desktop and
   36px on mobile. Time-entry controls remain compact; distinct actions
   retain their separately specified hit areas.
-- Time expression fields accept arithmetic input and normalize to a grouped
-  whole-minute value on blur. Invalid expressions remain visible and block save.
+- Time expression fields use exact arithmetic before normalizing to a grouped
+  whole-minute value on blur. Invalid expressions remain visible and block
+  save.
 - Center the Serves number within its 36px input on desktop and mobile.
 - On desktop, the recipe list shows Name, Food Type, State, and Opinion, which
   shows the active Enthusiasm, Verdict, or Reason; Score and active custom

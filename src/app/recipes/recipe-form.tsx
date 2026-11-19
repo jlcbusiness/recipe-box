@@ -49,7 +49,8 @@ import {
   formatGroupedIntegerInput,
   formatQuantityInput,
   parseGroupedInteger,
-  parseQuantityInput,
+  parseMeasurementDraftQuantity,
+  parseScalarQuantityInput,
   serializeMeasurements,
 } from '../../lib/recipes/measurement-rules';
 import {
@@ -60,7 +61,7 @@ import {
 import { normalizePicklistMatchText } from '../../lib/recipes/picklist-rules';
 import {
   clearConditionalValuesForStateChange,
-  formatRecipeDuration,
+  parseMakesInput,
   recipeScoreValues,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
@@ -323,14 +324,19 @@ export function RecipeForm({
         measurements: row.measurements.map((measurement) => ({
           id: measurement.id,
           type: measurement.measurement_type,
-          quantity:
-            measurement.amount_min === null
+          quantity: measurement.amount_is_a
+            ? 'a'
+            : measurement.amount_min === null
               ? ''
               : formatQuantityInput(
                   `${measurement.amount_min}${measurement.amount_max === null ? '' : `-${measurement.amount_max}`}`,
                 ),
           unitCode: measurement.unit_code ?? '',
           picklistValueId: measurement.picklist_value_id ?? '',
+          legacyRange:
+            measurement.amount_min !== null && measurement.amount_max !== null
+              ? { minimum: measurement.amount_min, maximum: measurement.amount_max }
+              : undefined,
         })),
         nutritionServingSizeOverride: row.nutrition_serving_size_override,
         nutritionOverrides: row.nutrition_overrides,
@@ -442,6 +448,7 @@ export function RecipeForm({
   const [serves, setServes] = useState(formatOptionalInteger(recipe?.serves));
   const [makesQuantity, setMakesQuantity] = useState(formatOptionalInteger(recipe?.makes_quantity));
   const [makesThing, setMakesThing] = useState(recipe?.makes_thing ?? '');
+  const [numericFieldsSubmitted, setNumericFieldsSubmitted] = useState(false);
   const [verdictId, setVerdictId] = useState(recipe?.verdict_id ?? '');
   const [score, setScore] = useState(recipe?.score?.toString() ?? '');
   const [enthusiasmId, setEnthusiasmId] = useState(recipe?.enthusiasm_id ?? '');
@@ -454,7 +461,22 @@ export function RecipeForm({
     BigInt(0),
   );
   const totalTimeExceedsLimit = totalTimeMinutes > BigInt(MAX_RECIPE_MINUTES);
-  const parsedServes = serves ? parseGroupedInteger(serves) : null;
+  const parsedServes = serves.trim() ? parseGroupedInteger(serves) : null;
+  const servesError =
+    serves.trim() && (parsedServes === null || parsedServes <= 0)
+      ? 'Serves must be a whole number greater than zero.'
+      : '';
+  const parsedMakesQuantity = makesQuantity.trim() ? parseGroupedInteger(makesQuantity) : null;
+  const makesQuantityError =
+    makesQuantity.trim() && (parsedMakesQuantity === null || parsedMakesQuantity <= 0)
+      ? 'Makes quantity must be a whole number greater than zero.'
+      : numericFieldsSubmitted && !makesQuantity.trim() && makesThing.trim()
+        ? 'Enter both a Makes quantity and thing, or leave both blank.'
+        : '';
+  const makesThingError =
+    numericFieldsSubmitted && makesQuantity.trim() && !makesThing.trim()
+      ? 'Enter both a Makes quantity and thing, or leave both blank.'
+      : '';
   const effectiveServes = parsedServes && parsedServes > 0 ? parsedServes : null;
   const nutritionState = useMemo(() => {
     const ingredientInputs = ingredientRows
@@ -472,7 +494,7 @@ export function RecipeForm({
           measurements: row.measurements.flatMap((measurement) => {
             if (!measurement.type) return [];
             const parsed =
-              measurement.type === 'unmeasured' ? null : parseQuantityInput(measurement.quantity);
+              measurement.type === 'unmeasured' ? null : parseMeasurementDraftQuantity(measurement);
             return [
               {
                 type: measurement.type,
@@ -574,7 +596,7 @@ export function RecipeForm({
             )?.measurement_type;
           let ratio = row.portionOneRatio;
           const firstAmount = row.portionOneAmount
-            ? parseQuantityInput(row.portionOneAmount)
+            ? parseScalarQuantityInput(row.portionOneAmount)
             : null;
           const total = serialized.find(
             (measurement) => measurement.measurement_type === measurementType,
@@ -958,6 +980,22 @@ export function RecipeForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     setSaveNotice('');
+    setNumericFieldsSubmitted(true);
+    if (servesError || 'error' in parseMakesInput(makesQuantity, makesThing)) {
+      event.preventDefault();
+      document
+        .getElementById(
+          servesError
+            ? 'serves'
+            : !makesQuantity.trim() && makesThing.trim()
+              ? 'makes-quantity'
+              : makesQuantity.trim() && !makesThing.trim()
+                ? 'makes-thing'
+                : 'makes-quantity',
+        )
+        ?.focus();
+      return;
+    }
     const availableTimeTypeIds = new Set(timeTypeOptions.map((option) => option.value));
     const evaluatedTimeEntries = timeEntries.map((entry) => {
       let minutes: number | null = null;
@@ -1287,23 +1325,32 @@ export function RecipeForm({
           <label className="recipe-field" htmlFor="serves">
             <span>Serves</span>
             <input
+              aria-describedby={servesError ? 'serves-error' : undefined}
+              aria-invalid={Boolean(servesError) || undefined}
               id="serves"
               min="1"
               name="serves"
-              inputMode="numeric"
+              inputMode="text"
               type="text"
               value={serves}
               onBlur={() => setServes(formatGroupedIntegerInput(serves))}
               onChange={(event) => setServes(event.currentTarget.value)}
             />
+            {servesError && (
+              <span className="recipe-form-error" id="serves-error" role="alert">
+                {servesError}
+              </span>
+            )}
           </label>
           <fieldset className="recipe-field recipe-makes-field">
             <legend>Makes</legend>
             <div className="recipe-makes-inputs">
               <input
                 aria-label="Makes quantity"
+                aria-describedby={makesQuantityError ? 'makes-quantity-error' : undefined}
+                aria-invalid={Boolean(makesQuantityError) || undefined}
                 id="makes-quantity"
-                inputMode="numeric"
+                inputMode="text"
                 name="makes_quantity"
                 placeholder="Qty"
                 type="text"
@@ -1315,6 +1362,8 @@ export function RecipeForm({
               />
               <input
                 aria-label="Makes thing"
+                aria-describedby={makesThingError ? 'makes-thing-error' : undefined}
+                aria-invalid={Boolean(makesThingError) || undefined}
                 id="makes-thing"
                 name="makes_thing"
                 placeholder="What it makes"
@@ -1323,6 +1372,16 @@ export function RecipeForm({
                 onChange={(event) => setMakesThing(event.currentTarget.value)}
               />
             </div>
+            {makesQuantityError && (
+              <p className="recipe-form-error" id="makes-quantity-error" role="alert">
+                {makesQuantityError}
+              </p>
+            )}
+            {makesThingError && (
+              <p className="recipe-form-error" id="makes-thing-error" role="alert">
+                {makesThingError}
+              </p>
+            )}
           </fieldset>
           <MultiPicklist
             category="equipment"
@@ -1383,6 +1442,7 @@ export function RecipeForm({
           rows={ingredientRows}
           ingredientSets={ingredientSets}
           onIngredientSetsChange={setIngredientSets}
+          onAddInformalUnit={(rawValue) => addPicklistOption('informal_unit', rawValue)}
           onRemoveSetRequested={requestIngredientSetRemoval}
           validateMeasurements={Boolean(ingredientRowsError)}
           onDeleteRequested={requestIngredientDeletion}

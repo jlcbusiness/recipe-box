@@ -23,15 +23,19 @@ one trailing empty row.
 2. **Ingredient (Picker):** Desktop cell suggestions show above and align to the left edge of the active cell. The user
    can select an account-owned canonical ingredient or type a new name. Mobile uses the same addable suggestions inside
    its row editor pane; menus remain within the viewport and use the available space above or below the field.
-3. **Quantity (Numeric/Range/Fraction):** Accepts positive decimals, including
+3. **Quantity (Numeric/Fraction):** Accept positive decimals, including
    leading-decimal forms such as `.5`, fraction text (`1/2`, `1 1/4`), and
-   optionally equivalent Unicode fraction glyphs (`½`, `1 ¼`),
-   ranges (`2-3`), and
-   comma-grouped whole-number parts (for example, `1,000` , `1,000 1/2` , or `1,000-2,000` ). Blank for Feel phrases.
-   On blur, the editor preserves exact values expressible with supported fraction denominators as fraction text;
-   other parsed values retain shortest round-trip decimal text instead of being rounded to hundredths. Recipe reading
-   groups thousands and displays supported US customary fractions as Unicode glyphs, while preserving range and
-   unit-system formatting.
+   optionally equivalent Unicode fraction glyphs (`½`, `1 ¼`), plus
+   comma-grouped whole-number parts (for example, `1,000` or `1,000 1/2`).
+   New and edited amounts are scalar; unchanged saved ranges remain readable
+   and survive unrelated recipe saves. Evaluate actual arithmetic expressions
+   exactly before applying the quantity parser and its validation; malformed
+   expressions do not fall through as literals. Blank for Feel phrases.
+   On blur, the editor preserves exact values expressible with supported
+   fraction denominators as fraction text; other parsed values retain shortest
+   round-trip decimal text instead of being rounded to hundredths. Recipe
+   reading groups thousands and displays supported US customary fractions as
+   Unicode glyphs, while preserving legacy-range and unit-system formatting.
 4. **Measurement Category (fixed selector and fields):**
    - **Unit:** The default category. Shows separate Volume amount/unit and Weight amount/unit fields. Either or both
      dimensions may be entered; a slash separates them visually and in recipe display.
@@ -42,8 +46,15 @@ one trailing empty row.
      Packaging and portion words such as can or bag are not units: a 14 oz can is entered as 14 oz under Units.
    - **Things Picker:** Settings-managed extensible picklist of non-standard units: bunch, sprig, clove, head, stalk,
      sheet, stick, slice, handful. Amounts in this category scale but do not convert by default or take part in
-     density; display pluralizes the unit when the amount (or range maximum) exceeds one. A configured DLC 12 measure
-     equivalent lets the private reader switch from Count/Things to its available Volume and/or Weight measures;
+     density; display pluralizes the unit when the amount (or range maximum) exceeds one. Standard view inserts
+     “of” between the unit and ingredient only when the saved unit does not already include it. Ingredients-First
+     shows the ingredient in its own column, so its Things amount omits a trailing “of” (for example, `a bunch`).
+     The editor uses an
+     addable searchable suggestion list; adding a unit updates the account picklist immediately, while assigning it
+     to the recipe remains part of the unsaved draft. An explicit standalone lowercase `a` represents one Thing and
+     is never inferred from numeric `1`; the private and public reader show it only when its marker is present and
+     the effective Things amount is exactly one. A configured DLC 12 measure equivalent lets the private reader
+     switch from Count/Things to its available Volume and/or Weight measures;
      public readers do not expose this Settings data. When both dimensions are available, `Units` reveals both and
      each unit picker can independently switch its slot back to Count/Things. The reader returns to the single
      Count/Things display only when both slots are switched back. When only one dimension is available, show it
@@ -69,7 +80,9 @@ one trailing empty row.
    during cooking. Examples: `diced` , `minced` , `cubed` , `melted` , `room-temperature` , `crushed` , and `sliced` .
    Users can add a preparation while editing; saved values appear in future suggestions. Selecting `cubed`, `diced`,
    or `sliced` reveals the separate Size field and an underlined `in`/`cm` unit toggle there.
-   Positive inch Size values also accept simple and mixed fractions; centimeters remain decimal-only.
+   Positive inch Size values also accept simple and mixed fractions;
+   centimeters remain decimal-only. Both accept expressions under the shared
+   [numeric arithmetic contract](../slices/2026-11-numeric-arithmetic.md).
 7. **Divide:** An optional two-portion allocation independent of Preparation. The Divide field uses the existing first-
    portion input and read-only remainder; it stores one ratio and its complement. Division values are not preparation
    suggestions.
@@ -118,8 +131,15 @@ one trailing empty row.
   - **Servings:** Enter desired servings $S_{target}$. The app computes multiplier $M = S_{target} / S_{base}$.
   - **Multiply:** Enter integer or decimal $j$. Multiplier $M = j$ (displays as $jx$).
   - **Divide:** Enter integer $j$. Multiplier $M = 1/j$ (displays as $1/j$).
+  - Target servings, multiplier, and divisor inputs accept expressions under
+    the shared [numeric arithmetic contract](../slices/2026-11-numeric-arithmetic.md);
+    each mode's existing positive-integer or decimal validation still applies
+    after evaluation.
 - **Quantities Scaled:**
   - All numeric Volume, Weight, Count, and Things quantities multiply by $M$.
+    An explicitly marked one-Thing amount displays as `a` only while the
+    effective Things amount remains exactly one; equivalent Volume or Weight
+    displays remain numeric.
   - Ranges scale both boundaries (e.g., `2-3` eggs at $2x$ becomes `4-6` eggs).
   - Feel items (`to taste`, `as needed`) are not scaled.
 - **Rounding and Fractions:**
@@ -254,7 +274,9 @@ remains decimal-only. Fractions are stored as their numeric equivalents.
   optional user-entered nutrition profile per canonical ingredient. The profile
   uses a positive scalar serving size in one fixed Volume or Weight unit and
   requires Calories. Nutrient amounts are finite and nonnegative; zero is
-  known and blank is unknown.
+  known and blank is unknown. Editable serving-size and nutrient inputs follow
+  the [Numeric Arithmetic contract](../slices/2026-11-numeric-arithmetic.md):
+  evaluate expressions exactly before applying those value constraints.
 - The fixed core fields are Calories; Total Fat, Saturated Fat, Trans Fat,
   Cholesterol, Sodium, Total Carbohydrate, Dietary Fiber, Total Sugars, Added
   Sugars, Protein, Vitamin D, Calcium, Iron, and Potassium. Amount units are

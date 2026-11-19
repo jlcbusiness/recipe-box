@@ -13,7 +13,7 @@ import {
 } from 'react';
 import {
   formatQuantity,
-  parseQuantityInput,
+  parseScalarQuantityInput,
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
@@ -87,8 +87,8 @@ function formatDensityValue(
 }
 
 function densityPreview(draft: DensityDraft): string {
-  const volume = parseQuantityInput(draft.volumeAmount);
-  const weight = parseQuantityInput(draft.weightAmount);
+  const volume = parseScalarQuantityInput(draft.volumeAmount);
+  const weight = parseScalarQuantityInput(draft.weightAmount);
   if (!volume || !weight || volume.maximum !== null || weight.maximum !== null) {
     return '';
   }
@@ -298,8 +298,8 @@ export function IngredientDensityManager({
 
   function saveDraft(restoreFocus = true) {
     if (!draft) return;
-    const volumeQuantity = parseQuantityInput(draft.volumeAmount);
-    const weightQuantity = parseQuantityInput(draft.weightAmount);
+    const volumeQuantity = parseScalarQuantityInput(draft.volumeAmount);
+    const weightQuantity = parseScalarQuantityInput(draft.weightAmount);
     const volumeAmount =
       volumeQuantity && volumeQuantity.maximum === null ? volumeQuantity.minimum : null;
     const weightAmount =
@@ -439,7 +439,7 @@ export function IngredientDensityManager({
             aria-label={`${label} amount`}
             autoComplete="off"
             enterKeyHint={isVolume ? 'next' : 'done'}
-            inputMode="decimal"
+            inputMode="text"
             ref={isVolume ? volumeAmountRef : weightAmountRef}
             type="text"
             value={quantity}

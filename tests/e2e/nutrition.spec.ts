@@ -76,9 +76,17 @@ test('ingredient Settings saves and clears nutrition in the shared pane @e2e @a1
 
     const dialog = page.getByRole('dialog', { name: `Nutrition for ${ingredientName}` });
     await expect(dialog).toBeVisible();
-    await dialog.getByLabel('Serving size amount', { exact: true }).fill('1');
-    await dialog.getByLabel(/Calories/u).fill('360');
-    await dialog.getByLabel(/Protein/u).fill('12');
+    const servingSize = dialog.getByLabel('Serving size amount', { exact: true });
+    const calories = dialog.getByLabel(/Calories/u);
+    await expect(servingSize).toHaveAttribute('inputmode', 'text');
+    await expect(calories).toHaveAttribute('inputmode', 'text');
+    await servingSize.fill('1 + 0');
+    await calories.fill('1 +');
+    await expect(dialog.getByRole('alert')).toContainText(
+      'Enter a finite, nonnegative amount or leave the field blank.',
+    );
+    await calories.fill('120 * 3');
+    await dialog.getByLabel(/Protein/u).fill('6 * 2');
     const zeroEmpty = dialog.getByRole('button', { name: 'Zero Empty Fields' });
     await zeroEmpty.click();
     await expect(dialog.getByLabel('Sodium', { exact: true })).toHaveValue('0');

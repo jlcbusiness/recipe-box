@@ -233,8 +233,11 @@ supports keyboard reordering. A full-width italic “add time” row appends an
 entry. Total is read-only and shows the derived sum. Keep one right-aligned Save
 action immediately after Instructions and before the Time section; do not repeat
 the action in the Total row.
-Serves and time values use comma grouping for thousands; time expressions
-normalize to a whole-minute value on blur. Hide numeric spinner controls; values
+Serves and time values use comma grouping for thousands; time expressions use
+exact arithmetic before normalizing to a whole-minute value on blur. Formula-
+enabled numeric fields use text entry and the standard mobile text keyboard,
+without app-provided operator controls. Show invalid expressions in place and
+block the affected save or apply action. Hide numeric spinner controls; values
 are entered by typing. The
 single-line Reason input remains 36px high, matching
 adjacent recipe fields.
@@ -944,6 +947,10 @@ quantity, Things places a quantity beside its account-managed unit, and Feel
 shows its phrase picker. Quantity fields begin at two characters, grow only for
 entered content, and center their text. Units and category values use compact
 custom listboxes; US and Metric groups are visibly underlined in unit menus.
+Things uses the same searchable, addable suggestion pattern as other recipe
+picklists. Focusing its selected unit selects the text for replacement, and the
+input fits the current value; adding a unit updates the account picklist
+immediately, while assigning it to the recipe remains an unsaved draft.
 
 ### Product direction
 
@@ -1162,7 +1169,13 @@ checkbox rail.
 
 Unit can display volume, weight, or both with `/` separating the dimensions.
 Things pluralize from their maximum range value; `cup` becomes `cups` above one
-while abbreviated fixed units remain unchanged. US customary quantities use
+while abbreviated fixed units remain unchanged. Standard-view Things wording
+inserts “of” between the unit and ingredient only when the saved unit does not
+already include it. Ingredients-First shows the ingredient in its own column,
+so its amount omits a trailing “of” (for example, `a bunch`), including when
+the saved unit label ends in “of”. A marked scalar Things amount displays as `a` only when its
+effective scaled amount is exactly one; numeric `1` is never rewritten, and
+equivalent Volume or Weight displays stay numeric. US customary quantities use
 Unicode glyphs for familiar fractions when close to halves, thirds, quarters,
 or eighths. Quantity editors accept leading decimals such as `.5`, retain exact
 values expressible with supported fraction denominators as fraction text, and

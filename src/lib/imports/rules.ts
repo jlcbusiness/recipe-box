@@ -471,7 +471,11 @@ function validateData(
                   ['nutrition_serving_size_override', 'nutrition_overrides'].includes(field)
                 ),
             )
-          : table === 'recipe_step_mentions' && schemaVersion < 3
+          : table === 'recipe_ingredient_measurements'
+            ? portableRecordFields[table].filter(
+                (field) => schemaVersion >= 13 || field !== 'amount_is_a',
+              )
+            : table === 'recipe_step_mentions' && schemaVersion < 3
             ? portableRecordFields[table].filter((field) => field !== 'portion_ordinal')
             : table === 'media_assets'
               ? portableRecordFields[table].filter(
@@ -488,6 +492,26 @@ function validateData(
       const record = asRecord(item, `The ${table} record at index ${index}`);
       if (Object.keys(record).some((field) => !allowedFields.has(field))) {
         throw new Error(`The ${table} record contains an unsupported field.`);
+      }
+    }
+  }
+
+  const measurements = records.recipe_ingredient_measurements as ExportRecord[];
+  if (schemaVersion < 13) {
+    records.recipe_ingredient_measurements = measurements.map((measurement) => ({
+      ...measurement,
+      amount_is_a: false,
+    }));
+  } else {
+    for (const measurement of measurements) {
+      if (
+        typeof measurement.amount_is_a !== 'boolean' ||
+        (measurement.amount_is_a &&
+          (measurement.measurement_type !== 'informal' ||
+            measurement.amount_min !== 1 ||
+            measurement.amount_max !== null))
+      ) {
+        throw new Error('The bundle contains invalid Things amount marker data.');
       }
     }
   }

@@ -119,22 +119,78 @@
   once on Fold 6; targeted Biome, typecheck, and `git diff --check` pass.
   Chromium emitted non-fatal React streaming warnings on some repeats, but
   those runs completed successfully.
+- 2026-11-18: Completed the numeric-input inventory and prepared the combined
+  C+F brief. The user confirmed that existing quantity ranges should remain
+  readable and unchanged, while new or edited amounts must be scalar. The
+  brief covers exact arithmetic before field normalization, all editable
+  numeric inputs, standalone Things `a`, inline unit addition, and the required
+  persistence/public-data lifecycle. No product code or migration changed.
+  Focused Markdown checks for the brief and intake, local links/headings, and
+  `git diff --check` passed. Full repository Markdown lint reported 32
+  findings, including existing issues outside the new brief and intake.
+
+- 2026-11-18: In response to review, split the C+F implementation scope into
+  separate Numeric Arithmetic and Things briefs while retaining the shared
+  overview. The user chose standard mobile text-keyboard entry without added
+  operator controls, restricted `a` display to Things presentation, and
+  requested explicit coverage that an unchanged legacy range survives an
+  unrelated save. All four planning documents pass focused Markdown and local
+  link checks; the decision log has only its known pre-existing lint finding.
+  No product code or migration changed.
+- 2026-11-18: The user approved both the Numeric Arithmetic and Things briefs.
+  Implementation starts with arithmetic because Things input dispatch reuses
+  its parser; the app's existing text-based ingredient amount input is the
+  closest UI pattern. No product implementation has started yet.
+- 2026-11-18: Completed Numeric Arithmetic implementation and focused
+  verification. Corrected the trusted-density browser assertion to match its
+  live status role; the density and Library Explorer tests now pass in
+  Chromium, and relevant Serves/Makes, scaling, density, and Recipe Count
+  browser checks pass on Fold 6. Typecheck and 133 focused unit tests pass.
+  Updated the arithmetic brief and canonical contracts. The Things slice
+  remains approved but deferred.
+- 2026-11-18: Started the separately approved Things Wording and Addable Units
+  slice after arithmetic verification. Confirmed the shared MeasurementEditor
+  is the desktop/mobile UI reference and reviewed its picklist and the
+  revision-aware add/reuse action. The local app is not currently running, so
+  rendered baseline inspection remains outstanding.
+- 2026-11-18: Completed Things Wording and Addable Units. Explicit `a` is
+  persisted only for Things, inline units are added to the account picklist
+  while recipe assignment remains draft-only, and readers use natural “of”
+  wording. The local migration and 138 focused unit tests passed; focused
+  database and Chromium save/reload tests passed. Desktop editor and mobile
+  reader screenshots were inspected.
+- 2026-11-18: The first responsive browser rerun exposed an outdated
+  “2 bunches cilantro” assertion; updating it to “2 bunches of cilantro”
+  matched the approved wording and both Chromium flows then passed. Typecheck
+  and whitespace checks passed. Biome exited successfully with one unused
+  parameter warning in the existing measurement test; repository Markdown
+  lint still reports 32 findings outside the Things brief and product
+  contracts. A non-fatal Next.js destination-stream error appeared during a
+  passing E2E run; its cause remains unverified.
+- 2026-11-18: Updated Things amount wording by presentation: Standard retains
+  `a <thing> of <ingredient>`, while Ingredients-First shows only `a <thing>`
+  because the ingredient has its own column. Trailing “of” is also omitted
+  from saved Things labels in Ingredients-First. Focused unit and Chromium
+  tests pass; desktop and mobile screenshots confirm the output. The browser
+  test now normalizes its persisted presentation preference before asserting
+  Standard output.
 
 ## Save Point
 
-- **Goal/status:** Package B, D+H, and E implementation and focused validation
-  are complete.
+- **Goal/status:** Packages B, D+H, E, Numeric Arithmetic (#4), and Things
+  Wording and Addable Units (#7/#10) are implemented and verified.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** Focused validation is complete.
-- **Last verified:** The publication flow passed three Chromium repeats and
-  once on Fold 6 after the mobile geometry assertion was made retryable.
-  Targeted Biome, `npm run typecheck`, and `git diff --check` passed. Chromium
-  emitted non-fatal React streaming warnings on some repeats.
-- **Next action:** None for this slice; broader end-to-end testing is optional.
+- **Current step:** The Things implementation and Ingredients-First wording
+  refinement are complete; awaiting selection of the next fix from the intake.
+- **Last verified:** 28 focused ingredient-display unit tests, the Things
+  save/reload Chromium flow, typecheck, and `git diff --check` passed.
+  Desktop and mobile Ingredients-First screenshots were inspected. The local
+  migration, database save/history E2E, and 138 focused unit tests also passed
+  earlier in this slice.
+- **Next action:** Select the next fix to implement, or close this workstream.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); session
-  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; last action: standalone publication
-  Playwright repeats and Fold 6 run, targeted Biome, TypeScript, and final
-  whitespace check.
-- **Trace boundary:** This checkpoint records the recent implementation and
-  verification actions; earlier preparation history remains partial.
+  `83fb1fca-a8d9-4060-aaf4-b5460d739b9a`; latest section records Things
+  Ingredients-First wording verification and remaining Markdown lint findings.
+- **Trace boundary:** The latest section records the Things verification;
+  earlier implementation history remains partial.

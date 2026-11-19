@@ -1020,10 +1020,16 @@ test('Find Recipes Query filters signed Rating values and Rating existence @e2e'
     const ratingRule = page.locator('.recipe-filter-row').first();
     await selectFilterOption(page, ratingRule, 'Field', 'Rating');
     await selectFilterOption(page, ratingRule, 'Operator', '=');
-    const ratingValue = ratingRule.locator('input[type="number"]');
-    await expect(ratingValue).toHaveAttribute('min', '-5');
-    await expect(ratingValue).toHaveAttribute('max', '5');
-    await ratingValue.fill('-3');
+    const ratingValue = ratingRule.getByLabel('Value');
+    await expect(ratingValue).toHaveAttribute('type', 'text');
+    await expect(ratingValue).toHaveAttribute('inputmode', 'text');
+    await ratingValue.fill('-1 * 6');
+    await expect(ratingValue).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('#recipe-filter-number-error')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'apply', exact: true })).toBeDisabled();
+    await ratingValue.fill('-1 * 3');
+    await ratingValue.press('Tab');
+    await expect(ratingValue).toHaveValue('-3');
     await page.getByRole('button', { name: 'apply', exact: true }).click();
 
     await expect(page.getByText('1 recipe found')).toBeVisible();
@@ -1031,7 +1037,7 @@ test('Find Recipes Query filters signed Rating values and Rating existence @e2e'
     await expect(page.getByRole('link', { name: unratedRecipeName })).toHaveCount(0);
 
     await selectFilterOption(page, ratingRule, 'Operator', 'Exists');
-    await expect(ratingRule.locator('input[type="number"]')).toHaveCount(0);
+    await expect(ratingRule.getByLabel('Value')).toHaveCount(0);
     await page.getByRole('button', { name: 'apply', exact: true }).click();
 
     await expect(page.getByText('1 recipe found')).toBeVisible();
@@ -1042,7 +1048,7 @@ test('Find Recipes Query filters signed Rating values and Rating existence @e2e'
     expect(existsFilter).not.toHaveProperty('value');
 
     await selectFilterOption(page, ratingRule, 'Operator', "Doesn't Exist");
-    await expect(ratingRule.locator('input[type="number"]')).toHaveCount(0);
+    await expect(ratingRule.getByLabel('Value')).toHaveCount(0);
     await page.getByRole('button', { name: 'apply', exact: true }).click();
 
     await expect(page.getByText('1 recipe found')).toBeVisible();

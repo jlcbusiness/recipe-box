@@ -17,6 +17,12 @@
 .recipe-form input[inputmode="numeric"] {
   appearance: textfield;
   -moz-appearance: textfield;
+}
+
+.recipe-form input[type="number"],
+.recipe-form input[inputmode="numeric"],
+.recipe-form input[name="serves"],
+.recipe-form input[name="makes_quantity"] {
   text-align: center;
 }
 
@@ -63,6 +69,10 @@
 .recipe-form input[name="serves"] {
   width: 6ch;
   min-height: 36px;
+}
+
+.recipe-form input[aria-invalid="true"] {
+  border-color: var(--tomato);
 }
 
 .recipe-form .recipe-makes-field {

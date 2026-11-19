@@ -1,3 +1,5 @@
+import { parseNumericInput, rationalToNumber, roundRationalToInteger } from '../numeric-expression';
+
 export type MeasurementType = 'volume' | 'weight' | 'count' | 'informal' | 'unmeasured';
 export type MeasurementSystem = 'us_customary' | 'metric';
 export type MeasurementSystemPreference = MeasurementSystem | 'recipe';
@@ -13,6 +15,7 @@ export type MeasurementInput = {
   quantity: string;
   unitCode: string | null;
   picklistValueId: string | null;
+  amountIsA?: boolean;
   parsedQuantity?: ParsedQuantity;
 };
 
@@ -22,6 +25,7 @@ export type MeasurementDraft = {
   quantity: string;
   unitCode: string;
   picklistValueId: string;
+  legacyRange?: ParsedQuantity;
   derivedFromDensity?: boolean;
   derivedQuantity?: ParsedQuantity;
 };
@@ -32,6 +36,7 @@ export type MeasurementPayload = {
   amount_max: number | null;
   unit_code: string | null;
   picklist_value_id: string | null;
+  amount_is_a: boolean;
 };
 
 export type ParsedQuantity = {
@@ -164,6 +169,35 @@ export function parseQuantityInput(value: string): ParsedQuantity | null {
   return { minimum, maximum };
 }
 
+export function parseScalarQuantityInput(value: string): ParsedQuantity | null {
+  const amount = parseNumericInput(
+    value,
+    (literal) => {
+      const parsed = parseQuantityInput(literal);
+      return parsed?.maximum === null ? parsed.minimum : null;
+    },
+    rationalToNumber,
+  );
+  return amount !== null && Number.isFinite(amount) && amount > 0
+    ? { minimum: amount, maximum: null }
+    : null;
+}
+
+export function parseMeasurementDraftQuantity(
+  measurement: Pick<
+    MeasurementDraft,
+    'type' | 'quantity' | 'legacyRange' | 'derivedFromDensity' | 'derivedQuantity'
+  >,
+): ParsedQuantity | null {
+  if (measurement.type === 'informal' && measurement.quantity.trim() === 'a') {
+    return { minimum: 1, maximum: null };
+  }
+  if (measurement.derivedFromDensity && measurement.derivedQuantity) {
+    return measurement.derivedQuantity;
+  }
+  return measurement.legacyRange ?? parseScalarQuantityInput(measurement.quantity);
+}
+
 function fractionText(value: number, useUnicodeGlyphs: boolean): string | null {
   const whole = Math.floor(value);
   const fraction = value - whole;
@@ -198,12 +232,20 @@ export function formatGroupedInteger(value: number): string {
 
 export function parseGroupedInteger(value: string): number | null {
   const normalized = value.trim();
-  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(normalized)) {
-    return null;
-  }
-
-  const parsed = Number(normalized.replaceAll(',', ''));
-  return Number.isSafeInteger(parsed) ? parsed : null;
+  return parseNumericInput(
+    normalized,
+    (literal) => {
+      if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(literal)) {
+        return null;
+      }
+      const parsed = Number(literal.replaceAll(',', ''));
+      return Number.isSafeInteger(parsed) ? parsed : null;
+    },
+    (expression) => {
+      const rounded = Number(roundRationalToInteger(expression));
+      return Number.isSafeInteger(rounded) ? rounded : null;
+    },
+  );
 }
 
 export function formatGroupedIntegerInput(value: string): string {
@@ -326,6 +368,9 @@ export function validateMeasurementSet(measurements: MeasurementInput[]): string
   }
 
   for (const measurement of measurements) {
+    if (measurement.amountIsA && measurement.type !== 'informal') {
+      return 'Use a only as a standalone Things amount of one.';
+    }
     if (measurement.type === 'unmeasured') {
       if (measurement.quantity.trim() || measurement.unitCode || !measurement.picklistValueId) {
         return 'Choose an Unmeasured phrase without a numeric amount or unit.';
@@ -333,8 +378,13 @@ export function validateMeasurementSet(measurements: MeasurementInput[]): string
       continue;
     }
 
-    if (!(measurement.parsedQuantity ?? parseQuantityInput(measurement.quantity))) {
-      return 'Enter a positive whole number, decimal, fraction, mixed number, or range.';
+    const parsedQuantity =
+      measurement.parsedQuantity ?? parseScalarQuantityInput(measurement.quantity);
+    if (!parsedQuantity) {
+      return 'Enter a positive number, decimal, fraction, mixed number, or arithmetic expression.';
+    }
+    if (measurement.amountIsA && (parsedQuantity.minimum !== 1 || parsedQuantity.maximum !== null)) {
+      return 'Use a only as a standalone Things amount of one.';
     }
 
     if (measurement.type === 'volume') {
@@ -387,12 +437,16 @@ export function serializeMeasurements(drafts: MeasurementDraft[]): MeasurementPa
     if (!draft.type) {
       throw new Error('Choose a measurement type.');
     }
+    const amountIsA = draft.type === 'informal' && draft.quantity.trim() === 'a';
     return {
       type: draft.type,
       quantity: draft.quantity,
       unitCode: draft.unitCode || null,
       picklistValueId: draft.picklistValueId || null,
-      parsedQuantity: draft.derivedFromDensity ? draft.derivedQuantity : undefined,
+      amountIsA,
+      parsedQuantity: amountIsA
+        ? { minimum: 1, maximum: null }
+        : (parseMeasurementDraftQuantity(draft) ?? undefined),
     };
   });
 
@@ -405,13 +459,14 @@ export function serializeMeasurements(drafts: MeasurementDraft[]): MeasurementPa
     const parsed =
       input.type === 'unmeasured'
         ? null
-        : (input.parsedQuantity ?? parseQuantityInput(input.quantity));
+        : (input.parsedQuantity ?? parseScalarQuantityInput(input.quantity));
     return {
       measurement_type: input.type,
       amount_min: parsed?.minimum ?? null,
       amount_max: parsed?.maximum ?? null,
       unit_code: input.unitCode,
       picklist_value_id: input.picklistValueId,
+      amount_is_a: input.amountIsA ?? false,
     };
   });
 }

@@ -105,6 +105,7 @@ export type RecipeMeasurement = {
   amount_max: number | null;
   unit_code: string | null;
   picklist_value_id: string | null;
+  amount_is_a?: boolean;
   picklist_value: string | null;
 };
 
@@ -600,7 +601,7 @@ export async function getRecipe(
     const { data: measurementData, error: measurementError } = await supabase
       .from('recipe_ingredient_measurements')
       .select(
-        'id, recipe_ingredient_id, position, measurement_type, amount_min, amount_max, unit_code, picklist_value_id',
+        'id, recipe_ingredient_id, position, measurement_type, amount_min, amount_max, unit_code, picklist_value_id, amount_is_a',
       )
       .in('recipe_ingredient_id', recipeIngredientIds)
       .order('recipe_ingredient_id')

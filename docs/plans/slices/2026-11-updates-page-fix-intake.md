@@ -1,8 +1,8 @@
 # November 2026 Updates Fixes: Brief and Split Proposal
 
-**Status: Packages B, D+H, and E are implemented. Chromium checks pass; the
-Fold 6 publication test did not reach the zero-time assertions. Other packages
-remain proposals.**
+**Status: Packages B, D+H, and E are implemented and verified in Chromium and
+Fold 6. C+F remains an intake grouping but now has two separate review briefs;
+A and G remain proposals.**
 
 ## Outcome and recommendation
 
@@ -10,11 +10,13 @@ Turn the ten unchecked **Fix** entries from the Updates page into independently
 testable work packages, distinguish current defects from behavior already
 present, and identify the product decisions needed before implementation.
 
-These entries do not share one demonstrable outcome, so they were split into the
-work packages below. **Ingredient-first reader parity** (#2 and #3) was selected,
-briefed, approved, and implemented as the first package. Packages D+H and E
-have since been selected, briefed, approved, and implemented. The other
-packages remain proposals; each needs its own selection, brief, and approval.
+These entries do not all share one demonstrable outcome, so they were split into
+the work packages below. **Ingredient-first reader parity** (#2 and #3) was
+selected, briefed, approved, and implemented as the first package. Packages
+D+H and E have since been selected, briefed, approved, and implemented. The
+user grouped C and F as input consistency. Review identified distinct
+demonstrations and data boundaries, so they now have separate implementation
+briefs under one intake grouping; neither is approved for implementation.
 
 ## Source and original notes
 
@@ -117,35 +119,24 @@ excessive checkbox-to-ingredient gap in either context.
   measures both checkbox gaps, and checks for page-level overflow. Wake-lock
   status, check-off, print, and accessibility behavior remain unchanged.
 
-### C. Trusted-density arithmetic (#4)
+### C+F. Numeric input consistency and Things units (#4, #7, and #10)
 
-**Status:** Open; scope is ambiguous. Density preview currently calls
-`parseQuantityInput`, which accepts quantity syntax but not arithmetic.
-`parseTimeExpression` is an existing expression parser, but it rounds to whole
-minutes; reusing it for density would lose fractional measurement values.
-See the [density manager](../../../src/app/settings/ingredient-density-manager.tsx),
-[`parseQuantityInput`](../../../src/lib/recipes/measurement-rules.ts), and
-[`parseTimeExpression`](../../../src/lib/recipes/time-rules.ts).
+**Status:** Grouped for coordination, split into two reviewable implementation
+briefs. Neither is approved for implementation.
 
-**Proposed outcome if scoped to density:** A person can enter supported
-arithmetic in both the Volume and Weight amount fields of a trusted density.
-Preview and save use the same exact parsed values, preserve supported
-fractional results, and reject malformed, zero, negative, or out-of-range
-values with a visible correction message.
+- **C, Numeric Arithmetic (#4):** extend exact arithmetic to every editable
+  numeric input, update time expressions, use the standard mobile text
+  keyboard, and preserve legacy ranges. See the
+  [Numeric Arithmetic brief](./2026-11-numeric-arithmetic.md).
+- **F, Things Wording and Addable Units (#7 and #10):** support natural “of”
+  wording, inline add/reuse, and explicit standalone `a` with a persisted
+  marker. Show `a` only in Things presentation; converted Volume/Weight values
+  remain numeric. See the [Things brief](./2026-11-things-units.md).
 
-**Open decision:** The note says “all integer fields,” which could mean only
-the two density amounts or every integer-valued field in the app. Do not expand
-quantity grammar across unrelated forms without approval. Decide whether this
-package is density-only or requires a shared expression-entry contract.
-
-**Acceptance criteria after scope is chosen:**
-
-- Unit tests cover operator precedence, parentheses, fractions/decimals if in
-  scope, invalid syntax, division by zero, negative results, and supported
-  precision/range limits.
-- Browser tests verify that preview and saved density values agree and that an
-  invalid expression is announced without persisting a rounded or fallback
-  value.
+The [input-consistency overview](./2026-11-numeric-input-consistency.md)
+records their shared rationale, complete numeric-field inventory, and
+cross-cutting decisions. Separate briefs keep their acceptance and approval
+gates clear.
 
 ### D. Recipe editor spacing and single-set labels (#5 and #9)
 
@@ -166,11 +157,10 @@ See the
 
 ### E. Hide zero total-time labels (#6)
 
-**Status:** Implemented and verified in Chromium. The user chose to omit the
-duration portion for zero in publication Details and Grid. The Fold 6
-publication test did not reach these assertions. Zero was shown as `0 min` in
-both views; the simple List view does not show duration. Other recipe detail
-and finder surfaces already omit non-positive totals. See the
+**Status:** Implemented and verified in Chromium and Fold 6. The user chose to
+omit the duration portion for zero in publication Details and Grid. Zero was
+shown as `0 min` in both views; the simple List view does not show duration.
+Other recipe detail and finder surfaces already omit non-positive totals. See the
 [publication zero-time brief](./2026-11-publication-zero-time.md).
 
 ### F. Natural Things display and addable Things units (#7 and #10)
@@ -245,8 +235,10 @@ Markdown.
 
 ## Suggested split and review gate
 
-These are seven packages after grouping fixes #2/#3, #5/#9, and #7/#10.
-Packages B, D+H, and E are implemented; the other packages remain proposals.
+These are six intake groupings after grouping fixes #2/#3, #5/#9, and #4/#7/#10.
+C+F has two separately reviewable implementation briefs. Packages B, D+H, and
+E are implemented; C, F, A, and G still need their respective review and
+approval gates.
 The updated
 [slice prompt](../../../.github/prompts/slice.prompt.md) permits grouping
 smaller fixes when they do not require significant restructuring. D+H share
@@ -254,8 +246,9 @@ the recipe editor, require no schema change, and retain separate acceptance
 checks. Their behavior choices and approval are recorded in the briefs.
 
 Package **G** remains larger because it adds persisted recipe data and must be
-briefed independently. Packages **C** and **F** also have explicit product
-decisions; D+H and E have review decisions recorded in their briefs.
+briefed independently. C+F remains grouped as a coherent input-consistency
+effort, but its arithmetic and Things implementations are separate outcomes
+with separate briefs and approval gates.
 
 ## Preparation references
 

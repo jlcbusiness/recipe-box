@@ -351,7 +351,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
         ? supabase
             .from('recipe_ingredient_measurements')
             .select(
-              'id, recipe_ingredient_id, position, measurement_type, amount_min, amount_max, unit_code, picklist_value_id',
+              'id, recipe_ingredient_id, position, measurement_type, amount_min, amount_max, unit_code, picklist_value_id, amount_is_a',
             )
             .eq('account_id', recipeRow.account_id)
             .in('recipe_ingredient_id', ingredientRowIds)

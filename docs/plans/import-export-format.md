@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 11 archive contains:
+A version 13 archive contains:
 
 ```text
 manifest.json
@@ -31,7 +31,7 @@ already the official image.
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 11,
+  "schema_version": 13,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "1.0.0",
   "scope": {
@@ -70,7 +70,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 11,
+  "schema_version": 13,
   "scope": {
     "type": "database"
   },
@@ -103,7 +103,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v12; future
+array contains only the normalized product fields selected for v13; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -212,8 +212,12 @@ preserves a valid marker, but rejects an active marker that conflicts with
 another active copy in the destination account; choosing Duplicate clears the
 marker while retaining protected source attribution.
 
+Version 13 adds `amount_is_a` to recipe ingredient measurements. It is true
+only for an informal scalar amount of one; earlier versions import it as false.
+The marker is never inferred from an existing numeric one.
+
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 12, verify all file sizes and checksums before
+accept only versions 1 through 13, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

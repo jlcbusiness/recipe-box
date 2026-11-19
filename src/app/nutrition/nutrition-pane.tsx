@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { parseDecimalInput } from '../../lib/numeric-expression';
 import { volumeUnits, weightUnits } from '../../lib/recipes/measurement-rules';
 import {
   getNutritionValuesForBasis,
@@ -106,12 +107,19 @@ export function NutritionPane({
   const [basis, setBasis] = useState<NutritionBasis | null>(
     () => basisOverride ?? profile?.servingSize ?? null,
   );
+  const [basisAmountInput, setBasisAmountInput] = useState(() => {
+    const initialBasis = basisOverride ?? profile?.servingSize ?? null;
+    return initialBasis ? String(initialBasis.amount) : '';
+  });
   const [hasBasisOverride, setHasBasisOverride] = useState(
     () => mode === 'settings' || (mode === 'ingredient' && (basisOverride !== null || !profile)),
   );
   const [values, setValues] = useState<NutrientValues>(() =>
     mode === 'settings' ? (profile?.nutrients ?? {}) : { ...manualValues },
   );
+  const [numericInputDrafts, setNumericInputDrafts] = useState<
+    Partial<Record<NutrientKey, string>>
+  >({});
   const [manualKeys, setManualKeys] = useState<Set<NutrientKey>>(() => {
     if (mode === 'settings') {
       return new Set(Object.keys(profile?.nutrients ?? {}) as NutrientKey[]);
@@ -240,12 +248,41 @@ export function NutritionPane({
     });
   }
 
+  function updateBasisAmount(raw: string) {
+    setBasisAmountInput(raw);
+    const amount = parseDecimalInput(raw);
+    if (amount === null || amount <= 0) {
+      setError('Enter a positive serving size and supported unit.');
+      return;
+    }
+    updateBasis({ amount });
+    setError('');
+  }
+
+  function commitBasisAmount() {
+    const amount = parseDecimalInput(basisAmountInput);
+    if (amount !== null && amount > 0) {
+      setBasisAmountInput(String(amount));
+    }
+  }
+
   function visibleValue(key: NutrientKey): string {
+    const draft = numericInputDrafts[key];
+    if (draft !== undefined) return draft;
     const value = values[key] ?? autoValues[key];
     return value === undefined ? '' : String(value);
   }
 
   function updateValue(key: NutrientKey, raw: string) {
+    if (raw.trim()) {
+      setNumericInputDrafts((current) => ({ ...current, [key]: raw }));
+    } else {
+      setNumericInputDrafts((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
     setConfirmStaleOverrides(false);
     setStaleKeys([]);
     setEditedKeys((current) => new Set(current).add(key));
@@ -262,8 +299,8 @@ export function NutritionPane({
       });
       return;
     }
-    const amount = Number(raw);
-    if (!Number.isFinite(amount) || amount < 0) {
+    const amount = parseDecimalInput(raw);
+    if (amount === null || !Number.isFinite(amount) || amount < 0) {
       setError('Enter a finite, nonnegative amount or leave the field blank.');
       return;
     }
@@ -273,10 +310,28 @@ export function NutritionPane({
     setActiveOptionalKeys((current) => new Set(current).add(key));
   }
 
-  function commitSave(staleResolution: NutritionPaneSave['staleResolution']) {
+  function commitNumericValue(key: NutrientKey) {
+    const raw = numericInputDrafts[key];
+    if (raw === undefined) return;
+    const amount = parseDecimalInput(raw);
+    if (amount === null || amount < 0) {
+      setError('Enter a finite, nonnegative amount or leave the field blank.');
+      return;
+    }
+    setNumericInputDrafts((current) => ({ ...current, [key]: String(amount) }));
+    setError('');
+  }
+
+  function commitSave(
+    staleResolution: NutritionPaneSave['staleResolution'],
+    basisToSave = basis,
+    normalizedInputs: Partial<NutrientValues> = {},
+  ) {
     const nextValues: NutrientValues = {};
     for (const field of NUTRIENT_DEFINITIONS) {
-      const value = manualKeys.has(field.key) ? values[field.key] : autoValues[field.key];
+      const value = manualKeys.has(field.key)
+        ? (normalizedInputs[field.key] ?? values[field.key])
+        : autoValues[field.key];
       if (value !== undefined) nextValues[field.key] = value;
     }
     if (mode === 'settings' && nextValues.calories === undefined) {
@@ -284,7 +339,7 @@ export function NutritionPane({
       return;
     }
     onSave({
-      basis,
+      basis: basisToSave,
       basisOverride: hasBasisOverride,
       values: nextValues,
       manualKeys: [...manualKeys],
@@ -294,8 +349,24 @@ export function NutritionPane({
   }
 
   function save() {
+    const normalizedInputs: Partial<NutrientValues> = {};
+    for (const [key, raw] of Object.entries(numericInputDrafts) as [NutrientKey, string][]) {
+      const amount = parseDecimalInput(raw);
+      if (amount === null || amount < 0) {
+        setError('Enter a finite, nonnegative amount or leave the field blank.');
+        return;
+      }
+      normalizedInputs[key] = amount;
+    }
+    const parsedBasisAmount = parseDecimalInput(basisAmountInput);
+    const basisToSave =
+      mode === 'recipe'
+        ? basis
+        : basis && parsedBasisAmount !== null && parsedBasisAmount > 0
+          ? { ...basis, amount: parsedBasisAmount }
+          : null;
     if (mode !== 'recipe') {
-      if (!basis || !Number.isFinite(basis.amount) || basis.amount <= 0) {
+      if (!basisToSave) {
         setError('Enter a positive serving size and supported unit.');
         return;
       }
@@ -310,8 +381,8 @@ export function NutritionPane({
         manualKeys.has(field.key) &&
         override !== undefined &&
         !editedKeys.has(field.key) &&
-        basis !== null &&
-        isNutritionFieldOverrideStale(override, basis)
+        basisToSave !== null &&
+        isNutritionFieldOverrideStale(override, basisToSave)
         ? [field.key]
         : [];
     });
@@ -320,7 +391,7 @@ export function NutritionPane({
       setConfirmStaleOverrides(true);
       return;
     }
-    commitSave(null);
+    commitSave(null, basisToSave, normalizedInputs);
   }
 
   function addOptionalNutrient(key: NutrientKey) {
@@ -342,6 +413,11 @@ export function NutritionPane({
       return next;
     });
     setEditedKeys((current) => new Set(current).add(key));
+    setNumericInputDrafts((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
     setValues((current) => {
       const next = { ...current };
       delete next[key];
@@ -537,19 +613,18 @@ export function NutritionPane({
           <input
             aria-label={`${field.label}${isAuto ? `, ${autoDescription}` : ''}${isStale ? ', serving changed' : ''}`}
             id={inputId}
-            inputMode="decimal"
-            min="0"
+            inputMode="text"
             ref={index === 0 && mode === 'recipe' ? firstInputRef : undefined}
             required={field.key === 'calories' && mode !== 'recipe'}
-            step="any"
             style={
               {
                 '--nutrient-chars': Math.max(3, visibleValue(field.key).replace('.', '').length),
               } as CSSProperties
             }
-            type="number"
+            type="text"
             value={visibleValue(field.key)}
             onChange={(event) => updateValue(field.key, event.currentTarget.value)}
+            onBlur={() => commitNumericValue(field.key)}
           />
           <span aria-hidden="true" className={styles.factUnit}>
             {field.unit}
@@ -626,16 +701,12 @@ export function NutritionPane({
                   <input
                     aria-label="Serving size amount"
                     ref={firstInputRef}
-                    inputMode="decimal"
-                    min="0"
+                    inputMode="text"
                     required
-                    step="any"
-                    type="number"
-                    value={basis?.amount ?? ''}
-                    onChange={(event) => {
-                      const amount = event.currentTarget.valueAsNumber;
-                      updateBasis({ amount: Number.isFinite(amount) ? amount : 0 });
-                    }}
+                    type="text"
+                    value={basisAmountInput}
+                    onBlur={commitBasisAmount}
+                    onChange={(event) => updateBasisAmount(event.currentTarget.value)}
                   />
                   <Picklist
                     className={styles.unitPicklist}

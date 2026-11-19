@@ -151,6 +151,7 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
             amount_max: null,
             unit_code: null,
             picklist_value_id: bunchId,
+            amount_is_a: true,
           },
         ],
       },
@@ -184,7 +185,7 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
       { headers: ownerHeaders },
     );
     const recipeRows = (await rowResponse.json()) as { id: string; position: number }[];
-    const measurementRowsUrl = `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=recipe_ingredient_id,position,measurement_type,amount_min,amount_max,unit_code,picklist_value_id&recipe_ingredient_id=in.(${recipeRows.map((row) => row.id).join(',')})&order=recipe_ingredient_id.asc,position.asc`;
+    const measurementRowsUrl = `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=recipe_ingredient_id,position,measurement_type,amount_min,amount_max,unit_code,picklist_value_id,amount_is_a&recipe_ingredient_id=in.(${recipeRows.map((row) => row.id).join(',')})&order=recipe_ingredient_id.asc,position.asc`;
     const allMeasurements = await request.get(measurementRowsUrl, { headers: ownerHeaders });
     const initialMeasurements = await allMeasurements.json();
     expect(initialMeasurements).toEqual(
@@ -209,6 +210,7 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
         expect.objectContaining({
           measurement_type: 'informal',
           picklist_value_id: bunchId,
+          amount_is_a: true,
         }),
         expect.objectContaining({
           measurement_type: 'unmeasured',
@@ -254,6 +256,30 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
           {
             ...ingredientRows[2],
             measurements: [{ ...ingredientRows[2].measurements[0], picklist_value_id: null }],
+          },
+          {
+            name: 'a marker on a count amount',
+            rows: [
+              {
+                ...ingredientRows[1],
+                measurements: [{ ...ingredientRows[1].measurements[0], amount_is_a: true }],
+              },
+            ],
+          },
+          {
+            name: 'a marker on a Things range',
+            rows: [
+              {
+                ...ingredientRows[2],
+                measurements: [
+                  {
+                    ...ingredientRows[2].measurements[0],
+                    amount_max: 2,
+                    amount_is_a: true,
+                  },
+                ],
+              },
+            ],
           },
         ],
       },
@@ -374,6 +400,11 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
       amount_min: 1.5,
       unit_code: 'cup',
     });
+    expect(history[0].after_data.ingredients[2].measurements[0]).toMatchObject({
+      measurement_type: 'informal',
+      amount_min: 1,
+      amount_is_a: true,
+    });
 
     const updatedIngredientRows = ingredientRows.map((row, index) =>
       index === 0
@@ -410,8 +441,95 @@ test('measurement saves are owner-scoped, validated, and included in history @e2
       amount_min: 2,
       unit_code: 'cup',
     });
+    expect(updatedHistory[1].after_data.ingredients[2].measurements[0]).toMatchObject({
+      amount_is_a: true,
+    });
   } finally {
     await deleteTestUser(request, other);
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('unrelated recipe edits preserve legacy measurement ranges and history @e2e @measurements', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const ownerHeaders = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${owner.accessToken}`,
+  };
+
+  try {
+    const createResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
+      headers: ownerHeaders,
+      data: recipePayload('Legacy range preservation', [
+        {
+          ingredient_id: null,
+          ingredient_name: 'Legacy range ingredient',
+          is_main: true,
+          detail: '',
+          preparation: '',
+          measurements: [
+            {
+              measurement_type: 'count',
+              amount_min: 1,
+              amount_max: 2,
+              unit_code: null,
+              picklist_value_id: null,
+            },
+          ],
+        },
+      ]),
+    });
+    expect(createResponse.ok(), await createResponse.text()).toBeTruthy();
+    const [recipe] = (await createResponse.json()) as { id: string; version: number }[];
+
+    await signIn(page, owner.email, owner.password);
+    await page.goto(`/recipes/${recipe.id}/edit`);
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    await expect(page.locator('.recipe-measurement-quantity').first()).toHaveValue('1-2');
+    await page.getByLabel('Notes (Markdown)').fill('An unrelated edit.');
+    await page
+      .locator('.recipe-form-save-row')
+      .getByRole('button', { name: 'Save recipe' })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipe.id}$`));
+
+    const ingredientResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?select=id&recipe_id=eq.${recipe.id}`,
+      { headers: ownerHeaders },
+    );
+    expect(ingredientResponse.ok(), await ingredientResponse.text()).toBeTruthy();
+    const [ingredient] = (await ingredientResponse.json()) as { id: string }[];
+    const measurementResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredient_measurements?select=amount_min,amount_max&recipe_ingredient_id=eq.${ingredient.id}`,
+      { headers: ownerHeaders },
+    );
+    expect(measurementResponse.ok(), await measurementResponse.text()).toBeTruthy();
+    expect(await measurementResponse.json()).toEqual([{ amount_min: 1, amount_max: 2 }]);
+
+    const historyResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_history?select=before_data,after_data&record_id=eq.${recipe.id}&event_type=eq.recipe.updated`,
+      { headers: ownerHeaders },
+    );
+    expect(historyResponse.ok(), await historyResponse.text()).toBeTruthy();
+    const [history] = (await historyResponse.json()) as {
+      before_data: {
+        ingredients: { measurements: { amount_min: number; amount_max: number }[] }[];
+      };
+      after_data: { ingredients: { measurements: { amount_min: number; amount_max: number }[] }[] };
+    }[];
+    expect(history.before_data.ingredients[0].measurements[0]).toMatchObject({
+      amount_min: 1,
+      amount_max: 2,
+    });
+    expect(history.after_data.ingredients[0].measurements[0]).toMatchObject({
+      amount_min: 1,
+      amount_max: 2,
+    });
+  } finally {
     await deleteTestUser(request, owner);
   }
 });
@@ -731,7 +849,7 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
     const portionSeparator = saltDivideCell.locator('.recipe-portion-separator');
     await expect(portionSeparator).toHaveCount(0);
     const cssPixelsPerMillimeter = 96 / 25.4;
-    await firstPortion.fill('1/3');
+    await firstPortion.fill('1 / 3');
     await expect(page.getByRole('status', { name: 'Second portion, row 1' })).toHaveText('⅔ cup');
     await expect(saltDivideCell).toContainText('cup');
     await expect(portionSeparator).toHaveText(':');
@@ -906,8 +1024,10 @@ test('Preparation and Divide stay independent while Size remains tied to Prepara
       name: 'Size unit, row 2: cm. Activate to switch to in',
     });
     await expect(sizeUnitCm).toHaveText('cm');
-    await size.fill('0.5');
-    await expect(size).toHaveValue('0.5');
+    await size.fill('0.2 + 0.3');
+    await expect(size).toHaveAttribute('inputmode', 'text');
+    await expect(size).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(size).toHaveValue('0.2 + 0.3');
     await expect(sizeUnitCm).toBeVisible();
 
     const chickpeaDivideCell = grid.getByRole('cell', { name: 'Divide, row 2' });
@@ -1415,6 +1535,148 @@ test('Diced and Sliced preserve Size while other preparations clear it @e2e @a11
   }
 });
 
+test('Things units can be added inline and explicit a survives save @e2e @measurements', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${user.accessToken}`,
+  };
+  const recipeName = 'Inline Things article';
+  const unitName = `e2e-unit-${Date.now()}`;
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill(recipeName);
+    const grid = page.getByRole('table', { name: 'Recipe ingredients', exact: true });
+
+    async function addThingRow(
+      row: number,
+      ingredientName: string,
+      amount: string,
+      addUnit: boolean,
+    ) {
+      await grid.getByRole('cell', { name: 'Add ingredient row' }).click();
+      const ingredientPicker = page.getByRole('combobox', {
+        name: `Ingredient, row ${row}`,
+      });
+      await ingredientPicker.fill(ingredientName);
+      await ingredientPicker.press('Enter');
+      await ingredientPicker.press('Enter');
+      const typePicker = page.getByRole('combobox', {
+        name: `Ingredient type, row ${row}`,
+      });
+      await typePicker.click();
+      await page.getByRole('listbox').getByRole('option', { name: 'Things', exact: true }).click();
+      await page.getByRole('textbox', { name: `Informal amount, row ${row}` }).fill(amount);
+      const unitPicker = page.getByRole('combobox', { name: `Informal unit, row ${row}` });
+      await unitPicker.fill(unitName);
+      if (addUnit) {
+        const addOption = page.getByRole('option', { name: `Add "${unitName}"`, exact: true });
+        await expect(addOption).toBeVisible();
+        await addOption.click();
+      } else {
+        await page.getByRole('option', { name: unitName, exact: true }).click();
+      }
+      await expect(unitPicker).toHaveValue(unitName);
+    }
+
+    await addThingRow(1, 'Parsley', 'a', true);
+    await addThingRow(2, 'Basil', '2', false);
+    await page.screenshot({ path: testInfo.outputPath('things-editor-desktop.png') });
+
+    const picklistResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id,category,value&account_id=eq.${user.id}&category=eq.informal_unit&value=eq.${unitName}`,
+      { headers },
+    );
+    expect(picklistResponse.ok()).toBeTruthy();
+    expect(await picklistResponse.json()).toMatchObject([
+      { category: 'informal_unit', value: unitName },
+    ]);
+    const unsavedRecipeResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=id&account_id=eq.${user.id}&name=eq.${encodeURIComponent(recipeName)}`,
+      { headers },
+    );
+    expect(unsavedRecipeResponse.ok()).toBeTruthy();
+    expect(await unsavedRecipeResponse.json()).toEqual([]);
+
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(page.getByText(`a ${unitName} of parsley`, { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(`2 ${unitName.replace('unit-', 'units-')} of basil`, { exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
+    if (
+      (await presentationToggle.getAttribute('aria-label')) ===
+      'Ingredient view: Ingredient-first. Activate for Standard.'
+    ) {
+      await presentationToggle.click();
+    }
+    await expect(presentationToggle).toHaveAttribute(
+      'aria-label',
+      'Ingredient view: Standard. Activate for Ingredient-first.',
+    );
+    await expect(page.getByText(`a ${unitName} of parsley`, { exact: true })).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 500 });
+    await expect(page.getByText(`a ${unitName} of parsley`, { exact: true })).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await page.getByText(`a ${unitName} of parsley`, { exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath('things-reader-mobile.png') });
+
+    await presentationToggle.click();
+    const ingredientFirstTable = page.getByRole('table', { name: 'Recipe ingredients' });
+    await expect(ingredientFirstTable).toBeVisible();
+    const mobileAmountCell = ingredientFirstTable
+      .locator('tbody tr')
+      .first()
+      .locator('.recipe-ingredient-column-amount-mobile');
+    await expect(mobileAmountCell).toHaveText(`a ${unitName}`);
+    await expect(mobileAmountCell).not.toContainText('of');
+    await page.screenshot({
+      path: testInfo.outputPath('things-reader-ingredient-first-mobile.png'),
+    });
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    const firstAmountCell = ingredientFirstTable
+      .locator('tbody tr')
+      .first()
+      .locator('.recipe-ingredient-column-volume');
+    await expect(firstAmountCell).toHaveText(`a ${unitName}`);
+    await expect(firstAmountCell).not.toContainText('of');
+    await page.screenshot({
+      path: testInfo.outputPath('things-reader-ingredient-first-desktop.png'),
+    });
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    const amount = page.getByRole('textbox', { name: 'Informal amount, row 1' });
+    await expect(amount).toHaveValue('a');
+    const unitPicker = page.getByRole('combobox', { name: 'Informal unit, row 1' });
+    await unitPicker.focus();
+    await expect
+      .poll(() =>
+        unitPicker.evaluate((input) => [
+          (input as HTMLInputElement).selectionStart,
+          (input as HTMLInputElement).selectionEnd,
+        ]),
+      )
+      .toEqual([0, unitName.length]);
+    await page.keyboard.press('Escape');
+    await expect(unitPicker).toHaveValue(unitName);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('owners enter, view, edit, and reload measurements on desktop and mobile @e2e @a11y @measurements', async ({
   page,
   request,
@@ -1524,7 +1786,12 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
       }
     }
 
-    await addIngredientRow(1, 'Flour', 'units', '1 1/2', 'cup');
+    await addIngredientRow(1, 'Flour', 'units', '1 + 1/2', 'cup');
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveAttribute(
+      'inputmode',
+      'text',
+    );
+    await expect(page.getByRole('textbox', { name: 'Volume amount, row 1' })).toHaveValue('1 1/2');
     await expect(grid.locator('tbody tr[data-row-id]').first().locator('td')).toHaveCount(8);
     await expect(grid.locator('tbody tr[data-row-id]').first().locator('td').nth(0)).toHaveCSS(
       'height',
@@ -1554,7 +1821,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await addIngredientRow(3, 'Butter', 'units', '', '');
     await page.getByRole('textbox', { name: 'Weight amount, row 3' }).fill('4');
     await chooseMeasurementOption('Weight unit, row 3', 'oz');
-    await addIngredientRow(4, 'Eggs', 'count', '2-3', '');
+    await addIngredientRow(4, 'Eggs', 'count', '2 + 1', '');
     await expect(page.getByRole('textbox', { name: 'Count amount, row 4' })).toHaveCSS(
       'text-align',
       'center',
@@ -1565,7 +1832,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await expect(page.getByRole('combobox', { name: 'Ingredient type, row 5' })).toHaveText(
       'Things',
     );
-    await expect(page.getByRole('combobox', { name: 'Informal unit, row 5' })).toHaveText('Bunch');
+    await expect(page.getByRole('combobox', { name: 'Informal unit, row 5' })).toHaveValue('Bunch');
     await expect(page.getByRole('textbox', { name: 'Weight amount, row 5' })).toHaveCount(0);
     await addIngredientRow(6, 'Salt', 'judgment', '', 'To taste');
     await expect(page.getByRole('combobox', { name: 'Ingredient type, row 6' })).toHaveText('Feel');
@@ -1676,7 +1943,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(volumeAmount).toHaveAttribute('aria-invalid', 'true');
     await expect(grid.locator('.recipe-measurement-error[role="alert"]')).toContainText(
-      'Enter a positive whole number, decimal, fraction, mixed number, or range.',
+      'Enter a positive number, decimal, fraction, mixed number, or arithmetic expression.',
     );
     await volumeAmount.fill('1200');
     await expect(page.getByRole('button', { name: 'Save recipe' })).toBeVisible();
@@ -1685,8 +1952,8 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     await expect(page.getByText('1,200 cups / 4 ¼ oz flour', { exact: true })).toBeVisible();
     await expect(page.getByText('1 cup milk', { exact: true })).toBeVisible();
     await expect(page.getByText('4 oz butter', { exact: true })).toBeVisible();
-    await expect(page.getByText('2-3 eggs', { exact: true })).toBeVisible();
-    await expect(page.getByText('2 bunches cilantro', { exact: true })).toBeVisible();
+    await expect(page.getByText('3 eggs', { exact: true })).toBeVisible();
+    await expect(page.getByText('2 bunches of cilantro', { exact: true })).toBeVisible();
     await expect(page.getByText('salt to taste', { exact: true })).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 500 });

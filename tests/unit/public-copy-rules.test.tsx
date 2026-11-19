@@ -133,6 +133,33 @@ describe('public recipe copy payload', () => {
     });
   });
 
+  it('preserves the explicit Things article marker in a copied public recipe', () => {
+    const recipeWithMarkedThing: PublicRecipePayload = {
+      ...recipe,
+      ingredients: recipe.ingredients.map((ingredient) => ({
+        ...ingredient,
+        measurements: ingredient.measurements.map((measurement) => ({
+          ...measurement,
+          measurement_type: 'informal',
+          amount_min: 1,
+          amount_max: null,
+          unit_code: null,
+          amount_is_a: true,
+        })),
+      })),
+    };
+    const payload = buildPublicRecipeCopyPayload(
+      { publicId, authorUsername: 'source-user', recipe: recipeWithMarkedThing, photoSources: [] },
+      createIdFactory(),
+    );
+
+    expect(payload.recipe.p_ingredient_rows[0]?.measurements[0]).toMatchObject({
+      measurement_type: 'informal',
+      amount_min: 1,
+      amount_is_a: true,
+    });
+  });
+
   it('preserves public nutrition, publication attribution, and reference labels only', () => {
     const payload = buildPublicRecipeCopyPayload(
       { publicId, authorUsername: 'source-user', recipe, photoSources: [] },
@@ -186,6 +213,7 @@ describe('public recipe copy payload', () => {
       amount_max: null,
       unit_code: 'cup',
       picklist_value_id: null,
+      amount_is_a: false,
     });
     expect(payload.photos[0]).not.toHaveProperty('full_path');
     expect(payload.photos[0]).not.toHaveProperty('thumbnail_path');

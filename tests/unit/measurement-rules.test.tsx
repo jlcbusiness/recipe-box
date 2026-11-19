@@ -8,6 +8,7 @@ import {
   type MeasurementInput,
   parseGroupedInteger,
   parseQuantityInput,
+  parseScalarQuantityInput,
   serializeMeasurements,
   validateMeasurementSet,
   volumeUnits,
@@ -57,6 +58,89 @@ describe('measurement rules', () => {
     expect(parseQuantityInput(input)).toBeNull();
   });
 
+  it('resolves exact scalar arithmetic without accepting new ranges', () => {
+    expect(parseScalarQuantityInput('0.1 + 0.2')).toEqual({ minimum: 0.3, maximum: null });
+    expect(parseScalarQuantityInput('(1 + 2) / 2')).toEqual({
+      minimum: 1.5,
+      maximum: null,
+    });
+    expect(parseScalarQuantityInput('1 1/2')).toEqual({ minimum: 1.5, maximum: null });
+    expect(parseScalarQuantityInput('½')).toEqual({ minimum: 0.5, maximum: null });
+    expect(parseScalarQuantityInput('1-2')).toBeNull();
+    expect(parseScalarQuantityInput('1 +')).toBeNull();
+    expect(validateMeasurementSet([measurement('count', '1-2')])).not.toBeNull();
+  });
+
+  it('keeps an explicitly entered a as one Things unit without accepting expressions', () => {
+    expect(
+      serializeMeasurements([
+        {
+          id: 'thing-entry',
+          type: 'informal',
+          quantity: ' a ',
+          unitCode: '',
+          picklistValueId: 'thing-unit',
+        },
+      ]),
+    ).toEqual([
+      {
+        measurement_type: 'informal',
+        amount_min: 1,
+        amount_max: null,
+        unit_code: null,
+        picklist_value_id: 'thing-unit',
+        amount_is_a: true,
+      },
+    ]);
+
+    for (const quantity of ['a + 0', 'A']) {
+      expect(() =>
+        serializeMeasurements([
+          {
+            id: 'thing-entry',
+            type: 'informal',
+            quantity,
+            unitCode: '',
+            picklistValueId: 'thing-unit',
+          },
+        ]),
+      ).toThrow();
+    }
+
+    expect(() =>
+      serializeMeasurements([
+        {
+          id: 'count-entry',
+          type: 'count',
+          quantity: 'a',
+          unitCode: '',
+          picklistValueId: '',
+        },
+      ]),
+    ).toThrow();
+  });
+
+  it('does not infer the explicit a marker from a numeric one', () => {
+    expect(
+      serializeMeasurements([
+        {
+          id: 'thing-entry',
+          type: 'informal',
+          quantity: '1',
+          unitCode: '',
+          picklistValueId: 'thing-unit',
+        },
+      ])[0],
+    ).toEqual({
+      measurement_type: 'informal',
+      amount_min: 1,
+      amount_max: null,
+      unit_code: null,
+      picklist_value_id: 'thing-unit',
+      amount_is_a: false,
+    });
+  });
+
   it('formats common fractions and falls back to concise decimals', () => {
     expect(formatQuantity(0.5)).toBe('½');
     expect(formatQuantity(1.5)).toBe('1 ½');
@@ -101,6 +185,9 @@ describe('measurement rules', () => {
     expect(formatGroupedIntegerInput('1234567')).toBe('1,234,567');
     expect(parseGroupedInteger('1,234,567')).toBe(1234567);
     expect(parseGroupedInteger('12,34')).toBeNull();
+    expect(parseGroupedInteger('1 + 2')).toBe(3);
+    expect(parseGroupedInteger('1.5 + 0')).toBe(2);
+    expect(parseGroupedInteger('1 +')).toBeNull();
   });
 
   it('formats editor quantities without rounding away measurement precision', () => {
@@ -141,7 +228,7 @@ describe('measurement rules', () => {
     expect(weightUnits.find(({ code }) => code === 'oz')?.system).toBe('us_customary');
   });
 
-  it('serializes parsed single and ranged measurements for the save RPC', () => {
+  it('serializes scalar measurements and rejects new ranges for the save RPC', () => {
     expect(
       serializeMeasurements([
         {
@@ -159,9 +246,10 @@ describe('measurement rules', () => {
         amount_max: null,
         unit_code: 'cup',
         picklist_value_id: null,
+        amount_is_a: false,
       },
     ]);
-    expect(
+    expect(() =>
       serializeMeasurements([
         {
           id: 'count-entry',
@@ -171,13 +259,31 @@ describe('measurement rules', () => {
           picklistValueId: '',
         },
       ]),
+    ).toThrow(
+      'Enter a positive number, decimal, fraction, mixed number, or arithmetic expression.',
+    );
+  });
+
+  it('preserves an unchanged legacy range when serializing a measurement draft', () => {
+    expect(
+      serializeMeasurements([
+        {
+          id: 'legacy-count',
+          type: 'count',
+          quantity: '1-2',
+          unitCode: '',
+          picklistValueId: '',
+          legacyRange: { minimum: 1, maximum: 2 },
+        },
+      ]),
     ).toEqual([
       {
         measurement_type: 'count',
-        amount_min: 2,
-        amount_max: 3,
+        amount_min: 1,
+        amount_max: 2,
         unit_code: null,
         picklist_value_id: null,
+        amount_is_a: false,
       },
     ]);
   });
@@ -226,6 +332,7 @@ describe('measurement rules', () => {
         amount_max: null,
         unit_code: 'cup',
         picklist_value_id: null,
+        amount_is_a: false,
       },
     ]);
     expect(
@@ -252,6 +359,7 @@ describe('measurement rules', () => {
         amount_max: null,
         unit_code: 'g',
         picklist_value_id: null,
+        amount_is_a: false,
       },
     ]);
     expect(() =>

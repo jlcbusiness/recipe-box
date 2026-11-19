@@ -9,6 +9,7 @@ import type {
   PublicationSearchSortKey,
 } from '../../lib/publications/search';
 import type { PublicationType } from '../../lib/recipes/data';
+import { formatGroupedInteger, parseGroupedInteger } from '../../lib/recipes/measurement-rules';
 import { createUuid } from '../../lib/uuid';
 
 type FilterKind = 'text' | 'enum' | 'multi' | 'number' | 'date';
@@ -120,16 +121,28 @@ function toFilter(draft: DraftFilter): PublicationSearchFilter | null {
   const value = Array.isArray(draft.value) ? '' : draft.value.trim();
   if (!value) return null;
   if (kind === 'number') {
-    const number = Number(value);
-    const upper = Number(draft.valueTo);
-    if (!Number.isFinite(number) || (draft.operator === 'between' && !Number.isFinite(upper))) {
+    const number = parseGroupedInteger(value);
+    const upper = parseGroupedInteger(draft.valueTo);
+    if (
+      number === null ||
+      number < 0 ||
+      (draft.operator === 'between' && (upper === null || upper < 0))
+    ) {
       return null;
+    }
+    if (draft.operator === 'between') {
+      if (upper === null) return null;
+      return {
+        field: draft.field,
+        operator: draft.operator,
+        value: number,
+        value_to: upper,
+      };
     }
     return {
       field: draft.field,
       operator: draft.operator,
       value: number,
-      ...(draft.operator === 'between' ? { value_to: upper } : {}),
     };
   }
 
@@ -192,6 +205,18 @@ export function PublicationFilterBuilder({
     const kind = definitionFor(draft.field)?.kind;
     return Boolean(kind && normalizedFilters[index]);
   });
+  const hasInvalidNumericValue = drafts.some((draft) => {
+    if (definitionFor(draft.field)?.kind !== 'number') return false;
+    const value = Array.isArray(draft.value) ? '' : draft.value.trim();
+    const parsedValue = parseGroupedInteger(value);
+    const parsedUpper = parseGroupedInteger(draft.valueTo);
+    return (
+      (Boolean(value) && (parsedValue === null || parsedValue < 0)) ||
+      (draft.operator === 'between' &&
+        Boolean(draft.valueTo.trim()) &&
+        (parsedUpper === null || parsedUpper < 0))
+    );
+  });
 
   function updateDraft(id: string, changes: Partial<DraftFilter>) {
     setDrafts((current) =>
@@ -217,6 +242,15 @@ export function PublicationFilterBuilder({
             />
           ),
       )}
+      {hasInvalidNumericValue && (
+        <p
+          className="publication-filter-number-error"
+          id="publication-filter-number-error"
+          role="alert"
+        >
+          Enter a nonnegative whole number or arithmetic expression for the highlighted filter.
+        </p>
+      )}
 
       <fieldset className="publication-filter-builder">
         <legend>Filter publications</legend>
@@ -225,6 +259,18 @@ export function PublicationFilterBuilder({
           const kind = definition?.kind;
           const noValue = draft.operator === 'is_empty' || draft.operator === 'is_not_empty';
           const between = draft.operator === 'between';
+          const valueText = Array.isArray(draft.value) ? '' : draft.value;
+          const parsedValue = kind === 'number' ? parseGroupedInteger(valueText) : null;
+          const parsedUpper = kind === 'number' ? parseGroupedInteger(draft.valueTo) : null;
+          const invalidValue =
+            kind === 'number' &&
+            Boolean(valueText.trim()) &&
+            (parsedValue === null || parsedValue < 0);
+          const invalidUpper =
+            kind === 'number' &&
+            between &&
+            Boolean(draft.valueTo.trim()) &&
+            (parsedUpper === null || parsedUpper < 0);
           const options =
             draft.field === 'publication_type'
               ? publicationTypeOptions
@@ -314,15 +360,26 @@ export function PublicationFilterBuilder({
                 ) : (
                   <input
                     aria-label={`Value for filter ${index + 1}`}
+                    aria-describedby={
+                      invalidValue || invalidUpper ? 'publication-filter-number-error' : undefined
+                    }
+                    aria-invalid={invalidValue || undefined}
                     disabled={!kind || noValue}
                     id={`publication-filter-value-${draft.id}`}
                     maxLength={kind === 'text' ? 500 : undefined}
-                    min={kind === 'number' ? 0 : undefined}
-                    type={kind === 'date' ? 'date' : kind === 'number' ? 'number' : 'text'}
-                    value={Array.isArray(draft.value) ? '' : draft.value}
+                    inputMode={kind === 'number' ? 'text' : undefined}
+                    type={kind === 'date' ? 'date' : 'text'}
+                    value={valueText}
                     onChange={(event) =>
                       updateDraft(draft.id, { value: event.currentTarget.value })
                     }
+                    onBlur={(event) => {
+                      if (kind !== 'number') return;
+                      const normalized = parseGroupedInteger(event.currentTarget.value);
+                      if (normalized !== null) {
+                        updateDraft(draft.id, { value: formatGroupedInteger(normalized) });
+                      }
+                    }}
                   />
                 )}
               </label>
@@ -331,12 +388,21 @@ export function PublicationFilterBuilder({
                   Through
                   <input
                     aria-label={`Upper value for filter ${index + 1}`}
-                    min={kind === 'number' ? 0 : undefined}
-                    type={kind === 'date' ? 'date' : 'number'}
+                    aria-describedby={invalidUpper ? 'publication-filter-number-error' : undefined}
+                    aria-invalid={invalidUpper || undefined}
+                    inputMode={kind === 'number' ? 'text' : undefined}
+                    type={kind === 'date' ? 'date' : 'text'}
                     value={draft.valueTo}
                     onChange={(event) =>
                       updateDraft(draft.id, { valueTo: event.currentTarget.value })
                     }
+                    onBlur={(event) => {
+                      if (kind !== 'number') return;
+                      const normalized = parseGroupedInteger(event.currentTarget.value);
+                      if (normalized !== null) {
+                        updateDraft(draft.id, { valueTo: formatGroupedInteger(normalized) });
+                      }
+                    }}
                   />
                 </label>
               )}

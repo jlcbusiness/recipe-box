@@ -55,6 +55,10 @@ describe('recipe metadata rules', () => {
       quantity: 1200,
       thing: '  baby cakes  ',
     });
+    expect(parseMakesInput('(1 + 4) / 2', 'cookies')).toEqual({
+      quantity: 3,
+      thing: 'cookies',
+    });
     expect(parseMakesInput('', 'cookies')).toEqual({
       error: 'Enter both a Makes quantity and thing, or leave both blank.',
     });

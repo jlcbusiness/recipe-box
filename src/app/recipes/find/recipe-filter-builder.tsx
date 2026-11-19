@@ -2,6 +2,7 @@
 
 import { ChevronRight, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { parseDecimalInput } from '../../../lib/numeric-expression';
 import {
   type BoundQueryExpression,
   bindQueryExpression,
@@ -12,10 +13,8 @@ import {
   readAdvancedRules,
   renumberQueryExpression,
 } from '../../../lib/query-logic';
-import {
-  STANDARD_NUTRIENT_FIELDS,
-  STANDARD_NUTRIENT_KEYS,
-} from '../../../lib/recipes/nutrition-rules';
+import { formatGroupedInteger, parseGroupedInteger } from '../../../lib/recipes/measurement-rules';
+import { STANDARD_NUTRIENT_FIELDS } from '../../../lib/recipes/nutrition-rules';
 import type { RecipeSearchFilter, RecipeSearchFilterField } from '../../../lib/recipes/search';
 import { createUuid } from '../../../lib/uuid';
 import { Picklist } from '../../picklist';
@@ -82,8 +81,6 @@ const filterDefinitions: FilterDefinition[] = [
   { field: 'created_at', label: 'Date Added', kind: 'date' },
   { field: 'updated_at', label: 'Date Changed', kind: 'date' },
 ];
-
-const standardNutrientFilterFields = new Set<string>(STANDARD_NUTRIENT_KEYS);
 
 const markerOptions: FilterOption[] = [
   { value: 'true', label: 'Yes' },
@@ -208,22 +205,51 @@ function filterValue(filter: DraftFilter, kind: FilterKind): RecipeSearchFilter 
     return { field: filter.field, operator, value: Array.isArray(value) ? value : [value] };
   }
   if (kind === 'number') {
-    if (
-      !Number.isFinite(Number(value)) ||
-      (operator === 'between' && !Number.isFinite(Number(filter.valueTo)))
-    )
-      return null;
+    const number = numericFilterNumber(filter.field, String(value));
+    const upper = operator === 'between' ? numericFilterNumber(filter.field, filter.valueTo) : null;
+    if (number === null || (operator === 'between' && upper === null)) return null;
+    if (operator === 'between') {
+      if (upper === null) return null;
+      return {
+        field: filter.field,
+        operator,
+        value: number,
+        value_to: upper,
+      };
+    }
     return {
       field: filter.field,
       operator,
-      value: Number(value),
-      ...(operator === 'between' ? { value_to: Number(filter.valueTo) } : {}),
+      value: number,
     };
   }
   if (kind === 'date' && operator === 'between') {
     return { field: filter.field, operator, value: String(value), value_to: filter.valueTo };
   }
   return { field: filter.field, operator, value: String(value) };
+}
+
+function numericFilterNumber(field: RecipeSearchFilterField | '', raw: string): number | null {
+  if (!field) return null;
+  const value =
+    field === 'serves' || field === 'total_time_minutes' || field === 'score'
+      ? parseGroupedInteger(raw)
+      : parseDecimalInput(raw);
+  if (value === null) return null;
+  if (field === 'score') return value >= -5 && value <= 5 ? value : null;
+  return value >= 0 ? value : null;
+}
+
+function normalizedNumericFilterText(
+  field: RecipeSearchFilterField | '',
+  raw: string,
+): string | null {
+  if (!field) return null;
+  const value = numericFilterNumber(field, raw);
+  if (value === null) return null;
+  return field === 'serves' || field === 'total_time_minutes' || field === 'score'
+    ? formatGroupedInteger(value)
+    : String(value);
 }
 
 function createDraft(filter: RecipeSearchFilter, index: number): DraftFilter {
@@ -475,6 +501,17 @@ export function RecipeFilterBuilder({
     return Boolean(kind && filterValue(draft, kind));
   }
 
+  const hasInvalidNumericInput = drafts.some((draft) => {
+    if (definitionFor(draft.field)?.kind !== 'number') return false;
+    const value = Array.isArray(draft.value) ? '' : draft.value.trim();
+    return (
+      (Boolean(value) && numericFilterNumber(draft.field, value) === null) ||
+      (draft.operator === 'between' &&
+        Boolean(draft.valueTo.trim()) &&
+        numericFilterNumber(draft.field, draft.valueTo) === null)
+    );
+  });
+
   function requestQuerySubmit() {
     const currentDrafts = draftsRef.current;
     if (!currentDrafts.every(isCompleteDraft) || logicError) return false;
@@ -719,6 +756,15 @@ export function RecipeFilterBuilder({
         const valueToControlId = `${draft.id}-value-to`;
         const isMobileExpanded = expandedRuleIds.has(draft.id);
         const inputValue = Array.isArray(draft.value) ? '' : draft.value;
+        const invalidNumericValue =
+          isNumberValue &&
+          Boolean(inputValue.trim()) &&
+          numericFilterNumber(draft.field, inputValue) === null;
+        const invalidNumericValueTo =
+          isNumberValue &&
+          isBetween &&
+          Boolean(draft.valueTo.trim()) &&
+          numericFilterNumber(draft.field, draft.valueTo) === null;
         const expandedInputWidth = (value: string) =>
           `calc(${Math.max(kind === 'date' ? 10 : kind === 'number' ? 4 : 1, value.length)}ch + 24px)`;
         const selectedMarkerValue = Array.isArray(draft.value)
@@ -858,27 +904,34 @@ export function RecipeFilterBuilder({
                     </Picklist>
                   ) : (
                     <input
-                      aria-describedby={valueChanged ? stagedStatusId : undefined}
+                      aria-describedby={
+                        [
+                          valueChanged ? stagedStatusId : null,
+                          invalidNumericValue || invalidNumericValueTo
+                            ? 'recipe-filter-number-error'
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' ') || undefined
+                      }
+                      aria-invalid={invalidNumericValue || undefined}
                       className={`recipe-filter-value-control${isNumberValue ? ' recipe-filter-number-value-control' : ''}${valueChanged ? ' is-staged-changed' : ''}`}
                       disabled={!kind}
                       id={valueControlId}
                       maxLength={kind === 'text' ? 500 : undefined}
-                      min={draft.field === 'score' ? -5 : kind === 'number' ? 0 : undefined}
-                      max={draft.field === 'score' ? 5 : undefined}
                       required={Boolean(kind)}
-                      step={
-                        draft.field === 'serves' || standardNutrientFilterFields.has(draft.field)
-                          ? 'any'
-                          : kind === 'number'
-                            ? 1
-                            : undefined
-                      }
-                      type={kind === 'number' ? 'number' : kind === 'date' ? 'date' : 'text'}
+                      inputMode={kind === 'number' ? 'text' : undefined}
+                      type={kind === 'number' ? 'text' : kind === 'date' ? 'date' : 'text'}
                       style={
                         isMobileExpanded ? { width: expandedInputWidth(inputValue) } : undefined
                       }
                       value={inputValue}
                       onChange={(event) => updateDraft(draft.id, { value: event.target.value })}
+                      onBlur={() => {
+                        if (!isNumberValue) return;
+                        const normalized = normalizedNumericFilterText(draft.field, inputValue);
+                        if (normalized !== null) updateDraft(draft.id, { value: normalized });
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                           event.preventDefault();
@@ -893,21 +946,35 @@ export function RecipeFilterBuilder({
                         Through
                       </label>
                       <input
-                        aria-describedby={valueToChanged ? stagedStatusId : undefined}
+                        aria-describedby={
+                          [
+                            valueToChanged ? stagedStatusId : null,
+                            invalidNumericValueTo ? 'recipe-filter-number-error' : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' ') || undefined
+                        }
+                        aria-invalid={invalidNumericValueTo || undefined}
                         className={`recipe-filter-value-to-control${isNumberValue ? ' recipe-filter-number-value-to-control' : ''}${valueToChanged ? ' is-staged-changed' : ''}`}
                         id={valueToControlId}
-                        min={draft.field === 'score' ? -5 : kind === 'number' ? 0 : undefined}
-                        max={draft.field === 'score' ? 5 : undefined}
                         required
+                        inputMode={kind === 'number' ? 'text' : undefined}
                         style={
                           isMobileExpanded
                             ? { width: expandedInputWidth(draft.valueTo) }
                             : undefined
                         }
-                        step={draft.field === 'serves' ? 'any' : kind === 'number' ? 1 : undefined}
-                        type={kind === 'number' ? 'number' : 'date'}
+                        type={kind === 'number' ? 'text' : 'date'}
                         value={draft.valueTo}
                         onChange={(event) => updateDraft(draft.id, { valueTo: event.target.value })}
+                        onBlur={() => {
+                          if (!isNumberValue) return;
+                          const normalized = normalizedNumericFilterText(
+                            draft.field,
+                            draft.valueTo,
+                          );
+                          if (normalized !== null) updateDraft(draft.id, { valueTo: normalized });
+                        }}
                       />
                     </>
                   )}
@@ -939,6 +1006,11 @@ export function RecipeFilterBuilder({
         <input name="filter" type="hidden" value={JSON.stringify(expressionFilter)} />
       )}
       {showAutoSelectColumns && <input name="auto_select_columns" type="hidden" value="1" />}
+      {hasInvalidNumericInput && (
+        <p className="recipe-filter-number-error" id="recipe-filter-number-error" role="alert">
+          Enter a valid number or arithmetic expression for the highlighted filter.
+        </p>
+      )}
       <div className="recipe-filter-actions">
         <button
           className="recipe-filter-add"

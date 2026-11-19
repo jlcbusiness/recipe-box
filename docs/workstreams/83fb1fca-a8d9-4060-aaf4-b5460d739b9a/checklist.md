@@ -47,3 +47,29 @@
 - [x] Update the visual/product contracts to match verified behavior.
 - [x] Reconcile the publication test's intermittent mobile geometry assertion
   and complete zero-time verification on Fold 6.
+- [x] Inventory editable numeric entry surfaces and separate them from
+  identifiers, selections, and computed outputs.
+- [x] Split C+F into separate arithmetic and Things implementation briefs
+  under the shared input-consistency overview.
+- [x] Specify standard mobile text-keyboard entry without added operator
+  controls, Things-only display of `a`, and legacy-range preservation tests.
+- [x] Validate the revised briefs and intake links, heading anchors, Markdown,
+  and whitespace; confirm the decision log has only its known prior lint issue.
+- [x] Obtain user review and explicit implementation approval for both briefs.
+- [x] Implement the shared exact arithmetic parser and apply it to every
+  approved numeric input surface, including updated time-expression behavior.
+- [x] Preserve legacy quantity ranges through unrelated recipe saves and reject
+  new ranges or edited range values that are not replaced with scalars.
+- [x] Implement Things wording, explicit `a` persistence/presentation, and
+  inline unit addition through the revision-checked picklist workflow.
+- [x] Update the Numeric Arithmetic brief and canonical product/data-model
+  contracts, with focused arithmetic tests.
+- [x] Update canonical product/data-model contracts and focused tests for the
+  Things slice.
+- [x] Verify numeric entry, legacy-range preservation, and relevant mobile
+  behavior with focused unit and browser checks.
+- [x] Verify Things output, persistence, and mobile behavior with focused unit,
+  database, and browser checks.
+- [x] Keep Things wording presentation-specific: Standard includes “of”;
+  Ingredients-First omits it, including for saved unit labels ending in “of”;
+  verify desktop and mobile output.

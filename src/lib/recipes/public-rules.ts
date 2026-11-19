@@ -147,6 +147,7 @@ export function buildPublicRecipePayload(
         amount_max: measurement.amount_max,
         unit_code: measurement.unit_code,
         picklist_value_id: null,
+        amount_is_a: measurement.amount_is_a ?? false,
         picklist_value: measurement.picklist_value,
       })),
     };

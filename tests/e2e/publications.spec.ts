@@ -612,6 +612,22 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
       .getByRole('button', { name: 'Apply' })
       .click();
     await expect(page).toHaveURL((url) => url.searchParams.getAll('filter').length === 0);
+    await page.getByRole('button', { name: 'Filter Recipe Count' }).click();
+    const recipeCountPopover = page.locator('.publication-column-filter-popover');
+    const recipeCountInput = recipeCountPopover.getByRole('textbox');
+    await expect(recipeCountInput).toHaveAttribute('inputmode', 'text');
+    await recipeCountInput.fill('1 +');
+    await expect(recipeCountInput).toHaveAttribute('aria-invalid', 'true');
+    await expect(recipeCountPopover.getByRole('alert')).toBeVisible();
+    await expect(recipeCountPopover.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    await recipeCountInput.fill('1 + 3');
+    await recipeCountInput.press('Tab');
+    await expect(recipeCountInput).toHaveValue('4');
+    await recipeCountPopover.getByRole('button', { name: 'Apply' }).click();
+    await expect(page).toHaveURL((url) => {
+      const [filter] = url.searchParams.getAll('filter').map((value) => JSON.parse(value));
+      return filter?.field === 'recipe_count' && filter?.value === 4;
+    });
     await page.getByRole('button', { name: 'Choose List columns' }).click();
     const columnOptions = page.getByRole('group', { name: 'List columns' });
     await columnOptions.getByLabel('Tags').check();

@@ -336,6 +336,51 @@ test('recipe time entries calculate, validate, and save in order @e2e', async ({
   }
 });
 
+test('Serves and Makes accept arithmetic and show invalid input @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
+    await page.getByLabel('Name').fill('Arithmetic metadata recipe');
+
+    const serves = page.getByLabel('Serves');
+    await expect(serves).toHaveAttribute('inputmode', 'text');
+    await serves.fill('1 +');
+    await expect(serves).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('#serves-error')).toContainText(
+      'Serves must be a whole number greater than zero.',
+    );
+    await page
+      .locator('.recipe-form-save-row')
+      .getByRole('button', { name: 'Save recipe' })
+      .click();
+    await expect(page).toHaveURL(/\/recipes\/new$/);
+
+    await serves.fill('1 + 3');
+    await serves.press('Tab');
+    await expect(serves).toHaveValue('4');
+    const makesQuantity = page.getByLabel('Makes quantity');
+    await makesQuantity.fill('(1 + 4) / 2');
+    await page.getByLabel('Makes thing').fill('cookies');
+    await expect(makesQuantity).toHaveValue('3');
+
+    await page
+      .locator('.recipe-form-save-row')
+      .getByRole('button', { name: 'Save recipe' })
+      .click();
+    await expect(page.getByRole('heading', { name: 'Arithmetic metadata recipe' })).toBeVisible();
+    await expect(page.locator('.recipe-serves-value')).toContainText('Serves 4');
+    await expect(page.locator('.recipe-makes-value')).toHaveText('3 cookies');
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('recipe save shortcuts keep create and edit forms open @e2e', async ({ page, request }) => {
   const user = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
@@ -540,6 +585,8 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.getByLabel('Makes quantity').fill('3');
     await page.getByLabel('Makes thing').fill('baby cakes');
     await expect(page.getByLabel('Makes quantity')).toHaveAttribute('placeholder', 'Qty');
+    await page.getByLabel('Serves').fill('1200');
+    await expect(page.getByLabel('Serves')).toHaveValue('1200');
     await expect(page.getByLabel('State')).toBeVisible();
     await expect(page.locator('input[name="state"]')).toHaveValue('want_to_try');
     const nameBounds = await page.getByLabel('Name').boundingBox();
@@ -619,6 +666,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       }
     }
     await expect(page.getByLabel('Serves')).toHaveCSS('text-align', 'center');
+    await expect(page.getByLabel('Makes quantity')).toHaveCSS('text-align', 'center');
     if (testInfo.project.name === 'Fold 6') {
       expect(servesBounds?.y).toBeGreaterThan(stateBounds.y);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
@@ -718,7 +766,6 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.getByRole('button', { name: 'Italian', exact: true }).click();
     await selectSinglePicklist(page, 'State', 'Want to Try');
     await selectSinglePicklist(page, 'Enthusiasm', 'Absolutely');
-    await page.getByLabel('Serves').fill('1200');
     await expect(page.getByLabel('Serves')).toHaveValue('1200');
     for (const [index, timeEntry] of [
       { type: 'Prep', minutes: '1015' },
@@ -4669,7 +4716,9 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(scalePane).toHaveCSS('overflow-x', 'hidden');
     await expect(scalePane.getByRole('heading', { name: 'Scale recipe' })).toBeHidden();
     await expect(scalePane.getByRole('button', { name: 'Reset' })).toHaveCount(0);
-    await scalePane.getByLabel('To').fill('8');
+    const targetServings = scalePane.getByLabel('To');
+    await expect(targetServings).toHaveAttribute('inputmode', 'text');
+    await targetServings.fill('4 + 4');
     await scalePane.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText('Serves 8', { exact: true })).toBeVisible();
     await flourMention.hover();
@@ -4771,13 +4820,13 @@ test('recipe detail print matches the active presentation @e2e', async ({
       scaledIngredientText,
     );
     await page.getByRole('button', { name: 'Scale recipe' }).click();
-    await scalePane.getByLabel('To').fill('0');
+    await targetServings.fill('1 / 0');
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(scalePane.getByRole('alert')).toContainText('positive whole serving count');
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
       scaledIngredientText,
     );
-    await scalePane.getByLabel('To').fill('8');
+    await targetServings.fill('4 + 4');
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText('Serves 8', { exact: true })).toBeVisible();
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
@@ -4803,7 +4852,9 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await expect(scaleMode).toContainText('Multiply');
     await expect(scalePane.getByLabel('By')).toBeFocused();
     await expect(scalePane.getByLabel('By')).toHaveValue('2');
-    await scalePane.getByLabel('By').fill('2.5');
+    const scaleFactor = scalePane.getByLabel('By');
+    await expect(scaleFactor).toHaveAttribute('inputmode', 'text');
+    await scaleFactor.fill('5 / 2');
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText('Serves 10', { exact: true })).toBeVisible();
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(
@@ -4813,7 +4864,7 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await page.getByRole('button', { name: 'Scale recipe' }).click();
     await page.getByRole('combobox', { name: 'Scale' }).click();
     await page.getByRole('option', { name: 'Divide' }).click();
-    await scalePane.getByLabel('By').fill('2');
+    await scalePane.getByLabel('By').fill('6 / 3');
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText('Serves 2', { exact: true })).toBeVisible();
     await expect(printIngredient.locator('.recipe-ingredient-name')).toHaveText(

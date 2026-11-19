@@ -156,7 +156,10 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   operators, including blank checks where supported. Multiple filters combine
   with `AND` by default. Find's Query mode optionally combines numbered rules
   with an **Advanced Rules** expression; a visual nested-group builder and
-  named-query lifecycle are not included.
+  named-query lifecycle are not included. Numeric filter values, including
+  each explicit **Between** bound, use the shared exact-arithmetic input
+  contract in the [Numeric Arithmetic brief](../slices/2026-11-numeric-arithmetic.md);
+  **Between** remains a two-bound query operator, not a quantity range.
 - **Advanced Rules:** A pane lists the current numbered Query rules and accepts
   their numbers with parentheses and case-insensitive `AND`, `OR`, and `NOT`.
   Aliases `&&`, `&`, `||`, `|`, `!`, `-and`, `-or`, and `-not` have the same

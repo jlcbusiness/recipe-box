@@ -12,6 +12,7 @@ import {
   useState,
   useTransition,
 } from 'react';
+import { parseDecimalInput } from '../../lib/numeric-expression';
 import { type IngredientDensity, resolveMeasureEquivalent } from '../../lib/recipes/density-rules';
 import { volumeUnits, weightUnits } from '../../lib/recipes/measurement-rules';
 import type { NutritionEquivalent, NutritionProfile } from '../../lib/recipes/nutrition-rules';
@@ -100,9 +101,8 @@ function IngredientEquivalentPane({
   const hasLegacyPair = Boolean(density && equivalent?.volume && equivalent.weight);
   const selectedThing = thingOptions.find((option) => option.id === picklistValueId);
   const sourceAmount = sourceDimension === 'volume' ? volumeAmount : weightAmount;
-  const parsedSourceAmount = Number(sourceAmount);
-  const hasValidSourceAmount =
-    sourceAmount.trim() !== '' && Number.isFinite(parsedSourceAmount) && parsedSourceAmount > 0;
+  const parsedSourceAmount = parseDecimalInput(sourceAmount);
+  const hasValidSourceAmount = parsedSourceAmount !== null && parsedSourceAmount > 0;
   const resolvedEquivalent =
     density && sourceDimension && hasValidSourceAmount
       ? resolveMeasureEquivalent(
@@ -168,12 +168,16 @@ function IngredientEquivalentPane({
       setError('Choose which existing equivalent to keep as the source before saving.');
       return;
     }
-    const enteredVolume = volumeAmount.trim()
-      ? { amount: Number(volumeAmount), unitCode: volumeUnitCode }
-      : null;
-    const enteredWeight = weightAmount.trim()
-      ? { amount: Number(weightAmount), unitCode: weightUnitCode }
-      : null;
+    const parsedVolume = parseDecimalInput(volumeAmount);
+    const parsedWeight = parseDecimalInput(weightAmount);
+    const enteredVolume =
+      volumeAmount.trim() && parsedVolume !== null
+        ? { amount: parsedVolume, unitCode: volumeUnitCode }
+        : null;
+    const enteredWeight =
+      weightAmount.trim() && parsedWeight !== null
+        ? { amount: parsedWeight, unitCode: weightUnitCode }
+        : null;
     const volume =
       density && sourceDimension
         ? sourceDimension === 'volume'
@@ -239,13 +243,17 @@ function IngredientEquivalentPane({
           <input
             aria-describedby={isDerived ? statusId : undefined}
             aria-label={`Average ${label.toLocaleLowerCase()} amount`}
-            inputMode="decimal"
-            min="0"
+            inputMode="text"
             readOnly={isReadOnly}
-            step="any"
-            type="number"
+            type="text"
             value={amount}
             onChange={(event) => updateAmount(dimension, event.currentTarget.value)}
+            onBlur={() => {
+              const normalized = parseDecimalInput(amount);
+              if (normalized !== null) {
+                updateAmount(dimension, String(normalized));
+              }
+            }}
           />
           {isDerived && (
             <>

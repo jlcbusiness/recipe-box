@@ -188,6 +188,34 @@ describe('public recipe projection', () => {
     expect(payload.steps[0]?.content_markdown).not.toContain(assetId);
   });
 
+  it('carries an explicit Things article marker into the public measurement projection', () => {
+    const recipeWithMarkedThing = {
+      ...privateRecipe,
+      ingredients: privateRecipe.ingredients.map((ingredient) => ({
+        ...ingredient,
+        measurements: ingredient.measurements.map((measurement) => ({
+          ...measurement,
+          measurement_type: 'informal' as const,
+          amount_min: 1,
+          amount_max: null,
+          unit_code: null,
+          picklist_value_id: null,
+          picklist_value: 'bunch',
+          amount_is_a: true,
+        })),
+      })),
+    };
+
+    const payload = buildPublicRecipePayload(recipeWithMarkedThing, []);
+
+    expect(payload.ingredients[0]?.measurements[0]).toMatchObject({
+      measurement_type: 'informal',
+      amount_min: 1,
+      amount_is_a: true,
+      picklist_value: 'bunch',
+    });
+  });
+
   it('keeps cooking content and approved attribution while excluding private recipe data', () => {
     const sourceWithMeasurementLink = {
       ...privateRecipe,
@@ -240,6 +268,7 @@ describe('public recipe projection', () => {
               amount_max: null,
               unit_code: null,
               picklist_value_id: null,
+              amount_is_a: false,
               picklist_value: null,
             },
           ],

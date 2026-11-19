@@ -14,6 +14,8 @@ describe('parseTimeExpression', () => {
     expect(parseTimeExpression('1 / 2')).toBe(1);
     expect(parseTimeExpression('3 / 2')).toBe(2);
     expect(parseTimeExpression('5 / 2')).toBe(3);
+    expect(parseTimeExpression('0.1 + 0.2')).toBe(0);
+    expect(parseTimeExpression('1.4 + 0.1')).toBe(2);
   });
 
   it('permits negative intermediate results when the final result is non-negative', () => {
@@ -34,7 +36,6 @@ describe('parseTimeExpression', () => {
     '1 / (2 - 2)',
     '1 - 2',
     '2147483648',
-    '1.5',
     '12,00',
     '2 ** 3',
     'globalThis.__timeExpressionProbe = 1',

@@ -11,6 +11,7 @@ import {
   moveIngredientRow,
   moveIngredientRowTo,
   normalizeLegacyDividedPreparation,
+  parseIngredientSizeValue,
   serializeIngredientRows,
   validateIngredientRowUniqueness,
   validateIngredientSize,
@@ -62,6 +63,13 @@ describe('ingredient row rules', () => {
     expect(getPortionRatio(4, 3)).toBeNull();
     expect(allocatePortions(3, 0)).toBeNull();
     expect(allocatePortions(3, 1)).toBeNull();
+  });
+
+  it('resolves Size arithmetic before applying its unit-specific literal rules', () => {
+    expect(parseIngredientSizeValue('1.25 + 0.25', 'cm')).toBe(1.5);
+    expect(parseIngredientSizeValue('1/2 + 1/4', 'in')).toBe(0.75);
+    expect(parseIngredientSizeValue('1/2', 'cm')).toBeNull();
+    expect(parseIngredientSizeValue('1 +', 'in')).toBeNull();
   });
 
   it('formats the selected portion amount for ingredient mentions', () => {
@@ -449,10 +457,61 @@ describe('ingredient row rules', () => {
         ],
       });
 
-    expect(display(1, null, 'Bunch')).toBe('1 bunch herbs');
-    expect(display(2, null, 'Bunch')).toBe('2 bunches herbs');
-    expect(display(1.5, null, 'Sprig')).toBe('1 ½ sprigs herbs');
+    expect(display(1, null, 'Bunch')).toBe('1 bunch of herbs');
+    expect(display(2, null, 'Bunch')).toBe('2 bunches of herbs');
+    expect(display(1.5, null, 'Sprig')).toBe('1 ½ sprigs of herbs');
     expect(display(1, 2, 'Pinch of')).toBe('1-2 pinches of herbs');
+  });
+
+  it('shows the explicit a marker only for a one-Thing display', () => {
+    const display = (
+      measurement_type: 'informal' | 'volume',
+      amount_min: number,
+      amount_is_a: boolean,
+    ) =>
+      formatIngredientDisplay({
+        ingredient_name: 'Herbs',
+        detail: '',
+        preparation: '',
+        measurements: [
+          {
+            measurement_type,
+            amount_min,
+            amount_max: null,
+            unit_code: measurement_type === 'volume' ? 'cup' : null,
+            picklist_value: measurement_type === 'volume' ? null : 'Bunch',
+            amount_is_a,
+          },
+        ],
+      });
+
+    expect(display('informal', 1, true)).toBe('a bunch of herbs');
+    expect(display('informal', 1, false)).toBe('1 bunch of herbs');
+    expect(display('informal', 2, true)).toBe('2 bunches of herbs');
+    expect(display('volume', 1, true)).toBe('1 cup herbs');
+  });
+
+  it('omits a trailing of from Things amounts in ingredient-first display', () => {
+    const ingredient = {
+      ingredient_name: 'Herbs',
+      detail: '',
+      preparation: '',
+      measurements: [
+        {
+          measurement_type: 'informal' as const,
+          amount_min: 1,
+          amount_max: null,
+          unit_code: null,
+          picklist_value: 'Pinch of',
+          amount_is_a: true,
+        },
+      ],
+    };
+
+    expect(getIngredientDisplayParts(ingredient, { includeInformalOf: false }).amount).toBe(
+      'a pinch',
+    );
+    expect(formatIngredientDisplay(ingredient)).toBe('a pinch of herbs');
   });
 
   it('moves a row by its stable ID without changing its content', () => {
@@ -573,6 +632,7 @@ describe('ingredient row rules', () => {
             amount_max: null,
             unit_code: 'cup',
             picklist_value_id: null,
+            amount_is_a: false,
           },
         ],
       },
@@ -655,6 +715,7 @@ describe('ingredient row rules', () => {
             amount_max: null,
             unit_code: 'cup',
             picklist_value_id: null,
+            amount_is_a: false,
           },
         ],
       },

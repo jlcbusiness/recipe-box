@@ -38,7 +38,7 @@ function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -1159,7 +1159,7 @@ describe('import bundle validation', () => {
 
     const bundle = validateImportBundleFiles(entries);
     const recipe = bundle.data.records.recipes[0];
-    expect(bundle.data.schema_version).toBe(12);
+    expect(bundle.data.schema_version).toBe(13);
     expect(recipe).not.toHaveProperty('prep_time_minutes');
     expect(recipe.total_time_minutes).toBe(40);
     expect(bundle.data.records.recipe_time_entries).toHaveLength(2);
@@ -1327,6 +1327,53 @@ describe('import bundle validation', () => {
     });
 
     expect(validateImportBundleFiles(entries).data.records.recipe_references).toHaveLength(2);
+  });
+
+  it('defaults the Things article marker to false for legacy measurement bundles', () => {
+    const setId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const rowId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const measurementId = '99999999-9999-4999-8999-999999999999';
+    const entries = createBundleEntries({
+      schemaVersion: 12,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        publication_id: null,
+        saved_from_public_id: null,
+        total_time_minutes: 0,
+      },
+      records: {
+        recipe_ingredient_sets: [{ id: setId, recipe_id: recipeId, label: 'Main', position: 0 }],
+        ingredients: [{ id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Lemon' }],
+        recipe_ingredients: [
+          {
+            id: rowId,
+            recipe_id: recipeId,
+            ingredient_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            ingredient_set_id: setId,
+            position: 0,
+            nutrition_serving_size_override: null,
+            nutrition_overrides: {},
+          },
+        ],
+        recipe_ingredient_measurements: [
+          {
+            id: measurementId,
+            recipe_ingredient_id: rowId,
+            position: 0,
+            measurement_type: 'informal',
+            amount_min: 1,
+            amount_max: null,
+            unit_code: null,
+            picklist_value_id: null,
+          },
+        ],
+      },
+    });
+
+    expect(
+      validateImportBundleFiles(entries).data.records.recipe_ingredient_measurements[0],
+    ).toMatchObject({ amount_is_a: false });
   });
 
   it('rejects protected source metadata whose stable URL does not match its public ID', () => {

@@ -60,7 +60,7 @@ event. Updates and events are excluded from account reset and database bundles.
 | Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
 | Ingredient set | A recipe-owned, ordered, named grouping for ingredient rows. |
 | Recipe ingredient | An ordered ingredient row assigned to exactly one ingredient set, with persistent manual order, Main flag, specifics, preparation, measurements, optional two-portion ratio, optional Size for cubed/diced/sliced preparations, an optional recipe-only nutrition serving-size basis, and per-field nutrition overrides with their serving-size basis. |
-| Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. |
+| Measurement | A volume, weight, count (a bare number), Things value (a number with an account-managed non-standard unit word), or Feel phrase attached to one recipe ingredient. Things may also carry an `amount_is_a` marker for an explicitly entered lowercase `a` representing exactly one; it is not inferred from numeric `1`. |
 | Recipe step | An ordered instruction block. |
 | Ingredient mention | A structured link from an instruction location to one recipe ingredient row and optionally one of its two portions. |
 | Instruction photo reference | A stable media-asset identity embedded in a recipe step; it can reference only a ready photo owned by that same recipe. |
@@ -100,6 +100,10 @@ columns.
   same account. Its order is persistent; a recipe's Total Time is derived from
   the sum of its entries, not independently editable. Recipe save, time-entry
   replacement, total derivation, and history capture are atomic.
+- Numeric expressions are input-only: persisted numeric fields contain their
+  resolved, field-normalized values, not the entered equation. Existing
+  measurement ranges retain both bounds when an unrelated recipe edit is saved;
+  replacing an edited range requires a scalar amount.
 - Every recipe has one primary publication. Each account has one permanent,
   system-managed Recipe Tin collection publication for recipes without an
   external publication source; Tin recipes have no publication location.
@@ -131,7 +135,10 @@ columns.
   Feel. Unit maps to the stored volume and/or weight records; Things maps to an
   informal record and Feel maps to an unmeasured record. A Unit row can contain
   volume, weight, or both; all other categories contain only their applicable
-  value.
+  value. `amount_is_a` is valid only for a scalar Things amount of one and
+  defaults to false for older records and bundles. It follows the measurement
+  through save history, public projections, and supported exports; it appears
+  as `a` only when the reader presents Things and the effective amount is one.
 - Main ingredients are derived from recipe-ingredient flags, not duplicated
   recipe metadata.
 - Ingredient nutrition profiles and measure equivalents belong to the

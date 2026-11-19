@@ -1,3 +1,4 @@
+import { parseNumericInput, rationalToNumber } from '../numeric-expression';
 import {
   formatQuantity,
   formatQuantityRange,
@@ -5,6 +6,7 @@ import {
   type MeasurementPayload,
   type MeasurementType,
   parseQuantityInput,
+  parseScalarQuantityInput,
   serializeMeasurements,
   volumeUnits,
   weightUnits,
@@ -58,6 +60,7 @@ export type IngredientDisplayInput = {
     amount_max: number | null;
     unit_code: string | null;
     picklist_value: string | null;
+    amount_is_a?: boolean;
   }[];
 };
 
@@ -78,6 +81,7 @@ export type IngredientDisplayParts = {
 
 export type IngredientDisplayOptions = {
   aliasPinch?: boolean;
+  includeInformalOf?: boolean;
   lowercaseMultiwordName?: boolean;
 };
 
@@ -87,13 +91,23 @@ export function isSizePreparation(preparation: string): boolean {
 
 export function parseIngredientSizeValue(value: string, unit: string): number | null {
   const normalized = value.trim();
-  const decimal = /^(?:\d+(?:\.\d+)?|\.\d+)$/u.test(normalized);
-  const fraction = /^(?:\d+\/\d+|\d+\s+\d+\/\d+)$/u.test(normalized);
-  if (!(unit === 'in' ? decimal || fraction : unit === 'cm' && decimal)) {
+  if (unit !== 'in' && unit !== 'cm') {
     return null;
   }
-  const parsed = parseQuantityInput(normalized);
-  return parsed?.maximum === null ? parsed.minimum : null;
+  const parsed = parseNumericInput(
+    normalized,
+    (literal) => {
+      const decimal = /^(?:\d+(?:\.\d+)?|\.\d+)$/u.test(literal);
+      const fraction = /^(?:\d+\/\d+|\d+\s+\d+\/\d+)$/u.test(literal);
+      if (!(unit === 'in' ? decimal || fraction : decimal)) {
+        return null;
+      }
+      const quantity = parseQuantityInput(literal);
+      return quantity?.maximum === null ? quantity.minimum : null;
+    },
+    rationalToNumber,
+  );
+  return parsed !== null && parsed > 0 ? parsed : null;
 }
 
 export function normalizeLegacyDividedPreparation(
@@ -348,9 +362,16 @@ export function getIngredientDisplayParts(
         measurement.amount_max === null &&
         measurement.amount_min > 1 / 32 &&
         measurement.amount_min < 3 / 32;
+      const quantityIsArticle =
+        measurement.measurement_type === 'informal' &&
+        measurement.amount_is_a === true &&
+        measurement.amount_min === 1 &&
+        measurement.amount_max === null;
       const quantity = isPinch
         ? ''
-        : formatQuantityRange(measurement.amount_min, measurement.amount_max, unit?.system);
+        : quantityIsArticle
+          ? 'a'
+          : formatQuantityRange(measurement.amount_min, measurement.amount_max, unit?.system);
       const unitLabel = isPinch ? 'pinch' : (unit?.abbreviation ?? measurement.picklist_value);
       const unitText = isPinch
         ? 'pinch'
@@ -366,10 +387,21 @@ export function getIngredientDisplayParts(
             : unitLabel
               ? (unit?.abbreviation ?? lowercaseFirst(unitLabel))
               : '';
+      const displayUnitText =
+        measurement.measurement_type === 'informal' && options.includeInformalOf === false
+          ? unitText.replace(/\s*\bof\s*$/iu, '')
+          : unitText;
+      const composedUnitText =
+        measurement.measurement_type === 'informal' &&
+        displayUnitText &&
+        options.includeInformalOf !== false &&
+        !/\bof\b/iu.test(displayUnitText)
+          ? `${displayUnitText} of`
+          : displayUnitText;
       return [
         {
           quantity,
-          unitLabel: unitText || null,
+          unitLabel: composedUnitText || null,
           measurementType: measurement.measurement_type,
           unitCode,
         },
@@ -516,7 +548,9 @@ export function serializeIngredientRows(rows: IngredientRowDraft[]): IngredientR
     const sizeUnit = sizeValue ? (row.sizeUnit?.trim() ?? '') : '';
 
     if (row.portionOneAmount !== undefined) {
-      const firstAmount = hasPortionAmount ? parseQuantityInput(row.portionOneAmount ?? '') : null;
+      const firstAmount = hasPortionAmount
+        ? parseScalarQuantityInput(row.portionOneAmount ?? '')
+        : null;
       const measurement = measurements.find(
         (item) => item.measurement_type === row.portionMeasurementType,
       );

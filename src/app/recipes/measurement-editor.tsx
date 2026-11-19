@@ -2,7 +2,7 @@
 
 import { Calculator } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Fragment, useId, useLayoutEffect, useRef } from 'react';
+import { Fragment, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { RecipePicklistValue } from '../../lib/recipes/data';
 import { deriveDensityCounterpart, type IngredientDensity } from '../../lib/recipes/density-rules';
@@ -11,12 +11,15 @@ import {
   type MeasurementDraft,
   type MeasurementSystem,
   type MeasurementType,
+  parseScalarQuantityInput,
   serializeMeasurements,
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
+import { normalizePicklistMatchText } from '../../lib/recipes/picklist-rules';
 import { createUuid } from '../../lib/uuid';
 import { usePicklistMenu } from '../picklist';
+import { SuggestionCellEditor } from './suggestion-cell-editor';
 
 type MeasurementCategory = 'units' | 'count' | 'informal' | 'judgment';
 
@@ -232,6 +235,7 @@ export function MeasurementEditor({
   layout = 'mobile',
   afterFields,
   onUnitFocus,
+  onAddInformalUnit,
   onChange,
   onCommitRow,
 }: {
@@ -243,12 +247,15 @@ export function MeasurementEditor({
   layout?: 'desktop' | 'mobile';
   afterFields?: ReactNode;
   onUnitFocus?: (type: 'volume' | 'weight') => void;
+  onAddInformalUnit?: (rawValue: string) => Promise<{ valueId?: string; error?: string }>;
   onChange: (measurements: MeasurementDraft[]) => void;
   onCommitRow?: () => void;
 }) {
   const editorId = useId();
   const fieldsContainerRef = useRef<HTMLElement | null>(null);
   const pendingCategoryTabFocusRef = useRef<MeasurementCategory | null>(null);
+  const [informalUnitError, setInformalUnitError] = useState('');
+  const [isAddingInformalUnit, setIsAddingInformalUnit] = useState(false);
   const category = categoryFor(measurements);
   const activeCategory = category ?? 'units';
   let validationError: string | null = null;
@@ -291,10 +298,14 @@ export function MeasurementEditor({
   }
 
   function commitQuantityInput(type: MeasurementType, measurement: MeasurementDraft) {
-    const formattedQuantity = formatQuantityInput(
-      measurement.quantity,
-      quantitySystem(type, measurement.unitCode),
-    );
+    const scalar = parseScalarQuantityInput(measurement.quantity);
+    const formattedQuantity =
+      type === 'informal' && measurement.quantity.trim() === 'a'
+        ? 'a'
+        : formatQuantityInput(
+            scalar ? String(scalar.minimum) : measurement.quantity,
+            quantitySystem(type, measurement.unitCode),
+          );
     let nextMeasurements =
       formattedQuantity !== measurement.quantity
         ? measurements.map((current) =>
@@ -325,6 +336,9 @@ export function MeasurementEditor({
                 ...(Object.hasOwn(update, 'quantity')
                   ? { derivedFromDensity: undefined, derivedQuantity: undefined }
                   : {}),
+                ...(Object.hasOwn(update, 'quantity') && update.quantity !== measurement.quantity
+                  ? { legacyRange: undefined }
+                  : {}),
               }
             : measurement,
         )
@@ -339,6 +353,38 @@ export function MeasurementEditor({
       nextMeasurements = deriveDensityCounterpart(nextMeasurements, sourceType, density);
     }
     onChange(nextMeasurements);
+  }
+
+  async function selectInformalUnit(rawValue: string, options: RecipePicklistValue[]) {
+    const normalizedValue = normalizePicklistMatchText(rawValue);
+    const existing = options.find(
+      (option) => normalizePicklistMatchText(option.display_value) === normalizedValue,
+    );
+    if (existing) {
+      updateMeasurement('informal', { picklistValueId: existing.id });
+      setInformalUnitError('');
+      return;
+    }
+
+    if (!onAddInformalUnit) {
+      setInformalUnitError('Things unit could not be added. Try again.');
+      return;
+    }
+
+    setIsAddingInformalUnit(true);
+    try {
+      const result = await onAddInformalUnit(rawValue);
+      if (!result.valueId) {
+        setInformalUnitError(result.error ?? 'Things unit could not be added. Try again.');
+        return;
+      }
+      updateMeasurement('informal', { picklistValueId: result.valueId });
+      setInformalUnitError('');
+    } catch {
+      setInformalUnitError('Things unit could not be added. Try again.');
+    } finally {
+      setIsAddingInformalUnit(false);
+    }
   }
 
   function renderCategoryPicker() {
@@ -468,21 +514,46 @@ export function MeasurementEditor({
     measurement: MeasurementDraft,
     type: 'informal' | 'unmeasured',
   ) {
+    const selectedValue = options.find((option) => option.id === measurement.picklistValueId);
     return (
       <div className="recipe-measurement-control">
         <span className="visually-hidden">
           {label}, row {rowNumber}
         </span>
-        <MeasurementPicklist
-          label={`${label}, row ${rowNumber}`}
-          prompt={prompt}
-          options={options}
-          selectedId={measurement.picklistValueId}
-          describedBy={describedBy}
-          invalid={Boolean(validationError)}
-          onCommitEnter={onCommitRow}
-          onSelect={(picklistValueId) => updateMeasurement(type, { picklistValueId })}
-        />
+        {type === 'informal' ? (
+          <SuggestionCellEditor
+            label={`${label}, row ${rowNumber}`}
+            value={selectedValue?.display_value ?? ''}
+            options={options.map((option) => option.display_value)}
+            className="recipe-measurement-picklist-trigger"
+            describedBy={describedBy}
+            invalid={Boolean(validationError)}
+            focusOnMount={false}
+            selectOnFocus
+            fitToValue
+            syncValue
+            resetOnCancel
+            errorMessage={informalUnitError}
+            isPending={isAddingInformalUnit}
+            onCommit={() => {}}
+            onSelectSuggestion={(value) => {
+              void selectInformalUnit(value, options);
+            }}
+            onDraftChange={() => setInformalUnitError('')}
+            onCancel={() => setInformalUnitError('')}
+          />
+        ) : (
+          <MeasurementPicklist
+            label={`${label}, row ${rowNumber}`}
+            prompt={prompt}
+            options={options}
+            selectedId={measurement.picklistValueId}
+            describedBy={describedBy}
+            invalid={Boolean(validationError)}
+            onCommitEnter={onCommitRow}
+            onSelect={(picklistValueId) => updateMeasurement(type, { picklistValueId })}
+          />
+        )}
       </div>
     );
   }

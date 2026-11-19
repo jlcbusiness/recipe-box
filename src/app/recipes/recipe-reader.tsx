@@ -29,6 +29,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { parseDecimalInput } from '../../lib/numeric-expression';
 import type {
   RecipeIngredient,
   RecipeIngredientSet,
@@ -46,10 +47,12 @@ import {
   type MeasureEquivalentOverrides,
 } from '../../lib/recipes/measure-equivalent-rules';
 import {
+  formatGroupedInteger,
   formatQuantity,
   type MeasurementSystemPreference,
   type MeasurementType,
   type MeasurementUnit,
+  parseGroupedInteger,
   volumeUnits,
   weightUnits,
 } from '../../lib/recipes/measurement-rules';
@@ -514,7 +517,17 @@ function ReaderScaleButton({ serves }: { serves: number | null }) {
   }
 
   function submit() {
-    const numericValue = Number(to);
+    const numericValue = mode === 'multiply' ? parseDecimalInput(to) : parseGroupedInteger(to);
+    if (numericValue === null) {
+      setError(
+        mode === 'servings'
+          ? 'To must be a positive whole serving count.'
+          : mode === 'multiply'
+            ? 'By must be a positive number.'
+            : 'By must be a positive whole number.',
+      );
+      return;
+    }
     const nextScale: RecipeScale =
       mode === 'servings'
         ? { mode, baseServings: serves, targetServings: numericValue }
@@ -598,13 +611,21 @@ function ReaderScaleButton({ serves }: { serves: number | null }) {
                   aria-invalid={Boolean(error)}
                   aria-describedby={error ? `${panelId}-error` : undefined}
                   className="recipe-scaling-to"
-                  min={mode === 'multiply' ? '0.01' : '1'}
-                  step={mode === 'multiply' ? 'any' : '1'}
-                  type="number"
+                  inputMode="text"
+                  type="text"
                   value={to}
                   onChange={(event) => {
                     setTo(event.currentTarget.value);
                     setError('');
+                  }}
+                  onBlur={() => {
+                    const normalized =
+                      mode === 'multiply' ? parseDecimalInput(to) : parseGroupedInteger(to);
+                    if (normalized !== null) {
+                      setTo(
+                        mode === 'multiply' ? String(normalized) : formatGroupedInteger(normalized),
+                      );
+                    }
                   }}
                 />
               </label>
@@ -1089,6 +1110,7 @@ export function RecipeReader({
     const parts = getIngredientDisplayParts(displayIngredient, {
       aliasPinch: true,
       lowercaseMultiwordName: true,
+      includeInformalOf: presentation !== 'ingredient_first',
     });
     ingredientFirstColumnPresence.volume ||= parts.measurements.some(
       (measurement) =>
@@ -1144,6 +1166,7 @@ export function RecipeReader({
     const parts = getIngredientDisplayParts(portionedIngredient, {
       aliasPinch: true,
       lowercaseMultiwordName: true,
+      includeInformalOf: presentation !== 'ingredient_first',
     });
     const equivalent = preserveStoredUnits ? null : getResolvedMeasureEquivalent(ingredient);
     const sourceMeasurement = ingredient.measurements.find(

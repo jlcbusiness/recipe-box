@@ -1,7 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { parseQuantityInput, volumeUnits, weightUnits } from '../../lib/recipes/measurement-rules';
+import {
+  parseScalarQuantityInput,
+  volumeUnits,
+  weightUnits,
+} from '../../lib/recipes/measurement-rules';
 import { createClient } from '../../lib/supabase/server';
 
 export type IngredientDensityActionState = {
@@ -40,8 +44,10 @@ export async function manageIngredientDensity(
   let volumeAmount: number | null = null;
   let weightAmount: number | null = null;
   if (action === 'set') {
-    const volume = typeof volumeQuantity === 'string' ? parseQuantityInput(volumeQuantity) : null;
-    const weight = typeof weightQuantity === 'string' ? parseQuantityInput(weightQuantity) : null;
+    const volume =
+      typeof volumeQuantity === 'string' ? parseScalarQuantityInput(volumeQuantity) : null;
+    const weight =
+      typeof weightQuantity === 'string' ? parseScalarQuantityInput(weightQuantity) : null;
     if (
       !volume ||
       volume.maximum !== null ||
