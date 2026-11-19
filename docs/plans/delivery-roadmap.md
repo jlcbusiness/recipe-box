@@ -228,6 +228,13 @@ question. Its output is a decision-log entry, not shipped code.
   [Admin Update Change Classification](slices/dlc/dlc-40-admin-update-change-type.md)
   adds Change as a third required classification alongside Fix and Feature.
 
+### Phase 17: Programmatic access to Admin Updates
+
+- **DLC 41 (implemented; local CLI acceptance pending):**
+  [Programmatic Access to Admin Updates](slices/dlc/dlc-41-admin-updates-api.md)
+  proposes a read-only, API-key-authenticated REST endpoint for people,
+  scripts, and Copilot, without making the tracker public.
+
 ## Completion Rule
 
 A slice is complete only when its stated demonstration works, the automated

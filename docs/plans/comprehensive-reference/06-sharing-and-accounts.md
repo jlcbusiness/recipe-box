@@ -261,6 +261,11 @@ delete Admin accounts or transfer Owner status.
   no archive or restore controls and displays previously archived entries as
   ordinary rows. Each saved entry has a trailing X control that asks for
   confirmation before permanently deleting the entry and its audit history.
+- A person, script, or Copilot may read update entries through a dedicated
+  read-only REST endpoint with bearer-key authentication. This does not make
+  the tracker public or grant access to audit history or mutations. The
+  endpoint and shared Vercel Secret lifecycle are defined in
+  [DLC 41](../slices/dlc/dlc-41-admin-updates-api.md).
 - The Updates list has a persistent blank Markdown field at the top. Each row
   has a completion control on the left, a directly editable text field in the
   center, and its required type pill on the right. Moving focus outside a row

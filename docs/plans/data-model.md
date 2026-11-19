@@ -49,6 +49,10 @@ authorization-checking RPCs through the session client. Each mutation appends
 an immutable audit event in the same transaction. Deleting an actor account
 sets its history actor reference to null without deleting the shared update or
 event. Updates and events are excluded from account reset and database bundles.
+The REST API adds a separate bearer-key-authorized, read-only path to update
+entries only; it does not expose audit events or grant mutation access. Its
+credential lifecycle is defined in
+[DLC 41](slices/dlc/dlc-41-admin-updates-api.md).
 
 ## Core Entities
 

@@ -78,7 +78,12 @@ function compareTimestampDescending(leftValue: string, rightValue: string): numb
   return leftValue < rightValue ? 1 : -1;
 }
 
-export function sortAdminUpdates(updates: readonly AdminUpdate[]): AdminUpdate[] {
+type AdminUpdateSortFields = Pick<
+  AdminUpdate,
+  'id' | 'completed_version' | 'completed_at' | 'sort_order'
+>;
+
+export function sortAdminUpdates<T extends AdminUpdateSortFields>(updates: readonly T[]): T[] {
   return [...updates].sort((left, right) => {
     if (left.completed_version === null && right.completed_version !== null) {
       return -1;

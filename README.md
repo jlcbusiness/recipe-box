@@ -317,6 +317,12 @@ existing build cache, then select **Redeploy**. This rebuilds the deployment
 with the saved variables. Repeat these steps after changing Production
 variables; redeploying a Preview deployment will not update Production.
 
+**Optional: Admin Updates API.** To let a trusted script or Copilot integration
+retrieve entries from the Updates tracker, configure the separate
+`ADMIN_UPDATES_API_KEY` Secret. Follow the
+[Admin Updates API setup and usage guide](docs/api/admin-updates.md); this key
+is not required for normal app operation.
+
 ### 6. Limit requests to public recipe links
 
 In the Vercel project, open **Firewall** in the sidebar and configure a new
