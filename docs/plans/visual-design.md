@@ -127,20 +127,21 @@ and full-width metadata groups.
 ### Guiding concepts
 
 - **Text-fit, not equal-width:** Single-choice selects fit their longest option.
-  The Rating selector uses a short em-dash unset prompt so its width is governed
-  by the numeric choices, not a longer placeholder. Metadata and time controls
-  flow left to right and wrap when the viewport runs out of room.
+  Rating is not an edit-form selector; its private detail button uses a compact
+  anchored choice menu. Metadata and time controls flow left to right and wrap
+  when the viewport runs out of room.
 - **A choice is not text selection:** Recipe multi-picklists use the dedicated
   `MultiPicklist` module and open a compact dropdown. Options are toggle buttons,
   not checkboxes or selectable text. One single- or multi-picklist menu is open
   at a time; Escape closes it and returns focus to the trigger.
 - **State is explicit:** Name occupies the first row. State defaults to Want to
-  try; its active Enthusiasm, Verdict, Rating, Reason, or Occasion Details
+  try; its active Enthusiasm, Verdict, Reason, or Occasion Details
   field shares the next row with State, followed by Serves and the paired Makes
   controls under one heading.
-  Tried recipes show Verdict and optional Rating together. The following row
-  holds Food Type, Meal Type, and Cuisine. Equipment follows Makes on the State
-  row.
+  Tried recipes show Verdict in the editor. Rating is changed only from its
+  private detail toolbar control, immediately after Heart and before Share.
+  The following row holds Food Type, Meal Type, and Cuisine. Equipment follows
+  Makes on the State row.
 - **Time is deliberate:** Time entries use compact minute-expression inputs and
   the ingredient/preparation suggestion pattern for Time Type. Focus opens the
   full managed list; typing narrows suggestions, and an explicit Add suggestion
@@ -272,9 +273,9 @@ show the numeric Rating beside those stamps without a visible label. Center the
 Rating and stamps vertically on the title, with equal visual spacing between
 the Rating and Star and between Star and Heart, optically raising the marker
 glyphs as needed; the remaining metadata continues below. Negative numeric
-Ratings use tomato red as a supplementary cue wherever they appear in private
+Ratings use red as a supplementary cue wherever they appear in private
 detail, List, and Grid views.
-Center numeric Rating choices in the recipe-edit picklist. Long titles truncate
+Rating remains numeric in list and grid displays. Long titles truncate
 with an ellipsis before the stamps, with at least 8px of trailing space after
 the rightmost stamp. In simple List rows, show a Rating as its number only while
 retaining a visually hidden “Rating” label for assistive technology. Keep the
@@ -284,13 +285,14 @@ beside the title-side markers; do not duplicate it in a metadata cell.
 On narrow desktop recipe details, let the featured image shrink only as needed
 to keep the action bar within the available heading width.
 Recipe detail follows the edit-form order but uses a distinct view
-order: State and its active response, optional Rating, Occasion Details when
-present, Serves, Makes, Equipment, Food Type, Meal Type, Cuisine, then Notes.
+order: State and its active response, Occasion Details when present, Serves,
+Makes, Equipment, Food Type, Meal Type, Cuisine, then Notes. Its Tried-only
+Rating toolbar control replaces the standalone on-screen value; eligible
+private print retains the numeric Rating.
 Display Equipment labels in lowercase in private and public recipe reading,
 print, and standalone recipe output without changing shared catalog or editor
 labels.
 Total Time leads the separate time breakdown instead of appearing in metadata.
-Center the numeric Rating value beneath its label on desktop and mobile.
 On desktop, Food Type, Meal Type, and Cuisine share their own full-width row.
 Center the fixed vertical rule in the gap between Total Time and the first time
 entry; omit it when there are no time entries.
@@ -1736,18 +1738,39 @@ and Sort Order controls are omitted in Details. Center Rating, Star, and Heart
 headers horizontally within their visible columns while keeping all headers
 vertically centered.
 
-On desktop, the private recipe-detail toolbar places Star and Heart to the left
-of its share, privacy, settings, print, export, duplicate, and edit actions.
+On desktop, the private recipe-detail toolbar places Star and Heart before
+Rating, with Rating immediately before Share. The remaining actions are
+privacy, settings, print, export, duplicate, and edit. Rating uses a 36px
+vector-hand glyph in its matching action frame, not an emoji glyph; match the
+Export glyph's line weight and center the complete signed value, including its
+minus sign, in the palm. Zero uses the filled palm-down hand; the unrated
+recipe action uses an unfilled yellow thumbs-up with `?` centered in the palm.
+Keep the picker's Clear action text-only and reduce its horizontal padding to
+5px per side. The glyph is supplementary. The picker offers the DLC 43
+score/label pairs from 5 at the top to -5 at the bottom, with a separate Clear
+action after them.
 Page Settings uses the filled treatment of Print & Download; Duplicate uses
 the outlined treatment of Edit. Duplicate sits immediately before Edit. On
 mobile, use even 4px gaps between the six first-row actions, keep Can Link at a
 compact 60px width with equal spacing around its label and switch, and put
-Page Settings before Edit in the first row. Put the markers on a second row
-with Duplicate immediately to the right of Heart, swapping the mobile action
-positions and treatments.
-Marker feedback appears below the action row rather than overlapping adjacent
-controls. Column resize handles retain their existing hit area and show one
-centered line.
+Page Settings before Edit in the first row. Put Star, Heart, and Rating in that
+order on the second row, with Duplicate immediately to the right of Rating,
+swapping the mobile action positions and treatments. Vertically center Rating
+with the marker buttons in the second row. Right-align Rating feedback 4px
+beneath the action controls in the shared action-feedback region without
+shifting page content. Dismiss success feedback after five seconds; keep
+pending feedback visible while saving and errors visible until the next action.
+On mobile, keep the photo gallery just below the feedback text and leave the
+feedback background transparent.
+In the Rating picker, tint positive and negative score values and labels with
+slightly darker shades of their associated hand line colors. Right-align only
+the integers, keep labels centered, and center Clear with the other labels.
+Give the desktop picker 10px of left margin and keep it centered on narrow
+screens. Shift only the `Needs work` label slightly right so it balances the
+gaps to `-1` and its checkmark. Use stronger-yellow text for zero and Clear,
+and keep the picker fitted to its compact content with 5px of horizontal space
+on each side.
+Column resize handles retain their existing hit area and show one centered line.
 
 Grid uses responsive 220px minimum columns with 12px gaps; five columns fit
 when the grid has at least 1,148px of usable width. Desktop cards are 234px

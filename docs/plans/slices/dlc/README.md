@@ -172,17 +172,18 @@ while retaining the existing single-image viewer without gallery navigation.
 
 The remaining slices are draft candidates from the Admin Updates backlog,
 ordered approximately by implementation effort. They are not approved or
-scheduled. DLC 42 is implemented and verified.
+scheduled. DLC 42 and DLC 43 are implemented and verified.
 
 - **DLC 42 (implemented; app version 1.15.1):**
   [Admin Update Text Reflow](dlc-42-admin-update-text-reflow.md) moves narrow
   Update text below its controls based on available text width.
-- **DLC 43 (draft candidate):**
-  [Rating Scale Guidance](dlc-43-rating-scale-guidance.md) explains the
-  existing numeric scale without changing its values.
+- **DLC 43 (implemented; app version 1.16.0):**
+  [Rating Labels and Detail Control](dlc-43-rating-scale-guidance.md) adds
+  named choices and an immediate hand-drawn detail control without changing
+  stored score values.
 - **DLC 44 (draft candidate):**
   [Recipe Detail Metadata and Rating](dlc-44-recipe-detail-metadata-and-rating.md)
-  reduces detail metadata and proposes a view-mode Rating action.
+  reduces detail metadata and reuses DLC 43's view-mode Rating control.
 - **DLC 45 (draft candidate):**
   [Prevent Saving an Own Public Recipe](dlc-45-prevent-own-public-recipe-copy.md)
   blocks redundant copies and explains why.
@@ -229,11 +230,10 @@ scheduled. DLC 42 is implemented and verified.
   approved migration maps total-only legacy recipes to Cook, derives totals
   from component entries when present, rounds expression results half-up, and
   retains only Total Time in Find Recipes.
-- DLC 43–49 are independent draft candidates. Resolve each brief's open
+- DLC 44–49 are independent draft candidates. Resolve each brief's open
   decisions and reconcile approved behavior with the comprehensive reference
-  before implementation. In particular, DLC 43 reopens DLC 10's
-  presentation-only rule for Rating meanings, while DLC 44 changes the
-  currently staged Rating interaction.
+  before implementation. DLC 44 must reuse DLC 43's implemented Rating
+  control; it remains a separate metadata-reduction slice.
 
 ## Existing deferrals not assigned a DLC brief
 

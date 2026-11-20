@@ -43,6 +43,11 @@ export type RecipeMarkerActionState = {
   message: string;
 };
 
+export type RecipeRatingActionState = {
+  status: 'idle' | 'success' | 'error';
+  message: string;
+};
+
 type RecipeRelationshipsPayload = {
   site_listing: null;
   pairings: { id: string; display_text: string; linked_recipe_id: string | null }[];
@@ -721,6 +726,66 @@ export async function setRecipeMarker(
   return {
     status: 'success',
     message: `${marker === 'star' ? 'Star' : 'Heart'} ${enabledText === 'true' ? 'added' : 'removed'}.`,
+  };
+}
+
+export async function setRecipeRating(
+  _previousState: RecipeRatingActionState,
+  formData: FormData,
+): Promise<RecipeRatingActionState> {
+  const recipeId = formText(formData, 'recipe_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  const scoreText = formText(formData, 'score');
+  const parsedScore = scoreText ? Number(scoreText) : null;
+  if (
+    !recipeId ||
+    !Number.isSafeInteger(expectedVersion) ||
+    expectedVersion < 1 ||
+    (scoreText &&
+      (parsedScore === null || !Number.isSafeInteger(parsedScore) || !isRecipeScore(parsedScore)))
+  ) {
+    return { status: 'error', message: 'Reload this recipe before changing its Rating.' };
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { status: 'error', message: 'Sign in before changing Rating.' };
+  }
+
+  const score = parsedScore !== null && isRecipeScore(parsedScore) ? parsedScore : null;
+  const { error } = await supabase.rpc('set_recipe_rating', {
+    p_recipe_id: recipeId,
+    p_expected_version: expectedVersion,
+    p_score: score,
+  });
+  if (error) {
+    if (error.code === 'PT409' || error.code === '40001') {
+      return {
+        status: 'error',
+        message: 'This recipe changed in another session. Reload before changing its Rating.',
+      };
+    }
+    if (error.code === 'P0002') {
+      return { status: 'error', message: 'This recipe is no longer available.' };
+    }
+    if (error.code === '22023' || error.code === '23514') {
+      return {
+        status: 'error',
+        message: 'Rating is only available for Tried recipes. Reload this recipe.',
+      };
+    }
+    return { status: 'error', message: 'Unable to update Rating. Try again.' };
+  }
+
+  revalidatePath('/recipes');
+  revalidatePath(`/recipes/${recipeId}`);
+  revalidatePath('/recipes/find');
+  revalidatePath('/publications');
+  revalidatePath('/publications/[id]', 'page');
+  return {
+    status: 'success',
+    message: score === null ? 'Rating cleared.' : 'Rating saved.',
   };
 }
 

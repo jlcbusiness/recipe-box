@@ -62,7 +62,6 @@ import { normalizePicklistMatchText } from '../../lib/recipes/picklist-rules';
 import {
   clearConditionalValuesForStateChange,
   parseMakesInput,
-  recipeScoreValues,
   shouldShowOccasionDetails,
 } from '../../lib/recipes/recipe-rules';
 import { MAX_RECIPE_MINUTES, parseTimeExpression } from '../../lib/recipes/time-rules';
@@ -101,7 +100,7 @@ type RecipeFormProps = {
   recipe?: RecipeRecord;
 };
 
-type RecipeSinglePicklistCategory = 'food_type' | 'state' | 'verdict' | 'enthusiasm' | 'score';
+type RecipeSinglePicklistCategory = 'food_type' | 'state' | 'verdict' | 'enthusiasm';
 type RecipePicklistKey = RecipeMultiSelectCategory | RecipeSinglePicklistCategory;
 type SinglePicklistOption = {
   value: string;
@@ -1192,6 +1191,7 @@ export function RecipeForm({
           <input name="expected_version" type="hidden" value={currentRecipeVersion} />
         </>
       )}
+      <input name="score" type="hidden" value={state === 'tried' ? score : ''} />
       <fieldset className="recipe-metadata-section">
         <legend>Recipe</legend>
         {recipe ? (
@@ -1282,22 +1282,6 @@ export function RecipeForm({
               isOpen={openPicklist === 'verdict'}
               onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'verdict' : null)}
               onChange={(value) => handleSelectionChange('verdict', value)}
-            />
-          )}
-          {state === 'tried' && (
-            <SinglePicklist
-              label="Rating"
-              name="score"
-              menuClassName="recipe-picklist-menu recipe-score-picklist-menu"
-              value={score}
-              placeholder="—"
-              options={recipeScoreValues.map((value) => ({
-                value: String(value),
-                label: String(value),
-              }))}
-              isOpen={openPicklist === 'score'}
-              onOpenChange={(isOpen) => setOpenPicklist(isOpen ? 'score' : null)}
-              onChange={setScore}
             />
           )}
           {state === 'will_not_try' && (

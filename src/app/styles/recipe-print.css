@@ -118,6 +118,10 @@
     gap: 4px 14px;
   }
 
+  .recipe-print-metadata .recipe-detail-rating-print {
+    display: grid;
+  }
+
   .recipe-print-metadata .recipe-metadata > div,
   .recipe-print-metadata-times .recipe-time-list > div,
   .recipe-public-summary .recipe-time-list > div {

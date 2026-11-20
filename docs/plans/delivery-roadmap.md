@@ -240,9 +240,13 @@ question. Its output is a decision-log entry, not shipped code.
 - **DLC 42 (implemented; app version 1.15.1):**
   [Admin Update Text Reflow](slices/dlc/dlc-42-admin-update-text-reflow.md)
   keeps update text readable in narrow containers.
-- **DLC 43–49 (draft candidates):**
+- **DLC 43 (implemented; app version 1.16.0):**
+  [Rating Labels and Detail Control](slices/dlc/dlc-43-rating-scale-guidance.md)
+  adds labeled Rating choices and an immediate private detail control without
+  changing numeric score storage.
+- **DLC 44–49 (draft candidates):**
   [DLC roadmap](slices/dlc/README.md#phase-18-admin-updates-and-recipe-experience-follow-ups)
-  records seven remaining proposed slices. They are not approved or scheduled;
+  records six remaining proposed slices. They are not approved or scheduled;
   resolve each brief's open decisions before implementation.
 
 ## Completion Rule

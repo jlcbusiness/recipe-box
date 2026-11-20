@@ -4,6 +4,17 @@ export type RecipeState = 'want_to_try' | 'tried' | 'will_not_try';
 
 export const recipeScoreValues = [-5, -3, -1, 0, 1, 2, 3, 4, 5] as const;
 export type RecipeScore = (typeof recipeScoreValues)[number];
+export const recipeScoreLabels: Record<RecipeScore, string> = {
+  '-5': 'NO',
+  '-3': 'Bad',
+  '-1': 'Needs work',
+  0: 'Eh',
+  1: 'Okay',
+  2: 'Decent',
+  3: 'Good',
+  4: 'Great',
+  5: 'Amazing',
+};
 
 export type ConditionalRecipeValues = {
   verdictId: string | null;

@@ -196,6 +196,11 @@
     grid-column: 1;
     grid-row: auto;
   }
+
+  .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading
+    > .recipe-photo-gallery {
+    margin-top: 0;
+  }
 }
 
 .recipe-photo-gallery {

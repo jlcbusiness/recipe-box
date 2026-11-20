@@ -403,9 +403,8 @@ section.recipe-detail-section .recipe-relationship-list a {
   overflow-wrap: anywhere;
 }
 
-.recipe-detail-rating-metadata dd {
-  justify-content: center;
-  text-align: center;
+.recipe-detail-rating-print {
+  display: none;
 }
 
 .recipe-detail-score {

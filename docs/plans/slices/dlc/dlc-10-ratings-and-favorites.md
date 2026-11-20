@@ -43,13 +43,13 @@ descriptive labels use **Rating**.
   values are `-5`, `-3`, `-1`, `0`, `1`, `2`, `3`, `4`, and `5`. The selected
   value is cleared when State changes away from Tried, matching the existing
   conditional-response behavior.
-- The negative meanings are `-1` “Needs work,” `-3` “No,” and `-5`
-  “DO NOT TRY.” Zero is neutral. These descriptions explain intended meaning
-  only; the UI presents numeric Rating values and does not include them in
-  option labels, tooltips, Help, or accessible names. Positive values remain
-  numeric; do not invent positive labels. Negative numeric values use tomato red
-  as a supplementary cue wherever Rating appears in private detail and list
-  views.
+- Picker labels, in score order, are `NO`, `Bad`, `Needs work`, `Eh`, `Okay`,
+  `Decent`, `Good`, `Great`, and `Amazing`. Negative intensity is mild at `-1`,
+  definite at `-3`, and emphatic at `-5`; zero is neutral. The private detail
+  control exposes both the signed score and its label to assistive technology.
+  Numeric storage and numeric Rating surfaces remain unchanged. Negative
+  numeric values use red as a supplementary cue wherever Rating appears in
+  private detail and list views.
 - Star means “note this recipe.” Heart means “I love this and want to repeat
   it.” Both are independent boolean markers, may be on together, are available
   in every State, and default off.
@@ -78,10 +78,11 @@ descriptive labels use **Rating**.
   screen-reader labels.
 - Rating, Star, and Heart are private owner data. Public recipe projections and
   public output do not include them.
-- Place the stamp toggles to the left of the share, privacy, and output actions
-  in the private recipe-detail toolbar. Each write is owner-scoped,
-  version-checked, and included in recipe history. Rating is staged in the
-  recipe editor and saved with the existing explicit Save action.
+- Place the immediate Rating control directly after Heart and before Share in
+  the private recipe-detail toolbar. On mobile, keep Star, Heart, and Rating in
+  that order on the marker row. Rating is the only edit path; its owner-scoped,
+  version-checked set and clear writes are included in recipe history. Changing
+  State away from Tried continues to clear Rating through recipe save.
 - Marker filters use the existing URL-backed explorer state in Find and
   publication recipe lists. They compose with the current query, filters, and
   publication scope.
@@ -111,18 +112,13 @@ The signed Rating is not a star rating. The WAI-ARIA APG rating radio example
 uses radio buttons for a small fixed scale; its rating slider example notes
 that larger scales may need other patterns and warns about touch
 assistive-technology support. This Rating has nine uneven, discrete choices, so
-use the app's labeled single-choice dropdown pattern rather than a star widget
-or continuous slider. Show the selected signed number; the options and
-accessible names remain numeric because the descriptions are intent-only. In
-the editor, use a short em-dash unset prompt so the control remains sized to
-the longest numeric choice. Use red only as a supplementary cue on negative
-numeric values in private detail and list views: the existing tomato token has
-5.39:1 and 5.43:1 contrast on the two app paper surfaces, while the existing
-gold token has only 2.76:1 and 2.78:1 contrast and must not be used as the
-Star's outline. Use gold as an accent fill with a darker outline, and use
-paper-mixed pale rose or warm-gold fills for the active stamps. The inactive
-outline must remain clearly distinguishable from either paper surface. Keep
-the Rating legible in forced-color mode and do not rely on hue alone.
+use the app's labeled single-choice menu pattern rather than a star widget or
+continuous slider. Each choice shows its approved label, while the trigger and
+accessible name identify both the selected signed score and label. The compact
+hand artwork is supplementary; the explicit signed score remains readable and
+color is not the sole cue. Keep the Rating legible in forced-color mode.
+Negative numeric values in other private surfaces retain their existing red
+supplementary cue.
 
 The shared browser can open the public recipe page, but its private route
 redirects to Sign in. Owner-toolbar geometry is therefore grounded in the
@@ -137,8 +133,9 @@ widths before completion.
 - Add owner-only, immediate, version-checked Star and Heart stamp toggles on
   recipe detail. The marker color shows state; show visible feedback only for
   recoverable errors or conflicts.
-- Show the Rating with Verdict on Tried recipes; retain State-driven display and
-  clear Rating when leaving Tried.
+- Show the immediate Rating control only on Tried recipes; do not repeat its
+  value in on-screen detail metadata. Keep eligible private print and existing
+  numeric Rating surfaces unchanged, and clear Rating when leaving Tried.
 - Add custom-artwork Star and Heart quick filters to the right of the sort,
   view, and list-settings controls in Find and each publication's recipe list.
   They compose with each other and existing filters using AND.
@@ -174,11 +171,12 @@ widths before completion.
 
 ## Acceptance criteria and tests
 
-- Database tests verify allowed Rating values, Tried-only storage, marker
-  defaults, owner RLS, trashed-recipe rejection, version conflicts, history,
-  and that existing Verdict data is unchanged.
-- Recipe-editor tests verify all nine numeric Rating choices, clearing on State
-  change, validation, numeric accessible names, and explicit Save behavior.
+- Database tests verify allowed Rating values, Tried-only storage, owner
+  authorization, version conflicts, history, and that existing Verdict data is
+  unchanged.
+- Rating-control tests verify all nine score/label pairs, immediate selection
+  and Clear, the accessible score/label name, pending and error behavior, and
+  State-change clearing through the existing recipe-save path.
 - Browser tests verify immediate Star and Heart stamp updates, independent and
   simultaneous pressed states, owner-only access, conflict/error recovery,
   visible off/on distinction, descriptive accessible names, visible focus, and
@@ -201,16 +199,15 @@ widths before completion.
 
 ## Confirmed interaction details
 
-- Rating changes are staged with recipe edits and saved through the existing
-  explicit Save action. Its choices and accessible names remain numeric, and
-  its control width follows the longest numeric choice in desktop and mobile
-  layouts.
+- Rating changes are immediate in private detail and use the exact score/label
+  map from DLC 43. The signed score stays numeric in storage and all existing
+  numeric surfaces. The Rating control appears after Heart and before Share.
 - Star and Heart detail controls and filters use shared custom marker artwork.
   On desktop, the detail toolbar places the toggles to the left of its other
   action buttons; on mobile, it uses even 4px gaps between the six first-row
   actions, keeps Can Link at a compact 60px width with equal spacing
-  around its label and switch, and places markers on a second row with Star
-  aligned under Page Settings and Heart under Edit.
+  around its label and switch, and places Star, Heart, and Rating in that order
+  on the second row, followed by Duplicate.
 - Filter controls use the marker colors when active or hovered and match the
   toolbar's button size and spacing, with a faint background that contrasts
   with each icon's accent fill. Desktop detail toggles use a thinner outline

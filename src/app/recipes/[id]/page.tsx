@@ -39,6 +39,7 @@ import { InstructionList } from '../instruction-list';
 import { RecipeDuplicateAction } from '../recipe-duplicate-action';
 import { RecipeMarkerActions } from '../recipe-marker-actions';
 import { RecipeOutputActions } from '../recipe-output-actions';
+import { RecipeRatingAction } from '../recipe-rating-action';
 import {
   RecipeInstructionMention,
   RecipeMakesValue,
@@ -354,7 +355,6 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
   const sections = [
     ['State', recipeStateLabels[recipe.state]],
     response,
-    ['Rating', recipe.score === null ? null : String(recipe.score)],
     ['Occasion Details', recipe.occasion_details],
     ['Serves', recipe.serves === null ? null : formatGroupedInteger(recipe.serves)],
     [
@@ -364,7 +364,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         : `${recipe.makes_quantity} ${recipe.makes_thing}`,
     ],
     ['Equipment', assignedValues('equipment', recipe.equipment_ids).join(', ')],
-  ].filter(([label, value]) => Boolean(value) || (label === 'Rating' && recipe.score !== null));
+  ].filter(([, value]) => Boolean(value));
   const classificationSections = [
     ['Food Type', valueFor(recipe.food_type_id)],
     ['Meal Type', assignedValues('meal_type', recipe.meal_type_ids).join(', ')],
@@ -446,6 +446,19 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             )}
             <div className="recipe-detail-heading-actions recipe-screen-only">
               <RecipeActionFeedbackProvider>
+                <RecipeMarkerActions
+                  starred={recipe.is_starred}
+                  hearted={recipe.is_hearted}
+                  recipeId={recipe.id}
+                  version={recipe.version}
+                />
+                {recipe.state === 'tried' && (
+                  <RecipeRatingAction
+                    recipeId={recipe.id}
+                    score={recipe.score}
+                    version={recipe.version}
+                  />
+                )}
                 <RecipeShareActions
                   isPrivate={recipe.is_private}
                   publicId={recipe.public_id}
@@ -486,12 +499,6 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                 >
                   <Pencil aria-hidden="true" size={16} strokeWidth={2} />
                 </Link>
-                <RecipeMarkerActions
-                  starred={recipe.is_starred}
-                  hearted={recipe.is_hearted}
-                  recipeId={recipe.id}
-                  version={recipe.version}
-                />
               </RecipeActionFeedbackProvider>
             </div>
           </div>
@@ -505,16 +512,10 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               <dl className="recipe-metadata">
                 {sections.map(([label, value]) => (
                   <div
-                    className={label === 'Rating' ? 'recipe-detail-rating-metadata' : undefined}
                     data-private-output-only={
-                      [
-                        'State',
-                        'Enthusiasm',
-                        'Verdict',
-                        'Rating',
-                        'Reason',
-                        'Occasion Details',
-                      ].includes(label ?? '')
+                      ['State', 'Enthusiasm', 'Verdict', 'Reason', 'Occasion Details'].includes(
+                        label ?? '',
+                      )
                         ? ''
                         : undefined
                     }
@@ -531,20 +532,24 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                         makesThing={recipe.makes_thing}
                       />
                     ) : (
-                      <dd>
-                        {label === 'Rating' && recipe.score !== null ? (
-                          <span
-                            className={`recipe-detail-score${recipe.score < 0 ? ' recipe-score-negative' : ''}`}
-                          >
-                            {value}
-                          </span>
-                        ) : (
-                          value
-                        )}
-                      </dd>
+                      <dd>{value}</dd>
                     )}
                   </div>
                 ))}
+              </dl>
+            )}
+            {recipe.score !== null && (
+              <dl className="recipe-metadata recipe-detail-rating-print" data-private-output-only>
+                <div>
+                  <dt>Rating</dt>
+                  <dd>
+                    <span
+                      className={`recipe-detail-score${recipe.score < 0 ? ' recipe-score-negative' : ''}`}
+                    >
+                      {recipe.score}
+                    </span>
+                  </dd>
+                </div>
               </dl>
             )}
             {classificationSections.length > 0 && (

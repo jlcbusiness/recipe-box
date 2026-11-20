@@ -1,7 +1,7 @@
 # DLC 44: Recipe Detail Metadata and Rating
 
-**Status:** Draft candidate. Confirm the Rating edit workflow and affected
-reader surfaces before implementation.
+**Status:** Draft candidate. DLC 43 owns the Rating control and edit workflow;
+confirm the affected reader surfaces before implementation.
 
 ## Outcome
 
@@ -16,20 +16,16 @@ the full recipe editor.
   Verdict, Food Type, Meal Type, and Cuisine.
 - Keep those fields saved, editable, and available to Find and publication
   recipe search.
-- Add a view-mode Rating interaction for Tried recipes.
-- Preserve the existing Rating values, Tried-only rule, and privacy boundary.
+- Do not add or redefine a Rating control in this slice. Reuse the control and
+  behavior defined by [DLC 43](./dlc-43-rating-scale-guidance.md).
+- Preserve Rating's score values, Tried-only rule, and privacy boundary.
 
 ## Proposed behavior
 
 - Remove only the five named fields from recipe detail metadata. Do not remove
   their filters, edit controls, or saved values.
-- Show the numeric Rating on detail as it is today. Let an owner open a compact
-  Rating picker there and save a selection without entering full Edit mode.
-- Keep the change owner-scoped, version-checked, and represented in recipe
-  history, consistent with the existing private Rating contract.
-- Recommended direction: make the detail picker the single Rating edit path
-  and remove Rating from the staged edit form. This avoids having both an
-  immediate and staged control for the same value.
+- Leave Rating presentation and editing to DLC 43. Do not add a separate
+  numeric metadata value beside its detail control.
 - Do not change the existing behavior that clears Rating when State changes
   away from Tried.
 
@@ -40,19 +36,13 @@ the full recipe editor.
    metadata.
 2. Other detail metadata, time entries, notes, ingredients, and recipe
    content retain their current order and presentation.
-3. A Tried recipe's owner can select or clear Rating from detail without
-   opening Edit. The saved value survives reload and appears in existing
-   private Rating surfaces.
-4. Concurrent or stale Rating updates show the existing conflict/error
-   treatment and do not silently overwrite another edit.
-5. Tests cover hidden detail fields, retained search/edit behavior, view-mode
-   save/clear, history, and the Tried-only constraint.
+3. Detail shows exactly one Rating control as defined in DLC 43, not a duplicate
+   standalone Rating metadata value.
+4. Tests cover hidden detail fields and retained search/edit behavior; Rating
+   control, save/clear, history, and conflict behavior are covered by DLC 43.
 
 ## Open decisions
 
-- Confirm whether Rating should be removed from Edit once the detail picker
-  exists. If it remains there, define how staged edits interact with an
-  immediate view-mode update.
 - This draft assumes the five fields are hidden only on the private recipe
   detail screen. Confirm whether the same reduction applies to public detail,
   print, offline, or standalone HTML output.
@@ -61,9 +51,9 @@ the full recipe editor.
 
 ## Initial sizing
 
-Medium difficulty; about **1.5–3 days**; medium churn. The metadata change is
-small, but the Rating control changes a currently staged write into an
-immediate, version-checked detail action.
+Low-to-medium difficulty; about **0.5–1.5 days**; medium churn. The Rating
+control is delivered by DLC 43, leaving this slice focused on metadata
+presentation and its output boundaries.
 
 ## References
 

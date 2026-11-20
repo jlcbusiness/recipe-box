@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, test } from '@playwright/test';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import sharp from 'sharp';
 import {
   createTestUser,
   deleteTestUser,
@@ -305,6 +306,9 @@ test('recipe time entries calculate, validate, and save in order @e2e', async ({
 
     const recipeId = new URL(page.url()).pathname.split('/').at(-1);
     expect(recipeId).toBeTruthy();
+    if (!recipeId) {
+      throw new Error('Expected the saved recipe ID in the detail URL.');
+    }
     const savedTimes = await request.get(
       `${config.apiUrl}/rest/v1/recipe_time_entries?select=minutes,position&recipe_id=eq.${recipeId}&order=position.asc`,
       {
@@ -1195,11 +1199,12 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
   }
 });
 
-test('Rating fits its choices and negative values stay distinct and red @e2e', async ({
+test('Rating is edited from detail with labeled choices and remains numeric in lists @e2e @a11y', async ({
   page,
   request,
 }) => {
   const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
   const recipeName =
     'Negative rating layout with a title that should truncate before its numeric rating and recipe markers in narrow mobile lists';
 
@@ -1208,140 +1213,566 @@ test('Rating fits its choices and negative values stay distinct and red @e2e', a
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill(recipeName);
     await selectSinglePicklist(page, 'State', 'Tried');
-    await page.getByRole('combobox', { name: 'Verdict', exact: true }).click();
-    await page.getByRole('option', { name: /so-so/i }).click();
     await page.getByLabel('Serves').fill('4');
-
-    const rating = page.getByRole('combobox', { name: 'Rating', exact: true });
-    const expectRatingFieldToFitOptions = async () => {
-      const bounds = await rating.evaluate((element) => {
-        const field = element.closest('.recipe-single-picklist');
-        const measure = field?.querySelector('.single-picklist-measure');
-        return {
-          fieldWidth: field?.getBoundingClientRect().width ?? 0,
-          triggerWidth: element.getBoundingClientRect().width,
-          optionWidth: measure?.getBoundingClientRect().width ?? 0,
-        };
-      });
-      expect(bounds.optionWidth).toBeGreaterThan(0);
-      expect(bounds.triggerWidth - bounds.optionWidth).toBeLessThanOrEqual(45);
-      expect(Math.abs(bounds.fieldWidth - bounds.triggerWidth)).toBeLessThanOrEqual(1);
-    };
-    const expectRatingOptionsToBeCentered = async () => {
-      await rating.click();
-      const scoreMenu = page.locator('.recipe-score-picklist-menu');
-      const options = scoreMenu.locator('.single-picklist-option');
-      await expect(scoreMenu).toBeVisible();
-      await expect(options).toHaveCount(9);
-      const optionGeometry = await options.evaluateAll((elements) =>
-        elements.map((option) => {
-          const optionBounds = option.getBoundingClientRect();
-          const label = option.querySelector<HTMLElement>(':scope > span:last-child');
-          const labelBounds = label?.getBoundingClientRect();
-          const check = option.querySelector<HTMLElement>('.single-picklist-check');
-          const checkBounds = check?.getBoundingClientRect();
-          return {
-            selected: option.getAttribute('aria-selected') === 'true',
-            optionCenter: optionBounds.x + optionBounds.width / 2,
-            labelCenter: labelBounds ? labelBounds.x + labelBounds.width / 2 : null,
-            labelLeft: labelBounds?.left ?? null,
-            checkRight: checkBounds?.right ?? null,
-            checkText: check?.textContent,
-          };
-        }),
-      );
-      for (const option of optionGeometry) {
-        expect(option.labelCenter).not.toBeNull();
-        if (option.labelCenter === null) {
-          throw new Error('Expected each Rating option to have a centered numeric label.');
-        }
-        expect(Math.abs(option.optionCenter - option.labelCenter)).toBeLessThanOrEqual(1);
-        if (option.selected) {
-          expect(option.checkText).toBe('✓');
-          expect(option.checkRight).not.toBeNull();
-          expect(option.labelLeft).not.toBeNull();
-          if (option.checkRight === null || option.labelLeft === null) {
-            throw new Error('Expected the selected Rating check to be separate from its value.');
-          }
-          expect(option.checkRight).toBeLessThan(option.labelLeft);
-        }
-      }
-      await page.keyboard.press('Escape');
-    };
-
-    await expect(rating).toContainText('—');
-    for (const viewport of [
-      { width: 1280, height: 900 },
-      { width: 390, height: 844 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await expectRatingFieldToFitOptions();
-      await expectRatingOptionsToBeCentered();
-    }
-
-    await selectSinglePicklist(page, 'Rating', '-5');
-    for (const viewport of [
-      { width: 1280, height: 900 },
-      { width: 390, height: 844 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await expectRatingFieldToFitOptions();
-      await expectRatingOptionsToBeCentered();
-      await expectRatingOptionsToBeCentered();
-    }
-
+    await expect(page.getByRole('combobox', { name: 'Rating', exact: true })).toHaveCount(0);
+    await page.getByLabel('Choose recipe photos').setInputFiles({
+      name: 'rating-feedback-layout.png',
+      mimeType: 'image/png',
+      buffer: await sharp({
+        create: {
+          width: 120,
+          height: 180,
+          channels: 3,
+          background: { r: 126, g: 154, b: 116 },
+        },
+      })
+        .png()
+        .toBuffer(),
+    });
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
-    const detailRating = page.locator('.recipe-detail-score');
-    const ratingDetailsField = page
-      .locator('.recipe-metadata > div')
-      .filter({ has: page.getByText('Rating', { exact: true }) });
-    const servesDetailsField = page
-      .locator('.recipe-metadata > div')
-      .filter({ has: page.getByText('Serves', { exact: true }) });
-    await expect(ratingDetailsField.locator('dt')).toHaveText('Rating');
-    await expect(detailRating).toHaveText('-5');
-    await expect(detailRating).toHaveCSS('color', 'rgb(180, 62, 50)');
+    await expect(page.locator('.recipe-photo-feature-image')).toBeVisible();
+    const recipeId = new URL(page.url()).pathname.split('/').at(-1);
+    expect(recipeId).toBeTruthy();
+    const rating = page.locator('.recipe-rating-action-trigger');
+    const recipeDetailsHeading = page.getByRole('heading', { name: 'Recipe details' });
+    const detailsHeadingBeforeRating = await recipeDetailsHeading.boundingBox();
+    expect(detailsHeadingBeforeRating).not.toBeNull();
+    if (!detailsHeadingBeforeRating) {
+      throw new Error('Expected the Recipe details heading to have visible bounds.');
+    }
+    await expect(rating).toHaveAccessibleName('Rating: Unrated');
+    await expect(page.locator('.recipe-detail-rating-metadata')).toHaveCount(0);
 
-    for (const viewport of [
-      { width: 1280, height: 900 },
-      { width: 390, height: 844 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await expect(ratingDetailsField.locator('dd')).toHaveCSS('justify-content', 'center');
-      const [ratingFieldBounds, ratingValueBounds] = await Promise.all([
-        ratingDetailsField.boundingBox(),
-        detailRating.boundingBox(),
+    async function expectRatingNumberInPalm(gesture: 'palm-down' | 'thumbs-down' | 'thumbs-up') {
+      const [numberBounds, numberTextBounds, palmBounds, handBounds] = await Promise.all([
+        rating.locator('.recipe-rating-number').boundingBox(),
+        rating.locator('.recipe-rating-number').evaluate((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const bounds = range.getBoundingClientRect();
+          return { x: bounds.x, width: bounds.width };
+        }),
+        rating.locator('.recipe-rating-palm').boundingBox(),
+        rating.locator('.recipe-rating-hand').boundingBox(),
       ]);
-      expect(ratingFieldBounds).not.toBeNull();
-      expect(ratingValueBounds).not.toBeNull();
-      if (!ratingFieldBounds || !ratingValueBounds) {
-        throw new Error('Expected Rating metadata geometry.');
+      expect(numberBounds).not.toBeNull();
+      expect(palmBounds).not.toBeNull();
+      expect(handBounds).not.toBeNull();
+      expect(numberTextBounds.width).toBeGreaterThan(0);
+      if (!numberBounds || !palmBounds || !handBounds) {
+        throw new Error('Expected the Rating number, palm area, and hand artwork.');
       }
+
+      const expectedPalmCenter = {
+        'palm-down': { x: 24, y: 19 },
+        'thumbs-down': { x: 16, y: 12 },
+        'thumbs-up': { x: 18, y: 24 },
+      }[gesture];
+      const numberCenterX = numberBounds.x + numberBounds.width / 2;
+      const numberCenterY = numberBounds.y + numberBounds.height / 2;
+      const numberTextCenterX = numberTextBounds.x + numberTextBounds.width / 2;
+      const palmCenterX = palmBounds.x + palmBounds.width / 2;
+      const palmCenterY = palmBounds.y + palmBounds.height / 2;
+      expect(palmBounds.x).toBeGreaterThanOrEqual(handBounds.x);
+      expect(palmBounds.x + palmBounds.width).toBeLessThanOrEqual(handBounds.x + handBounds.width);
+      expect(palmBounds.y).toBeGreaterThanOrEqual(handBounds.y);
+      expect(palmBounds.y + palmBounds.height).toBeLessThanOrEqual(
+        handBounds.y + handBounds.height,
+      );
+      expect(Math.abs(numberCenterX - palmCenterX)).toBeLessThanOrEqual(1);
+      expect(Math.abs(numberCenterY - palmCenterY)).toBeLessThanOrEqual(1);
+      expect(Math.abs(numberTextCenterX - palmCenterX)).toBeLessThanOrEqual(1);
+      expect(Math.abs(palmCenterX - (handBounds.x + expectedPalmCenter.x))).toBeLessThanOrEqual(1);
+      expect(Math.abs(palmCenterY - (handBounds.y + expectedPalmCenter.y))).toBeLessThanOrEqual(1);
+      const filledShape = rating.locator('.recipe-rating-hand > path:first-child');
+      await expect(filledShape).not.toHaveCSS('fill', 'none');
+    }
+
+    async function expectClearGlyph() {
+      const hand = rating.locator('.recipe-rating-hand');
+      const palm = rating.locator('.recipe-rating-palm[data-gesture="clear"]');
+      const question = palm.locator('.recipe-rating-question');
+      await expect(hand).toHaveAttribute('data-gesture', 'clear');
+      await expect(question).toHaveText('?');
+      await expect(hand.locator('path:first-child')).toHaveCSS('fill', 'none');
+
+      const [handBounds, palmBounds, questionBounds] = await Promise.all([
+        hand.boundingBox(),
+        palm.boundingBox(),
+        question.boundingBox(),
+      ]);
+      expect(handBounds).not.toBeNull();
+      expect(palmBounds).not.toBeNull();
+      expect(questionBounds).not.toBeNull();
+      if (!handBounds || !palmBounds || !questionBounds) {
+        throw new Error('Expected the cleared Rating glyph to have visible bounds.');
+      }
+
+      const palmCenterX = palmBounds.x + palmBounds.width / 2;
+      const palmCenterY = palmBounds.y + palmBounds.height / 2;
+      expect(Math.abs(palmCenterX - (handBounds.x + 20))).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(questionBounds.x + questionBounds.width / 2 - palmCenterX),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(questionBounds.y + questionBounds.height / 2 - palmCenterY),
+      ).toBeLessThanOrEqual(1);
+    }
+
+    async function expectRatingFeedbackRightAligned(message: string) {
+      const feedback = page.locator('.recipe-action-feedback-region');
+      const actionRow = page.locator('.recipe-detail-heading-actions');
+      const status = feedback.getByRole('status');
+      await expect(status).toHaveText(message);
+
+      const [
+        feedbackBounds,
+        actionBounds,
+        statusBounds,
+        visibleControlBottom,
+        feedbackTop,
+        paddingTop,
+        textBounds,
+        paddingRight,
+      ] = await Promise.all([
+        feedback.boundingBox(),
+        actionRow.boundingBox(),
+        status.boundingBox(),
+        actionRow
+          .locator('button:visible, a:visible')
+          .evaluateAll((elements) =>
+            Math.max(...elements.map((element) => element.getBoundingClientRect().bottom)),
+          ),
+        feedback.evaluate((element) => getComputedStyle(element).top),
+        feedback.evaluate((element) => getComputedStyle(element).paddingTop),
+        status.evaluate((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const bounds = range.getBoundingClientRect();
+          return { right: bounds.right };
+        }),
+        feedback.evaluate((element) => getComputedStyle(element).paddingRight),
+      ]);
+      expect(feedbackBounds).not.toBeNull();
+      expect(actionBounds).not.toBeNull();
+      expect(statusBounds).not.toBeNull();
+      if (!feedbackBounds || !actionBounds || !statusBounds) {
+        throw new Error('Expected the Rating feedback and action row to have visible bounds.');
+      }
+
+      expect(feedbackBounds.width).toBeLessThan(160);
+      expect(
+        Math.abs(feedbackBounds.x + feedbackBounds.width - actionBounds.x - actionBounds.width),
+      ).toBeLessThanOrEqual(1);
+      const buttonToTextGap = statusBounds.y - visibleControlBottom;
+      expect(
+        buttonToTextGap,
+        `Expected 4px between controls and text; got ${buttonToTextGap}px ` +
+          `(feedback top ${feedbackTop}, padding top ${paddingTop})`,
+      ).toBeCloseTo(4, 0);
       expect(
         Math.abs(
-          ratingFieldBounds.x +
-            ratingFieldBounds.width / 2 -
-            (ratingValueBounds.x + ratingValueBounds.width / 2),
+          textBounds.right -
+            (feedbackBounds.x + feedbackBounds.width - Number.parseFloat(paddingRight)),
         ),
       ).toBeLessThanOrEqual(1);
     }
 
-    const [ratingBounds, servesBounds] = await Promise.all([
-      ratingDetailsField.boundingBox(),
-      servesDetailsField.boundingBox(),
-    ]);
-    expect(ratingBounds).not.toBeNull();
-    expect(servesBounds).not.toBeNull();
-    if (!ratingBounds || !servesBounds) {
-      throw new Error('Expected separate Rating and Serves metadata fields.');
+    async function expectRecipePhotoBelowRatingFeedback() {
+      const feedbackText = page.locator('.recipe-action-feedback-region').getByRole('status');
+      const photo = page.locator('.recipe-photo-feature-image');
+      await expect(feedbackText).toHaveText('Rating cleared.');
+      await expect(photo).toBeVisible();
+      await expect(page.locator('.recipe-action-feedback-region')).toHaveCSS(
+        'background-color',
+        'rgba(0, 0, 0, 0)',
+      );
+
+      const [textBounds, photoBounds] = await Promise.all([
+        feedbackText.evaluate((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const bounds = range.getBoundingClientRect();
+          return { bottom: bounds.bottom };
+        }),
+        photo.boundingBox(),
+      ]);
+      expect(photoBounds).not.toBeNull();
+      if (!photoBounds) {
+        throw new Error('Expected the recipe photo to have visible bounds.');
+      }
+
+      const gap = photoBounds.y - textBounds.bottom;
+      expect(gap).toBeGreaterThanOrEqual(0);
+      expect(gap).toBeLessThanOrEqual(3);
     }
-    const fieldsOverlap =
-      ratingBounds.x < servesBounds.x + servesBounds.width &&
-      ratingBounds.x + ratingBounds.width > servesBounds.x &&
-      ratingBounds.y < servesBounds.y + servesBounds.height &&
-      ratingBounds.y + ratingBounds.height > servesBounds.y;
-    expect(fieldsOverlap).toBe(false);
+
+    await expectClearGlyph();
+    await rating.focus();
+    await page.keyboard.press('Enter');
+    const menu = page.getByRole('menu', { name: 'Rating choices' });
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole('menuitemradio')).toHaveCount(9);
+    await expect(menu.locator('.recipe-rating-choice-value')).toHaveText([
+      '5',
+      '4',
+      '3',
+      '2',
+      '1',
+      '0',
+      '-1',
+      '-3',
+      '-5',
+    ]);
+    await expect(menu.locator('.recipe-rating-choice-label')).toHaveText([
+      'Amazing',
+      'Great',
+      'Good',
+      'Decent',
+      'Okay',
+      'Eh',
+      'Needs work',
+      'Bad',
+      'NO',
+    ]);
+    const positiveChoice = menu.getByRole('menuitemradio', { name: '5, Amazing' });
+    const neutralChoice = menu.getByRole('menuitemradio', { name: '0, Eh' });
+    const negativeChoice = menu.getByRole('menuitemradio', { name: '-5, NO' });
+    const positiveValue = positiveChoice.locator('.recipe-rating-choice-value');
+    const neutralValue = neutralChoice.locator('.recipe-rating-choice-value');
+    const negativeValue = negativeChoice.locator('.recipe-rating-choice-value');
+    const positiveLabel = positiveChoice.locator('.recipe-rating-choice-label');
+    const neutralLabel = neutralChoice.locator('.recipe-rating-choice-label');
+    const negativeLabel = negativeChoice.locator('.recipe-rating-choice-label');
+    await expect(positiveChoice).toHaveAttribute('data-tone', 'positive');
+    await expect(neutralChoice).toHaveAttribute('data-tone', 'neutral');
+    await expect(negativeChoice).toHaveAttribute('data-tone', 'negative');
+    const positiveToneColor = 'color(srgb 0.279216 0.470588 0.235294)';
+    const neutralToneColor = 'color(srgb 0.489412 0.382745 0.0470588)';
+    const negativeToneColor = 'color(srgb 0.596078 0.222745 0.181961)';
+    await expect(positiveValue).toHaveCSS('color', positiveToneColor);
+    await expect(positiveLabel).toHaveCSS('color', positiveToneColor);
+    await expect(neutralValue).toHaveCSS('color', neutralToneColor);
+    await expect(neutralLabel).toHaveCSS('color', neutralToneColor);
+    await expect(negativeValue).toHaveCSS('color', negativeToneColor);
+    await expect(negativeLabel).toHaveCSS('color', negativeToneColor);
+    await expect(positiveValue).toHaveCSS('justify-self', 'end');
+    await expect(negativeValue).toHaveCSS('justify-self', 'end');
+    await expect(positiveLabel).toHaveCSS('justify-self', 'center');
+    await expect(negativeLabel).toHaveCSS('justify-self', 'center');
+    const [positiveValueBounds, negativeValueBounds, positiveLabelBounds, negativeLabelBounds] =
+      await Promise.all([
+        positiveValue.boundingBox(),
+        negativeValue.boundingBox(),
+        positiveLabel.boundingBox(),
+        negativeLabel.boundingBox(),
+      ]);
+    expect(positiveValueBounds).not.toBeNull();
+    expect(negativeValueBounds).not.toBeNull();
+    expect(positiveLabelBounds).not.toBeNull();
+    expect(negativeLabelBounds).not.toBeNull();
+    if (
+      !positiveValueBounds ||
+      !negativeValueBounds ||
+      !positiveLabelBounds ||
+      !negativeLabelBounds
+    ) {
+      throw new Error('Expected Rating values and labels to have visible bounds.');
+    }
+    expect(
+      Math.abs(
+        positiveValueBounds.x +
+          positiveValueBounds.width -
+          negativeValueBounds.x -
+          negativeValueBounds.width,
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      positiveLabelBounds.x - (positiveValueBounds.x + positiveValueBounds.width),
+    ).toBeGreaterThanOrEqual(4);
+    expect(
+      negativeLabelBounds.x - (negativeValueBounds.x + negativeValueBounds.width),
+    ).toBeGreaterThanOrEqual(4);
+    await expect(menu.getByRole('menuitem')).toHaveCount(1);
+    const clearItem = menu.getByRole('menuitem').last();
+    await expect(clearItem).toHaveText('Clear');
+    await expect(clearItem.locator('.recipe-rating-hand')).toHaveCount(0);
+    const clearLabel = clearItem.locator('.recipe-rating-clear-label');
+    await expect(clearLabel).toHaveCSS('color', neutralToneColor);
+    const [
+      menuBounds,
+      ratingBounds,
+      clearBounds,
+      clearLabelBounds,
+      menuPadding,
+      menuMarginLeft,
+      choicePadding,
+    ] = await Promise.all([
+      menu.boundingBox(),
+      rating.boundingBox(),
+      clearItem.boundingBox(),
+      clearLabel.boundingBox(),
+      menu.evaluate((element) => getComputedStyle(element).paddingLeft),
+      menu.evaluate((element) => getComputedStyle(element).marginLeft),
+      menu
+        .getByRole('menuitemradio')
+        .first()
+        .evaluate((element) => getComputedStyle(element).paddingLeft),
+    ]);
+    const needsWorkLabel = await menu
+      .getByRole('menuitemradio', { name: '-1, Needs work' })
+      .locator('.recipe-rating-choice-label')
+      .boundingBox();
+    const centeredLabel = await menu
+      .getByRole('menuitemradio', { name: '-3, Bad' })
+      .locator('.recipe-rating-choice-label')
+      .boundingBox();
+    expect(menuBounds).not.toBeNull();
+    expect(ratingBounds).not.toBeNull();
+    expect(clearBounds).not.toBeNull();
+    expect(clearLabelBounds).not.toBeNull();
+    if (
+      !menuBounds ||
+      !ratingBounds ||
+      !clearBounds ||
+      !clearLabelBounds ||
+      !needsWorkLabel ||
+      !centeredLabel
+    ) {
+      throw new Error('Expected the Rating menu and Clear action to have visible bounds.');
+    }
+    expect(menuBounds.width).toBeLessThan(150);
+    expect(needsWorkLabel.height).toBeLessThan(30);
+    expect(menuPadding).toBe('5px');
+    expect(menuMarginLeft).toBe('10px');
+    expect(choicePadding).toBe('0px');
+    expect(Math.abs(menuBounds.x - ratingBounds.x - 10)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        clearLabelBounds.x + clearLabelBounds.width / 2 - centeredLabel.x - centeredLabel.width / 2,
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(clearBounds.y + clearBounds.height).toBeLessThanOrEqual(
+      menuBounds.y + menuBounds.height,
+    );
+    await page.keyboard.press('End');
+    await page.keyboard.press('ArrowUp');
+    await expect(menu.getByRole('menuitemradio', { name: '-5, NO' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(rating).toHaveAccessibleName('Rating: -5, NO');
+    await expect(rating).toBeFocused();
+    await expectRatingFeedbackRightAligned('Rating saved.');
+    const originalViewport = page.viewportSize();
+    expect(originalViewport).not.toBeNull();
+    if (!originalViewport) {
+      throw new Error('Expected the Rating test page to have a viewport size.');
+    }
+    await page.setViewportSize({ width: 320, height: originalViewport.height });
+    await expectRatingFeedbackRightAligned('Rating saved.');
+    await page.setViewportSize(originalViewport);
+    const savedFeedbackId = await rating.getAttribute('aria-describedby');
+    expect(savedFeedbackId).not.toBeNull();
+    if (!savedFeedbackId) {
+      throw new Error('Expected the Rating trigger to reference its feedback status.');
+    }
+    const savedStatus = page.locator(`[id="${savedFeedbackId}"]`);
+    await expect(savedStatus).toBeVisible();
+    await expect(savedStatus).toHaveClass(/visually-hidden/, { timeout: 6_500 });
+    await expect(savedStatus).toHaveText('Rating saved.');
+    await expect(savedStatus).toHaveAttribute('role', 'status');
+    await expect(page.locator('.recipe-action-feedback-region')).toHaveCount(0);
+    const detailsHeadingAfterRating = await recipeDetailsHeading.boundingBox();
+    expect(detailsHeadingAfterRating).not.toBeNull();
+    if (!detailsHeadingAfterRating) {
+      throw new Error('Expected the Recipe details heading to remain visible.');
+    }
+    expect(
+      Math.abs(detailsHeadingAfterRating.y - detailsHeadingBeforeRating.y),
+    ).toBeLessThanOrEqual(1);
+    await expect(rating.locator('.recipe-rating-number')).toHaveText('-5');
+    await expect(rating.locator('.recipe-rating-hand')).toHaveAttribute('data-tone', 'negative');
+    await expect(rating.locator('.recipe-rating-hand')).toHaveAttribute(
+      'data-gesture',
+      'thumbs-down',
+    );
+    await expectRatingNumberInPalm('thumbs-down');
+
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('End');
+    await expect(menu.getByRole('menuitem', { name: 'Clear' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(rating).toHaveAccessibleName('Rating: Unrated');
+    await expect(rating).toBeFocused();
+    await expectClearGlyph();
+    await expectRatingFeedbackRightAligned('Rating cleared.');
+    await page.setViewportSize({ width: 320, height: originalViewport.height });
+    await expectRatingFeedbackRightAligned('Rating cleared.');
+    await expectRecipePhotoBelowRatingFeedback();
+    await page.setViewportSize(originalViewport);
+
+    await rating.click();
+    await menu.getByRole('menuitemradio', { name: '-1, Needs work' }).click();
+    await expect(rating).toHaveAccessibleName('Rating: -1, Needs work');
+    await rating.click();
+    const needsWorkChoice = menu.getByRole('menuitemradio', { name: '-1, Needs work' });
+    await expect(needsWorkChoice).toHaveAttribute('aria-checked', 'true');
+    await expect(needsWorkChoice.locator('.recipe-rating-choice-check')).toHaveText('✓');
+    const measureText = (selector: string) =>
+      needsWorkChoice.locator(selector).evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const bounds = range.getBoundingClientRect();
+        return { x: bounds.x, width: bounds.width };
+      });
+    const [needsWorkValueBounds, needsWorkTextBounds, needsWorkCheckBounds] = await Promise.all([
+      measureText('.recipe-rating-choice-value'),
+      measureText('.recipe-rating-choice-label'),
+      measureText('.recipe-rating-choice-check'),
+    ]);
+    const valueToLabelGap =
+      needsWorkTextBounds.x - (needsWorkValueBounds.x + needsWorkValueBounds.width);
+    const labelToCheckGap =
+      needsWorkCheckBounds.x - (needsWorkTextBounds.x + needsWorkTextBounds.width);
+    expect(Math.abs(valueToLabelGap - labelToCheckGap)).toBeLessThanOrEqual(1);
+    await page.keyboard.press('Escape');
+    await rating.click();
+    await menu.getByRole('menuitemradio', { name: '0, Eh' }).click();
+    await expect(rating).toHaveAccessibleName('Rating: 0, Eh');
+    await expectRatingNumberInPalm('palm-down');
+    await expect(rating.locator('.recipe-rating-hand')).toHaveAttribute(
+      'data-gesture',
+      'palm-down',
+    );
+    await expect(rating.locator('.recipe-rating-hand-fill')).not.toHaveCSS('fill', 'none');
+
+    await rating.click();
+    await menu.getByRole('menuitemradio', { name: '5, Amazing' }).click();
+    await expect(rating).toHaveAccessibleName('Rating: 5, Amazing');
+    await expect(rating.locator('.recipe-rating-hand')).toHaveAttribute('data-tone', 'positive');
+    await expect(rating.locator('.recipe-rating-hand')).toHaveAttribute(
+      'data-gesture',
+      'thumbs-up',
+    );
+    await expectRatingNumberInPalm('thumbs-up');
+    await rating.click();
+    await menu.getByRole('menuitem', { name: 'Clear' }).click();
+    await expect(rating).toHaveAccessibleName('Rating: Unrated');
+    await expect(rating).toBeFocused();
+    await expectClearGlyph();
+    await expect(rating.locator('.recipe-rating-number')).toHaveCount(0);
+
+    await rating.click();
+    await menu.getByRole('menuitemradio', { name: '-5, NO' }).click();
+    await expect(rating).toHaveAccessibleName('Rating: -5, NO');
+    const headers = {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${user.accessToken}`,
+    };
+    const recipeResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=score,version&id=eq.${recipeId}`,
+      { headers },
+    );
+    const recipeResponseText = await recipeResponse.text();
+    expect(recipeResponse.ok(), recipeResponseText).toBeTruthy();
+    const [savedRecipe] = JSON.parse(recipeResponseText) as {
+      score: number | null;
+      version: number;
+    }[];
+    expect(savedRecipe).toMatchObject({ score: -5 });
+    expect(savedRecipe?.version).toBeGreaterThan(1);
+
+    await page.getByRole('button', { name: 'Page settings' }).click();
+    const privateOutputSetting = page.getByRole('checkbox', {
+      name: 'Include private-only details',
+    });
+    await privateOutputSetting.check();
+    await expect(privateOutputSetting).toBeChecked();
+    await page.keyboard.press('Escape');
+
+    const printAndDownloadButton = page.getByRole('button', { name: 'Print & Download' });
+    const ratingHtmlDownloadPromise = page.waitForEvent('download');
+    await printAndDownloadButton.click();
+    await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+    const ratingHtmlDownload = await ratingHtmlDownloadPromise;
+    const ratingHtmlPath = await ratingHtmlDownload.path();
+    if (!ratingHtmlPath) {
+      throw new Error('Expected the private Rating HTML download to have a file path.');
+    }
+    const ratingHtml = await readFile(ratingHtmlPath, 'utf8');
+    expect(ratingHtml).toContain('Rating');
+    expect(ratingHtml).toContain('-5');
+
+    const star = page.getByRole('button', { name: 'Star recipe' });
+    const heart = page.getByRole('button', { name: 'Heart recipe' });
+    const share = page.getByRole('button', { name: 'Copy share link' });
+    const duplicate = page.getByRole('button', { name: 'Duplicate recipe' });
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 390, height: 844 },
+      { width: 320, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const [
+        ratingBounds,
+        starBounds,
+        heartBounds,
+        shareBounds,
+        duplicateBounds,
+        ratingHandBounds,
+      ] = await Promise.all([
+        rating.boundingBox(),
+        star.boundingBox(),
+        heart.boundingBox(),
+        share.boundingBox(),
+        duplicate.boundingBox(),
+        rating.locator('.recipe-rating-hand').boundingBox(),
+      ]);
+      expect(ratingBounds).not.toBeNull();
+      expect(starBounds).not.toBeNull();
+      expect(heartBounds).not.toBeNull();
+      expect(shareBounds).not.toBeNull();
+      expect(duplicateBounds).not.toBeNull();
+      expect(ratingHandBounds).not.toBeNull();
+      if (
+        !ratingBounds ||
+        !starBounds ||
+        !heartBounds ||
+        !shareBounds ||
+        !duplicateBounds ||
+        !ratingHandBounds
+      ) {
+        throw new Error('Expected Rating, marker, Share, and Duplicate toolbar controls.');
+      }
+      expect(starBounds.x + starBounds.width).toBeLessThanOrEqual(heartBounds.x);
+      expect(heartBounds.x + heartBounds.width).toBeLessThanOrEqual(ratingBounds.x);
+      if (viewport.width > 640) {
+        expect(ratingBounds.x + ratingBounds.width).toBeLessThanOrEqual(shareBounds.x);
+      } else {
+        expect(ratingBounds.x + ratingBounds.width).toBeLessThanOrEqual(duplicateBounds.x);
+      }
+      expect(ratingHandBounds.width).toBe(starBounds.width);
+      expect(ratingHandBounds.height).toBe(starBounds.height);
+      expect(ratingBounds.y + ratingBounds.height / 2).toBeCloseTo(
+        heartBounds.y + heartBounds.height / 2,
+        0,
+      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      await rating.click();
+      await expect(menu).toBeVisible();
+      const responsiveMenuBounds = await menu.boundingBox();
+      expect(responsiveMenuBounds).not.toBeNull();
+      if (!responsiveMenuBounds) {
+        throw new Error('Expected the responsive Rating picker to have visible bounds.');
+      }
+      expect(responsiveMenuBounds.x).toBeGreaterThanOrEqual(0);
+      expect(responsiveMenuBounds.x + responsiveMenuBounds.width).toBeLessThanOrEqual(
+        viewport.width,
+      );
+      await page.keyboard.press('Escape');
+    }
 
     const publicationPath = await page.locator('.recipe-attribution a').getAttribute('href');
     expect(publicationPath).not.toBeNull();
@@ -1434,6 +1865,48 @@ test('Rating fits its choices and negative values stay distinct and red @e2e', a
       await expect(findRating.locator('.recipe-score-negative')).toHaveText('-5');
       await expectListRowToTruncate(findRow);
     }
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/recipes/${recipeId}`);
+    const staleRating = page.locator('.recipe-rating-action-trigger');
+    const staleDetailsHeading = page.getByRole('heading', { name: 'Recipe details' });
+    const detailsHeadingBeforeConflict = await staleDetailsHeading.boundingBox();
+    expect(detailsHeadingBeforeConflict).not.toBeNull();
+    if (!detailsHeadingBeforeConflict) {
+      throw new Error('Expected the Recipe details heading to have visible bounds.');
+    }
+    await expect(staleRating).toHaveAccessibleName('Rating: -5, NO');
+    const concurrentUpdate = await request.post(`${config.apiUrl}/rest/v1/rpc/set_recipe_rating`, {
+      headers,
+      data: {
+        p_recipe_id: recipeId,
+        p_expected_version: savedRecipe.version,
+        p_score: 4,
+      },
+    });
+    const concurrentUpdateText = await concurrentUpdate.text();
+    expect(concurrentUpdate.ok(), concurrentUpdateText).toBeTruthy();
+
+    await staleRating.click();
+    const staleMenu = page.getByRole('menu', { name: 'Rating choices' });
+    await staleMenu.getByRole('menuitemradio', { name: '3, Good' }).click();
+    await expect(staleRating).toHaveAccessibleName('Rating: -5, NO');
+    const ratingFeedback = page.locator('.recipe-action-feedback-region');
+    await expect(ratingFeedback.getByRole('alert')).toHaveText(
+      'This recipe changed in another session. Reload before changing its Rating.',
+    );
+    await expect(page.locator('.recipe-rating-action-status')).toHaveCount(0);
+    const detailsHeadingAfterConflict = await staleDetailsHeading.boundingBox();
+    expect(detailsHeadingAfterConflict).not.toBeNull();
+    if (!detailsHeadingAfterConflict) {
+      throw new Error('Expected the Recipe details heading to remain visible.');
+    }
+    expect(
+      Math.abs(detailsHeadingAfterConflict.y - detailsHeadingBeforeConflict.y),
+    ).toBeLessThanOrEqual(1);
+    await expect(staleRating).toBeFocused();
+    await page.reload();
+    await expect(staleRating).toHaveAccessibleName('Rating: 4, Great');
   } finally {
     await deleteTestUser(request, user);
   }

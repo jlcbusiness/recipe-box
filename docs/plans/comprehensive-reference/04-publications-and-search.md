@@ -256,8 +256,9 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   below the markers in an opaque pill matching the card surface. Vertically
   center the complete stack in a pill sized to its contents: one Rating or
   marker forms a 32px circle, and additional signals extend the pill vertically
-  with equal visual spacing. Negative values remain tomato red. Center numeric Rating
-  choices in the recipe-edit picklist on desktop and mobile.
+  with equal visual spacing. Negative values remain tomato red. Rating picker
+  labels and its accessible score/label name follow the DLC 43 contract; search,
+  list, grid, filter, and sort values remain numeric.
 - **Nutrition columns:** Each of the fifteen standard nutrients is available
   as an optional recipe List column, hidden by default. Display the per-serving
   estimate in the nutrient's fixed unit; load these values only when at least

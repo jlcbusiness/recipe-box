@@ -187,6 +187,22 @@ the product specification or a task list. The canonical behavior remains in
 
 | **DLC 39 ratio-display update:** For the six supported ratios, show reduced text only when the selected displayed portion pair uses metric units, in both Standard and Ingredient-first views. Determine eligibility after scaling and conversion; dual-measure rows use the existing readable-pair selection. Print follows the active presentation, and instruction popups remain actual amounts. This supersedes the Ingredient-first-only shorthand rule in the earlier divided-ingredient decision. | The displayed unit is the relevant measure for readers after account preferences and conversion. Applying the same rule across reader presentations keeps metric splits scannable while preserving customary portion amounts. |
 
+**DLC 43 Rating control:** Supersede DLC 10's numeric-only Rating wording, but
+keep the signed `score` values and map them to `NO`, `Bad`, `Needs work`,
+`Eh`, `Okay`, `Decent`, `Good`, `Great`, and `Amazing`. Negative intensity
+remains mild at `-1`, definite at `-3`, and emphatic at `-5`. Display picker
+choices from `5` at the top to `-5` at the bottom. In Tried recipe detail, use
+one immediate owner-scoped hand control to the left of Star; it replaces the
+separate on-screen Rating value, supports a distinct Clear action, and
+preserves numeric scores in storage and other numeric surfaces. Use vector
+hand gestures rather than emoji glyphs, with the signed number in the palm and
+contrast-safe positive, negative, and neutral line colors.
+
+Direct labels make the scale understandable at the point of choice, while a
+single immediate detail control avoids duplicate display and conflicting
+staged edits. Keeping the signed values preserves existing filtering, sorting,
+history, bundles, and privacy boundaries. See the [DLC 43 brief](slices/dlc/dlc-43-rating-scale-guidance.md).
+
 ## November 2026 small adjustments
 
 The maintenance work is split into three packages: recipe-reading polish,
@@ -200,6 +216,8 @@ Minutes.
 These boundaries keep unrelated outcomes independently testable and prevent
 external website availability from blocking recipe Save. See
 [November 2026 Small Adjustments](slices/2026-11-small-adjustments.md).
+
+| Rating follows Heart then Share; mobile order is Star, Heart, Rating. | Supersedes the previous toolbar order. |
 
 ## Recording New Decisions
 
