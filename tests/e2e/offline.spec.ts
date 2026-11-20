@@ -30,6 +30,7 @@ async function createRecipe(
   user: TestUser,
   name: string,
   ingredientRows: unknown[] = [],
+  metadata: { state?: 'want_to_try' | 'tried' | 'will_not_try'; reason?: string } = {},
 ) {
   const response = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe`, {
     headers: ownerHeaders(config, user),
@@ -38,11 +39,11 @@ async function createRecipe(
       p_expected_version: null,
       p_name: name,
       p_food_type_id: null,
-      p_state: 'want_to_try',
+      p_state: metadata.state ?? 'want_to_try',
       p_verdict_id: null,
       p_enthusiasm_id: null,
       p_occasion_details: null,
-      p_reason: null,
+      p_reason: metadata.reason ?? null,
       p_serves: null,
       p_prep_time_minutes: null,
       p_mixing_time_minutes: null,
@@ -167,25 +168,32 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
   const config = await getLocalSupabaseConfig();
   const recipeId = randomUUID();
   const ingredientRowId = randomUUID();
-  const recipe = await createRecipe(request, config, user, `Offline recipe ${recipeId}`, [
-    {
-      recipe_ingredient_id: ingredientRowId,
-      ingredient_id: null,
-      ingredient_name: 'Carrot',
-      is_main: false,
-      detail: '',
-      preparation: 'cubed',
-      measurements: [
-        {
-          measurement_type: 'count',
-          amount_min: 4,
-          amount_max: null,
-          unit_code: null,
-          picklist_value_id: null,
-        },
-      ],
-    },
-  ]);
+  const recipe = await createRecipe(
+    request,
+    config,
+    user,
+    `Offline recipe ${recipeId}`,
+    [
+      {
+        recipe_ingredient_id: ingredientRowId,
+        ingredient_id: null,
+        ingredient_name: 'Carrot',
+        is_main: false,
+        detail: '',
+        preparation: 'cubed',
+        measurements: [
+          {
+            measurement_type: 'count',
+            amount_min: 4,
+            amount_max: null,
+            unit_code: null,
+            picklist_value_id: null,
+          },
+        ],
+      },
+    ],
+    { state: 'will_not_try', reason: 'Too spicy for me.' },
+  );
   const ingredientUpdate = await request.patch(
     `${config.apiUrl}/rest/v1/recipe_ingredients?id=eq.${ingredientRowId}`,
     {
@@ -202,6 +210,8 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
       .toBe(true);
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
+    await expect(page.locator('.recipe-metadata').first()).toContainText('Will not try');
+    await expect(page.locator('.recipe-metadata').first()).toContainText('Too spicy for me.');
     const renderedIngredients = page.locator('.recipe-ingredient-list, .recipe-ingredient-table');
     await expect(renderedIngredients).toContainText('cubed 1 ¼"');
     await expect(renderedIngredients).toContainText('divided');
@@ -220,6 +230,14 @@ test('an owner opens cached recipes offline and sign-out removes them @e2e @a11y
 
     await recipeLink.click();
     await expect(page.getByRole('heading', { name: `Offline recipe ${recipeId}` })).toBeVisible();
+    const offlineMetadataLabels = await page
+      .locator('.recipe-metadata:not(.recipe-time-list) dt:visible')
+      .allTextContents();
+    expect(offlineMetadataLabels).toContain('State');
+    expect(offlineMetadataLabels).toContain('Reason');
+    expect(offlineMetadataLabels).not.toContain('Food Type');
+    expect(offlineMetadataLabels).not.toContain('Meal Type');
+    expect(offlineMetadataLabels).not.toContain('Cuisine');
     await expect(renderedIngredients).toContainText('cubed 1 ¼"');
     await expect(renderedIngredients).toContainText('divided');
     await expect(renderedIngredients).toContainText('1 : 3');

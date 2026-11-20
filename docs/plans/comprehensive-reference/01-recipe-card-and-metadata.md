@@ -191,13 +191,20 @@ same type. Time values remain minutes in storage.
   right; Grid indicators stack at the top-right. Only active stamps are drawn.
   On mobile, the list shows Name and Opinion with compact Score and active
   marker indicators. Detail view
-  uses content-sized wrapping metadata in this
-  order: State/response, Occasion
-  Details when present, Serves, Makes, Equipment, Food Type, Meal Type,
-  Cuisine, then Notes. Private detail has one Tried-only Rating toolbar control
-  and no duplicate standalone on-screen Rating value; eligible private print
-  retains its numeric Rating. On desktop, Food Type, Meal Type, and Cuisine occupy a
-  dedicated full-width row. Total Time leads the separate time breakdown on
+  uses content-sized wrapping metadata. It omits Verdict, Enthusiasm, Reason,
+  Occasion Details, Food Type, Meal Type, and Cuisine, except that a
+  **Will not try** recipe shows State and Reason together. Other fields remain
+  in their current order. Private detail has one Tried-only Rating
+  toolbar control and no duplicate standalone on-screen Rating value;
+  eligible private print retains its numeric Rating. When **Include
+  private-only details** is enabled, private Print and standalone HTML retain
+  State and its applicable response (Enthusiasm, Verdict, or Reason), plus
+  Occasion Details when present, but omit Food Type, Meal Type, and Cuisine;
+  preserve the existing preference gating. Offline detail snapshots match
+  private detail, including the **Will not try** exception. Public detail and
+  print remain unchanged; their allow-listed
+  payload omits all eight fields. Total Time
+  leads the separate time breakdown on
   private and public pages. On mobile, it occupies a full-width row above
   time entries in the subsection with a divider and small-caps “Time
   Breakdown” title. On desktop, a fixed vertical rule separates Total Time

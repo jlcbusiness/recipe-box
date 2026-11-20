@@ -244,10 +244,15 @@ question. Its output is a decision-log entry, not shipped code.
   [Rating Labels and Detail Control](slices/dlc/dlc-43-rating-scale-guidance.md)
   adds labeled Rating choices and an immediate private detail control without
   changing numeric score storage.
-- **DLC 44–49 (draft candidates):**
+- **DLC 44 (implemented; app version 1.17.0):**
+  [Recipe Detail Metadata and Rating](slices/dlc/dlc-44-recipe-detail-metadata-and-rating.md)
+  reduces private detail metadata while preserving private-output preferences
+  and DLC 43's Rating behavior.
+- **DLC 45–49 (draft candidates):**
   [DLC roadmap](slices/dlc/README.md#phase-18-admin-updates-and-recipe-experience-follow-ups)
-  records six remaining proposed slices. They are not approved or scheduled;
-  resolve each brief's open decisions before implementation.
+  records five remaining proposed slices. They are not approved or scheduled;
+  resolve each brief's open decisions before implementation. DLC 49 will shift
+  the private-detail composition established by DLC 44.
 
 ## Completion Rule
 

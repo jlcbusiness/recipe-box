@@ -897,13 +897,13 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page.getByRole('main').getByRole('link', { name: 'Recipe Tin' })).toBeVisible();
     await expect(page.locator('.recipe-attribution')).toContainText('In the Recipe Tin');
     const detailLabels = await page
-      .locator('.recipe-metadata:not(.recipe-time-list) dt')
+      .locator('.recipe-metadata:not(.recipe-time-list) dt:visible')
       .allTextContents();
     const detailMetadata = page.locator('.recipe-metadata:not(.recipe-time-list)').first();
     await expect(detailMetadata).toHaveCSS('display', 'flex');
     await expect(detailMetadata).toHaveCSS('flex-wrap', 'wrap');
     await expect(detailMetadata).toHaveCSS('row-gap', '11px');
-    await expect(page.locator('.recipe-detail-classification')).toHaveCSS('margin-top', '11px');
+    await expect(page.locator('.recipe-detail-classification')).toBeHidden();
     await expect(page.locator('.recipe-detail-times')).toHaveCSS('margin-top', '11px');
     await expect(page.locator('.recipe-time-list')).toHaveCSS('margin-top', '0px');
     await expect(page.locator('.recipe-time-list > div dt')).toHaveText([
@@ -933,25 +933,7 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
       Math.abs(timeDividerGeometry.dividerCenter - timeDividerGeometry.fieldGapCenter),
     ).toBeLessThanOrEqual(1);
     const detailSectionBounds = await page.locator('.recipe-detail-section').first().boundingBox();
-    const classificationBounds = await page.locator('.recipe-detail-classification').boundingBox();
-    expect(
-      Math.abs((classificationBounds?.width ?? 0) - (detailSectionBounds?.width ?? 0)),
-    ).toBeLessThanOrEqual(1);
-    expect(detailLabels).toEqual([
-      'State',
-      'Enthusiasm',
-      'Serves',
-      'Makes',
-      'Equipment',
-      'Food Type',
-      'Meal Type',
-      'Cuisine',
-    ]);
-    await expect(page.locator('.recipe-detail-classification dt')).toHaveText([
-      'Food Type',
-      'Meal Type',
-      'Cuisine',
-    ]);
+    expect(detailLabels).toEqual(['Serves', 'Makes', 'Equipment']);
     await expect(page.getByRole('heading', { name: 'Time Breakdown', exact: true })).toBeHidden();
     const mobileViewportWidth = testInfo.project.name === 'Fold 6' ? 307 : 390;
     await page.setViewportSize({ width: mobileViewportWidth, height: 844 });
@@ -1167,6 +1149,11 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}$`));
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Sunday tomato and basil soup' })).toBeVisible();
+    const triedDetailLabels = await page
+      .locator('.recipe-metadata:not(.recipe-time-list) dt:visible')
+      .allTextContents();
+    expect(triedDetailLabels).not.toContain('State');
+    expect(triedDetailLabels).not.toContain('Verdict');
 
     const updatedRecipe = await request.get(
       `${config.apiUrl}/rest/v1/recipes?select=id,version,total_time_minutes&id=eq.${recipeId}`,
@@ -1190,10 +1177,132 @@ test('an owner can create, view, edit, and reload a Recipe Tin recipe @e2e', asy
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Sunday tomato and basil soup' })).toBeVisible();
     await expect(page.locator('.recipe-metadata').first()).toContainText('Will not try');
+    await expect(page.locator('.recipe-metadata').first()).toContainText(
+      'Contains an ingredient I avoid.',
+    );
+    const willNotTryLabels = await page
+      .locator('.recipe-metadata:not(.recipe-time-list) dt:visible')
+      .allTextContents();
+    expect(willNotTryLabels).toContain('State');
+    expect(willNotTryLabels).toContain('Reason');
+    expect(willNotTryLabels).not.toContain('Food Type');
+    expect(willNotTryLabels).not.toContain('Meal Type');
+    expect(willNotTryLabels).not.toContain('Cuisine');
     await page.goto('/recipes');
     await expect(page.getByRole('row', { name: /Sunday tomato and basil soup/ })).toContainText(
       'Contains an ingredient I avoid.',
     );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('private recipe detail hides evaluation metadata except for Will not try @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Metadata visibility fixture');
+    await page.getByLabel('Serves').fill('4');
+    await selectSinglePicklist(page, 'Food Type', 'Soup');
+    await page.getByRole('button', { name: 'Meal Type: Select' }).click();
+    await page.getByRole('button', { name: 'Dinner', exact: true }).click();
+    await page.getByRole('button', { name: 'Cuisine: Select' }).click();
+    await page.getByRole('button', { name: 'Italian', exact: true }).click();
+    await selectSinglePicklist(page, 'Enthusiasm', 'Specific occasion');
+    await page.getByLabel('Occasion Details').fill('Sunday brunch');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Metadata visibility fixture' })).toBeVisible();
+
+    async function expectHiddenMetadata(labels: string[]) {
+      const visibleLabels = await page
+        .locator('.recipe-metadata:not(.recipe-time-list) dt:visible')
+        .allTextContents();
+      for (const label of labels) expect(visibleLabels).not.toContain(label);
+      await expect(page.locator('.recipe-detail-classification')).toBeHidden();
+    }
+
+    await expectHiddenMetadata([
+      'State',
+      'Enthusiasm',
+      'Occasion Details',
+      'Food Type',
+      'Meal Type',
+      'Cuisine',
+    ]);
+    const wantToTryLabels = await page
+      .locator('.recipe-metadata:not(.recipe-time-list) dt:visible')
+      .allTextContents();
+    expect(wantToTryLabels).toContain('Serves');
+    async function expectDetailFits(width: number) {
+      await page.setViewportSize({ width, height: 844 });
+      const bounds = await page.locator('.recipe-print-metadata').boundingBox();
+      const documentSize = await page.evaluate(() => ({
+        content: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+      }));
+      expect(bounds).not.toBeNull();
+      if (bounds) {
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+      }
+      expect(documentSize.content).toBeLessThanOrEqual(documentSize.viewport);
+    }
+
+    await expectDetailFits(1280);
+    await expectDetailFits(761);
+    await expectDetailFits(760);
+    await expectDetailFits(390);
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('combobox', { name: 'Food Type', exact: true })).toHaveValue(
+      'Soup',
+    );
+    await expect(page.getByRole('button', { name: /Meal Type: Dinner/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Cuisine: Italian/ })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Enthusiasm', exact: true })).toContainText(
+      'Specific occasion',
+    );
+    await expect(page.getByLabel('Occasion Details')).toHaveValue('Sunday brunch');
+
+    await selectSinglePicklist(page, 'State', 'Tried');
+    await selectSinglePicklist(page, 'Verdict', 'Favorite');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Metadata visibility fixture' })).toBeVisible();
+    await expectHiddenMetadata(['State', 'Verdict', 'Food Type', 'Meal Type', 'Cuisine']);
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await selectSinglePicklist(page, 'State', 'Will not try');
+    await page.getByLabel('Reason').fill('Contains an ingredient I avoid.');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Metadata visibility fixture' })).toBeVisible();
+    const visibleLabels = await page
+      .locator('.recipe-metadata:not(.recipe-time-list) dt:visible')
+      .allTextContents();
+    expect(visibleLabels).toContain('State');
+    expect(visibleLabels).toContain('Reason');
+    for (const label of [
+      'Verdict',
+      'Enthusiasm',
+      'Occasion Details',
+      'Food Type',
+      'Meal Type',
+      'Cuisine',
+    ]) {
+      expect(visibleLabels).not.toContain(label);
+    }
+    await expect(page.locator('.recipe-metadata').first()).toContainText('Will not try');
+    await expect(page.locator('.recipe-metadata').first()).toContainText(
+      'Contains an ingredient I avoid.',
+    );
+    await expectDetailFits(1280);
+    await expectDetailFits(761);
+    await expectDetailFits(760);
+    await expectDetailFits(390);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -4838,10 +4947,22 @@ test('recipe detail print matches the active presentation @e2e', async ({
   const ingredientSetId = randomUUID();
 
   try {
-    const [prepTimeTypeId, cookTimeTypeId, equipmentId] = await Promise.all([
+    const [
+      prepTimeTypeId,
+      cookTimeTypeId,
+      equipmentId,
+      foodTypeId,
+      specificOccasionId,
+      mealTypeId,
+      cuisineId,
+    ] = await Promise.all([
       getPicklistId(request, config, user, 'time_type', 'Prep'),
       getPicklistId(request, config, user, 'time_type', 'Cook'),
       getPicklistId(request, config, user, 'equipment', 'Medium skillet'),
+      getPicklistId(request, config, user, 'food_type', 'Soup'),
+      getPicklistId(request, config, user, 'enthusiasm', 'Specific occasion'),
+      getPicklistId(request, config, user, 'meal_type', 'Dinner'),
+      getPicklistId(request, config, user, 'cuisine', 'Italian'),
     ]);
     const saved = await request.post(`${config.apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`, {
       headers: {
@@ -4852,16 +4973,16 @@ test('recipe detail print matches the active presentation @e2e', async ({
         p_recipe_id: null,
         p_expected_version: null,
         p_name: 'A recipe to print',
-        p_food_type_id: null,
+        p_food_type_id: foodTypeId,
         p_state: 'want_to_try',
         p_verdict_id: null,
-        p_enthusiasm_id: null,
-        p_occasion_details: null,
+        p_enthusiasm_id: specificOccasionId,
+        p_occasion_details: 'Sunday brunch',
         p_reason: null,
         p_serves: 4,
         p_notes_markdown: 'Serve warm.',
-        p_meal_type_ids: [],
-        p_cuisine_ids: [],
+        p_meal_type_ids: [mealTypeId],
+        p_cuisine_ids: [cuisineId],
         p_equipment_ids: [equipmentId],
         p_ingredient_rows: [
           {
@@ -5040,6 +5161,10 @@ test('recipe detail print matches the active presentation @e2e', async ({
         const equipmentValue =
           equipmentLabel?.parentElement?.querySelector('dd')?.textContent?.trim() ?? '';
         window.top?.document.documentElement.setAttribute('data-print-equipment', equipmentValue);
+        window.top?.document.documentElement.setAttribute(
+          'data-print-metadata',
+          metadata?.textContent?.trim() ?? '',
+        );
         window.top?.document.documentElement.setAttribute('data-print-requested', 'true');
       };
     });
@@ -5107,11 +5232,25 @@ test('recipe detail print matches the active presentation @e2e', async ({
     if (!defaultHtmlPath)
       throw new Error('Expected the default HTML download to have a file path.');
     const defaultHtml = await readFile(defaultHtmlPath, 'utf8');
+    const readOutputMetadata = async (html: string) => {
+      const outputPage = await page.context().newPage();
+      try {
+        await outputPage.setContent(html);
+        return await outputPage.locator('.recipe-output-metadata').innerText();
+      } finally {
+        await outputPage.close();
+      }
+    };
+    const defaultHtmlMetadata = await readOutputMetadata(defaultHtml);
     expect(defaultHtml.replace(/<!--[\s\S]*?-->/g, '')).toContain('Serves 4');
     expect(defaultHtml).toContain('medium skillet');
     expect(defaultHtml).not.toContain('Medium skillet');
     expect(defaultHtml).not.toContain('Want to try');
     expect(defaultHtml).not.toContain('Serve warm.');
+    expect(defaultHtmlMetadata).not.toContain('Sunday brunch');
+    expect(defaultHtmlMetadata).not.toContain('Food Type');
+    expect(defaultHtmlMetadata).not.toContain('Meal Type');
+    expect(defaultHtmlMetadata).not.toContain('Cuisine');
 
     await settingsButton.click();
     await pagePrivateDetails.check();
@@ -5124,10 +5263,28 @@ test('recipe detail print matches the active presentation @e2e', async ({
     if (!privateHtmlPath)
       throw new Error('Expected the private HTML download to have a file path.');
     const privateHtml = await readFile(privateHtmlPath, 'utf8');
+    const privateHtmlMetadata = await readOutputMetadata(privateHtml);
     expect(privateHtml).toContain('Want to try');
     expect(privateHtml).toContain('Serve warm.');
     expect(privateHtml).toContain('medium skillet');
     expect(privateHtml).not.toContain('Medium skillet');
+    expect(privateHtml).toContain('Enthusiasm');
+    expect(privateHtml).toContain('Specific occasion');
+    expect(privateHtml).toContain('Sunday brunch');
+    expect(privateHtmlMetadata).not.toContain('Food Type');
+    expect(privateHtmlMetadata).not.toContain('Meal Type');
+    expect(privateHtmlMetadata).not.toContain('Cuisine');
+
+    await outputButton.click();
+    await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
+    const privatePrintMetadata = await page.locator('html').getAttribute('data-print-metadata');
+    expect(privatePrintMetadata).toContain('Want to try');
+    expect(privatePrintMetadata).toContain('Specific occasion');
+    expect(privatePrintMetadata).toContain('Sunday brunch');
+    expect(privatePrintMetadata).not.toContain('Food Type');
+    expect(privatePrintMetadata).not.toContain('Meal Type');
+    expect(privatePrintMetadata).not.toContain('Cuisine');
 
     await page.reload();
     await settingsButton.click();
@@ -5238,11 +5395,6 @@ test('recipe detail print matches the active presentation @e2e', async ({
           expect(bounds.width).toBeCloseTo(contentBounds.width, 0);
         }
       }
-      const stateValueBounds = await page
-        .locator('.recipe-metadata > div')
-        .first()
-        .locator('dd')
-        .boundingBox();
       const servesTextBounds = await page
         .locator('.recipe-serves-value > span:first-child')
         .boundingBox();
@@ -5250,17 +5402,9 @@ test('recipe detail print matches the active presentation @e2e', async ({
         .locator('.recipe-reader-controls .recipe-scale-button svg')
         .boundingBox();
       const scaleButtonBounds = await scaleButton.boundingBox();
-      expect(stateValueBounds).not.toBeNull();
       expect(servesTextBounds).not.toBeNull();
       expect(scaleIconBounds).not.toBeNull();
       expect(scaleButtonBounds).not.toBeNull();
-      expect(
-        Math.abs(
-          (stateValueBounds?.y ?? 0) +
-            (stateValueBounds?.height ?? 0) / 2 -
-            ((servesTextBounds?.y ?? 0) + (servesTextBounds?.height ?? 0) / 2),
-        ),
-      ).toBeLessThanOrEqual(2);
       if (scaleButtonBounds && scaleIconBounds) {
         expect(
           Math.abs(
@@ -5550,6 +5694,13 @@ test('recipe detail print matches the active presentation @e2e', async ({
     await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
     await expect(page.locator('html')).toHaveAttribute('data-print-equipment', 'medium skillet');
+    const defaultPrintMetadata = await page.locator('html').getAttribute('data-print-metadata');
+    expect(defaultPrintMetadata).not.toContain('Want to try');
+    expect(defaultPrintMetadata).not.toContain('Specific occasion');
+    expect(defaultPrintMetadata).not.toContain('Sunday brunch');
+    expect(defaultPrintMetadata).not.toContain('Food Type');
+    expect(defaultPrintMetadata).not.toContain('Meal Type');
+    expect(defaultPrintMetadata).not.toContain('Cuisine');
     await expect(page.locator('.recipe-output-feedback-success')).toHaveText('Print request sent.');
     await expect(outputButton).toBeEnabled();
     const printFrame = page.locator('iframe[title="Recipe print document"]');

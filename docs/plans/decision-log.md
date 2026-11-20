@@ -203,6 +203,29 @@ single immediate detail control avoids duplicate display and conflicting
 staged edits. Keeping the signed values preserves existing filtering, sorting,
 history, bundles, and privacy boundaries. See the [DLC 43 brief](slices/dlc/dlc-43-rating-scale-guidance.md).
 
+**DLC 44 recipe detail metadata:** Hide Verdict, Enthusiasm, Reason, Occasion
+Details, Food Type, Meal Type, and Cuisine from private recipe detail, except
+show State and Reason together for **Will not try** recipes. Retain the
+metadata in storage, editing, and search. Public detail
+and print remain unchanged because their allow-listed payload already omits
+all eight. With the existing **Include private-only details** option enabled,
+private Print and standalone HTML keep State and its applicable response
+(Enthusiasm, Verdict, or Reason), plus Occasion Details when present, but omit
+the three classification fields; preserve existing preference gating. Offline
+detail snapshots match private detail, including the **Will not try** exception. DLC 43
+continues to own the single private detail Rating control, and its numeric
+print behavior is unchanged.
+
+Removing most state, opinion, and search-oriented metadata from the cooking
+view keeps recipe content prominent without changing the archive record or
+discovery tools. Pairing Will not try with its Reason preserves the decision's
+useful context. Private print and standalone output retain State and only its
+applicable response, plus Occasion Details when present, as the user's
+explicitly selected context. This private-detail posture is interim: DLC 49
+will shift the detail experience by adding the Made control, count, and
+last-made information, and will revisit the detail composition without
+changing DLC 44's metadata visibility rules.
+
 ## November 2026 small adjustments
 
 The maintenance work is split into three packages: recipe-reading polish,

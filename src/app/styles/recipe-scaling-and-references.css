@@ -384,9 +384,8 @@ section.recipe-detail-section .recipe-relationship-list a {
   max-width: 100%;
 }
 
-.recipe-detail-classification {
-  width: 100%;
-  margin-top: 11px;
+.recipe-metadata > .recipe-detail-private-field-hidden {
+  display: none;
 }
 
 .recipe-metadata dt {

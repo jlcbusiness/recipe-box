@@ -338,14 +338,14 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 
   const valueFor = (valueId: string | null) =>
     picklists.find((value) => value.id === valueId)?.value;
-  const assignedValues = (category: 'meal_type' | 'cuisine' | 'equipment', ids: string[]) =>
+  const assignedEquipment = (ids: string[]) =>
     ids
       .map(
         (valueId) =>
-          picklists.find((value) => value.id === valueId && value.category === category)?.value,
+          picklists.find((value) => value.id === valueId && value.category === 'equipment')?.value,
       )
       .filter((value): value is string => Boolean(value))
-      .map((value) => (category === 'equipment' ? value.toLocaleLowerCase() : value));
+      .map((value) => value.toLocaleLowerCase());
   const response =
     recipe.state === 'want_to_try'
       ? ['Enthusiasm', valueFor(recipe.enthusiasm_id)]
@@ -363,12 +363,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         ? null
         : `${recipe.makes_quantity} ${recipe.makes_thing}`,
     ],
-    ['Equipment', assignedValues('equipment', recipe.equipment_ids).join(', ')],
-  ].filter(([, value]) => Boolean(value));
-  const classificationSections = [
-    ['Food Type', valueFor(recipe.food_type_id)],
-    ['Meal Type', assignedValues('meal_type', recipe.meal_type_ids).join(', ')],
-    ['Cuisine', assignedValues('cuisine', recipe.cuisine_ids).join(', ')],
+    ['Equipment', assignedEquipment(recipe.equipment_ids).join(', ')],
   ].filter(([, value]) => Boolean(value));
   const times = [
     ...(recipe.total_time_minutes > 0
@@ -510,32 +505,43 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             <h2 id="metadata-title">Recipe details</h2>
             {sections.length > 0 && (
               <dl className="recipe-metadata">
-                {sections.map(([label, value]) => (
-                  <div
-                    data-private-output-only={
-                      ['State', 'Enthusiasm', 'Verdict', 'Reason', 'Occasion Details'].includes(
-                        label ?? '',
-                      )
-                        ? ''
-                        : undefined
-                    }
-                    key={label}
-                  >
-                    <dt>{label}</dt>
-                    {label === 'Serves' && recipe.serves !== null ? (
-                      <RecipeServesControl serves={recipe.serves} />
-                    ) : label === 'Makes' &&
-                      recipe.makes_quantity !== null &&
-                      recipe.makes_thing !== null ? (
-                      <RecipeMakesValue
-                        makesQuantity={recipe.makes_quantity}
-                        makesThing={recipe.makes_thing}
-                      />
-                    ) : (
-                      <dd>{value}</dd>
-                    )}
-                  </div>
-                ))}
+                {sections.map(([label, value]) => {
+                  const isPrivateEvaluationField = [
+                    'State',
+                    'Enthusiasm',
+                    'Verdict',
+                    'Reason',
+                    'Occasion Details',
+                  ].includes(label ?? '');
+                  const remainsVisibleForWillNotTry =
+                    recipe.state === 'will_not_try' && (label === 'State' || label === 'Reason');
+
+                  return (
+                    <div
+                      className={
+                        isPrivateEvaluationField && !remainsVisibleForWillNotTry
+                          ? 'recipe-detail-private-field-hidden'
+                          : undefined
+                      }
+                      data-private-output-only={isPrivateEvaluationField ? '' : undefined}
+                      key={label}
+                    >
+                      <dt>{label}</dt>
+                      {label === 'Serves' && recipe.serves !== null ? (
+                        <RecipeServesControl serves={recipe.serves} />
+                      ) : label === 'Makes' &&
+                        recipe.makes_quantity !== null &&
+                        recipe.makes_thing !== null ? (
+                        <RecipeMakesValue
+                          makesQuantity={recipe.makes_quantity}
+                          makesThing={recipe.makes_thing}
+                        />
+                      ) : (
+                        <dd>{value}</dd>
+                      )}
+                    </div>
+                  );
+                })}
               </dl>
             )}
             {recipe.score !== null && (
@@ -550,16 +556,6 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                     </span>
                   </dd>
                 </div>
-              </dl>
-            )}
-            {classificationSections.length > 0 && (
-              <dl className="recipe-metadata recipe-detail-classification" data-private-output-only>
-                {classificationSections.map(([label, value]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
               </dl>
             )}
             {times.length > 0 && (

@@ -284,16 +284,25 @@ group, without horizontal page overflow. In mobile Details, show Rating only
 beside the title-side markers; do not duplicate it in a metadata cell.
 On narrow desktop recipe details, let the featured image shrink only as needed
 to keep the action bar within the available heading width.
-Recipe detail follows the edit-form order but uses a distinct view
-order: State and its active response, Occasion Details when present, Serves,
-Makes, Equipment, Food Type, Meal Type, Cuisine, then Notes. Its Tried-only
-Rating toolbar control replaces the standalone on-screen value; eligible
-private print retains the numeric Rating.
+Recipe detail uses a distinct view order and omits Verdict, Enthusiasm, Reason,
+Occasion Details, Food Type, Meal Type, and Cuisine, except that a **Will not
+try** recipe shows State and Reason together. Keep all other fields in their
+existing order. Its Tried-only Rating toolbar control replaces
+the standalone on-screen value; eligible private print retains the numeric
+Rating. With **Include private-only details** enabled, private Print and
+standalone HTML retain State and its applicable response (Enthusiasm, Verdict,
+or Reason), plus Occasion Details when present, but omit Food Type, Meal Type,
+and Cuisine; preserve the existing preference gating. Offline detail snapshots
+match private detail, including the **Will not try** exception. Public detail
+and print remain unchanged and
+continue to omit all eight fields through their allow-listed payload.
+This reduced-metadata detail composition is an interim posture; DLC 49 will
+shift the private detail experience by adding the Made control, count, and
+last-made information.
 Display Equipment labels in lowercase in private and public recipe reading,
 print, and standalone recipe output without changing shared catalog or editor
 labels.
 Total Time leads the separate time breakdown instead of appearing in metadata.
-On desktop, Food Type, Meal Type, and Cuisine share their own full-width row.
 Center the fixed vertical rule in the gap between Total Time and the first time
 entry; omit it when there are no time entries.
 The Makes heading labels its value, so show only the quantity and authored thing

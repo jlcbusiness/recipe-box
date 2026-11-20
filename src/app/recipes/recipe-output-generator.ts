@@ -343,6 +343,9 @@ function cloneReadableNode(
       element.remove();
     });
   }
+  clone.querySelectorAll('.recipe-detail-private-field-hidden').forEach((element) => {
+    element.classList.remove('recipe-detail-private-field-hidden');
+  });
   clone.querySelectorAll('[id], [aria-labelledby], [aria-describedby]').forEach((element) => {
     element.removeAttribute('id');
     element.removeAttribute('aria-labelledby');
