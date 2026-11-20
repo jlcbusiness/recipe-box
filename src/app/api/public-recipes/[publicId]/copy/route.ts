@@ -1,6 +1,9 @@
 import { queueMediaDeletions } from '../../../../../lib/media/server';
 import { buildPublicRecipeCopyPayload } from '../../../../../lib/recipes/public-copy-rules';
-import { getPublicRecipeCopySource } from '../../../../../lib/recipes/public-data';
+import {
+  getPublicRecipeCopySource,
+  isOwnPublicRecipe,
+} from '../../../../../lib/recipes/public-data';
 import { createAdminClient } from '../../../../../lib/supabase/admin';
 import { createClient } from '../../../../../lib/supabase/server';
 
@@ -9,6 +12,7 @@ export const runtime = 'nodejs';
 const uuidPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu;
 const maximumPhotoBytes = 20 * 1024 * 1024;
 const noStoreHeaders = { 'Cache-Control': 'private, no-store, max-age=0, must-revalidate' };
+const ownRecipeErrorMessage = 'You already have this recipe. Use "copy" if you wish a duplicate.';
 
 type CopyRouteContext = { params: Promise<{ publicId: string }> };
 type ExistingCopy = { recipeId: string };
@@ -93,6 +97,17 @@ export async function POST(_request: Request, context: CopyRouteContext) {
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
     return jsonResponse({ error: 'Sign in before saving a public recipe.' }, 401);
+  }
+
+  let isOwnRecipe: boolean;
+  try {
+    isOwnRecipe = await isOwnPublicRecipe(publicId, authData.user.id);
+  } catch (error) {
+    reportFailure('copy_source_owner', error instanceof Error ? error.name : undefined);
+    return jsonResponse({ error: 'Unable to verify recipe ownership. Please try again.' }, 503);
+  }
+  if (isOwnRecipe) {
+    return jsonResponse({ code: 'own_recipe', error: ownRecipeErrorMessage }, 409);
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -220,6 +235,11 @@ export async function POST(_request: Request, context: CopyRouteContext) {
     }
     if (copyError?.code === 'P0002') {
       return jsonResponse({ error: 'This recipe is currently unavailable.' }, 404);
+    }
+    if (copyError?.code === 'PT409' && copyError.message === ownRecipeErrorMessage) {
+      return cleanupQueued
+        ? jsonResponse({ code: 'own_recipe', error: ownRecipeErrorMessage }, 409)
+        : jsonResponse({ error: 'Unable to clean up duplicate recipe photos.' }, 503);
     }
     return jsonResponse(
       {

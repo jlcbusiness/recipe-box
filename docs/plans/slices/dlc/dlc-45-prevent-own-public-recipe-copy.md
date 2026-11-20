@@ -1,30 +1,35 @@
 # DLC 45: Prevent Saving an Own Public Recipe
 
-**Status:** Draft candidate.
+**Status:** Implemented; app version 1.17.1.
 
 ## Outcome
 
-An owner who opens their own public recipe cannot accidentally save a second,
-private copy of it. Instead, the Save action explains that the recipe is
-already theirs, using the requested friendly tone: “That's ya own recipe,
-fam.”
+When a signed-in User opens their own public recipe, the Save action does not
+create a private duplicate. It displays the approved message:
+`You already have this recipe. Use "copy" if you wish a duplicate.`
 
 ## Scope
 
 - Detect the source recipe owner on the server before creating a copy or
   duplicating its photos.
+- Keep the Save action and existing feedback placement; show the owner message
+  as an accessible, distinct rejection rather than hiding or disabling Save.
+- Do not link to the private recipe or return the source account identity.
 - Return a distinct, non-success result for an owner attempting to copy their
   own public recipe.
 - Show a clear status near the Save action; do not present this as a generic
   network or save failure.
+- Enforce the same owner check in the database copy function before inserting
+  a recipe, protected reference, or media row, so bypassing the UI cannot copy.
 - Preserve normal copy behavior for other viewers and the existing
   already-saved-copy flow.
 
 ## Data and failure boundaries
 
-- The database copy function is the authoritative guard. It must compare the
-  authenticated destination account with the source recipe account before
-  inserting a recipe or copying media.
+- The server route compares the account from the verified session with the
+  source account before uploading photo bytes. The database copy function
+  repeats the comparison against the destination account before any database
+  copy side effect.
 - The API route translates the expected result into a stable response that the
   UI can render. Do not rely only on hiding or disabling the client button.
 - An own-recipe attempt creates no recipe, reference, or photo assets.
@@ -33,22 +38,27 @@ fam.”
 
 ## Acceptance criteria
 
-1. An authenticated owner attempting to save their own public recipe receives
-   the distinct friendly message and no private copy is created.
-2. The database guard rejects the operation even if the request bypasses the
-   UI.
+1. Clicking Save on one's own active public recipe returns the approved
+   message in the existing accessible feedback area and creates or uploads no
+   recipe, reference, or photo assets.
+2. A direct database-function call for an account's own active public recipe
+   returns the distinct non-success result before inserting copy rows.
 3. A different signed-in viewer can still save the public recipe and receives
    the existing success flow.
-4. The already-saved-copy flow still opens the existing private copy.
-5. Tests cover owner rejection, no media or recipe side effects, normal copy,
-   duplicate copy, and UI feedback.
+4. The already-saved-copy confirmation and trashed-copy replacement flows
+   remain unchanged for other viewers.
+5. Focused route, database, and UI tests cover owner rejection, zero side
+   effects, normal copy, duplicate copy, and the exact message.
 
-## Open decisions
+## Accepted decisions
 
-- Confirm whether the message should include a link to the owner's private
-  recipe when one can be resolved safely. The first version can simply prevent
-  the duplicate and explain why.
-- Confirm final punctuation and whether to keep the exact informal wording.
+- Use the exact message `You already have this recipe. Use "copy" if you wish
+  a duplicate.`
+- Do not include a link to the private recipe. The public source is already
+  open, and resolving a separate private destination is outside this flow.
+- Keep the existing Save control and feedback location; distinguish this
+  expected rejection from network and save failures without exposing owner
+  identity.
 
 ## Initial sizing
 

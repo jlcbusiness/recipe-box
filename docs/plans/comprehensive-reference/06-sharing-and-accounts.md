@@ -38,10 +38,12 @@ When a Guest accesses a valid public recipe link, whether signed in or not:
   - Scale servings ($jx$, $1/j$, or custom servings).
   - Switch measurement display units. The page opens in the recipe's stored units because a guest has no unit preferences.
   - Print recipe.
-  - A signed-in User can save an active public recipe to their Recipe Tin.
-    The copy is private, uses only public recipe data and photos, and is
-    independent of the source. Visitors without a verified session can still
-    read and print but do not see a save action.
+  - A signed-in User can save another User's active public recipe to their
+    Recipe Tin. The copy is private, uses only public recipe data and photos,
+    and is independent of the source. A User cannot save their own public
+    recipe as a duplicate; the Save action explains why without creating a
+    copy. Visitors without a verified session can still read and print but do
+    not see a save action.
 - **Restricted / Hidden Elements:**
   - No application navigation, sidebar, or account links.
   - No edit, delete, or clone buttons.
@@ -89,6 +91,14 @@ reference is labeled `{source username}'s {recipe title}` and cannot be
 changed while the copy exists. If the source publication is the Recipe Tin
 collection, it is not copied as a source citation; the Tin is a container, not
 a recipe source.
+
+The Save action remains available when a signed-in User opens their own active
+public recipe. Submitting it returns the distinct message
+`You already have this recipe. Use "copy" if you wish a duplicate.` No private
+copy link or owner identity is returned. The server checks the verified
+session's account before staging public photos, and the database copy function
+repeats the owner check before inserting any copy rows. Other viewers' saves
+and their already-saved-copy flow remain unchanged.
 
 ### 9.4 Recipe duplication
 

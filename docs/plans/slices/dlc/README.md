@@ -170,9 +170,9 @@ while retaining the existing single-image viewer without gallery navigation.
 
 ### Phase 18: Admin Updates and recipe experience follow-ups
 
-The remaining slices are draft candidates from the Admin Updates backlog,
-ordered approximately by implementation effort. They are not approved or
-scheduled. DLC 42, DLC 43, and DLC 44 are implemented and verified.
+The remaining slices are ordered approximately by implementation effort. DLC
+42 through DLC 45 are implemented and verified; DLC 46–49 remain draft
+candidates.
 
 - **DLC 42 (implemented; app version 1.15.1):**
   [Admin Update Text Reflow](dlc-42-admin-update-text-reflow.md) moves narrow
@@ -185,7 +185,7 @@ scheduled. DLC 42, DLC 43, and DLC 44 are implemented and verified.
   [Recipe Detail Metadata and Rating](dlc-44-recipe-detail-metadata-and-rating.md)
   reduces private detail metadata, defines output-specific behavior, and
   reuses DLC 43's view-mode Rating control.
-- **DLC 45 (draft candidate):**
+- **DLC 45 (implemented; app version 1.17.1):**
   [Prevent Saving an Own Public Recipe](dlc-45-prevent-own-public-recipe-copy.md)
   blocks redundant copies and explains why.
 - **DLC 46 (draft candidate):**
@@ -231,10 +231,11 @@ scheduled. DLC 42, DLC 43, and DLC 44 are implemented and verified.
   approved migration maps total-only legacy recipes to Cook, derives totals
   from component entries when present, rounds expression results half-up, and
   retains only Total Time in Find Recipes.
-- DLC 45–49 remain independent draft candidates. Resolve each brief's open
-  decisions and reconcile approved behavior with the comprehensive reference
-  before implementation. DLC 44's interim private-detail composition will
-  shift when DLC 49 adds its Made control and last-made information.
+- DLC 46–49 remain independent draft candidates. Resolve each brief's open
+  decisions and reconcile
+  approved behavior with the comprehensive reference before implementation.
+  DLC 44's interim private-detail composition will shift when DLC 49 adds its
+  Made control and last-made information.
 
 ## Existing deferrals not assigned a DLC brief
 

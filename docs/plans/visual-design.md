@@ -1472,6 +1472,12 @@ untouched. Visitors without a verified session retain public reading and
 output but see no save or sign-in action. Keep the action and status usable
 without horizontal overflow at mobile widths.
 
+When a signed-in User opens their own active public recipe, keep Save visible.
+Submitting it shows `You already have this recipe. Use "copy" if you wish a
+duplicate.` in the existing accessible feedback area. Do not add a private-copy
+link or shift the public header; preserve the current compact mobile feedback
+and full screen-reader announcement.
+
 ## Publication Editing
 
 Publication detail shows the cover without an edit trigger. Its action row

@@ -325,6 +325,10 @@ equipment, ingredients, instructions, and static publication attribution, while
 strictly omitting personal fields (verdict, enthusiasm, reason, notes, gotchas)
 and change history.
 
+A signed-in User cannot save their own active public recipe as a duplicate.
+The Save action explains why without creating a copy or linking to the private
+recipe; other viewers can still save the public projection to their Recipe Tin.
+
 Support password sign-in, password recovery, and Google sign-in. Each account
 uses exactly one sign-in method, chosen when its invite is accepted.
 In production, sign-up is invite-only: an Admin generates account-creation

@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(12);
+select plan(14);
 
 insert into auth.users (
   id,
@@ -30,6 +30,10 @@ values (
   now()
 );
 
+update public.accounts
+set public_username = 'copy-protection-owner'
+where id = '40000000-0000-4000-8000-000000000001';
+
 insert into public.recipes (id, account_id, name, state)
 values
   (
@@ -44,6 +48,28 @@ values
     'Duplicate recipe',
     'want_to_try'
   );
+
+insert into public.recipes (id, account_id, name, state, is_private)
+values (
+  '40000000-0000-4000-8000-000000000009',
+  '40000000-0000-4000-8000-000000000001',
+  'Owner public recipe',
+  'want_to_try',
+  false
+);
+
+select ok(
+  exists (
+    select 1
+    from public.recipes
+    where id = '40000000-0000-4000-8000-000000000009'
+      and account_id = '40000000-0000-4000-8000-000000000001'
+      and public_id is not null
+      and not is_private
+      and trashed_at is null
+  ),
+  'owner guard fixture is an active public recipe'
+);
 
 insert into public.recipe_references (
   id,
@@ -70,6 +96,27 @@ values (
 
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 set local role service_role;
+select throws_ok(
+  format(
+    'select public.save_public_recipe_copy(%L::uuid, %L::uuid, %L::text, %L::jsonb, %L::jsonb)',
+    '40000000-0000-4000-8000-000000000001',
+    (
+      select public_id
+      from public.recipes
+      where id = '40000000-0000-4000-8000-000000000009'
+    ),
+    'https://recipe-box.example/r/' || (
+      select public_id::text
+      from public.recipes
+      where id = '40000000-0000-4000-8000-000000000009'
+    ),
+    '{}',
+    '[]'
+  ),
+  'PT409',
+  'You already have this recipe. Use "copy" if you wish a duplicate.',
+  'the database copy function rejects an owner before loading copy data'
+);
 select set_config(
   'app.public_recipe_saved_from_public_id',
   '40000000-0000-4000-8000-000000000005',

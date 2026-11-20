@@ -248,9 +248,12 @@ question. Its output is a decision-log entry, not shipped code.
   [Recipe Detail Metadata and Rating](slices/dlc/dlc-44-recipe-detail-metadata-and-rating.md)
   reduces private detail metadata while preserving private-output preferences
   and DLC 43's Rating behavior.
-- **DLC 45–49 (draft candidates):**
+- **DLC 45 (implemented; app version 1.17.1):**
+  [Prevent Saving an Own Public Recipe](slices/dlc/dlc-45-prevent-own-public-recipe-copy.md)
+  prevents redundant private copies of one's own public recipe.
+- **DLC 46–49 (draft candidates):**
   [DLC roadmap](slices/dlc/README.md#phase-18-admin-updates-and-recipe-experience-follow-ups)
-  records five remaining proposed slices. They are not approved or scheduled;
+  records four remaining proposed slices. They are not approved or scheduled;
   resolve each brief's open decisions before implementation. DLC 49 will shift
   the private-detail composition established by DLC 44.
 

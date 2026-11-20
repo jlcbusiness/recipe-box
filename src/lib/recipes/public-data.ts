@@ -551,6 +551,20 @@ export async function getPublicRecipePageData(publicId: string): Promise<PublicR
   }
 }
 
+export async function isOwnPublicRecipe(publicId: string, accountId: string): Promise<boolean> {
+  const supabase = createPublicDataAdminClient();
+  const { data: recipe, error } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('public_id', publicId)
+    .eq('account_id', accountId)
+    .eq('is_private', false)
+    .is('trashed_at', null)
+    .maybeSingle();
+  ensureNoError(error, 'copy_source_owner');
+  return recipe !== null;
+}
+
 export async function getPublicRecipeCopySource(
   publicId: string,
 ): Promise<PublicRecipeCopySourceData> {

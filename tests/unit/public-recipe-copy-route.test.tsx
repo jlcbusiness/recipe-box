@@ -5,18 +5,23 @@ const {
   buildPublicRecipeCopyPayload,
   createAdminClient,
   createClient,
+  isOwnPublicRecipe,
   getPublicRecipeCopySource,
   queueMediaDeletions,
 } = vi.hoisted(() => ({
   buildPublicRecipeCopyPayload: vi.fn(),
   createAdminClient: vi.fn(),
   createClient: vi.fn(),
+  isOwnPublicRecipe: vi.fn(),
   getPublicRecipeCopySource: vi.fn(),
   queueMediaDeletions: vi.fn(),
 }));
 
 vi.mock('../../src/lib/recipes/public-copy-rules', () => ({ buildPublicRecipeCopyPayload }));
-vi.mock('../../src/lib/recipes/public-data', () => ({ getPublicRecipeCopySource }));
+vi.mock('../../src/lib/recipes/public-data', () => ({
+  getPublicRecipeCopySource,
+  isOwnPublicRecipe,
+}));
 vi.mock('../../src/lib/supabase/admin', () => ({ createAdminClient }));
 vi.mock('../../src/lib/supabase/server', () => ({ createClient }));
 vi.mock('../../src/lib/media/server', () => ({ queueMediaDeletions }));
@@ -64,11 +69,13 @@ function setup({
   existingRecipe = null,
   rpcResult = { data: { recipe_id: copiedRecipeId }, error: null },
   authenticated = true,
+  isOwnRecipe = false,
   sourceStatus = 'active',
 }: {
   existingRecipe?: { id: string; version: number; trashed_at: string | null } | null;
-  rpcResult?: { data: unknown; error: null | { code: string } };
+  rpcResult?: { data: unknown; error: null | { code: string; message?: string } };
   authenticated?: boolean;
+  isOwnRecipe?: boolean;
   sourceStatus?: string;
 } = {}) {
   const recipeLookup = createLookupQuery({
@@ -94,6 +101,7 @@ function setup({
     },
   });
   createAdminClient.mockReturnValue(admin);
+  isOwnPublicRecipe.mockResolvedValue(isOwnRecipe);
   getPublicRecipeCopySource.mockResolvedValue(
     sourceStatus === 'active'
       ? {
@@ -139,6 +147,45 @@ describe('public recipe copy route', () => {
     expect(response.status).toBe(401);
     expect(getPublicRecipeCopySource).not.toHaveBeenCalled();
     expect(createAdminClient).not.toHaveBeenCalled();
+  });
+
+  it('rejects the owner before checking copies, loading photos, or calling the copy RPC', async () => {
+    const { admin, download, upload } = setup({ isOwnRecipe: true });
+
+    const response = await POST(request(), {
+      params: Promise.resolve({ publicId }),
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      code: 'own_recipe',
+      error: 'You already have this recipe. Use "copy" if you wish a duplicate.',
+    });
+    expect(isOwnPublicRecipe).toHaveBeenCalledWith(publicId, accountId);
+    expect(admin.from).not.toHaveBeenCalled();
+    expect(getPublicRecipeCopySource).not.toHaveBeenCalled();
+    expect(download).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
+    expect(admin.rpc).not.toHaveBeenCalled();
+  });
+
+  it('translates the database owner conflict after cleaning up staged photos', async () => {
+    const message = 'You already have this recipe. Use "copy" if you wish a duplicate.';
+    const { admin } = setup({
+      rpcResult: { data: null, error: { code: 'PT409', message } },
+    });
+
+    const response = await POST(request(), {
+      params: Promise.resolve({ publicId }),
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ code: 'own_recipe', error: message });
+    expect(queueMediaDeletions).toHaveBeenCalledWith(expect.anything(), accountId, [
+      destinationFullPath,
+      destinationThumbnailPath,
+    ]);
+    expect(admin.rpc).toHaveBeenCalledOnce();
   });
 
   it('returns an existing saved copy without uploading media again', async () => {

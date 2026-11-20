@@ -219,7 +219,7 @@
     border: 0;
   }
 
-  .recipe-public-save-error-compact {
+  .recipe-public-save-feedback .recipe-public-save-error-compact {
     display: inline;
   }
 

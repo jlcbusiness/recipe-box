@@ -200,9 +200,11 @@ columns.
   a version conflict leaves both recipe content and media unchanged.
 - A recipe pairing may be plain text or link another recipe. Linked pairings are
   directional and expose both outgoing and incoming recipe relationships.
-- Saving a public recipe creates a private, destination-owned Recipe Tin copy
-  from the public projection, including public photos only. The copy retains a
-  protected URL reference to the source; the Recipe Tin collection itself is
+- Saving another User's public recipe creates a private, destination-owned
+  Recipe Tin copy from the public projection, including public photos only.
+  Users cannot save their own active public recipe as a duplicate; the server
+  and database reject that operation before copy side effects. The copy retains
+  a protected URL reference to the source; the Recipe Tin collection itself is
   not treated as source attribution. Schema-v10 bundles preserve the protected
   source public ID, and import cannot remove or replace an existing protected
   reference.

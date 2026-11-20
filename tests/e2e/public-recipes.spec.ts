@@ -859,6 +859,76 @@ test('a signed-in user can save one active copy while preserving trashed copies 
   }
 });
 
+test('a User cannot save their own public recipe as a duplicate @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipe = await createRecipe(request, config, user, 'My public recipe');
+    const publicId = await getPublicId(request, config, recipe.id);
+    await signIn(page, user);
+
+    for (const width of [1280, 641, 640, 390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/r/${publicId}`);
+
+      const saveButton = page.getByRole('button', { name: 'Save to Recipe Tin' });
+      const heading = page.locator('.recipe-page-heading.recipe-detail-heading');
+      await expect(saveButton).toBeVisible();
+      const [saveBoxBefore, headingBoxBefore] = await Promise.all([
+        saveButton.boundingBox(),
+        heading.boundingBox(),
+      ]);
+      if (!saveBoxBefore || !headingBoxBefore) {
+        throw new Error('Expected the own public recipe header to have bounds.');
+      }
+
+      await saveButton.click();
+      const ownerMessage = page.locator('.recipe-public-save-error');
+      await expect(ownerMessage).toContainText(
+        'You already have this recipe. Use "copy" if you wish a duplicate.',
+      );
+      await expect(ownerMessage).toBeVisible();
+      await expect(
+        ownerMessage.locator(
+          width <= 640 ? '.recipe-public-save-error-compact' : '.recipe-public-save-error-full',
+        ),
+      ).toBeVisible();
+      await expect(saveButton).toBeEnabled();
+      const [saveBoxAfter, headingBoxAfter] = await Promise.all([
+        saveButton.boundingBox(),
+        heading.boundingBox(),
+      ]);
+      if (!saveBoxAfter || !headingBoxAfter) {
+        throw new Error('Expected the owner feedback to preserve header bounds.');
+      }
+      expect(saveBoxAfter).toEqual(saveBoxBefore);
+      expect(headingBoxAfter.height).toBeCloseTo(headingBoxBefore.height, 1);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+        .toBe(true);
+    }
+
+    const copiesResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=id&account_id=eq.${user.id}&saved_from_public_id=eq.${publicId}`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(copiesResponse.ok(), await copiesResponse.text()).toBeTruthy();
+    expect(await copiesResponse.json()).toEqual([]);
+    const sourceReferencesResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_references?select=id&account_id=eq.${user.id}&source_public_id=eq.${publicId}&is_protected_source=eq.true`,
+      { headers: serviceHeaders(config) },
+    );
+    expect(sourceReferencesResponse.ok(), await sourceReferencesResponse.text()).toBeTruthy();
+    expect(await sourceReferencesResponse.json()).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('public save errors appear beside settings without shifting the header @e2e', async ({
   page,
   request,

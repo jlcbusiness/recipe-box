@@ -139,6 +139,25 @@ describe('public recipe save action', () => {
     );
   });
 
+  it('shows the specific own-recipe message and leaves Save available', async () => {
+    const message = 'You already have this recipe. Use "copy" if you wish a duplicate.';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ code: 'own_recipe', error: message }), { status: 409 }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PublicRecipeSaveAction publicId={publicId} recipeName="Citrus cake" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Save to Recipe Tin' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain(message);
+    expect(
+      screen.getByRole('button', { name: 'Save to Recipe Tin' }).hasAttribute('disabled'),
+    ).toBe(false);
+    expect(screen.queryByRole('link', { name: 'Open your saved copy' })).toBeNull();
+  });
+
   it('explains when the deployed copy endpoint is unavailable', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('<!doctype html>', { status: 404 }));
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
