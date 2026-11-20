@@ -35,5 +35,5 @@ recipe or publication version without erasing the forensic record.
 
 ## References
 
-- [History viewer](../23-history-viewer.md)
-- [Catalog management](../14c-ingredient-catalog-management.md)
+- [History viewer](../build/23-history-viewer.md)
+- [Catalog management](../build/14c-ingredient-catalog-management.md)

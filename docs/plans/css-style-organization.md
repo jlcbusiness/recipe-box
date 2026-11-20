@@ -154,13 +154,13 @@ Keep the stylesheet imports in this exact order after `@import "tailwindcss";`:
 
 This organization does not override the visual contracts in the
 [visual design guide](./visual-design.md) or the owning slice briefs,
-including the [recipe editor](./slices/4-recipe-card-basics.md),
-[ingredient rows](./slices/5-ingredient-rows.md),
-[measurements](./slices/6-measurements.md),
-[instructions](./slices/7-instructions-and-mentions.md),
-[Library Explorer](./slices/10a-library-explorer.md),
-[images](./slices/12-images.md),
-[Find Recipes](./slices/17-find-recipes.md),
+including the [recipe editor](slices/build/4-recipe-card-basics.md),
+[ingredient rows](slices/build/5-ingredient-rows.md),
+[measurements](slices/build/6-measurements.md),
+[instructions](slices/build/7-instructions-and-mentions.md),
+[Library Explorer](slices/build/10a-library-explorer.md),
+[images](slices/build/12-images.md),
+[Find Recipes](slices/build/17-find-recipes.md),
 [public recipe and print layout](./slices/dlc/dlc-08-recipe-public-and-print-layout.md),
 [advanced query rules](./slices/dlc/dlc-13-advanced-query-groups.md), and
 [Settings tabs](./slices/dlc/dlc-32-settings-tabs.md).

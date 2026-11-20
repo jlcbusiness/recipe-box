@@ -37,4 +37,4 @@ button.
 
 ## References
 
-- [Install and offline](../24-install-and-offline.md)
+- [Install and offline](../build/24-install-and-offline.md)

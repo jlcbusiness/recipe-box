@@ -2,10 +2,10 @@
 
 This brief defines the canonical ingredients and ordered recipe rows needed by
 Slice 5. Measurements and instruction mentions remain separate slices. The
-product authority is [the comprehensive reference](../comprehensive-reference.md),
-with related boundaries in [the data model](../data-model.md),
-[the delivery roadmap](../delivery-roadmap.md), and
-[the visual design guide](../visual-design.md).
+product authority is [the comprehensive reference](../../comprehensive-reference.md),
+with related boundaries in [the data model](../../data-model.md),
+[the delivery roadmap](../../delivery-roadmap.md), and
+[the visual design guide](../../visual-design.md).
 
 ## Outcome
 

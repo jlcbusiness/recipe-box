@@ -8,12 +8,12 @@ history, and a daily 30-day purge. It extends the existing recipe Trash
 workflow and keeps publication lifecycle changes atomic and version-checked.
 
 The product authority is
-[comprehensive reference](../comprehensive-reference.md), especially
-[§ 6, Publications and the Recipe Tin](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin).
-Also consult the [data model](../data-model.md),
-[visual design guide](../visual-design.md),
-[decision log](../decision-log.md), and
-[delivery roadmap](../delivery-roadmap.md).
+[comprehensive reference](../../comprehensive-reference.md), especially
+[§ 6, Publications and the Recipe Tin](../../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin).
+Also consult the [data model](../../data-model.md),
+[visual design guide](../../visual-design.md),
+[decision log](../../decision-log.md), and
+[delivery roadmap](../../delivery-roadmap.md).
 
 ## Outcome
 

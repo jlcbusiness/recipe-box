@@ -14,9 +14,9 @@
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide](../../visual-design.md), Public Recipe View and Data Management
 - [Decision log](../../decision-log.md)
-- [Slice 11: Source Links and Relationships](../11-source-links-and-relationships.md)
-- [Slice 12: Images](../12-images.md)
-- [Slice 21: Import](../21-import.md) and [Slice 21B: Scoped Import](../21b-scoped-import.md)
+- [Slice 11: Source Links and Relationships](../build/11-source-links-and-relationships.md)
+- [Slice 12: Images](../build/12-images.md)
+- [Slice 21: Import](../build/21-import.md) and [Slice 21B: Scoped Import](../build/21b-scoped-import.md)
 
 ## Outcome
 

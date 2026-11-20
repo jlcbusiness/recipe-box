@@ -146,7 +146,7 @@ the text. An out-of-scope publication reference preserves its display text
 without a publication ID. For a recipe-scoped import, the destination recipe
 match uses normalized name across active destination publications. Source
 publication metadata resolves automatically; Recipe Tin maps to the
-destination owner's collection. See [Slice 21B](slices/21b-scoped-import.md)
+destination owner's collection. See [Slice 21B](slices/build/21b-scoped-import.md)
 for the complete relationship and conflict rules.
 
 History, full-text-search documents, pending uploads, Storage deletion queue
@@ -234,4 +234,4 @@ bundle. Slice 21 defines transaction and recovery behavior.
 - [Comprehensive reference, § 11: Import, Export, and Backup Bundles](comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
 - [Comprehensive reference, § 12: Change History and Forensic Audit](comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
 - [Data model](data-model.md)
-- [Slice 20: Export](slices/20-export.md)
+- [Slice 20: Export](slices/build/20-export.md)

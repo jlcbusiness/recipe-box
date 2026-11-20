@@ -39,6 +39,6 @@ explicitly approved.
 
 ## References
 
-- [Find recipes](../17-find-recipes.md)
-- [Images](../12-images.md)
-- [Public links](../22-public-links-and-privacy.md)
+- [Find recipes](../build/17-find-recipes.md)
+- [Images](../build/12-images.md)
+- [Public links](../build/22-public-links-and-privacy.md)

@@ -2,13 +2,13 @@
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 25, Mandatory Slice Preparation, Standing Rules, and Completion Rule
-- [First-draft specification](../first-draft-spec.md), Sharing and Authentication and Import, Export, Lifecycle, and History
-- [Comprehensive reference](../comprehensive-reference.md), §§ 9, 10, 11, 13, 14, and 16
-- [Data model](../data-model.md), Ownership and Configuration Boundaries
-- [Design philosophy](../design-philosophy.md), Security, user agency, and device capabilities
-- [Visual design guide](../visual-design.md), Accessibility and Interaction and Install and Offline
-- [Decision log](../decision-log.md), production sign-up, account methods, and Slice 24 offline data
+- [Delivery roadmap](../../delivery-roadmap.md), slice 25, Mandatory Slice Preparation, Standing Rules, and Completion Rule
+- [First-draft specification](../../first-draft-spec.md), Sharing and Authentication and Import, Export, Lifecycle, and History
+- [Comprehensive reference](../../comprehensive-reference.md), §§ 9, 10, 11, 13, 14, and 16
+- [Data model](../../data-model.md), Ownership and Configuration Boundaries
+- [Design philosophy](../../design-philosophy.md), Security, user agency, and device capabilities
+- [Visual design guide](../../visual-design.md), Accessibility and Interaction and Install and Offline
+- [Decision log](../../decision-log.md), production sign-up, account methods, and Slice 24 offline data
 - [Slice 2: Invites and admin](2-invites-and-admin.md)
 - [Slice 20: Export](20-export.md)
 - [Slice 21A: Database import](21-import.md)

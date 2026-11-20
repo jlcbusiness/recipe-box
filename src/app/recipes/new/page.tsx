@@ -8,6 +8,7 @@ import {
   getTags,
 } from '../../../lib/recipes/data';
 import { createClient } from '../../../lib/supabase/server';
+import { PrivateBreadcrumbs } from '../../private-breadcrumbs';
 import { RecipeForm } from '../recipe-form';
 
 export const metadata = {
@@ -38,10 +39,22 @@ export default async function NewRecipePage({
   const initialPublicationId = publications.some(({ id }) => id === requestedPublicationId)
     ? requestedPublicationId
     : (publications.find(({ publication_type }) => publication_type === 'collection')?.id ?? null);
+  const initialPublication = publications.find(({ id }) => id === initialPublicationId);
 
   return (
     <main className="recipes-main" aria-labelledby="page-title">
-      <p className="eyebrow">ADD TO YOUR COLLECTION</p>
+      {initialPublication && (
+        <PrivateBreadcrumbs
+          className="private-breadcrumbs-add-recipe"
+          parents={[
+            { label: 'Library', href: '/publications' },
+            {
+              label: initialPublication.name,
+              href: `/publications/${initialPublication.id}`,
+            },
+          ]}
+        />
+      )}
       <h1 id="page-title">Add Recipe</h1>
       <RecipeForm
         ingredients={ingredients}

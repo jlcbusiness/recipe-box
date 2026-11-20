@@ -171,7 +171,8 @@ while retaining the existing single-image viewer without gallery navigation.
 ### Phase 18: Admin Updates and recipe experience follow-ups
 
 The remaining slices are ordered approximately by implementation effort. DLC
-42 through DLC 45 are implemented and verified; DLC 46–49 remain draft
+42 through DLC 46 are implemented. DLC 46's focused breadcrumb, history, and
+direct-destination checks pass on Chromium and Fold 6. DLC 47–49 remain draft
 candidates.
 
 - **DLC 42 (implemented; app version 1.15.1):**
@@ -188,7 +189,7 @@ candidates.
 - **DLC 45 (implemented; app version 1.17.1):**
   [Prevent Saving an Own Public Recipe](dlc-45-prevent-own-public-recipe-copy.md)
   blocks redundant copies and explains why.
-- **DLC 46 (draft candidate):**
+- **DLC 46 (implemented; app version 1.18.0):**
   [Nested Library Breadcrumbs](dlc-46-nested-library-breadcrumbs.md) shows
   paths for pages whose parent is not a main-menu destination.
 - **DLC 47 (draft candidate):**
@@ -231,7 +232,7 @@ candidates.
   approved migration maps total-only legacy recipes to Cook, derives totals
   from component entries when present, rounds expression results half-up, and
   retains only Total Time in Find Recipes.
-- DLC 46–49 remain independent draft candidates. Resolve each brief's open
+- DLC 47–49 remain independent draft candidates. Resolve each brief's open
   decisions and reconcile
   approved behavior with the comprehensive reference before implementation.
   DLC 44's interim private-detail composition will shift when DLC 49 adds its

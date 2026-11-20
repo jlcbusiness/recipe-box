@@ -9,26 +9,26 @@ measurement Type control and its Amount fields, and do not offer section-title
 editing when a recipe has only one ingredient set.
 
 These fixes share the existing recipe editor and require no schema change. The
-updated [slice prompt](../../../.github/prompts/slice.prompt.md) recommends one
+updated [slice prompt](../../../../.github/prompts/slice.prompt.md) recommends one
 demonstrable outcome but permits smaller fixes to be grouped when they do not
 require significant restructuring. Keep the behaviors separately testable.
 
 ## Requirements and references
 
 - Fixes #5 and #9 from the
-  [November Updates intake](./2026-11-updates-page-fix-intake.md).
-- [Slice 6: Measurements](./6-measurements.md) and
-  [DLC 03: Ingredient sets](./dlc/dlc-03-ingredient-sets.md).
-- [Comprehensive reference, §3](../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
-  including [§3.6](../comprehensive-reference/02-ingredients-and-presentation.md#36-ingredient-sets).
-- [Data model](../data-model.md), [design philosophy](../design-philosophy.md),
-  [visual design guide](../visual-design.md#ingredient-presentation), and
-  [decision log](../decision-log.md).
+  [November Updates intake](2026-11-18-updates-page-fix-intake.md).
+- [Slice 6: Measurements](../build/6-measurements.md) and
+  [DLC 03: Ingredient sets](../dlc/dlc-03-ingredient-sets.md).
+- [Comprehensive reference, §3](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
+  including [§3.6](../../comprehensive-reference/02-ingredients-and-presentation.md#36-ingredient-sets).
+- [Data model](../../data-model.md), [design philosophy](../../design-philosophy.md),
+  [visual design guide](../../visual-design.md#ingredient-presentation), and
+  [decision log](../../decision-log.md).
 - Current implementation and tests:
-  [`measurement-editor.tsx`](../../../src/app/recipes/measurement-editor.tsx),
-  [`ingredient-rows-editor.tsx`](../../../src/app/recipes/ingredient-rows-editor.tsx),
-  [`measurements.spec.ts`](../../../tests/e2e/measurements.spec.ts), and
-  [`ingredient-sets.spec.ts`](../../../tests/e2e/ingredient-sets.spec.ts).
+  [`measurement-editor.tsx`](../../../../src/app/recipes/measurement-editor.tsx),
+  [`ingredient-rows-editor.tsx`](../../../../src/app/recipes/ingredient-rows-editor.tsx),
+  [`measurements.spec.ts`](../../../../tests/e2e/measurements.spec.ts), and
+  [`ingredient-sets.spec.ts`](../../../../tests/e2e/ingredient-sets.spec.ts).
 
 ## Existing behavior and closest patterns
 

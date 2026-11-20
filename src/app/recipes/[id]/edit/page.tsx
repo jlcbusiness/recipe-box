@@ -12,6 +12,7 @@ import {
   getTags,
 } from '../../../../lib/recipes/data';
 import { createClient } from '../../../../lib/supabase/server';
+import { PrivateBreadcrumbs } from '../../../private-breadcrumbs';
 import { RecipeForm } from '../../recipe-form';
 
 type EditRecipePageProps = {
@@ -51,6 +52,18 @@ export default async function EditRecipePage({ params, searchParams }: EditRecip
       className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}`}
       aria-labelledby="page-title"
     >
+      {recipe.publication && (
+        <PrivateBreadcrumbs
+          parents={[
+            { label: 'Library', href: '/publications' },
+            {
+              label: recipe.publication.name,
+              href: `/publications/${recipe.publication.id}`,
+            },
+            { label: recipe.name, href: `/recipes/${recipe.id}` },
+          ]}
+        />
+      )}
       <div className="recipe-edit-heading">
         <h1 id="page-title">Edit Recipe</h1>
         <Link

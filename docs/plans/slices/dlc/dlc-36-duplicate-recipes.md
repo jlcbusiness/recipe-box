@@ -21,8 +21,8 @@ importing it, so the person can make a copy for editing.
 - [Visual design guide](../../visual-design.md), Recipe detail actions,
   App data: Export and Import, and Public Recipe View
 - [Decision log](../../decision-log.md)
-- [Slice 21: Import](../21-import.md) and
-  [Slice 21B: Scoped imports](../21b-scoped-import.md)
+- [Slice 21: Import](../build/21-import.md) and
+  [Slice 21B: Scoped imports](../build/21b-scoped-import.md)
 - [DLC 31: Save public recipe copies](dlc-31-save-public-recipe-copies.md)
 - [Portable bundle format](../../import-export-format.md)
 

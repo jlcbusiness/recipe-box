@@ -12,6 +12,7 @@
   - [Recipe Relationships and References (Slice 11)](#recipe-relationships-and-references-slice-11)
     - [Serves and times](#serves-and-times)
     - [Recipe list, detail, and headings](#recipe-list-detail-and-headings)
+    - [Private breadcrumbs (DLC 46)](#private-breadcrumbs-dlc-46)
     - [Account menu](#account-menu)
     - [App admin and Updates (DLC 28 / DLC 34 / DLC 40)](#app-admin-and-updates-dlc-28--dlc-34--dlc-40)
   - [Settings (Slice 14A)](#settings-slice-14a)
@@ -63,7 +64,7 @@
   [publications](comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin),
   [queries](comprehensive-reference/04-publications-and-search.md#7-queries-search-and-library-explorer), and
   [accessibility](comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility).
-- [Slice 17: Find recipes](slices/17-find-recipes.md) for search and explorer
+- [Slice 17: Find recipes](slices/build/17-find-recipes.md) for search and explorer
   behavior.
 
 ## Purpose
@@ -358,9 +359,9 @@ Icon buttons are 36px square; on mobile, their hit areas expand to 48px without
 changing their visible size. On mobile, keep the privacy switch 72px wide in
 both Linkable and Private states. Show the two-line label `Can` / `Link` when
 Linkable and keep the `Private` label visible when private. Wrap the toolbar
-without horizontal overflow at narrow viewports. Recipe Tin
-recipes use the attribution `In the Recipe Tin`; the Tin is a Library entry,
-not a separate navigation destination.
+without horizontal overflow at narrow viewports. Publication identity belongs
+in the private recipe-detail breadcrumb, not duplicated in the attribution.
+The Recipe Tin is a Library entry, not a separate navigation destination.
 On mobile recipe detail, Download and Page Settings menus open centered below
 the action toolbar and remain within the viewport.
 Recipe titles and major detail section headings use 16pt (about 21.33px). The
@@ -372,6 +373,33 @@ place the title and attribution beside the actions in the column beside the
 gallery, with tags below that row when present. Keep the metadata divider 8px
 below the title/action/tag group. On mobile, keep the title group before the
 gallery, then details and reading content.
+
+### Private breadcrumbs (DLC 46)
+
+Show a breadcrumb on a private page only when its parent is not directly
+reachable from navigation. Start at the nearest direct navigation destination
+and link each ancestor to its actual route. Omit the final path item when it
+duplicates the page title; otherwise identify the current page without linking
+it to itself. Use a labeled navigation landmark and ordered list; hide
+decorative separators from assistive technology. Keep the path left-aligned
+with the page title, with roughly one line of visual spacing between them.
+Keep it visible on keyboard focus and wrapping without page-level horizontal
+overflow. Separate each leg with `>` in the same color as the ancestor links.
+Mobile ancestor links have at least 48px hit areas.
+On Add Recipe, replace the
+generic collection eyebrow with the breadcrumb, align it with the page title,
+and keep it slightly closer to the heading. The adjacent heading already names
+the current page.
+On recipe detail, align the action toolbar vertically with the breadcrumb so
+the section divider can sit closer to the page heading.
+
+Do not show breadcrumbs on public pages, direct destinations (Library, Find,
+Trash, Help, Settings, or Account-menu pages), or Settings tab changes. A
+publication detail page is directly below Library and needs no breadcrumb;
+its history page can show `Library → Publication → History`. Recipe detail,
+edit, and history use the assigned publication and recipe ancestry. Contextual
+Add Recipe retains the publication it was opened from; the unscoped route uses
+Recipe Tin as its publication context.
 
 ### Account menu
 
@@ -1430,7 +1458,7 @@ navigation.
 Print omits gallery photos and controls, reflects the visible inline-photo and
 emphasis states, and requests landscape. Public metadata and reading content
 use the available width with outer gutters capped at 96 CSS pixels per side
-and aligned section-group edges. See [Slice 22](slices/22-public-links-and-privacy.md)
+and aligned section-group edges. See [Slice 22](slices/build/22-public-links-and-privacy.md)
 for the public data and interaction contract and [DLC 08](slices/dlc/dlc-08-recipe-public-and-print-layout.md)
 for the print and responsive-width contract. On desktop, public recipe actions
 form a compact grid: Save to Recipe Tin, Download, and Print occupy the first

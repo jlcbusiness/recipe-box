@@ -1,11 +1,11 @@
 # Slice 7: Instructions and Mentions
 
 This brief defines ordered recipe instructions, Markdown editing, and structured
-ingredient mentions. The product authority is [the comprehensive reference](../comprehensive-reference.md),
-especially [§ 5, Instructions, Autocomplete, and Recipe Linking](../comprehensive-reference/03-instructions-and-links.md#5-instructions-autocomplete-and-recipe-linking).
-Related boundaries are in the [first-draft specification](../first-draft-spec.md),
-[data model](../data-model.md), [visual design guide](../visual-design.md),
-[delivery roadmap](../delivery-roadmap.md), and [decision log](../decision-log.md).
+ingredient mentions. The product authority is [the comprehensive reference](../../comprehensive-reference.md),
+especially [§ 5, Instructions, Autocomplete, and Recipe Linking](../../comprehensive-reference/03-instructions-and-links.md#5-instructions-autocomplete-and-recipe-linking).
+Related boundaries are in the [first-draft specification](../../first-draft-spec.md),
+[data model](../../data-model.md), [visual design guide](../../visual-design.md),
+[delivery roadmap](../../delivery-roadmap.md), and [decision log](../../decision-log.md).
 
 ## Outcome
 

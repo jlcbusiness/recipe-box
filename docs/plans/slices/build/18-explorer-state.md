@@ -9,17 +9,17 @@ brief defines the immediate delivery contract.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 18
-- [First-draft specification](../first-draft-spec.md), Queries and Settings
-- [Comprehensive reference](../comprehensive-reference.md), § 7
-- [Data model](../data-model.md), Ownership and Core Entities
-- [Visual design guide](../visual-design.md), Find Recipes and Accessibility
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 18
+- [First-draft specification](../../first-draft-spec.md), Queries and Settings
+- [Comprehensive reference](../../comprehensive-reference.md), § 7
+- [Data model](../../data-model.md), Ownership and Core Entities
+- [Visual design guide](../../visual-design.md), Find Recipes and Accessibility
+- [Decision log](../../decision-log.md)
 - [Slice 17: Find recipes](17-find-recipes.md)
 - [Azure Boards query guidance](https://learn.microsoft.com/en-us/azure/devops/boards/queries/using-queries?view=azure-devops)
 - [Notion views, filters, and sorts](https://www.notion.com/help/views-filters-and-sorts)
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Next.js Server Actions](../../../node_modules/next/dist/docs/01-app/02-guides/server-actions.md)
+- [Next.js Server Actions](../../../../node_modules/next/dist/docs/01-app/02-guides/server-actions.md)
 
 ## Outcome
 

@@ -483,7 +483,7 @@ records, preferences, and ready image variants; it does not restore Auth users,
 passwords, or change history. Recreate a local Auth account and import the ZIP
 from Account > App data to recover those records. Never reset a linked or hosted
 database as part of local testing. See the
-[Slice 21 import brief](docs/plans/slices/21-import.md)
+[Slice 21 import brief](docs/plans/slices/build/21-import.md)
 for the import contract.
 
 - App: <http://localhost:3000>
@@ -504,7 +504,7 @@ server normalizes JPEG, PNG, WebP, and HEIC/HEIF uploads to metadata-free WebP
 derivatives. Account storage is limited to 1 GiB of processed images, each
 original is limited to 20 MiB, and recipes can have up to 12 photos. A real
 CC0 HEIC fixture is covered by normalization and browser upload tests; see the
-[Slice 12 brief](docs/plans/slices/12-images.md) and
+[Slice 12 brief](docs/plans/slices/build/12-images.md) and
 [fixture provenance](tests/fixtures/media/README.md). Vercel runs the
 queued-object cleanup endpoint daily.
 Configure a non-empty `CRON_SECRET` in the Vercel Production environment; Vercel

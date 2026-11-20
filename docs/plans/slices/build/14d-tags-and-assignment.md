@@ -6,14 +6,14 @@ version-aware, owner-scoped, and represented in forensic history.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 14D
-- [Comprehensive reference § 2.1](../comprehensive-reference/01-recipe-card-and-metadata.md#21-metadata-fields-breakdown)
-- [Comprehensive reference § 6](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
-- [Comprehensive reference § 8](../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
-- [Comprehensive reference § 12](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
-- [Data model](../data-model.md), Core Entities and Relationship Rules
-- [Visual design guide](../visual-design.md), Settings and recipe/publication detail
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 14D
+- [Comprehensive reference § 2.1](../../comprehensive-reference/01-recipe-card-and-metadata.md#21-metadata-fields-breakdown)
+- [Comprehensive reference § 6](../../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
+- [Comprehensive reference § 8](../../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
+- [Comprehensive reference § 12](../../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
+- [Data model](../../data-model.md), Core Entities and Relationship Rules
+- [Visual design guide](../../visual-design.md), Settings and recipe/publication detail
+- [Decision log](../../decision-log.md)
 - [Slice 14C: Ingredient catalog management](14c-ingredient-catalog-management.md)
 
 ## Outcome

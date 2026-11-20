@@ -167,7 +167,7 @@ section after Ingredients and before Tags, with matching disclosure spacing and 
   add flow can select only existing canonical ingredients and cannot create
   one.
 - Configuration changes do not rewrite saved recipe amounts. See the
-  [Slice 15 brief](slices/15-trusted-density.md) for the data, concurrency, and
+  [Slice 15 brief](../slices/build/15-trusted-density.md) for the data, concurrency, and
   interaction contract.
 
 ### 8.3 Nutrition and Measure Equivalents

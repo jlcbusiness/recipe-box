@@ -45,6 +45,6 @@ pending invitations.
 
 ## References
 
-- [Invites and admin](../2-invites-and-admin.md)
+- [Invites and admin](../build/2-invites-and-admin.md)
 - [Account administration](../../../src/app/admin/actions.ts)
 - [DLC brainstorm](../../discussion/dlc.md)

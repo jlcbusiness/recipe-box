@@ -16,7 +16,7 @@ separate personal signals. It does not create a Favorites collection.
 - [Visual design guide](../../visual-design.md), Recipe metadata and detail
   toolbar
 - [Decision log](../../decision-log.md), DLC 10
-- [Explorer columns and widths](../../19-advanced-queries-and-saved-views.md)
+- [Explorer columns and widths](../build/19-advanced-queries-and-saved-views.md)
 - [WAI-ARIA APG rating radio group example](https://www.w3.org/WAI/ARIA/apg/patterns/radio/examples/radio-rating/)
 - [WAI-ARIA APG rating slider example](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-rating/)
 - [WAI-ARIA APG button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/button/)

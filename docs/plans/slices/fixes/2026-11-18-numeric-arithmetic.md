@@ -10,20 +10,20 @@ then run the target field's existing validation.
 
 ## Requirements and references
 
-- Fix #4 in the [November Updates intake](./2026-11-updates-page-fix-intake.md).
-- See the [C+F input-consistency overview](./2026-11-numeric-input-consistency.md)
+- Fix #4 in the [November Updates intake](2026-11-18-updates-page-fix-intake.md).
+- See the [C+F input-consistency overview](2026-11-18-numeric-input-consistency.md)
   for shared decisions and the complete source inventory.
-- Relevant contracts: [recipe times](../comprehensive-reference/01-recipe-card-and-metadata.md#22-time-tracking-and-overlapping-times),
-  [ingredient measurements and density](../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
-  [scaling and rounding](../comprehensive-reference/02-ingredients-and-presentation.md#34-scaling-math-and-rounding-rules),
-  [Size and portions](../comprehensive-reference/02-ingredients-and-presentation.md#37-divided-portions-and-size),
-  [numeric filters](../comprehensive-reference/04-publications-and-search.md#71-recipe-and-publication-search-and-filters),
-  and the [data model](../data-model.md).
+- Relevant contracts: [recipe times](../../comprehensive-reference/01-recipe-card-and-metadata.md#22-time-tracking-and-overlapping-times),
+  [ingredient measurements and density](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
+  [scaling and rounding](../../comprehensive-reference/02-ingredients-and-presentation.md#34-scaling-math-and-rounding-rules),
+  [Size and portions](../../comprehensive-reference/02-ingredients-and-presentation.md#37-divided-portions-and-size),
+  [numeric filters](../../comprehensive-reference/04-publications-and-search.md#71-recipe-and-publication-search-and-filters),
+  and the [data model](../../data-model.md).
 - Current parser and tests:
-  [`time-rules.ts`](../../../src/lib/recipes/time-rules.ts),
-  [`measurement-rules.ts`](../../../src/lib/recipes/measurement-rules.ts),
-  [`recipe-time-rules.test.tsx`](../../../tests/unit/recipe-time-rules.test.tsx),
-  and [`recipes.spec.ts`](../../../tests/e2e/recipes.spec.ts).
+  [`time-rules.ts`](../../../../src/lib/recipes/time-rules.ts),
+  [`measurement-rules.ts`](../../../../src/lib/recipes/measurement-rules.ts),
+  [`recipe-time-rules.test.tsx`](../../../../tests/unit/recipe-time-rules.test.tsx),
+  and [`recipes.spec.ts`](../../../../tests/e2e/recipes.spec.ts).
 
 ## Scope and input inventory
 
@@ -47,7 +47,7 @@ remains in scope because it is a value-entry control.
 
 The Things-only standalone `a` token, Things wording, and inline unit addition
 belong to the separate
-[Things brief](./2026-11-things-units.md), not this slice.
+[Things brief](2026-11-18-things-units.md), not this slice.
 
 ## Behavior contract
 

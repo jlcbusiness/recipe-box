@@ -5,17 +5,17 @@ publication, or one recipe. It does not import or modify source records.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 20
-- [First-draft specification](../first-draft-spec.md), Import, Export, Lifecycle, and History
-- [Comprehensive reference, § 11: Import, Export, and Backup Bundles](../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
-- [Comprehensive reference, § 9.5: Secure Image Delivery](../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
-- [Comprehensive reference, § 12: Change History and Forensic Audit](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
-- [Data model](../data-model.md), Ownership, Relationship Rules, and Configuration Boundaries
-- [Design philosophy](../design-philosophy.md), Information Hierarchy and Interaction
-- [Visual design guide](../visual-design.md), Account menu and Settings (Slice 14A)
-- [Decision log](../decision-log.md), backup, Settings, and test-first decisions
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 20
+- [First-draft specification](../../first-draft-spec.md), Import, Export, Lifecycle, and History
+- [Comprehensive reference, § 11: Import, Export, and Backup Bundles](../../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
+- [Comprehensive reference, § 9.5: Secure Image Delivery](../../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
+- [Comprehensive reference, § 12: Change History and Forensic Audit](../../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
+- [Data model](../../data-model.md), Ownership, Relationship Rules, and Configuration Boundaries
+- [Design philosophy](../../design-philosophy.md), Information Hierarchy and Interaction
+- [Visual design guide](../../visual-design.md), Account menu and Settings (Slice 14A)
+- [Decision log](../../decision-log.md), backup, Settings, and test-first decisions
 - [Slice 12: Images](12-images.md), private storage and ready asset lifecycle
-- [Portable bundle format](../import-export-format.md)
+- [Portable bundle format](../../import-export-format.md)
 - Installed Next.js 16 Route Handler guide: `node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md`
 - [Vercel Function limits](https://vercel.com/docs/functions/limitations)
 - [Vercel streaming](https://vercel.com/docs/functions/streaming)
@@ -60,7 +60,7 @@ old.
 ## Format and large-export boundaries
 
 - The portable bundle format is version 1 and is defined in
-  [import-export-format.md](../import-export-format.md). It uses fixed internal
+  [import-export-format.md](../../import-export-format.md). It uses fixed internal
   paths, a manifest file list, UTC creation time, app version, scope, byte
   lengths, and SHA-256 checksums for `data.json` and every image file.
 - Cap included uncompressed media at 1 GiB, matching the existing per-account

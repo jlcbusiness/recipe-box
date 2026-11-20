@@ -11,19 +11,19 @@ zero value used for filtering and sorting.
 ## Requirements and references
 
 - Fix #6 from the
-  [November Updates intake](./2026-11-updates-page-fix-intake.md).
-- [Comprehensive reference, §2.2](../comprehensive-reference/01-recipe-card-and-metadata.md#22-time-tracking-and-overlapping-times),
+  [November Updates intake](2026-11-18-updates-page-fix-intake.md).
+- [Comprehensive reference, §2.2](../../comprehensive-reference/01-recipe-card-and-metadata.md#22-time-tracking-and-overlapping-times),
   including the derived-total and card-display rules.
-- [DLC 33: Configurable recipe times](./dlc/dlc-33-configurable-recipe-times.md)
-  and [Slice 17: Find recipes](./17-find-recipes.md).
-- [Data model](../data-model.md), [design philosophy](../design-philosophy.md),
-  [visual design guide](../visual-design.md), and
-  [decision log](../decision-log.md).
+- [DLC 33: Configurable recipe times](../dlc/dlc-33-configurable-recipe-times.md)
+  and [Slice 17: Find recipes](../build/17-find-recipes.md).
+- [Data model](../../data-model.md), [design philosophy](../../design-philosophy.md),
+  [visual design guide](../../visual-design.md), and
+  [decision log](../../decision-log.md).
 - Current implementation and tests:
-  [`recipe-explorer.tsx`](<../../../src/app/publications/[id]/recipe-explorer.tsx>),
-  [`recipes/find/page.tsx`](../../../src/app/recipes/find/page.tsx),
-  [`data.ts`](../../../src/lib/recipes/data.ts), and
-  [`publications.spec.ts`](../../../tests/e2e/publications.spec.ts).
+  [`recipe-explorer.tsx`](<../../../../src/app/publications/%5Bid%5D/recipe-explorer.tsx>),
+  [`recipes/find/page.tsx`](../../../../src/app/recipes/find/page.tsx),
+  [`data.ts`](../../../../src/lib/recipes/data.ts), and
+  [`publications.spec.ts`](../../../../tests/e2e/publications.spec.ts).
 
 ## Existing behavior and closest pattern
 

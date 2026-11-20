@@ -234,9 +234,9 @@ dropping criteria.
 
 ## References
 
-- [Find recipes](../17-find-recipes.md)
-- [Explorer state](../18-explorer-state.md)
-- [Explorer preferences](../19-advanced-queries-and-saved-views.md)
+- [Find recipes](../build/17-find-recipes.md)
+- [Explorer state](../build/18-explorer-state.md)
+- [Explorer preferences](../build/19-advanced-queries-and-saved-views.md)
 - [Comprehensive reference: Queries](../../comprehensive-reference/04-publications-and-search.md#7-queries-search-and-library-explorer)
 - [Visual design: Find Recipes](../../visual-design.md)
 - [Design philosophy](../../design-philosophy.md)

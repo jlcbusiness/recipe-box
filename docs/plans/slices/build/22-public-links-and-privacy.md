@@ -4,16 +4,16 @@
 
 ## References
 
-- [First-draft specification](../first-draft-spec.md), Recipe Privacy and Share Links
-- [Comprehensive reference](../comprehensive-reference.md), §§ 2, 5, 9, 11
-- [Data model](../data-model.md), Ownership, Core Entities, and Relationship Rules
-- [Design philosophy](../design-philosophy.md)
-- [Visual design guide](../visual-design.md), Recipe Detail and Responsive Layout
-- [Decision log](../decision-log.md), public-link and guest-reference decisions
+- [First-draft specification](../../first-draft-spec.md), Recipe Privacy and Share Links
+- [Comprehensive reference](../../comprehensive-reference.md), §§ 2, 5, 9, 11
+- [Data model](../../data-model.md), Ownership, Core Entities, and Relationship Rules
+- [Design philosophy](../../design-philosophy.md)
+- [Visual design guide](../../visual-design.md), Recipe Detail and Responsive Layout
+- [Decision log](../../decision-log.md), public-link and guest-reference decisions
 - [Slice 13: Scaling and unit conversion](13-scaling-and-unit-conversion.md)
 - [Slice 16: Cooking views](16-cooking-views.md)
 - [Slice 12: Images](12-images.md)
-- [Portable bundle format](../import-export-format.md)
+- [Portable bundle format](../../import-export-format.md)
 - Installed Next.js 16 Pages Router request-rendering documentation
 
 ## Outcome

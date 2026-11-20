@@ -64,9 +64,9 @@ CSS px at desktop and mobile widths, with no page-level horizontal overflow.
 **Contract and closest pattern:** DLC 34 says Settings tabs retain full-width,
 unframed sections. The existing Updates tracker is the correct functional
 pattern, but its observed width does not satisfy that workspace contract.
-See [DLC 34](./dlc/dlc-34-account-and-admin-settings.md), the
-[Settings tab implementation](../../../src/app/settings/settings-tabs.tsx),
-and [Updates styles](../../../src/app/styles/account-admin.css).
+See [DLC 34](../dlc/dlc-34-account-and-admin-settings.md), the
+[Settings tab implementation](../../../../src/app/settings/settings-tabs.tsx),
+and [Updates styles](../../../../src/app/styles/account-admin.css).
 
 **Verified outcome:** The Updates tracker uses the available Settings content
 width, like the neighboring full-width Settings sections, without changing its
@@ -86,15 +86,15 @@ row layout or editing behavior.
 ### B. Ingredient-first reader parity in Cook mode (#2 and #3)
 
 **Status:** Implemented and verified. See the
-[Ingredient-first reader parity brief](./2026-11-ingredient-first-reader-parity.md).
+[Ingredient-first reader parity brief](2026-11-18-ingredient-first-reader-parity.md).
 Private and shared pages use the same
-[`RecipeReader`](../../../src/app/recipes/recipe-reader.tsx). Desktop names are
+[`RecipeReader`](../../../../src/app/recipes/recipe-reader.tsx). Desktop names are
 now 18px in both contexts, and focused browser coverage measures typography and
 3px/6px Cook-mode spacing at desktop and mobile widths.
 
 **Contract and closest pattern:** Follow the
-[reader and measurement contract](./dlc/dlc-02-reader-and-measurement-polish.md)
-and [Ingredient Presentation guide](../visual-design.md#ingredient-presentation).
+[reader and measurement contract](../dlc/dlc-02-reader-and-measurement-polish.md)
+and [Ingredient Presentation guide](../../visual-design.md#ingredient-presentation).
 The shared reader is the right reuse point; the current font-size divergence
 is not a pattern to preserve. The accepted reference is implemented as 18px
 desktop names with 0.92em Specifics; mobile font sizing remains unchanged.
@@ -128,14 +128,14 @@ with focused unit, migration/database, and browser coverage.
 - **C, Numeric Arithmetic (#4):** exact arithmetic now applies to editable
   numeric inputs, including time expressions, with the standard mobile text
   keyboard and legacy-range preservation. See the
-  [Numeric Arithmetic brief](./2026-11-numeric-arithmetic.md).
+  [Numeric Arithmetic brief](2026-11-18-numeric-arithmetic.md).
 - **F, Things Wording and Addable Units (#7 and #10):** natural “of” wording,
   inline add/reuse, and an explicit persisted `a` marker are implemented.
   `a` appears only in Things presentation; converted Volume/Weight values
   remain numeric. Help explains when to use `a` versus `1`. See the
-  [Things brief](./2026-11-things-units.md).
+  [Things brief](2026-11-18-things-units.md).
 
-The [input-consistency overview](./2026-11-numeric-input-consistency.md)
+The [input-consistency overview](2026-11-18-numeric-input-consistency.md)
 records their shared rationale, complete numeric-field inventory, and
 cross-cutting decisions. Each brief's separate acceptance criteria and
 approval gate has been completed.
@@ -147,7 +147,7 @@ a 1mm minimum gap and chose to hide the editor heading when one set remains,
 while preserving the stored label. Both fixes are local to the recipe editor
 and do not require a schema change.
 See the
-[combined recipe-editor brief](./2026-11-recipe-editor-spacing-and-sections.md).
+[combined recipe-editor brief](2026-11-18-recipe-editor-spacing-and-sections.md).
 
 - **#5, Measurement Type-to-Amount spacing:** The editor enforces and tests a
   positive 1mm minimum while preserving the one-line layout where controls fit.
@@ -163,7 +163,7 @@ See the
 omit the duration portion for zero in publication Details and Grid. Zero was
 shown as `0 min` in both views; the simple List view does not show duration.
 Other recipe detail and finder surfaces already omit non-positive totals. See the
-[publication zero-time brief](./2026-11-publication-zero-time.md).
+[publication zero-time brief](2026-11-18-publication-zero-time.md).
 
 ### F. Natural Things display and addable Things units (#7 and #10)
 
@@ -187,7 +187,7 @@ an equivalent Volume or Weight value is shown numerically.
 
 **Verification:** Focused unit, migration/database, and browser coverage
 passed for the behavior and persistence boundaries in the
-[Things brief](./2026-11-things-units.md). The authenticated Help test checks
+[Things brief](2026-11-18-things-units.md). The authenticated Help test checks
 the guidance, accessibility, and overflow at desktop and narrow mobile widths.
 
 ### G. Alternate-ingredient note field (#8)
@@ -220,7 +220,7 @@ These are six intake groupings after grouping fixes #2/#3, #5/#9, and #4/#7/#10.
 C+F has two separately reviewable implementation briefs. Packages A, B, C, F,
 D+H, E, and G are implemented and verified.
 The updated
-[slice prompt](../../../.github/prompts/slice.prompt.md) permits grouping
+[slice prompt](../../../../.github/prompts/slice.prompt.md) permits grouping
 smaller fixes when they do not require significant restructuring. D+H share
 the recipe editor, require no schema change, and retain separate acceptance
 checks. Their behavior choices and approval are recorded in the briefs.
@@ -232,15 +232,15 @@ gates.
 
 ## Preparation references
 
-- [Slice workflow](../../../.github/prompts/slice.prompt.md)
-- [First-draft specification](../first-draft-spec.md)
-- [Delivery roadmap](../delivery-roadmap.md)
-- [Design philosophy](../design-philosophy.md)
-- [Visual design guide](../visual-design.md)
-- [Data model](../data-model.md)
-- [Comprehensive reference: Ingredients and presentation](../comprehensive-reference/02-ingredients-and-presentation.md)
-- [Decision log](../decision-log.md)
-- [Completed November reported-fixes brief](./2026-11-reported-fixes.md)
+- [Slice workflow](../../../../.github/prompts/slice.prompt.md)
+- [First-draft specification](../../first-draft-spec.md)
+- [Delivery roadmap](../../delivery-roadmap.md)
+- [Design philosophy](../../design-philosophy.md)
+- [Visual design guide](../../visual-design.md)
+- [Data model](../../data-model.md)
+- [Comprehensive reference: Ingredients and presentation](../../comprehensive-reference/02-ingredients-and-presentation.md)
+- [Decision log](../../decision-log.md)
+- [Completed November reported-fixes brief](2026-11-04-reported-fixes.md)
 
 This intake began as a research pass; implementation and verification status
 for each package is recorded above.

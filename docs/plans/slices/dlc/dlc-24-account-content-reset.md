@@ -197,11 +197,11 @@ authorization or treat an unverified OTP as recent authentication.
 - [Visual design guide](../../visual-design.md), Data Management and Account
   menu sections
 - [Decision log](../../decision-log.md)
-- [Trash and restore](../8-trash-restore-and-print.md)
-- [Export](../../20-export.md)
-- [Public links](../../22-public-links-and-privacy.md)
-- [History viewer](../../23-history-viewer.md)
-- [Install and offline](../../24-install-and-offline.md)
+- [Trash and restore](../build/8-trash-restore-and-print.md)
+- [Export](../build/20-export.md)
+- [Public links](../build/22-public-links-and-privacy.md)
+- [History viewer](../build/23-history-viewer.md)
+- [Install and offline](../build/24-install-and-offline.md)
 - [DLC brainstorm](../../discussion/dlc.md)
 - [Existing administrative account deletion](../../../../src/app/admin/actions.ts)
 - [Supabase JavaScript reauthenticate reference](https://supabase.com/docs/reference/javascript/auth-reauthenticate)

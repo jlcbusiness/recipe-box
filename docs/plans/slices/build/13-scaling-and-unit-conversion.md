@@ -6,17 +6,17 @@ remain unchanged; conversion never crosses between volume and weight.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 13
-- [First-draft specification](../first-draft-spec.md), Ingredients and Views
-- [Comprehensive reference, § 3: Ingredients and measurements](../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density)
-- [Comprehensive reference, § 3.5: Unit display preferences](../comprehensive-reference/02-ingredients-and-presentation.md#35-unit-display-preferences)
-- [Comprehensive reference, § 4: Ingredient presentation and sorting](../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting)
-- [Comprehensive reference, § 8.4: Personal preferences](../comprehensive-reference/05-settings-and-taxonomies.md#84-personal-preferences)
-- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
-- [Data model boundary](../data-model.md)
-- [Visual design guide](../visual-design.md)
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), slice 13
+- [First-draft specification](../../first-draft-spec.md), Ingredients and Views
+- [Comprehensive reference, § 3: Ingredients and measurements](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density)
+- [Comprehensive reference, § 3.5: Unit display preferences](../../comprehensive-reference/02-ingredients-and-presentation.md#35-unit-display-preferences)
+- [Comprehensive reference, § 4: Ingredient presentation and sorting](../../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting)
+- [Comprehensive reference, § 8.4: Personal preferences](../../comprehensive-reference/05-settings-and-taxonomies.md#84-personal-preferences)
+- [Comprehensive reference, § 13: Accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
+- [Data model boundary](../../data-model.md)
+- [Visual design guide](../../visual-design.md)
+- [Decision log](../../decision-log.md)
 - Installed Next.js 16 documentation for Server and Client Components and Server Actions under `node_modules/next/dist/docs/`
 - Supabase PostgreSQL functions and row-level security documentation
 - [NIST Guide to the SI, Appendix B.9: Conversion factors by quantity](https://www.nist.gov/pml/special-publication-811/nist-guide-si-appendix-b-conversion-factors/nist-guide-si-appendix-b9)

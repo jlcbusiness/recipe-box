@@ -6,13 +6,13 @@ recipe features are built.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 0
-- [First-draft specification](../first-draft-spec.md)
-- [Comprehensive reference, § 14: Technology stack](../comprehensive-reference/00-foundations-and-delivery.md#14-technology-stack-and-hosting-architecture)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
-- [Data model boundary](../data-model.md)
-- [Visual design guide](../visual-design.md)
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), slice 0
+- [First-draft specification](../../first-draft-spec.md)
+- [Comprehensive reference, § 14: Technology stack](../../comprehensive-reference/00-foundations-and-delivery.md#14-technology-stack-and-hosting-architecture)
+- [Comprehensive reference, § 16: Testability](../../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
+- [Data model boundary](../../data-model.md)
+- [Visual design guide](../../visual-design.md)
+- [Decision log](../../decision-log.md)
 
 ## Outcome
 

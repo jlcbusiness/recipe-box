@@ -37,7 +37,7 @@ audit events.
 
 ## References
 
-- [Export](../20-export.md)
-- [Import](../21-import.md)
-- [History viewer](../23-history-viewer.md)
+- [Export](../build/20-export.md)
+- [Import](../build/21-import.md)
+- [History viewer](../build/23-history-viewer.md)
 - [Portable bundle format](../../import-export-format.md)

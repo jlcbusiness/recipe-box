@@ -43,5 +43,5 @@ it safely after reconnecting, without exposing private data or losing edits.
 
 ## References
 
-- [Install and offline](../24-install-and-offline.md)
-- [History viewer](../23-history-viewer.md)
+- [Install and offline](../build/24-install-and-offline.md)
+- [History viewer](../build/23-history-viewer.md)

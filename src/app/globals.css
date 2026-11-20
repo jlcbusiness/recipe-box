@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/foundation.css";
+@import "./styles/private-breadcrumbs.css";
 @import "./styles/account-admin.css";
 @import "./styles/account-data-management.css";
 @import "./styles/settings-controls.css";

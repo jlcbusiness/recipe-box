@@ -102,7 +102,7 @@ table. The table always has one trailing empty row.
    or `sliced` reveals the separate Size field and an underlined `in`/`cm` unit toggle there.
    Positive inch Size values also accept simple and mixed fractions;
    centimeters remain decimal-only. Both accept expressions under the shared
-   [numeric arithmetic contract](../slices/2026-11-numeric-arithmetic.md).
+   [numeric arithmetic contract](../slices/fixes/2026-11-18-numeric-arithmetic.md).
 8. **Divide:** An optional two-portion allocation independent of Preparation. The Divide field uses the existing first-
    portion input and read-only remainder; it stores one ratio and its complement. In the desktop editor, keep the full
    input, unit, separator, and remainder left-aligned within the Divide cell with compact spacing; the remainder must not
@@ -153,7 +153,7 @@ table. The table always has one trailing empty row.
   - **Multiply:** Enter integer or decimal $j$. Multiplier $M = j$ (displays as $jx$).
   - **Divide:** Enter integer $j$. Multiplier $M = 1/j$ (displays as $1/j$).
   - Target servings, multiplier, and divisor inputs accept expressions under
-    the shared [numeric arithmetic contract](../slices/2026-11-numeric-arithmetic.md);
+    the shared [numeric arithmetic contract](../slices/fixes/2026-11-18-numeric-arithmetic.md);
     each mode's existing positive-integer or decimal validation still applies
     after evaluation.
 - **Quantities Scaled:**
@@ -296,7 +296,7 @@ remains decimal-only. Fractions are stored as their numeric equivalents.
   uses a positive scalar serving size in one fixed Volume or Weight unit and
   requires Calories. Nutrient amounts are finite and nonnegative; zero is
   known and blank is unknown. Editable serving-size and nutrient inputs follow
-  the [Numeric Arithmetic contract](../slices/2026-11-numeric-arithmetic.md):
+  the [Numeric Arithmetic contract](../slices/fixes/2026-11-18-numeric-arithmetic.md):
   evaluate expressions exactly before applying those value constraints.
 - The fixed core fields are Calories; Total Fat, Saturated Fat, Trans Fat,
   Cholesterol, Sodium, Total Carbohydrate, Dietary Fiber, Total Sugars, Added

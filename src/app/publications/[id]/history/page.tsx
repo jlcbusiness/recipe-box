@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '../../../../lib/supabase/server';
 import { type HistoryEventRow, HistoryEvents } from '../../../history/history-events';
+import { PrivateBreadcrumbs } from '../../../private-breadcrumbs';
 
 export async function generateMetadata({ params }: PageProps<'/publications/[id]/history'>) {
   const { id } = await params;
@@ -44,9 +44,13 @@ export default async function PublicationHistoryPage({
 
   return (
     <main className="recipes-main recipe-history-page" aria-labelledby="page-title">
-      <Link className="recipe-history-back" href={`/publications/${id}`}>
-        Back to publication
-      </Link>
+      <PrivateBreadcrumbs
+        currentPage="History"
+        parents={[
+          { label: 'Library', href: '/publications' },
+          { label: publication.name, href: `/publications/${publication.id}` },
+        ]}
+      />
       <h1 id="page-title">History: {publication.name}</h1>
       <HistoryEvents entity="publication" events={(data ?? []) as HistoryEventRow[]} />
     </main>

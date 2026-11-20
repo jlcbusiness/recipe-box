@@ -15,9 +15,9 @@ comprehensive reference remains the product authority.
 - [Visual design guide](../../visual-design.md), Ingredient Presentation,
   Public Recipe View, and baseline print
 - [Decision log](../../decision-log.md)
-- [Slice 12: Images](../12-images.md)
-- [Slice 16: Cooking views](../16-cooking-views.md)
-- [Slice 22: Public links and privacy](../22-public-links-and-privacy.md)
+- [Slice 12: Images](../build/12-images.md)
+- [Slice 16: Cooking views](../build/16-cooking-views.md)
+- [Slice 22: Public links and privacy](../build/22-public-links-and-privacy.md)
 - [DLC 05: Instruction authoring and references](dlc-05-instruction-authoring-and-references.md)
 - [DLC 06: Image framing and gallery](dlc-06-image-framing-and-gallery.md)
 

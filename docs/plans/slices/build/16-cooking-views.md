@@ -2,19 +2,19 @@
 
 This slice adds reader presentation and ingredient ordering controls, plus a
 mobile cooking mode for temporary check-off and screen wake lock. The
-[comprehensive reference](../comprehensive-reference.md) is the product
+[comprehensive reference](../../comprehensive-reference.md) is the product
 authority; this brief resolves its Slice 16 implementation details.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 16
-- [First-draft specification](../first-draft-spec.md), Views and Sorting
-- [Comprehensive reference § 4](../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting)
-- [Comprehensive reference § 8.3](../comprehensive-reference/05-settings-and-taxonomies.md#84-personal-preferences)
-- [Comprehensive reference § 13](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Data model](../data-model.md), Core Entities and Configuration Boundaries
-- [Visual design guide](../visual-design.md), Ingredient Presentation and Mobile
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 16
+- [First-draft specification](../../first-draft-spec.md), Views and Sorting
+- [Comprehensive reference § 4](../../comprehensive-reference/02-ingredients-and-presentation.md#4-ingredient-presentation-and-sorting)
+- [Comprehensive reference § 8.3](../../comprehensive-reference/05-settings-and-taxonomies.md#84-personal-preferences)
+- [Comprehensive reference § 13](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Data model](../../data-model.md), Core Entities and Configuration Boundaries
+- [Visual design guide](../../visual-design.md), Ingredient Presentation and Mobile
+- [Decision log](../../decision-log.md)
 - [Slice 13: Scaling and unit conversion](13-scaling-and-unit-conversion.md)
 - [MDN: Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API)
 
@@ -129,7 +129,7 @@ Excluded:
   desktop adds a conditional Divide column; mobile stacks Volume and Weight in
   Amount and shows `Divide a : b` below Preparation in its existing column.
   The selected portion pair for dual measures follows the display-readability
-  rule in the [DLC 38 brief](dlc/dlc-38-separate-divide-from-preparation.md).
+  rule in the [DLC 38 brief](../dlc/dlc-38-separate-divide-from-preparation.md).
   Keep paired measurements together and retain current scaling, unit conversion,
   preparation, and print formatting.
 - Cook mode is an icon-only switch in the Ingredients toolbar. While active,

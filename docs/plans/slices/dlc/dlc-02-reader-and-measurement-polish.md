@@ -15,7 +15,7 @@ data, account preferences, or measurement storage.
   Recipe Detail
 - [Decision log](../../decision-log.md), reader controls, measurement display,
   cook mode, and DLC 02
-- [Slice 16: Cooking views](../16-cooking-views.md)
+- [Slice 16: Cooking views](../build/16-cooking-views.md)
 - [DLC 08: Recipe reading, public, and print layout](dlc-08-recipe-public-and-print-layout.md)
 - [MDN: Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API)
 

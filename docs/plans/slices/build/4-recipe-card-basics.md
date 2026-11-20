@@ -6,17 +6,17 @@ instructions, tags, public URLs, or recipe photos.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 4
-- [First-draft specification](../first-draft-spec.md), Recipes
-- [Comprehensive reference, § 2: Recipe metadata and time](../comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata)
-- [Comprehensive reference, § 6: Recipe Tin](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
-- [Comprehensive reference, § 8: Picklists](../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
-- [Comprehensive reference, § 12: History](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
-- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
-- [Data model boundary](../data-model.md)
-- [Visual design guide](../visual-design.md)
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), slice 4
+- [First-draft specification](../../first-draft-spec.md), Recipes
+- [Comprehensive reference, § 2: Recipe metadata and time](../../comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata)
+- [Comprehensive reference, § 6: Recipe Tin](../../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
+- [Comprehensive reference, § 8: Picklists](../../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
+- [Comprehensive reference, § 12: History](../../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
+- [Comprehensive reference, § 13: Accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
+- [Data model boundary](../../data-model.md)
+- [Visual design guide](../../visual-design.md)
+- [Decision log](../../decision-log.md)
 - [Slice 3 editor proof](3-instruction-editor-proof.md)
 
 ## Outcome
@@ -194,8 +194,9 @@ recipe routes, or components:
   dedicated Food Type, Meal Type, and Cuisine row. On mobile, component times
   appear after the main metadata in a subsection with a divider and small-caps
   “Times” title; Total Time stays in the main metadata. Recipe-page headings are
-  about 16pt (about 21.33px), and Recipe Tin is not repeated as a breadcrumb or
-  attribution.
+  about 16pt (about 21.33px). DLC 46 later added Recipe Tin as an ancestor in
+  the private detail breadcrumb; the path stops before the recipe title, and
+  the attribution does not repeat Recipe Tin.
 - In detail view, show “Edit” at the right end of the title row on desktop and
   mobile. The inline Edit control is 32px high in both layouts; use normal text
   on desktop and 18px small caps on mobile, with a 48px mobile hit area. The

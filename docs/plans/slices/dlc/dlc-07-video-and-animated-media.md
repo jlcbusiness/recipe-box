@@ -44,6 +44,6 @@ same owner-checked lifecycle as recipe photos.
 
 ## References
 
-- [Image pipeline](../12-images.md)
-- [Public links](../22-public-links-and-privacy.md)
+- [Image pipeline](../build/12-images.md)
+- [Public links](../build/22-public-links-and-privacy.md)
 - [DLC brainstorm](../../discussion/dlc.md)

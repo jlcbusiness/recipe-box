@@ -106,6 +106,15 @@
     min-width: 0;
     width: 100%;
     margin: 0;
+    row-gap: 0;
+  }
+
+  .recipe-summary-layout-with-detail-heading
+    > .recipe-page-heading.recipe-detail-heading
+    > .private-breadcrumbs {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 0;
   }
 
   .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading {
@@ -137,49 +146,56 @@
 
   .recipe-summary-layout-with-detail-heading
     > .recipe-page-heading.recipe-detail-heading
+    > .recipe-detail-title {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .recipe-summary-layout-with-detail-heading
+    > .recipe-page-heading.recipe-detail-heading
     > .recipe-detail-tags-row {
     grid-column: 1 / -1;
-    grid-row: 2;
-    margin: 0;
+    grid-row: 3;
+    margin: 8px 0 0;
   }
 
   .recipe-summary-layout-with-detail-heading
     > .recipe-page-heading.recipe-detail-heading
     > .recipe-detail-heading-actions {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 2;
     justify-self: end;
+  }
+
+  .recipe-summary-layout-with-detail-heading
+    > .recipe-page-heading.recipe-detail-heading:not(:has(> .private-breadcrumbs))
+    > .recipe-detail-title {
+    grid-row: 1;
+  }
+
+  .recipe-summary-layout-with-detail-heading
+    > .recipe-page-heading.recipe-detail-heading:not(:has(> .private-breadcrumbs))
+    > .recipe-detail-tags-row {
+    grid-row: 2;
   }
 }
 
 @media screen and (min-width: 761px) {
   .recipe-summary-layout-with-detail-heading > .recipe-page-heading.recipe-detail-heading {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    display: grid;
   }
 
   .recipe-summary-layout-with-detail-heading
     > .recipe-page-heading.recipe-detail-heading
-    > .recipe-detail-title {
-    order: 0;
-    flex: 1 1 50%;
+    > .private-breadcrumbs {
+    grid-column: 1;
   }
 
   .recipe-summary-layout-with-detail-heading
     > .recipe-page-heading.recipe-detail-heading
     > .recipe-detail-heading-actions {
-    order: 1;
-    flex: 0 0 max-content;
-    justify-self: auto;
-    margin-left: 0;
-  }
-
-  .recipe-summary-layout-with-detail-heading
-    > .recipe-page-heading.recipe-detail-heading
-    > .recipe-detail-tags-row {
-    order: 2;
-    flex: 0 0 100%;
+    grid-row: 1;
+    align-self: center;
   }
 }
 
@@ -195,6 +211,7 @@
     > .recipe-detail-heading-actions {
     grid-column: 1;
     grid-row: auto;
+    margin-top: 8px;
   }
 
   .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading

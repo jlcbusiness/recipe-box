@@ -264,10 +264,12 @@ Slice 19.
 
 The Recipe Tin is permanent and appears first among matching Library results
 regardless of sort direction. Normal filters can exclude it. It uses the
-mirrored transparent tin cover, and recipe attribution says `In the Recipe Tin`.
-The existing `/recipes` route redirects to its Library detail page. Recipe Tin
-recipes retain the distinctive tin-and-paper treatment (hinged tin lid graphic,
-ragged/deckled paper background for their recipe cards).
+mirrored transparent tin cover. Private recipe detail identifies the Tin in its
+breadcrumb rather than repeating it in the attribution; the path ends before
+the recipe title because the title already appears as the H1. The existing
+`/recipes` route redirects to its Library detail page. Recipe Tin recipes retain
+the distinctive tin-and-paper treatment (hinged tin lid graphic, ragged/deckled
+paper background for their recipe cards).
 Ordinary publication and recipe cards remain restrained. Deleting a publication
 prompts to delete recipes, move to Recipe Tin, or move to another publication.
 

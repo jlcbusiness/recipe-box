@@ -142,8 +142,8 @@ in instruction steps.
 
 ## References
 
-- [Ingredient rows](../5-ingredient-rows.md)
-- [Measurements](../6-measurements.md)
-- [Instructions and mentions](../7-instructions-and-mentions.md)
-- [Recipe picklist management](../14b-recipe-picklist-values.md)
+- [Ingredient rows](../build/5-ingredient-rows.md)
+- [Measurements](../build/6-measurements.md)
+- [Instructions and mentions](../build/7-instructions-and-mentions.md)
+- [Recipe picklist management](../build/14b-recipe-picklist-values.md)
 - [DLC brainstorm](../../discussion/dlc.md)

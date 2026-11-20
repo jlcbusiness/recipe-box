@@ -33,6 +33,7 @@ import { ExportAction } from '../../export-action';
 import { ImageViewer } from '../../media/image-viewer';
 import { RecipePhotoGallery } from '../../media/media-display';
 import { OfflineSnapshotCapture } from '../../offline-snapshot-capture';
+import { PrivateBreadcrumbs } from '../../private-breadcrumbs';
 import { RecipeActionFeedbackProvider } from '../../recipe-action-feedback';
 import { TagChips } from '../../tags/tag-controls';
 import { InstructionList } from '../instruction-list';
@@ -412,27 +413,36 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       <RecipeReaderProvider serves={recipe.serves}>
         <RecipeSummaryLayout hasPhotos={photos.length > 0}>
           <div className="recipe-page-heading recipe-detail-heading">
+            <PrivateBreadcrumbs
+              parents={
+                recipe.publication
+                  ? [
+                      { label: 'Library', href: '/publications' },
+                      {
+                        label: recipe.publication.name,
+                        href: `/publications/${recipe.publication.id}`,
+                      },
+                    ]
+                  : []
+              }
+            />
             <div className="recipe-detail-title">
               <h1 id="page-title">{recipe.name}</h1>
-              {recipe.publication && (
-                <p className="recipe-attribution">
-                  <span>
-                    {recipe.publication.publication_type === 'collection' ? 'In the ' : 'From '}
-                  </span>
-                  <Link href={`/publications/${recipe.publication.id}`}>
-                    <cite>{recipe.publication.name}</cite>
-                  </Link>
-                  {recipe.publication.publication_type !== 'collection' && recipe.publication_page
-                    ? ` · ${recipe.publication.publication_type === 'book' ? `p. ${recipe.publication_page}` : recipe.publication_page}`
-                    : ''}
-                  {recipe.publication.publication_type !== 'collection' && recipe.recipe_url && (
-                    <a className="recipe-source-link" href={recipe.recipe_url}>
-                      <span className="recipe-source-url-full">{recipe.recipe_url}</span>
-                      <span className="recipe-source-url-mobile">View online</span>
-                    </a>
-                  )}
-                </p>
-              )}
+              {recipe.publication &&
+                recipe.publication.publication_type !== 'collection' &&
+                (recipe.publication_page || recipe.recipe_url) && (
+                  <p className="recipe-attribution">
+                    {recipe.publication_page
+                      ? `${recipe.publication.publication_type === 'book' ? `p. ${recipe.publication_page}` : recipe.publication_page}`
+                      : ''}
+                    {recipe.recipe_url && (
+                      <a className="recipe-source-link" href={recipe.recipe_url}>
+                        <span className="recipe-source-url-full">{recipe.recipe_url}</span>
+                        <span className="recipe-source-url-mobile">View online</span>
+                      </a>
+                    )}
+                  </p>
+                )}
             </div>
             {recipe.tags.length > 0 && (
               <div className="recipe-detail-tags-row">

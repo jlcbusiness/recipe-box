@@ -4189,6 +4189,7 @@ test('the public recipe page has no automated accessibility violations @a11y', a
     const recipe = await createRecipe(request, config, user);
     publicId = await getPublicId(request, config, recipe.id);
     await page.goto(`/r/${publicId}`);
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
 
     const accessibilityScan = await new AxeBuilder({ page }).analyze();
     expect(accessibilityScan.violations).toEqual([]);

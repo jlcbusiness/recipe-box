@@ -2,18 +2,18 @@
 
 This slice adds one trusted volume-to-weight equivalency per canonical
 ingredient and uses it to derive the missing dimension while editing recipe
-ingredients. The [comprehensive reference](../comprehensive-reference.md) is the
+ingredients. The [comprehensive reference](../../comprehensive-reference.md) is the
 product authority; this brief resolves its Slice 15 implementation details.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 15
-- [First-draft specification](../first-draft-spec.md), Ingredients
-- [Comprehensive reference § 3.3](../comprehensive-reference/02-ingredients-and-presentation.md#33-trusted-ingredient-density)
-- [Comprehensive reference § 8.2](../comprehensive-reference/05-settings-and-taxonomies.md#82-trusted-densities)
-- [Data model](../data-model.md), Core Entities and Configuration Boundaries
-- [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Settings
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 15
+- [First-draft specification](../../first-draft-spec.md), Ingredients
+- [Comprehensive reference § 3.3](../../comprehensive-reference/02-ingredients-and-presentation.md#33-trusted-ingredient-density)
+- [Comprehensive reference § 8.2](../../comprehensive-reference/05-settings-and-taxonomies.md#82-trusted-densities)
+- [Data model](../../data-model.md), Core Entities and Configuration Boundaries
+- [Design philosophy](../../design-philosophy.md) and [visual design guide](../../visual-design.md), Settings
+- [Decision log](../../decision-log.md)
 - [Slice 6: Measurements](6-measurements.md)
 - [Slice 13: Scaling and unit conversion](13-scaling-and-unit-conversion.md)
 - [Slice 14C: Ingredient catalog management](14c-ingredient-catalog-management.md)

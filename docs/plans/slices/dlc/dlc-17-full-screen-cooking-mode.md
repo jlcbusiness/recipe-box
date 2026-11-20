@@ -40,5 +40,5 @@ to return to the recipe.
 
 ## References
 
-- [Cooking views](../16-cooking-views.md)
+- [Cooking views](../build/16-cooking-views.md)
 - [DLC brainstorm](../../discussion/dlc.md)

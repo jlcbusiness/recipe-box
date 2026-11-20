@@ -8,13 +8,13 @@ the product authority.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 19
-- [First-draft specification](../first-draft-spec.md), Queries and Settings
-- [Comprehensive reference](../comprehensive-reference.md), § 7
-- [Data model](../data-model.md), Ownership, Core Entities, and Required Future Detail
-- [Design philosophy](../design-philosophy.md), Information hierarchy and interaction
-- [Visual design guide](../visual-design.md), Find Recipes and Explorer Columns And Widths
-- [Decision log](../decision-log.md), Slice 19 explorer preferences
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 19
+- [First-draft specification](../../first-draft-spec.md), Queries and Settings
+- [Comprehensive reference](../../comprehensive-reference.md), § 7
+- [Data model](../../data-model.md), Ownership, Core Entities, and Required Future Detail
+- [Design philosophy](../../design-philosophy.md), Information hierarchy and interaction
+- [Visual design guide](../../visual-design.md), Find Recipes and Explorer Columns And Widths
+- [Decision log](../../decision-log.md), Slice 19 explorer preferences
 - [Slice 17: Find recipes](17-find-recipes.md)
 - [Slice 18: Explorer state](18-explorer-state.md)
 

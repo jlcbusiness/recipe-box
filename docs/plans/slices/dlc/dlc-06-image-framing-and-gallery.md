@@ -138,9 +138,9 @@ successfully.
 
 ## Dependencies and patterns to preserve
 
-- [Slice 12 image pipeline](../12-images.md): private signed uploads, WebP
+- [Slice 12 image pipeline](../build/12-images.md): private signed uploads, WebP
   derivatives, per-account quota, and durable cleanup.
-- [Slice 22 public links](../22-public-links-and-privacy.md): public recipe
+- [Slice 22 public links](../build/22-public-links-and-privacy.md): public recipe
   media is signed only after access and lifecycle checks.
 - [DLC 05 instruction authoring](dlc-05-instruction-authoring-and-references.md):
   stable photo references and authored inline width remain unchanged.
@@ -160,14 +160,14 @@ automated and physical-device checks pass.
 ## References
 
 - [Delivery roadmap, DLC ordering](README.md)
-- [Image pipeline](../12-images.md)
+- [Image pipeline](../build/12-images.md)
 - [Comprehensive reference, recipe photos](../../comprehensive-reference/01-recipe-card-and-metadata.md#23-recipe-photos)
 - [Comprehensive reference, secure image delivery](../../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
 - [Data model boundary](../../data-model.md)
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide, recipe photos](../../visual-design.md)
 - [Decision log](../../decision-log.md)
-- [Public links](../22-public-links-and-privacy.md)
+- [Public links](../build/22-public-links-and-privacy.md)
 - [Apple iPhone Photos crop guide](https://support.apple.com/guide/iphone/crop-rotate-flip-straighten-photos-videos-iph0f3ebb1dd/ios)
 - [Google Photos on Pixel crop guide](https://support.google.com/photos/answer/9940184?hl=en)
 - [React Advanced Cropper API](https://advanced-cropper.github.io/react-advanced-cropper/docs/components/Cropper)

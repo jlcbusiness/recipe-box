@@ -13,21 +13,21 @@ into the Recipe Tin. Complete and verify each package separately.
 
 ## Sources and authority
 
-- [Slice workflow](../../../.github/prompts/slice.prompt.md)
-- [Product summary](../first-draft-spec.md)
-- [Comprehensive reference](../comprehensive-reference.md), especially
+- [Slice workflow](../../../../.github/prompts/slice.prompt.md)
+- [Product summary](../../first-draft-spec.md)
+- [Comprehensive reference](../../comprehensive-reference.md), especially
   sections 2.5, 5, 6, 11, and 13
-- [Data model](../data-model.md)
-- [Design philosophy](../design-philosophy.md)
-- [Visual design guide](../visual-design.md), especially Nutrition, Data
+- [Data model](../../data-model.md)
+- [Design philosophy](../../design-philosophy.md)
+- [Visual design guide](../../visual-design.md), especially Nutrition, Data
   Management, Ingredient Presentation, and Publication Editing
-- [Decision log](../decision-log.md)
-- [Publication editing](12.5-edit-publications.md),
-  [images](12-images.md), and [scoped import](21b-scoped-import.md)
-- [Instruction authoring](dlc/dlc-05-instruction-authoring-and-references.md),
-  [reader and print layout](dlc/dlc-08-recipe-public-and-print-layout.md),
-  [standalone exports](dlc/dlc-09-standalone-recipe-exports.md), and
-  [nutrition](dlc/dlc-12-recipe-nutrition.md)
+- [Decision log](../../decision-log.md)
+- [Publication editing](../build/12.5-edit-publications.md),
+  [images](../build/12-images.md), and [scoped import](../build/21b-scoped-import.md)
+- [Instruction authoring](../dlc/dlc-05-instruction-authoring-and-references.md),
+  [reader and print layout](../dlc/dlc-08-recipe-public-and-print-layout.md),
+  [standalone exports](../dlc/dlc-09-standalone-recipe-exports.md), and
+  [nutrition](../dlc/dlc-12-recipe-nutrition.md)
 
 The user supplied the reports and two clarifying screenshots on November 4,
 2026. Item 2 concerns both a publication header and the recipe instruction
@@ -55,9 +55,9 @@ maximum screen gutters, nested lists, and bounded instruction photos.
   Import/Export into one action.
 - The screenshot shows a Site cover, a narrow wrapped title and URL, and four
   wide actions competing for the same row.
-- [Publication detail](../../../src/app/publications/[id]/page.tsx) uses a
+- [Publication detail](../../../../src/app/publications/%5Bid%5D/page.tsx) uses a
   cover/title/actions grid. Its title receives the space left by the actions.
-- [The shared media manager](../../../src/app/media/media-manager.tsx)
+- [The shared media manager](../../../../src/app/media/media-manager.tsx)
   already handles pasted image files for publication covers. Treat the report
   as a discoverability or behavior defect to reproduce, not proof that a new
   clipboard implementation is needed.
@@ -65,7 +65,7 @@ maximum screen gutters, nested lists, and bounded instruction photos.
 ### Proposed contract
 
 Use the existing compact publication toolbar and
-[transfer menu](../../../src/app/publications/publication-transfer-menu.tsx)
+[transfer menu](../../../../src/app/publications/publication-transfer-menu.tsx)
 as the closest reference. Their actions and keyboard behavior fit this
 workflow; restricting the menu to mobile no longer fits the requested desktop
 layout.
@@ -110,9 +110,9 @@ Item 2 includes this exact authored step:
 ```
 
 The nested entries render as peers. The referenced screenshot renders small.
-[The Markdown parser](../../../src/lib/recipes/instruction-markdown.ts)
+[The Markdown parser](../../../../src/lib/recipes/instruction-markdown.ts)
 accepts leading whitespace but stores a flat list of inline-token arrays.
-[Instruction-photo CSS](../../../src/app/styles/recipe-instruction-display.css) caps
+[Instruction-photo CSS](../../../../src/app/styles/recipe-instruction-display.css) caps
 desktop photos at `min(55%, 20rem)`, independently of the requested width.
 These are confirmed implementation constraints, not yet a full diagnosis of
 every output surface.
@@ -205,7 +205,7 @@ Preserve Save, Cancel, and Delete behavior and saved recipe values.
 ### Proposed contract
 
 Use the full-main-content alignment specified in the
-[DLC 08 brief](dlc/dlc-08-recipe-public-and-print-layout.md) as the private
+[DLC 08 brief](../dlc/dlc-08-recipe-public-and-print-layout.md) as the private
 reader reference. Preserve the useful Ingredients/Instructions and
 Nutrition/Notes column compositions; repair their outer containers rather than
 stretching individual controls or removing meaningful internal indentation.
@@ -257,10 +257,10 @@ Item 8 reports `Unable to import this archive. No changes were committed.`
 The user notes likely similarity to the earlier database import/export
 failures.
 
-[The commit route](../../../src/app/api/imports/commit/route.ts) uses the
+[The commit route](../../../../src/app/api/imports/commit/route.ts) uses the
 shared `commit_database_import_with_media_sources` RPC and emits this message
 for otherwise unclassified database errors. The recent
-[trashed-recipe import-ID repair](../../../supabase/migrations/20261215000000_fix_trashed_recipe_import_ids.sql)
+[trashed-recipe import-ID repair](../../../../supabase/migrations/20261215000000_fix_trashed_recipe_import_ids.sql)
 is an initial lead, not a confirmed cause. Recipe Tin mapping and transaction
 context must both be checked.
 

@@ -12,13 +12,13 @@ preparation.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 17
-- [First-draft specification](../first-draft-spec.md), Queries and Settings
-- [Comprehensive reference](../comprehensive-reference.md), § 7
-- [Data model](../data-model.md), Core Entities and Required Future Detail
-- [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Find Recipes,
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 17
+- [First-draft specification](../../first-draft-spec.md), Queries and Settings
+- [Comprehensive reference](../../comprehensive-reference.md), § 7
+- [Data model](../../data-model.md), Core Entities and Required Future Detail
+- [Design philosophy](../../design-philosophy.md) and [visual design guide](../../visual-design.md), Find Recipes,
   Desktop, Mobile, and Accessibility And Interaction
-- [Decision log](../decision-log.md)
+- [Decision log](../../decision-log.md)
 - [Slice 10A: Library Explorer](10a-library-explorer.md)
 - [Slice 12: Images](12-images.md)
 - [Slice 14D: Tags and assignment](14d-tags-and-assignment.md)

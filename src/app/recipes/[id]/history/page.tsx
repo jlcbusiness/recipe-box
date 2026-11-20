@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '../../../../lib/supabase/server';
 import { type HistoryEventRow, HistoryEvents } from '../../../history/history-events';
+import { PrivateBreadcrumbs } from '../../../private-breadcrumbs';
 
 export async function generateMetadata({ params }: PageProps<'/recipes/[id]/history'>) {
   const { id } = await params;
@@ -24,13 +24,22 @@ export default async function RecipeHistoryPage({ params }: PageProps<'/recipes/
   const supabase = await createClient();
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
-    .select('id, name')
+    .select('id, name, publication_id')
     .eq('id', id)
     .is('trashed_at', null)
     .maybeSingle();
 
   if (recipeError) throw new Error('Unable to load recipe history.');
   if (!recipe) notFound();
+  if (!recipe.publication_id) throw new Error('Unable to load recipe history.');
+
+  const { data: publication, error: publicationError } = await supabase
+    .from('publications')
+    .select('id, name')
+    .eq('id', recipe.publication_id)
+    .maybeSingle();
+
+  if (publicationError || !publication) throw new Error('Unable to load recipe history.');
 
   const { data, error } = await supabase
     .from('recipe_history')
@@ -43,9 +52,14 @@ export default async function RecipeHistoryPage({ params }: PageProps<'/recipes/
 
   return (
     <main className="recipes-main recipe-history-page" aria-labelledby="page-title">
-      <Link className="recipe-history-back" href={`/recipes/${id}`}>
-        Back to recipe
-      </Link>
+      <PrivateBreadcrumbs
+        currentPage="History"
+        parents={[
+          { label: 'Library', href: '/publications' },
+          { label: publication.name, href: `/publications/${publication.id}` },
+          { label: recipe.name, href: `/recipes/${recipe.id}` },
+        ]}
+      />
       <h1 id="page-title">History: {recipe.name}</h1>
       <HistoryEvents entity="recipe" events={(data ?? []) as HistoryEventRow[]} />
     </main>

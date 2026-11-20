@@ -22,7 +22,7 @@ regular signed-in users or anonymous visitors.
   accessibility
 - [Visual design guide](../../visual-design.md), account menu and admin shell
 - [Decision log](../../decision-log.md)
-- [Slice 2: Invites and admin](../2-invites-and-admin.md)
+- [Slice 2: Invites and admin](../build/2-invites-and-admin.md)
 - [DLC 05: Instruction authoring and references](dlc-05-instruction-authoring-and-references.md)
 - [DLC 26: Recipe-editor save shortcut](README.md#phase-5-recipe-and-document-output-follow-up)
 - [DLC 27: Ingredient sets and instruction groups](dlc-27-ingredient-instruction-groups.md)

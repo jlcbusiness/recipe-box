@@ -98,8 +98,10 @@ through the account-scoped update function.
 - **Physical Metaphor:** A vintage metal tin box with a hinged lid, containing dog-eared 3x5 index cards and handwritten
   scraps of paper.
 - **Visual Design:**
-  - Recipe detail attribution says `In the Recipe Tin`; the Tin is a container,
-    not a recipe source.
+  - Private recipe detail shows Recipe Tin in the breadcrumb as its assigned
+    Library publication, but does not repeat the recipe title already shown as
+    the H1. The attribution does not repeat the Tin. The Tin is a container,
+    not an external recipe source.
   - Recipes belonging to the Recipe Tin are rendered with a subtle, textured **ragged/deckled paper border background**
     instead of standard clean rounded cards.
   - Normal publication cards remain crisp, clean, and restrained.
@@ -158,7 +160,7 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   with an **Advanced Rules** expression; a visual nested-group builder and
   named-query lifecycle are not included. Numeric filter values, including
   each explicit **Between** bound, use the shared exact-arithmetic input
-  contract in the [Numeric Arithmetic brief](../slices/2026-11-numeric-arithmetic.md);
+  contract in the [Numeric Arithmetic brief](../slices/fixes/2026-11-18-numeric-arithmetic.md);
   **Between** remains a two-bound query operator, not a quantity range.
 - **Advanced Rules:** A pane lists the current numbered Query rules and accepts
   their numbers with parentheses and case-insensitive `AND`, `OR`, and `NOT`.

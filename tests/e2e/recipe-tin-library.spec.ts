@@ -10,6 +10,88 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
 }
 
+async function expectBreadcrumbPath(page: import('@playwright/test').Page, labels: string[]) {
+  const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+  await expect(breadcrumb.getByRole('link')).toHaveText(labels.slice(0, -1));
+  await expect(breadcrumb.locator('[aria-current="page"]')).toHaveText(labels[labels.length - 1]);
+  await expect(breadcrumb.getByRole('link')).toHaveCount(labels.length - 1);
+  await expect(breadcrumb.locator('.private-breadcrumb-separator')).toHaveText(
+    Array.from({ length: labels.length - 1 }, () => '>'),
+  );
+  const ancestorColor = await breadcrumb
+    .getByRole('link')
+    .first()
+    .evaluate((element) => getComputedStyle(element).color);
+  await expect(breadcrumb.locator('.private-breadcrumb-separator').first()).toHaveCSS(
+    'color',
+    ancestorColor,
+  );
+}
+
+async function expectBreadcrumbAncestry(page: import('@playwright/test').Page, labels: string[]) {
+  const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+  await expect(breadcrumb.getByRole('link')).toHaveText(labels);
+  await expect(breadcrumb.locator('[aria-current="page"]')).toHaveCount(0);
+  await expect(breadcrumb.locator('.private-breadcrumb-separator')).toHaveText(
+    Array.from({ length: labels.length - 1 }, () => '>'),
+  );
+  const ancestorColor = await breadcrumb
+    .getByRole('link')
+    .first()
+    .evaluate((element) => getComputedStyle(element).color);
+  await expect(breadcrumb.locator('.private-breadcrumb-separator').first()).toHaveCSS(
+    'color',
+    ancestorColor,
+  );
+}
+
+async function expectNoBreadcrumb(page: import('@playwright/test').Page) {
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
+}
+
+async function expectBreadcrumbAlignedWithHeading(
+  page: import('@playwright/test').Page,
+  headingName: string,
+) {
+  const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+  const firstLink = breadcrumb.getByRole('link').first();
+  const heading = page.getByRole('heading', { name: headingName, level: 1 });
+  const [breadcrumbBox, firstLinkBox, headingBox] = await Promise.all([
+    breadcrumb.boundingBox(),
+    firstLink.boundingBox(),
+    heading.boundingBox(),
+  ]);
+  if (!breadcrumbBox || !firstLinkBox || !headingBox) {
+    throw new Error('Expected breadcrumb and heading geometry');
+  }
+  expect(Math.abs(firstLinkBox.x - headingBox.x)).toBeLessThanOrEqual(1);
+  expect(headingBox.y - (breadcrumbBox.y + breadcrumbBox.height)).toBeLessThanOrEqual(16);
+}
+
+async function expectRecipeActionsAlignedWithBreadcrumb(page: import('@playwright/test').Page) {
+  const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+  const actions = page.locator('.recipe-detail-heading-actions');
+  const [breadcrumbBox, actionsBox] = await Promise.all([
+    breadcrumb.boundingBox(),
+    actions.boundingBox(),
+  ]);
+  if (!breadcrumbBox || !actionsBox) throw new Error('Expected recipe header geometry');
+  const breadcrumbCenter = breadcrumbBox.y + breadcrumbBox.height / 2;
+  const actionsCenter = actionsBox.y + actionsBox.height / 2;
+  expect(Math.abs(breadcrumbCenter - actionsCenter)).toBeLessThanOrEqual(3);
+}
+
+async function expectRecipeSectionDividerCloseToHeading(page: import('@playwright/test').Page) {
+  const heading = page.locator('.recipe-detail-heading');
+  const firstSection = page.locator('.recipe-summary-layout > .recipe-detail-section').first();
+  const [headingBox, sectionBox] = await Promise.all([
+    heading.boundingBox(),
+    firstSection.boundingBox(),
+  ]);
+  if (!headingBox || !sectionBox) throw new Error('Expected recipe heading and section geometry');
+  expect(sectionBox.y - (headingBox.y + headingBox.height)).toBeLessThanOrEqual(10);
+}
+
 async function createBook(
   request: import('@playwright/test').APIRequestContext,
   config: Awaited<ReturnType<typeof getLocalSupabaseConfig>>,
@@ -36,11 +118,40 @@ async function createBook(
   return (await response.json()) as string;
 }
 
-async function createTinRecipe(
+async function createMagazine(
+  request: import('@playwright/test').APIRequestContext,
+  config: Awaited<ReturnType<typeof getLocalSupabaseConfig>>,
+  accessToken: string,
+  name: string,
+) {
+  const response = await request.post(`${config.apiUrl}/rest/v1/rpc/create_publication`, {
+    headers: {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    data: {
+      p_name: name,
+      p_publication_type: 'magazine',
+      p_author: null,
+      p_edition: null,
+      p_isbn: null,
+      p_retailer_url: null,
+      p_issue: null,
+      p_site_url: null,
+    },
+  });
+  expect(response.ok(), await response.text()).toBeTruthy();
+  return (await response.json()) as string;
+}
+
+async function createRecipe(
   request: import('@playwright/test').APIRequestContext,
   config: Awaited<ReturnType<typeof getLocalSupabaseConfig>>,
   accessToken: string,
   publicationId: string,
+  name = 'Recipe Tin attribution recipe',
+  publicationPage: string | null = null,
+  recipeUrl: string | null = null,
 ) {
   const response = await request.post(
     `${config.apiUrl}/rest/v1/rpc/save_recipe_with_relationships`,
@@ -52,7 +163,7 @@ async function createTinRecipe(
       data: {
         p_recipe_id: null,
         p_expected_version: null,
-        p_name: 'Recipe Tin attribution recipe',
+        p_name: name,
         p_food_type_id: null,
         p_state: 'want_to_try',
         p_verdict_id: null,
@@ -77,8 +188,8 @@ async function createTinRecipe(
         p_ingredient_rows: [],
         p_instruction_steps: [],
         p_publication_id: publicationId,
-        p_publication_page: null,
-        p_recipe_url: null,
+        p_publication_page: publicationPage,
+        p_recipe_url: recipeUrl,
         p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
         p_tag_ids: [],
       },
@@ -88,6 +199,206 @@ async function createTinRecipe(
   const [recipe] = (await response.json()) as { id: string }[];
   return recipe.id;
 }
+
+test('private recipe detail shows its parent path without repeating publication attribution @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const tinResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=id&publication_type=eq.collection`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    expect(tinResponse.ok(), await tinResponse.text()).toBeTruthy();
+    const [{ id: tinId }] = (await tinResponse.json()) as { id: string }[];
+    const publicationName = 'Breadcrumb Magazine';
+    const publicationId = await createMagazine(request, config, user.accessToken, publicationName);
+    const tinRecipeName = 'Tin breadcrumb recipe';
+    const bookRecipeName = 'Book breadcrumb recipe';
+    const recipeUrl = 'https://example.test/breadcrumb-recipe';
+    const tinRecipeId = await createRecipe(request, config, user.accessToken, tinId, tinRecipeName);
+    const bookRecipeId = await createRecipe(
+      request,
+      config,
+      user.accessToken,
+      publicationId,
+      bookRecipeName,
+      '12',
+      recipeUrl,
+    );
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByLabel('Email')).toHaveCount(0);
+
+    const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+
+    await page.goto(`/recipes/${tinRecipeId}`);
+    await expect(breadcrumb).toBeVisible();
+    await expectBreadcrumbAncestry(page, ['Library', 'Recipe Tin']);
+    await expect(breadcrumb.getByRole('link', { name: 'Library', exact: true })).toHaveAttribute(
+      'href',
+      '/publications',
+    );
+    await expect(breadcrumb.getByRole('link', { name: 'Recipe Tin', exact: true })).toHaveAttribute(
+      'href',
+      `/publications/${tinId}`,
+    );
+    await expect(breadcrumb.getByRole('link', { name: tinRecipeName, exact: true })).toHaveCount(0);
+    await expect(page.locator('.recipe-attribution')).toHaveCount(0);
+    await expectBreadcrumbAlignedWithHeading(page, tinRecipeName);
+    if ((page.viewportSize()?.width ?? 0) >= 761) {
+      await expectRecipeActionsAlignedWithBreadcrumb(page);
+      await expectRecipeSectionDividerCloseToHeading(page);
+    }
+
+    await page.setViewportSize({ width: 384, height: 915 });
+    await expectNoHorizontalOverflow(page);
+    await page.goto(`/recipes/${bookRecipeId}`);
+    await expectBreadcrumbAncestry(page, ['Library', publicationName]);
+    await expectBreadcrumbAlignedWithHeading(page, bookRecipeName);
+    await expect(
+      breadcrumb.getByRole('link', { name: publicationName, exact: true }),
+    ).toHaveAttribute('href', `/publications/${publicationId}`);
+    await expect(page.locator('.recipe-attribution')).toContainText('12');
+    await expect(page.locator('.recipe-attribution')).not.toContainText('·');
+    await expect(page.locator('.recipe-attribution')).not.toContainText(publicationName);
+    await expect(page.locator('.recipe-attribution .recipe-source-link')).toHaveAttribute(
+      'href',
+      recipeUrl,
+    );
+    await expectNoHorizontalOverflow(page);
+    const publicationLink = breadcrumb.getByRole('link', {
+      name: publicationName,
+      exact: true,
+    });
+    expect((await publicationLink.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    const recipeAccessibility = await new AxeBuilder({ page }).analyze();
+    expect(recipeAccessibility.violations).toEqual([]);
+    const libraryLink = breadcrumb.getByRole('link', { name: 'Library', exact: true });
+    await libraryLink.focus();
+    await page.keyboard.press('Tab');
+    await expect(publicationLink).toBeFocused();
+    await expect(publicationLink).toHaveCSS('outline-style', 'solid');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(`/publications/${publicationId}`);
+    await expect(page.getByRole('heading', { name: publicationName, level: 1 })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
+
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('Add Recipe breadcrumbs replace the eyebrow beside the title @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+
+  try {
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByLabel('Email')).toHaveCount(0);
+
+    await page.goto('/recipes/new');
+    await expectBreadcrumbAncestry(page, ['Library', 'Recipe Tin']);
+    await expectBreadcrumbAlignedWithHeading(page, 'Add Recipe');
+    await expect(page.getByText('ADD TO YOUR COLLECTION', { exact: true })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('private nested pages use their parent path and direct destinations stay breadcrumb-free @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const publicationName = 'Nested Route Cookbook';
+    const publicationId = await createBook(request, config, user.accessToken, publicationName);
+    const recipeName = 'Nested route recipe';
+    const recipeId = await createRecipe(
+      request,
+      config,
+      user.accessToken,
+      publicationId,
+      recipeName,
+    );
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByLabel('Email')).toHaveCount(0);
+
+    await page.goto(`/publications/${publicationId}/history`);
+    await expectBreadcrumbPath(page, ['Library', publicationName, 'History']);
+    await expectBreadcrumbAlignedWithHeading(page, `History: ${publicationName}`);
+
+    await page.goto(`/recipes/${recipeId}/history`);
+    await expectBreadcrumbPath(page, ['Library', publicationName, recipeName, 'History']);
+    await expectBreadcrumbAlignedWithHeading(page, `History: ${recipeName}`);
+
+    await page.goto(`/recipes/${recipeId}/edit`);
+    await expectBreadcrumbAncestry(page, ['Library', publicationName, recipeName]);
+    await expectBreadcrumbAlignedWithHeading(page, 'Edit Recipe');
+
+    await page.goto(`/recipes/new?publication=${publicationId}`);
+    await expectBreadcrumbAncestry(page, ['Library', publicationName]);
+    await expectBreadcrumbAlignedWithHeading(page, 'Add Recipe');
+
+    await page.goto('/recipes/new');
+    await expectBreadcrumbAncestry(page, ['Library', 'Recipe Tin']);
+    await expectBreadcrumbAlignedWithHeading(page, 'Add Recipe');
+
+    for (const route of [
+      '/publications',
+      '/publications/new',
+      '/recipes/find',
+      '/recipes/trash',
+      '/help',
+      '/settings?tab=recipe-data',
+      '/account/username',
+      '/account/app-data',
+    ]) {
+      await page.goto(route);
+      await expectNoBreadcrumb(page);
+      if (route === '/account/app-data') {
+        await expect(page.getByRole('heading', { name: 'App data', level: 1 })).toBeVisible();
+      }
+      if (route === '/settings?tab=recipe-data') {
+        await expect(page.getByRole('tab', { name: 'Recipe data' })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        );
+      }
+    }
+
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
 
 test('Recipe Tin stays first after Library sorting and remains type-filterable @e2e @a11y', async ({
   page,
@@ -108,7 +419,7 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     );
     expect(tinResponse.ok(), await tinResponse.text()).toBeTruthy();
     const [{ id: tinId }] = (await tinResponse.json()) as { id: string }[];
-    const tinRecipeId = await createTinRecipe(request, config, user.accessToken, tinId);
+    const tinRecipeId = await createRecipe(request, config, user.accessToken, tinId);
 
     await createBook(request, config, user.accessToken, 'Aardvark Cookbook');
     await createBook(request, config, user.accessToken, 'Zebra Cookbook');
@@ -183,7 +494,12 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       wash: '#f4efe9',
     });
     await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 253, 246)');
-    await expect(page.locator('.recipe-attribution')).toContainText('In the Recipe Tin');
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Breadcrumb' })
+        .getByRole('link', { name: 'Recipe Tin', exact: true }),
+    ).toHaveAttribute('href', `/publications/${tinId}`);
+    await expect(page.locator('.recipe-attribution')).toHaveCount(0);
     await page.goto(`/recipes/${tinRecipeId}/edit`);
     const tinEditTheme = page.locator('main.recipe-tin-theme');
     await expect(tinEditTheme).toHaveCount(1);

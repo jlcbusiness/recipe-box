@@ -2,13 +2,13 @@
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 23
-- [First-draft specification](../first-draft-spec.md), Import, Export, Lifecycle, and History
-- [Comprehensive reference](../comprehensive-reference.md), §§ 6.6, 9, 12, and 13
-- [Data model](../data-model.md), Ownership and Relationship Rules
-- [Design philosophy](../design-philosophy.md)
-- [Visual design guide](../visual-design.md), Recipe detail, publication detail, and Trash
-- [Decision log](../decision-log.md), history and purge decisions
+- [Delivery roadmap](../../delivery-roadmap.md), slice 23
+- [First-draft specification](../../first-draft-spec.md), Import, Export, Lifecycle, and History
+- [Comprehensive reference](../../comprehensive-reference.md), §§ 6.6, 9, 12, and 13
+- [Data model](../../data-model.md), Ownership and Relationship Rules
+- [Design philosophy](../../design-philosophy.md)
+- [Visual design guide](../../visual-design.md), Recipe detail, publication detail, and Trash
+- [Decision log](../../decision-log.md), history and purge decisions
 - [Slice 4: Recipe card basics](4-recipe-card-basics.md)
 - [Slice 8: Trash, restore, and print](8-trash-restore-and-print.md)
 - [Slice 10B: Publication deletion and restore](10b-publication-deletion-and-restore.md)

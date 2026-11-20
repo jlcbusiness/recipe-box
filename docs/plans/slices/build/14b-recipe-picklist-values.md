@@ -6,12 +6,13 @@ owner isolation, and the protected meaning of `Specific occasion`.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 14B
-- [First-draft specification](../first-draft-spec.md), Recipes and Ingredients
-- [Comprehensive reference](../comprehensive-reference/05-settings-and-taxonomies.md#81-centralized-picklist-management)
-- [Data model](../data-model.md), Configuration Boundaries
-- [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Controls and state, and Settings
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 14B
+- [First-draft specification](../../first-draft-spec.md), Recipes and Ingredients
+- [Comprehensive reference](../../comprehensive-reference/05-settings-and-taxonomies.md#81-centralized-picklist-management)
+- [Data model](../../data-model.md), Configuration Boundaries
+- [Design philosophy](../../design-philosophy.md) and
+  [visual design guide](../../visual-design.md), Controls and state, and Settings
+- [Decision log](../../decision-log.md)
 - Installed Next.js 16 documentation: Server Actions, Forms, Vitest, and Playwright
 
 ## Outcome

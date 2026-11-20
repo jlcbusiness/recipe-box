@@ -1790,8 +1790,7 @@
   white-space: nowrap;
 }
 
-.recipe-history-link,
-.recipe-history-back {
+.recipe-history-link {
   display: inline-block;
   margin-top: 8px;
   color: var(--leaf);

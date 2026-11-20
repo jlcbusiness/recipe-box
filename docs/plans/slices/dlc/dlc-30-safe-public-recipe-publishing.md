@@ -13,7 +13,7 @@ the nutrition tables used by the public loader.
 - [Design philosophy](../../design-philosophy.md)
 - [Visual design guide](../../visual-design.md), Recipe Detail and Public Recipe View
 - [Decision log](../../decision-log.md)
-- [Slice 22: Public Links and Privacy](../22-public-links-and-privacy.md), current implementation contract
+- [Slice 22: Public Links and Privacy](../build/22-public-links-and-privacy.md), current implementation contract
 
 ## Outcome
 

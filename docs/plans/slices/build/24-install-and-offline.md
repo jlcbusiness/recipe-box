@@ -2,17 +2,17 @@
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 24 and Standing Rules
-- [First-draft specification](../first-draft-spec.md), Product, Sharing and Authentication, Accessibility, and Testability
-- [Comprehensive reference](../comprehensive-reference.md), §§ 9, 13, 14, and 16
-- [Data model](../data-model.md), Ownership
-- [Design philosophy](../design-philosophy.md), Treat device capabilities as enhancements and Keep temporary state temporary
-- [Visual design guide](../visual-design.md), Accessibility and Interaction
-- [Decision log](../decision-log.md), public-link and private-data decisions
+- [Delivery roadmap](../../delivery-roadmap.md), slice 24 and Standing Rules
+- [First-draft specification](../../first-draft-spec.md), Product, Sharing and Authentication, Accessibility, and Testability
+- [Comprehensive reference](../../comprehensive-reference.md), §§ 9, 13, 14, and 16
+- [Data model](../../data-model.md), Ownership
+- [Design philosophy](../../design-philosophy.md), Treat device capabilities as enhancements and Keep temporary state temporary
+- [Visual design guide](../../visual-design.md), Accessibility and Interaction
+- [Decision log](../../decision-log.md), public-link and private-data decisions
 - [Slice 22: Public links and privacy](22-public-links-and-privacy.md)
 - [Slice 23: History viewer](23-history-viewer.md)
-- [Next.js 16.3.8 PWA guide](../../node_modules/next/dist/docs/01-app/02-guides/progressive-web-apps.md)
-- [Next.js 16.3.8 offline support guide](../../node_modules/next/dist/docs/01-app/02-guides/offline-support.md)
+- [Next.js 16.3.8 PWA guide](../../../node_modules/next/dist/docs/01-app/02-guides/progressive-web-apps.md)
+- [Next.js 16.3.8 offline support guide](../../../node_modules/next/dist/docs/01-app/02-guides/offline-support.md)
 - [MDN: Service Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
 - [MDN: Cache](https://developer.mozilla.org/en-US/docs/Web/API/Cache)
 - [MDN: Making PWAs installable](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)

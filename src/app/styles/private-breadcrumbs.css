@@ -1,0 +1,70 @@
+.private-breadcrumbs {
+  min-width: 0;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.private-breadcrumbs-add-recipe {
+  margin-top: 32px;
+}
+
+.private-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.private-breadcrumbs li {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+
+.private-breadcrumb-separator {
+  display: inline-block;
+  margin-inline-end: 6px;
+  color: var(--leaf);
+}
+
+.private-breadcrumbs a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding-block: 4px;
+  color: var(--leaf);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.private-breadcrumbs a:hover,
+.private-breadcrumbs a:focus-visible {
+  text-decoration: underline;
+}
+
+.private-breadcrumbs a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.private-breadcrumbs [aria-current="page"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .private-breadcrumbs a {
+    min-height: 48px;
+  }
+
+  .private-breadcrumbs-add-recipe {
+    margin-top: 48px;
+  }
+}

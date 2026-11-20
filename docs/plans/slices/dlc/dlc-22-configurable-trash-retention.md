@@ -38,6 +38,6 @@ shows when each item is scheduled for permanent deletion.
 
 ## References
 
-- [Trash and restore](../8-trash-restore-and-print.md)
-- [Publication lifecycle](../10b-publication-deletion-and-restore.md)
-- [Public links](../22-public-links-and-privacy.md)
+- [Trash and restore](../build/8-trash-restore-and-print.md)
+- [Publication lifecycle](../build/10b-publication-deletion-and-restore.md)
+- [Public links](../build/22-public-links-and-privacy.md)

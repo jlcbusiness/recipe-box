@@ -69,7 +69,7 @@ makes, such as `Serves 4` and `Makes 1 cake`.
 
 ## References
 
-- [Recipe card basics](../4-recipe-card-basics.md)
-- [Scaling and conversion](../13-scaling-and-unit-conversion.md)
+- [Recipe card basics](../build/4-recipe-card-basics.md)
+- [Scaling and conversion](../build/13-scaling-and-unit-conversion.md)
 - [Visual design guide](../../visual-design.md)
 - [Decision log](../../decision-log.md)

@@ -1,7 +1,7 @@
 # DLC 09: Standalone recipe exports
 
 This brief adds portable, human-readable outputs beyond the ZIP bundles in
-[Slice 20](../20-export.md). It also extends the print layout from
+[Slice 20](../build/20-export.md). It also extends the print layout from
 [DLC 08](dlc-08-recipe-public-and-print-layout.md) with readable pagination.
 The comprehensive reference remains the product authority.
 
@@ -17,7 +17,7 @@ The comprehensive reference remains the product authority.
 - [Visual design guide](../../visual-design.md), recipe detail actions,
   public recipe controls, and baseline print
 - [Decision log](../../decision-log.md)
-- [Slice 20: Export](../20-export.md), recipe ZIP authorization and delivery
+- [Slice 20: Export](../build/20-export.md), recipe ZIP authorization and delivery
 - [DLC 08: Recipe reading, public, and print layout](dlc-08-recipe-public-and-print-layout.md)
 
 ## Outcome

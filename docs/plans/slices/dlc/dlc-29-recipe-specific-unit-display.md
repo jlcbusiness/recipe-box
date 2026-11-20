@@ -19,8 +19,8 @@ simplification, allowing a recipe to retain mixed units such as
 - [Design philosophy](../../design-philosophy.md) and
   [visual design guide](../../visual-design.md), Settings and recipe reading
 - [Decision log](../../decision-log.md)
-- [Slice 13: Scaling and Unit Conversion](../13-scaling-and-unit-conversion.md)
-- [Slice 14A: Settings and Personal Preferences](../14a-settings-and-preferences.md)
+- [Slice 13: Scaling and Unit Conversion](../build/13-scaling-and-unit-conversion.md)
+- [Slice 14A: Settings and Personal Preferences](../build/14a-settings-and-preferences.md)
 
 ## Outcome
 

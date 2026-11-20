@@ -89,6 +89,16 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await expect(page).toHaveURL(/\/publications$/);
 }
 
+async function expectStreamingNotFound(
+  page: import('@playwright/test').Page,
+  privateHeading: string,
+) {
+  // These routes stream their loading fallback before the page-level notFound check runs.
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute('content', 'noindex');
+  await expect(page.getByRole('heading', { name: privateHeading, exact: true })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
+}
+
 test('active recipe owners can review readable, private change history @e2e @a11y', async ({
   browser,
   page,
@@ -183,7 +193,13 @@ test('active recipe owners can review readable, private change history @e2e @a11
       'Food type: Casserole; Publication: Recipe Tin; Meal type: Lunch',
     );
     await expect(events.nth(1)).toContainText('Recipe created');
-    await expect(page.getByRole('link', { name: 'Back to recipe' })).toBeVisible();
+    const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+    await expect(breadcrumb.getByRole('link')).toHaveText([
+      'Library',
+      'Recipe Tin',
+      'Crispy herb roast potatoes',
+    ]);
+    await expect(breadcrumb.locator('[aria-current="page"]')).toHaveText('History');
     await expect(page.getByText(owner.id, { exact: false })).toHaveCount(0);
 
     const accessibility = await new AxeBuilder({ page }).analyze();
@@ -193,6 +209,11 @@ test('active recipe owners can review readable, private change history @e2e @a11
       content: document.documentElement.scrollWidth,
     }));
     expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
+    await breadcrumb.getByRole('link', { name: 'Crispy herb roast potatoes' }).click();
+    await expect(page).toHaveURL(`/recipes/${created.id}`);
+    await expect(
+      page.getByRole('heading', { name: 'Crispy herb roast potatoes', level: 1 }),
+    ).toBeVisible();
 
     const recipeResponse = await request.get(
       `${config.apiUrl}/rest/v1/recipes?select=public_id&id=eq.${created.id}`,
@@ -223,8 +244,9 @@ test('active recipe owners can review readable, private change history @e2e @a11
 
     const otherPage = await browser.newPage();
     await signIn(otherPage, other.email, other.password);
-    const foreignPageResponse = await otherPage.goto(`/recipes/${created.id}/history`);
-    expect(foreignPageResponse?.status()).toBe(404);
+    await otherPage.goto(`/recipes/${created.id}/history`);
+    await expect(otherPage.getByRole('heading', { name: 'Recipe not found' })).toBeVisible();
+    await expectStreamingNotFound(otherPage, 'Crispy herb roast potatoes');
     await otherPage.close();
 
     const secondTrashResponse = await request.post(`${config.apiUrl}/rest/v1/rpc/trash_recipe`, {
@@ -232,8 +254,9 @@ test('active recipe owners can review readable, private change history @e2e @a11
       data: { p_recipe_id: created.id, p_expected_version: updated.version + 2 },
     });
     expect(secondTrashResponse.ok(), await secondTrashResponse.text()).toBeTruthy();
-    const trashedPageResponse = await page.goto(`/recipes/${created.id}/history`);
-    expect(trashedPageResponse?.status()).toBe(404);
+    await page.goto(`/recipes/${created.id}/history`);
+    await expect(page.getByRole('heading', { name: 'Recipe not found' })).toBeVisible();
+    await expectStreamingNotFound(page, 'Crispy herb roast potatoes');
   } finally {
     await deleteTestUser(request, other);
     await deleteTestUser(request, owner);
@@ -302,20 +325,31 @@ test('publication history is owner-only and returns to its active publication @e
     await expect(
       page.getByRole('heading', { name: 'History: Weeknight cooking, revised edition' }),
     ).toBeVisible();
+    await expect(page).toHaveTitle(/History/);
     const events = page.getByRole('list', { name: 'Publication history' }).getByRole('listitem');
     await expect(events).toHaveCount(2);
     await expect(events.nth(0)).toContainText('Publication updated');
     await expect(events.nth(0)).toContainText('Weeknight cooking');
     await expect(events.nth(0)).toContainText('Weeknight cooking, revised edition');
-    await expect(page.getByRole('link', { name: 'Back to publication' })).toBeVisible();
+    const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+    await expect(breadcrumb.getByRole('link')).toHaveText([
+      'Library',
+      'Weeknight cooking, revised edition',
+    ]);
+    await expect(breadcrumb.locator('[aria-current="page"]')).toHaveText('History');
 
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
+    await breadcrumb.getByRole('link', { name: 'Weeknight cooking, revised edition' }).click();
+    await expect(page).toHaveURL(`/publications/${publicationId}`);
+    await expect(
+      page.getByRole('heading', { name: 'Weeknight cooking, revised edition', level: 1 }),
+    ).toBeVisible();
 
     const otherPage = await browser.newPage();
     await signIn(otherPage, other.email, other.password);
-    const foreignPageResponse = await otherPage.goto(`/publications/${publicationId}/history`);
-    expect(foreignPageResponse?.status()).toBe(404);
+    await otherPage.goto(`/publications/${publicationId}/history`);
+    await expectStreamingNotFound(otherPage, 'History: Weeknight cooking, revised edition');
     await otherPage.close();
   } finally {
     await deleteTestUser(request, other);

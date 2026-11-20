@@ -6,13 +6,13 @@ and fixture editor are removed before Slice 4 begins.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 3
-- [First-draft specification](../first-draft-spec.md), Instructions and Relationships
-- [Comprehensive reference, § 5: Instructions and recipe linking](../comprehensive-reference/03-instructions-and-links.md#5-instructions-autocomplete-and-recipe-linking)
-- [Comprehensive reference, § 13: Interaction and accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
-- [Visual design guide](../visual-design.md)
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), slice 3
+- [First-draft specification](../../first-draft-spec.md), Instructions and Relationships
+- [Comprehensive reference, § 5: Instructions and recipe linking](../../comprehensive-reference/03-instructions-and-links.md#5-instructions-autocomplete-and-recipe-linking)
+- [Comprehensive reference, § 13: Interaction and accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
+- [Visual design guide](../../visual-design.md)
+- [Decision log](../../decision-log.md)
 - [Tiptap React](https://tiptap.dev/docs/editor/getting-started/install/react)
 - [Tiptap Markdown](https://tiptap.dev/docs/editor/markdown)
 - [Tiptap custom Markdown tokenizers](https://tiptap.dev/docs/editor/markdown/advanced-usage/custom-tokenizer)

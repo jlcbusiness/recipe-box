@@ -2,16 +2,16 @@
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 21 and its Mandatory Slice Preparation and Standing Rules
-- [First-draft specification](../first-draft-spec.md), Import, Export, Lifecycle, and History
-- [Comprehensive reference, § 11: Import, Export, and Backup Bundles](../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
-- [Comprehensive reference, § 12: Change History and Forensic Audit](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
-- [Data model](../data-model.md), Ownership, Relationship Rules, Configuration Boundaries, and Required Future Detail
-- [Design philosophy](../design-philosophy.md), Information Hierarchy and Interaction
-- [Visual design guide](../visual-design.md), Data Management and Export (Slice 20), desktop, mobile, and accessibility
-- [Decision log](../decision-log.md), import conflict, backup, ID, and history decisions
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 21 and its Mandatory Slice Preparation and Standing Rules
+- [First-draft specification](../../first-draft-spec.md), Import, Export, Lifecycle, and History
+- [Comprehensive reference, § 11: Import, Export, and Backup Bundles](../../comprehensive-reference/07-import-export-and-history.md#11-import-export-and-backup-bundles)
+- [Comprehensive reference, § 12: Change History and Forensic Audit](../../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
+- [Data model](../../data-model.md), Ownership, Relationship Rules, Configuration Boundaries, and Required Future Detail
+- [Design philosophy](../../design-philosophy.md), Information Hierarchy and Interaction
+- [Visual design guide](../../visual-design.md), Data Management and Export (Slice 20), desktop, mobile, and accessibility
+- [Decision log](../../decision-log.md), import conflict, backup, ID, and history decisions
 - [Slice 20: Export](20-export.md)
-- [Portable bundle format](../import-export-format.md)
+- [Portable bundle format](../../import-export-format.md)
 - Installed Next.js 16 Route Handler guide: `node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md`
 - [fflate API](https://github.com/101arrowz/fflate)
 - [Supabase Storage upload](https://supabase.com/docs/reference/javascript/storage-from-upload)

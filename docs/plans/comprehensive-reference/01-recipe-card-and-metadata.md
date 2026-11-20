@@ -28,8 +28,8 @@ The top portion of the desktop recipe card contains compact, dense metadata insp
 | **Occasion Details**    | Free text                                      | Text string describing the occasion                                                                                              | Visible **only** when either Verdict or Enthusiasm has `Specific occasion` selected.                                                                                                                                                                                                                                                                                   |
 | **Reason**              | Single-line text                               | Text string explaining rejection                                                                                                 | Visible **only** when `State == Will not try`.                                                                                                                                                                                                                                                                                                                         |
 | **Equipment**           | Multi-select picklist                          | Small pan, medium skillet, 12-inch cast iron, stand mixer, baking sheet, chef knife, spatula, whisk, peeler, blender, etc.       | Settings-managed multi-select dropdown; follows Serves on the State row.                                                                                                                                                                                                                                                                                               |
-| **Serves**              | Optional positive integer                      | Number of people served (e.g., `4`)                                                                                              | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling. Editable numeric input follows the [Numeric Arithmetic contract](../slices/2026-11-numeric-arithmetic.md).                                                                                                                                                              |
-| **Makes**               | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes`                                                                            | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged. Editable numeric input follows the [Numeric Arithmetic contract](../slices/2026-11-numeric-arithmetic.md).                                                                         |
+| **Serves**              | Optional positive integer                      | Number of people served (e.g., `4`)                                                                                              | Appears on the State row before Makes and Equipment. It is the base serving count for recipe scaling. Editable numeric input follows the [Numeric Arithmetic contract](../slices/fixes/2026-11-18-numeric-arithmetic.md).                                                                                                                                                              |
+| **Makes**               | Optional paired positive integer and free text | `makes_quantity` and `makes_thing`, such as `2 cakes`                                                                            | Appears beside Serves under one Makes heading. Both values are saved together or left blank; the quantity scales with the reader while the authored thing text stays unchanged. Editable numeric input follows the [Numeric Arithmetic contract](../slices/fixes/2026-11-18-numeric-arithmetic.md).                                                                         |
 | **Nutrition**           | Optional estimated nutrient values             | FDA label nutrients and approved optional vitamins/minerals                                                                      | Shown as an italic sans-serif “Nutrition Per Serving” Nutrition Facts-style list after Notes (left of Notes on desktop) when Serves and nutrition values are available; print and downloads use one compact string. Values are estimates from User-entered ingredient profiles and/or whole-recipe overrides, never an external lookup.                                |
 | **Tags**                | Multi-select account-owned tags                | Flat freeform tags can be created or reused inline; Settings manages their shared pastel color and catalog lifecycle             | Translucent color distinguishes tags visually. Private detail chips preserve their text and are searchable across both entity types in Slice 17.                                                                                                                                                                                                                       |
 | **Notes**               | Markdown text                                  | Multi-line text                                                                                                                  | Captured gotchas, recipe tweaks, variations, and improvement observations.                                                                                                                                                                                                                                                                                             |
@@ -51,7 +51,7 @@ same type. Time values remain minutes in storage.
   discounted. Find Recipes retains Total Time filters and its column, but
   removes the former fixed component-time filters and columns.
 - **Expression Input:** Time values use the shared exact-arithmetic input
-  contract in the [Numeric Arithmetic brief](../slices/2026-11-numeric-arithmetic.md).
+  contract in the [Numeric Arithmetic brief](../slices/fixes/2026-11-18-numeric-arithmetic.md).
   Evaluate expressions before field normalization; time values then normalize
   to the nearest whole minute, with ties away from zero, and retain the
   existing non-negative validation. Do not save the equation. Invalid,
@@ -210,21 +210,28 @@ same type. Time values remain minutes in storage.
   Breakdown” title. On desktop, a fixed vertical rule separates Total Time
   from the entries, centered in the gap before the first entry. Omit the rule
   when there are no entries.
-  Recipe Tin does not appear as a
-  duplicate breadcrumb or attribution when it is already selected in navigation.
-  Recipe-page headings are about 16pt (about 21.33px). A recipe assigned to a
-  publication presents its origin as a compact subtitle directly beneath the
-  recipe title. The linked publication title is italicized as a citation; the
-  “From” label, issue, page, and URL remain upright. This attribution is absent
-  for Recipe Tin recipes.
-- Standalone text actions are 48px high. Compact icon-only actions beside the
-  detail tag line, including Print and Edit, are 36px square with descriptive
-  accessible names and tooltips. They follow the chips with compact spacing,
-  and the action line remains when no tags are assigned. On mobile, their hit
-  areas expand to 48px without changing their visible size. Picklist triggers have
-  separate sizing rules. In edit mode, a standard 48px icon-only `x` with a
-  24px icon in the header returns to view; Delete remains a distinct text action
-  below it.
+  Private recipe detail shows a breadcrumb from the Library through its assigned
+  publication when that parent is not directly reachable from navigation. End
+  the path at the publication when the recipe title is already shown as the H1.
+  Left-align the path with the title and keep about one line of visual spacing
+  between them. The desktop action toolbar aligns with the breadcrumb, and the
+  section divider sits close below the heading. Use `>` separators in the
+  ancestor-link color. The breadcrumb carries the publication context, so do not
+  repeat the publication name in the recipe attribution; retain location details
+  such as issue, page, and URL. Public pages do not show breadcrumbs and keep
+  their existing attribution.
+  Recipe-page headings are about 16pt (about 21.33px). When a recipe belongs
+  to a publication, the private breadcrumb carries its publication identity;
+  the compact attribution beneath the title retains location details such as
+  issue, page, and URL without repeating the publication name. Recipe Tin
+  recipes have no publication-location attribution.
+- Standalone text actions are 48px high. Compact icon-only actions, including
+  Print and Edit, are 36px square with descriptive accessible names and
+  tooltips. On private recipe detail, the desktop action toolbar aligns with
+  the breadcrumb row. On mobile, action hit areas expand to 48px without
+  changing their visible size. Picklist triggers have separate sizing rules. In
+  edit mode, a standard 48px icon-only `x` with a 24px icon in the header
+  returns to view; Delete remains a distinct text action below it.
 - The desktop Recipe Tin list is up to 1172px wide and its detail metadata
   section is up to 1012px wide.
 

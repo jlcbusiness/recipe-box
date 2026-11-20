@@ -14,38 +14,38 @@ the arithmetic and Things changes are separate implementation slices.
 ## Requirements and references
 
 - Fixes #4, #7, and #10 in the
-  [November Updates intake](./2026-11-updates-page-fix-intake.md).
-- [Comprehensive reference, ingredient amounts and density](../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
-  [scaling and rounding](../comprehensive-reference/02-ingredients-and-presentation.md#34-scaling-math-and-rounding-rules),
-  [portion and Size fields](../comprehensive-reference/02-ingredients-and-presentation.md#37-divided-portions-and-size),
-  [recipe metadata and time expressions](../comprehensive-reference/01-recipe-card-and-metadata.md#22-time-tracking-and-overlapping-times),
-  [numeric query filters](../comprehensive-reference/04-publications-and-search.md#71-recipe-and-publication-search-and-filters),
-  [Settings picklists](../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists),
-  [data model](../data-model.md), [design philosophy](../design-philosophy.md),
-  [visual design guide](../visual-design.md), and
-  [decision log](../decision-log.md).
+  [November Updates intake](2026-11-18-updates-page-fix-intake.md).
+- [Comprehensive reference, ingredient amounts and density](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
+  [scaling and rounding](../../comprehensive-reference/02-ingredients-and-presentation.md#34-scaling-math-and-rounding-rules),
+  [portion and Size fields](../../comprehensive-reference/02-ingredients-and-presentation.md#37-divided-portions-and-size),
+  [recipe metadata and time expressions](../../comprehensive-reference/01-recipe-card-and-metadata.md#22-time-tracking-and-overlapping-times),
+  [numeric query filters](../../comprehensive-reference/04-publications-and-search.md#71-recipe-and-publication-search-and-filters),
+  [Settings picklists](../../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists),
+  [data model](../../data-model.md), [design philosophy](../../design-philosophy.md),
+  [visual design guide](../../visual-design.md), and
+  [decision log](../../decision-log.md).
 - Current arithmetic implementation:
-  [`time-rules.ts`](../../../src/lib/recipes/time-rules.ts),
-  [`measurement-rules.ts`](../../../src/lib/recipes/measurement-rules.ts),
-  and [time expression unit and browser tests](../../../tests/unit/recipe-time-rules.test.tsx).
+  [`time-rules.ts`](../../../../src/lib/recipes/time-rules.ts),
+  [`measurement-rules.ts`](../../../../src/lib/recipes/measurement-rules.ts),
+  and [time expression unit and browser tests](../../../../tests/unit/recipe-time-rules.test.tsx).
 - Current input surfaces:
-  [`recipe-form.tsx`](../../../src/app/recipes/recipe-form.tsx),
-  [`ingredient-rows-editor.tsx`](../../../src/app/recipes/ingredient-rows-editor.tsx),
-  [`measurement-editor.tsx`](../../../src/app/recipes/measurement-editor.tsx),
-  [`ingredient-density-manager.tsx`](../../../src/app/settings/ingredient-density-manager.tsx),
-  [`ingredient-catalog-manager.tsx`](../../../src/app/settings/ingredient-catalog-manager.tsx),
-  [`nutrition-pane.tsx`](../../../src/app/nutrition/nutrition-pane.tsx),
-  [`recipe-reader.tsx`](../../../src/app/recipes/recipe-reader.tsx),
-  and the [recipe](../../../src/app/recipes/find/recipe-filter-builder.tsx) and
-  [publication](../../../src/app/publications/publication-filter-builder.tsx)
+  [`recipe-form.tsx`](../../../../src/app/recipes/recipe-form.tsx),
+  [`ingredient-rows-editor.tsx`](../../../../src/app/recipes/ingredient-rows-editor.tsx),
+  [`measurement-editor.tsx`](../../../../src/app/recipes/measurement-editor.tsx),
+  [`ingredient-density-manager.tsx`](../../../../src/app/settings/ingredient-density-manager.tsx),
+  [`ingredient-catalog-manager.tsx`](../../../../src/app/settings/ingredient-catalog-manager.tsx),
+  [`nutrition-pane.tsx`](../../../../src/app/nutrition/nutrition-pane.tsx),
+  [`recipe-reader.tsx`](../../../../src/app/recipes/recipe-reader.tsx),
+  and the [recipe](../../../../src/app/recipes/find/recipe-filter-builder.tsx) and
+  [publication](../../../../src/app/publications/publication-filter-builder.tsx)
   filter builders.
-- The [measurement save RPC](../../../supabase/migrations/20261008000000_add_recipe_ingredient_measurements.sql)
+- The [measurement save RPC](../../../../supabase/migrations/20261008000000_add_recipe_ingredient_measurements.sql)
   accepts an explicit measurement-key allowlist. Public copies use a separate
-  [measurement payload contract](../../../src/lib/recipes/public-copy-rules.ts).
+  [measurement payload contract](../../../../src/lib/recipes/public-copy-rules.ts).
 - The existing inline-add pattern is
-  [`SuggestionCellEditor`](../../../src/app/recipes/ingredient-rows-editor.tsx);
+  [`SuggestionCellEditor`](../../../../src/app/recipes/ingredient-rows-editor.tsx);
   recipe picklist writes use the existing revision-checked
-  [picklist action](../../../src/app/recipes/actions.ts).
+  [picklist action](../../../../src/app/recipes/actions.ts).
 
 ## Existing behavior and nearest patterns
 
@@ -119,10 +119,10 @@ following surfaces; do not limit the implementation to whole-number fields.
 
 - **#4, Numeric Arithmetic:** extend exact arithmetic to every editable
   numeric input, update time expressions to that model, and preserve legacy
-  ranges. See the [Numeric Arithmetic brief](./2026-11-numeric-arithmetic.md).
+  ranges. See the [Numeric Arithmetic brief](2026-11-18-numeric-arithmetic.md).
 - **#7 and #10, Things Wording and Addable Units:** implement natural Things
   wording, standalone `a`, and inline unit addition with its persisted marker.
-  See the [Things brief](./2026-11-things-units.md).
+  See the [Things brief](2026-11-18-things-units.md).
 
 Each brief has its own acceptance criteria and approval. Both implementation
 slices are complete: Things reuses the arithmetic parser boundary without

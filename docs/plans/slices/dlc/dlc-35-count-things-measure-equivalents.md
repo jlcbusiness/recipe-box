@@ -26,8 +26,8 @@ equivalents.
 - [Visual design guide](../../visual-design.md), especially Ingredient Presentation and Accessibility
 - [Decision log](../../decision-log.md)
 - [DLC 12: Recipe nutrition](dlc-12-recipe-nutrition.md)
-- [Slice 13: Scaling and unit conversion](../13-scaling-and-unit-conversion.md)
-- [Slice 15: Trusted densities](../15-trusted-density.md)
+- [Slice 13: Scaling and unit conversion](../build/13-scaling-and-unit-conversion.md)
+- [Slice 15: Trusted densities](../build/15-trusted-density.md)
 
 ## Scope and boundaries
 

@@ -5,7 +5,7 @@ browser checks pass.
 
 This umbrella groups the requested small changes into three independently
 demonstrable work packages. It follows the dated maintenance-plan approach in
-[November 2026 Reported Fixes](./2026-11-reported-fixes.md) and does not assign
+[November 2026 Reported Fixes](2026-11-04-reported-fixes.md) and does not assign
 a DLC number. Each package has its own outcome and acceptance criteria.
 
 ## Outcome
@@ -72,9 +72,9 @@ Implementation began after the user approved this brief.
   verify the desktop presentation and layout remain unchanged; the
   no-horizontal-scroll assertion does not apply to Standard view at that width.
 - Reuse the reader and Size test patterns in
-  [ingredient-rules tests](../../../tests/unit/ingredient-rules.test.tsx),
-  [measurement browser tests](../../../tests/e2e/measurements.spec.ts), and
-  [recipe browser tests](../../../tests/e2e/recipes.spec.ts).
+  [ingredient-rules tests](../../../../tests/unit/ingredient-rules.test.tsx),
+  [measurement browser tests](../../../../tests/e2e/measurements.spec.ts), and
+  [recipe browser tests](../../../../tests/e2e/recipes.spec.ts).
 
 ## B. Descriptive page and reference titles
 
@@ -165,20 +165,20 @@ Implementation began after the user approved this brief.
 
 ## Existing patterns and references
 
-- [Slice workflow](../../../.github/prompts/slice.prompt.md)
-- [Comprehensive reference: metadata and times](../comprehensive-reference/01-recipe-card-and-metadata.md)
-- [Comprehensive reference: ingredients and presentation](../comprehensive-reference/02-ingredients-and-presentation.md)
-- [Comprehensive reference: references](../comprehensive-reference/03-instructions-and-links.md)
-- [Comprehensive reference: interaction and accessibility](../comprehensive-reference/08-interaction-and-accessibility.md)
-- [Visual design guide](../visual-design.md)
-- [Decision log](../decision-log.md)
-- [DLC 33: Configurable recipe times](./dlc/dlc-33-configurable-recipe-times.md)
-- [DLC 38: Separate Divide from Preparation](./dlc/dlc-38-separate-divide-from-preparation.md)
-- [DLC 04: Ingredient amounts and references](./dlc/dlc-04-ingredient-amounts-and-references.md)
-- [Related reader and editor implementation](../../../src/app/recipes/recipe-reader.tsx),
-  [ingredient display rules](../../../src/lib/recipes/ingredient-rules.ts),
-  [reference editor](../../../src/app/recipes/recipe-relationships-editor.tsx),
-  and [Time Type editor](../../../src/app/recipes/recipe-form.tsx)
+- [Slice workflow](../../../../.github/prompts/slice.prompt.md)
+- [Comprehensive reference: metadata and times](../../comprehensive-reference/01-recipe-card-and-metadata.md)
+- [Comprehensive reference: ingredients and presentation](../../comprehensive-reference/02-ingredients-and-presentation.md)
+- [Comprehensive reference: references](../../comprehensive-reference/03-instructions-and-links.md)
+- [Comprehensive reference: interaction and accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md)
+- [Visual design guide](../../visual-design.md)
+- [Decision log](../../decision-log.md)
+- [DLC 33: Configurable recipe times](../dlc/dlc-33-configurable-recipe-times.md)
+- [DLC 38: Separate Divide from Preparation](../dlc/dlc-38-separate-divide-from-preparation.md)
+- [DLC 04: Ingredient amounts and references](../dlc/dlc-04-ingredient-amounts-and-references.md)
+- [Related reader and editor implementation](../../../../src/app/recipes/recipe-reader.tsx),
+  [ingredient display rules](../../../../src/lib/recipes/ingredient-rules.ts),
+  [reference editor](../../../../src/app/recipes/recipe-relationships-editor.tsx),
+  and [Time Type editor](../../../../src/app/recipes/recipe-form.tsx)
 
 The reader was visually inspected with authenticated content at 902px and
 390px. Browser tests also verify its responsive geometry and wrapping for long

@@ -27,7 +27,7 @@
   casing; confirmed mobile wrapping to avoid horizontal scrolling; chose Enter
   to append a blank time row and focus Minutes; and applied descriptive titles
   to all app routes.
-- Drafted `docs/plans/slices/2026-11-small-adjustments.md` and updated the
+- Drafted `docs/plans/slices/fixes/2026-11-17-small-adjustments.md` and updated the
   relevant comprehensive-reference, visual-design, decision-log, and
   workstream records to match those decisions.
 

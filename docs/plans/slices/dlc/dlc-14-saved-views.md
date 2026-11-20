@@ -36,6 +36,6 @@ it without losing publication scope or personal display preferences.
 
 ## References
 
-- [Explorer state](../18-explorer-state.md)
-- [Explorer preferences](../19-advanced-queries-and-saved-views.md)
+- [Explorer state](../build/18-explorer-state.md)
+- [Explorer preferences](../build/19-advanced-queries-and-saved-views.md)
 - [Advanced Rules expressions](dlc-13-advanced-query-groups.md)

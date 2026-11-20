@@ -11,21 +11,21 @@ supporting an explicitly entered standalone `a` for one Thing.
 
 ## Requirements and references
 
-- Fixes #7 and #10 in the [November Updates intake](./2026-11-updates-page-fix-intake.md).
-- See the [C+F input-consistency overview](./2026-11-numeric-input-consistency.md)
+- Fixes #7 and #10 in the [November Updates intake](2026-11-18-updates-page-fix-intake.md).
+- See the [C+F input-consistency overview](2026-11-18-numeric-input-consistency.md)
   for shared decisions and the input inventory.
-- Relevant contracts: [Things measurements and density](../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
-  [scaling](../comprehensive-reference/02-ingredients-and-presentation.md#34-scaling-math-and-rounding-rules),
-  [Settings picklists](../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists),
-  [data model](../data-model.md), [design philosophy](../design-philosophy.md),
-  [visual design guide](../visual-design.md), and [decision log](../decision-log.md).
+- Relevant contracts: [Things measurements and density](../../comprehensive-reference/02-ingredients-and-presentation.md#3-ingredient-rows-measurements-and-density),
+  [scaling](../../comprehensive-reference/02-ingredients-and-presentation.md#34-scaling-math-and-rounding-rules),
+  [Settings picklists](../../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists),
+  [data model](../../data-model.md), [design philosophy](../../design-philosophy.md),
+  [visual design guide](../../visual-design.md), and [decision log](../../decision-log.md).
 - Current implementation patterns:
-  [`measurement-editor.tsx`](../../../src/app/recipes/measurement-editor.tsx),
-  [`ingredient-rows-editor.tsx`](../../../src/app/recipes/ingredient-rows-editor.tsx),
-  and the revision-checked [recipe picklist action](../../../src/app/actions/recipe-picklists.ts).
+  [`measurement-editor.tsx`](../../../../src/app/recipes/measurement-editor.tsx),
+  [`ingredient-rows-editor.tsx`](../../../../src/app/recipes/ingredient-rows-editor.tsx),
+  and the revision-checked [recipe picklist action](../../../../src/app/actions/recipe-picklists.ts).
 - Measurement persistence boundaries:
-  [measurement save RPC](../../../supabase/migrations/20261008000000_add_recipe_ingredient_measurements.sql)
-  and [public-copy payload](../../../src/lib/recipes/public-copy-rules.ts).
+  [measurement save RPC](../../../../supabase/migrations/20261008000000_add_recipe_ingredient_measurements.sql)
+  and [public-copy payload](../../../../src/lib/recipes/public-copy-rules.ts).
 
 ## Existing behavior and nearest patterns
 
@@ -63,7 +63,7 @@ an authored `a` marker must be explicitly carried through both.
   remains a draft until the recipe is explicitly saved. Cancelling the recipe
   does not undo a successful account-picklist addition.
 - Reuse the arithmetic dispatch defined in the
-  [Numeric Arithmetic brief](./2026-11-numeric-arithmetic.md): standalone `a`
+  [Numeric Arithmetic brief](2026-11-18-numeric-arithmetic.md): standalone `a`
   is handled as a Things literal before expression evaluation; `a` inside an
   expression is invalid. No arithmetic beyond this integration is part of
   this slice.

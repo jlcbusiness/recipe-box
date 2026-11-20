@@ -4,7 +4,7 @@
 Magazine model was revised during Slice 11; implementation follow-up is
 required to consolidate issue records into Magazine titles and move issue
 details onto recipes. The current product contract is in the
-[comprehensive reference](../comprehensive-reference/04-publications-and-search.md#62-magazine-titles-recipe-locations-and-online-urls).
+[comprehensive reference](../../comprehensive-reference/04-publications-and-search.md#62-magazine-titles-recipe-locations-and-online-urls).
 The scope, verified constraints, and acceptance details below document what
 Slice 9 originally shipped; they are not the target requirements for revised
 Magazine behavior.
@@ -17,17 +17,17 @@ active recipes. It does not introduce publication deletion, secondary Site
 listings, uploaded covers, or the full Library explorer.
 
 The product authority is
-[comprehensive reference](../comprehensive-reference.md), especially
-[§ 2, Recipe Card and Metadata](../comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata),
-[§ 6, Publications, Magazine Handling, and The Recipe Tin](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin),
-[§ 12, Change History and Forensic Audit](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit),
-and [§ 13, Interaction, Keyboard-First Design, and Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility).
+[comprehensive reference](../../comprehensive-reference.md), especially
+[§ 2, Recipe Card and Metadata](../../comprehensive-reference/01-recipe-card-and-metadata.md#2-recipe-card-and-metadata),
+[§ 6, Publications, Magazine Handling, and The Recipe Tin](../../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin),
+[§ 12, Change History and Forensic Audit](../../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit),
+and [§ 13, Interaction, Keyboard-First Design, and Accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility).
 Related boundaries are in the
-[first-draft specification](../first-draft-spec.md),
-[data model](../data-model.md),
-[visual design guide](../visual-design.md),
-[delivery roadmap](../delivery-roadmap.md),
-and [decision log](../decision-log.md).
+[first-draft specification](../../first-draft-spec.md),
+[data model](../../data-model.md),
+[visual design guide](../../visual-design.md),
+[delivery roadmap](../../delivery-roadmap.md),
+and [decision log](../../decision-log.md).
 
 ## Outcome
 
@@ -225,7 +225,7 @@ a bounded tin-and-paper identity treatment.
 
 - Preserve the app's quiet paper-and-ink palette, DM Sans typography, restrained
   borders, compact spacing, and direct working-tool hierarchy in
-  [visual-design.md](../visual-design.md). The Tin identity is bounded to the
+  [visual-design.md](../../visual-design.md). The Tin identity is bounded to the
   Recipe Tin view; ordinary publication and recipe screens remain crisp.
 - On mobile, adapt publication lists to a readable stacked layout instead of
   shrinking a multi-column table. Keep visible controls and dialog actions

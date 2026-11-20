@@ -6,17 +6,17 @@ publication covers and recipe photos. It extends the existing private
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), slice 12
-- [First-draft specification](../first-draft-spec.md)
-- [Comprehensive reference, § 2.3: Recipe photos](../comprehensive-reference/01-recipe-card-and-metadata.md#23-recipe-photos)
-- [Comprehensive reference, § 6: Publications and the Recipe Tin](../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
-- [Comprehensive reference, § 9.5: Secure image delivery](../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
-- [Comprehensive reference, § 12: Change history](../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
-- [Comprehensive reference, § 13: Accessibility](../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
-- [Comprehensive reference, § 16: Testability](../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
-- [Data model boundary](../data-model.md)
-- [Visual design guide](../visual-design.md), including publication cover fallbacks
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), slice 12
+- [First-draft specification](../../first-draft-spec.md)
+- [Comprehensive reference, § 2.3: Recipe photos](../../comprehensive-reference/01-recipe-card-and-metadata.md#23-recipe-photos)
+- [Comprehensive reference, § 6: Publications and the Recipe Tin](../../comprehensive-reference/04-publications-and-search.md#6-publications-magazine-handling-and-the-recipe-tin)
+- [Comprehensive reference, § 9.5: Secure image delivery](../../comprehensive-reference/06-sharing-and-accounts.md#95-secure-image-delivery)
+- [Comprehensive reference, § 12: Change history](../../comprehensive-reference/07-import-export-and-history.md#12-change-history-and-forensic-audit)
+- [Comprehensive reference, § 13: Accessibility](../../comprehensive-reference/08-interaction-and-accessibility.md#13-interaction-keyboard-first-design-and-accessibility)
+- [Comprehensive reference, § 16: Testability](../../comprehensive-reference/00-foundations-and-delivery.md#16-testability-and-test-first-delivery)
+- [Data model boundary](../../data-model.md)
+- [Visual design guide](../../visual-design.md), including publication cover fallbacks
+- [Decision log](../../decision-log.md)
 - [Supabase Storage buckets](https://supabase.com/docs/guides/storage/buckets)
 - [Supabase Storage access control](https://supabase.com/docs/guides/storage/security/access-control)
 - [Vercel Function limits](https://vercel.com/docs/functions/limitations)
@@ -232,6 +232,6 @@ parent purge. All Slice 12 completion criteria are verified locally.
   for that route and has owner/public authorization tests.
 - Trash/restore retains image associations, purge queues object cleanup, and a
   failed Storage delete remains retryable.
-- Update the [comprehensive reference](../comprehensive-reference.md), visual
+- Update the [comprehensive reference](../../comprehensive-reference.md), visual
   guide, decision log, README, and roadmap to reflect behavior actually
   implemented; defer any new decisions explicitly.

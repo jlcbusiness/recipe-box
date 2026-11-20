@@ -38,5 +38,5 @@ without silently changing saved recipe quantities.
 
 ## References
 
-- [Trusted densities](../15-trusted-density.md)
-- [Ingredient catalog](../14c-ingredient-catalog-management.md)
+- [Trusted densities](../build/15-trusted-density.md)
+- [Ingredient catalog](../build/14c-ingredient-catalog-management.md)

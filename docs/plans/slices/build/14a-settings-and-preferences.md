@@ -6,13 +6,13 @@ defaults without adding a second preference store or changing recipe data.
 
 ## References
 
-- [Delivery roadmap](../delivery-roadmap.md), Slice 14
-- [First-draft specification](../first-draft-spec.md), Queries and Settings
-- [Comprehensive reference, § 3.5: Unit display preferences](../comprehensive-reference/02-ingredients-and-presentation.md#35-unit-display-preferences)
-- [Comprehensive reference, § 8: Settings and taxonomies](../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
-- [Data model](../data-model.md), Configuration Boundaries
-- [Design philosophy](../design-philosophy.md) and [visual design guide](../visual-design.md), Account menu
-- [Decision log](../decision-log.md)
+- [Delivery roadmap](../../delivery-roadmap.md), Slice 14
+- [First-draft specification](../../first-draft-spec.md), Queries and Settings
+- [Comprehensive reference, § 3.5: Unit display preferences](../../comprehensive-reference/02-ingredients-and-presentation.md#35-unit-display-preferences)
+- [Comprehensive reference, § 8: Settings and taxonomies](../../comprehensive-reference/05-settings-and-taxonomies.md#8-settings-taxonomies-and-picklists)
+- [Data model](../../data-model.md), Configuration Boundaries
+- [Design philosophy](../../design-philosophy.md) and [visual design guide](../../visual-design.md), Account menu
+- [Decision log](../../decision-log.md)
 - Installed Next.js 16 documentation: Layouts and Pages, Authentication, and Server Actions
 
 ## Outcome
