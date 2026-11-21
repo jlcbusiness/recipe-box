@@ -847,8 +847,8 @@ test('App data, publication detail, and recipe detail expose accessible export a
     expect(publicationExportBackground).toBe('rgb(255, 255, 255)');
     expect(
       await publicationExport.evaluate((element) => getComputedStyle(element).borderTopColor),
-    ).toBe('rgb(56, 96, 68)');
-    expect(addRecipeBackground).toBe('rgb(56, 96, 68)');
+    ).toBe('rgb(88, 99, 108)');
+    expect(addRecipeBackground).toBe('rgb(88, 99, 108)');
     await expectKeyboardFocusVisible(page, publicationExport);
     const publicationA11y = await new AxeBuilder({ page }).analyze();
     expect(publicationA11y.violations).toEqual([]);
@@ -954,10 +954,10 @@ test('App data, publication detail, and recipe detail expose accessible export a
         recipeSettings.evaluate((element) => getComputedStyle(element).backgroundColor),
         recipeEdit.evaluate((element) => getComputedStyle(element).backgroundColor),
       ]);
-    expect(exportBackground).toBe('rgb(56, 96, 68)');
-    expect(printBackground).toBe('rgb(56, 96, 68)');
-    expect(settingsBackground).toBe('rgb(56, 96, 68)');
-    expect(editBackground).toBe('rgb(247, 249, 244)');
+    expect(exportBackground).toBe('rgb(88, 99, 108)');
+    expect(printBackground).toBe('rgb(88, 99, 108)');
+    expect(settingsBackground).toBe('rgb(88, 99, 108)');
+    expect(editBackground).toBe('rgb(255, 253, 248)');
     await expectKeyboardFocusVisible(page, recipeExport);
     const recipeA11y = await new AxeBuilder({ page }).analyze();
     expect(recipeA11y.violations).toEqual([]);

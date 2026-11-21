@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import type { PublicationType } from '../lib/recipes/data';
 
 export type PrivateBreadcrumbParent = {
   href: string;
   label: string;
+  publicationType?: PublicationType;
 };
 
 export function PrivateBreadcrumbs({
@@ -19,14 +21,23 @@ export function PrivateBreadcrumbs({
   return (
     <nav aria-label="Breadcrumb" className={`private-breadcrumbs ${className ?? ''}`.trim()}>
       <ol>
-        {parents.map(({ href, label }, index) => (
+        {parents.map(({ href, label, publicationType }, index) => (
           <li key={href}>
             {index > 0 && (
               <span aria-hidden="true" className="private-breadcrumb-separator">
                 &gt;
               </span>
             )}
-            <Link href={href}>{label}</Link>
+            <Link
+              className={
+                publicationType
+                  ? `private-breadcrumb-publication-link publication-type-theme-${publicationType}`
+                  : undefined
+              }
+              href={href}
+            >
+              {label}
+            </Link>
           </li>
         ))}
         {currentPage !== undefined && (

@@ -49,7 +49,7 @@ export default async function EditRecipePage({ params, searchParams }: EditRecip
 
   return (
     <main
-      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}`}
+      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-recipe-theme' : ''}`}
       aria-labelledby="page-title"
     >
       {recipe.publication && (
@@ -59,6 +59,7 @@ export default async function EditRecipePage({ params, searchParams }: EditRecip
             {
               label: recipe.publication.name,
               href: `/publications/${recipe.publication.id}`,
+              publicationType: recipe.publication.publication_type,
             },
             { label: recipe.name, href: `/recipes/${recipe.id}` },
           ]}

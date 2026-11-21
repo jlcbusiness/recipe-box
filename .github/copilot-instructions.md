@@ -1,0 +1,1 @@
+When using ask_questions, write the text explaining the context of the question _before_ using the ask_questions tool. The question should be clear and concise.

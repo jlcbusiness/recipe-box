@@ -53,6 +53,8 @@ test('Site publication covers stay circular on the detail page @e2e', async ({ p
     await expect(siteCover).toHaveCSS('width', initialCoverSize);
     await expect(siteCover).toHaveCSS('height', initialCoverSize);
     await expect(siteCover).toHaveCSS('border-radius', '50%');
+    await expect(siteCover).toHaveCSS('background-color', 'rgb(237, 244, 233)');
+    await expect(siteCover).toHaveCSS('border-top-color', 'rgb(56, 96, 68)');
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(siteCover).toHaveCSS('width', '48px');
@@ -1280,12 +1282,9 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
     const addRecipeLink = page.getByRole('link', { name: 'Add Recipe' });
     const isMobile = (page.viewportSize()?.width ?? 1280) <= 720;
-    await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(96, 76, 56)');
+    await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(56, 96, 68)');
     await addRecipeLink.hover();
-    await expect(addRecipeLink).toHaveCSS(
-      'background-color',
-      isMobile ? 'rgb(40, 36, 32)' : 'rgb(96, 76, 56)',
-    );
+    await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(36, 40, 32)');
     await addRecipeLink.click();
     await expect(page.getByRole('heading', { name: 'Add Recipe' })).toBeVisible();
     await page.locator('.recipe-form').getByLabel('Name').fill('Roasted tomato soup');
@@ -1432,11 +1431,11 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await expect(publicationNameHeader).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
       await expect(publicationTable.locator('thead tr')).toHaveCSS(
         'background-color',
-        'rgb(247, 249, 244)',
+        'rgb(255, 253, 248)',
       );
       await expect(publicationTable.locator('tbody tr:first-child')).toHaveCSS(
         'background-color',
-        'rgba(56, 96, 68, 0.08)',
+        'rgba(88, 99, 108, 0.08)',
       );
       await expect(publicationTable.locator('tbody tr:first-child td:first-child')).toHaveCSS(
         'background-color',
@@ -1617,20 +1616,20 @@ test('publication recipe URLs show the host on desktop and truncate on mobile @e
     const recipeDetailPath = new URL(page.url()).pathname;
     const sourceRecipeLink = page.locator('.recipe-attribution .recipe-source-link');
     await expect(sourceRecipeLink).toHaveAttribute('href', externalRecipeUrl);
-    await expect(sourceRecipeLink).toHaveCSS('color', 'rgb(120, 59, 48)');
+    await expect(sourceRecipeLink).toHaveCSS('color', 'rgb(104, 69, 117)');
     await expect(page.getByRole('link', { name: 'Recipe Journal' })).toHaveCSS(
       'color',
-      'rgb(56, 96, 68)',
+      'rgb(104, 69, 117)',
     );
 
     await page.setViewportSize({ width: 1024, height: 900 });
     await page.goto(recipeDetailPath);
     const desktopSourceLink = page.locator('.recipe-attribution .recipe-source-link');
-    const desktopPublicationLink = page.locator('.recipe-attribution > a').first();
+    const desktopPublicationLink = page.getByRole('link', { name: 'Recipe Journal', exact: true });
     await expect(desktopPublicationLink).toHaveCSS('text-decoration-line', 'none');
     await desktopPublicationLink.hover();
     await expect(desktopPublicationLink).toHaveCSS('text-decoration-line', 'underline');
-    await expect(desktopSourceLink).toHaveCSS('color', 'rgb(120, 59, 48)');
+    await expect(desktopSourceLink).toHaveCSS('color', 'rgb(104, 69, 117)');
     await expect(desktopSourceLink).toHaveCSS('text-decoration-line', 'none');
     await desktopSourceLink.hover();
     await expect(desktopSourceLink).toHaveCSS('text-decoration-line', 'underline');

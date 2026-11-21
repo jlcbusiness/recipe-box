@@ -144,6 +144,32 @@ async function createMagazine(
   return (await response.json()) as string;
 }
 
+async function createSite(
+  request: import('@playwright/test').APIRequestContext,
+  config: Awaited<ReturnType<typeof getLocalSupabaseConfig>>,
+  accessToken: string,
+  name: string,
+) {
+  const response = await request.post(`${config.apiUrl}/rest/v1/rpc/create_publication`, {
+    headers: {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    data: {
+      p_name: name,
+      p_publication_type: 'site',
+      p_author: null,
+      p_edition: null,
+      p_isbn: null,
+      p_retailer_url: null,
+      p_issue: null,
+      p_site_url: 'https://example.test',
+    },
+  });
+  expect(response.ok(), await response.text()).toBeTruthy();
+  return (await response.json()) as string;
+}
+
 async function createRecipe(
   request: import('@playwright/test').APIRequestContext,
   config: Awaited<ReturnType<typeof getLocalSupabaseConfig>>,
@@ -199,6 +225,433 @@ async function createRecipe(
   const [recipe] = (await response.json()) as { id: string }[];
   return recipe.id;
 }
+
+function relativeLuminance(color: string) {
+  const channels = color
+    .match(/\d+(?:\.\d+)?/g)
+    ?.slice(0, 3)
+    .map(Number);
+  if (!channels || channels.length !== 3) throw new Error(`Unexpected computed color: ${color}`);
+  const linear = channels.map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+}
+
+function contrastRatio(first: string, second: string) {
+  const values = [relativeLuminance(first), relativeLuminance(second)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
+async function expectThemeLabelContrast(label: import('@playwright/test').Locator) {
+  const colors = await label.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      background: styles.backgroundColor,
+      border: styles.borderTopColor,
+      text: styles.color,
+    };
+  });
+  expect(contrastRatio(colors.text, colors.background)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(colors.border, colors.background)).toBeGreaterThanOrEqual(3);
+}
+
+async function getPublicationPageColors(page: import('@playwright/test').Page) {
+  const colors = await page.locator('body').evaluate((element) => {
+    const bodyStyles = getComputedStyle(element);
+    const navigation = element.querySelector<HTMLElement>('.private-nav');
+    const libraryLink = navigation?.querySelector<HTMLElement>(
+      '.private-nav-links a[href="/publications"]',
+    );
+    if (!navigation || !libraryLink) {
+      throw new Error('Expected the themed page to include shared navigation');
+    }
+    return {
+      body: bodyStyles.backgroundColor,
+      ink: bodyStyles.color,
+      navigation: getComputedStyle(navigation).backgroundColor,
+      accent: getComputedStyle(libraryLink).color,
+    };
+  });
+  const navigationColor = colors.navigation.match(/^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)\)$/);
+  return {
+    ...colors,
+    navigation: navigationColor
+      ? `rgb(${navigationColor
+          .slice(1)
+          .map((channel) => Math.round(Number(channel) * 255))
+          .join(', ')})`
+      : colors.navigation,
+  };
+}
+
+async function expectPublicationPageTheme(
+  page: import('@playwright/test').Page,
+  publication: { pageSurface: string; navigationSurface: string; themeAccent: string },
+) {
+  const colors = await getPublicationPageColors(page);
+  expect(colors).toEqual({
+    body: publication.pageSurface,
+    ink: 'rgb(36, 40, 32)',
+    navigation: publication.navigationSurface,
+    accent: publication.themeAccent,
+  });
+  expect(colors.navigation).not.toBe(colors.body);
+  expect(relativeLuminance(colors.navigation)).toBeGreaterThan(relativeLuminance(colors.body));
+  expect(contrastRatio(colors.ink, colors.body)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(colors.accent, colors.navigation)).toBeGreaterThanOrEqual(4.5);
+}
+
+async function expectDefaultPublicationPageTheme(
+  page: import('@playwright/test').Page,
+  navigationSurface: string,
+) {
+  expect(await getPublicationPageColors(page)).toEqual({
+    body: 'rgb(247, 249, 244)',
+    ink: 'rgb(36, 40, 32)',
+    navigation: navigationSurface,
+    accent: 'rgb(56, 96, 68)',
+  });
+}
+
+test('publication themes fill publication pages while normal covers stay unchanged @e2e @a11y', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const tinResponse = await request.get(
+      `${config.apiUrl}/rest/v1/publications?select=id&publication_type=eq.collection`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      },
+    );
+    expect(tinResponse.ok(), await tinResponse.text()).toBeTruthy();
+    const [{ id: tinId }] = (await tinResponse.json()) as { id: string }[];
+    const publications: Array<{
+      id: string;
+      type: 'collection' | 'book' | 'magazine' | 'site';
+      label: string;
+      name: string;
+      accent: string;
+      themeAccent: string;
+      surface: string;
+      ink: string;
+      pageSurface: string;
+      navigationSurface: string;
+    }> = [
+      {
+        id: tinId,
+        type: 'collection',
+        label: 'Recipe Tin',
+        name: 'Recipe Tin',
+        accent: 'rgb(56, 96, 68)',
+        themeAccent: 'rgb(56, 96, 68)',
+        surface: 'rgb(234, 243, 232)',
+        ink: 'rgb(31, 52, 36)',
+        pageSurface: 'rgb(247, 249, 244)',
+        navigationSurface: 'rgb(255, 255, 255)',
+      },
+      {
+        id: await createBook(request, config, user.accessToken, 'DLC47 Cookbook'),
+        type: 'book',
+        label: 'Book',
+        name: 'DLC47 Cookbook',
+        accent: 'rgb(88, 99, 108)',
+        themeAccent: 'rgb(56, 78, 96)',
+        surface: 'rgb(233, 239, 244)',
+        ink: 'rgb(32, 36, 40)',
+        pageSurface: 'rgb(244, 247, 249)',
+        navigationSurface: 'rgb(250, 251, 252)',
+      },
+      {
+        id: await createMagazine(request, config, user.accessToken, 'DLC47 Magazine'),
+        type: 'magazine',
+        label: 'Magazine',
+        name: 'DLC47 Magazine',
+        accent: 'rgb(115, 87, 0)',
+        themeAccent: 'rgb(96, 86, 56)',
+        surface: 'rgb(244, 241, 233)',
+        ink: 'rgb(40, 38, 32)',
+        pageSurface: 'rgb(249, 248, 244)',
+        navigationSurface: 'rgb(252, 252, 250)',
+      },
+      {
+        id: await createSite(request, config, user.accessToken, 'DLC47 Site'),
+        type: 'site',
+        label: 'Site',
+        name: 'DLC47 Site',
+        accent: 'rgb(104, 69, 117)',
+        themeAccent: 'rgb(85, 56, 96)',
+        surface: 'rgb(241, 233, 244)',
+        ink: 'rgb(38, 32, 40)',
+        pageSurface: 'rgb(248, 244, 249)',
+        navigationSurface: 'rgb(252, 250, 252)',
+      },
+    ];
+    const recipeIds = new Map<string, string>();
+    for (const publication of publications) {
+      recipeIds.set(
+        publication.type,
+        await createRecipe(
+          request,
+          config,
+          user.accessToken,
+          publication.id,
+          `DLC47 ${publication.label} recipe`,
+          publication.type === 'book'
+            ? '12'
+            : publication.type === 'magazine'
+              ? 'Spring 2026, page 6'
+              : null,
+          publication.type === 'site' ? 'https://example.test/recipe' : null,
+        ),
+      );
+    }
+
+    await page.goto('/');
+    await page.getByLabel('Email').fill(user.email);
+    await page.getByLabel('Password').fill(user.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByLabel('Email')).toHaveCount(0);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/publications?type=all&view=list');
+    for (const publication of publications) {
+      const row = page
+        .locator('.publication-explorer-table tbody tr')
+        .filter({ hasText: publication.name });
+      const typeIcon = row.locator('.publication-explorer-table-type');
+      await expect(typeIcon).toHaveAttribute('aria-label', publication.label);
+      await expect(typeIcon.locator('svg')).toHaveCSS('color', publication.accent);
+    }
+
+    await page.goto('/publications?type=all&view=grid');
+    await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 249, 244)');
+    await expect(page.locator('.private-nav')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    for (const publication of publications) {
+      const card = page.locator('.publication-explorer-card').filter({ hasText: publication.name });
+      await expect(card.getByRole('link')).toHaveAttribute('aria-description', publication.label);
+      if (publication.type === 'collection') {
+        await expect(card).toHaveCSS('background-color', publication.surface);
+        await expect(card).toHaveCSS('border-color', publication.accent);
+      } else {
+        await expect(card.locator('.publication-type-grid-label')).toHaveCount(0);
+      }
+    }
+    const bookCover = page
+      .locator('.publication-explorer-card')
+      .filter({
+        hasText: 'DLC47 Cookbook',
+      })
+      .locator('.publication-cover-book');
+    await expect(bookCover).toHaveCSS('background-color', 'rgb(230, 240, 247)');
+    await expect(bookCover).toHaveCSS('border-top-color', 'rgb(35, 76, 112)');
+    const magazineCover = page
+      .locator('.publication-explorer-card')
+      .filter({
+        hasText: 'DLC47 Magazine',
+      })
+      .locator('.publication-cover-magazine');
+    await expect(magazineCover).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(magazineCover).toHaveCSS('border-top-color', 'rgb(155, 63, 50)');
+    const siteCover = page
+      .locator('.publication-explorer-card')
+      .filter({
+        hasText: 'DLC47 Site',
+      })
+      .locator('.publication-cover-site');
+    await expect(siteCover).toHaveCSS('background-color', 'rgb(237, 244, 233)');
+    await expect(siteCover).toHaveCSS('border-top-color', 'rgb(56, 96, 68)');
+
+    const tinLink = page.getByRole('link', { name: 'Recipe Tin', exact: true });
+    await tinLink.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(tinLink).toBeFocused();
+    const tinFocus = await tinLink.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      const card = element.parentElement;
+      if (!card) throw new Error('Expected the Recipe Tin focus target to have a card parent');
+      return {
+        keyline: styles.color,
+        outline: styles.outlineColor,
+        shadow: styles.boxShadow,
+        surface: getComputedStyle(card).backgroundColor,
+      };
+    });
+    expect(tinFocus.outline).toBe('rgb(191, 143, 47)');
+    expect(tinFocus.shadow).toContain('36, 40, 32');
+    expect(contrastRatio(tinFocus.keyline, tinFocus.surface)).toBeGreaterThanOrEqual(3);
+
+    for (const publication of publications) {
+      await page.goto(`/publications/${publication.id}`);
+      await expect(page.getByRole('heading', { name: publication.name, level: 1 })).toBeVisible();
+      if (publication.type === 'collection') {
+        const typeLabel = page.locator('.publication-detail-type-label');
+        await expect(typeLabel).toHaveText('Recipe Tin');
+        await expect(typeLabel).toHaveCSS('background-color', publication.surface);
+        await expect(typeLabel).toHaveCSS('color', publication.ink);
+        await expectThemeLabelContrast(typeLabel);
+        await expectDefaultPublicationPageTheme(page, 'rgb(255, 255, 255)');
+      } else {
+        await expect(page.locator('.publication-detail-type-label')).toHaveCount(0);
+        await expectPublicationPageTheme(page, publication);
+      }
+      await page.goto(`/publications/${publication.id}/history`);
+      await expect(
+        page.getByRole('heading', { name: `History: ${publication.name}`, level: 1 }),
+      ).toBeVisible();
+      if (publication.type === 'collection') {
+        await expectDefaultPublicationPageTheme(page, 'rgb(255, 255, 255)');
+      } else {
+        await expectPublicationPageTheme(page, publication);
+      }
+    }
+
+    const sitePublication = publications.find(({ type }) => type === 'site');
+    const siteRecipeId = recipeIds.get('site');
+    if (!sitePublication || !siteRecipeId)
+      throw new Error('Expected the Site publication and recipe fixtures');
+    await page.goto(`/recipes/${siteRecipeId}`);
+    await expect(page.getByRole('heading', { name: 'DLC47 Site recipe', level: 1 })).toBeVisible();
+    const siteBreadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+    await expect(siteBreadcrumb.locator('.private-breadcrumb-publication-type')).toHaveCount(0);
+    await expect(
+      siteBreadcrumb.getByRole('link', { name: sitePublication.name, exact: true }),
+    ).toBeVisible();
+    await expectPublicationPageTheme(page, sitePublication);
+    await page.setViewportSize({ width: 352, height: 844 });
+    await page.goto('/publications?type=all&view=list');
+    const defaultMobileNavigationBackground = await page
+      .locator('.private-nav')
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+    for (const publication of publications) {
+      const row = page
+        .locator('.publication-explorer-mobile-list > li')
+        .filter({ hasText: publication.name });
+      await expect(row.locator('.publication-explorer-mobile-type')).toHaveAttribute(
+        'aria-label',
+        publication.label,
+      );
+      await expect(row.locator('.publication-type-icon')).toHaveCSS('color', publication.accent);
+    }
+    await page.goto('/publications?type=all&view=grid');
+    await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    for (const publication of publications.filter(({ type }) => type !== 'collection')) {
+      const card = page.locator('.publication-explorer-card').filter({ hasText: publication.name });
+      await expect(card.locator('.publication-type-grid-label')).toHaveCount(0);
+    }
+    const gridA11y = await new AxeBuilder({ page }).analyze();
+    expect(gridA11y.violations).toEqual([]);
+    for (const publication of publications) {
+      await page.goto(`/publications/${publication.id}`);
+      await expect(page.getByRole('heading', { name: publication.name, level: 1 })).toBeVisible();
+      if (publication.type === 'collection') {
+        const typeLabel = page.locator('.publication-detail-type-label');
+        await expect(typeLabel).toHaveText('Recipe Tin');
+        await expect(typeLabel).toBeVisible();
+        await expectThemeLabelContrast(typeLabel);
+        await expectDefaultPublicationPageTheme(page, defaultMobileNavigationBackground);
+      } else {
+        await expect(page.locator('.publication-detail-type-label')).toHaveCount(0);
+        await expectPublicationPageTheme(page, publication);
+      }
+      await expectNoHorizontalOverflow(page);
+    }
+
+    for (const publication of publications) {
+      await page.goto(`/recipes/${recipeIds.get(publication.type)}`);
+      await expect(
+        page.getByRole('heading', { name: `DLC47 ${publication.label} recipe`, level: 1 }),
+      ).toBeVisible();
+      if (publication.type === 'collection') {
+        await expectDefaultPublicationPageTheme(page, defaultMobileNavigationBackground);
+      } else {
+        await expectPublicationPageTheme(page, publication);
+      }
+      const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+      if (publication.type === 'collection') {
+        await expect(
+          breadcrumb.getByRole('link', { name: 'Recipe Tin', exact: true }),
+        ).toBeVisible();
+        await expect(breadcrumb.getByRole('link', { name: 'Recipe Tin', exact: true })).toHaveCSS(
+          'color',
+          publication.accent,
+        );
+      } else {
+        await expect(breadcrumb.locator('.private-breadcrumb-publication-type')).toHaveCount(0);
+        await expect(
+          breadcrumb.getByRole('link', { name: publication.name, exact: true }),
+        ).toBeVisible();
+      }
+      const recipeA11y = await new AxeBuilder({ page }).analyze();
+      expect(recipeA11y.violations).toEqual([]);
+
+      await page.goto(`/recipes/${recipeIds.get(publication.type)}/history`);
+      await expect(
+        page.getByRole('heading', {
+          name: `History: DLC47 ${publication.label} recipe`,
+          level: 1,
+        }),
+      ).toBeVisible();
+      if (publication.type === 'collection') {
+        await expectDefaultPublicationPageTheme(page, defaultMobileNavigationBackground);
+      } else {
+        await expectPublicationPageTheme(page, publication);
+      }
+
+      await page.goto(`/recipes/${recipeIds.get(publication.type)}/edit`);
+      await expect(page.getByRole('heading', { name: 'Edit Recipe', level: 1 })).toBeVisible();
+      if (publication.type === 'collection') {
+        await expectDefaultPublicationPageTheme(page, defaultMobileNavigationBackground);
+      } else {
+        await expectPublicationPageTheme(page, publication);
+      }
+      const editBreadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+      if (publication.type === 'collection') {
+        await expect(
+          editBreadcrumb.getByRole('link', { name: 'Recipe Tin', exact: true }),
+        ).toHaveCSS('color', publication.accent);
+      } else {
+        await expect(editBreadcrumb.locator('.private-breadcrumb-publication-type')).toHaveCount(0);
+        await expect(
+          editBreadcrumb.getByRole('link', { name: publication.name, exact: true }),
+        ).toBeVisible();
+      }
+      await expectNoHorizontalOverflow(page);
+    }
+
+    const book = publications.find(({ type }) => type === 'book');
+    const magazine = publications.find(({ type }) => type === 'magazine');
+    const tin = publications.find(({ type }) => type === 'collection');
+    if (!book || !magazine || !tin)
+      throw new Error('Expected Recipe Tin, Book, and Magazine fixtures');
+    await page.goto(`/recipes/new?publication=${tin.id}`);
+    await expectDefaultPublicationPageTheme(page, defaultMobileNavigationBackground);
+    await page.goto(`/recipes/new?publication=${book.id}`);
+    await expectPublicationPageTheme(page, book);
+    await page.getByRole('combobox', { name: 'Publication' }).fill('DLC47 Magazine');
+    await page.getByRole('option', { name: 'DLC47 Magazine' }).click();
+    await expectPublicationPageTheme(page, magazine);
+    await page.goto('/recipes/find');
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 249, 244)');
+    await expect(page.locator('.private-nav')).toHaveCSS(
+      'background-color',
+      defaultMobileNavigationBackground,
+    );
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
 
 test('private recipe detail shows its parent path without repeating publication attribution @e2e @a11y', async ({
   page,
@@ -467,33 +920,37 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
       element.setAttribute('data-hand', hand ?? 'right');
     }, initialHand);
     await page.setViewportSize(initialViewport);
+    await page.goto('/publications');
+    const defaultNavigationBackground = await page
+      .locator('.private-nav')
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
     await page.goto(`/recipes/${tinRecipeId}`);
-    const recipeTinTheme = page.locator('main.recipe-tin-theme');
-    await expect(recipeTinTheme).toHaveCount(1);
+    await expect(page.locator('main.recipe-tin-theme')).toHaveCount(0);
+    await expect(page.locator('main.recipe-tin-recipe-theme')).toHaveCount(1);
     const printAction = page.getByRole('button', {
       name: initialViewport.width <= 720 ? 'Download' : 'Print',
     });
     const editAction = page.getByRole('link', { name: 'Edit' });
-    await expect(printAction).toHaveCSS('background-color', 'rgb(96, 76, 56)');
+    await expect(printAction).toHaveCSS('background-color', 'rgb(56, 96, 68)');
     await expect(printAction).toHaveCSS('color', 'rgb(255, 255, 255)');
-    await expect(printAction).toHaveCSS('border-color', 'rgb(154, 107, 63)');
-    await expect(editAction).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-    await expect(editAction).toHaveCSS('color', 'rgb(40, 36, 32)');
-    await expect(editAction).toHaveCSS('border-color', 'rgb(96, 76, 56)');
-    const recipeTinPalette = await recipeTinTheme.evaluate((element) => {
+    await expect(editAction).toHaveCSS('background-color', 'rgb(247, 249, 244)');
+    await expect(editAction).toHaveCSS('color', 'rgb(36, 40, 32)');
+    const applicationPalette = await page.locator('body').evaluate((element) => {
       const styles = getComputedStyle(element);
       return {
         paper: styles.getPropertyValue('--paper').trim(),
         leaf: styles.getPropertyValue('--leaf').trim(),
-        wash: styles.getPropertyValue('--tin-wash').trim(),
       };
     });
-    expect(recipeTinPalette).toEqual({
-      paper: '#fffdf6',
-      leaf: '#604c38',
-      wash: '#f4efe9',
+    expect(applicationPalette).toEqual({
+      paper: '#f7f9f4',
+      leaf: '#386044',
     });
-    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 253, 246)');
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 249, 244)');
+    await expect(page.locator('.private-nav')).toHaveCSS(
+      'background-color',
+      defaultNavigationBackground,
+    );
     await expect(
       page
         .getByRole('navigation', { name: 'Breadcrumb' })
@@ -501,10 +958,13 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     ).toHaveAttribute('href', `/publications/${tinId}`);
     await expect(page.locator('.recipe-attribution')).toHaveCount(0);
     await page.goto(`/recipes/${tinRecipeId}/edit`);
-    const tinEditTheme = page.locator('main.recipe-tin-theme');
-    await expect(tinEditTheme).toHaveCount(1);
-    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 253, 246)');
-    await expect(tinEditTheme).toHaveCSS('color', 'rgb(40, 36, 32)');
+    await expect(page.locator('main.recipe-tin-theme')).toHaveCount(0);
+    await expect(page.locator('main.recipe-tin-recipe-theme')).toHaveCount(1);
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 249, 244)');
+    await expect(page.locator('.private-nav')).toHaveCSS(
+      'background-color',
+      defaultNavigationBackground,
+    );
     await page.goto('/publications?sort=name&direction=desc&view=list');
 
     const resultLinks =
@@ -535,11 +995,12 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     const tinGridLink = page.getByRole('link', { name: 'Recipe Tin', exact: true });
     const tinCard = page.locator('.publication-explorer-card-collection');
     await expect(tinGridLink).toBeVisible();
-    await expect(tinCard).toHaveCSS('background-color', 'rgb(255, 249, 231)');
-    await expect(tinCard).toHaveCSS('border-color', 'rgb(154, 107, 63)');
-    const tinImage = tinGridLink.getByRole('img', { name: 'Recipe Tin', exact: true });
+    await expect(tinCard).toHaveCSS('background-color', 'rgb(234, 243, 232)');
+    await expect(tinCard).toHaveCSS('border-color', 'rgb(56, 96, 68)');
+    const tinImage = tinGridLink.locator('.publication-cover-image-content');
     await expect(tinImage).toBeVisible();
-    await expect(tinImage).toHaveAttribute('src', /recipe-tin-3e1f5f0d8f3a\.webp/);
+    await expect(tinImage).toHaveAttribute('src', /logo_detail/);
+    await expect(tinImage).toHaveAttribute('alt', '');
     const tinImageBounds = await tinImage.boundingBox();
     const tinCoverBounds = await tinGridLink.locator('.publication-cover').boundingBox();
     const tinCopy = tinGridLink.locator('.publication-list-copy');
@@ -562,8 +1023,12 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     expect(tinImageBounds.x + tinImageBounds.width).toBeLessThan(tinTitleBounds.x);
 
     await page.goto(`/publications/${tinId}`);
-    await expect(page.locator('main.recipe-tin-theme')).toHaveCount(1);
-    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 249, 231)');
+    await expect(page.locator('main.recipe-tin-theme')).toHaveCount(0);
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 249, 244)');
+    await expect(page.locator('.private-nav')).toHaveCSS(
+      'background-color',
+      defaultNavigationBackground,
+    );
     await expect(page.getByRole('heading', { name: 'Recipe Tin', level: 1 })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
@@ -577,32 +1042,9 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     await expect(sortButton).toHaveCount(0);
     if (isMobile) {
       await expect(addRecipeLink).toHaveAttribute('aria-label', 'Add Recipe');
-      const toolbarControlStyles = await page
-        .locator(
-          '.recipe-explorer-toolbar .recipe-explorer-sort-picklist, .recipe-explorer-toolbar .recipe-explorer-trigger, .explorer-list-preferences-trigger',
-        )
-        .evaluateAll((elements) =>
-          elements.map((element) => {
-            const styles = getComputedStyle(element);
-            return {
-              backgroundColor: styles.backgroundColor,
-              borderTopColor: styles.borderTopColor,
-              borderRightColor: styles.borderRightColor,
-              borderBottomColor: styles.borderBottomColor,
-            };
-          }),
-        );
-      expect(toolbarControlStyles).toEqual(
-        Array(2).fill({
-          backgroundColor: 'rgb(255, 252, 241)',
-          borderTopColor: 'rgb(154, 107, 63)',
-          borderRightColor: 'rgb(154, 107, 63)',
-          borderBottomColor: 'rgb(154, 107, 63)',
-        }),
-      );
-      await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(96, 76, 56)');
-      await expect(addRecipeLink).toHaveCSS('color', 'rgb(255, 249, 231)');
-      await expect(addRecipeLink).toHaveCSS('border-color', 'rgb(96, 76, 56)');
+      await expect(addRecipeLink).toHaveCSS('background-color', 'rgb(56, 96, 68)');
+      await expect(addRecipeLink).toHaveCSS('color', 'rgb(255, 255, 255)');
+      await expect(addRecipeLink).toHaveCSS('border-color', 'rgb(56, 96, 68)');
       const addRecipeBounds = await addRecipeLink.boundingBox();
       const columnsButton = page.getByRole('button', { name: 'Choose List columns' });
       await expect(columnsButton).toBeVisible();

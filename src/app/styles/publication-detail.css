@@ -65,10 +65,10 @@
   height: 40px;
   flex-basis: 40px;
   align-items: center;
-  border: 1px solid var(--leaf);
+  border: 1px solid #386044;
   border-radius: 50%;
-  background: var(--tin-wash);
-  color: var(--leaf);
+  background: #edf4e9;
+  color: #386044;
 }
 
 .publication-explorer-card-link > .publication-cover {

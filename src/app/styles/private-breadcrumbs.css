@@ -54,6 +54,15 @@
   outline-offset: 2px;
 }
 
+.private-breadcrumbs .private-breadcrumb-publication-link {
+  color: var(--publication-theme-accent);
+  font-weight: 700;
+}
+
+.private-breadcrumbs .private-breadcrumb-publication-link:focus-visible {
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
 .private-breadcrumbs [aria-current="page"] {
   color: var(--ink);
   font-weight: 700;

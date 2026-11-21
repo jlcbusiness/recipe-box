@@ -546,8 +546,11 @@
     border-bottom: 1px solid var(--line);
   }
 
-  .publication-explorer-mobile-list > li > .publication-type-icon {
+  .publication-explorer-mobile-type {
+    display: flex;
     flex: 0 0 20px;
+    align-items: center;
+    justify-content: center;
     margin-top: 2px;
   }
 

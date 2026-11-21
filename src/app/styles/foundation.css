@@ -19,6 +19,39 @@
   --staged-change: #fff7d6;
   --photo-orange: #cf7b35;
   --photo-orange-ink: #35200f;
+  --publication-theme-collection-surface: #eaf3e8;
+  --publication-theme-collection-ink: #1f3424;
+  --publication-theme-collection-accent: #386044;
+  --publication-theme-book-surface: #e9eff4;
+  --publication-theme-book-accent: #58636c;
+  --publication-theme-book-leaf: #384e60;
+  --publication-theme-book-page-surface: #f4f7f9;
+  --publication-theme-book-navigation-surface: #fafbfc;
+  --publication-theme-book-muted: #5d6469;
+  --publication-theme-book-line: #d3dadf;
+  --publication-theme-book-line-strong: #a7b0b8;
+  --publication-theme-book-line-interactive: #7d8891;
+  --publication-theme-book-control-border: #969ea5;
+  --publication-theme-magazine-surface: #f4f1e9;
+  --publication-theme-magazine-accent: #735700;
+  --publication-theme-magazine-leaf: #605638;
+  --publication-theme-magazine-page-surface: #f9f8f4;
+  --publication-theme-magazine-navigation-surface: #fcfcfa;
+  --publication-theme-magazine-muted: #69665d;
+  --publication-theme-magazine-line: #dfdcd3;
+  --publication-theme-magazine-line-strong: #b8b4a7;
+  --publication-theme-magazine-line-interactive: #918c7d;
+  --publication-theme-magazine-control-border: #a5a196;
+  --publication-theme-site-surface: #f1e9f4;
+  --publication-theme-site-accent: #684575;
+  --publication-theme-site-leaf: #553860;
+  --publication-theme-site-page-surface: #f8f4f9;
+  --publication-theme-site-navigation-surface: #fcfafc;
+  --publication-theme-site-muted: #665d69;
+  --publication-theme-site-line: #dcd3df;
+  --publication-theme-site-line-strong: #b3a7b8;
+  --publication-theme-site-line-interactive: #8c7d91;
+  --publication-theme-site-control-border: #a196a5;
 }
 
 * {
@@ -46,106 +79,103 @@ body {
   );
 }
 
+@media screen {
+  body:has([data-publication-theme="book"]) {
+    --publication-theme-surface: var(--publication-theme-book-surface);
+    --publication-theme-accent: var(--publication-theme-book-accent);
+    --publication-theme-leaf: var(--publication-theme-book-leaf);
+    --publication-theme-page-surface: var(--publication-theme-book-page-surface);
+    --publication-theme-navigation-surface: var(--publication-theme-book-navigation-surface);
+    --publication-theme-muted: var(--publication-theme-book-muted);
+    --publication-theme-line: var(--publication-theme-book-line);
+    --publication-theme-line-strong: var(--publication-theme-book-line-strong);
+    --publication-theme-line-interactive: var(--publication-theme-book-line-interactive);
+    --publication-theme-control-border: var(--publication-theme-book-control-border);
+  }
+
+  body:has([data-publication-theme="magazine"]) {
+    --publication-theme-surface: var(--publication-theme-magazine-surface);
+    --publication-theme-accent: var(--publication-theme-magazine-accent);
+    --publication-theme-leaf: var(--publication-theme-magazine-leaf);
+    --publication-theme-page-surface: var(--publication-theme-magazine-page-surface);
+    --publication-theme-navigation-surface: var(--publication-theme-magazine-navigation-surface);
+    --publication-theme-muted: var(--publication-theme-magazine-muted);
+    --publication-theme-line: var(--publication-theme-magazine-line);
+    --publication-theme-line-strong: var(--publication-theme-magazine-line-strong);
+    --publication-theme-line-interactive: var(--publication-theme-magazine-line-interactive);
+    --publication-theme-control-border: var(--publication-theme-magazine-control-border);
+  }
+
+  body:has([data-publication-theme="site"]) {
+    --publication-theme-surface: var(--publication-theme-site-surface);
+    --publication-theme-accent: var(--publication-theme-site-accent);
+    --publication-theme-leaf: var(--publication-theme-site-leaf);
+    --publication-theme-page-surface: var(--publication-theme-site-page-surface);
+    --publication-theme-navigation-surface: var(--publication-theme-site-navigation-surface);
+    --publication-theme-muted: var(--publication-theme-site-muted);
+    --publication-theme-line: var(--publication-theme-site-line);
+    --publication-theme-line-strong: var(--publication-theme-site-line-strong);
+    --publication-theme-line-interactive: var(--publication-theme-site-line-interactive);
+    --publication-theme-control-border: var(--publication-theme-site-control-border);
+  }
+
+  body:has([data-publication-theme="book"]),
+  body:has([data-publication-theme="magazine"]),
+  body:has([data-publication-theme="site"]) {
+    --muted: var(--publication-theme-muted);
+    --paper: var(--publication-theme-page-surface);
+    --line: var(--publication-theme-line);
+    --line-strong: var(--publication-theme-line-strong);
+    --line-interactive: var(--publication-theme-line-interactive);
+    --control-border: var(--publication-theme-control-border);
+    --tin-wash: var(--publication-theme-surface);
+    --tin-hover-wash: color-mix(in srgb, var(--publication-theme-leaf) 8%, transparent);
+    --paper-rule: color-mix(in srgb, var(--publication-theme-leaf) 3%, transparent);
+    --paper-rule-subtle: color-mix(in srgb, var(--publication-theme-leaf) 2.5%, transparent);
+    --leaf: var(--publication-theme-leaf);
+    --source-link: var(--publication-theme-accent);
+  }
+
+  body:has([data-publication-theme="book"]) .private-nav,
+  body:has([data-publication-theme="book"]) .account-menu-trigger,
+  body:has([data-publication-theme="book"]) .account-menu-panel,
+  body:has([data-publication-theme="book"]) .account-menu-panel button,
+  body:has([data-publication-theme="magazine"]) .private-nav,
+  body:has([data-publication-theme="magazine"]) .account-menu-trigger,
+  body:has([data-publication-theme="magazine"]) .account-menu-panel,
+  body:has([data-publication-theme="magazine"]) .account-menu-panel button,
+  body:has([data-publication-theme="site"]) .private-nav,
+  body:has([data-publication-theme="site"]) .account-menu-trigger,
+  body:has([data-publication-theme="site"]) .account-menu-panel,
+  body:has([data-publication-theme="site"]) .account-menu-panel button {
+    background: var(--publication-theme-navigation-surface);
+  }
+}
+
 @supports (height: 100dvh) {
   body {
     min-height: 100dvh;
   }
 }
 
-body:has(.recipe-tin-theme) {
-  --ink: #282420;
-  --muted: #6c675f;
-  --paper: #fff9e7;
-  --line: #ddd9d2;
-  --line-strong: #b7b1a8;
-  --line-interactive: #918775;
-  --leaf: #604c38;
-  --tin-wash: #f4efe9;
-  --tin-hover-wash: rgb(96 76 56 / 8%);
-  --tin-control: #fffcf1;
-  --tin-control-border: #9a6b3f;
-  --control-border: var(--tin-control-border);
-  --paper-rule: rgb(96 76 56 / 3%);
-  background-color: var(--paper);
-}
-
-body:has(.recipe-tin-recipe-theme) {
-  --paper: #fffdf6;
-  background-color: var(--paper);
-}
-
-.recipe-tin-theme {
-  color: var(--ink);
-}
-
-@media (max-width: 720px) {
-  .recipe-tin-theme
-    .recipe-explorer-toolbar
-    .recipe-explorer-view-controls
-    .recipe-explorer-sort-picklist,
-  .recipe-tin-theme .recipe-explorer-toolbar .recipe-explorer-trigger,
-  .recipe-tin-theme .explorer-list-preferences-toolbar .explorer-list-preferences-trigger {
-    border-color: var(--tin-control-border);
-    background: var(--tin-control);
-  }
-
-  .recipe-tin-theme .publication-detail-heading .publication-new-recipe,
-  .recipe-tin-theme .explorer-list-preferences-toolbar .publication-mobile-add {
-    border-color: var(--leaf);
-    background: var(--leaf);
-    color: var(--paper);
-  }
-
-  .recipe-tin-theme .publication-detail-heading .publication-new-recipe:hover,
-  .recipe-tin-theme .publication-detail-heading .publication-new-recipe:focus-visible,
-  .recipe-tin-theme .explorer-list-preferences-toolbar .publication-mobile-add:hover,
-  .recipe-tin-theme .explorer-list-preferences-toolbar .publication-mobile-add:focus-visible {
-    border-color: var(--ink);
-    background: var(--ink);
-  }
-}
-
-.recipe-tin-theme
-  .recipe-detail-heading-actions
-  .recipe-secondary-button:not(.recipe-duplicate-trigger) {
-  border-color: var(--tin-control-border);
-  background: var(--leaf);
-  color: white;
-}
-
-.recipe-tin-theme .recipe-detail-heading-actions .recipe-duplicate-trigger,
-.recipe-tin-theme .recipe-detail-heading-actions .recipe-edit-link {
-  border-color: var(--leaf);
-  background: white;
-  color: var(--ink);
-}
-
-body:not(:has(.recipe-tin-theme))
-  .recipe-detail-heading-actions
-  .recipe-secondary-button:not(.recipe-duplicate-trigger),
-body:not(:has(.recipe-tin-theme))
-  .recipe-public-title-actions
+.recipe-detail-heading-actions .recipe-secondary-button:not(.recipe-duplicate-trigger),
+.recipe-public-title-actions
   :is(.recipe-output-trigger, .recipe-output-print-trigger, .recipe-public-save-button) {
   border-color: color-mix(in srgb, var(--leaf) 55%, white);
   background: var(--leaf);
   color: white;
 }
 
-body:not(:has(.recipe-tin-theme)) .recipe-detail-heading-actions .recipe-duplicate-trigger,
-body:not(:has(.recipe-tin-theme)) .recipe-detail-heading-actions .recipe-edit-link {
+.recipe-detail-heading-actions .recipe-duplicate-trigger,
+.recipe-detail-heading-actions .recipe-edit-link {
   border-color: var(--leaf);
   background: var(--paper);
   color: var(--ink);
 }
 
-body:not(:has(.recipe-tin-theme))
-  .recipe-detail-heading-actions
-  .recipe-secondary-button:not(.recipe-duplicate-trigger):hover,
-body:not(:has(.recipe-tin-theme))
-  .recipe-detail-heading-actions
-  .recipe-secondary-button:not(.recipe-duplicate-trigger):focus-visible,
-body:not(:has(.recipe-tin-theme))
-  .recipe-public-title-actions
+.recipe-detail-heading-actions
+  .recipe-secondary-button:not(.recipe-duplicate-trigger):is(:hover, :focus-visible),
+.recipe-public-title-actions
   :is(.recipe-output-trigger, .recipe-output-print-trigger, .recipe-public-save-button):is(
     :hover,
     :focus-visible
@@ -155,12 +185,10 @@ body:not(:has(.recipe-tin-theme))
   color: white;
 }
 
-body:not(:has(.recipe-tin-theme)) .recipe-detail-heading-actions .recipe-duplicate-trigger:hover,
-body:not(:has(.recipe-tin-theme))
-  .recipe-detail-heading-actions
-  .recipe-duplicate-trigger:focus-visible,
-body:not(:has(.recipe-tin-theme)) .recipe-detail-heading-actions .recipe-edit-link:hover,
-body:not(:has(.recipe-tin-theme)) .recipe-detail-heading-actions .recipe-edit-link:focus-visible {
+.recipe-detail-heading-actions .recipe-duplicate-trigger:hover,
+.recipe-detail-heading-actions .recipe-duplicate-trigger:focus-visible,
+.recipe-detail-heading-actions .recipe-edit-link:hover,
+.recipe-detail-heading-actions .recipe-edit-link:focus-visible {
   background: var(--tin-wash);
   color: var(--ink);
 }

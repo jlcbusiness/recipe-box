@@ -406,7 +406,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 
   return (
     <main
-      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-theme recipe-tin-recipe-theme' : ''}${privatePrintUsesColors ? '' : ' no-print-emphasis-colors'}${includeInstructionPhotosInPrivatePrint ? '' : ' no-instruction-photos'}`}
+      className={`recipes-main${recipe.publication?.publication_type === 'collection' ? ' recipe-tin-recipe-theme' : ''}${privatePrintUsesColors ? '' : ' no-print-emphasis-colors'}${includeInstructionPhotosInPrivatePrint ? '' : ' no-instruction-photos'}`}
+      data-publication-theme={
+        recipe.publication?.publication_type === 'collection'
+          ? undefined
+          : recipe.publication?.publication_type
+      }
       aria-labelledby="page-title"
     >
       <OfflineSnapshotCapture recipeId={recipe.id} />
@@ -421,6 +426,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                       {
                         label: recipe.publication.name,
                         href: `/publications/${recipe.publication.id}`,
+                        publicationType: recipe.publication.publication_type,
                       },
                     ]
                   : []

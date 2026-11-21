@@ -808,7 +808,7 @@
   background: color-mix(in srgb, var(--paper) 55%, transparent);
 }
 
-.recipe-tin-theme .recipe-ingredient-value-cell.is-empty {
+.recipe-tin-recipe-theme .recipe-ingredient-value-cell.is-empty {
   background: transparent;
 }
 

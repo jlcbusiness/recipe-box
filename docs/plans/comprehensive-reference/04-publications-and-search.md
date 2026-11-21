@@ -22,7 +22,7 @@ omitted.
 | **Book**         | Name, Author, Edition (optional), ISBN (optional), Retailer Lookup URL (Amazon, B&N, AbeBooks, etc. - optional), Cover image | Page number or page range                                          | Postage-stamp cover thumbnail. Without an image, show a light-blue book-shaped rectangle with a dark-blue border and italic title text sized to fit. ISBN-10 and ISBN-13 accept pasted separators and format with registered ISBN range hyphens while preserving validation. |
 | **Magazine**     | Magazine title and optional cover image                                                                                      | Per-recipe issue, volume, edition/date, and optional page citation | Postage-stamp cover thumbnail. Without an image, show a white magazine-shaped rectangle with a black border and normal title text sized to fit.                                                                                                                              |
 | **Website**      | Site Display Name, Site Root URL, Site Logo/Favicon (optional)                                                               | Full recipe URL                                                    | Minimalist site icon / badge.                                                                                                                                                                                                                                                |
-| **Collection**   | Reserved Recipe Tin, one per account                                                                                         | None                                                               | Mirrored transparent tin image; cannot be created, edited, or deleted by the User.                                                                                                                                                                                           |
+| **Collection**   | Reserved Recipe Tin, one per account                                                                                         | None                                                               | Sign-in illustration as decorative cover artwork; cannot be created, edited, or deleted by the User.                                                                                                                                                                         |
 
 ### 6.2 Magazine Titles, Recipe Locations, and Online URLs
 
@@ -93,7 +93,7 @@ through the account-scoped update function.
   matching Library entries regardless of sort direction.
 - **Library Behavior:** Normal search and filters apply. A type or field filter
   can exclude the Tin; selecting Collection shows it. Its static cover uses
-  the mirrored transparent `public/images/recipe-tin.webp` asset. The former
+  the sign-in illustration at `src/app/images/logo_detail.png`. The former
   `/recipes` destination redirects to the Tin's Library detail page.
 - **Physical Metaphor:** A vintage metal tin box with a hinged lid, containing dog-eared 3x5 index cards and handwritten
   scraps of paper.
@@ -104,6 +104,19 @@ through the account-scoped update function.
     not an external recipe source.
   - Recipes belonging to the Recipe Tin are rendered with a subtle, textured **ragged/deckled paper border background**
     instead of standard clean rounded cards.
+  - Book, Magazine, and Site publication detail and associated private recipe
+    detail/edit/history pages use restrained, role-matched tints; the new/edit
+    recipe form follows its selected non-Tin publication. Map the existing
+    green surfaces, washes, lines, and controls to each type's blue-gray (Book),
+    gold (Magazine), or plum (Site) hue without changing their relative
+    saturation or lightness.
+  - The left navigation uses a paler version of the active tint, distinct from
+    the page surface. Recipe Tin and unrelated routes retain the default app
+    palette. The mixed-type Library keeps per-type icons and accessible names
+    without adopting one page-wide theme or showing type-name badges. Private
+    recipe breadcrumbs show the publication name without an additional Book,
+    Magazine, or Site badge; the existing Recipe Tin name identifies the
+    collection.
   - Normal publication cards remain crisp, clean, and restrained.
 - **Mobility:** Tin recipes can later be assigned to another publication, and
   publication recipes can be moved into the Tin. Tin recipes cannot have a
@@ -279,7 +292,9 @@ Fast, indexed text search across:
 ### 7.3 Source Library Explorer
 
 The Library provides a compact publication explorer with a desktop list/grid
-and a single-line mobile list:
+and a single-line mobile list. Keep the Library page title visible as the
+level-one heading above explorer controls at desktop and mobile widths;
+switching view modes does not remove it.
 
 - **View Modes:**
   - **List:** Desktop uses a semantic table with Name, Type, Author,

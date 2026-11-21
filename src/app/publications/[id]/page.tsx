@@ -11,13 +11,6 @@ import { PublicationEditAction } from '../publication-edit-action';
 import { PublicationTransferMenu } from '../publication-transfer-menu';
 import { PublicationRecipeExplorer } from './recipe-explorer';
 
-const publicationTypeLabels = {
-  book: 'Book',
-  magazine: 'Magazine',
-  site: 'Site',
-  collection: 'Recipe Tin',
-} as const;
-
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -109,13 +102,12 @@ export default async function PublicationPage({
   const assignedTagIds = new Set((publicationTagAssignments ?? []).map(({ tag_id }) => tag_id));
   const publicationTags = tags.filter((tag) => assignedTagIds.has(tag.id));
 
-  const detail = [publicationTypeLabels[publication.publication_type], publication.author].filter(
-    Boolean,
-  );
-
   return (
     <main
-      className={`recipes-main${publication.publication_type === 'collection' ? ' recipe-tin-theme' : ''}`}
+      className="recipes-main"
+      data-publication-theme={
+        publication.publication_type === 'collection' ? undefined : publication.publication_type
+      }
       aria-labelledby="page-title"
     >
       <div className="publication-detail-heading">
@@ -129,12 +121,14 @@ export default async function PublicationPage({
           publication={publication}
         />
         <div>
-          <p className="eyebrow">{publicationTypeLabels[publication.publication_type]}</p>
+          {publication.publication_type === 'collection' && (
+            <p className="eyebrow publication-detail-type-label publication-type-theme-collection">
+              Recipe Tin
+            </p>
+          )}
           <h1 id="page-title">{publication.name}</h1>
           <TagChips tags={publicationTags} />
-          {detail.length > 1 && (
-            <p className="publication-detail-meta">{detail.slice(1).join(' · ')}</p>
-          )}
+          {publication.author && <p className="publication-detail-meta">{publication.author}</p>}
           {publication.site_url && (
             <a className="publication-site-link" href={publication.site_url}>
               {publication.site_url}

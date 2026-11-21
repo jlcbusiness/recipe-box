@@ -133,6 +133,11 @@ export function PublicationPicker({
       <input name="recipe_url" type="hidden" value={recipeUrl} />
       <fieldset
         className="publication-picker"
+        data-publication-theme={
+          selectedPublication?.publication_type === 'collection'
+            ? undefined
+            : selectedPublication?.publication_type
+        }
         ref={containerRef}
         onBlur={(event) => {
           if (!containerRef.current?.contains(event.relatedTarget as Node)) {

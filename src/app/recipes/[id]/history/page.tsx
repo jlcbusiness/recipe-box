@@ -35,7 +35,7 @@ export default async function RecipeHistoryPage({ params }: PageProps<'/recipes/
 
   const { data: publication, error: publicationError } = await supabase
     .from('publications')
-    .select('id, name')
+    .select('id, name, publication_type')
     .eq('id', recipe.publication_id)
     .maybeSingle();
 
@@ -51,12 +51,22 @@ export default async function RecipeHistoryPage({ params }: PageProps<'/recipes/
   if (error) throw new Error('Unable to load recipe history.');
 
   return (
-    <main className="recipes-main recipe-history-page" aria-labelledby="page-title">
+    <main
+      className="recipes-main recipe-history-page"
+      data-publication-theme={
+        publication.publication_type === 'collection' ? undefined : publication.publication_type
+      }
+      aria-labelledby="page-title"
+    >
       <PrivateBreadcrumbs
         currentPage="History"
         parents={[
           { label: 'Library', href: '/publications' },
-          { label: publication.name, href: `/publications/${publication.id}` },
+          {
+            label: publication.name,
+            href: `/publications/${publication.id}`,
+            publicationType: publication.publication_type,
+          },
           { label: recipe.name, href: `/recipes/${recipe.id}` },
         ]}
       />

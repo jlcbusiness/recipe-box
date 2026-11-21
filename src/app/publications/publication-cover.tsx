@@ -2,6 +2,7 @@ import { Globe } from 'lucide-react';
 import Image from 'next/image';
 import type { CropRect } from '../../lib/media/rules';
 import type { PublicationOption } from '../../lib/recipes/data';
+import logoDetail from '../images/logo_detail.png';
 import { FramedMediaImage } from '../media/framed-media-image';
 
 export function PublicationCover({
@@ -25,12 +26,12 @@ export function PublicationCover({
     return (
       <span className="publication-cover publication-cover-recipe-tin">
         <Image
-          alt="Recipe Tin"
+          alt=""
           className="publication-cover-image-content"
-          height={1031}
+          height={logoDetail.height}
           loading="eager"
-          src="/images/recipe-tin-3e1f5f0d8f3a.webp"
-          width={933}
+          src={logoDetail}
+          width={logoDetail.width}
         />
       </span>
     );

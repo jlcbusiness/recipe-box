@@ -51,6 +51,7 @@ export default async function NewRecipePage({
             {
               label: initialPublication.name,
               href: `/publications/${initialPublication.id}`,
+              publicationType: initialPublication.publication_type,
             },
           ]}
         />

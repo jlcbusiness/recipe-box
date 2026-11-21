@@ -331,9 +331,7 @@
   outline-offset: 2px;
 }
 
-body:not(:has(.recipe-tin-theme))
-  .recipe-public-title-actions
-  .recipe-output-trigger:focus-visible {
+.recipe-public-title-actions .recipe-output-trigger:focus-visible {
   border-color: color-mix(in srgb, var(--leaf) 55%, white);
   background: color-mix(in srgb, var(--leaf) 88%, black);
   color: white;

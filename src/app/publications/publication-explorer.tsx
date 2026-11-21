@@ -599,7 +599,14 @@ export function PublicationExplorer({
               <ul className="publication-explorer-mobile-list">
                 {sortedPublications.map((publication) => (
                   <li key={publication.id}>
-                    <PublicationTypeIcon type={publication.publication_type} />
+                    <span
+                      aria-label={publicationTypeLabels[publication.publication_type]}
+                      className="publication-explorer-mobile-type"
+                      role="img"
+                      title={publicationTypeLabels[publication.publication_type]}
+                    >
+                      <PublicationTypeIcon type={publication.publication_type} />
+                    </span>
                     <div className="publication-explorer-mobile-content">
                       <Link
                         className="publication-explorer-mobile-link"
@@ -618,7 +625,14 @@ export function PublicationExplorer({
             <ul className="publication-explorer-mobile-list">
               {sortedPublications.map((publication) => (
                 <li key={publication.id}>
-                  <PublicationTypeIcon type={publication.publication_type} />
+                  <span
+                    aria-label={publicationTypeLabels[publication.publication_type]}
+                    className="publication-explorer-mobile-type"
+                    role="img"
+                    title={publicationTypeLabels[publication.publication_type]}
+                  >
+                    <PublicationTypeIcon type={publication.publication_type} />
+                  </span>
                   <div className="publication-explorer-mobile-content">
                     <Link
                       className="publication-explorer-mobile-link"
@@ -636,11 +650,12 @@ export function PublicationExplorer({
             <ul className="publication-explorer-grid">
               {sortedPublications.map((publication) => (
                 <li
-                  className={`publication-explorer-card${publication.publication_type === 'collection' ? ' publication-explorer-card-collection' : ''}`}
+                  className={`publication-explorer-card${publication.publication_type === 'collection' ? ' publication-explorer-card-collection publication-type-theme-collection' : ''}`}
                   key={publication.id}
                 >
                   <Link
                     aria-label={publication.name}
+                    aria-description={publicationTypeLabels[publication.publication_type]}
                     className={`publication-explorer-card-link${publication.publication_type === 'site' ? ' publication-explorer-card-link-site' : ''}${publication.publication_type === 'collection' ? ' publication-explorer-card-link-collection' : ''}`}
                     href={`/publications/${publication.id}`}
                     title={tooltipText(publication)}

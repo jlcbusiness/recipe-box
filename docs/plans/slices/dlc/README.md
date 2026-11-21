@@ -171,9 +171,9 @@ while retaining the existing single-image viewer without gallery navigation.
 ### Phase 18: Admin Updates and recipe experience follow-ups
 
 The remaining slices are ordered approximately by implementation effort. DLC
-42 through DLC 46 are implemented. DLC 46's focused breadcrumb, history, and
-direct-destination checks pass on Chromium and Fold 6. DLC 47–49 remain draft
-candidates.
+42 through DLC 47 are implemented. DLC 46's focused breadcrumb, history, and
+direct-destination checks pass on Chromium and Fold 6. DLC 47's focused theme
+and cover checks pass on Chromium and Fold 6; DLC 48–49 remain draft candidates.
 
 - **DLC 42 (implemented; app version 1.15.1):**
   [Admin Update Text Reflow](dlc-42-admin-update-text-reflow.md) moves narrow
@@ -192,9 +192,11 @@ candidates.
 - **DLC 46 (implemented; app version 1.18.0):**
   [Nested Library Breadcrumbs](dlc-46-nested-library-breadcrumbs.md) shows
   paths for pages whose parent is not a main-menu destination.
-- **DLC 47 (draft candidate):**
+- **DLC 47 (implemented; app version 1.19.0):**
   [Publication Type Themes](dlc-47-publication-type-themes.md) gives each
-  publication type a distinct application-wide theme.
+  non-Tin publication workflow a restrained role-matched tint, including
+  associated private recipe pages, while preserving the Recipe Tin and
+  unrelated-route palettes, mixed-type Library cues, and normal covers.
 - **DLC 48 (draft candidate):**
   [Pre-Recipe Preparation Notes](dlc-48-pre-recipe-prep-notes.md) adds a
   prominent Markdown callout for required advance work.
@@ -232,8 +234,8 @@ candidates.
   approved migration maps total-only legacy recipes to Cook, derives totals
   from component entries when present, rounds expression results half-up, and
   retains only Total Time in Find Recipes.
-- DLC 47–49 remain independent draft candidates. Resolve each brief's open
-  decisions and reconcile
+- DLC 47–49 are independent. DLC 47 is implemented; DLC 48–49
+  remain draft candidates. Resolve each remaining brief's open decisions and reconcile
   approved behavior with the comprehensive reference before implementation.
   DLC 44's interim private-detail composition will shift when DLC 49 adds its
   Made control and last-made information.

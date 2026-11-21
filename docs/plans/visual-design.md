@@ -872,7 +872,8 @@ export action. Publication toolbar actions use 40px square controls on mobile;
 recipe detail actions use 36px square controls with 48px mobile hit areas.
 On standard recipe detail, Print & Download and Export use the filled leaf
 treatment with a pale green edge, while Page Settings and Edit use light
-backgrounds with green borders; the Recipe Tin keeps its brown palette.
+backgrounds with green borders. The Recipe Tin uses these same application
+action colors; its recipe-card texture remains a separate content treatment.
 Export actions use the supplied square-arrow-out icon.
 On mobile publication detail, View, Sort, direction, and List columns form one
 connected 40px group, with a visible divider between the View-and-sort group
@@ -1032,10 +1033,29 @@ buttons have accessible names.
 Desktop List uses scan-friendly metadata columns with centered recipe counts and
 publication-title tooltips that put each field on its own line. Mobile List
 shows only a type icon and one truncated title per row. Grid cards show author
-names without a type prefix; desktop puts each author on its own line, while
-mobile truncates titles and authors on one line. Grid covers are 72px wide on
-desktop and 48px wide on mobile. Date Added and Date Changed remain sort
-choices, not visible List columns. Configurable columns remain future work.
+names without a type prefix and do not repeat Book, Magazine, or Site as a
+badge; the Recipe Tin name itself identifies its type.
+Desktop puts each author on its own line, while mobile truncates titles and
+authors on one line. Grid covers are 72px wide on desktop and 48px wide on
+mobile. Date Added and Date Changed remain sort choices, not visible List
+columns. Configurable columns remain future work.
+
+### Publication Type Themes (DLC 47)
+
+Keep Recipe Tin and unrelated routes on the existing app palette. For Book,
+Magazine, and Site publication workflows, map the current green surface,
+wash, line, and control roles to the existing type-accent hue while preserving
+each role's saturation and lightness. Book uses blue-gray, Magazine gold, and
+Site plum tints; do not darken the page by mixing in the accent. Keep body text
+at `#242820`. The new/edit recipe form follows its selected non-Tin publication.
+
+The left navigation uses a very pale tint of the active publication color,
+lighter than the page surface. Recipe breadcrumbs show the publication name
+without an extra Book, Magazine, or Site badge. The mixed-type Library remains
+on its default palette with per-type icons and accessible names, but no visible
+type-name badges. Preserve the Recipe Tin's documented recipe texture and
+normal Book, Magazine, and Site cover treatments. Preserve the focus treatment
+and verify readable contrast on themed surfaces.
 
 ## Mobile
 
@@ -1536,6 +1556,11 @@ dark-blue border and italic title text sized to fit. When a Magazine has no
 cover image, show a white magazine-shaped rectangle with a black border and
 normal title text sized to fit. A saved cover replaces the fallback in the
 publication detail and Explorer.
+
+The Recipe Tin uses the sign-in illustration at
+`src/app/images/logo_detail.png` as decorative cover artwork; the adjacent
+publication name supplies its accessible name. This changes only the Tin
+artwork, not Book, Magazine, or Site covers or their saved framing.
 
 Uploaded covers show the whole image within their reserved frame by default,
 preserving its aspect ratio without automatic cropping, including in the compact

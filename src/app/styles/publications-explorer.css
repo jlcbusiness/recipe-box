@@ -8,6 +8,38 @@
   color: var(--tomato);
 }
 
+.publication-type-theme-collection {
+  --publication-theme-surface: var(--publication-theme-collection-surface);
+  --publication-theme-ink: var(--publication-theme-collection-ink);
+  --publication-theme-accent: var(--publication-theme-collection-accent);
+}
+
+.publication-type-theme-book {
+  --publication-theme-accent: var(--publication-theme-book-accent);
+}
+
+.publication-type-theme-magazine {
+  --publication-theme-accent: var(--publication-theme-magazine-accent);
+}
+
+.publication-type-theme-site {
+  --publication-theme-accent: var(--publication-theme-site-accent);
+}
+
+.publication-detail-type-label {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  padding: 1px 6px;
+  border: 1px solid var(--publication-theme-accent);
+  border-radius: 3px;
+  background: var(--publication-theme-surface);
+  color: var(--publication-theme-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .recipe-tin .recipe-list-scroll {
   border-top-color: #b8b6a8;
 }
@@ -157,15 +189,19 @@
 }
 
 .publication-type-icon-book {
-  color: #386f9b;
+  color: #58636c;
 }
 
 .publication-type-icon-magazine {
-  color: #b44938;
+  color: #735700;
 }
 
 .publication-type-icon-site {
-  color: var(--leaf);
+  color: #684575;
+}
+
+.publication-type-icon-collection {
+  color: #386044;
 }
 
 .publication-explorer-popover {
@@ -797,8 +833,8 @@
 }
 
 .publication-explorer-card-collection {
-  border-color: #9a6b3f;
-  background: #fff9e7;
+  border-color: var(--publication-theme-accent);
+  background: var(--publication-theme-surface);
 }
 
 .publication-explorer-card-link-collection {
@@ -885,4 +921,8 @@
 .publication-preview-link:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
+}
+
+.publication-explorer-card-link:focus-visible {
+  box-shadow: 0 0 0 1px var(--ink);
 }

@@ -3,7 +3,7 @@
 > **Reference Note:** For the complete catalog of all requirements, edge cases,
 > UI behaviors, and design discussions, see [comprehensive reference](comprehensive-reference.md).
 
-The current product baseline is **v1.18.0**. Unscheduled improvements and
+The current product baseline is **v1.19.0**. Unscheduled improvements and
 verification follow-ups remain in the [deferred-work inventory](discussion/later.md);
 they are not blockers to this release.
 
@@ -255,11 +255,17 @@ question. Its output is a decision-log entry, not shipped code.
   [Nested Library Breadcrumbs](slices/dlc/dlc-46-nested-library-breadcrumbs.md)
   shows private parent paths when the parent is not directly reachable from
   navigation, without adding breadcrumbs to public pages.
-- **DLC 47–49 (draft candidates):**
+- **DLC 47 (implemented; app version 1.19.0):**
+  [Publication Type Themes](slices/dlc/dlc-47-publication-type-themes.md)
+  applies restrained role-matched tints to Book, Magazine, and Site
+  publication workflows and associated private recipe pages, while preserving
+  the Recipe Tin and unrelated-route palettes, mixed-type Library cues, and
+  normal publication covers.
+- **DLC 48–49 (draft candidates):**
   [DLC roadmap](slices/dlc/README.md#phase-18-admin-updates-and-recipe-experience-follow-ups)
-  records three remaining proposed slices. They are not approved or scheduled;
-  resolve each brief's open decisions before implementation. DLC 49 will shift
-  the private-detail composition established by DLC 44.
+  records the remaining proposed slices. Resolve each brief's open decisions
+  before implementation. DLC 49 will shift the private-detail composition
+  established by DLC 44.
 
 ## Completion Rule
 

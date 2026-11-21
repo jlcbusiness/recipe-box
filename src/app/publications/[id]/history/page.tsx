@@ -25,7 +25,7 @@ export default async function PublicationHistoryPage({
   const supabase = await createClient();
   const { data: publication, error: publicationError } = await supabase
     .from('publications')
-    .select('id, name')
+    .select('id, name, publication_type')
     .eq('id', id)
     .is('trashed_at', null)
     .maybeSingle();
@@ -43,12 +43,22 @@ export default async function PublicationHistoryPage({
   if (error) throw new Error('Unable to load publication history.');
 
   return (
-    <main className="recipes-main recipe-history-page" aria-labelledby="page-title">
+    <main
+      className="recipes-main recipe-history-page"
+      data-publication-theme={
+        publication.publication_type === 'collection' ? undefined : publication.publication_type
+      }
+      aria-labelledby="page-title"
+    >
       <PrivateBreadcrumbs
         currentPage="History"
         parents={[
           { label: 'Library', href: '/publications' },
-          { label: publication.name, href: `/publications/${publication.id}` },
+          {
+            label: publication.name,
+            href: `/publications/${publication.id}`,
+            publicationType: publication.publication_type,
+          },
         ]}
       />
       <h1 id="page-title">History: {publication.name}</h1>
