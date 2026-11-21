@@ -146,6 +146,7 @@ test('database import commit is privileged, versioned, history-aware, and atomic
         cooling_time_minutes: null,
         rest_time_minutes: null,
         total_time_minutes: null,
+        prep_ahead_markdown: 'Rest overnight.',
         notes_markdown: '',
         is_private: true,
         created_at: createdAt,
@@ -253,10 +254,10 @@ test('database import commit is privileged, versioned, history-aware, and atomic
         request,
         config,
         'recipes',
-        `select=total_time_minutes&id=eq.${recipeId}`,
+        `select=total_time_minutes,prep_ahead_markdown&id=eq.${recipeId}`,
         ownerHeaders(config, owner),
       ),
-    ).toEqual([{ total_time_minutes: 25 }]);
+    ).toEqual([{ total_time_minutes: 25, prep_ahead_markdown: 'Rest overnight.' }]);
     expect(
       await selectRows(
         request,

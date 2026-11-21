@@ -57,6 +57,68 @@
   margin-top: 14px;
 }
 
+.recipe-prep-ahead-callout {
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper);
+}
+
+.recipe-prep-ahead-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+  color: var(--tomato);
+}
+
+.recipe-prep-ahead-heading h3 {
+  margin: 0;
+  font-size: 0.95em;
+}
+
+.recipe-prep-ahead-body {
+  min-width: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.recipe-prep-ahead-body p {
+  margin: 0;
+}
+
+.recipe-prep-ahead-body p + p {
+  margin-top: 8px;
+}
+
+.recipe-prep-ahead-body h1,
+.recipe-prep-ahead-body h2,
+.recipe-prep-ahead-body h3,
+.recipe-prep-ahead-body h4,
+.recipe-prep-ahead-body h5,
+.recipe-prep-ahead-body h6 {
+  margin: 10px 0 4px;
+}
+
+.recipe-prep-ahead-body ul,
+.recipe-prep-ahead-body ol {
+  margin: 5px 0;
+  padding-inline-start: 24px;
+}
+
+.recipe-prep-ahead-body li {
+  overflow-wrap: anywhere;
+}
+
+.recipe-prep-ahead-body a,
+.recipe-prep-ahead-body code {
+  overflow-wrap: anywhere;
+}
+
 .recipe-instruction-list ul li + li,
 .recipe-instruction-list ol li + li {
   margin-top: 4px;
@@ -223,9 +285,18 @@
     visibility: collapse;
   }
 
-  .recipe-ingredient-first-table tbody tr[data-ingredient-stripe] > .recipe-ingredient-column-volume,
-  .recipe-ingredient-first-table tbody tr[data-ingredient-stripe] > .recipe-ingredient-column-weight,
-  .recipe-ingredient-first-table tbody tr[data-ingredient-stripe] > .recipe-ingredient-column-divide,
+  .recipe-ingredient-first-table
+    tbody
+    tr[data-ingredient-stripe]
+    > .recipe-ingredient-column-volume,
+  .recipe-ingredient-first-table
+    tbody
+    tr[data-ingredient-stripe]
+    > .recipe-ingredient-column-weight,
+  .recipe-ingredient-first-table
+    tbody
+    tr[data-ingredient-stripe]
+    > .recipe-ingredient-column-divide,
   .recipe-ingredient-first-table-hide-preparation-mobile
     tbody
     tr[data-ingredient-stripe]
@@ -296,9 +367,7 @@
     text-align: center;
   }
 
-  .recipe-ingredient-first-table
-    .recipe-reader-mobile-divide-note
-    .recipe-ingredient-portion-label,
+  .recipe-ingredient-first-table .recipe-reader-mobile-divide-note .recipe-ingredient-portion-label,
   .recipe-ingredient-first-table
     .recipe-reader-mobile-divide-note
     .recipe-ingredient-portion-values {

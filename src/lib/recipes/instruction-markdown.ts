@@ -23,21 +23,28 @@ export type InstructionInlineToken =
   | { type: 'link'; label: string; url: string }
   | { type: 'mention'; id: string; slug: string; portionOrdinal?: 1 | 2 };
 
+export type PrepAheadInlineToken = Exclude<
+  InstructionInlineToken,
+  { type: 'temperature' | 'photo' }
+>;
+
 export type TemperatureSystem = 'fahrenheit' | 'celsius';
 
-export type InstructionMarkdownList = {
+export type InstructionMarkdownList<T extends InstructionInlineToken = InstructionInlineToken> = {
   type: 'list';
   ordered: boolean;
-  items: Array<{ content: InstructionInlineToken[]; children: InstructionMarkdownList[] }>;
+  items: Array<{ content: T[]; children: InstructionMarkdownList<T>[] }>;
 };
 
-export type InstructionMarkdownBlock =
-  | { type: 'paragraph'; content: InstructionInlineToken[] }
-  | { type: 'heading'; level: number; content: InstructionInlineToken[] }
-  | InstructionMarkdownList;
+export type InstructionMarkdownBlock<T extends InstructionInlineToken = InstructionInlineToken> =
+  | { type: 'paragraph'; content: T[] }
+  | { type: 'heading'; level: number; content: T[] }
+  | InstructionMarkdownList<T>;
 
 const inlineTokenPattern =
   /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::[12])?\|([^\]\r\n]+)\]\])|(\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|(\[\[duration:([^\]\r\n]+)\]\])|(?<![\p{L}\p{N}_])([FC])!(\d+(?:\.\d+)?)\b|(?<![\p{L}\p{N}_])!(?:[\p{L}\p{M}](?:[\p{L}\p{M} -]*[\p{L}\p{M}])?)!(?![\p{L}\p{N}_])|(\[\[photo:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\]\](?:-(?:left|center|steponly|nowrap|w?[1-9]\d{0,3})){0,5})|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
+const prepAheadInlineTokenPattern =
+  /(\[\[ingredient:([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(?::([12]))?\|([^\]\r\n]+)\]\])|(\[\[duration:([^\]\r\n]+)\]\])|((?<!!)\[([^\]\r\n]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\))|(\*\*[^*]+\*\*|__[^_]+__)|(\*[^*]+\*|_[^_]+_)|(~~[^~]+~~)|(`+[^`]+`+)|((?<![\\=])=([^\s=\r\n](?:[^=\r\n]*[^\s=\r\n])?)(?<!\\)=(?![=]))/giu;
 
 function formatTemperature(
   value: string,
@@ -151,11 +158,63 @@ function parseInstructionInline(
   });
 }
 
-export function parseInstructionMarkdown(
+function parsePrepAheadInline(value: string): PrepAheadInlineToken[] {
+  const tokens: PrepAheadInlineToken[] = [];
+  let previousIndex = 0;
+
+  for (const match of value.matchAll(prepAheadInlineTokenPattern)) {
+    const fullMatch = match[0];
+    const index = match.index ?? 0;
+    if (index > previousIndex) {
+      tokens.push({
+        type: 'text',
+        value: value.slice(previousIndex, index).replace(/\n/gu, ' '),
+      });
+    }
+
+    if (match[2] && match[4]) {
+      const legacyPortion = /^([12])\|(.+)$/u.exec(match[4]);
+      const portionOrdinal = match[3]
+        ? (Number(match[3]) as 1 | 2)
+        : legacyPortion
+          ? (Number(legacyPortion[1]) as 1 | 2)
+          : undefined;
+      tokens.push({
+        type: 'mention',
+        id: match[2].toLocaleLowerCase(),
+        slug: legacyPortion?.[2] ?? match[4],
+        ...(portionOrdinal === undefined ? {} : { portionOrdinal }),
+      });
+    } else if (match[6]) {
+      tokens.push({ type: 'duration', value: match[6] });
+    } else if (match[8] && match[9]) {
+      tokens.push({ type: 'link', label: match[8], url: match[9] });
+    } else if (match[11]) {
+      tokens.push({ type: 'strong', value: match[11].slice(2, -2) });
+    } else if (match[12]) {
+      tokens.push({ type: 'emphasis', value: match[12].slice(1, -1) });
+    } else if (match[13]) {
+      tokens.push({ type: 'strike', value: match[13].slice(2, -2) });
+    } else if (match[14]) {
+      const fence = match[14].match(/^`+/u)?.[0] ?? '`';
+      tokens.push({ type: 'code', value: match[14].slice(fence.length, -fence.length) });
+    } else if (match[16]) {
+      tokens.push({ type: 'duration', value: match[16] });
+    }
+    previousIndex = index + fullMatch.length;
+  }
+
+  if (previousIndex < value.length) {
+    tokens.push({ type: 'text', value: value.slice(previousIndex).replace(/\n/gu, ' ') });
+  }
+  return tokens;
+}
+
+function parseMarkdownBlocks<T extends InstructionInlineToken>(
   markdown: string,
-  temperatureSystem?: TemperatureSystem,
-): InstructionMarkdownBlock[] {
-  const blocks: InstructionMarkdownBlock[] = [];
+  parseInline: (value: string) => T[],
+): InstructionMarkdownBlock<T>[] {
+  const blocks: InstructionMarkdownBlock<T>[] = [];
   const source = markdown.replace(/\r\n?/gu, '\n').trim();
   if (!source) {
     return blocks;
@@ -170,7 +229,7 @@ export function parseInstructionMarkdown(
       if (paragraphLines.length > 0) {
         blocks.push({
           type: 'paragraph',
-          content: parseInstructionInline(paragraphLines.join('\n'), temperatureSystem),
+          content: parseInline(paragraphLines.join('\n')),
         });
         paragraphLines = [];
       }
@@ -188,7 +247,7 @@ export function parseInstructionMarkdown(
         blocks.push({
           type: 'heading',
           level: heading[1]?.length ?? 1,
-          content: parseInstructionInline(heading[2] ?? '', temperatureSystem),
+          content: parseInline(heading[2] ?? ''),
         });
         continue;
       }
@@ -207,7 +266,7 @@ export function parseInstructionMarkdown(
           current = listStack[listStack.length - 1];
         }
         if (!current || current.indent < indent) {
-          const list: InstructionMarkdownList = { type: 'list', ordered, items: [] };
+          const list: InstructionMarkdownList<T> = { type: 'list', ordered, items: [] };
           if (current) {
             current.list.items[current.list.items.length - 1].children.push(list);
           } else {
@@ -217,7 +276,7 @@ export function parseInstructionMarkdown(
           listStack.push(current);
         }
         current.list.items.push({
-          content: parseInstructionInline(listItem[4] ?? '', temperatureSystem),
+          content: parseInline(listItem[4] ?? ''),
           children: [],
         });
         continue;
@@ -235,6 +294,19 @@ export function parseInstructionMarkdown(
   }
 
   return blocks;
+}
+
+export function parseInstructionMarkdown(
+  markdown: string,
+  temperatureSystem?: TemperatureSystem,
+): InstructionMarkdownBlock[] {
+  return parseMarkdownBlocks(markdown, (value) => parseInstructionInline(value, temperatureSystem));
+}
+
+export function parsePrepAheadMarkdown(
+  markdown: string,
+): InstructionMarkdownBlock<PrepAheadInlineToken>[] {
+  return parseMarkdownBlocks(markdown, parsePrepAheadInline);
 }
 
 export function continueInstructionListOnEnter(

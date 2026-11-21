@@ -13,6 +13,7 @@ describe('history event formatting', () => {
           public_id: 'public-link-secret-id',
           version: 2,
           name: 'Sunday roast',
+          prep_ahead_markdown: 'Thaw overnight.',
           makes_quantity: 1,
           makes_thing: 'baby',
           bake_time_minutes: 45,
@@ -48,6 +49,7 @@ describe('history event formatting', () => {
           public_id: 'public-link-secret-id',
           version: 3,
           name: 'Sunday roast potatoes',
+          prep_ahead_markdown: 'Marinate for 8 hours.',
           makes_quantity: 3,
           makes_thing: 'babies',
           bake_time_minutes: 45,
@@ -87,6 +89,11 @@ describe('history event formatting', () => {
       label: 'Name',
       before: 'Sunday roast',
       after: 'Sunday roast potatoes',
+    });
+    expect(entry.changes).toContainEqual({
+      label: 'Pre-recipe Prep',
+      before: 'Thaw overnight.',
+      after: 'Marinate for 8 hours.',
     });
     expect(entry.changes).toContainEqual({
       label: 'Makes quantity',

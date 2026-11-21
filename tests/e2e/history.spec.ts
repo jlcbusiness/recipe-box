@@ -118,6 +118,7 @@ test('active recipe owners can review readable, private change history @e2e @a11
       p_food_type_id: roastId,
       p_meal_type_ids: [dinnerId],
       p_time_entries: [{ time_type_id: prepTimeTypeId, minutes: 20, position: 0 }],
+      p_prep_ahead_markdown: 'Soak potatoes overnight.',
     });
     const updated = await saveRecipe(request, config, owner, {
       p_recipe_id: created.id,
@@ -126,6 +127,7 @@ test('active recipe owners can review readable, private change history @e2e @a11
       p_food_type_id: casseroleId,
       p_meal_type_ids: [lunchId],
       p_time_entries: [{ time_type_id: prepTimeTypeId, minutes: 35, position: 0 }],
+      p_prep_ahead_markdown: 'Drain and dry before roasting.',
     });
 
     const historyUrl = new URL(`${config.apiUrl}/rest/v1/recipe_history`);
@@ -144,6 +146,8 @@ test('active recipe owners can review readable, private change history @e2e @a11
     ]);
     expect(ownHistory[0].before_data.name).toBe('Herb roast potatoes');
     expect(ownHistory[0].after_data.name).toBe('Crispy herb roast potatoes');
+    expect(ownHistory[0].before_data.prep_ahead_markdown).toBe('Soak potatoes overnight.');
+    expect(ownHistory[0].after_data.prep_ahead_markdown).toBe('Drain and dry before roasting.');
     expect(ownHistory[0].before_data.picklists).toMatchObject({
       food_type: 'Roast',
       meal_type: ['Dinner'],
@@ -184,6 +188,9 @@ test('active recipe owners can review readable, private change history @e2e @a11
     await expect(events.nth(0)).toContainText('Recipe updated');
     await expect(events.nth(0)).toContainText('Herb roast potatoes');
     await expect(events.nth(0)).toContainText('Crispy herb roast potatoes');
+    await expect(events.nth(0)).toContainText('Pre-recipe Prep');
+    await expect(events.nth(0)).toContainText('Soak potatoes overnight.');
+    await expect(events.nth(0)).toContainText('Drain and dry before roasting.');
     await expect(events.nth(0)).toContainText('20 min');
     await expect(events.nth(0)).toContainText('35 min');
     await expect(events.nth(0)).toContainText(

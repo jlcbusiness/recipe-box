@@ -48,6 +48,13 @@ describe('recipe output rules', () => {
     expect(paginateInstructionSteps([], 100)).toEqual([[]]);
   });
 
+  it('allows a pre-work-only first page when no room remains for its first step', () => {
+    const steps = [{ id: 'first-step', height: 40, continuationHeight: 40 }];
+
+    expect(paginateInstructionSteps(steps, 0, 100)).toEqual([[], steps]);
+    expect(paginateInstructionSteps([], 0, 100)).toEqual([[]]);
+  });
+
   it('rejects a step that cannot fit at the minimum readable text size', () => {
     expect(() => paginateInstructionSteps([{ id: 'too-tall', height: 101 }], 100)).toThrow(
       'An instruction step cannot fit on a page at the minimum readable text size.',
@@ -55,8 +62,8 @@ describe('recipe output rules', () => {
   });
 
   it('rejects invalid page geometry rather than returning an incomplete layout', () => {
-    expect(() => paginateInstructionSteps([], 0)).toThrow(
-      'The available page height must be a positive finite number.',
+    expect(() => paginateInstructionSteps([], -1)).toThrow(
+      'The available first-page height must be a non-negative finite number.',
     );
   });
 });

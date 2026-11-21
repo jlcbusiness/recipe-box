@@ -168,6 +168,10 @@
     justify-self: center;
   }
 
+  .recipe-detail-heading-actions:not(:has(.recipe-rating-action-form)) .recipe-marker-actions {
+    grid-column: 4 / span 2;
+  }
+
   .recipe-detail-heading-actions > a[aria-label="Edit"] {
     grid-column: 6;
     grid-row: 1;

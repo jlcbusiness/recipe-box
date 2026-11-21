@@ -70,6 +70,7 @@ describe('public recipe media access', () => {
 
     expect(from).toHaveBeenCalledOnce();
     expect(from).toHaveBeenCalledWith('recipes');
+    expect(query.select).toHaveBeenCalledWith(expect.stringContaining('prep_ahead_markdown'));
     expect(storageFrom).not.toHaveBeenCalled();
     expect(createSignedUrl).not.toHaveBeenCalled();
   });

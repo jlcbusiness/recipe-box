@@ -193,6 +193,8 @@ History events are recorded on save (never on individual keystrokes):
   after snapshots
 - Recipe ingredient nutrition override and recipe-level nutrition changes,
   captured with the ordinary versioned recipe save
+- Pre-recipe Prep Markdown changes, captured separately from Notes and ordered
+  instruction-step changes
 - Before/after ingredient snapshots include portion ratios and Size value/units;
   instruction mention snapshots include nullable portion ordinals.
 - Step reordering and edits

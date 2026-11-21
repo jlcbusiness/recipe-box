@@ -38,7 +38,7 @@ function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -530,6 +530,7 @@ describe('import bundle validation', () => {
         makes_quantity: null,
         makes_thing: null,
         nutrition_overrides: {},
+        prep_ahead_markdown: '',
         saved_from_public_id: null,
         total_time_minutes: 0,
       },
@@ -1159,9 +1160,10 @@ describe('import bundle validation', () => {
 
     const bundle = validateImportBundleFiles(entries);
     const recipe = bundle.data.records.recipes[0];
-    expect(bundle.data.schema_version).toBe(14);
+    expect(bundle.data.schema_version).toBe(15);
     expect(recipe).not.toHaveProperty('prep_time_minutes');
     expect(recipe.total_time_minutes).toBe(40);
+    expect(recipe.prep_ahead_markdown).toBe('');
     expect(bundle.data.records.recipe_time_entries).toHaveLength(2);
     expect(
       bundle.data.records.recipe_time_entries.map((entry) => [entry.minutes, entry.position]),
@@ -1216,6 +1218,24 @@ describe('import bundle validation', () => {
     expect(
       validateImportBundleFiles(entries).data.records.recipe_ingredients[0]?.alternate_note,
     ).toBe('');
+  });
+
+  it('defaults Prep ahead to empty when importing schema version 14', () => {
+    const entries = createBundleEntries({
+      schemaVersion: 14,
+      scope: { type: 'recipe', id: recipeId },
+      recipe: {
+        id: recipeId,
+        name: 'Milk drink',
+        publication_id: null,
+        saved_from_public_id: null,
+        total_time_minutes: 0,
+      },
+    });
+
+    expect(validateImportBundleFiles(entries).data.records.recipes[0]).toMatchObject({
+      prep_ahead_markdown: '',
+    });
   });
 
   it('converts a legacy total-only recipe into a Cook entry', () => {

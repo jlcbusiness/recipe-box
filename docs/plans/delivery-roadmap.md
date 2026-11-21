@@ -261,11 +261,14 @@ question. Its output is a decision-log entry, not shipped code.
   publication workflows and associated private recipe pages, while preserving
   the Recipe Tin and unrelated-route palettes, mixed-type Library cues, and
   normal publication covers.
-- **DLC 48–49 (draft candidates):**
-  [DLC roadmap](slices/dlc/README.md#phase-18-admin-updates-and-recipe-experience-follow-ups)
-  records the remaining proposed slices. Resolve each brief's open decisions
-  before implementation. DLC 49 will shift the private-detail composition
-  established by DLC 44.
+- **DLC 48 (implemented; app version 1.20.0):**
+  [Pre-Recipe Preparation Instructions](slices/dlc/dlc-48-pre-recipe-prep-instructions.md)
+  adds a separate Markdown field for advance work, with safe private/public
+  rendering and first-page-only paginated output.
+- **DLC 49 (draft candidate):**
+  [Made Counter and Last-Made Stamp](slices/dlc/dlc-49-made-counter.md)
+  remains proposed. Resolve its open decisions before implementation; it will
+  shift the private-detail composition established by DLC 44.
 
 ## Completion Rule
 

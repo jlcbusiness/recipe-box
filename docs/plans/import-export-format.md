@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 13 archive contains:
+A version 15 archive contains:
 
 ```text
 manifest.json
@@ -31,7 +31,7 @@ already the official image.
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 13,
+  "schema_version": 15,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "1.0.0",
   "scope": {
@@ -70,7 +70,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 13,
+  "schema_version": 15,
   "scope": {
     "type": "database"
   },
@@ -103,7 +103,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v13; future
+array contains only the normalized product fields selected for v15; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -164,7 +164,7 @@ adds the optional paired Makes quantity and thing. Version 9 adds ingredient
 nutrition profiles and measure equivalents plus recipe-level and
 recipe-ingredient nutrition overrides. Version 10 adds protected public-copy
 source identity to recipe references. Version 11 adds ordered recipe time
-entries with their Time Type references. Version 12 adds the optional
+entries with their Time Type references. version 12 adds the optional
 `saved_from_public_id` direct-save marker to recipe records. Versions 1 through
 11 import with their existing compatibility rules; older
 media rows treat their full and thumbnail files as the retained source.
@@ -216,8 +216,15 @@ Version 13 adds `amount_is_a` to recipe ingredient measurements. It is true
 only for an informal scalar amount of one; earlier versions import it as false.
 The marker is never inferred from an existing numeric one.
 
+Version 14 adds `alternate_note` to recipe ingredient rows; versions 1 through
+13 import it as an empty string. Version 15 adds `prep_ahead_markdown` to
+recipe records; versions 1 through 14 import it as an empty string. Markdown
+and duration markers are preserved; ingredient references are remapped to the
+imported recipe ingredient row IDs. The field remains
+separate from `notes_markdown` and ordered `recipe_steps`.
+
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 13, verify all file sizes and checksums before
+accept only versions 1 through 15, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

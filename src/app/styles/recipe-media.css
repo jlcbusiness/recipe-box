@@ -97,6 +97,8 @@
 
 @media screen {
   .recipe-summary-layout-with-detail-heading {
+    container-name: recipe-summary;
+    container-type: inline-size;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     row-gap: 8px;
@@ -121,10 +123,20 @@
     grid-template-areas:
       "photo heading"
       "photo details";
+    --recipe-detail-toolbar-width: 444px;
     grid-template-columns:
-      minmax(0, min(var(--recipe-photo-row-width), calc(100% - 436px - 32px)))
+      minmax(
+        0,
+        min(var(--recipe-photo-row-width), calc(100% - var(--recipe-detail-toolbar-width) - 32px))
+      )
       minmax(0, 1fr);
     column-gap: 32px;
+  }
+
+  .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading:has(
+    .recipe-rating-action-form
+  ) {
+    --recipe-detail-toolbar-width: 480px;
   }
 
   .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading
@@ -217,6 +229,53 @@
   .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading
     > .recipe-photo-gallery {
     margin-top: 0;
+  }
+}
+
+@media screen and (min-width: 761px) {
+  @container recipe-summary (max-width: 1272px) {
+    .recipe-summary-layout-with-photos:has(.recipe-rating-action-form)
+      > .recipe-page-heading.recipe-detail-heading {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .recipe-summary-layout-with-photos:has(.recipe-rating-action-form)
+      > .recipe-page-heading.recipe-detail-heading
+      > .recipe-detail-heading-actions {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: 8px;
+    }
+  }
+
+  @container recipe-summary (max-width: 1200px) {
+    .recipe-summary-layout-with-photos:not(:has(.recipe-rating-action-form))
+      > .recipe-page-heading.recipe-detail-heading {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .recipe-summary-layout-with-photos:not(:has(.recipe-rating-action-form))
+      > .recipe-page-heading.recipe-detail-heading
+      > .recipe-detail-heading-actions {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: 8px;
+    }
+  }
+
+  @container recipe-summary (max-width: 960px) {
+    .recipe-summary-layout-with-detail-heading:not(.recipe-summary-layout-with-photos)
+      > .recipe-page-heading.recipe-detail-heading {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .recipe-summary-layout-with-detail-heading:not(.recipe-summary-layout-with-photos)
+      > .recipe-page-heading.recipe-detail-heading
+      > .recipe-detail-heading-actions {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: 8px;
+    }
   }
 }
 

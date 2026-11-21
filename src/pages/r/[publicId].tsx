@@ -5,6 +5,7 @@ import { ImageViewer } from '../../app/media/image-viewer';
 import { RecipePhotoGallery } from '../../app/media/media-display';
 import { RecipeActionFeedbackProvider } from '../../app/recipe-action-feedback';
 import { InstructionList } from '../../app/recipes/instruction-list';
+import { PrepAheadCallout, PrepAheadTitleIndicator } from '../../app/recipes/prep-ahead-callout';
 import { PublicRecipeSaveAction } from '../../app/recipes/public-recipe-save-action';
 import { RecipeOutputActions } from '../../app/recipes/recipe-output-actions';
 import {
@@ -274,9 +275,15 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
   const hasPublicSummary = times.length > 0 || recipe.equipment.length > 0;
   const preserveStoredUnits = true;
   const unitSystems = { volume: 'us_customary' as const, weight: 'us_customary' as const };
-  const instructions = recipe.steps.length > 0 && (
+  const instructions = (recipe.prep_ahead_markdown.trim() || recipe.steps.length > 0) && (
     <section className="recipe-detail-section" aria-labelledby="instructions-title">
       <h2 id="instructions-title">Instructions</h2>
+      <PrepAheadCallout
+        markdown={recipe.prep_ahead_markdown}
+        ingredients={recipe.ingredients}
+        unitSystems={unitSystems}
+        preserveStoredUnits={preserveStoredUnits}
+      />
       <ol className="recipe-instruction-list">
         {recipe.steps.map((step) => (
           <li key={step.position}>
@@ -318,6 +325,7 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
                   />
                 )}
               </h1>
+              <PrepAheadTitleIndicator markdown={recipe.prep_ahead_markdown} />
             </div>
             <p className="recipe-public-author">By {authorUsername}</p>
             {recipe.attribution && (

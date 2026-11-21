@@ -1557,9 +1557,9 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
     await expect(positiveChoice).toHaveAttribute('data-tone', 'positive');
     await expect(neutralChoice).toHaveAttribute('data-tone', 'neutral');
     await expect(negativeChoice).toHaveAttribute('data-tone', 'negative');
-    const positiveToneColor = 'color(srgb 0.279216 0.470588 0.235294)';
-    const neutralToneColor = 'color(srgb 0.489412 0.382745 0.0470588)';
-    const negativeToneColor = 'color(srgb 0.596078 0.222745 0.181961)';
+    const positiveToneColor = 'color(srgb 0.276078 0.473725 0.235294)';
+    const neutralToneColor = 'color(srgb 0.486275 0.385882 0.0470588)';
+    const negativeToneColor = 'color(srgb 0.592941 0.225882 0.181961)';
     await expect(positiveValue).toHaveCSS('color', positiveToneColor);
     await expect(positiveLabel).toHaveCSS('color', positiveToneColor);
     await expect(neutralValue).toHaveCSS('color', neutralToneColor);
@@ -2068,6 +2068,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
 
     await page.setViewportSize({ width: 1280, height: 900 });
     const desktopToolbar = page.locator('.recipe-detail-heading-actions');
+    await expect(desktopToolbar.locator('.recipe-rating-action-form')).toHaveCount(0);
     const desktopStar = page.getByRole('button', { name: 'Star recipe' });
     const desktopHeart = page.getByRole('button', { name: 'Heart recipe' });
     const desktopDuplicate = page.getByRole('button', { name: 'Duplicate recipe' });
@@ -2093,6 +2094,18 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       throw new Error('Expected desktop recipe marker and action controls.');
     }
     const desktopControls = desktopControlBounds.filter((bounds) => bounds !== null);
+    const [desktopMarkerGroupBounds, desktopShareBounds] = await Promise.all([
+      desktopToolbar.locator('.recipe-marker-actions').boundingBox(),
+      desktopToolbar.locator('.recipe-share-copy-action').boundingBox(),
+    ]);
+    expect(desktopMarkerGroupBounds).not.toBeNull();
+    expect(desktopShareBounds).not.toBeNull();
+    if (!desktopMarkerGroupBounds || !desktopShareBounds) {
+      throw new Error('Expected the desktop markers and Share action.');
+    }
+    expect(
+      desktopShareBounds.x - desktopMarkerGroupBounds.x - desktopMarkerGroupBounds.width,
+    ).toBeCloseTo(8, 0);
     const desktopRowTops = desktopControls.map((bounds) => bounds.y);
     expect(Math.max(...desktopRowTops) - Math.min(...desktopRowTops)).toBeLessThanOrEqual(1);
     expect(desktopControls[4]!.x).toBeLessThan(desktopControls[5]!.x);
@@ -2188,7 +2201,14 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     expect(wrappedToolbarBounds.y).toBeGreaterThanOrEqual(
       wrappedTitleBounds.y + wrappedTitleBounds.height,
     );
-    expect(Math.abs(wrappedToolbarBounds.x - wrappedHeadingBounds.x)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        wrappedToolbarBounds.x +
+          wrappedToolbarBounds.width -
+          wrappedHeadingBounds.x -
+          wrappedHeadingBounds.width,
+      ),
+    ).toBeLessThanOrEqual(1);
 
     await page.setViewportSize({ width: 390, height: 844 });
     const actionToolbar = page.locator('.recipe-detail-heading-actions');
@@ -2267,6 +2287,9 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     ) {
       throw new Error('Expected recipe marker action geometry.');
     }
+    expect(await markerActions.evaluate((element) => getComputedStyle(element).gridColumn)).toBe(
+      '4 / span 2',
+    );
     const firstRowBottom = Math.max(
       ...toolbarActionBounds.map((bounds) => bounds!.y + bounds!.height),
     );
@@ -2285,6 +2308,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       4,
     );
     expect(pageSettingsBounds.y).toBe(toolbarActionBounds[4]!.y);
+    await duplicateButton.evaluate((button) => button.blur());
     const duplicateBounds = await duplicateButton.boundingBox();
     expect(duplicateBounds).not.toBeNull();
     if (!duplicateBounds) throw new Error('Expected the mobile Duplicate action.');
@@ -2486,6 +2510,90 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       saved_from_public_id: null,
     });
     expect(copy?.publication_id).toBeTruthy();
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
+test('recipe duplication preserves Prep ahead content @e2e', async ({ page, request }) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill('Prep ahead duplicate source');
+    const prepAheadInput = page.getByLabel('Pre-recipe Prep', { exact: true });
+    await prepAheadInput.pressSequentially('Soak #garlic');
+    const prepAheadSuggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    await expect(prepAheadSuggestions.getByRole('option')).toHaveText('Create ingredient “garlic”');
+    await prepAheadSuggestions.getByRole('option').click();
+    await prepAheadInput.pressSequentially(' for =2 hours=');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: 'Prep ahead duplicate source' })).toBeVisible();
+    await expect(page.locator('.recipe-prep-ahead-callout')).toContainText('garlic');
+    await expect(
+      page.locator('.recipe-prep-ahead-callout .recipe-instruction-duration'),
+    ).toHaveText('2 hours');
+
+    const sourceId = new URL(page.url()).pathname.split('/').at(-1);
+    if (!sourceId) throw new Error('Expected the source recipe ID in the URL.');
+    const headers = {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${user.accessToken}`,
+    };
+    const sourceRecipeResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=prep_ahead_markdown&id=eq.${sourceId}`,
+      { headers },
+    );
+    const sourceRecipeBody = await sourceRecipeResponse.text();
+    expect(sourceRecipeResponse.ok(), sourceRecipeBody).toBeTruthy();
+    const [sourceRecipe] = (await sourceRecipeResponse.json()) as {
+      prep_ahead_markdown: string;
+    }[];
+    const sourceMentionId = sourceRecipe?.prep_ahead_markdown.match(
+      /\[\[ingredient:([0-9a-f-]{36})\|/iu,
+    )?.[1];
+    expect(sourceMentionId).toBeTruthy();
+    const sourceIngredientsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?select=id&recipe_id=eq.${sourceId}`,
+      { headers },
+    );
+    const sourceIngredientsBody = await sourceIngredientsResponse.text();
+    expect(sourceIngredientsResponse.ok(), sourceIngredientsBody).toBeTruthy();
+    const sourceIngredientIds = (await sourceIngredientsResponse.json()) as { id: string }[];
+    expect(sourceIngredientIds.map(({ id }) => id)).toContain(sourceMentionId);
+
+    await page.getByRole('button', { name: 'Duplicate recipe' }).click();
+    const duplicateDialog = page.getByRole('dialog', { name: 'Duplicate recipe' });
+    await duplicateDialog.getByLabel('Name').fill('Prep ahead duplicate copy');
+    await duplicateDialog.getByRole('button', { name: 'Duplicate recipe' }).click();
+    await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit$/);
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    await expect(page.locator('#prep-ahead-markdown')).toHaveValue('Soak #garlic for =2 hours=');
+
+    const copyId = new URL(page.url()).pathname.split('/').at(-2);
+    if (!copyId) throw new Error('Expected the duplicated recipe ID in the URL.');
+    const copyResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipes?select=prep_ahead_markdown&id=eq.${copyId}`,
+      { headers },
+    );
+    const responseBody = await copyResponse.text();
+    expect(copyResponse.ok(), responseBody).toBeTruthy();
+    const [copyRecipe] = (await copyResponse.json()) as { prep_ahead_markdown: string }[];
+    const copyMentionId = copyRecipe?.prep_ahead_markdown.match(
+      /\[\[ingredient:([0-9a-f-]{36})\|/iu,
+    )?.[1];
+    expect(copyMentionId).toBeTruthy();
+    expect(copyMentionId).not.toBe(sourceMentionId);
+    const copyIngredientsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_ingredients?select=id&recipe_id=eq.${copyId}`,
+      { headers },
+    );
+    const copyIngredientsBody = await copyIngredientsResponse.text();
+    expect(copyIngredientsResponse.ok(), copyIngredientsBody).toBeTruthy();
+    const copyIngredientIds = (await copyIngredientsResponse.json()) as { id: string }[];
+    expect(copyIngredientIds.map(({ id }) => id)).toContain(copyMentionId);
   } finally {
     await deleteTestUser(request, user);
   }
@@ -3100,6 +3208,7 @@ test('stale recipe versions are rejected without overwriting the first save @e2e
     await signIn(firstPage, user.email, user.password);
     await firstPage.goto('/recipes/new');
     await firstPage.getByLabel('Name').fill('Concurrent edit soup');
+    await firstPage.getByLabel('Pre-recipe Prep', { exact: true }).fill('First writer pre-work.');
     await selectSinglePicklist(firstPage, 'State', 'Want to Try');
     await firstPage.getByRole('button', { name: 'Save recipe' }).click();
     await expect(firstPage.getByRole('heading', { name: 'Concurrent edit soup' })).toBeVisible();
@@ -3111,18 +3220,24 @@ test('stale recipe versions are rejected without overwriting the first save @e2e
     await secondPage.goto(`${detailPath}/edit`);
 
     await firstPage.getByLabel('Name').fill('First writer wins');
+    await firstPage.locator('#prep-ahead-markdown').fill('First writer pre-work update.');
     await firstPage.getByRole('button', { name: 'Save recipe' }).click();
     await expect(firstPage.getByRole('heading', { name: 'First writer wins' })).toBeVisible();
 
     await secondPage.getByLabel('Name').fill('Stale writer must not win');
+    await secondPage.locator('#prep-ahead-markdown').fill('Stale writer pre-work.');
     await secondPage.keyboard.press('Control+s');
     await expect(secondPage.locator('.recipe-form-error')).toHaveText(
       'This recipe changed in another session. Reload before saving again.',
     );
     await expect(secondPage).toHaveURL(new RegExp(`${detailPath}/edit$`));
     await expect(secondPage.getByLabel('Name')).toHaveValue('Stale writer must not win');
+    await expect(secondPage.locator('#prep-ahead-markdown')).toHaveValue('Stale writer pre-work.');
     await secondPage.reload();
     await expect(secondPage.getByLabel('Name')).toHaveValue('First writer wins');
+    await expect(secondPage.locator('#prep-ahead-markdown')).toHaveValue(
+      'First writer pre-work update.',
+    );
 
     await firstPage.close();
     await secondPage.close();
@@ -3444,7 +3559,36 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
     await signIn(page, user.email, user.password);
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill('Braised chickpeas');
-    await expect(page.getByRole('group', { name: 'Instructions' })).toBeVisible();
+    const prepAheadSection = page.getByRole('group', { name: 'Pre-recipe Prep' });
+    const prepAheadInput = page.getByLabel('Pre-recipe Prep', { exact: true });
+    const instructionsSection = page.getByRole('group', { name: 'Instructions' });
+    await expect(prepAheadSection).toBeVisible();
+    await expect(prepAheadSection.locator('legend')).toHaveCSS('color', 'rgb(180, 62, 50)');
+    await expect(instructionsSection).toBeVisible();
+    const prepAheadBounds = await prepAheadSection.boundingBox();
+    const instructionsBounds = await instructionsSection.boundingBox();
+    if (!prepAheadBounds || !instructionsBounds) {
+      throw new Error('Expected the Pre-recipe Prep and Instructions sections to have bounds.');
+    }
+    expect(prepAheadBounds.y).toBeLessThan(instructionsBounds.y);
+    await expect(prepAheadInput).toHaveClass(/recipe-instruction-textarea/u);
+    await expect(prepAheadInput).toHaveAttribute('rows', '1');
+    const prepAheadInitialHeight = (await prepAheadInput.boundingBox())?.height ?? 0;
+    await prepAheadInput.fill('Thaw overnight.\n\n## Before cooking\n- Drain and rinse.\n\n');
+    await expect
+      .poll(() => prepAheadInput.evaluate((element) => element.getBoundingClientRect().height))
+      .toBeGreaterThan(prepAheadInitialHeight);
+    await prepAheadInput.pressSequentially('Soak #braised-chickpeas');
+    const prepAheadSuggestions = page.getByRole('listbox', { name: 'Ingredient suggestions' });
+    await expect(
+      prepAheadSuggestions.getByRole('option', { name: 'Create ingredient “braised chickpeas”' }),
+    ).toBeVisible();
+    await prepAheadSuggestions
+      .getByRole('option', { name: 'Create ingredient “braised chickpeas”' })
+      .click();
+    await prepAheadInput.pressSequentially(' for =2 hours=');
+    await expect(prepAheadInput).toHaveValue(/#braised-chickpeas for =2 hours=/);
+    await page.locator('#notes-markdown').fill('Personal note stays separate.');
     const firstInstruction = page.getByRole('textbox', { name: 'Instruction step 1' });
     const initialHeight = (await firstInstruction.boundingBox())?.height ?? 0;
     await firstInstruction.fill(
@@ -3588,13 +3732,17 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
       .analyze();
     expect(droppedInstructionA11y.violations).toEqual([]);
     await page.getByRole('textbox', { name: 'Instruction step 1' }).press('Control+ArrowDown');
-    await expect(page.locator('.recipe-instruction-editor [aria-live="polite"]')).toHaveText(
-      'Instruction step moved to position 2.',
-    );
+    await expect(
+      page.locator(
+        '.recipe-instruction-editor:not(.recipe-instruction-editor-single) [aria-live="polite"]',
+      ),
+    ).toHaveText('Instruction step moved to position 2.');
     await page.getByRole('textbox', { name: 'Instruction step 2' }).press('Control+ArrowUp');
-    await expect(page.locator('.recipe-instruction-editor [aria-live="polite"]')).toHaveText(
-      'Instruction step moved to position 1.',
-    );
+    await expect(
+      page.locator(
+        '.recipe-instruction-editor:not(.recipe-instruction-editor-single) [aria-live="polite"]',
+      ),
+    ).toHaveText('Instruction step moved to position 1.');
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
       'Stir in chickpeas and simmer.',
     );
@@ -3770,6 +3918,48 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
     await page.getByRole('button', { name: 'Save recipe' }).click();
 
     await expect(page.getByRole('heading', { name: 'Instructions' })).toBeVisible();
+    const prepAheadCallout = page.locator('.recipe-prep-ahead-callout');
+    await expect(prepAheadCallout.getByRole('heading', { name: 'Pre-recipe Prep' })).toBeVisible();
+    await expect(prepAheadCallout.locator('.recipe-prep-ahead-heading h3')).toHaveCSS(
+      'color',
+      'rgb(180, 62, 50)',
+    );
+    await expect(prepAheadCallout.locator('.recipe-prep-ahead-heading svg')).toHaveCSS(
+      'color',
+      'rgb(180, 62, 50)',
+    );
+    await expect(prepAheadCallout).toContainText('Thaw overnight.');
+    await expect(prepAheadCallout).toContainText('braised chickpeas');
+    await expect(prepAheadCallout.locator('.recipe-instruction-duration')).toHaveText('2 hours');
+    await expect(prepAheadCallout.locator('ul > li')).toHaveText('Drain and rinse.');
+    const prepAheadIndicator = page.locator('.recipe-prep-ahead-indicator');
+    await expect(prepAheadIndicator).toHaveText('Pre-recipe Prep');
+    await expect(prepAheadIndicator).toHaveCSS('color', 'rgb(180, 62, 50)');
+    await expect(prepAheadIndicator.locator('svg')).toHaveCSS('color', 'rgb(180, 62, 50)');
+    await expect(page.getByText('Total time', { exact: true })).toHaveCount(0);
+    await expect(page.locator('.recipe-notes')).toHaveText('Personal note stays separate.');
+    const prepAheadAccessibility = await new AxeBuilder({ page })
+      .include('.recipe-prep-ahead-callout')
+      .analyze();
+    expect(prepAheadAccessibility.violations).toEqual([]);
+    await expect(page.locator('.recipe-prep-ahead-callout + .recipe-instruction-list')).toHaveCount(
+      1,
+    );
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 384, height: 915 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const calloutBounds = await prepAheadCallout.boundingBox();
+      expect(calloutBounds).not.toBeNull();
+      if (!calloutBounds) throw new Error('Expected the Pre-recipe Prep callout to be visible.');
+      expect(calloutBounds.width).toBeGreaterThan(0);
+      expect(calloutBounds.x).toBeGreaterThanOrEqual(0);
+      expect(calloutBounds.x + calloutBounds.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
     const steps = page.locator('.recipe-instruction-list > li');
     await expect(steps).toHaveCount(4);
     await expect(steps.nth(0)).toHaveText('Stir in chickpeas and simmer.');
@@ -3779,6 +3969,10 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
     await expect(steps.nth(3)).toHaveText('Finish with lemon.');
 
     await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    await expect(page.locator('#prep-ahead-markdown')).toHaveValue(
+      'Thaw overnight.\n\n## Before cooking\n- Drain and rinse.\n\nSoak #braised-chickpeas for =2 hours=',
+    );
     await expect(page.getByRole('textbox', { name: 'Instruction step 1' })).toHaveValue(
       'Stir in chickpeas and simmer.',
     );
@@ -3797,6 +3991,30 @@ test('owners can save and reload ordered Markdown instruction steps @e2e', async
     await persistedFirstInstruction.fill('Discard this accidental change.');
     await persistedFirstInstruction.press('Escape');
     await expect(persistedFirstInstruction).toHaveValue('Stir in chickpeas and simmer.');
+    const ingredientGrid = page.getByRole('table', { name: 'Recipe ingredients' });
+    const deleteIngredient = page.getByRole('button', { name: 'Delete ingredient row 1' });
+    await ingredientGrid.getByRole('row').nth(1).hover();
+    await deleteIngredient.click();
+    const ingredientConfirmation = page.getByRole('dialog', { name: 'Remove ingredient?' });
+    await expect(ingredientConfirmation).toContainText('ordinary # text');
+    await ingredientConfirmation.getByRole('button', { name: 'Remove ingredient' }).click();
+    await expect(page.locator('#prep-ahead-markdown')).toHaveValue(
+      'Thaw overnight.\n\n## Before cooking\n- Drain and rinse.\n\nSoak #braised-chickpeas for =2 hours=',
+    );
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.locator('.recipe-prep-ahead-callout')).toContainText(
+      'Soak #braised-chickpeas for',
+    );
+    await expect(
+      page.locator('.recipe-prep-ahead-callout .recipe-instruction-mention'),
+    ).toHaveCount(0);
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
+    await page.locator('#prep-ahead-markdown').fill('');
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.locator('.recipe-prep-ahead-callout')).toHaveCount(0);
+    await expect(page.locator('.recipe-prep-ahead-indicator')).toHaveCount(0);
+    await expect(page.locator('.recipe-notes')).toHaveText('Personal note stays separate.');
   } finally {
     await deleteTestUser(request, user);
   }

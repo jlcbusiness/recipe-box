@@ -284,6 +284,7 @@ test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ p
     await waitForServiceWorker(page);
     await page.goto('/recipes/new');
     await page.getByLabel('Name').fill(recipeName);
+    await page.getByLabel('Pre-recipe Prep', { exact: true }).fill('Defrost overnight.');
     await page.getByPlaceholder('Add instruction…').fill('Stir until glossy.');
     await page.getByLabel('Choose recipe photos').setInputFiles({
       name: 'offline-instruction-photo.png',
@@ -301,6 +302,7 @@ test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ p
     });
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(page.locator('.recipe-prep-ahead-callout')).toContainText('Defrost overnight.');
     const recipeId = new URL(page.url()).pathname.split('/').at(-1);
     if (!recipeId) {
       throw new Error('The saved recipe URL must include its ID.');
@@ -338,6 +340,7 @@ test('offline snapshots omit decorative instruction photo URLs @e2e', async ({ p
       }, recipeId);
     await expect.poll(readCachedSnapshot, { timeout: 10_000 }).toContain('Stir until glossy.');
     const cachedSnapshot = await readCachedSnapshot();
+    expect(cachedSnapshot).toContain('Defrost overnight.');
     expect(cachedSnapshot).not.toContain('/storage/v1/object/sign/');
     expect(cachedSnapshot).not.toMatch(/<img\b/i);
     expect(cachedSnapshot).not.toMatch(/<image\b/i);

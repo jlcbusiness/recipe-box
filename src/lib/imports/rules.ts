@@ -457,7 +457,8 @@ function validateData(
               !(schemaVersion < 6 && ['score', 'is_starred', 'is_hearted'].includes(field)) &&
               !(schemaVersion < 8 && ['makes_quantity', 'makes_thing'].includes(field)) &&
               !(schemaVersion < 9 && field === 'nutrition_overrides') &&
-              !(schemaVersion < 12 && field === 'saved_from_public_id'),
+              !(schemaVersion < 12 && field === 'saved_from_public_id') &&
+              !(schemaVersion < 15 && field === 'prep_ahead_markdown'),
           )
         : table === 'recipe_ingredients'
           ? portableRecordFields[table].filter(
@@ -506,6 +507,19 @@ function validateData(
     for (const ingredient of records.recipe_ingredients as ExportRecord[]) {
       if (typeof ingredient.alternate_note !== 'string') {
         throw new Error('The bundle contains an invalid ingredient alternative note.');
+      }
+    }
+  }
+
+  if (schemaVersion < 15) {
+    records.recipes = (records.recipes as ExportRecord[]).map((recipe) => ({
+      ...recipe,
+      prep_ahead_markdown: '',
+    }));
+  } else {
+    for (const recipe of records.recipes as ExportRecord[]) {
+      if (typeof recipe.prep_ahead_markdown !== 'string') {
+        throw new Error('The bundle contains invalid Pre-recipe Prep instructions.');
       }
     }
   }

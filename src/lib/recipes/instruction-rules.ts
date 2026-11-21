@@ -545,6 +545,33 @@ export function parseIngredientMentions(markdown: string): InstructionMention[] 
   });
 }
 
+export function validateIngredientMentions(
+  markdown: string,
+  recipeIngredientIds: readonly string[],
+  contentLabel = 'Instruction',
+): void {
+  const validIngredientIds = new Set(recipeIngredientIds.map((id) => id.toLocaleLowerCase()));
+  for (const mention of parseIngredientMentions(markdown)) {
+    if (!validIngredientIds.has(mention.recipeIngredientId)) {
+      throw new Error(`${contentLabel} mentions must reference an ingredient row in this recipe.`);
+    }
+  }
+}
+
+export function remapIngredientMentions(
+  markdown: string,
+  remapId: (sourceId: string) => string,
+): string {
+  const mentions = parseIngredientMentions(markdown);
+  let mentionIndex = 0;
+  return markdown.replace(new RegExp(mentionPattern), (marker: string, sourceId: string) => {
+    if (!mentions[mentionIndex++]) {
+      throw new Error('Instruction contains an invalid ingredient mention.');
+    }
+    return marker.replace(sourceId, remapId(sourceId));
+  });
+}
+
 export function resolveInstructionMentions(
   markdown: string,
   ingredients: readonly { id: string; name: string }[],
@@ -570,7 +597,10 @@ export function unlinkIngredientMentions(
 ): string {
   parseIngredientMentions(markdown);
   const escapedId = recipeIngredientId.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-  const targetPattern = new RegExp(`\\[\\[ingredient:${escapedId}\\|[^\\]\\r\\n]+\\]\\]`, 'giu');
+  const targetPattern = new RegExp(
+    `\\[\\[ingredient:${escapedId}(?::[12])?\\|[^\\]\\r\\n]+\\]\\]`,
+    'giu',
+  );
   const slug = ingredientSlug(ingredientName);
   if (!slug) {
     throw new Error('Ingredient names must produce a readable mention.');
@@ -583,7 +613,6 @@ export function serializeInstructionSteps(
   recipeIngredientIds: readonly string[],
 ): InstructionStepPayload[] {
   const seenStepIds = new Set<string>();
-  const validIngredientIds = new Set(recipeIngredientIds.map((id) => id.toLocaleLowerCase()));
   const payload: InstructionStepPayload[] = [];
 
   for (const step of steps) {
@@ -597,11 +626,7 @@ export function serializeInstructionSteps(
       continue;
     }
 
-    for (const mention of parseIngredientMentions(markdown)) {
-      if (!validIngredientIds.has(mention.recipeIngredientId)) {
-        throw new Error('Instruction mentions must reference an ingredient row in this recipe.');
-      }
-    }
+    validateIngredientMentions(markdown, recipeIngredientIds);
 
     payload.push({
       id: step.id,

@@ -139,6 +139,22 @@
     omits it. A divided whole-row token ends in `-whole`, such as
     `#carrot-main-whole`.
 
+**Pre-recipe Prep** is an optional recipe-level Markdown field for work that must
+happen before the ordered steps. It is not a numbered step or personal Note.
+The editor places it in its own section above Instructions and reuses the
+standard compact, auto-growing instruction row without step numbering or
+reordering. It supports `#` ingredient references and marked durations using
+`=...=`; durations are emphasized text and do not contribute to Total Time.
+Ingredient references must resolve to this recipe's rows and are remapped in
+copies and imports; removing a referenced row converts the link to readable
+`#` text. The reader renders a bordered callout before the first step, with a
+title indicator only when saved content is non-empty. Its safe Markdown subset
+does not interpret photo or temperature markers, raw HTML, or embedded images.
+Public detail and public print/download include the field only for a linkable
+recipe. Private print and downloads include it regardless of the
+private-only-details setting; paginated output shows it once on the first
+instruction page.
+
 ### 5.2 Recipe-to-Recipe Links ("Pairs With")
 
 - Bottom row of the recipe card features a **Pairs With** section.

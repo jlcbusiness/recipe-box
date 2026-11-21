@@ -5,6 +5,7 @@ import {
   exportTableNames,
   type PortableData,
 } from '../exports/rules';
+import { remapIngredientMentions } from '../recipes/instruction-rules';
 import { findImportMatches, normalizeImportName } from './rules';
 
 export type ImportChoice = {
@@ -567,6 +568,26 @@ export function planImport(
         'ingredient set',
       ),
     }));
+  records.recipes = records.recipes.map((recipe) => {
+    if (
+      recipe.prep_ahead_markdown !== undefined &&
+      typeof recipe.prep_ahead_markdown !== 'string'
+    ) {
+      throw new Error('The import plan cannot resolve Pre-recipe Prep content.');
+    }
+    const prepAheadMarkdown =
+      typeof recipe.prep_ahead_markdown === 'string' ? recipe.prep_ahead_markdown : '';
+    return {
+      ...recipe,
+      prep_ahead_markdown: remapIngredientMentions(prepAheadMarkdown, (sourceId) => {
+        const remappedId = mappedId('recipe_ingredients', sourceId, 'recipe ingredient');
+        if (typeof remappedId !== 'string') {
+          throw new Error('The import plan cannot resolve a recipe ingredient reference.');
+        }
+        return remappedId;
+      }),
+    };
+  });
   records.recipe_ingredient_measurements = incoming.records.recipe_ingredient_measurements
     .filter((record) => {
       const sourceIngredient = incoming.records.recipe_ingredients.find(

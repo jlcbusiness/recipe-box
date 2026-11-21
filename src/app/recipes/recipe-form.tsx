@@ -43,6 +43,7 @@ import {
   serializeInstructionSteps,
   unlinkIngredientMentions,
   unlinkInstructionPhoto,
+  validateIngredientMentions,
 } from '../../lib/recipes/instruction-rules';
 import {
   formatGroupedInteger,
@@ -296,6 +297,8 @@ export function RecipeForm({
   const formRef = useRef<HTMLFormElement>(null);
   const shortcutSaveButtonRef = useRef<HTMLButtonElement>(null);
   const handledCreatedRecipeIdRef = useRef<string | null>(null);
+  const [prepAheadMarkdown, setPrepAheadMarkdown] = useState(recipe?.prep_ahead_markdown ?? '');
+  const [prepAheadError, setPrepAheadError] = useState('');
   const [savedRecipeVersion, setSavedRecipeVersion] = useState<number | undefined>();
   const [saveNotice, setSaveNotice] = useState(initialSaveNotice ? 'Saved.' : '');
   const currentRecipeVersion = actionState?.recipeVersion ?? savedRecipeVersion ?? recipe?.version;
@@ -887,11 +890,15 @@ export function RecipeForm({
   }
 
   function requestIngredientDeletion(row: IngredientRowDraft) {
-    const isMentioned = instructionSteps.some((step) =>
-      parseIngredientMentions(step.markdown).some(
+    const isMentioned =
+      parseIngredientMentions(prepAheadMarkdown).some(
         (mention) => mention.recipeIngredientId === row.id.toLocaleLowerCase(),
-      ),
-    );
+      ) ||
+      instructionSteps.some((step) =>
+        parseIngredientMentions(step.markdown).some(
+          (mention) => mention.recipeIngredientId === row.id.toLocaleLowerCase(),
+        ),
+      );
     if (isMentioned) {
       setPendingIngredientDeletion(row);
       return;
@@ -910,6 +917,9 @@ export function RecipeForm({
         ...step,
         markdown: unlinkIngredientMentions(step.markdown, row.id, row.ingredientName),
       })),
+    );
+    setPrepAheadMarkdown((currentMarkdown) =>
+      unlinkIngredientMentions(currentMarkdown, row.id, row.ingredientName),
     );
     setIngredientRows((currentRows) => currentRows.filter((current) => current.id !== row.id));
     setPendingIngredientDeletion(null);
@@ -968,6 +978,12 @@ export function RecipeForm({
             step.markdown,
           ),
         })),
+      );
+      setPrepAheadMarkdown((currentMarkdown) =>
+        pendingRemoval.rows.reduce(
+          (markdown, row) => unlinkIngredientMentions(markdown, row.id, row.ingredientName),
+          currentMarkdown,
+        ),
       );
       setIngredientRows((current) =>
         current.filter((row) => row.ingredientSetId !== pendingRemoval.set.id),
@@ -1090,6 +1106,18 @@ export function RecipeForm({
       return;
     }
 
+    try {
+      validateIngredientMentions(
+        prepAheadMarkdown,
+        ingredientPayload.map((row) => row.recipe_ingredient_id),
+        'Pre-recipe Prep',
+      );
+    } catch {
+      event.preventDefault();
+      setPrepAheadError('Check Pre-recipe Prep ingredient references before saving.');
+      return;
+    }
+
     let instructionPayload: ReturnType<typeof serializeInstructionSteps>;
     try {
       instructionPayload = serializeInstructionSteps(
@@ -1131,6 +1159,7 @@ export function RecipeForm({
     setIngredientRowsError('');
     setIngredientSetsError('');
     setInstructionStepsError('');
+    setPrepAheadError('');
     setTimeEntriesError('');
   }
 
@@ -1506,6 +1535,33 @@ export function RecipeForm({
         {ingredientRowsError && (
           <p className="recipe-form-error" role="alert">
             {ingredientRowsError}
+          </p>
+        )}
+      </fieldset>
+      <fieldset className="recipe-instruction-section recipe-pre-instruction-section">
+        <legend>Pre-recipe Prep</legend>
+        <input name="prep_ahead_markdown" type="hidden" value={prepAheadMarkdown} />
+        <InstructionStepsEditor
+          availableIngredients={ingredients}
+          entryDescribedBy={prepAheadError ? 'prep-ahead-error' : undefined}
+          entryId="prep-ahead-markdown"
+          entryLabel="Pre-recipe Prep"
+          ingredients={ingredientRows
+            .filter((row) => row.ingredientName.trim())
+            .map((row) => ({ id: row.id, name: row.ingredientName }))}
+          mentionOptions={ingredientMentionOptions}
+          onAddIngredient={addInstructionIngredient}
+          onChange={(entries) => {
+            setPrepAheadMarkdown(entries[0]?.markdown ?? '');
+            setPrepAheadError('');
+          }}
+          photos={[]}
+          singleEntry
+          steps={[{ id: 'prep-ahead', markdown: prepAheadMarkdown, plainText: '' }]}
+        />
+        {prepAheadError && (
+          <p className="recipe-form-error" id="prep-ahead-error" role="alert">
+            {prepAheadError}
           </p>
         )}
       </fieldset>

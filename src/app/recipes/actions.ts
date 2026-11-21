@@ -19,6 +19,7 @@ import {
   type InstructionStepPayload,
   instructionPlainText,
   serializeInstructionSteps,
+  validateIngredientMentions,
 } from '../../lib/recipes/instruction-rules';
 import { parseGroupedInteger } from '../../lib/recipes/measurement-rules';
 import {
@@ -393,6 +394,20 @@ export async function saveRecipe(
   if (!instructionSteps) {
     return { error: 'Check the instruction steps before saving.' };
   }
+  const prepAheadValue = formData.get('prep_ahead_markdown');
+  if (prepAheadValue !== null && typeof prepAheadValue !== 'string') {
+    return { error: 'Check Pre-recipe Prep before saving.' };
+  }
+  const prepAheadMarkdown = prepAheadValue ?? '';
+  try {
+    validateIngredientMentions(
+      prepAheadMarkdown,
+      ingredientRows.map((row) => row.recipe_ingredient_id),
+      'Pre-recipe Prep',
+    );
+  } catch {
+    return { error: 'Check Pre-recipe Prep ingredient references before saving.' };
+  }
   const relationships = parseRecipeRelationships(formData);
   if (!relationships) {
     return { error: 'Check the Pairs With and References fields before saving.' };
@@ -494,6 +509,7 @@ export async function saveRecipe(
     p_makes_thing: makes.thing,
     p_nutrition_overrides: nutritionOverrides,
     p_time_entries: timeEntries,
+    p_prep_ahead_markdown: prepAheadMarkdown,
     p_notes_markdown: String(formData.get('notes_markdown') ?? ''),
     p_meal_type_ids: selectedIds(formData, 'meal_type_ids'),
     p_cuisine_ids: selectedIds(formData, 'cuisine_ids'),

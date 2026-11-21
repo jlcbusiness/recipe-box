@@ -58,7 +58,7 @@ credential lifecycle is defined in
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, derived total time, notes, primary publication and location, optional online recipe URL, privacy, public-link ID, and optional `saved_from_public_id` direct-save marker. |
+| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, derived total time, separate Notes and `prep_ahead_markdown` fields, primary publication and location, optional online recipe URL, privacy, public-link ID, and optional `saved_from_public_id` direct-save marker. Pre-recipe Prep is unnumbered pre-work content, distinct from Notes and ordered Recipe steps; it defaults to empty text and participates in recipe history. |
 | Recipe time entry | An ordered recipe-owned duration in whole minutes linked to one account-managed Time Type. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
@@ -140,6 +140,11 @@ columns.
   Preparation and follows the ingredient through save history, public recipe
   data, and portable import/export. Portable schema version 14 includes the
   field; older bundles import it as empty.
+- Recipe-level `prep_ahead_markdown` is an unnumbered pre-instruction, distinct
+  from Notes and ordered Recipe steps. Ingredient references target recipe
+  ingredient row IDs and are remapped with those rows in copies and imports;
+  marked durations are display emphasis, not time entries. Portable schema
+  version 15 includes the field; versions 1 through 14 import it as empty text.
 - A recipe ingredient can have one displayed category: Unit, Count, Things, or
   Feel. Unit maps to the stored volume and/or weight records; Things maps to an
   informal record and Feel maps to an unmeasured record. A Unit row can contain

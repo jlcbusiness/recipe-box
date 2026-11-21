@@ -120,7 +120,7 @@ async function createRecipe(
   request: import('@playwright/test').APIRequestContext,
   config: LocalSupabaseConfig,
   user: TestUser,
-  name = 'Guest citrus cake',
+  nameOrOptions: string | { name?: string; prepAheadMarkdown?: string } = 'Guest citrus cake',
   publicationId?: string,
   includeCookingData = false,
   extraIngredientRows: Record<string, unknown>[] = [],
@@ -130,6 +130,10 @@ async function createRecipe(
   publishAutomatically = true,
   equipmentIds: string[] = [],
 ) {
+  const name =
+    typeof nameOrOptions === 'string' ? nameOrOptions : (nameOrOptions.name ?? 'Guest citrus cake');
+  const prepAheadMarkdown =
+    typeof nameOrOptions === 'string' ? '' : (nameOrOptions.prepAheadMarkdown ?? '');
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
   const ingredientSetId = randomUUID();
@@ -172,6 +176,7 @@ async function createRecipe(
         p_occasion_details: null,
         p_reason: null,
         p_serves: includeCookingData ? 4 : 8,
+        p_prep_ahead_markdown: prepAheadMarkdown,
         p_notes_markdown: 'Private note sentinel',
         p_meal_type_ids: [],
         p_cuisine_ids: [],
@@ -343,7 +348,9 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
     expect(privateRecipe?.is_private).toBe(true);
     expect((await request.get(`/r/${privateRecipe.public_id}`)).status()).toBe(404);
 
-    const recipe = await createRecipe(request, config, user);
+    const recipe = await createRecipe(request, config, user, {
+      prepAheadMarkdown: 'Marinate overnight.',
+    });
     const publicId = await getPublicId(request, config, recipe.id);
 
     const publicResponse = await request.get(`/r/${publicId}`);
@@ -351,6 +358,7 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
     expectNoStoreOrRevalidation(publicResponse.headers());
     const publicHtml = await publicResponse.text();
     expect(publicHtml).toContain('Guest citrus cake');
+    expect(publicHtml).toContain('Marinate overnight.');
     expect(publicHtml).not.toContain('Private note sentinel');
     expect(publicHtml).not.toContain(recipe.id);
     expect(publicHtml).not.toContain(user.email);
@@ -502,7 +510,10 @@ test('a signed-in user can save one active copy while preserving trashed copies 
   const config = await getLocalSupabaseConfig();
 
   try {
-    const sourceRecipe = await createRecipe(request, config, sourceUser, 'Public copy source');
+    const sourceRecipe = await createRecipe(request, config, sourceUser, {
+      name: 'Public copy source',
+      prepAheadMarkdown: 'Soak and chill overnight.',
+    });
     const publicId = await getPublicId(request, config, sourceRecipe.id);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/r/${publicId}`);
@@ -659,7 +670,7 @@ test('a signed-in user can save one active copy while preserving trashed copies 
     expect(mobileSuccessOverlapsTitle).toBe(false);
 
     const copiedRecipeResponse = await request.get(
-      `${config.apiUrl}/rest/v1/recipes?select=id,account_id,is_private,name,version&id=eq.${savedRecipeId}`,
+      `${config.apiUrl}/rest/v1/recipes?select=id,account_id,is_private,name,version,prep_ahead_markdown&id=eq.${savedRecipeId}`,
       { headers: serviceHeaders(config) },
     );
     expect(copiedRecipeResponse.ok(), await copiedRecipeResponse.text()).toBeTruthy();
@@ -669,6 +680,7 @@ test('a signed-in user can save one active copy while preserving trashed copies 
       is_private: boolean;
       name: string;
       version: number;
+      prep_ahead_markdown: string;
     }>;
     expect(savedRecipes).toHaveLength(1);
     const savedRecipe = savedRecipes[0];
@@ -678,6 +690,7 @@ test('a signed-in user can save one active copy while preserving trashed copies 
       account_id: destinationUser.id,
       is_private: true,
       name: 'Public copy source',
+      prep_ahead_markdown: 'Soak and chill overnight.',
     });
 
     const referenceResponse = await request.get(
@@ -1820,7 +1833,10 @@ test('public Equipment labels lowercase without changing picklist values @e2e', 
       request,
       config,
       user,
-      'Public equipment casing',
+      {
+        name: 'Public equipment casing',
+        prepAheadMarkdown: 'Thaw overnight.\n\n- Drain any liquid.\n- Pat dry.',
+      },
       undefined,
       false,
       [],
@@ -1840,14 +1856,35 @@ test('public Equipment labels lowercase without changing picklist values @e2e', 
         const equipmentValue =
           equipmentLabel?.parentElement?.querySelector('dd')?.textContent?.trim() ?? '';
         window.top?.document.documentElement.setAttribute('data-print-equipment', equipmentValue);
+        const prepAhead = document.querySelector<HTMLElement>('.recipe-prep-ahead-callout');
+        window.top?.document.documentElement.setAttribute(
+          'data-print-prep-ahead',
+          prepAhead?.textContent?.trim() ?? '',
+        );
+        window.top?.document.documentElement.setAttribute(
+          'data-print-prep-ahead-count',
+          String(document.querySelectorAll('.recipe-prep-ahead-callout').length),
+        );
         window.top?.document.documentElement.setAttribute('data-print-requested', 'true');
       };
     });
     await page.goto(`/r/${publicId}`);
+    const prepAheadCallout = page.locator('.recipe-prep-ahead-callout');
+    await expect(prepAheadCallout).toContainText('Thaw overnight.');
+    await expect(prepAheadCallout.locator('ul > li')).toHaveText(['Drain any liquid.', 'Pat dry.']);
+    const prepAheadAccessibility = await new AxeBuilder({ page })
+      .include('.recipe-prep-ahead-callout')
+      .analyze();
+    expect(prepAheadAccessibility.violations).toEqual([]);
     const equipmentSection = page.getByRole('region', { name: 'Equipment', exact: true });
     await expect(equipmentSection.getByRole('listitem')).toHaveText('medium skillet');
     await requestPublicPrint(page);
     await expect(page.locator('html')).toHaveAttribute('data-print-equipment', 'medium skillet');
+    await expect(page.locator('html')).toHaveAttribute('data-print-prep-ahead-count', '1');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-print-prep-ahead',
+      /Thaw overnight.*Drain any liquid.*Pat dry/u,
+    );
 
     const htmlDownloadPromise = page.waitForEvent('download');
     await publicOutputTrigger(page).click();
@@ -1864,6 +1901,13 @@ test('public Equipment labels lowercase without changing picklist values @e2e', 
         .locator('..')
         .locator('dd');
       await expect(equipmentValue).toHaveText('medium skillet');
+      await expect(standalone.locator('.recipe-prep-ahead-callout')).toContainText(
+        'Thaw overnight.',
+      );
+      await expect(standalone.locator('.recipe-prep-ahead-callout ul > li')).toHaveText([
+        'Drain any liquid.',
+        'Pat dry.',
+      ]);
       await expect(standalone.locator('.recipe-output-metadata')).not.toContainText(
         'Medium skillet',
       );

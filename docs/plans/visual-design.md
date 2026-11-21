@@ -300,6 +300,17 @@ continue to omit all eight fields through their allow-listed payload.
 This reduced-metadata detail composition is an interim posture; DLC 49 will
 shift the private detail experience by adding the Made control, count, and
 last-made information.
+When saved `prep_ahead_markdown` is non-empty, show a compact **Pre-recipe Prep**
+indicator beside the title and a bordered callout at the top of the instruction
+column, before numbered steps. Give the callout a visible **Pre-recipe Prep**
+heading and decorative icon in the tomato-red color; it must not rely on color
+alone. In the editor, put Pre-recipe Prep in its own red-labeled section above
+Instructions and reuse the standard compact, auto-growing instruction row
+without its step number or reorder controls.
+Support ingredient references and marked duration emphasis; duration markers
+do not contribute to Total Time. Keep it separate from Notes, do not interpret
+photo or temperature markers, and let the callout wrap within the reader column
+on mobile.
 Display Equipment labels in lowercase in private and public recipe reading,
 print, and standalone recipe output without changing shared catalog or editor
 labels.
@@ -1450,6 +1461,11 @@ remain part of Slice 25.
 ## Public Recipe View (Slice 22 current implementation)
 
 The guest recipe page has 24px horizontal gutters and a centered content width.
+For an active linkable recipe, render the allow-listed Pre-recipe Prep field in the
+same bordered callout before ordered steps. Resolve its ingredient references
+against the public ingredient rows and render marked durations as emphasis.
+Include it in public print and downloads; keep personal Notes and all other
+non-allow-listed fields absent.
 Use text-labeled **No emphasis** and **No instruction photos** toggles; both
 start unpressed, change only the current page, and reset on reload. They affect
 the visible public recipe and its print output, preserve authored Markdown
@@ -1806,9 +1822,11 @@ and Sort Order controls are omitted in Details. Center Rating, Star, and Heart
 headers horizontally within their visible columns while keeping all headers
 vertically centered.
 
-On desktop, the private recipe-detail toolbar places Star and Heart before
-Rating, with Rating immediately before Share. The remaining actions are
-privacy, settings, print, export, duplicate, and edit. Rating uses a 36px
+On desktop, when Rating is shown, the private recipe-detail toolbar places Star
+and Heart before Rating, with Rating immediately before Share. When it is
+absent, do not reserve its slot; shift Star and Heart right into the freed
+space. The remaining actions are privacy, settings, print, export, duplicate,
+and edit. Rating uses a 36px
 vector-hand glyph in its matching action frame, not an emoji glyph; match the
 Export glyph's line weight and center the complete signed value, including its
 minus sign, in the palm. Zero uses the filled palm-down hand; the unrated
@@ -1821,10 +1839,12 @@ Page Settings uses the filled treatment of Print & Download; Duplicate uses
 the outlined treatment of Edit. Duplicate sits immediately before Edit. On
 mobile, use even 4px gaps between the six first-row actions, keep Can Link at a
 compact 60px width with equal spacing around its label and switch, and put
-Page Settings before Edit in the first row. Put Star, Heart, and Rating in that
-order on the second row, with Duplicate immediately to the right of Rating,
-swapping the mobile action positions and treatments. Vertically center Rating
-with the marker buttons in the second row. Right-align Rating feedback 4px
+Page Settings before Edit in the first row. When Rating is shown, put Star,
+Heart, and Rating in that order on the second row, with Duplicate immediately
+to the right of Rating. When Rating is absent, shift Star and Heart right into
+its freed slot and keep Duplicate immediately to the right of Heart, swapping
+the mobile action positions and treatments. Vertically center Rating with the
+marker buttons in the second row. Right-align Rating feedback 4px
 beneath the action controls in the shared action-feedback region without
 shifting page content. Dismiss success feedback after five seconds; keep
 pending feedback visible while saving and errors visible until the next action.

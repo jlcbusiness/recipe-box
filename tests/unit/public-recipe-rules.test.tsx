@@ -63,6 +63,7 @@ const privateRecipe = {
     },
   ],
   total_time_minutes: 100,
+  prep_ahead_markdown: 'Marinate overnight',
   notes_markdown: 'Private notes',
   nutrition_overrides: {},
   version: 12,
@@ -232,6 +233,7 @@ describe('public recipe projection', () => {
 
     expect(payload).toEqual({
       name: 'Citrus cake',
+      prep_ahead_markdown: 'Marinate overnight',
       serves: 8,
       makes_quantity: 2,
       makes_thing: 'citrus cakes',

@@ -34,8 +34,27 @@
   overflow-wrap: anywhere;
 }
 
+.recipe-detail-title-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recipe-prep-ahead-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  color: var(--tomato);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .recipe-public-main .recipe-detail-title-row {
-  display: block;
+  display: flex;
   min-width: 0;
 }
 

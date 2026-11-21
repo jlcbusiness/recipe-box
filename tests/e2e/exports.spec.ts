@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { unzipSync } from 'fflate';
@@ -1038,6 +1039,145 @@ test('App data, publication detail, and recipe detail expose accessible export a
     ]);
   } finally {
     releaseFirstRequest?.();
+    await deleteTestUser(request, owner);
+  }
+});
+
+test('private output keeps Prep ahead once on the first page without private details @e2e', async ({
+  page,
+  request,
+}) => {
+  const owner = await createTestUser(request);
+  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
+  const recipeName = `Prep output ${randomUUID()}`;
+  const prepAheadMarkdown = [
+    'Move the frozen beans to the refrigerator the night before.',
+    '',
+    '## Before cooking',
+    'Let them thaw completely.',
+    '',
+    '- Drain any liquid.',
+    '- Rinse briefly.',
+    '- Pat dry.',
+  ].join('\n');
+  const saveResponse = await request.post(`${apiUrl}/rest/v1/rpc/save_recipe_with_time_entries`, {
+    headers: ownerHeaders(anonKey, owner.accessToken),
+    data: {
+      p_recipe_id: null,
+      p_expected_version: null,
+      p_name: recipeName,
+      p_food_type_id: null,
+      p_state: 'want_to_try',
+      p_verdict_id: null,
+      p_enthusiasm_id: null,
+      p_occasion_details: null,
+      p_reason: null,
+      p_serves: null,
+      p_notes_markdown: 'Personal note remains private.',
+      p_meal_type_ids: [],
+      p_cuisine_ids: [],
+      p_equipment_ids: [],
+      p_ingredient_rows: [],
+      p_instruction_steps: Array.from({ length: 22 }, (_, position) => {
+        const text = `Step ${position + 1}: stir gently and scrape the sides. `.repeat(5);
+        return {
+          id: randomUUID(),
+          position,
+          content_markdown: text,
+          plain_text: text,
+        };
+      }),
+      p_publication_id: null,
+      p_publication_page: null,
+      p_recipe_url: null,
+      p_recipe_relationships: { site_listing: null, pairings: [], references: [] },
+      p_tag_ids: [],
+      p_ingredient_sets: [{ id: randomUUID(), label: 'Main', position: 0 }],
+      p_score: null,
+      p_makes_quantity: null,
+      p_makes_thing: null,
+      p_nutrition_overrides: {},
+      p_time_entries: [],
+      p_prep_ahead_markdown: prepAheadMarkdown,
+    },
+  });
+  expect(saveResponse.ok(), await saveResponse.text()).toBeTruthy();
+  const [recipe] = (await saveResponse.json()) as Array<{ id: string }>;
+  if (!recipe?.id) throw new Error('Expected the output test recipe to be saved.');
+
+  try {
+    await page.addInitScript(() => {
+      window.print = () => {
+        const papers = Array.from(document.querySelectorAll('.recipe-output-paper'));
+        const topDocument = window.top?.document.documentElement;
+        if (!topDocument) throw new Error('Expected the recipe print document to have a parent.');
+        topDocument.setAttribute('data-print-paper-count', String(papers.length));
+        topDocument.setAttribute(
+          'data-print-prep-ahead-count',
+          String(document.querySelectorAll('.recipe-prep-ahead-callout').length),
+        );
+        topDocument.setAttribute(
+          'data-print-first-page-prep-ahead-count',
+          String(papers[0]?.querySelectorAll('.recipe-prep-ahead-callout').length ?? 0),
+        );
+        topDocument.setAttribute(
+          'data-print-continuation-prep-ahead-count',
+          String(
+            papers
+              .slice(1)
+              .reduce(
+                (count, paper) =>
+                  count + paper.querySelectorAll('.recipe-prep-ahead-callout').length,
+                0,
+              ),
+          ),
+        );
+        topDocument.setAttribute(
+          'data-print-instruction-count',
+          String(
+            document.querySelectorAll(
+              '.recipe-output-instruction-column .recipe-instruction-list > li',
+            ).length,
+          ),
+        );
+        topDocument.setAttribute(
+          'data-print-includes-private-note',
+          String(document.body.textContent?.includes('Personal note remains private.') ?? false),
+        );
+      };
+    });
+    await signIn(page, owner.email, owner.password);
+    await page.goto(`/recipes/${recipe.id}`);
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await page.getByRole('button', { name: 'Page settings' }).click();
+    await page.getByLabel('Include private-only details').uncheck();
+
+    await page.locator('.recipe-output-menu-action').getByRole('button').click();
+    const htmlDownloadPromise = page.waitForEvent('download');
+    await page.getByRole('menuitem', { name: 'Download HTML' }).click();
+    const htmlDownload = await htmlDownloadPromise;
+    const htmlPath = await htmlDownload.path();
+    if (!htmlPath) throw new Error('Expected the standalone HTML download to have a file path.');
+    const htmlDocument = await readFile(htmlPath, 'utf8');
+    expect(htmlDocument).toContain('class="recipe-prep-ahead-callout"');
+    expect(htmlDocument).toContain('Drain any liquid.');
+    expect(htmlDocument).not.toContain('Personal note remains private.');
+
+    await page.locator('.recipe-output-menu-action').getByRole('button').click();
+    await page.getByRole('menuitem', { name: 'Print' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-print-paper-count', /^[2-9]\d*$/);
+    await expect(page.locator('html')).toHaveAttribute('data-print-prep-ahead-count', '1');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-print-first-page-prep-ahead-count',
+      '1',
+    );
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-print-continuation-prep-ahead-count',
+      '0',
+    );
+    await expect(page.locator('html')).toHaveAttribute('data-print-instruction-count', '22');
+    await expect(page.locator('html')).toHaveAttribute('data-print-includes-private-note', 'false');
+  } finally {
     await deleteTestUser(request, owner);
   }
 });

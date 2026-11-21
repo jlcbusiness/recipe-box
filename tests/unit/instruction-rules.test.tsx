@@ -9,12 +9,14 @@ import {
   instructionPlainText,
   parseIngredientMentions,
   parseInstructionPhotoModifiers,
+  remapIngredientMentions,
   replaceInstructionEditorRange,
   resolveInstructionMentions,
   serializeInstructionSteps,
   unlinkIngredientMentions,
   unlinkInstructionPhoto,
   updateInstructionMarkdownFromEditor,
+  validateIngredientMentions,
 } from '../../src/lib/recipes/instruction-rules';
 
 const flourId = '11111111-1111-4111-8111-111111111111';
@@ -448,6 +450,25 @@ describe('instruction mention rules', () => {
     expect(parseIngredientMentions('Literal #all-purpose-flour stays plain.')).toEqual([]);
   });
 
+  it('validates and remaps ingredient references in pre-instructions', () => {
+    const remappedFlourId = '33333333-3333-4333-8333-333333333333';
+    const markdown = `Soak [[ingredient:${flourId}:2|flour-main-2]] and rest for =20 minutes=.`;
+
+    expect(() => validateIngredientMentions(markdown, [flourId], 'Pre-recipe Prep')).not.toThrow();
+    expect(() => validateIngredientMentions(markdown, [eggId], 'Pre-recipe Prep')).toThrow(
+      'Pre-recipe Prep mentions must reference an ingredient row in this recipe.',
+    );
+    expect(
+      remapIngredientMentions(markdown, (sourceId) => {
+        expect(sourceId).toBe(flourId);
+        return remappedFlourId;
+      }),
+    ).toBe(`Soak [[ingredient:${remappedFlourId}:2|flour-main-2]] and rest for =20 minutes=.`);
+    expect(() =>
+      remapIngredientMentions('[[ingredient:bad|flour]]', () => remappedFlourId),
+    ).toThrow('Instruction contains an invalid ingredient mention.');
+  });
+
   it('parses stable portion ordinals and serializes whole-row compatibility markers', () => {
     expect(
       parseIngredientMentions(
@@ -493,7 +514,7 @@ describe('instruction mention rules', () => {
   it('unlinks every occurrence as readable plain text when an ingredient is removed', () => {
     expect(
       unlinkIngredientMentions(
-        `Add [[ingredient:${flourId}|flour]] and reserve [[ingredient:${flourId}|flour]].`,
+        `Add [[ingredient:${flourId}|flour]] and reserve [[ingredient:${flourId}:2|flour-main-2]].`,
         flourId,
         'All-purpose flour',
       ),

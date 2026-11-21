@@ -110,6 +110,35 @@ const outputStyles = `
     font-size: ${MINIMUM_FONT_SIZE}px;
   }
   .recipe-output-column p { margin: 0 0 5px; }
+  .recipe-output-column .recipe-prep-ahead-callout {
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    overflow-wrap: anywhere;
+    border: 1px solid #aeb8a7;
+    border-radius: 4px;
+    background: #f7f9f4;
+    break-inside: avoid;
+  }
+  .recipe-output-column .recipe-prep-ahead-heading {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 4px;
+    color: #386044;
+  }
+  .recipe-output-column .recipe-prep-ahead-heading h3 { margin: 0; font-size: 11px; }
+  .recipe-output-column .recipe-prep-ahead-body { line-height: 1.4; overflow-wrap: anywhere; }
+  .recipe-output-column .recipe-prep-ahead-body p { margin: 0 0 4px; }
+  .recipe-output-column .recipe-prep-ahead-body h1,
+  .recipe-output-column .recipe-prep-ahead-body h2,
+  .recipe-output-column .recipe-prep-ahead-body h3,
+  .recipe-output-column .recipe-prep-ahead-body h4,
+  .recipe-output-column .recipe-prep-ahead-body h5,
+  .recipe-output-column .recipe-prep-ahead-body h6 { margin: 5px 0 3px; }
+  .recipe-output-column .recipe-prep-ahead-body ul,
+  .recipe-output-column .recipe-prep-ahead-body ol { margin: 3px 0; padding-left: 18px; }
+  .recipe-output-column .recipe-prep-ahead-body a,
+  .recipe-output-column .recipe-prep-ahead-body code { overflow-wrap: anywhere; }
   .recipe-output-column ol, .recipe-output-column ul { margin: 0; padding-left: 20px; }
   .recipe-output-column li + li { margin-top: 5px; }
   .recipe-output-column .recipe-instruction-list > li { display: flow-root; }
@@ -527,6 +556,9 @@ function createOutputPage(
   let instructionsList: HTMLOListElement | null = null;
   if (instructionSource) {
     const section = cloneReadableNode(instructionSource, settings);
+    if (pageIndex > 0) {
+      section.querySelector('.recipe-prep-ahead-callout')?.remove();
+    }
     const sourceList = instructionSource.querySelector('ol.recipe-instruction-list');
     if (sourceList) {
       instructionsList = document.createElement('ol');
@@ -661,13 +693,19 @@ function instructionCapacity(page: OutputPage): number {
   const section = page.instructionColumn.querySelector('.recipe-detail-section');
   if (!section) return page.instructionColumn.clientHeight;
   const heading = section.querySelector('h2');
+  const prepAhead = section.querySelector<HTMLElement>('.recipe-prep-ahead-callout');
   const list = section.querySelector('ol');
   const headingHeight = heading?.getBoundingClientRect().height ?? 0;
   const headingStyle = heading ? getComputedStyle(heading) : null;
+  const prepAheadStyle = prepAhead ? getComputedStyle(prepAhead) : null;
   const listStyle = list ? getComputedStyle(list) : null;
   const headingSpacing =
     (Number.parseFloat(headingStyle?.marginTop ?? '0') || 0) +
     (Number.parseFloat(headingStyle?.marginBottom ?? '0') || 0);
+  const prepAheadHeight = prepAhead?.getBoundingClientRect().height ?? 0;
+  const prepAheadSpacing =
+    (Number.parseFloat(prepAheadStyle?.marginTop ?? '0') || 0) +
+    (Number.parseFloat(prepAheadStyle?.marginBottom ?? '0') || 0);
   const listSpacing =
     (Number.parseFloat(listStyle?.marginTop ?? '0') || 0) +
     (Number.parseFloat(listStyle?.marginBottom ?? '0') || 0);
@@ -676,8 +714,33 @@ function instructionCapacity(page: OutputPage): number {
     page.instructionColumn.clientHeight -
       headingHeight -
       headingSpacing -
+      prepAheadHeight -
+      prepAheadSpacing -
       listSpacing -
       INSTRUCTION_LAYOUT_SAFETY_MARGIN,
+  );
+}
+
+function prepAheadCalloutFits(page: OutputPage): boolean {
+  const section = page.instructionColumn.querySelector('.recipe-detail-section');
+  const prepAhead = section?.querySelector<HTMLElement>('.recipe-prep-ahead-callout');
+  if (!section || !prepAhead) return true;
+
+  const heading = section.querySelector('h2');
+  const headingStyle = heading ? getComputedStyle(heading) : null;
+  const prepAheadStyle = getComputedStyle(prepAhead);
+  const headingHeight = heading?.getBoundingClientRect().height ?? 0;
+  const headingSpacing =
+    (Number.parseFloat(headingStyle?.marginTop ?? '0') || 0) +
+    (Number.parseFloat(headingStyle?.marginBottom ?? '0') || 0);
+  const prepAheadHeight = prepAhead.getBoundingClientRect().height;
+  const prepAheadSpacing =
+    (Number.parseFloat(prepAheadStyle.marginTop) || 0) +
+    (Number.parseFloat(prepAheadStyle.marginBottom) || 0);
+
+  return (
+    headingHeight + headingSpacing + prepAheadHeight + prepAheadSpacing <=
+    page.instructionColumn.clientHeight + 1
   );
 }
 
@@ -1090,6 +1153,11 @@ export async function generateRecipeOutputDocument(
       await nextFrame(signal);
     }
 
+    if (!prepAheadCalloutFits(measurementPage)) {
+      throw new Error(
+        'Pre-recipe Prep instructions cannot fit on a page at the minimum readable text size.',
+      );
+    }
     const availableInstructionHeight = instructionCapacity(measurementPage);
     const continuationInstructionHeight = instructionCapacity(continuationMeasurementPage);
     const firstPageSteps = measureSteps(sourceSteps, measurementPage, settings);

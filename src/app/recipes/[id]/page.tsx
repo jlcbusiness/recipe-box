@@ -37,6 +37,7 @@ import { PrivateBreadcrumbs } from '../../private-breadcrumbs';
 import { RecipeActionFeedbackProvider } from '../../recipe-action-feedback';
 import { TagChips } from '../../tags/tag-controls';
 import { InstructionList } from '../instruction-list';
+import { PrepAheadCallout, PrepAheadTitleIndicator } from '../prep-ahead-callout';
 import { RecipeDuplicateAction } from '../recipe-duplicate-action';
 import { RecipeMarkerActions } from '../recipe-marker-actions';
 import { RecipeOutputActions } from '../recipe-output-actions';
@@ -380,13 +381,19 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       })),
   ];
   const unitSystems = { volume: volumeSystem, weight: weightSystem };
-  const instructions = recipe.steps.length > 0 && (
+  const instructions = (recipe.prep_ahead_markdown.trim() || recipe.steps.length > 0) && (
     <section
       aria-labelledby="instructions-title"
       className="recipe-detail-section"
       key="recipe-instructions"
     >
       <h2 id="instructions-title">Instructions</h2>
+      <PrepAheadCallout
+        markdown={recipe.prep_ahead_markdown}
+        ingredients={recipe.ingredients}
+        unitSystems={unitSystems}
+        emphasisColors={emphasisColors}
+      />
       <ol className="recipe-instruction-list">
         {recipe.steps.map((step) => (
           <li key={step.id}>
@@ -433,7 +440,10 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               }
             />
             <div className="recipe-detail-title">
-              <h1 id="page-title">{recipe.name}</h1>
+              <div className="recipe-detail-title-row">
+                <h1 id="page-title">{recipe.name}</h1>
+                <PrepAheadTitleIndicator markdown={recipe.prep_ahead_markdown} />
+              </div>
               {recipe.publication &&
                 recipe.publication.publication_type !== 'collection' &&
                 (recipe.publication_page || recipe.recipe_url) && (

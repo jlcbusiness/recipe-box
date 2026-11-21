@@ -2010,6 +2010,44 @@ test('image management panes stage covers and immediately manage decorative reci
     ).toBeLessThanOrEqual(1);
     expect(featureImageBounds?.width ?? Infinity).toBeLessThanOrEqual(280);
     if (viewportWidth > 760) {
+      await page.setViewportSize({ width: 862, height: 900 });
+      const responsiveSummaryBounds = await page
+        .locator('.recipe-summary-layout-with-photos')
+        .boundingBox();
+      const responsiveBreadcrumbBounds = await page.locator('.private-breadcrumbs').boundingBox();
+      const responsiveTitleBounds = await page.locator('.recipe-detail-title').boundingBox();
+      const responsiveTitleTextBounds = await page.locator('.recipe-detail-title h1').boundingBox();
+      const responsiveToolbarBounds = await page
+        .locator('.recipe-detail-heading-actions')
+        .boundingBox();
+      expect(responsiveSummaryBounds).not.toBeNull();
+      expect(responsiveTitleBounds).not.toBeNull();
+      expect(responsiveTitleTextBounds).not.toBeNull();
+      expect(responsiveToolbarBounds).not.toBeNull();
+      if (
+        !responsiveSummaryBounds ||
+        !responsiveTitleBounds ||
+        !responsiveTitleTextBounds ||
+        !responsiveToolbarBounds
+      ) {
+        throw new Error('Expected the narrow desktop recipe heading and toolbar.');
+      }
+      if (responsiveBreadcrumbBounds) {
+        expect(responsiveTitleBounds.y).toBeGreaterThanOrEqual(
+          responsiveBreadcrumbBounds.y + responsiveBreadcrumbBounds.height,
+        );
+      }
+      expect(responsiveTitleTextBounds.width).toBeGreaterThan(200);
+      expect(responsiveToolbarBounds.y).toBeGreaterThanOrEqual(
+        responsiveTitleBounds.y + responsiveTitleBounds.height,
+      );
+      expect(responsiveToolbarBounds.x + responsiveToolbarBounds.width).toBeLessThanOrEqual(
+        responsiveSummaryBounds.x + responsiveSummaryBounds.width + 1,
+      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+
       await page.setViewportSize({ width: 761, height: 900 });
       const summaryLayout = page.locator('.recipe-summary-layout-with-photos');
       const originalSummaryWidth = await summaryLayout.evaluate((element) => element.style.width);
@@ -2022,6 +2060,7 @@ test('image management panes stage covers and immediately manage decorative reci
       const metadataBounds = await page
         .getByRole('heading', { name: 'Recipe details' })
         .boundingBox();
+      const constrainedBreadcrumbBounds = await page.locator('.private-breadcrumbs').boundingBox();
       const titleElement = page.locator('.recipe-detail-title h1');
       const originalTitle = await titleElement.textContent();
       await titleElement.evaluate(
@@ -2033,6 +2072,7 @@ test('image management panes stage covers and immediately manage decorative reci
       const titleBounds = await page.locator('.recipe-detail-title').boundingBox();
       expect(summaryBounds).not.toBeNull();
       expect(metadataBounds).not.toBeNull();
+      expect(constrainedBreadcrumbBounds).not.toBeNull();
       expect(actionBounds).not.toBeNull();
       expect(titleBounds).not.toBeNull();
       expect(constrainedFeatureBounds).not.toBeNull();
@@ -2040,6 +2080,7 @@ test('image management panes stage covers and immediately manage decorative reci
       if (
         !summaryBounds ||
         !metadataBounds ||
+        !constrainedBreadcrumbBounds ||
         !constrainedFeatureBounds ||
         !constrainedFeatureImageBounds ||
         !actionBounds ||
@@ -2052,7 +2093,9 @@ test('image management panes stage covers and immediately manage decorative reci
       expect(constrainedFeatureBounds.x + constrainedFeatureBounds.width).toBeLessThan(
         metadataBounds.x,
       );
-      expect(Math.abs(constrainedFeatureImageBounds.y - titleBounds.y)).toBeLessThanOrEqual(4);
+      expect(
+        Math.abs(constrainedFeatureImageBounds.y - constrainedBreadcrumbBounds.y),
+      ).toBeLessThanOrEqual(4);
       expect(constrainedFeatureImageBounds.width).toBeLessThan(featureImageBounds?.width ?? 0);
       expect(actionBounds.x).toBeGreaterThanOrEqual(summaryBounds.x - 1);
       expect(actionBounds.x + actionBounds.width).toBeLessThanOrEqual(
@@ -2109,6 +2152,9 @@ test('image management panes stage covers and immediately manage decorative reci
     const compactImage = page.locator('.recipe-photo-feature-image');
     const compactThumbnails = page.locator('.recipe-photo-thumbnails');
     await expect(compactThumbnails.locator('.framed-media-image')).toHaveCount(2);
+    await expect(compactGallery).toBeVisible();
+    await expect(compactImage).toBeVisible();
+    await expect(compactThumbnails).toBeVisible();
     const [compactGalleryBounds, compactImageBounds, compactThumbnailBounds] = await Promise.all([
       compactGallery.boundingBox(),
       compactImage.boundingBox(),

@@ -88,6 +88,7 @@ type PublicRecipeRow = {
   makes_quantity: number | null;
   makes_thing: string | null;
   total_time_minutes: number;
+  prep_ahead_markdown: string;
   nutrition_overrides: NutrientValues;
 };
 
@@ -195,7 +196,7 @@ async function loadPublicRecipePageData(publicId: string): Promise<LoadedPublicR
   const { data: row, error } = await supabase
     .from('recipes')
     .select(
-      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, makes_quantity, makes_thing, total_time_minutes, nutrition_overrides',
+      'id, account_id, public_id, is_private, trashed_at, name, publication_id, publication_page, serves, makes_quantity, makes_thing, total_time_minutes, prep_ahead_markdown, nutrition_overrides',
     )
     .eq('public_id', publicId)
     .maybeSingle();

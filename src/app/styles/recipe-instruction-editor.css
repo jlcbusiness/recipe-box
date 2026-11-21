@@ -15,6 +15,10 @@
   width: 100%;
 }
 
+.recipe-pre-instruction-section > legend {
+  color: var(--tomato);
+}
+
 .recipe-metadata-section .recipe-field,
 .recipe-metadata-section .publication-picker-label,
 .recipe-metadata-section .publication-field,
@@ -38,7 +42,8 @@
   list-style: none;
 }
 
-.recipe-instruction-edit-step {
+.recipe-instruction-edit-step,
+.recipe-pre-instruction-edit-step {
   position: relative;
   display: grid;
   min-height: 48px;
@@ -50,8 +55,14 @@
   transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.recipe-instruction-editor-single .recipe-pre-instruction-edit-step {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .recipe-instruction-edit-step:hover,
-.recipe-instruction-edit-step:focus-within {
+.recipe-instruction-edit-step:focus-within,
+.recipe-pre-instruction-edit-step:hover,
+.recipe-pre-instruction-edit-step:focus-within {
   background: rgb(247 249 244 / 55%);
 }
 
@@ -234,7 +245,8 @@
   outline-offset: 2px;
 }
 
-.recipe-instruction-edit-step:focus-within .recipe-instruction-textarea {
+.recipe-instruction-edit-step:focus-within .recipe-instruction-textarea,
+.recipe-pre-instruction-edit-step:focus-within .recipe-instruction-textarea {
   outline: 2px solid var(--gold);
   outline-offset: -2px;
 }

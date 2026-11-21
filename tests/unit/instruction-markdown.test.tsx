@@ -5,6 +5,7 @@ import {
   createInstructionExtensions,
   getSafeInstructionHref,
   parseInstructionMarkdown,
+  parsePrepAheadMarkdown,
 } from '../../src/lib/recipes/instruction-markdown';
 
 const ingredientId = '11111111-1111-4111-8111-111111111111';
@@ -177,6 +178,32 @@ describe('instruction Markdown', () => {
           { type: 'text', value: ' and cool for ' },
           { type: 'duration', value: '10 minutes' },
           { type: 'text', value: '. Leave for 10 minutes.' },
+        ],
+      },
+    ]);
+  });
+
+  it('parses Prep ahead ingredient references and durations but leaves other markers literal', () => {
+    expect(
+      parsePrepAheadMarkdown(
+        `Thaw [[ingredient:${ingredientId}:2|cake-flour-2]] for =10 minutes= and rest [[duration:2 hours]]. Set F!400 and insert [[photo:${photoId}]].`,
+      ),
+    ).toEqual([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', value: 'Thaw ' },
+          {
+            type: 'mention',
+            id: ingredientId,
+            slug: 'cake-flour-2',
+            portionOrdinal: 2,
+          },
+          { type: 'text', value: ' for ' },
+          { type: 'duration', value: '10 minutes' },
+          { type: 'text', value: ' and rest ' },
+          { type: 'duration', value: '2 hours' },
+          { type: 'text', value: `. Set F!400 and insert [[photo:${photoId}]].` },
         ],
       },
     ]);

@@ -171,9 +171,9 @@ while retaining the existing single-image viewer without gallery navigation.
 ### Phase 18: Admin Updates and recipe experience follow-ups
 
 The remaining slices are ordered approximately by implementation effort. DLC
-42 through DLC 47 are implemented. DLC 46's focused breadcrumb, history, and
+42 through DLC 48 are implemented. DLC 46's focused breadcrumb, history, and
 direct-destination checks pass on Chromium and Fold 6. DLC 47's focused theme
-and cover checks pass on Chromium and Fold 6; DLC 48–49 remain draft candidates.
+and cover checks pass on Chromium and Fold 6. DLC 49 remains a draft candidate.
 
 - **DLC 42 (implemented; app version 1.15.1):**
   [Admin Update Text Reflow](dlc-42-admin-update-text-reflow.md) moves narrow
@@ -197,9 +197,10 @@ and cover checks pass on Chromium and Fold 6; DLC 48–49 remain draft candidate
   non-Tin publication workflow a restrained role-matched tint, including
   associated private recipe pages, while preserving the Recipe Tin and
   unrelated-route palettes, mixed-type Library cues, and normal covers.
-- **DLC 48 (draft candidate):**
-  [Pre-Recipe Preparation Notes](dlc-48-pre-recipe-prep-notes.md) adds a
-  prominent Markdown callout for required advance work.
+- **DLC 48 (implemented; app version 1.20.0):**
+  [Pre-Recipe Preparation Instructions](dlc-48-pre-recipe-prep-instructions.md)
+  adds a separate Markdown field and callout for advance work across private,
+  public, offline, bundle, history, and paginated output flows.
 - **DLC 49 (draft candidate):**
   [Made Counter and Last-Made Stamp](dlc-49-made-counter.md) records private
   daily marks, count, and latest make time.
@@ -234,9 +235,9 @@ and cover checks pass on Chromium and Fold 6; DLC 48–49 remain draft candidate
   approved migration maps total-only legacy recipes to Cook, derives totals
   from component entries when present, rounds expression results half-up, and
   retains only Total Time in Find Recipes.
-- DLC 47–49 are independent. DLC 47 is implemented; DLC 48–49
-  remain draft candidates. Resolve each remaining brief's open decisions and reconcile
-  approved behavior with the comprehensive reference before implementation.
+- DLC 47–49 are independent. DLC 47 and DLC 48 are implemented; resolve DLC
+  49's open decisions and reconcile its approved behavior with the
+  comprehensive reference before implementation.
   DLC 44's interim private-detail composition will shift when DLC 49 adds its
   Made control and last-made information.
 

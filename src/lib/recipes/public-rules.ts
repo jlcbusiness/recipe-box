@@ -16,6 +16,7 @@ export type PublicRecipeSource = {
   makes_quantity: number | null;
   makes_thing: string | null;
   total_time_minutes: number;
+  prep_ahead_markdown: string;
   time_entries: Array<{ time_type: string; minutes: number; position: number }>;
   publication_page: string | null;
   publication: { name: string; publication_type: PublicationType } | null;
@@ -40,6 +41,7 @@ export type PublicRecipePayload = {
   makes_quantity: number | null;
   makes_thing: string | null;
   total_time_minutes: number;
+  prep_ahead_markdown: string;
   time_entries: Array<{ time_type: string; minutes: number; position: number }>;
   equipment: string[];
   ingredient_sets: RecipeIngredientSet[];
@@ -161,6 +163,7 @@ export function buildPublicRecipePayload(
     makes_quantity: recipe.makes_quantity,
     makes_thing: recipe.makes_thing,
     total_time_minutes: recipe.total_time_minutes,
+    prep_ahead_markdown: recipe.prep_ahead_markdown,
     time_entries: recipe.time_entries.map(({ time_type, minutes, position }) => ({
       time_type,
       minutes,

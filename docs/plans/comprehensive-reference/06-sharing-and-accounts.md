@@ -53,6 +53,11 @@ When a Guest accesses a valid public recipe link, whether signed in or not:
     remain static text.
   - In-app pairs-with links are displayed as static text.
 
+The public allow-list includes the optional `prep_ahead_markdown` field only
+for an active linkable recipe. Render it as a **Pre-recipe Prep** callout before
+ordered steps, including in public print and downloads. Personal Notes,
+history, and other non-allow-listed fields remain excluded.
+
 The public time summary is labeled “Time Breakdown,” places Total Time before
 ordered time entries, and follows the shared duration format in 2.2. Public
 ingredients use the same transient scalar

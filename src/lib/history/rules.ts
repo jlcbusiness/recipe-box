@@ -37,6 +37,7 @@ const fieldLabels: Record<string, string> = {
   makes_thing: 'Makes thing',
   total_time_minutes: 'Total time',
   time_entries: 'Time entries',
+  prep_ahead_markdown: 'Pre-recipe Prep',
   notes_markdown: 'Notes',
   is_private: 'Sharing',
   ingredients: 'Ingredients',

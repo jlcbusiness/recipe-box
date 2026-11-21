@@ -16,6 +16,7 @@ const recipe: PublicRecipePayload = {
   makes_quantity: 1,
   makes_thing: 'cake',
   total_time_minutes: 80,
+  prep_ahead_markdown: '',
   time_entries: [
     { time_type: 'Prep', minutes: 15, position: 0 },
     { time_type: 'Cook', minutes: 30, position: 1 },
@@ -75,6 +76,10 @@ const recipe: PublicRecipePayload = {
     },
     { display_text: 'Printed note', href: null },
   ],
+};
+const recipeWithPrepAhead = {
+  ...recipe,
+  prep_ahead_markdown: `Defrost [[ingredient:${publicIngredientId}|lemon]] for =8 hours=.`,
 };
 
 const photo = {
@@ -164,10 +169,18 @@ describe('public recipe copy payload', () => {
 
   it('preserves public nutrition, publication attribution, and reference labels only', () => {
     const payload = buildPublicRecipeCopyPayload(
-      { publicId, authorUsername: 'source-user', recipe, photoSources: [] },
+      { publicId, authorUsername: 'source-user', recipe: recipeWithPrepAhead, photoSources: [] },
       createIdFactory(),
     );
+    const copiedIngredientId = payload.recipe.p_ingredient_rows[0]?.recipe_ingredient_id;
 
+    expect(payload.recipe).toMatchObject({
+      p_notes_markdown: '',
+    });
+    expect(copiedIngredientId).toBeTruthy();
+    expect(payload.recipe.p_prep_ahead_markdown).toBe(
+      `Defrost [[ingredient:${copiedIngredientId}|lemon]] for =8 hours=.`,
+    );
     expect(payload.recipe.p_nutrition_overrides).toEqual({ calories: 250, protein: 8 });
     expect(payload.recipe.p_recipe_relationships.references).toEqual(
       expect.arrayContaining([

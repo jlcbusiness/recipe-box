@@ -212,6 +212,7 @@ describe('database import planning', () => {
         enthusiasm_id: undefined,
         makes_quantity: 2,
         makes_thing: 'baby cakes',
+        prep_ahead_markdown: '',
         saved_from_public_id: null,
         is_private: true,
       },
@@ -411,7 +412,7 @@ describe('database import planning', () => {
     );
   });
 
-  it('rewrites ingredient mention IDs embedded in step markdown', () => {
+  it('rewrites ingredient mention IDs in steps and pre-instructions', () => {
     const { data, existing } = createInput();
     const sourceIngredientId = '88888888-8888-4888-8888-888888888888';
     const sourceRecipeIngredientId = '99999999-9999-4999-8999-999999999999';
@@ -428,6 +429,7 @@ describe('database import planning', () => {
       },
     ];
     data.records.recipe_ingredients[0].portion_one_ratio = 0.5;
+    data.records.recipes[0].prep_ahead_markdown = `Soak [[ingredient:${sourceRecipeIngredientId}|Lemon]] for =8 hours=.`;
     data.records.recipe_steps[0].content_markdown = `Add [[ingredient:${sourceRecipeIngredientId}:2|Lemon]].`;
     data.records.recipe_step_mentions = [
       {
@@ -456,6 +458,9 @@ describe('database import planning', () => {
       `Add [[ingredient:${plan.idMappings.recipe_ingredients.get(sourceRecipeIngredientId)}:2|Lemon]].`,
     );
     expect(plan.records.recipe_steps[0].content_markdown).not.toContain(sourceRecipeIngredientId);
+    expect(plan.records.recipes[0].prep_ahead_markdown).toBe(
+      `Soak [[ingredient:${plan.idMappings.recipe_ingredients.get(sourceRecipeIngredientId)}|Lemon]] for =8 hours=.`,
+    );
     expect(plan.records.recipe_step_mentions[0]).toMatchObject({
       recipe_ingredient_id: plan.idMappings.recipe_ingredients.get(sourceRecipeIngredientId),
       portion_ordinal: 2,

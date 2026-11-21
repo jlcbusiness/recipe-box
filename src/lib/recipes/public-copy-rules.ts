@@ -1,5 +1,5 @@
 import { createUuid } from '../uuid';
-import { instructionPlainText } from './instruction-rules';
+import { instructionPlainText, remapIngredientMentions } from './instruction-rules';
 import type { NutrientValues } from './nutrition-rules';
 import type { PublicRecipePhoto } from './public-data';
 import type { PublicRecipePayload } from './public-rules';
@@ -98,6 +98,7 @@ export type PublicRecipeCopyPayload = {
     p_makes_quantity: number | null;
     p_makes_thing: string | null;
     p_nutrition_overrides: NutrientValues;
+    p_prep_ahead_markdown: string;
   };
   photos: Array<{
     id: string;
@@ -264,6 +265,16 @@ export function buildPublicRecipeCopyPayload(
       p_nutrition_overrides: recipeNutritionOverrides(
         source.recipe.nutrition_per_serving,
         source.recipe.serves,
+      ),
+      p_prep_ahead_markdown: remapIngredientMentions(
+        source.recipe.prep_ahead_markdown,
+        (sourceId) => {
+          const mappedId = ingredientIds.get(sourceId.toLocaleLowerCase());
+          if (!mappedId) {
+            throw new Error('Public Pre-recipe Prep references an unavailable ingredient row.');
+          }
+          return mappedId;
+        },
       ),
     },
     photos,

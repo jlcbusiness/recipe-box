@@ -62,6 +62,7 @@ function createSnapshot() {
           makes_thing: 'baby cakes',
           prep_time_minutes: 10,
           total_time_minutes: 40,
+          prep_ahead_markdown: 'Soak overnight.',
           is_private: true,
           saved_from_public_id: sourcePublicId,
           public_link_id: 'future-public-link-identity',
@@ -282,10 +283,10 @@ function createSnapshot() {
 }
 
 describe('export rules', () => {
-  it('exports alternative notes, protected source identity, times, and Things markers in schema version 14', () => {
+  it('exports alternative notes, protected source identity, times, and Things markers in schema version 15', () => {
     const output = buildPortableData(createSnapshot(), { type: 'recipe', id: firstRecipeId });
 
-    expect(output.schema_version).toBe(14);
+    expect(output.schema_version).toBe(15);
     expect(output.records.recipe_ingredients[0]).toMatchObject({
       alternate_note: 'or half and half',
     });
@@ -295,7 +296,10 @@ describe('export rules', () => {
       display_text: 'Stovetop Chicken & Broccoli Casserole',
     });
     expect(output.records.recipes[0]).toMatchObject({ saved_from_public_id: sourcePublicId });
-    expect(output.records.recipes[0]).toMatchObject({ total_time_minutes: 40 });
+    expect(output.records.recipes[0]).toMatchObject({
+      total_time_minutes: 40,
+      prep_ahead_markdown: 'Soak overnight.',
+    });
     expect(output.records.recipes[0]).not.toHaveProperty('prep_time_minutes');
     expect(output.records.recipe_time_entries).toEqual([
       {
@@ -479,7 +483,7 @@ describe('export rules', () => {
       { type: 'database' },
     );
 
-    expect(output.schema_version).toBe(14);
+    expect(output.schema_version).toBe(15);
     expect(output.account_preferences).toMatchObject({
       volume_system: 'recipe',
       weight_system: 'recipe',
@@ -499,7 +503,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(14);
+    expect(manifest.schema_version).toBe(15);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

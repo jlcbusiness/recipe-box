@@ -171,6 +171,7 @@ export type RecipeRecord = {
   makes_thing: string | null;
   time_entries: RecipeTimeEntry[];
   total_time_minutes: number;
+  prep_ahead_markdown: string;
   notes_markdown: string;
   nutrition_overrides: NutrientValues;
   version: number;
@@ -422,7 +423,7 @@ export async function getRecipe(
   const { data, error } = await supabase
     .from('recipes')
     .select(
-      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, notes_markdown, nutrition_overrides, version, created_at, updated_at',
+      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, prep_ahead_markdown, notes_markdown, nutrition_overrides, version, created_at, updated_at',
     )
     .eq('id', recipeId)
     .is('trashed_at', null)

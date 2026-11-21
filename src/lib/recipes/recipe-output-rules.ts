@@ -45,8 +45,8 @@ export function paginateInstructionSteps<T extends { height: number; continuatio
   availableHeight: number,
   continuationAvailableHeight = availableHeight,
 ): T[][] {
-  if (!Number.isFinite(availableHeight) || availableHeight <= 0) {
-    throw new Error('The available page height must be a positive finite number.');
+  if (!Number.isFinite(availableHeight) || availableHeight < 0) {
+    throw new Error('The available first-page height must be a non-negative finite number.');
   }
   if (!Number.isFinite(continuationAvailableHeight) || continuationAvailableHeight <= 0) {
     throw new Error('The available page height must be a positive finite number.');
