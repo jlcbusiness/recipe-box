@@ -1509,6 +1509,10 @@ installation steps remain part of Slice 25.
 ## Public Recipe View (Slice 22 current implementation)
 
 The guest recipe page has 24px horizontal gutters and a centered content width.
+Below the title, label the account `In <username>'s recipes`. When a publication
+is present, prefix its name with `From ` to distinguish the recipe source from
+the public-link account. Preserve the existing publication styling and location
+suffix.
 For an active linkable recipe, render the allow-listed Pre-recipe Prep field in the
 same bordered callout before ordered steps. Resolve its ingredient references
 against the public ingredient rows and render marked durations as emphasis.

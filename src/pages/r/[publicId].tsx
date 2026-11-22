@@ -327,10 +327,10 @@ export default function PublicRecipePage(props: PublicRecipePageProps) {
               </h1>
               <PrepAheadTitleIndicator markdown={recipe.prep_ahead_markdown} />
             </div>
-            <p className="recipe-public-author">By {authorUsername}</p>
+            <p className="recipe-public-author">In {authorUsername}'s recipes</p>
             {recipe.attribution && (
               <p className="recipe-attribution">
-                <cite>{recipe.attribution.publication_name}</cite>
+                From <cite>{recipe.attribution.publication_name}</cite>
                 {recipe.attribution.page ? ` · p. ${recipe.attribution.page}` : ''}
               </p>
             )}

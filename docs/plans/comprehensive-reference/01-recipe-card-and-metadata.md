@@ -234,8 +234,9 @@ same type. Time values remain minutes in storage.
   section divider sits close below the heading. Use `>` separators in the
   ancestor-link color. The breadcrumb carries the publication context, so do not
   repeat the publication name in the recipe attribution; retain location details
-  such as issue, page, and URL. Public pages do not show breadcrumbs and keep
-  their existing attribution.
+  such as issue, page, and URL. Public pages do not show breadcrumbs. Beneath the
+  title, identify the account as `In <username>'s recipes`; when a publication is
+  present, identify it as `From <publication>` and retain its location details.
   Recipe-page headings are about 16pt (about 21.33px). When a recipe belongs
   to a publication, the private breadcrumb carries its publication identity;
   the compact attribution beneath the title retains location details such as

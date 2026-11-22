@@ -534,6 +534,37 @@ test('shared recipe resolves Pre-recipe Prep ingredient references @e2e', async 
   }
 });
 
+test('shared recipe header distinguishes its account and publication source @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const publicationId = await createPublication(request, config, user, 'AllRecipes');
+    const recipe = await createRecipe(
+      request,
+      config,
+      user,
+      'Publication attribution',
+      publicationId,
+    );
+    const publicId = await getPublicId(request, config, recipe.id);
+
+    await page.goto(`/r/${publicId}`);
+    await expect(page.locator('.recipe-public-author')).toHaveText(
+      `In test-${user.id.slice(0, 8)}'s recipes`,
+    );
+    await expect(page.locator('.recipe-attribution')).toHaveText('From AllRecipes');
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('signed-in users visiting the home page are sent to their recipe library @e2e', async ({
   page,
   request,
