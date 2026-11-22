@@ -135,6 +135,35 @@ describe('instruction mention rules', () => {
     ]);
   });
 
+  it('keeps a terminal hyphen after an ingredient mention as punctuation', () => {
+    const mentionOptions = [
+      {
+        recipeIngredientId: butterId,
+        ingredientSetId: 'main',
+        portionOrdinal: null,
+        label: 'Butter Sauce (whole)',
+        slug: 'butter-sauce-main-whole',
+      },
+    ];
+
+    expect(
+      updateInstructionMarkdownFromEditor(
+        '',
+        'Use #butter-sauce-main-whole- before freezing.',
+        [],
+        mentionOptions,
+      ),
+    ).toBe(`Use [[ingredient:${butterId}|butter-sauce-main-whole]]- before freezing.`);
+    expect(
+      updateInstructionMarkdownFromEditor(
+        '',
+        'Use #butter-sauce-main-whole-extra before freezing.',
+        [],
+        mentionOptions,
+      ),
+    ).toBe('Use #butter-sauce-main-whole-extra before freezing.');
+  });
+
   it('leaves an ambiguous short portion slug literal', () => {
     const mentionOptions = buildIngredientMentionOptions([
       {

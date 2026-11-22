@@ -88,3 +88,16 @@
 - `npx biome format --write tests/e2e/recipes.spec.ts tests/e2e/media.spec.ts` — completed with no changes needed.
 - `npx playwright test tests/e2e/recipes.spec.ts tests/e2e/media.spec.ts --project=chromium --project="Fold 6" --grep "recipe marker actions follow recipe actions on desktop and mobile|image management panes stage covers and immediately manage decorative recipe photos" --workers=1` — all four selected test runs passed.
 - `npx biome check src/app/styles/recipe-actions.css src/app/styles/recipe-responsive-overrides.css src/app/styles/recipe-media.css tests/e2e/recipes.spec.ts tests/e2e/media.spec.ts docs/plans/visual-design.md` — exit 0 with `noDescendingSpecificity` warnings in `recipe-actions.css`.
+
+## 2026-11-22 — Shared Prep reference follow-up
+
+Session: `8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36`
+
+- Inspected the DLC 48 public recipe projection, Prep callout, mention parser, and relevant contracts; the visual-design contract already requires public prep references to resolve against public ingredient rows.
+- Added unit regressions for shared projection ID remapping and typed ingredient mentions followed by terminal hyphen punctuation; both failed before the implementation changes.
+- Updated `src/lib/recipes/public-rules.ts` to remap Prep references through the same public ingredient ID map used by cooking steps.
+- Updated `src/lib/recipes/instruction-rules.ts` so a final hyphen followed by punctuation is not treated as part of the ingredient slug, while a continuing hyphenated word remains unmatched.
+- Added a browser regression using a published recipe. The public callout resolved the ingredient and displayed its amount tooltip on Chromium and Fold 6 (2/2).
+- `npx vitest run tests/unit/public-recipe-rules.test.tsx tests/unit/instruction-rules.test.tsx tests/unit/prep-ahead-callout.test.tsx` — 41 tests passed.
+- `npm run typecheck` — passed.
+- Targeted `npx biome check` on implementation and unit tests, `npx biome lint` on the E2E file, and `git diff --check` — passed.

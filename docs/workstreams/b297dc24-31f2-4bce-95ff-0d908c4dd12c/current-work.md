@@ -44,13 +44,20 @@
   Duplicate control first so it compares default styles rather than a focused button; the compact
   gallery test waits for the gallery, feature image, and thumbnails to be visible before measuring.
   The focused media and recipe-marker tests passed on Chromium and Fold 6.
+- 2026-11-22: Resumed in session `8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36` for a follow-up bug report.
+  The shared public projection remapped ingredient mentions in cooking steps but not in
+  `prep_ahead_markdown`; the hashtag parser also rejected a mention followed by a terminal hyphen.
+  Fixed both and added focused unit and browser regression coverage. The public page now resolves
+  the shared prep mention and shows its amount tooltip on Chromium and Fold 6. The existing
+  visual-design contract already requires public prep references to resolve against public
+  ingredient rows.
 
 ## Save Point
 
-- **Goal/status:** DLC 48 and the requested label/color follow-up are complete; when Rating is absent, its toolbar slot collapses and Star/Heart shift right.
+- **Goal/status:** DLC 48 and follow-up fixes are complete; shared Pre-recipe Prep ingredient mentions resolve, and terminal hyphen punctuation no longer blocks typed mention parsing.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** Responsive toolbar implementation, design contract, and focused E2E fixes are complete.
-- **Last verified result:** The focused photo-management and recipe-marker E2E tests passed on Chromium and Fold 6 (4/4). Targeted Biome check exited successfully with `noDescendingSpecificity` warnings. Integrated-browser screenshots at 862px and 390px, plus 1280px geometry, showed no horizontal overflow; see the trace.
+- **Current step:** Shared prep-reference projection and terminal-hyphen parsing fixes are complete.
+- **Last verified result:** Focused unit tests passed (41/41); the shared public recipe E2E passed on Chromium and Fold 6 (2/2); typecheck, targeted Biome checks, and `git diff --check` passed.
 - **Next action:** No further changes requested.
 - **Checklist:** [checklist.md](./checklist.md)
-- **Execution trace:** [trace.md](./trace.md); latest section is `2026-11-20 — Responsive Rating slot`, session `b297dc24-31f2-4bce-95ff-0d908c4dd12c`; last recorded action is recording the focused Chromium and Fold 6 pass.
+- **Execution trace:** [trace.md](./trace.md); latest section is `2026-11-22 — Shared Prep reference follow-up`, session `8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36`; last recorded action is recording focused unit, browser, typecheck, and lint results.

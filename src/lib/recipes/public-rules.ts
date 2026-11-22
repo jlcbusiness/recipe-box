@@ -163,7 +163,12 @@ export function buildPublicRecipePayload(
     makes_quantity: recipe.makes_quantity,
     makes_thing: recipe.makes_thing,
     total_time_minutes: recipe.total_time_minutes,
-    prep_ahead_markdown: recipe.prep_ahead_markdown,
+    prep_ahead_markdown: remapPublicInstructionMentions(
+      recipe.prep_ahead_markdown,
+      ingredientIds,
+      missingMentionIds,
+      createDisplayId,
+    ),
     time_entries: recipe.time_entries.map(({ time_type, minutes, position }) => ({
       time_type,
       minutes,

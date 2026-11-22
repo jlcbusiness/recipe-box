@@ -376,7 +376,7 @@ export function updateInstructionMarkdownFromEditor(
     },
   );
   return markdownWithPhotos.replace(
-    /(?<![\p{L}\p{N}_#])#([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)(?![\p{L}\p{N}_-])/gu,
+    /(?<![\p{L}\p{N}_#])#([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)(?![\p{L}\p{N}_]|-[\p{L}\p{N}])/gu,
     (match, slug: string) => {
       const mention = resolveTypedIngredientMention(slug, mentionOptions);
       return mention ? ingredientMentionMarker(mention) : match;

@@ -173,6 +173,23 @@ const privateRecipe = {
 } satisfies RecipeRecord;
 
 describe('public recipe projection', () => {
+  it('remaps Pre-recipe Prep ingredient markers to public projection IDs', () => {
+    const sourceIngredientId = '11111111-1111-4111-8111-111111111111';
+    const recipe = {
+      ...privateRecipe,
+      prep_ahead_markdown: `Freeze [[ingredient:${sourceIngredientId}|lemon]] before baking.`,
+    };
+
+    const payload = buildPublicRecipePayload(recipe, []);
+    const projectedIngredientId = payload.ingredients[0]?.id;
+
+    expect(projectedIngredientId).toBeTruthy();
+    expect(payload.prep_ahead_markdown).toBe(
+      `Freeze [[ingredient:${projectedIngredientId}|lemon]] before baking.`,
+    );
+    expect(payload.prep_ahead_markdown).not.toContain(sourceIngredientId);
+  });
+
   it('remaps referenced photo IDs without exposing private asset identifiers', () => {
     const assetId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
     const displayId = '00000000-0000-4000-8000-000000000010';

@@ -120,7 +120,12 @@ async function createRecipe(
   request: import('@playwright/test').APIRequestContext,
   config: LocalSupabaseConfig,
   user: TestUser,
-  nameOrOptions: string | { name?: string; prepAheadMarkdown?: string } = 'Guest citrus cake',
+  nameOrOptions:
+    | string
+    | {
+        name?: string;
+        prepAheadMarkdown?: string | ((ingredientId: string) => string);
+      } = 'Guest citrus cake',
   publicationId?: string,
   includeCookingData = false,
   extraIngredientRows: Record<string, unknown>[] = [],
@@ -136,6 +141,15 @@ async function createRecipe(
     typeof nameOrOptions === 'string' ? '' : (nameOrOptions.prepAheadMarkdown ?? '');
   const ingredientRowId = includeCookingData ? randomUUID() : null;
   const saltRowId = includeCookingData ? randomUUID() : null;
+  let resolvedPrepAheadMarkdown = '';
+  if (typeof prepAheadMarkdown === 'string') {
+    resolvedPrepAheadMarkdown = prepAheadMarkdown;
+  } else {
+    if (!ingredientRowId) {
+      throw new Error('Pre-recipe Prep fixture requires cooking data for its ingredient mention.');
+    }
+    resolvedPrepAheadMarkdown = prepAheadMarkdown(ingredientRowId);
+  }
   const ingredientSetId = randomUUID();
   const timeTypeResponse = await request.get(
     `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id,value&category=eq.time_type`,
@@ -176,7 +190,7 @@ async function createRecipe(
         p_occasion_details: null,
         p_reason: null,
         p_serves: includeCookingData ? 4 : 8,
-        p_prep_ahead_markdown: prepAheadMarkdown,
+        p_prep_ahead_markdown: resolvedPrepAheadMarkdown,
         p_notes_markdown: 'Private note sentinel',
         p_meal_type_ids: [],
         p_cuisine_ids: [],
@@ -340,6 +354,7 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
         state: 'want_to_try',
       },
     });
+
     expect(privateByDefault.ok(), await privateByDefault.text()).toBeTruthy();
     const [privateRecipe] = (await privateByDefault.json()) as Array<{
       public_id: string;
@@ -481,6 +496,40 @@ test('public links respect privacy and lifecycle HTTP status @e2e', async ({ req
         },
       );
     }
+    await deleteTestUser(request, user);
+  }
+});
+
+test('shared recipe resolves Pre-recipe Prep ingredient references @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipe = await createRecipe(
+      request,
+      config,
+      user,
+      {
+        name: 'Shared prep reference',
+        prepAheadMarkdown: (ingredientId) =>
+          `Freeze [[ingredient:${ingredientId}|flour]] before baking.`,
+      },
+      undefined,
+      true,
+    );
+    const publicId = await getPublicId(request, config, recipe.id);
+
+    await page.goto(`/r/${publicId}`);
+    const callout = page.locator('.recipe-prep-ahead-callout');
+    const mention = callout.locator('.recipe-instruction-mention');
+    await expect(callout).toBeVisible();
+    await expect(mention).toHaveText('flour');
+    await mention.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('250 ml');
+  } finally {
     await deleteTestUser(request, user);
   }
 });
