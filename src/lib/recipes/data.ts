@@ -164,6 +164,8 @@ export type RecipeRecord = {
   score: RecipeScore | null;
   is_starred: boolean;
   is_hearted: boolean;
+  made_count: number;
+  last_made_at: string | null;
   occasion_details: string | null;
   reason: string | null;
   serves: number | null;
@@ -423,7 +425,7 @@ export async function getRecipe(
   const { data, error } = await supabase
     .from('recipes')
     .select(
-      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, prep_ahead_markdown, notes_markdown, nutrition_overrides, version, created_at, updated_at',
+      'id, public_id, is_private, name, publication_id, publication_page, recipe_url, food_type_id, state, verdict_id, enthusiasm_id, score, is_starred, is_hearted, made_count, last_made_at, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, prep_ahead_markdown, notes_markdown, nutrition_overrides, version, created_at, updated_at',
     )
     .eq('id', recipeId)
     .is('trashed_at', null)
@@ -717,7 +719,7 @@ export async function getRecipeExplorerColumnValues(
     supabase
       .from('recipes')
       .select(
-        'id, publication_id, publication_page, recipe_url, state, is_private, food_type_id, verdict_id, enthusiasm_id, score, is_starred, is_hearted, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, created_at, updated_at',
+        'id, publication_id, publication_page, recipe_url, state, is_private, food_type_id, verdict_id, enthusiasm_id, score, is_starred, is_hearted, made_count, last_made_at, occasion_details, reason, serves, makes_quantity, makes_thing, total_time_minutes, created_at, updated_at',
       )
       .in('id', recipeIds),
     supabase
@@ -907,6 +909,16 @@ export async function getRecipeExplorerColumnValues(
         score: optionalValue(recipe.score),
         starred: recipe.is_starred ? 'true' : null,
         hearted: recipe.is_hearted ? 'true' : null,
+        made_count:
+          recipe.state === 'will_not_try'
+            ? null
+            : recipe.state === 'want_to_try'
+              ? '0'
+              : optionalValue(recipe.made_count),
+        last_made_at:
+          recipe.state === 'will_not_try' || recipe.state === 'want_to_try'
+            ? null
+            : recipe.last_made_at,
         created_at: recipe.created_at,
         updated_at: recipe.updated_at,
         pairs_with: pairingsByRecipe.get(recipe.id)?.join(', ') ?? null,

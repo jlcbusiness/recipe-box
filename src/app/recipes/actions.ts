@@ -49,6 +49,17 @@ export type RecipeRatingActionState = {
   message: string;
 };
 
+export type RecipeMadeActionState =
+  | { status: 'idle'; message: '' }
+  | {
+      status: 'success';
+      message: string;
+      version: number;
+      madeCount: number;
+      lastMadeAt: string;
+    }
+  | { status: 'error'; message: string };
+
 type RecipeRelationshipsPayload = {
   site_listing: null;
   pairings: { id: string; display_text: string; linked_recipe_id: string | null }[];
@@ -802,6 +813,77 @@ export async function setRecipeRating(
   return {
     status: 'success',
     message: score === null ? 'Rating cleared.' : 'Rating saved.',
+  };
+}
+
+export async function markRecipeMade(
+  _previousState: RecipeMadeActionState,
+  formData: FormData,
+): Promise<RecipeMadeActionState> {
+  const recipeId = formText(formData, 'recipe_id');
+  const expectedVersion = Number(formText(formData, 'expected_version'));
+  const timezone = formText(formData, 'timezone');
+  if (!recipeId || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1 || !timezone) {
+    return { status: 'error', message: 'Reload this recipe before recording Made.' };
+  }
+
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+  } catch {
+    return { status: 'error', message: 'The device time zone is invalid. Reload this recipe.' };
+  }
+
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { status: 'error', message: 'Sign in before recording Made.' };
+  }
+
+  const { data, error } = await supabase.rpc('mark_recipe_made', {
+    p_recipe_id: recipeId,
+    p_expected_version: expectedVersion,
+    p_timezone: timezone,
+  });
+  if (error) {
+    if (error.code === 'PT409' || error.code === '40001') {
+      return {
+        status: 'error',
+        message: 'This recipe changed in another session. Reload before recording Made.',
+      };
+    }
+    if (error.code === 'P0002') {
+      return { status: 'error', message: 'This recipe is no longer available.' };
+    }
+    if (error.code === '22023') {
+      return {
+        status: 'error',
+        message: 'Made is unavailable while State is Will not try. Change State first.',
+      };
+    }
+    return { status: 'error', message: 'Unable to record Made. Try again.' };
+  }
+
+  const result = Array.isArray(data) ? data[0] : null;
+  if (
+    !result ||
+    typeof result.version !== 'number' ||
+    typeof result.made_count !== 'number' ||
+    typeof result.last_made_at !== 'string'
+  ) {
+    return { status: 'error', message: 'The Made result was incomplete. Reload this recipe.' };
+  }
+
+  revalidatePath('/recipes');
+  revalidatePath(`/recipes/${recipeId}`);
+  revalidatePath('/recipes/find');
+  revalidatePath('/publications');
+  revalidatePath('/publications/[id]', 'page');
+  return {
+    status: 'success',
+    message: 'Made recorded for today.',
+    version: result.version,
+    madeCount: result.made_count,
+    lastMadeAt: result.last_made_at,
   };
 }
 

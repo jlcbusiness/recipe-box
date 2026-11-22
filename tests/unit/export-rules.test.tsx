@@ -58,6 +58,8 @@ function createSnapshot() {
           score: 5,
           is_starred: true,
           is_hearted: false,
+          made_count: 7,
+          last_made_at: '2026-03-08T09:59:59.000Z',
           makes_quantity: 2,
           makes_thing: 'baby cakes',
           prep_time_minutes: 10,
@@ -82,6 +84,8 @@ function createSnapshot() {
           score: null,
           is_starred: false,
           is_hearted: true,
+          made_count: 0,
+          last_made_at: null,
           is_private: false,
           trashed_at: null,
         },
@@ -283,10 +287,10 @@ function createSnapshot() {
 }
 
 describe('export rules', () => {
-  it('exports alternative notes, protected source identity, times, and Things markers in schema version 15', () => {
+  it('exports Made values with the recipe graph in schema version 16', () => {
     const output = buildPortableData(createSnapshot(), { type: 'recipe', id: firstRecipeId });
 
-    expect(output.schema_version).toBe(15);
+    expect(output.schema_version).toBe(16);
     expect(output.records.recipe_ingredients[0]).toMatchObject({
       alternate_note: 'or half and half',
     });
@@ -299,6 +303,8 @@ describe('export rules', () => {
     expect(output.records.recipes[0]).toMatchObject({
       total_time_minutes: 40,
       prep_ahead_markdown: 'Soak overnight.',
+      made_count: 7,
+      last_made_at: '2026-03-08T09:59:59.000Z',
     });
     expect(output.records.recipes[0]).not.toHaveProperty('prep_time_minutes');
     expect(output.records.recipe_time_entries).toEqual([
@@ -450,6 +456,8 @@ describe('export rules', () => {
       score: 5,
       is_starred: true,
       is_hearted: false,
+      made_count: 7,
+      last_made_at: '2026-03-08T09:59:59.000Z',
       makes_quantity: 2,
       makes_thing: 'baby cakes',
     });
@@ -483,7 +491,7 @@ describe('export rules', () => {
       { type: 'database' },
     );
 
-    expect(output.schema_version).toBe(15);
+    expect(output.schema_version).toBe(16);
     expect(output.account_preferences).toMatchObject({
       volume_system: 'recipe',
       weight_system: 'recipe',
@@ -503,7 +511,7 @@ describe('export rules', () => {
       new Date('2026-10-15T12:00:00.000Z'),
     );
 
-    expect(manifest.schema_version).toBe(15);
+    expect(manifest.schema_version).toBe(16);
     expect(manifest.scope).toEqual({ type: 'recipe', id: firstRecipeId });
     expect(manifest.files).toEqual([
       {

@@ -7,7 +7,7 @@ authority.
 
 ## Archive layout
 
-A version 15 archive contains:
+A version 16 archive contains:
 
 ```text
 manifest.json
@@ -31,7 +31,7 @@ already the official image.
 ```json
 {
   "format": "recipe-box-bundle",
-  "schema_version": 15,
+  "schema_version": 16,
   "created_at": "2026-10-15T12:00:00.000Z",
   "app_version": "1.0.0",
   "scope": {
@@ -70,7 +70,7 @@ backslashes, and unexpected ZIP entries.
 ```json
 {
   "format": "recipe-box-data",
-  "schema_version": 15,
+  "schema_version": 16,
   "scope": {
     "type": "database"
   },
@@ -103,7 +103,7 @@ backslashes, and unexpected ZIP entries.
 ```
 
 The `records` keys and each table's fields are fixed versioned allow-lists. Each
-array contains only the normalized product fields selected for v15; future
+array contains only the normalized product fields selected for v16; future
 database columns cannot enter the bundle without a format change. Every v2
 recipe ingredient row includes `ingredient_set_id`, which references a set in
 `recipe_ingredient_sets` for the same recipe. Version 3 also includes
@@ -223,8 +223,17 @@ and duration markers are preserved; ingredient references are remapped to the
 imported recipe ingredient row IDs. The field remains
 separate from `notes_markdown` and ordered `recipe_steps`.
 
+Version 16 adds `made_count` and `last_made_at` to recipe records. For versions
+1 through 15, new imports of Tried recipes default to a Made count of one with
+an unknown last-made timestamp; other States default to zero and null.
+Same-recipe imports restore values present in the bundle, and when an older
+bundle omits the Made fields they preserve the destination's current values.
+New duplicates reset Made values to zero/null; duplicating a Tried recipe also
+resets State to Want to try and clears Tried-only conditional values, while
+other duplicate State behavior remains unchanged.
+
 An importer must validate both `schema_version` fields, require them to match,
-accept only versions 1 through 15, verify all file sizes and checksums before
+accept only versions 1 through 16, verify all file sizes and checksums before
 creating records, and reject unknown versions without partially applying the
 bundle. Slice 21 defines transaction and recovery behavior.
 

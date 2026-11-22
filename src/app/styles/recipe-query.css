@@ -12,6 +12,18 @@
     margin-top: 0;
   }
 
+  .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading
+    > .recipe-photo-gallery {
+    margin-top: 16px;
+  }
+
+  .recipe-summary-layout-with-photos.recipe-summary-layout-with-detail-heading:has(
+    .recipe-rating-action-form
+  )
+    > .recipe-photo-gallery {
+    margin-top: 0;
+  }
+
   .recipe-summary-layout-with-photos .recipe-photo-feature-image {
     max-height: 144px;
   }

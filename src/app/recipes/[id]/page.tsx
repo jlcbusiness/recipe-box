@@ -39,6 +39,7 @@ import { TagChips } from '../../tags/tag-controls';
 import { InstructionList } from '../instruction-list';
 import { PrepAheadCallout, PrepAheadTitleIndicator } from '../prep-ahead-callout';
 import { RecipeDuplicateAction } from '../recipe-duplicate-action';
+import { RecipeMadeAction } from '../recipe-made-action';
 import { RecipeMarkerActions } from '../recipe-marker-actions';
 import { RecipeOutputActions } from '../recipe-output-actions';
 import { RecipeRatingAction } from '../recipe-rating-action';
@@ -480,6 +481,14 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                     version={recipe.version}
                   />
                 )}
+                <RecipeMadeAction
+                  lastMadeAt={recipe.last_made_at}
+                  madeCount={recipe.made_count}
+                  reason={recipe.reason}
+                  recipeId={recipe.id}
+                  state={recipe.state}
+                  version={recipe.version}
+                />
                 <RecipeShareActions
                   isPrivate={recipe.is_private}
                   publicId={recipe.public_id}

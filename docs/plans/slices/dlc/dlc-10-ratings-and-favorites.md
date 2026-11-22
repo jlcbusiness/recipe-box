@@ -202,6 +202,20 @@ widths before completion.
 - Rating changes are immediate in private detail and use the exact score/label
   map from DLC 43. The signed score stays numeric in storage and all existing
   numeric surfaces. The Rating control appears after Heart and before Share.
+  For negative scores, shift the thumbs-down hand and in-palm score together
+  12px down without moving the 36px action frame or neighboring controls.
+  For the clear/unrated state, shift the thumbs-up hand and in-palm `?` down
+  1px together without moving the action frame.
+  For positive scores, shift the thumbs-up hand and in-palm score down 1px
+  together, then center the score 2px to the right within the visible palm,
+  without moving the action frame.
+- On desktop when Rating is present, center the Star and Heart icons vertically
+  on the thumbs-up palm's top/bottom midpoint. Move only the icons; preserve
+  their 36px action frames and leave mobile and no-Rating layouts unchanged.
+- Keep visible desktop gaps 16px edge-to-edge between adjacent Star, Heart,
+  Rating when present, and Made glyphs. From the Made pot outline to Share,
+  measure 16px to the Share button's outer border without resizing the action
+  frames; retain the existing mobile spacing.
 - Star and Heart detail controls and filters use shared custom marker artwork.
   On desktop, the detail toolbar places the toggles to the left of its other
   action buttons; on mobile, it uses even 4px gaps between the six first-row

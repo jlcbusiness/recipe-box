@@ -265,10 +265,12 @@ question. Its output is a decision-log entry, not shipped code.
   [Pre-Recipe Preparation Instructions](slices/dlc/dlc-48-pre-recipe-prep-instructions.md)
   adds a separate Markdown field for advance work, with safe private/public
   rendering and first-page-only paginated output.
-- **DLC 49 (draft candidate):**
+- **DLC 49 (implemented; app version 1.21.0):**
   [Made Counter and Last-Made Stamp](slices/dlc/dlc-49-made-counter.md)
-  remains proposed. Resolve its open decisions before implementation; it will
-  shift the private-detail composition established by DLC 44.
+  records the Made action and State invariants, owner backups, Find Search and
+  Query filters, hidden-by-default columns in Find and publication recipe
+  lists, output/privacy boundaries, and toolbar behavior. It shifts the
+  private-detail composition established by DLC 44.
 
 ## Completion Rule
 

@@ -256,6 +256,56 @@ describe('recipe duplicate route', () => {
     });
   });
 
+  it('resets Made and Tried-only metadata when duplicating a Tried recipe', async () => {
+    const snapshot = snapshotWithRecipe();
+    const sourceRecipe = snapshot.records.recipes?.[0];
+    if (!sourceRecipe) throw new Error('Expected the source recipe.');
+    Object.assign(sourceRecipe, {
+      state: 'tried',
+      made_count: 7,
+      last_made_at: '2026-03-08T09:59:59.000Z',
+      verdict_id: '11111111-1111-4111-8111-111111111111',
+      enthusiasm_id: '22222222-2222-4222-8222-222222222222',
+      occasion_details: 'Birthday',
+      reason: 'Too much effort',
+    });
+    snapshot.records.recipe_picklist_values = [
+      { id: '11111111-1111-4111-8111-111111111111', category: 'verdict', value: 'Favorite' },
+      {
+        id: '22222222-2222-4222-8222-222222222222',
+        category: 'enthusiasm',
+        value: 'Absolutely',
+      },
+    ];
+    const { rpc } = configure({ snapshot });
+
+    const response = await POST(request(), context());
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    const commitCall = rpc.mock.calls.find(
+      ([name]) => name === 'commit_recipe_duplicate_with_media_sources',
+    );
+    expect(commitCall).toBeDefined();
+    if (!commitCall) throw new Error('Expected the duplicate commit RPC.');
+    expect(commitCall[1]).toMatchObject({
+      p_records: {
+        recipes: [
+          expect.objectContaining({
+            state: 'want_to_try',
+            made_count: 0,
+            last_made_at: null,
+            verdict_id: null,
+            enthusiasm_id: null,
+            occasion_details: null,
+            reason: null,
+          }),
+        ],
+      },
+    });
+    expect(body.recipeId).not.toBe(sourceRecipeId);
+  });
+
   it('stages photo variants at new paths and commits their remapped metadata', async () => {
     const { download, rpc } = configure({
       snapshot: snapshotWithRecipe({ includePhoto: true }),

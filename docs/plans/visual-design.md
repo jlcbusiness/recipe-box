@@ -321,15 +321,57 @@ The Makes heading labels its value, so show only the quantity and authored thing
 in the value. The public title has no separate
 Makes heading and retains the inline label. Private recipe detail places alphabetized tag chips beneath the heading,
 with a compact action toolbar below. The toolbar orders immediate Star and
-Heart stamp toggles before share and privacy controls, **Page Settings**,
+Heart stamp toggles, the Tried-only Rating action, then the Made action before
+share and privacy controls, **Page Settings**,
 **Print & Download**, Export, Duplicate, and Edit. Page Settings uses the
 filled treatment of Print & Download; Duplicate uses the outlined treatment of
 Edit. Star and Heart are independent of State. Duplicate sits immediately
 before Edit.
+Made uses a stew-pot glyph with the exact count centered over the pot body, not
+the full glyph, in a 36px-tall action frame that widens as needed to fit every
+digit. On desktop, it follows Rating when present and precedes Share. On mobile,
+it follows Heart and precedes Rating when present; keep a 48px hit area as the
+frame widens.
+Align the visible bottom edge of the pot with the bottom edge of the Heart
+control's outer border; shift the Made visuals together without moving its
+trigger or reducing the 48px hit area.
+Use the Star/Heart outline treatment with the jaunty lid open when the recipe
+has not been marked Made that local day. After the first successful mark,
+close the lid, fill the pot brown, show the count in white for contrast, and
+disable the action for the rest of that day; automatically return it to the
+outlined, open-lid, enabled state at the next local day boundary, even if the
+detail page stays open. Keep the count visible in both available daily states.
+When State is **Will not try**, cross the pot out with a red `✘` glyph no larger
+than the pot, aligned to the full pot icon bounds with a 3px downward offset,
+and show no count or latest date/time.
+This is a state cue, not an available action; preserve the accessible
+disabled-state and Reason information, and do not rely on color alone. Do not
+clear the stored Made values; show them again if State returns to Tried.
+While State is **Want to try**, show a count of zero and no Last Made date,
+regardless of preserved values. Keep those values until the first successful
+Made tap, which changes State to Tried and resets the count to one and the
+timestamp to now. If State returns to Tried before that tap, show the
+preserved values again.
+Otherwise, show the latest date and time in the current device timezone as
+visible, unobtrusive italic text right-aligned immediately above the action
+toolbar; do not make a tooltip the only source. Reserve its space so the toolbar
+does not shift when the first mark adds the date. Place the Made action status
+message below the toolbar with the same gap as the Last Made line above it. On
+mobile, right-align it across the toolbar width and leave enough space before
+the recipe photos to prevent overlap.
+Keep Made unavailable while State is Will not try and expose that restriction
+to assistive technology.
+Changing State to Tried in the editor initializes a zero Made count to one;
+it does not increment a positive count. Existing Tried recipes always show a
+count of at least one. When an older recipe has no recoverable last-made date,
+show that the date is unknown rather than implying it was never made.
 At desktop widths, keep the title alongside the action toolbar only when the
 title can retain at least as much width as the toolbar; otherwise wrap the
-toolbar below the title. Keep the visual gap between Star and Heart equal to the
-gap between Heart and the Share button.
+toolbar below the title. Keep visible gaps 16px edge-to-edge between adjacent
+Star, Heart, optional Rating, and Made glyphs. From Made to Share, measure
+16px from the pot outline to the Share button's outer border. Preserve the
+existing control frames, including Made's ability to widen for a multi-digit
+count, and retain the existing mobile spacing.
 The custom stamp itself is the immediate, keyboard-operable toggle. On desktop,
 keep it visually unraised: its off state is a clearly discernible muted outline,
 and its on state uses its warm-gold or rose fill inside the outline without a
@@ -344,10 +386,9 @@ shown on public recipe pages.
 Keep the desktop actions compact rather than pushing them to the far edge. On
 mobile, use even 4px gaps between the six first-row actions and keep Can Link
 60px wide, with equal spacing around its label and switch. Put Page Settings
-in the former Duplicate slot before Edit, and put Duplicate in the former Page
-Settings slot immediately to the right of Heart on the second row. Swap their
-filled and outlined treatments along with their positions. Retain the toolbar
-when the recipe has no tags.
+before Edit in the first row. On the second row, order the controls Star, Heart,
+Made when available, then Rating when available. Keep Duplicate in the far-right
+column, aligned with Edit. Retain the toolbar when the recipe has no tags.
 The Duplicate dialog gives Name and Publication bold labels above full-width
 controls, each within its own bordered field area with clear spacing.
 Give the line vertical margins matching the action spacing. Show marker error
@@ -996,9 +1037,11 @@ without selecting. Tab accepts an active option before advancing. Enter in an
 amount or Specifics input commits the row when no suggestion is open.
 Non-submit Enter does not submit the recipe form. The visible Save recipe
 button keeps its current redirect; `Ctrl+S` (`Cmd+S` on macOS) saves and stays
-in the editor. Neither path introduces autosave. Committing focuses the trailing Add ingredient row cell on desktop and
-submits the row popover on mobile. Escape closes a listbox or cancels the active
-edit/popover.
+in the editor. Neither path introduces autosave. Show the successful-save
+status in the gap between the edit heading and first form section without
+changing the form's vertical layout. Committing focuses the trailing Add
+ingredient row cell on desktop and submits the row popover on mobile. Escape
+closes a listbox or cancels the active edit/popover.
 
 Divide is edited in its own cell, independently from Preparation. Its
 first-portion input is always visible: blank means not divided, entering an
@@ -1811,6 +1854,27 @@ per-serving estimate; a nutrient becomes a sort choice when its column is
 visible. Optional vitamins and minerals are excluded. The fifteen values are
 optional List columns, hidden by default.
 
+Find Search and Query also offer **Made** as a numeric field and **Last Made**
+as a date field. Made supports numeric comparisons; Last Made supports
+explicit-date comparisons and empty/not-empty checks. The values are structured
+filters, not free-text search terms. Add Made and Last Made as optional,
+filterable columns in Find and each publication recipe list, hidden by default.
+Use numeric operators for the Made column and date operators for Last Made
+rather than faceting every distinct timestamp. Last Made uses an explicit
+cutoff date; rolling relative windows are deferred. When an applied Query
+matches either field, Find Details auto-selects the corresponding column under
+the existing behavior unless the user opts out. Before then, both columns
+remain hidden. While State is **Will not try**, treat Made as absent (blank
+column and no numeric-filter matches) and Last Made as empty in detail, Find,
+and publication lists, without clearing stored values. Sort both as absent
+too. If State returns to Tried, show the preserved values. While State is
+**Want to try**, Made is zero and Last Made is empty in filters and sorting,
+even when prior values remain stored. The first successful Made tap resets
+them to one and now; returning to Tried before that tap restores prior values.
+For Tried recipes, show the local date only in the Last Made column; keep the
+local date and time visible on private detail.
+Publication-list filters remain scoped to their publication.
+
 In Details, applying Query automatically shows matching List columns when
 available, unless the user checks **Don't auto-select columns** for that
 application. List and Grid do not auto-select columns and do not show the
@@ -1826,11 +1890,23 @@ On desktop, when Rating is shown, the private recipe-detail toolbar places Star
 and Heart before Rating, with Rating immediately before Share. When it is
 absent, do not reserve its slot; shift Star and Heart right into the freed
 space. The remaining actions are privacy, settings, print, export, duplicate,
-and edit. Rating uses a 36px
+and edit. When Rating is shown on desktop, center the Star and Heart icons
+vertically on the midpoint between the thumbs-up palm's top and bottom lines.
+Move only their icons; keep their 36px button frames aligned with the toolbar.
+Leave the marker alignment unchanged when Rating is absent or on mobile.
+Rating uses a 36px
 vector-hand glyph in its matching action frame, not an emoji glyph; match the
 Export glyph's line weight and center the complete signed value, including its
 minus sign, in the palm. Zero uses the filled palm-down hand; the unrated
 recipe action uses an unfilled yellow thumbs-up with `?` centered in the palm.
+For the clear state, move the thumbs-up hand and `?` down 1px together without
+moving the action frame.
+For negative scores, move the thumbs-down hand and signed score together 12px
+down within the unchanged action frame. For positive scores, move the
+thumbs-up hand and in-palm score together 1px down; center the score 2px to
+the right within the visible palm, without moving the action frame.
+At mobile widths, move the complete Rating hand and in-palm mark 1px farther
+down together, leaving the 36px trigger fixed.
 Keep the picker's Clear action text-only and reduce its horizontal padding to
 5px per side. The glyph is supplementary. The picker offers the DLC 43
 score/label pairs from 5 at the top to -5 at the bottom, with a separate Clear
@@ -1839,12 +1915,20 @@ Page Settings uses the filled treatment of Print & Download; Duplicate uses
 the outlined treatment of Edit. Duplicate sits immediately before Edit. On
 mobile, use even 4px gaps between the six first-row actions, keep Can Link at a
 compact 60px width with equal spacing around its label and switch, and put
-Page Settings before Edit in the first row. When Rating is shown, put Star,
-Heart, and Rating in that order on the second row, with Duplicate immediately
-to the right of Rating. When Rating is absent, shift Star and Heart right into
-its freed slot and keep Duplicate immediately to the right of Heart, swapping
-the mobile action positions and treatments. Vertically center Rating with the
-marker buttons in the second row. Right-align Rating feedback 4px
+Page Settings before Edit in the first row. Put Star, Heart, Made when
+available, and optional Rating in that order on the second row. Keep Duplicate
+in the far-right column, aligned with Edit. Vertically center Rating with the
+marker buttons in the second row. Center the complete Rating hand-and-palm
+artwork horizontally on the Print & Download button above it; move only the
+artwork, leaving its 36px trigger and enlarged mobile hit area fixed.
+When Rating is present, keep the visible gaps from the Heart control's outer
+edge to the Made pot and from the pot to Rating artwork equal within 1px; move
+only the Made glyph, leaving its trigger and 48px hit area fixed.
+At mobile widths, keep the visible bottom edge of the Made pot aligned with
+the bottom edge of the Heart control's outer border.
+Move the complete Rating hand and in-palm mark 1px farther down at mobile
+widths, without moving its trigger.
+Right-align Rating feedback 4px
 beneath the action controls in the shared action-feedback region without
 shifting page content. Dismiss success feedback after five seconds; keep
 pending feedback visible while saving and errors visible until the next action.

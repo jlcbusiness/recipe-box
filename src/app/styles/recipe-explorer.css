@@ -803,6 +803,60 @@
   gap: 6px;
 }
 
+.recipe-column-filter-comparison {
+  display: grid;
+  gap: 8px;
+  padding-block: 2px;
+}
+
+.recipe-column-filter-comparison-operator {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  justify-content: space-between;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 6px 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.recipe-column-filter-comparison-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recipe-column-filter-comparison-values label {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.recipe-column-filter-comparison-values input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 7px 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.recipe-column-filter-comparison-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .recipe-column-filter-actions {
   display: flex;
   align-items: center;
@@ -882,6 +936,11 @@
   border: 1px solid var(--line);
   background: var(--tin-wash);
   text-align: center;
+}
+
+.recipe-column-filter-apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .publication-column-filter {
@@ -1190,6 +1249,7 @@
 }
 
 .recipe-form {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 22px;

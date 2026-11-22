@@ -199,7 +199,14 @@ one immediate owner-scoped hand control to the left of Star; it replaces the
 separate on-screen Rating value, supports a distinct Clear action, and
 preserves numeric scores in storage and other numeric surfaces. Use vector
 hand gestures rather than emoji glyphs, with the signed number in the palm and
-contrast-safe positive, negative, and neutral line colors.
+contrast-safe positive, negative, and neutral line colors. Shift the negative
+thumb hand and signed score down 12px together without moving its action frame.
+Shift the clear-state thumbs-up and `?` down 1px together, preserving its
+action frame.
+Shift the positive thumbs-up and in-palm score down 1px together, preserving
+its action frame. Center the score 2px to the right within the visible palm.
+On desktop, center the Star and Heart icons on the thumbs-up palm's vertical
+midpoint when Rating is present, without moving their action frames.
 
 Direct labels make the scale understandable at the point of choice, while a
 single immediate detail control avoids duplicate display and conflicting
@@ -228,6 +235,65 @@ explicitly selected context. This private-detail posture is interim: DLC 49
 will shift the detail experience by adding the Made control, count, and
 last-made information, and will revisit the detail composition without
 changing DLC 44's metadata visibility rules.
+
+## DLC 49 Made counter
+
+The user selected the invoking device's IANA timezone for the once-per-local-
+day rule; the server supplies the timestamp, and no account timezone setting is
+added. A successful Made action changes Want to try to Tried using the existing
+conditional-value clearing rules. The user chose to disable Made while State
+is Will not try, avoiding an implicit loss of Reason. The count and timestamp
+are included in all owner backup scopes; new copies start at zero, while
+restoring the same bundled recipe preserves them. Each successful mark is one
+normal recipe history event, not a separate cooking-log entry.
+
+On private detail, use a stew-pot glyph with the count centered in a 36px-tall
+frame that widens to fit every digit, after Rating and before Share. Keep the
+latest local date/time right-aligned immediately above the action toolbar,
+except while State is Will not try, and preserve the 48px mobile hit area.
+Reserve its space so the toolbar does not shift when the date first appears;
+render the Last Made text in italics and place Made status feedback below the
+toolbar with the same gap as the Last Made line above.
+Show the pot outlined with its count before the day's mark and filled with color
+after the first successful mark; disable it for the remainder of that local
+day, then automatically restore the outlined, enabled state at the next local
+day boundary even when the detail page stays open. Same-day retries preserve
+the first mark's timestamp and do not increment the count again.
+For State **Will not try**, cross the pot out with a red `✘` glyph no larger
+than the pot, aligned to the full pot icon bounds with a 3px downward offset.
+Hide the count and timestamp from private detail, Find, Query, and list columns.
+Treat Made as absent for numeric
+filters and Last Made as empty; keep the stored values unchanged so they
+reappear if State returns to Tried. Sort both fields as absent too, never by
+stored values. The action stays disabled, and its state and Reason remain
+accessible without relying on color alone.
+Interpret explicit Last Made date comparisons in Find Search, Query, and list
+columns in the current device's timezone, matching the local date shown in the
+column.
+The user confirmed that private Print and standalone/download output do not
+include Made, and public outputs remain unchanged. The Made count and Last
+Made date are now also in the private Find scope described below.
+For State **Want to try**, show Made as zero and Last Made as empty while
+preserving previous values internally. The first successful Made tap changes
+State to Tried and resets Made to one with the current timestamp, even if the
+preserved timestamp is from today. Returning to Tried before that tap restores
+previous values; if none existed, the existing Tried initializer supplies one
+and the server time.
+The user approved the expanded contract on 2026-11-20; it was implemented in
+app version 1.21.0. The scope includes Made count and Last Made in Find Search and
+Query, plus optional filterable columns hidden by default in Find and
+publication-specific recipe lists. Count filters use numeric operators; Last
+Made filters use explicit-date operators, including on the column, rather than
+rolling windows or distinct timestamp facets. Changing State to Tried
+initializes Made to one when the count is zero. Duplicates of Tried recipes
+reset State to Want to try; other duplicate State behavior remains unchanged.
+The Last Made column shows the local date only; private detail retains the
+date and time. Legacy Tried recipes have count one; use a recoverable history
+transition timestamp when available and otherwise preserve the date as
+unknown. Versions 1–15 import Tried recipes with count one and unknown date.
+The user also approved a private helper for deterministic daily-limit tests:
+SQL tests supply fixed instants, while the owner-facing RPC accepts no
+timestamp and uses database time.
 
 ## November 2026 small adjustments
 

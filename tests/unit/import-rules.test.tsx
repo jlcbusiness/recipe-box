@@ -38,7 +38,7 @@ function createMemoryArchiveSource(archive: Buffer): ImportArchiveSource {
 function createBundleEntries(options: {
   scope?: ExportScope;
   manifestScope?: ExportScope;
-  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+  schemaVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
   recipe?: Record<string, unknown>;
   publication?: Record<string, unknown>;
   accountPreferences?: Record<string, unknown>;
@@ -84,6 +84,15 @@ function createBundleEntries(options: {
                     : {}),
                   ...(schemaVersion >= 8 ? { makes_quantity: null, makes_thing: null } : {}),
                   ...(schemaVersion >= 9 ? { nutrition_overrides: {} } : {}),
+                  ...(schemaVersion >= 11 ? { total_time_minutes: 0 } : {}),
+                  ...(schemaVersion >= 12 ? { saved_from_public_id: null } : {}),
+                  ...(schemaVersion >= 15 ? { prep_ahead_markdown: '' } : {}),
+                  ...(schemaVersion >= 16
+                    ? {
+                        made_count: options.recipe?.state === 'tried' ? 1 : 0,
+                        last_made_at: null,
+                      }
+                    : {}),
                   ...options.recipe,
                 },
               ]
@@ -273,6 +282,8 @@ describe('import bundle validation', () => {
       score: null,
       is_starred: false,
       is_hearted: false,
+      made_count: 1,
+      last_made_at: null,
     });
     expect(result.data.account_preferences.recipe_column_order).toEqual([
       'name',
@@ -326,6 +337,59 @@ describe('import bundle validation', () => {
       },
     });
     expect(() => validateImportBundleFiles(invalid)).toThrow(/score or marker/i);
+  });
+
+  it('defaults pre-version-16 Made values by recipe state and validates version-16 values', () => {
+    const oldTried = validateImportBundleFiles(
+      createBundleEntries({
+        schemaVersion: 15,
+        recipe: { id: recipeId, name: 'Lemon cake', state: 'tried' },
+      }),
+    );
+    expect(oldTried.data.records.recipes[0]).toMatchObject({
+      made_count: 1,
+      last_made_at: null,
+    });
+
+    const oldWantToTry = validateImportBundleFiles(
+      createBundleEntries({
+        schemaVersion: 15,
+        recipe: { id: recipeId, name: 'Lemon cake', state: 'want_to_try' },
+      }),
+    );
+    expect(oldWantToTry.data.records.recipes[0]).toMatchObject({
+      made_count: 0,
+      last_made_at: null,
+    });
+
+    const current = validateImportBundleFiles(
+      createBundleEntries({
+        schemaVersion: 16,
+        recipe: {
+          id: recipeId,
+          name: 'Lemon cake',
+          state: 'tried',
+          made_count: 4,
+          last_made_at: '2026-03-08T09:59:59.000Z',
+        },
+      }),
+    );
+    expect(current.data.records.recipes[0]).toMatchObject({
+      made_count: 4,
+      last_made_at: '2026-03-08T09:59:59.000Z',
+    });
+
+    const zeroWithTimestamp = createBundleEntries({
+      schemaVersion: 16,
+      recipe: {
+        id: recipeId,
+        name: 'Lemon cake',
+        state: 'want_to_try',
+        made_count: 0,
+        last_made_at: '2026-03-08T09:59:59.000Z',
+      },
+    });
+    expect(() => validateImportBundleFiles(zeroWithTimestamp)).toThrow(/Made/i);
   });
 
   it('accepts and validates instruction emphasis preferences in database bundles', () => {
@@ -527,6 +591,8 @@ describe('import bundle validation', () => {
         score: null,
         is_starred: false,
         is_hearted: false,
+        made_count: 0,
+        last_made_at: null,
         makes_quantity: null,
         makes_thing: null,
         nutrition_overrides: {},
@@ -1160,7 +1226,7 @@ describe('import bundle validation', () => {
 
     const bundle = validateImportBundleFiles(entries);
     const recipe = bundle.data.records.recipes[0];
-    expect(bundle.data.schema_version).toBe(15);
+    expect(bundle.data.schema_version).toBe(16);
     expect(recipe).not.toHaveProperty('prep_time_minutes');
     expect(recipe.total_time_minutes).toBe(40);
     expect(recipe.prep_ahead_markdown).toBe('');

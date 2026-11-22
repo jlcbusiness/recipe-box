@@ -14,7 +14,11 @@ import {
 } from 'react';
 
 export type ActionFeedbackKind = 'working' | 'success' | 'cancelled' | 'error';
-export type ActionFeedbackSource = 'recipe-export' | 'recipe-output' | 'recipe-rating';
+export type ActionFeedbackSource =
+  | 'recipe-export'
+  | 'recipe-output'
+  | 'recipe-rating'
+  | 'recipe-made';
 
 type ActionFeedbackProps = {
   action?: ReactNode;
@@ -51,7 +55,12 @@ type FeedbackEntry = {
 
 type FeedbackEntries = Partial<Record<ActionFeedbackSource, FeedbackEntry>>;
 
-const feedbackSources: ActionFeedbackSource[] = ['recipe-output', 'recipe-export', 'recipe-rating'];
+const feedbackSources: ActionFeedbackSource[] = [
+  'recipe-output',
+  'recipe-export',
+  'recipe-rating',
+  'recipe-made',
+];
 const feedbackAutoDismissDelay = 5_000;
 const RecipeActionFeedbackContext = createContext<RecipeActionFeedbackContextValue | null>(null);
 
@@ -93,6 +102,7 @@ export function RecipeActionFeedbackProvider({ children }: { children: ReactNode
       'recipe-export': `recipe-action-feedback-${generatedId}-export`,
       'recipe-output': `recipe-action-feedback-${generatedId}-output`,
       'recipe-rating': `recipe-action-feedback-${generatedId}-rating`,
+      'recipe-made': `recipe-action-feedback-${generatedId}-made`,
     }),
     [generatedId],
   );
@@ -191,6 +201,25 @@ export function RecipeActionFeedbackProvider({ children }: { children: ReactNode
     }, feedbackAutoDismissDelay);
     return () => window.clearTimeout(timeout);
   }, [ratingEntry?.dismissed, ratingNotice]);
+
+  const madeEntry = feedbackEntries['recipe-made'];
+  const madeNotice = madeEntry?.notice;
+  useEffect(() => {
+    if (!madeNotice?.autoDismiss || madeEntry?.dismissed || madeNotice.kind !== 'success') {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setFeedbackEntries((current) => {
+        const currentEntry = current['recipe-made'];
+        if (!currentEntry || currentEntry.notice !== madeNotice) return current;
+        return {
+          ...current,
+          'recipe-made': { ...currentEntry, dismissed: true },
+        };
+      });
+    }, feedbackAutoDismissDelay);
+    return () => window.clearTimeout(timeout);
+  }, [madeEntry?.dismissed, madeNotice]);
 
   const visibleEntries = feedbackSources.flatMap((source) => {
     const entry = feedbackEntries[source];

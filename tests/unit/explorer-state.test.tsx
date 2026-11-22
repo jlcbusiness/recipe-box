@@ -75,6 +75,12 @@ describe('explorer state contract', () => {
     );
     expect(recipeFindColumns.find(({ key }) => key === 'publication')?.defaultVisible).toBe(false);
     expect(defaultRecipeFindColumns.find(({ key }) => key === 'makes')?.defaultVisible).toBe(false);
+    expect(defaultRecipeFindColumns.find(({ key }) => key === 'made_count')?.defaultVisible).toBe(
+      false,
+    );
+    expect(defaultRecipeFindColumns.find(({ key }) => key === 'last_made_at')?.defaultVisible).toBe(
+      false,
+    );
     expect(publicationRecipeColumns.find(({ key }) => key === 'publication')).toBeUndefined();
     expect(
       defaultExplorerDisplayPreferences('recipes-find', recipeFindColumns).visible_columns,
@@ -130,6 +136,8 @@ describe('explorer state contract', () => {
         'created_at',
         'updated_at',
         'pairs_with',
+        'made_count',
+        'last_made_at',
       ]),
     );
     expect(recipeColumns).not.toEqual(
@@ -159,10 +167,12 @@ describe('explorer state contract', () => {
           { field: 'main_ingredient', operator: 'contains_any', value: ['ingredient-id'] },
           { field: 'ingredient', operator: 'contains_any', value: ['ingredient-id'] },
           { field: 'notes_markdown', operator: 'contains', value: 'garlic' },
+          { field: 'made_count', operator: 'greater_than', value: 2 },
+          { field: 'last_made_at', operator: 'equals', value: '2026-11-20' },
         ],
         columns,
       ),
-    ).toEqual(['calories', 'publication', 'main_ingredients']);
+    ).toEqual(['calories', 'publication', 'main_ingredients', 'made_count', 'last_made_at']);
   });
 
   it('accepts supported recipe explorer state and excludes transient search and pagination', () => {

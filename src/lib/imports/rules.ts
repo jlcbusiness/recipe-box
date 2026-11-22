@@ -458,7 +458,8 @@ function validateData(
               !(schemaVersion < 8 && ['makes_quantity', 'makes_thing'].includes(field)) &&
               !(schemaVersion < 9 && field === 'nutrition_overrides') &&
               !(schemaVersion < 12 && field === 'saved_from_public_id') &&
-              !(schemaVersion < 15 && field === 'prep_ahead_markdown'),
+              !(schemaVersion < 15 && field === 'prep_ahead_markdown') &&
+              !(schemaVersion < 16 && ['made_count', 'last_made_at'].includes(field)),
           )
         : table === 'recipe_ingredients'
           ? portableRecordFields[table].filter(
@@ -567,6 +568,38 @@ function validateData(
         (recipe.score !== null && recipe.state !== 'tried')
       ) {
         throw new Error('The bundle contains invalid recipe score or marker data.');
+      }
+    }
+  }
+
+  if (schemaVersion < 16) {
+    records.recipes = (records.recipes as ExportRecord[]).map((recipe) => ({
+      ...recipe,
+      made_count: recipe.state === 'tried' ? 1 : 0,
+      last_made_at: null,
+    }));
+  } else {
+    const isoTimestampPattern =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i;
+    for (const recipe of recipes) {
+      const madeCount = recipe.made_count;
+      const lastMadeAt = recipe.last_made_at;
+      const validLastMadeAt =
+        lastMadeAt === null ||
+        (typeof lastMadeAt === 'string' &&
+          isoTimestampPattern.test(lastMadeAt) &&
+          Number.isFinite(Date.parse(lastMadeAt)));
+      if (
+        !Object.hasOwn(recipe, 'made_count') ||
+        !Object.hasOwn(recipe, 'last_made_at') ||
+        typeof madeCount !== 'number' ||
+        !Number.isSafeInteger(madeCount) ||
+        madeCount < 0 ||
+        !validLastMadeAt ||
+        (madeCount === 0 && lastMadeAt !== null) ||
+        (recipe.state === 'tried' && madeCount < 1)
+      ) {
+        throw new Error('The bundle contains invalid recipe Made data.');
       }
     }
   }

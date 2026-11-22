@@ -17,8 +17,10 @@ import {
 } from '../../../lib/recipes/data';
 import {
   getRecipeSearchColumnFacetValues,
+  getRecipeSearchComparisonColumn,
   getRecipeSearchFacetValues,
   getRecipeSearchSortOptions,
+  isRecipeSearchComparisonFilter,
   isRecipeSearchGenericColumnKey,
   parseRecipeSearchColumnFilters,
   parseRecipeSearchFilters,
@@ -35,6 +37,7 @@ import {
   ExplorerListPreferences,
 } from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
+import { LocalDate } from '../../local-date';
 import { FramedMediaImage } from '../../media/framed-media-image';
 import { RecipeListScroll } from '../../recipe-list-scroll';
 import { AlternatingRecipeGrid } from '../../recipes/find/alternating-recipe-grid';
@@ -265,6 +268,8 @@ export async function PublicationRecipeExplorer({
       { value: 'private', label: 'Private' },
       { value: 'linkable', label: 'Linkable' },
     ],
+    made_count: [],
+    last_made_at: [],
   };
   const mobileColumnFacets =
     view === 'details' && visibleMobileColumnFacetKeys.length > 0
@@ -278,37 +283,54 @@ export async function PublicationRecipeExplorer({
       : {};
 
   const countLabel = `${matchingCount} ${matchingCount === 1 ? 'recipe' : 'recipes'} found`;
-  const columnFilter = (field: keyof typeof columnFacetOptions) => (
-    <RecipeColumnFilter
-      action={path}
-      baseFilters={filters}
-      baseQuery=""
-      columnSelections={columnSelections}
-      direction={sortDirection}
-      field={field}
-      options={columnFacetOptions[field]}
-      selectedValues={columnSelections[field]}
-      sort={sortKey}
-      view={view}
-    />
-  );
+  const columnFilter = (field: keyof typeof columnFacetOptions) => {
+    const comparisonColumn = getRecipeSearchComparisonColumn(field);
+    return (
+      <RecipeColumnFilter
+        action={path}
+        baseFilters={filters.filter((filter) => filter.field !== comparisonColumn?.filterField)}
+        baseQuery=""
+        columnSelections={columnSelections}
+        comparisonFilter={
+          comparisonColumn
+            ? filters.find((filter) => filter.field === comparisonColumn.filterField)
+            : undefined
+        }
+        comparisonKind={comparisonColumn?.kind}
+        direction={sortDirection}
+        field={field}
+        options={columnFacetOptions[field]}
+        selectedValues={columnSelections[field]}
+        sort={sortKey}
+        view={view}
+      />
+    );
+  };
   const isFilterColumn = (key: string): key is keyof typeof columnFacetOptions =>
     key in columnFacetOptions;
   const mobileColumnFilterFields = recipeColumns.map(({ key, label }) => ({
     field: key as RecipeSearchColumnKey,
     label,
+    comparisonKind: getRecipeSearchComparisonColumn(key)?.kind,
+    comparisonFilter: filters.find(
+      (filter) => filter.field === getRecipeSearchComparisonColumn(key)?.filterField,
+    ),
     options:
       (isFilterColumn(key) ? columnFacetOptions[key] : undefined) ??
       mobileColumnFacets[key as RecipeSearchColumnKey] ??
       [],
   }));
   const mobileClearParams = [
-    ...filters.map((filter) => ({ name: 'filter', value: JSON.stringify(filter) })),
+    ...filters
+      .filter((filter) => !isRecipeSearchComparisonFilter(filter))
+      .map((filter) => ({ name: 'filter', value: JSON.stringify(filter) })),
     { name: 'sort', value: sortKey },
     { name: 'direction', value: sortDirection },
     { name: 'view', value: view },
   ];
-  const hasColumnFilters = Object.values(columnSelections).some((values) => values !== undefined);
+  const hasColumnFilters =
+    Object.values(columnSelections).some((values) => values !== undefined) ||
+    filters.some(isRecipeSearchComparisonFilter);
   const resultsHref = (nextPage: number) =>
     searchHref({
       path,
@@ -476,6 +498,8 @@ export async function PublicationRecipeExplorer({
                                   marker={key === 'starred' ? 'star' : 'heart'}
                                 />
                               ) : null
+                            ) : key === 'last_made_at' && value !== null ? (
+                              <LocalDate value={value} />
                             ) : key === 'score' && value !== null ? (
                               <span
                                 className={Number(value) < 0 ? 'recipe-score-negative' : undefined}

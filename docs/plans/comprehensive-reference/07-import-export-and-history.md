@@ -9,13 +9,14 @@
 ### 11.1 ZIP Bundle Formats
 
 Export is built for disaster recovery and migration. The app's ZIP export is the
-user-facing backup mechanism; Supabase backups are not used. Version 12 archives
+user-facing backup mechanism; Supabase backups are not used. Version 16 archives
 contain:
 
 - `manifest.json`: Format and schema versions, UTC creation time, scope, app
   version, and each payload file's uncompressed byte count and SHA-256 digest.
 - `data.json`: Normalized relational JSON using fixed record-table and
-  per-table field allow-lists, including ingredient sets and each row's set
+  per-table field allow-lists, including Made count and last-made timestamp,
+  ingredient sets and each row's set
   membership, portion ratio, Size value/unit, mention ordinal, protected
   source-reference identity, ordered time entries, and the optional
   `saved_from_public_id` direct-save marker. Account
@@ -53,7 +54,7 @@ contract and compatibility rules are defined in
 
 ### 11.3 Import Conflict Resolution
 
-Imports accept supported v1 through v12 bundles only after validating archive
+Imports accept supported v1 through v16 bundles only after validating archive
 integrity, scope, and required graph data. Versions 1 through 3 default media
 framing to null (Fit/contain); version 4 preserves each media asset's nullable
 normalized crop rectangle at 0-degree rotation, and version 5 preserves its
@@ -67,7 +68,13 @@ Version 9 adds nutrition profiles, measure equivalents, and recipe/ingredient
 nutrition overrides; version 10 adds protected public-source identity to
 references; version 11 adds ordered recipe time entries; and version 12 adds
 the `saved_from_public_id` direct-save marker. Versions 1 through 11 default
-that marker to null.
+that marker to null. Version 13 adds `amount_is_a`; version 14 adds
+`alternate_note`; version 15 adds `prep_ahead_markdown`; and version 16 adds
+`made_count` and `last_made_at`. For versions 1 through 15, new imports of
+Tried recipes default to a Made count of one with an unknown last-made
+timestamp; other States default to zero and null. Same-recipe imports restore
+values present in the bundle, and when an older bundle omits the Made fields
+they preserve the destination's current values.
 Version 1 recipes receive a synthesized `Main` set and their ingredient rows
 are assigned to it. Version 2
 preserves the included set records and row membership. Versions 1 and 2 default
@@ -81,7 +88,10 @@ Version 12 validates a non-null direct-save marker against the recipe's
 protected source attribution. Faithful imports preserve it only when no other
 active recipe in the destination account already has that marker; a collision
 is rejected. Choosing Duplicate for an import conflict clears the marker while
-preserving protected source attribution.
+preserving protected source attribution. New duplicates start with Made count
+zero and no last-made timestamp. A duplicate of a Tried recipe resets State to
+Want to try and clears Tried-only conditional values; other duplicate State
+behavior remains unchanged.
 
 Publication roots match by normalized publication type and name. Database and
 publication imports match recipe roots by normalized name within the resolved
@@ -181,6 +191,8 @@ database as part of local testing.
 History events are recorded on save (never on individual keystrokes):
 
 - Recipe / Publication creation
+- Successful Made actions, together with the count, timestamp, and any State
+  transition; same-day no-ops create no event
 - Metadata edits (field-level before/after diffs)
 - Tag assignment changes, including tag IDs, names, and color keys in
   before/after recipe and publication snapshots

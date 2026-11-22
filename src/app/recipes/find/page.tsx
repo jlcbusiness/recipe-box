@@ -23,8 +23,10 @@ import {
 } from '../../../lib/recipes/data';
 import {
   getRecipeSearchColumnFacetValues,
+  getRecipeSearchComparisonColumn,
   getRecipeSearchFacetValues,
   getRecipeSearchSortOptions,
+  isRecipeSearchComparisonFilter,
   isRecipeSearchGenericColumnKey,
   mainIngredientTextFilters,
   parseRecipeSearchColumnFilters,
@@ -42,6 +44,7 @@ import {
   ExplorerListPreferences,
 } from '../../explorer-list-preferences';
 import { ExplorerStatePersistence } from '../../explorer-state-persistence';
+import { LocalDate } from '../../local-date';
 import { FramedMediaImage } from '../../media/framed-media-image';
 import { RecipeListScroll } from '../../recipe-list-scroll';
 import { RecipeMarkerFilters } from '../recipe-marker-filters';
@@ -213,11 +216,19 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     };
   };
   const filters = [
-    ...(searchMode === 'query' ? parsedFilters.filter((filter) => !isMarkerFilter(filter)) : []),
+    ...(searchMode === 'query'
+      ? parsedFilters.filter(
+          (filter) => !isMarkerFilter(filter) && !isRecipeSearchComparisonFilter(filter),
+        )
+      : []),
     ...parsedFilters.filter(isMarkerFilter),
+    ...parsedFilters.filter(isRecipeSearchComparisonFilter),
   ].map(normalizeTinFilter);
   const markerFilters = filters.filter(isMarkerFilter);
-  const builderFilters = searchMode === 'query' ? filters : [];
+  const builderFilters =
+    searchMode === 'query'
+      ? filters.filter((filter) => !isRecipeSearchComparisonFilter(filter))
+      : [];
   const querySubmitted = firstValue(params.query_submitted) === '1' || builderFilters.length > 0;
   const columnSelections = {
     ...parsedColumnFilters.selections,
@@ -503,6 +514,8 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
     publication_page: pageFacets,
     recipe_url: urlFacets,
     citation: citationFacets,
+    made_count: [],
+    last_made_at: [],
   };
   const mobileColumnFilterOptions = {
     ...columnFilterOptions,
@@ -517,29 +530,42 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
   const mobileColumnFilterFields = recipeColumns.map(({ key, label }) => ({
     field: key as RecipeColumnFilterKey,
     label,
+    comparisonKind: getRecipeSearchComparisonColumn(key)?.kind,
+    comparisonFilter: filters.find(
+      (filter) => filter.field === getRecipeSearchComparisonColumn(key)?.filterField,
+    ),
     options:
       (isMobileFilterColumn(key) ? mobileColumnFilterOptions[key] : undefined) ??
       mobileColumnFacets[key as RecipeSearchColumnKey] ??
       [],
   }));
   const hasActiveFilters = Boolean(mainIngredientsOnly || combinedFilters.length > 0);
-  const columnFilter = (field: keyof typeof columnFilterOptions, compact = false) => (
-    <RecipeColumnFilter
-      action="/recipes/find"
-      baseFilters={filters}
-      baseQuery={query}
-      columnSelections={columnSelections}
-      compact={compact}
-      direction={sortDirection}
-      field={field}
-      mainIngredientsOnly={mainIngredientsOnly}
-      options={columnFilterOptions[field]}
-      querySubmitted={querySubmitted}
-      selectedValues={columnSelections[field]}
-      sort={sortKey}
-      view={view}
-    />
-  );
+  const columnFilter = (field: keyof typeof columnFilterOptions, compact = false) => {
+    const comparisonColumn = getRecipeSearchComparisonColumn(field);
+    return (
+      <RecipeColumnFilter
+        action="/recipes/find"
+        baseFilters={filters.filter((filter) => filter.field !== comparisonColumn?.filterField)}
+        baseQuery={query}
+        columnSelections={columnSelections}
+        compact={compact}
+        comparisonFilter={
+          comparisonColumn
+            ? filters.find((filter) => filter.field === comparisonColumn.filterField)
+            : undefined
+        }
+        comparisonKind={comparisonColumn?.kind}
+        direction={sortDirection}
+        field={field}
+        mainIngredientsOnly={mainIngredientsOnly}
+        options={columnFilterOptions[field]}
+        querySubmitted={querySubmitted}
+        selectedValues={columnSelections[field]}
+        sort={sortKey}
+        view={view}
+      />
+    );
+  };
   const serializedColumns = Object.entries(columnSelections).flatMap(([key, values]) => {
     if (values === undefined) return [];
     const name = `column_${key}`;
@@ -712,6 +738,7 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                 clearAction={
                   hasActiveFilters ? (
                     <RecipeSearchClearFilters
+                      key="mobile-clear-filters"
                       direction={sortDirection}
                       path="/recipes/find"
                       querySubmitted={querySubmitted}
@@ -907,6 +934,8 @@ export default async function FindRecipesPage({ searchParams }: FindRecipesPageP
                                     marker={key === 'starred' ? 'star' : 'heart'}
                                   />
                                 ) : null
+                              ) : key === 'last_made_at' && value !== null ? (
+                                <LocalDate value={value} />
                               ) : key === 'score' && value !== null ? (
                                 <span
                                   className={

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-export const EXPORT_SCHEMA_VERSION = 15;
+export const EXPORT_SCHEMA_VERSION = 16;
 export const EXPORT_DATA_BYTES_LIMIT = 64 * 1024 * 1024;
 export const EXPORT_MEDIA_BYTES_LIMIT = 1024 * 1024 * 1024;
 export const DATABASE_EXPORT_REMINDER_DAYS = 30;
@@ -215,6 +215,8 @@ export const portableRecordFields: Record<ExportTableName, readonly string[]> = 
     'score',
     'is_starred',
     'is_hearted',
+    'made_count',
+    'last_made_at',
     'verdict_id',
     'enthusiasm_id',
     'occasion_details',

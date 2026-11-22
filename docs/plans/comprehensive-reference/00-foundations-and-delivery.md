@@ -71,7 +71,9 @@ The following features were discussed and intentionally set aside for post-v1 re
 - Automated web recipe URL scrapers
 - Ingredient alias mapping (e.g., `bell pepper` $\leftrightarrow$ `capsicum`)
 - Formal allergen and dietary restriction tags/warnings
-- Cooking attempt logs, historical Score changes over time, and cook history
+- Full cooking attempt logs, historical Score changes over time, and cook
+  history remain deferred; DLC 49 adds only a per-recipe count and latest
+  timestamp, with structured Find filters but no date-by-date journal
 - Multi-user household collaboration and role permissions
 - Native mobile applications (Expo / React Native)
 - Historical version rollback/restoration engine

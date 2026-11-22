@@ -230,6 +230,18 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   values remain unavailable rather than becoming zero. Optional vitamins and
   minerals are not Query fields or sort keys. Apply nutrition filters in the
   database before pagination so result counts and pages remain correct.
+- **Made Search and Query fields:** Find Search and Query provide **Made**
+  count as a numeric field and **Last Made** as a date field. Last Made uses
+  explicit-date comparisons and empty/not-empty checks; rolling relative-date
+  windows are deferred. These fields are structured filters, not free-text
+  search terms. Interpret explicit dates in the current device timezone so
+  they match the local date shown in the Last Made column. “Not made since”
+  uses a chosen cutoff date. A blank Last Made date can mean no recorded mark
+  or an unknown legacy date; Made count distinguishes those cases except while
+  State is Will not try. In that state, Made is absent and matches no numeric
+  comparison, while Last Made is empty, regardless of preserved stored values.
+  While State is Want to try, treat Made as zero and Last Made as empty even
+  when stored values are retained; the first successful Made tap resets them.
 - **Query columns and Details sorting:** In Details only, applying Query
   automatically selects visible List columns corresponding to its fields
   unless the user checks **Don't auto-select columns** for that application.
@@ -253,7 +265,21 @@ Recipe and publication discovery is optimized for quick, occasional lookup:
   and resize desktop column widths independently in Find, Library, and each
   publication recipe explorer. A small settings icon opens the column chooser.
   Star and Heart columns are visible by default in each recipe-list explorer
-  and may be hidden or shown independently. A User's saved visibility choice
+  and may be hidden or shown independently. Made and Last Made are optional
+  filterable columns, hidden by default in Find and each publication recipe
+  explorer. The Made column uses numeric operators; Last Made uses explicit
+  date operators and empty/not-empty checks rather than facets for every
+  timestamp. A blank Last Made date can represent either zero recorded marks
+  or a legacy unknown date, so use the Made count to distinguish them. Show
+  the local date only in the Last Made column, using the current device
+  timezone for date comparisons. While State is Will not try, leave both Made
+  columns blank and treat the values as absent without clearing them; show
+  preserved values again if State returns to Tried. While State is Want to try,
+  show Made as zero and Last Made as blank, and sort as zero and empty,
+  regardless of preserved values. The first successful Made tap resets them to
+  one and now. Sort Will not try values as absent, never by stored values.
+  Publication-list filters remain scoped to their publication. A User's saved
+  visibility choice
   overrides the default for that exact account and explorer context. Makes and
   nutrition columns are hidden by default. Active custom stamp indicators
   align right in List and stack at the top-right of

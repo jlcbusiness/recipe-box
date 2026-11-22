@@ -40,6 +40,20 @@ describe('recipe search URL contract', () => {
     expect(searchOptions.some(({ value }) => value === 'opinion')).toBe(false);
   });
 
+  it('offers Made and Last Made as sortable recipe columns when selected', () => {
+    const options = getRecipeSearchSortOptions([
+      { key: 'name', label: 'Name' },
+      { key: 'made_count', label: 'Made' },
+      { key: 'last_made_at', label: 'Last Made' },
+    ]);
+
+    expect(options).toEqual([
+      { value: 'name', label: 'Name' },
+      { value: 'made_count', label: 'Made' },
+      { value: 'last_made_at', label: 'Last Made' },
+    ]);
+  });
+
   it('ignores malformed filters and limits repeated filter values to ten', () => {
     const filters = Array.from({ length: 12 }, (_, index) =>
       JSON.stringify({ field: `field-${index}`, operator: 'contains', value: 'x' }),

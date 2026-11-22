@@ -76,10 +76,12 @@ const filterDefinitions: FilterDefinition[] = [
   { field: 'serves', label: 'Serves', kind: 'number' },
   { field: 'total_time_minutes', label: 'Total Time', kind: 'number' },
   { field: 'score', label: 'Rating', kind: 'number' },
+  { field: 'made_count', label: 'Made', kind: 'number' },
   { field: 'starred', label: 'Starred', kind: 'marker' },
   { field: 'hearted', label: 'Hearted', kind: 'marker' },
   { field: 'created_at', label: 'Date Added', kind: 'date' },
   { field: 'updated_at', label: 'Date Changed', kind: 'date' },
+  { field: 'last_made_at', label: 'Last Made', kind: 'date' },
 ];
 
 const markerOptions: FilterOption[] = [
@@ -121,6 +123,8 @@ const operators: Record<FilterKind, { value: string; label: string }[]> = {
     { value: 'between', label: 'Between' },
   ],
   date: [
+    { value: 'is_empty', label: 'Is Empty' },
+    { value: 'is_not_empty', label: "Isn't Empty" },
     { value: 'equals', label: 'On' },
     { value: 'not_equals', label: 'Not On' },
     { value: 'greater_than', label: 'After' },
@@ -148,6 +152,8 @@ const compactOperatorLabels: Record<string, string> = {
   'number:is_empty': 'None',
   'number:is_not_empty': 'Set',
   'date:not_equals': 'Not',
+  'date:is_empty': 'None',
+  'date:is_not_empty': 'Set',
   'date:greater_than': 'Aft.',
   'date:less_than': 'Bef.',
   'date:at_least': 'On+',
@@ -224,15 +230,33 @@ function filterValue(filter: DraftFilter, kind: FilterKind): RecipeSearchFilter 
     };
   }
   if (kind === 'date' && operator === 'between') {
-    return { field: filter.field, operator, value: String(value), value_to: filter.valueTo };
+    return {
+      field: filter.field,
+      operator,
+      value: String(value),
+      value_to: filter.valueTo,
+      ...(filter.field === 'last_made_at'
+        ? { time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone }
+        : {}),
+    };
   }
-  return { field: filter.field, operator, value: String(value) };
+  return {
+    field: filter.field,
+    operator,
+    value: String(value),
+    ...(kind === 'date' && filter.field === 'last_made_at'
+      ? { time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone }
+      : {}),
+  };
 }
 
 function numericFilterNumber(field: RecipeSearchFilterField | '', raw: string): number | null {
   if (!field) return null;
   const value =
-    field === 'serves' || field === 'total_time_minutes' || field === 'score'
+    field === 'serves' ||
+    field === 'total_time_minutes' ||
+    field === 'score' ||
+    field === 'made_count'
       ? parseGroupedInteger(raw)
       : parseDecimalInput(raw);
   if (value === null) return null;
@@ -247,7 +271,10 @@ function normalizedNumericFilterText(
   if (!field) return null;
   const value = numericFilterNumber(field, raw);
   if (value === null) return null;
-  return field === 'serves' || field === 'total_time_minutes' || field === 'score'
+  return field === 'serves' ||
+    field === 'total_time_minutes' ||
+    field === 'score' ||
+    field === 'made_count'
     ? formatGroupedInteger(value)
     : String(value);
 }

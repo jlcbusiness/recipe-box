@@ -101,6 +101,22 @@ function createIdFactory() {
 }
 
 describe('public recipe copy payload', () => {
+  it('creates new public copies without Made data from their source', () => {
+    const sourceRecipe = {
+      ...recipe,
+      made_count: 7,
+      last_made_at: '2026-03-08T09:59:59.000Z',
+    };
+    const payload = buildPublicRecipeCopyPayload(
+      { publicId, authorUsername: 'source-user', recipe: sourceRecipe, photoSources: [] },
+      createIdFactory(),
+    );
+
+    expect(payload.recipe.p_state).toBe('want_to_try');
+    expect(payload.recipe).not.toHaveProperty('p_made_count');
+    expect(payload.recipe).not.toHaveProperty('p_last_made_at');
+  });
+
   it('creates new graph IDs and remaps public ingredient and photo markers', () => {
     const payload = buildPublicRecipeCopyPayload(
       {

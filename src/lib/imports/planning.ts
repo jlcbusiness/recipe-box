@@ -357,6 +357,33 @@ export function planImport(
         });
         location.publication_page = null;
       }
+      const duplicateMadeDefaults =
+        result.action === 'duplicate'
+          ? {
+              made_count: 0,
+              last_made_at: null,
+              ...(recipe.state === 'tried'
+                ? {
+                    state: 'want_to_try',
+                    verdict_id: null,
+                    enthusiasm_id: null,
+                    occasion_details: null,
+                    reason: null,
+                  }
+                : {}),
+            }
+          : {};
+      const legacyRestoreMadeValues =
+        result.action === 'replace' &&
+        incoming.schema_version < 16 &&
+        targetRecipe &&
+        Object.hasOwn(targetRecipe, 'made_count') &&
+        Object.hasOwn(targetRecipe, 'last_made_at')
+          ? {
+              made_count: targetRecipe.made_count,
+              last_made_at: targetRecipe.last_made_at,
+            }
+          : {};
       importedRecipes.push({
         ...location,
         id: result.id,
@@ -367,6 +394,8 @@ export function planImport(
         verdict_id: mappedId('recipe_picklist_values', recipe.verdict_id, 'verdict'),
         enthusiasm_id: mappedId('recipe_picklist_values', recipe.enthusiasm_id, 'enthusiasm'),
         is_private: recipe.is_private !== false,
+        ...duplicateMadeDefaults,
+        ...legacyRestoreMadeValues,
       });
     }
   }

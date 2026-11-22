@@ -704,21 +704,22 @@
   position: relative;
   display: grid;
   width: max-content;
-  grid-template-columns: repeat(4, 36px) 84px repeat(5, 36px);
+  padding-top: 24px;
+  grid-template-columns: repeat(3, 36px) minmax(36px, max-content) 36px 84px repeat(5, 36px);
   align-items: start;
   gap: 8px;
 }
 
 .recipe-share-copy-action {
   position: relative;
-  grid-column: 4;
+  grid-column: 5;
   grid-row: 1;
   width: 36px;
   height: 36px;
 }
 
 .recipe-sharing-action-form {
-  grid-column: 5 / 6;
+  grid-column: 6 / 7;
   width: 100%;
   margin: 0;
 }

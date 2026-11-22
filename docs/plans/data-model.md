@@ -58,7 +58,7 @@ credential lifecycle is defined in
 
 | Entity | Responsibility |
 | ------ | -------------- |
-| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, optional integer Serves count and paired Makes quantity/free text, derived total time, separate Notes and `prep_ahead_markdown` fields, primary publication and location, optional online recipe URL, privacy, public-link ID, and optional `saved_from_public_id` direct-save marker. Pre-recipe Prep is unnumbered pre-work content, distinct from Notes and ordered Recipe steps; it defaults to empty text and participates in recipe history. |
+| Recipe | The recipe's metadata, state, optional tried-only signed Score, independent private Star and Heart markers, Made count and nullable last-made timestamp, optional integer Serves count and paired Makes quantity/free text, derived total time, separate Notes and `prep_ahead_markdown` fields, primary publication and location, optional online recipe URL, privacy, public-link ID, and optional `saved_from_public_id` direct-save marker. Tried state requires a Made count of at least one; a legacy date may be unknown. Pre-recipe Prep is unnumbered pre-work content, distinct from Notes and ordered Recipe steps; it defaults to empty text and participates in recipe history. |
 | Recipe time entry | An ordered recipe-owned duration in whole minutes linked to one account-managed Time Type. |
 | Publication | A Book, Magazine title, or Site that can be assigned as a primary source. |
 | Ingredient | A canonical account-owned ingredient with optional trusted density, user-entered nutrition profile, and one explicit Count-or-Things average-measure equivalent. |
@@ -104,6 +104,24 @@ columns.
   same account. Its order is persistent; a recipe's Total Time is derived from
   the sum of its entries, not independently editable. Recipe save, time-entry
   replacement, total derivation, and history capture are atomic.
+- A Made action records one mark per current device-local calendar day using a
+  validated IANA timezone and server timestamp. It atomically increments the
+  count, sets the last-made timestamp, changes Want to try to Tried under the
+  existing conditional-value rules, and records one recipe history event. The
+  action is unavailable while State is Will not try. A direct transition to
+  Tried initializes a zero count to one and sets the timestamp; it does not
+  increment a positive count. Tried state requires count >= 1; count zero
+  requires a null timestamp, while a positive count may have a null timestamp
+  only when its legacy date is unknown. A duplicate of a Tried recipe resets
+  State to Want to try and starts with zero/null, clearing Tried-only
+  conditional values; other duplicate State behavior remains unchanged.
+  Same-recipe import/restore preserves bundled values, and an older bundle
+  missing the Made fields preserves the destination's current values. Made
+  fields remain owner-only and are excluded from public projections. When State
+  is Will not try, treat the stored values as absent in owner-facing detail,
+  Find Search/Query, and list columns; Made matches no numeric filter and Last
+  Made is empty, and sorts do not use the stored values. Do not clear the
+  values, so they can be shown if State returns to Tried.
 - Numeric expressions are input-only: persisted numeric fields contain their
   resolved, field-normalized values, not the entered equation. Existing
   measurement ranges retain both bounds when an unrelated recipe edit is saved;
@@ -145,6 +163,13 @@ columns.
   ingredient row IDs and are remapped with those rows in copies and imports;
   marked durations are display emphasis, not time entries. Portable schema
   version 15 includes the field; versions 1 through 14 import it as empty text.
+- `made_count` and `last_made_at` are included in portable schema version 16.
+  Versions 1 through 15 default new imports of Tried recipes to a count of one
+  and an unknown timestamp, and other states to zero/null. New duplicates do
+  not inherit Made values; duplicating a Tried recipe also resets State to Want
+  to try and clears Tried-only conditional values. Same-recipe restore
+  preserves values present in the bundle; when an older bundle omits Made
+  fields, it preserves the destination's current values.
 - A recipe ingredient can have one displayed category: Unit, Count, Things, or
   Feel. Unit maps to the stored volume and/or weight records; Things maps to an
   informal record and Feel maps to an unmeasured record. A Unit row can contain

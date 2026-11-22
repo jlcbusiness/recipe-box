@@ -261,7 +261,10 @@
 }
 
 .recipe-form-save-status {
-  margin: 0 0 12px;
+  position: absolute;
+  top: -27px;
+  left: 0;
+  margin: 0;
   color: var(--leaf);
   font-weight: 700;
 }

@@ -173,7 +173,8 @@ while retaining the existing single-image viewer without gallery navigation.
 The remaining slices are ordered approximately by implementation effort. DLC
 42 through DLC 48 are implemented. DLC 46's focused breadcrumb, history, and
 direct-destination checks pass on Chromium and Fold 6. DLC 47's focused theme
-and cover checks pass on Chromium and Fold 6. DLC 49 remains a draft candidate.
+and cover checks pass on Chromium and Fold 6. DLC 49 is implemented in app
+version 1.21.0.
 
 - **DLC 42 (implemented; app version 1.15.1):**
   [Admin Update Text Reflow](dlc-42-admin-update-text-reflow.md) moves narrow
@@ -201,9 +202,10 @@ and cover checks pass on Chromium and Fold 6. DLC 49 remains a draft candidate.
   [Pre-Recipe Preparation Instructions](dlc-48-pre-recipe-prep-instructions.md)
   adds a separate Markdown field and callout for advance work across private,
   public, offline, bundle, history, and paginated output flows.
-- **DLC 49 (draft candidate):**
+- **DLC 49 (implemented; app version 1.21.0):**
   [Made Counter and Last-Made Stamp](dlc-49-made-counter.md) records private
-  daily marks, count, and latest make time.
+  daily marks, count, latest make time, Find filters, and hidden-by-default
+  columns in Find and publication recipe lists.
 
 ## Sequencing notes
 

@@ -119,9 +119,10 @@
     display: grid;
     width: 100%;
     flex: 0 0 auto;
-    justify-self: end;
-    justify-content: end;
-    grid-template-columns: 36px 72px repeat(4, 36px);
+    padding-top: 20px;
+    justify-self: start;
+    justify-content: start;
+    grid-template-columns: 36px 72px 36px minmax(36px, max-content) 36px 36px;
     column-gap: 4px;
     row-gap: 4px;
   }
@@ -166,10 +167,6 @@
     grid-row: 2;
     align-self: center;
     justify-self: center;
-  }
-
-  .recipe-detail-heading-actions:not(:has(.recipe-rating-action-form)) .recipe-marker-actions {
-    grid-column: 4 / span 2;
   }
 
   .recipe-detail-heading-actions > a[aria-label="Edit"] {

@@ -31,8 +31,10 @@ flow and does not introduce autosave.
   save. For a new recipe, it opens the created recipe's edit route so later
   saves update that recipe rather than creating another.
 - Provide visible, screen-reader-announced confirmation for a successful
-  shortcut save. Validation, upload, and concurrency failures retain the draft,
-  stay in the editor, and use the existing error presentation.
+  shortcut save in the gap between the edit heading and first form section
+  without shifting the editor fields. Validation, upload, and concurrency
+  failures retain the draft, stay in the editor, and use the existing error
+  presentation.
 - The visible Save button keeps its current behavior and destination; the
   shortcut is the only save path that stays in the editor.
 - Preserve existing Enter, picklist, and editor interactions. Do not add
@@ -48,8 +50,9 @@ duplicate recipe creation.
 ## Acceptance criteria
 
 1. Pressing `Ctrl+S` in an existing recipe form saves once, stays on the edit
-   route, and announces success. A second shortcut save updates the same recipe
-   with its refreshed version.
+   route, announces success, and does not move the form fields. A second
+   shortcut save updates the same recipe with its refreshed version and also
+   leaves the fields in place.
 2. Pressing `Ctrl+S` in a new recipe form creates the recipe and opens its edit
    route. A later shortcut save updates that same recipe.
 3. `Cmd+S` invokes the same behavior on macOS; neither shortcut opens the

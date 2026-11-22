@@ -122,6 +122,8 @@ const recipeColumnDefinitions: ExplorerColumnDefinition[] = [
   { key: 'score', label: 'Rating', defaultVisible: false, minWidth: 64, maxWidth: 120 },
   { key: 'starred', label: 'Star', defaultVisible: true, minWidth: 56, maxWidth: 96 },
   { key: 'hearted', label: 'Heart', defaultVisible: true, minWidth: 56, maxWidth: 96 },
+  { key: 'made_count', label: 'Made', defaultVisible: false, minWidth: 72, maxWidth: 160 },
+  { key: 'last_made_at', label: 'Last Made', defaultVisible: false, minWidth: 112, maxWidth: 200 },
 ];
 
 function recipeColumns(defaultVisible: string[]): ExplorerColumnDefinition[] {
@@ -295,6 +297,10 @@ const recipeFilterFields = new Set([
   'score',
   'starred',
   'hearted',
+  'made_count',
+  'last_made_at',
+  'column_made_count',
+  'column_last_made_at',
   'created_at',
   'updated_at',
   ...STANDARD_NUTRIENT_KEYS,
@@ -364,10 +370,11 @@ function isFilterValue(value: unknown): value is ExplorerFilter['value'] {
 
 function isExplorerFilter(value: unknown): value is ExplorerFilter {
   if (!isRecord(value)) return false;
-  const allowedKeys = new Set(['field', 'operator', 'value', 'value_to']);
+  const allowedKeys = new Set(['field', 'operator', 'value', 'value_to', 'time_zone']);
   if (Object.keys(value).some((key) => !allowedKeys.has(key))) return false;
   if (typeof value.field !== 'string' || typeof value.operator !== 'string') return false;
   if ('value' in value && !isFilterValue(value.value)) return false;
+  if ('time_zone' in value && typeof value.time_zone !== 'string') return false;
   return (
     !('value_to' in value) ||
     typeof value.value_to === 'string' ||

@@ -4,6 +4,7 @@ export type QueryRule = {
   operator: string;
   value?: string | number | (string | number)[];
   value_to?: string | number;
+  time_zone?: string;
 };
 
 export type QueryNode =
@@ -208,12 +209,13 @@ export function readAdvancedRules(filter: Filter): AdvancedRules {
       rule.field === 'advanced_rules' ||
       typeof rule.operator !== 'string' ||
       Object.keys(rule).some(
-        (key) => !['id', 'field', 'operator', 'value', 'value_to'].includes(key),
+        (key) => !['id', 'field', 'operator', 'value', 'value_to', 'time_zone'].includes(key),
       ) ||
       ('value' in rule && !isValue(rule.value)) ||
       ('value_to' in rule &&
         typeof rule.value_to !== 'string' &&
-        !(typeof rule.value_to === 'number' && Number.isFinite(rule.value_to)))
+        !(typeof rule.value_to === 'number' && Number.isFinite(rule.value_to))) ||
+      ('time_zone' in rule && typeof rule.time_zone !== 'string')
     ) {
       throw new Error('Invalid Advanced Rules leaf or duplicate rule ID.');
     }
@@ -224,6 +226,7 @@ export function readAdvancedRules(filter: Filter): AdvancedRules {
       operator: rule.operator,
       ...('value' in rule ? { value: rule.value as QueryRule['value'] } : {}),
       ...('value_to' in rule ? { value_to: rule.value_to as string | number } : {}),
+      ...('time_zone' in rule ? { time_zone: rule.time_zone as string } : {}),
     });
   }
   return { version: 1, text: value.text, rules };

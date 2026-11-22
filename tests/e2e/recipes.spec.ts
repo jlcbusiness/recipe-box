@@ -20,6 +20,154 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await expect(page).toHaveURL(/\/(?:app|recipes|publications(?:\/[0-9a-f-]+)?)(?:\?.*)?$/);
 }
 
+async function getVisibleInkBounds(locator: Locator) {
+  const bounds = await locator.boundingBox();
+  if (!bounds) {
+    throw new Error('Expected a visible toolbar glyph component.');
+  }
+
+  const image = await locator.screenshot();
+  const { data, info } = await sharp(image)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const backgroundRed = data[0];
+  const backgroundGreen = data[1];
+  const backgroundBlue = data[2];
+  if (
+    info.width === 0 ||
+    info.height === 0 ||
+    backgroundRed === undefined ||
+    backgroundGreen === undefined ||
+    backgroundBlue === undefined
+  ) {
+    throw new Error('Expected rendered toolbar glyph pixels.');
+  }
+
+  let minX = info.width;
+  let maxX = -1;
+  let minY = info.height;
+  let maxY = -1;
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      const offset = (y * info.width + x) * info.channels;
+      const red = data[offset];
+      const green = data[offset + 1];
+      const blue = data[offset + 2];
+      if (red === undefined || green === undefined || blue === undefined) {
+        throw new Error('Expected complete toolbar glyph pixel data.');
+      }
+
+      if (
+        Math.max(
+          Math.abs(red - backgroundRed),
+          Math.abs(green - backgroundGreen),
+          Math.abs(blue - backgroundBlue),
+        ) > 35
+      ) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    throw new Error('Expected visible ink in a toolbar glyph component.');
+  }
+
+  const pixelsPerCssPixelX = info.width / bounds.width;
+  const pixelsPerCssPixelY = info.height / bounds.height;
+  return {
+    left: bounds.x + minX / pixelsPerCssPixelX,
+    right: bounds.x + (maxX + 1) / pixelsPerCssPixelX,
+    top: bounds.y + minY / pixelsPerCssPixelY,
+    bottom: bounds.y + (maxY + 1) / pixelsPerCssPixelY,
+  };
+}
+
+async function getVisibleInkBoundsForSelectors(toolbar: Locator, selectors: string[]) {
+  const components = await Promise.all(
+    selectors.map(async (selector) => {
+      const locator = toolbar.locator(selector);
+      if ((await locator.count()) === 0 || !(await locator.isVisible())) {
+        return null;
+      }
+
+      return getVisibleInkBounds(locator);
+    }),
+  );
+  const visibleComponents = components.filter(
+    (component): component is NonNullable<typeof component> => component !== null,
+  );
+  if (visibleComponents.length === 0) {
+    throw new Error('Expected visible ink for every toolbar glyph.');
+  }
+
+  return {
+    left: Math.min(...visibleComponents.map((component) => component.left)),
+    right: Math.max(...visibleComponents.map((component) => component.right)),
+    top: Math.min(...visibleComponents.map((component) => component.top)),
+    bottom: Math.max(...visibleComponents.map((component) => component.bottom)),
+  };
+}
+
+async function expectRecipeToolbarGapsToBe16px(page: import('@playwright/test').Page) {
+  const toolbar = page.locator('.recipe-detail-heading-actions');
+  const hasRating = (await toolbar.locator('.recipe-rating-action-form').count()) > 0;
+  const glyphSelectors = [
+    ['.recipe-marker-toggle[data-marker="star"] svg'],
+    ['.recipe-marker-toggle[data-marker="heart"] svg'],
+    ...(hasRating ? [['.recipe-rating-action-trigger > svg', '.recipe-rating-number']] : []),
+    [
+      '.recipe-made-pot',
+      '.recipe-made-pot-closed-lid',
+      '.recipe-made-count',
+      '.recipe-made-unavailable-x',
+    ],
+    ['.recipe-share-copy-action button'],
+  ];
+  const frameSelectors = [
+    '.recipe-marker-toggle[data-marker="star"]',
+    '.recipe-marker-toggle[data-marker="heart"]',
+    ...(hasRating ? ['.recipe-rating-action-form'] : []),
+    '.recipe-made-action-form',
+    '.recipe-share-copy-action button',
+  ];
+  const bounds = await Promise.all(
+    glyphSelectors.map((selectors) => getVisibleInkBoundsForSelectors(toolbar, selectors)),
+  );
+  const frames = await Promise.all(
+    frameSelectors.map(async (selector) => {
+      const rect = await toolbar.locator(selector).boundingBox();
+      if (!rect) {
+        throw new Error(`Expected an action frame for ${selector}.`);
+      }
+
+      return { left: rect.x, right: rect.x + rect.width, width: rect.width };
+    }),
+  );
+  const gaps = bounds.slice(1).map((current, index) => current.left - bounds[index].right);
+
+  expect(gaps.length).toBeGreaterThanOrEqual(3);
+  expect(
+    gaps.every((gap) => Math.abs(gap - 16) <= 1),
+    `Expected 16px visible toolbar gaps, ending at the Share button border; received [${gaps.map((gap) => gap.toFixed(2)).join(', ')}].`,
+  ).toBe(true);
+  for (const [index, frame] of frames.entries()) {
+    expect(frame.width).toBe(36);
+    if (index > 0) {
+      const previousFrame = frames[index - 1];
+      if (!previousFrame) {
+        throw new Error('Expected the previous toolbar action frame.');
+      }
+
+      expect(frame.left).toBeGreaterThanOrEqual(previousFrame.right);
+    }
+  }
+}
+
 async function selectSinglePicklist(
   page: import('@playwright/test').Page,
   label: string,
@@ -404,11 +552,16 @@ test('recipe save shortcuts keep create and edit forms open @e2e', async ({ page
     ).toBe(true);
 
     await nameField.fill('Keyboard shortcut recipe');
+    const recipeSection = page.locator('.recipe-metadata-section');
     await page.keyboard.press('Control+s');
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit(?:\?[^#]*)?$/);
     await expect(page.getByRole('heading', { name: 'Edit Recipe' })).toBeVisible();
     const saveStatus = page.locator('.recipe-form-save-status');
     await expect(saveStatus).toHaveText('Saved.');
+    const sectionAfterSave = await recipeSection.boundingBox();
+    if (!sectionAfterSave) {
+      throw new Error('Expected the recipe section after the shortcut save.');
+    }
     const statusBounds = await saveStatus.boundingBox();
     const viewportWidth = page.viewportSize()?.width ?? 0;
     expect(statusBounds).not.toBeNull();
@@ -423,9 +576,20 @@ test('recipe save shortcuts keep create and edit forms open @e2e', async ({ page
     const recipeId = new URL(page.url()).pathname.split('/').at(-2);
     expect(recipeId).toBeTruthy();
     await page.getByLabel('Name').fill('Keyboard shortcut recipe updated');
+    await expect(saveStatus).toHaveCount(0);
+    const sectionAfterNoticeClears = await recipeSection.boundingBox();
+    if (!sectionAfterNoticeClears) {
+      throw new Error('Expected the recipe section after the status clears.');
+    }
+    expect(Math.abs(sectionAfterNoticeClears.y - sectionAfterSave.y)).toBeLessThanOrEqual(1);
     await page.keyboard.press('Meta+s');
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/edit(?:\\?[^#]*)?$`));
-    await expect(page.locator('.recipe-form-save-status')).toHaveText('Saved.');
+    await expect(saveStatus).toHaveText('Saved.');
+    const sectionAfterRepeatSave = await recipeSection.boundingBox();
+    if (!sectionAfterRepeatSave) {
+      throw new Error('Expected the recipe section after the repeat save.');
+    }
+    expect(Math.abs(sectionAfterRepeatSave.y - sectionAfterSave.y)).toBeLessThanOrEqual(1);
 
     const savedRecipes = await request.get(
       `${config.apiUrl}/rest/v1/recipes?select=id,name,version&id=eq.${recipeId}`,
@@ -1350,33 +1514,56 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
     if (!detailsHeadingBeforeRating) {
       throw new Error('Expected the Recipe details heading to have visible bounds.');
     }
+    const detailsHeadingBeforeRatingScrollY = await page.evaluate(() => window.scrollY);
     await expect(rating).toHaveAccessibleName('Rating: Unrated');
     await expect(page.locator('.recipe-detail-rating-metadata')).toHaveCount(0);
 
     async function expectRatingNumberInPalm(gesture: 'palm-down' | 'thumbs-down' | 'thumbs-up') {
-      const [numberBounds, numberTextBounds, palmBounds, handBounds] = await Promise.all([
-        rating.locator('.recipe-rating-number').boundingBox(),
-        rating.locator('.recipe-rating-number').evaluate((element) => {
-          const range = document.createRange();
-          range.selectNodeContents(element);
-          const bounds = range.getBoundingClientRect();
-          return { x: bounds.x, width: bounds.width };
-        }),
-        rating.locator('.recipe-rating-palm').boundingBox(),
-        rating.locator('.recipe-rating-hand').boundingBox(),
-      ]);
+      const viewport = page.viewportSize();
+      expect(viewport).not.toBeNull();
+      if (!viewport) {
+        throw new Error('Expected the Rating test page to have a viewport size.');
+      }
+      const mobileOffset = viewport.width <= 640 ? 1 : 0;
+      const [numberBounds, numberTextBounds, palmBounds, handBounds, triggerBounds] =
+        await Promise.all([
+          rating.locator('.recipe-rating-number').boundingBox(),
+          rating.locator('.recipe-rating-number').evaluate((element) => {
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const bounds = range.getBoundingClientRect();
+            return { x: bounds.x, width: bounds.width };
+          }),
+          rating.locator('.recipe-rating-palm').boundingBox(),
+          rating.locator('.recipe-rating-hand').boundingBox(),
+          rating.boundingBox(),
+        ]);
       expect(numberBounds).not.toBeNull();
       expect(palmBounds).not.toBeNull();
       expect(handBounds).not.toBeNull();
+      expect(triggerBounds).not.toBeNull();
       expect(numberTextBounds.width).toBeGreaterThan(0);
-      if (!numberBounds || !palmBounds || !handBounds) {
+      if (!numberBounds || !palmBounds || !handBounds || !triggerBounds) {
         throw new Error('Expected the Rating number, palm area, and hand artwork.');
+      }
+
+      if (gesture === 'thumbs-down') {
+        expect(triggerBounds.width).toBe(36);
+        expect(triggerBounds.height).toBe(36);
+        expect(Math.abs(handBounds.y - triggerBounds.y - 12 - mobileOffset)).toBeLessThanOrEqual(1);
+        expect(Math.abs(palmBounds.y - triggerBounds.y - 16 - mobileOffset)).toBeLessThanOrEqual(1);
+      }
+      if (gesture === 'thumbs-up') {
+        expect(triggerBounds.width).toBe(36);
+        expect(triggerBounds.height).toBe(36);
+        expect(Math.abs(handBounds.y - triggerBounds.y - 1 - mobileOffset)).toBeLessThanOrEqual(1);
+        expect(Math.abs(palmBounds.y - triggerBounds.y - 17 - mobileOffset)).toBeLessThanOrEqual(1);
       }
 
       const expectedPalmCenter = {
         'palm-down': { x: 24, y: 19 },
         'thumbs-down': { x: 16, y: 12 },
-        'thumbs-up': { x: 18, y: 24 },
+        'thumbs-up': { x: 20, y: 24 },
       }[gesture];
       const numberCenterX = numberBounds.x + numberBounds.width / 2;
       const numberCenterY = numberBounds.y + numberBounds.height / 2;
@@ -1398,6 +1585,65 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
       await expect(filledShape).not.toHaveCSS('fill', 'none');
     }
 
+    async function expectDesktopMarkersCenteredOnPalm() {
+      const viewport = page.viewportSize();
+      expect(viewport).not.toBeNull();
+      if (!viewport) {
+        throw new Error('Expected the Rating test page to have a viewport size.');
+      }
+      if (viewport.width < 641) {
+        return;
+      }
+
+      const starToggle = page.getByRole('button', { name: 'Star recipe' });
+      const heartToggle = page.getByRole('button', { name: 'Heart recipe' });
+      const [
+        starButtonBounds,
+        heartButtonBounds,
+        starIconBounds,
+        heartIconBounds,
+        palmBounds,
+        ratingBounds,
+      ] = await Promise.all([
+        starToggle.boundingBox(),
+        heartToggle.boundingBox(),
+        starToggle.locator('svg').boundingBox(),
+        heartToggle.locator('svg').boundingBox(),
+        rating.locator('.recipe-rating-palm[data-gesture="thumbs-up"]').boundingBox(),
+        rating.boundingBox(),
+      ]);
+      expect(starButtonBounds).not.toBeNull();
+      expect(heartButtonBounds).not.toBeNull();
+      expect(starIconBounds).not.toBeNull();
+      expect(heartIconBounds).not.toBeNull();
+      expect(palmBounds).not.toBeNull();
+      expect(ratingBounds).not.toBeNull();
+      if (
+        !starButtonBounds ||
+        !heartButtonBounds ||
+        !starIconBounds ||
+        !heartIconBounds ||
+        !palmBounds ||
+        !ratingBounds
+      ) {
+        throw new Error('Expected the Rating, Star, and Heart controls to have visible bounds.');
+      }
+
+      expect(starButtonBounds.width).toBe(36);
+      expect(starButtonBounds.height).toBe(36);
+      expect(heartButtonBounds.width).toBe(36);
+      expect(heartButtonBounds.height).toBe(36);
+      expect(Math.abs(starButtonBounds.y - ratingBounds.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(heartButtonBounds.y - ratingBounds.y)).toBeLessThanOrEqual(1);
+      const palmCenterY = palmBounds.y + palmBounds.height / 2;
+      expect(Math.abs(starIconBounds.y + starIconBounds.height / 2 - palmCenterY)).toBeLessThanOrEqual(
+        1,
+      );
+      expect(
+        Math.abs(heartIconBounds.y + heartIconBounds.height / 2 - palmCenterY),
+      ).toBeLessThanOrEqual(1);
+    }
+
     async function expectClearGlyph() {
       const hand = rating.locator('.recipe-rating-hand');
       const palm = rating.locator('.recipe-rating-palm[data-gesture="clear"]');
@@ -1406,18 +1652,30 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
       await expect(question).toHaveText('?');
       await expect(hand.locator('path:first-child')).toHaveCSS('fill', 'none');
 
-      const [handBounds, palmBounds, questionBounds] = await Promise.all([
+      const [handBounds, palmBounds, questionBounds, triggerBounds] = await Promise.all([
         hand.boundingBox(),
         palm.boundingBox(),
         question.boundingBox(),
+        rating.boundingBox(),
       ]);
       expect(handBounds).not.toBeNull();
       expect(palmBounds).not.toBeNull();
       expect(questionBounds).not.toBeNull();
-      if (!handBounds || !palmBounds || !questionBounds) {
+      expect(triggerBounds).not.toBeNull();
+      if (!handBounds || !palmBounds || !questionBounds || !triggerBounds) {
         throw new Error('Expected the cleared Rating glyph to have visible bounds.');
       }
 
+      expect(triggerBounds.width).toBe(36);
+      expect(triggerBounds.height).toBe(36);
+      const viewport = page.viewportSize();
+      expect(viewport).not.toBeNull();
+      if (!viewport) {
+        throw new Error('Expected the Rating test page to have a viewport size.');
+      }
+      const mobileOffset = viewport.width <= 640 ? 1 : 0;
+      expect(Math.abs(handBounds.y - triggerBounds.y - 1 - mobileOffset)).toBeLessThanOrEqual(1);
+      expect(Math.abs(palmBounds.y - triggerBounds.y - 17 - mobileOffset)).toBeLessThanOrEqual(1);
       const palmCenterX = palmBounds.x + palmBounds.width / 2;
       const palmCenterY = palmBounds.y + palmBounds.height / 2;
       expect(Math.abs(palmCenterX - (handBounds.x + 20))).toBeLessThanOrEqual(1);
@@ -1475,10 +1733,13 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
         Math.abs(feedbackBounds.x + feedbackBounds.width - actionBounds.x - actionBounds.width),
       ).toBeLessThanOrEqual(1);
       const buttonToTextGap = statusBounds.y - visibleControlBottom;
+      const viewport = page.viewportSize();
       expect(
         buttonToTextGap,
         `Expected 4px between controls and text; got ${buttonToTextGap}px ` +
-          `(feedback top ${feedbackTop}, padding top ${paddingTop})`,
+          `(status y ${statusBounds.y}, controls bottom ${visibleControlBottom}, ` +
+          `feedback y ${feedbackBounds.y}, action bottom ${actionBounds.y + actionBounds.height}, ` +
+          `feedback top ${feedbackTop}, padding top ${paddingTop}, viewport width ${viewport?.width})`,
       ).toBeCloseTo(4, 0);
       expect(
         Math.abs(
@@ -1518,6 +1779,14 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
     }
 
     await expectClearGlyph();
+    const clearGlyphViewport = page.viewportSize();
+    expect(clearGlyphViewport).not.toBeNull();
+    if (!clearGlyphViewport) {
+      throw new Error('Expected the clear-glyph test page to have a viewport size.');
+    }
+    await page.setViewportSize({ width: 320, height: clearGlyphViewport.height });
+    await expectClearGlyph();
+    await page.setViewportSize(clearGlyphViewport);
     await rating.focus();
     await page.keyboard.press('Enter');
     const menu = page.getByRole('menu', { name: 'Rating choices' });
@@ -1656,7 +1925,22 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
     expect(menuPadding).toBe('5px');
     expect(menuMarginLeft).toBe('10px');
     expect(choicePadding).toBe('0px');
-    expect(Math.abs(menuBounds.x - ratingBounds.x - 10)).toBeLessThanOrEqual(1);
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    if (!viewport) {
+      throw new Error('Expected the Rating picker test page to have a viewport size.');
+    }
+    if (viewport.width <= 640) {
+      expect(
+        Math.abs(
+          menuBounds.x +
+            menuBounds.width / 2 -
+            (ratingBounds.x + ratingBounds.width / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+    } else {
+      expect(Math.abs(menuBounds.x - ratingBounds.x - 10)).toBeLessThanOrEqual(1);
+    }
     expect(
       Math.abs(
         clearLabelBounds.x + clearLabelBounds.width / 2 - centeredLabel.x - centeredLabel.width / 2,
@@ -1665,12 +1949,31 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
     expect(clearBounds.y + clearBounds.height).toBeLessThanOrEqual(
       menuBounds.y + menuBounds.height,
     );
+    await positiveChoice.click();
+    await expect(rating).toHaveAccessibleName('Rating: 5, Amazing');
+    await expectRatingNumberInPalm('thumbs-up');
+    await expectDesktopMarkersCenteredOnPalm();
+    const toolbarViewport = page.viewportSize();
+    expect(toolbarViewport).not.toBeNull();
+    if (!toolbarViewport) {
+      throw new Error('Expected the Rating test page to have a viewport size.');
+    }
+    if (toolbarViewport.width > 640) {
+      await expectRecipeToolbarGapsToBe16px(page);
+    }
+    await rating.click();
+    await menu.getByRole('menuitem', { name: 'Clear' }).click();
+    await expect(rating).toHaveAccessibleName('Rating: Unrated');
+    await expectClearGlyph();
+    await rating.focus();
+    await page.keyboard.press('Enter');
     await page.keyboard.press('End');
     await page.keyboard.press('ArrowUp');
     await expect(menu.getByRole('menuitemradio', { name: '-5, NO' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(rating).toHaveAccessibleName('Rating: -5, NO');
     await expect(rating).toBeFocused();
+    await expectRatingNumberInPalm('thumbs-down');
     await expectRatingFeedbackRightAligned('Rating saved.');
     const originalViewport = page.viewportSize();
     expect(originalViewport).not.toBeNull();
@@ -1678,6 +1981,7 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
       throw new Error('Expected the Rating test page to have a viewport size.');
     }
     await page.setViewportSize({ width: 320, height: originalViewport.height });
+    await expectRatingNumberInPalm('thumbs-down');
     await expectRatingFeedbackRightAligned('Rating saved.');
     await page.setViewportSize(originalViewport);
     const savedFeedbackId = await rating.getAttribute('aria-describedby');
@@ -1696,8 +2000,14 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
     if (!detailsHeadingAfterRating) {
       throw new Error('Expected the Recipe details heading to remain visible.');
     }
+    const detailsHeadingAfterRatingScrollY = await page.evaluate(() => window.scrollY);
     expect(
-      Math.abs(detailsHeadingAfterRating.y - detailsHeadingBeforeRating.y),
+      Math.abs(
+        detailsHeadingAfterRating.y +
+          detailsHeadingAfterRatingScrollY -
+          detailsHeadingBeforeRating.y -
+          detailsHeadingBeforeRatingScrollY,
+      ),
     ).toBeLessThanOrEqual(1);
     await expect(rating.locator('.recipe-rating-number')).toHaveText('-5');
     await expect(rating.locator('.recipe-rating-hand')).toHaveAttribute('data-tone', 'negative');
@@ -1705,7 +2015,6 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
       'data-gesture',
       'thumbs-down',
     );
-    await expectRatingNumberInPalm('thumbs-down');
 
     await page.keyboard.press('Enter');
     await page.keyboard.press('End');
@@ -1883,7 +2192,10 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
       await page.keyboard.press('Escape');
     }
 
-    const publicationPath = await page.locator('.recipe-attribution a').getAttribute('href');
+    const publicationPath = await page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .getByRole('link', { name: 'Recipe Tin' })
+      .getAttribute('href');
     expect(publicationPath).not.toBeNull();
     if (!publicationPath) {
       throw new Error('Expected the saved recipe to remain in its publication.');
@@ -2021,6 +2333,198 @@ test('Rating is edited from detail with labeled choices and remains numeric in l
   }
 });
 
+test('mobile Made status and toolbar order stay aligned with the recipe photo @e2e', async ({
+  page,
+  request,
+}) => {
+  const user = await createTestUser(request);
+  const recipeName = 'Mobile Made feedback layout';
+
+  try {
+    await signIn(page, user.email, user.password);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto('/recipes/new');
+    await page.getByLabel('Name').fill(recipeName);
+    await page.getByLabel('Choose recipe photos').setInputFiles({
+      name: 'made-feedback-layout.png',
+      mimeType: 'image/png',
+      buffer: await sharp({
+        create: {
+          width: 120,
+          height: 180,
+          channels: 3,
+          background: { r: 126, g: 154, b: 116 },
+        },
+      })
+        .png()
+        .toBuffer(),
+    });
+    await page.getByRole('button', { name: 'Save recipe' }).click();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(page.locator('.recipe-photo-feature-image')).toBeVisible();
+
+    const toolbar = page.locator('.recipe-detail-heading-actions');
+    await toolbar.getByRole('button', { name: /Record Made/ }).click();
+    const feedback = toolbar.locator('.recipe-action-feedback-region');
+    const status = feedback.getByRole('status');
+    await expect(status).toHaveText('Made recorded for today.');
+
+    const [toolbarBounds, feedbackBounds, photoBounds, visibleControlBottom] = await Promise.all([
+      toolbar.boundingBox(),
+      feedback.boundingBox(),
+      page.locator('.recipe-photo-feature-image').boundingBox(),
+      toolbar
+        .locator('button:visible, a:visible')
+        .evaluateAll((elements) =>
+          Math.max(...elements.map((element) => element.getBoundingClientRect().bottom)),
+        ),
+    ]);
+    expect(toolbarBounds).not.toBeNull();
+    expect(feedbackBounds).not.toBeNull();
+    expect(photoBounds).not.toBeNull();
+    if (!toolbarBounds || !feedbackBounds || !photoBounds) {
+      throw new Error('Expected the mobile toolbar, Made status, and recipe photo to be visible.');
+    }
+
+    const statusTextBounds = await status.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const bounds = range.getBoundingClientRect();
+      return { top: bounds.top, right: bounds.right, bottom: bounds.bottom };
+    });
+    const toolbarRight = toolbarBounds.x + toolbarBounds.width;
+    expect(Math.abs(feedbackBounds.x - toolbarBounds.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(feedbackBounds.x + feedbackBounds.width - toolbarRight)).toBeLessThanOrEqual(1);
+    expect(Math.abs(statusTextBounds.right - toolbarRight)).toBeLessThanOrEqual(1);
+    expect(Math.abs(statusTextBounds.top - visibleControlBottom - 4)).toBeLessThanOrEqual(1);
+    expect(
+      statusTextBounds.bottom,
+      `Made status text ends at ${statusTextBounds.bottom}px; ` +
+        `photo starts at ${photoBounds.y}px, controls end at ${visibleControlBottom}px, ` +
+        `toolbar ends at ${toolbarBounds.y + toolbarBounds.height}px.`,
+    ).toBeLessThanOrEqual(photoBounds.y + 1);
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    const ratingForm = toolbar.locator('.recipe-rating-action-form');
+    await expect(ratingForm).toHaveCount(1);
+    const star = page.getByRole('button', { name: 'Star recipe' });
+    const heart = page.getByRole('button', { name: 'Heart recipe' });
+    const madeForm = toolbar.locator('.recipe-made-action-form');
+    const madeButton = madeForm.getByRole('button');
+    const ratingButton = ratingForm.getByRole('button');
+    const duplicateButton = page.getByRole('button', { name: 'Duplicate recipe' });
+    const editButton = toolbar.getByRole('link', { name: 'Edit' });
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const [desktopHeartBounds, desktopMadeBounds, desktopRatingBounds] = await Promise.all([
+      heart.boundingBox(),
+      madeForm.boundingBox(),
+      ratingForm.boundingBox(),
+    ]);
+    expect(desktopHeartBounds).not.toBeNull();
+    expect(desktopMadeBounds).not.toBeNull();
+    expect(desktopRatingBounds).not.toBeNull();
+    if (!desktopHeartBounds || !desktopMadeBounds || !desktopRatingBounds) {
+      throw new Error('Expected the desktop Heart, Made, and Rating controls to be visible.');
+    }
+
+    expect(desktopMadeBounds.x).toBeGreaterThanOrEqual(
+      desktopRatingBounds.x + desktopRatingBounds.width,
+    );
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    const [
+      starBounds,
+      heartBounds,
+      madeBounds,
+      madeButtonBounds,
+      ratingBounds,
+      duplicateBounds,
+      editBounds,
+    ] = await Promise.all([
+      star.boundingBox(),
+      heart.boundingBox(),
+      madeForm.boundingBox(),
+      madeButton.boundingBox(),
+      ratingButton.boundingBox(),
+      duplicateButton.boundingBox(),
+      editButton.boundingBox(),
+    ]);
+    expect(starBounds).not.toBeNull();
+    expect(heartBounds).not.toBeNull();
+    expect(madeBounds).not.toBeNull();
+    expect(madeButtonBounds).not.toBeNull();
+    expect(ratingBounds).not.toBeNull();
+    expect(duplicateBounds).not.toBeNull();
+    expect(editBounds).not.toBeNull();
+    if (
+      !starBounds ||
+      !heartBounds ||
+      !madeBounds ||
+      !madeButtonBounds ||
+      !ratingBounds ||
+      !duplicateBounds ||
+      !editBounds
+    ) {
+      throw new Error(
+        'Expected the mobile Star, Heart, Made, Rating, Duplicate, and Edit controls.',
+      );
+    }
+
+    expect(madeBounds.width).toBe(48);
+    expect(madeBounds.height).toBe(48);
+    expect(heartBounds.x - (starBounds.x + starBounds.width)).toBe(4);
+    expect(madeButtonBounds.x - (heartBounds.x + heartBounds.width)).toBe(4);
+    expect(ratingBounds.x - (madeButtonBounds.x + madeButtonBounds.width)).toBe(4);
+    expect(duplicateBounds.x).toBe(editBounds.x);
+    const [
+      heartControlBounds,
+      madePotBounds,
+      madeGlyphBounds,
+      ratingGlyphBounds,
+      ratingHandBounds,
+      ratingPalmBounds,
+    ] = await Promise.all([
+      getVisibleInkBoundsForSelectors(toolbar, ['.recipe-marker-toggle[data-marker="heart"]']),
+      getVisibleInkBoundsForSelectors(toolbar, ['.recipe-made-pot']),
+      getVisibleInkBoundsForSelectors(toolbar, [
+        '.recipe-made-pot',
+        '.recipe-made-pot-closed-lid',
+        '.recipe-made-count',
+        '.recipe-made-unavailable-x',
+      ]),
+      getVisibleInkBoundsForSelectors(toolbar, [
+        '.recipe-rating-action-trigger > svg',
+        '.recipe-rating-number',
+      ]),
+      ratingButton.locator('.recipe-rating-hand').boundingBox(),
+      ratingButton.locator('.recipe-rating-palm[data-gesture="clear"]').boundingBox(),
+    ]);
+    const heartToMadeGap = madeGlyphBounds.left - heartControlBounds.right;
+    const madeToRatingGap = ratingGlyphBounds.left - madeGlyphBounds.right;
+    expect(
+      Math.abs(heartToMadeGap - madeToRatingGap),
+      `Expected equal visible gaps around Made; Heart→Made is ${heartToMadeGap.toFixed(2)}px and Made→Rating is ${madeToRatingGap.toFixed(2)}px.`,
+    ).toBeLessThanOrEqual(1);
+    expect(ratingBounds.width).toBe(36);
+    expect(ratingBounds.height).toBe(36);
+    expect(ratingHandBounds).not.toBeNull();
+    expect(ratingPalmBounds).not.toBeNull();
+    if (!ratingHandBounds || !ratingPalmBounds) {
+      throw new Error('Expected the mobile Rating hand and in-palm mark to be visible.');
+    }
+    expect(Math.abs(ratingHandBounds.y - ratingBounds.y - 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(ratingPalmBounds.y - ratingBounds.y - 18)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(madePotBounds.bottom - heartControlBounds.bottom),
+      `Expected the pot bottom to align with the Heart control border; pot is at ${madePotBounds.bottom.toFixed(2)}px and Heart is at ${heartControlBounds.bottom.toFixed(2)}px.`,
+    ).toBeLessThanOrEqual(1);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a11y', async ({
   page,
   request,
@@ -2094,20 +2598,21 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       throw new Error('Expected desktop recipe marker and action controls.');
     }
     const desktopControls = desktopControlBounds.filter((bounds) => bounds !== null);
-    const [desktopMarkerGroupBounds, desktopShareBounds] = await Promise.all([
-      desktopToolbar.locator('.recipe-marker-actions').boundingBox(),
+    const [desktopMadeBounds, desktopShareBounds] = await Promise.all([
+      desktopToolbar.locator('.recipe-made-action-form').boundingBox(),
       desktopToolbar.locator('.recipe-share-copy-action').boundingBox(),
     ]);
-    expect(desktopMarkerGroupBounds).not.toBeNull();
+    expect(desktopMadeBounds).not.toBeNull();
     expect(desktopShareBounds).not.toBeNull();
-    if (!desktopMarkerGroupBounds || !desktopShareBounds) {
-      throw new Error('Expected the desktop markers and Share action.');
+    if (!desktopMadeBounds || !desktopShareBounds) {
+      throw new Error('Expected the desktop Made and Share actions.');
     }
-    expect(
-      desktopShareBounds.x - desktopMarkerGroupBounds.x - desktopMarkerGroupBounds.width,
-    ).toBeCloseTo(8, 0);
+    expect(desktopMadeBounds.width).toBe(36);
+    expect(desktopShareBounds.x).toBeGreaterThan(desktopMadeBounds.x);
+    await expectRecipeToolbarGapsToBe16px(page);
     const desktopRowTops = desktopControls.map((bounds) => bounds.y);
     expect(Math.max(...desktopRowTops) - Math.min(...desktopRowTops)).toBeLessThanOrEqual(1);
+    expect(Math.abs(desktopMadeBounds.y - desktopRowTops[0])).toBeLessThanOrEqual(1);
     expect(desktopControls[4]!.x).toBeLessThan(desktopControls[5]!.x);
     const desktopTreatments = await Promise.all(
       [pageSettingsButton, printButton, desktopDuplicate, editLink].map((button) =>
@@ -2167,19 +2672,6 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     await page.keyboard.press('Escape');
     await expect(desktopDuplicateDialog).toBeHidden();
     await expect(desktopDuplicate).toBeFocused();
-    const [starIconBounds, heartIconBounds] = await Promise.all([
-      desktopStar.locator('svg').boundingBox(),
-      desktopHeart.locator('svg').boundingBox(),
-    ]);
-    expect(starIconBounds).not.toBeNull();
-    expect(heartIconBounds).not.toBeNull();
-    if (!starIconBounds || !heartIconBounds) {
-      throw new Error('Expected desktop Star and Heart icons.');
-    }
-    const copyBounds = desktopControls[2]!;
-    const markerIconGap = heartIconBounds.x - (starIconBounds.x + starIconBounds.width);
-    const heartToShareGap = copyBounds.x - (heartIconBounds.x + heartIconBounds.width);
-    expect(Math.abs(markerIconGap - heartToShareGap)).toBeLessThanOrEqual(1);
     const desktopGaps = desktopControls.slice(3).map((bounds, index) => {
       const previousBounds = desktopControls[index + 2]!;
       return bounds.x - (previousBounds.x + previousBounds.width);
@@ -2210,7 +2702,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       ),
     ).toBeLessThanOrEqual(1);
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 320, height: 844 });
     const actionToolbar = page.locator('.recipe-detail-heading-actions');
     const markerActions = actionToolbar.locator('.recipe-marker-actions');
     const duplicateButton = page.getByRole('button', { name: 'Duplicate recipe' });
@@ -2248,9 +2740,12 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const heartButton = page.getByRole('button', { name: 'Heart recipe' });
     const starButton = page.getByRole('button', { name: 'Star recipe' });
     const editButton = actionToolbar.getByRole('link', { name: 'Edit' });
+    const madeButton = actionToolbar.locator('.recipe-made-action-form').getByRole('button');
     const heartBounds = await heartButton.boundingBox();
     const starBounds = await starButton.boundingBox();
     const heartFormBounds = await heartButton.locator('..').boundingBox();
+    const madeFormBounds = await actionToolbar.locator('.recipe-made-action-form').boundingBox();
+    const madeButtonBounds = await madeButton.boundingBox();
     const editBounds = await editButton.boundingBox();
     const pageSettingsBounds = await pageSettingsButton.boundingBox();
     const toolbarActionSelectors = [
@@ -2272,6 +2767,8 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     expect(heartBounds).not.toBeNull();
     expect(starBounds).not.toBeNull();
     expect(heartFormBounds).not.toBeNull();
+    expect(madeFormBounds).not.toBeNull();
+    expect(madeButtonBounds).not.toBeNull();
     expect(editBounds).not.toBeNull();
     expect(pageSettingsBounds).not.toBeNull();
     expect(toolbarActionBounds.every((bounds) => bounds !== null)).toBe(true);
@@ -2281,6 +2778,8 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       !heartBounds ||
       !starBounds ||
       !heartFormBounds ||
+      !madeFormBounds ||
+      !madeButtonBounds ||
       !editBounds ||
       !pageSettingsBounds ||
       toolbarActionBounds.some((bounds) => bounds === null)
@@ -2288,13 +2787,19 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       throw new Error('Expected recipe marker action geometry.');
     }
     expect(await markerActions.evaluate((element) => getComputedStyle(element).gridColumn)).toBe(
-      '4 / span 2',
+      '1 / span 2',
     );
+    expect(madeFormBounds.width).toBe(48);
+    expect(madeFormBounds.height).toBe(48);
+    expect(heartBounds.x - (starBounds.x + starBounds.width)).toBe(4);
+    expect(madeButtonBounds.x - (heartBounds.x + heartBounds.width)).toBe(4);
     const firstRowBottom = Math.max(
       ...toolbarActionBounds.map((bounds) => bounds!.y + bounds!.height),
     );
     expect(markerGroupBounds.y).toBeGreaterThanOrEqual(firstRowBottom);
-    expect(toolbarActionBounds[5]!.x + toolbarActionBounds[5]!.width).toBeCloseTo(toolbarRight, 0);
+    expect(toolbarActionBounds[5]!.x + toolbarActionBounds[5]!.width).toBeLessThanOrEqual(
+      toolbarRight,
+    );
     const actionGaps = toolbarActionBounds.slice(1).map((bounds, index) => {
       const previousBounds = toolbarActionBounds[index]!;
       return bounds!.x - (previousBounds.x + previousBounds.width);
@@ -2312,7 +2817,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
     const duplicateBounds = await duplicateButton.boundingBox();
     expect(duplicateBounds).not.toBeNull();
     if (!duplicateBounds) throw new Error('Expected the mobile Duplicate action.');
-    expect(duplicateBounds.x - (heartBounds.x + heartBounds.width)).toBe(4);
+    expect(duplicateBounds.x).toBe(editBounds.x);
     expect(
       Math.abs(
         heartBounds.y + heartBounds.height / 2 - (duplicateBounds.y + duplicateBounds.height / 2),
@@ -2443,7 +2948,7 @@ test('recipe marker actions follow recipe actions on desktop and mobile @e2e @a1
       4,
     );
     expect(narrowSettingsBounds.y).toBe(narrowActionBounds[4]!.y);
-    expect(narrowDuplicateBounds.x - (narrowHeartBounds.x + narrowHeartBounds.width)).toBe(4);
+    expect(narrowDuplicateBounds.x).toBe(narrowEditBounds.x);
     expect(
       Math.abs(
         narrowHeartBounds.y +

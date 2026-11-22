@@ -43,6 +43,8 @@ export type RecipeSearchFilterField =
   | 'score'
   | 'starred'
   | 'hearted'
+  | 'made_count'
+  | 'last_made_at'
   | RecipeSearchColumnFilterField
   | 'serves'
   | 'total_time_minutes'
@@ -55,7 +57,25 @@ export type RecipeSearchFilter = {
   operator: string;
   value?: string | number | (string | number)[];
   value_to?: string | number;
+  time_zone?: string;
 };
+
+export const recipeSearchComparisonColumns = [
+  { key: 'made_count', filterField: 'column_made_count', kind: 'number' },
+  { key: 'last_made_at', filterField: 'column_last_made_at', kind: 'date' },
+] as const satisfies readonly {
+  key: RecipeSearchColumnKey;
+  filterField: RecipeSearchFilterField;
+  kind: 'number' | 'date';
+}[];
+
+export function getRecipeSearchComparisonColumn(key: string) {
+  return recipeSearchComparisonColumns.find((column) => column.key === key);
+}
+
+export function isRecipeSearchComparisonFilter(filter: RecipeSearchFilter) {
+  return recipeSearchComparisonColumns.some(({ filterField }) => filter.field === filterField);
+}
 
 export type RecipeSearchColumnKey =
   | Exclude<RecipeSearchSortKey, 'relevance'>
@@ -123,6 +143,8 @@ export type RecipeSearchSortKey =
   | 'makes'
   | 'starred'
   | 'hearted'
+  | 'made_count'
+  | 'last_made_at'
   | StandardNutrientKey;
 
 export type RecipeSearchSortOption = { value: RecipeSearchSortKey; label: string };

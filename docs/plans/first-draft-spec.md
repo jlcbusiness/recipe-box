@@ -99,6 +99,24 @@ values that no longer apply. Recipes can also carry photos; the add-photo
 mechanism is defined in the Images slice
 (see [comprehensive-reference.md § 2.3](comprehensive-reference/01-recipe-card-and-metadata.md#23-recipe-photos)).
 
+The private detail Made action records at most one mark per current device
+local calendar day. A successful mark increments the recipe's Made count and
+records the timestamp. It changes Want to try to Tried under the existing
+conditional-value clearing rules, but is unavailable while State is Will not
+try. A direct State change to Tried initializes a zero Made count to one
+without incrementing a positive count. Existing Tried recipes have a count of
+at least one; their timestamp may remain unknown when history cannot recover
+it. Find Search and Query expose Made count and Last Made as structured
+filters. Both are optional, filterable columns hidden by default in Find and
+publication-specific recipe lists. Last Made uses explicit date comparisons,
+not rolling relative windows, and its list column shows the local date only.
+When State is Will not try, suppress both values in owner-facing detail, Find
+Search/Query, and columns; Made matches no numeric comparison and Last Made is
+empty, and sorting treats both as absent. Preserve the stored values so they
+reappear if State returns to Tried.
+The count and latest timestamp are private owner data; a full cooking journal
+remains deferred.
+
 ### Ingredients
 
 An ingredient and its measurements are one ordered row.
@@ -405,7 +423,8 @@ See [comprehensive-reference.md § 15](comprehensive-reference/00-foundations-an
 - Diet, allergen, and substitution features. User-entered nutrition estimates
   are defined by [DLC 12](slices/dlc/dlc-12-recipe-nutrition.md); automatic
   external nutrition lookup remains excluded.
-- Cooking history, favorites, and per-cook notes.
+- Full cooking history, favorites, and per-cook notes; the Made count and
+  latest timestamp do not create a date-by-date cooking journal.
 - Collaboration and household sharing.
 - Native mobile clients.
 - Recipe-version restoration.

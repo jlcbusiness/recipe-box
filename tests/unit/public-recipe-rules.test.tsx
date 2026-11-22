@@ -25,6 +25,8 @@ const privateRecipe = {
   score: -5,
   is_starred: true,
   is_hearted: true,
+  made_count: 7,
+  last_made_at: '2026-03-08T09:59:59.000Z',
   verdict_id: 'private-verdict',
   enthusiasm_id: 'private-enthusiasm',
   occasion_details: 'Family birthday',

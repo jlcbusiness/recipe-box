@@ -48,6 +48,7 @@ When a Guest accesses a valid public recipe link, whether signed in or not:
   - No application navigation, sidebar, or account links.
   - No edit, delete, or clone buttons.
   - No User-only evaluation metadata, including Verdict, Score, Star, or Heart.
+  - No private Made count or last-made timestamp.
   - Publication name is displayed as static text attribution, not a clickable link.
   - Safe external HTTP(S) references are clickable; in-app recipe references
     remain static text.

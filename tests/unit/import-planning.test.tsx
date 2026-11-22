@@ -256,6 +256,85 @@ describe('database import planning', () => {
     });
   });
 
+  it('preserves existing Made values when replacing from a pre-version-16 bundle', () => {
+    const { data, existing } = createInput();
+    data.schema_version = 15;
+    Object.assign(data.records.recipes[0], { state: 'tried' });
+    Object.assign(existing.recipes[0], {
+      state: 'tried',
+      made_count: 8,
+      last_made_at: '2026-03-08T09:59:59.000Z',
+    });
+
+    const plan = planDatabaseImport(data, existing, {
+      [`publication:${sourcePublicationId}`]: {
+        action: 'replace',
+        targetId: destinationPublicationId,
+      },
+      [`recipe:${sourceRecipeId}`]: {
+        action: 'replace',
+        targetId: destinationRecipeId,
+      },
+    });
+
+    expect(plan.records.recipes[0]).toMatchObject({
+      made_count: 8,
+      last_made_at: '2026-03-08T09:59:59.000Z',
+    });
+  });
+
+  it('resets Made and Tried-only metadata when duplicating a Tried recipe', () => {
+    const { data, existing } = createInput();
+    const generatedIds = [newRecipeId, newStepId];
+    data.records.recipe_picklist_values = [
+      {
+        id: '88888888-8888-4888-8888-888888888888',
+        category: 'verdict',
+        value: 'Favorite',
+      },
+      {
+        id: '99999999-9999-4999-8999-999999999999',
+        category: 'enthusiasm',
+        value: 'Absolutely',
+      },
+    ];
+    Object.assign(data.records.recipes[0], {
+      state: 'tried',
+      made_count: 7,
+      last_made_at: '2026-03-08T09:59:59.000Z',
+      verdict_id: '88888888-8888-4888-8888-888888888888',
+      enthusiasm_id: '99999999-9999-4999-8999-999999999999',
+      occasion_details: 'Birthday',
+      reason: 'Too much effort',
+    });
+
+    const plan = planDatabaseImport(
+      data,
+      existing,
+      {
+        [`publication:${sourcePublicationId}`]: {
+          action: 'replace',
+          targetId: destinationPublicationId,
+        },
+        [`recipe:${sourceRecipeId}`]: {
+          action: 'duplicate',
+          targetId: destinationRecipeId,
+        },
+      },
+      () => generatedIds.shift() ?? newStepId,
+    );
+
+    expect(plan.records.recipes[0]).toMatchObject({
+      state: 'want_to_try',
+      made_count: 0,
+      last_made_at: null,
+      verdict_id: null,
+      enthusiasm_id: null,
+      occasion_details: null,
+      reason: null,
+    });
+  });
+
   it('preserves matched root IDs on Replace and skips the graph on Keep Existing', () => {
     const { data, existing } = createInput();
     const replacePlan = planDatabaseImport(
