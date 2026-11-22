@@ -49,6 +49,7 @@ table. The table always has one trailing empty row.
      density; display pluralizes the unit when the amount (or range maximum) exceeds one. Standard view inserts
      “of” between the unit and ingredient only when the saved unit does not already include it. Ingredients-First
      shows the ingredient in its own column, so its Things amount omits a trailing “of” (for example, `a bunch`).
+     Instruction-reference amount tooltips also omit “of” (for example, `1 dash`).
      The editor uses an
      addable searchable suggestion list; adding a unit updates the account picklist immediately, while assigning it
      to the recipe remains part of the unsaved draft. An explicit standalone lowercase `a` represents one Thing and

@@ -275,6 +275,31 @@ it('shows actual amounts in divided instruction mention popups', () => {
   expect(screen.getByRole('tooltip').textContent).toBe('4 cups');
 });
 
+it('omits trailing of from Things instruction mention tooltips', () => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const ingredient = ingredientRow('parsley-row', 'Parsley', 0, [
+    { ...amount('informal', 1), picklist_value: 'Dash' },
+  ]);
+  render(
+    <RecipeReaderProvider serves={4}>
+      <RecipeInstructionMention
+        displayName="parsley"
+        ingredient={ingredient}
+        unitSystems={{ volume: 'us_customary', weight: 'us_customary' }}
+      />
+    </RecipeReaderProvider>,
+  );
+
+  fireEvent.mouseEnter(screen.getByRole('button', { name: 'parsley' }));
+  expect(screen.getByRole('tooltip').textContent).toBe('1 dash');
+});
+
 const flour: IngredientDisplayInput = {
   ingredient_name: 'Flour',
   detail: 'All-purpose',

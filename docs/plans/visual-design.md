@@ -1321,7 +1321,8 @@ while abbreviated fixed units remain unchanged. Standard-view Things wording
 inserts “of” between the unit and ingredient only when the saved unit does not
 already include it. Ingredients-First shows the ingredient in its own column,
 so its amount omits a trailing “of” (for example, `a bunch`), including when
-the saved unit label ends in “of”. A marked scalar Things amount displays as `a` only when its
+the saved unit label ends in “of”. Instruction-reference amount tooltips also
+omit “of” (for example, `1 dash`). A marked scalar Things amount displays as `a` only when its
 effective scaled amount is exactly one; numeric `1` is never rewritten, and
 equivalent Volume or Weight displays stay numeric. US customary quantities use
 Unicode glyphs for familiar fractions when close to halves, thirds, quarters,

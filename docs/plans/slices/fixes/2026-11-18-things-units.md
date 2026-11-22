@@ -44,7 +44,9 @@ an authored `a` marker must be explicitly carried through both.
   already include it. Never duplicate a saved “of”. Ingredients-First shows
   the ingredient in a separate column, so its Things amount omits a trailing
   “of” (for example, `a bunch`), including when the saved unit label ends in
-  “of”. Preserve current pluralization for scalar amounts and legacy ranges.
+  “of”. Instruction-reference amount tooltips also omit “of” (for example,
+  `1 dash`). Preserve current pluralization for scalar amounts and legacy
+  ranges.
 - Permit the trimmed standalone token `a` only in a Things amount field. It
   represents numeric one but is an explicit author choice: never rewrite a
   typed `1` to `a`. Reject `a` in other categories and reject any arithmetic
@@ -97,6 +99,7 @@ an authored `a` marker must be explicitly carried through both.
   showing an equivalent Volume or Weight, and returns when switching back if
   the effective Things amount is exactly one. Test other scales and legacy
   ranges as well.
+- Instruction mention tooltip tests verify Things amounts omit trailing “of”.
 - Migration and API tests cover the marker default and constraints, recipe
   save/load/history, public-copy allowlists, and bundle/offline round-trips.
   Measurements without the marker retain existing behavior.

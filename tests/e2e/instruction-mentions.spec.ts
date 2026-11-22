@@ -99,7 +99,7 @@ async function signIn(page: Page, email: string, password: string) {
   await page.getByRole('button', { name: 'Sign in' }).click();
 }
 
-test('whole ingredient mention and metric ratios preserve reader amounts @e2e @instructions', async ({
+test('whole and Things ingredient mentions preserve reader amounts @e2e @instructions', async ({
   page,
   request,
 }) => {
@@ -107,10 +107,18 @@ test('whole ingredient mention and metric ratios preserve reader amounts @e2e @i
   const config = await getLocalSupabaseConfig();
   const ingredientId = randomUUID();
   const customaryIngredientId = randomUUID();
+  const thingsIngredientId = randomUUID();
   const ingredientSetId = randomUUID();
   const stepId = randomUUID();
 
   try {
+    const picklistsResponse = await request.get(
+      `${config.apiUrl}/rest/v1/recipe_picklist_values?select=id&account_id=eq.${owner.id}&category=eq.informal_unit&value=eq.Bunch`,
+      { headers: headers(owner, config.anonKey) },
+    );
+    expect(picklistsResponse.ok(), await picklistsResponse.text()).toBeTruthy();
+    const [{ id: bunchId }] = (await picklistsResponse.json()) as { id: string }[];
+
     const preferenceResponse = await request.patch(
       `${config.apiUrl}/rest/v1/accounts?id=eq.${owner.id}`,
       {
@@ -123,6 +131,7 @@ test('whole ingredient mention and metric ratios preserve reader amounts @e2e @i
     );
     expect(preferenceResponse.ok(), await preferenceResponse.text()).toBeTruthy();
     const wholeMarker = `[[ingredient:${ingredientId}|butter-main-whole]]`;
+    const thingsMarker = `[[ingredient:${thingsIngredientId}|parsley]]`;
     const createdResponse = await request.post(
       `${config.apiUrl}/rest/v1/rpc/save_recipe_with_ingredient_sets`,
       {
@@ -143,8 +152,29 @@ test('whole ingredient mention and metric ratios preserve reader amounts @e2e @i
                 position: 1,
                 portion_one_ratio: 0.25,
               },
+              {
+                ...ingredientRow(thingsIngredientId, 'Parsley'),
+                ingredient_set_id: ingredientSetId,
+                position: 2,
+                measurements: [
+                  {
+                    measurement_type: 'informal',
+                    amount_min: 1,
+                    amount_max: null,
+                    unit_code: null,
+                    picklist_value_id: bunchId,
+                  },
+                ],
+              },
             ],
-            [instructionStep(stepId, 0, `Use ${wholeMarker}.`, 'Use #butter-main-whole.')],
+            [
+              instructionStep(
+                stepId,
+                0,
+                `Use ${wholeMarker}. Add ${thingsMarker}.`,
+                'Use #butter-main-whole. Add #parsley.',
+              ),
+            ],
           ),
           p_publication_id: null,
           p_publication_page: null,
@@ -220,9 +250,11 @@ test('whole ingredient mention and metric ratios preserve reader amounts @e2e @i
     ).toBe(true);
 
     const mentions = page.locator('.recipe-instruction-mention');
-    await expect(mentions).toHaveCount(1);
-    await mentions.hover();
+    await expect(mentions).toHaveCount(2);
+    await mentions.nth(0).hover();
     await expect(page.getByRole('tooltip')).toHaveText('8 g');
+    await mentions.nth(1).hover();
+    await expect(page.getByRole('tooltip')).toHaveText('1 bunch');
   } finally {
     await deleteTestUser(request, owner);
   }

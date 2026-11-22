@@ -202,6 +202,7 @@ export function RecipeInstructionMention({
   const parts = getIngredientDisplayParts(portionedDisplayIngredient, {
     aliasPinch: true,
     lowercaseMultiwordName: true,
+    includeInformalOf: false,
   });
   const amount =
     [parts.amount, parts.unmeasuredPhrase].filter(Boolean).join(' ') || 'No amount listed';
