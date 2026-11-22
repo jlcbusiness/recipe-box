@@ -285,15 +285,14 @@ test('Username and App data are separate account pages @e2e', async ({
       );
       await page.evaluate(() => {
         const themeMarker = document.createElement('span');
-        themeMarker.className = 'recipe-tin-theme';
+        themeMarker.dataset.publicationTheme = 'book';
         themeMarker.hidden = true;
         document.body.append(themeMarker);
       });
-      await expect(mobileNav).toHaveCSS(
-        'background-color',
-        'color(srgb 0.376471 0.298039 0.219608 / 0.5)',
+      await expect(mobileNav).toHaveCSS('background-color', 'rgb(250, 251, 252)');
+      await page.evaluate(() =>
+        document.querySelector('[data-publication-theme="book"]')?.remove(),
       );
-      await page.evaluate(() => document.querySelector('.recipe-tin-theme')?.remove());
     } else {
       expect(wipeBounds.x).toBeLessThan(exportBounds.x);
       expect(wipeBounds.x).toBeLessThan(importBounds.x);

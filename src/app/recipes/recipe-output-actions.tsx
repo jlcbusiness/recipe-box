@@ -98,6 +98,13 @@ function preparePrintHtmlDocument(
     frame.addEventListener(
       'load',
       () => {
+        void handleFrameLoad();
+      },
+      { once: true },
+    );
+
+    async function handleFrameLoad() {
+      try {
         if (signal.aborted) {
           handleAbort();
           return;
@@ -105,6 +112,11 @@ function preparePrintHtmlDocument(
         printWindow = frame.contentWindow;
         if (!printWindow) {
           if (cleanup()) reject(new Error('The browser could not open the print document.'));
+          return;
+        }
+        await printWindow.document.fonts.ready;
+        if (cleaned || signal.aborted) {
+          handleAbort();
           return;
         }
         printWindow.addEventListener('afterprint', handleAfterPrint, { once: true });
@@ -127,9 +139,13 @@ function preparePrintHtmlDocument(
             }
           },
         });
-      },
-      { once: true },
-    );
+      } catch (error) {
+        if (cleanup() && !settled) {
+          settled = true;
+          reject(error);
+        }
+      }
+    }
     frame.srcdoc = html;
   });
 }

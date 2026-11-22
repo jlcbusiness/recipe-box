@@ -1169,6 +1169,7 @@ test('Find Recipes centers and resizes Rating and marker columns in Search and Q
     const expectResizeHandleCentered = async (column: string) => {
       const header = table.locator(`th[data-explorer-column="${column}"]`);
       const handle = header.locator(`[data-explorer-resize-column="${column}"]`);
+      await header.scrollIntoViewIfNeeded();
       const [headerBounds, handleBounds] = await Promise.all([
         header.boundingBox(),
         handle.boundingBox(),
@@ -1225,6 +1226,7 @@ test('Find Recipes centers and resizes Rating and marker columns in Search and Q
     ] as const) {
       const header = table.locator(`th[data-explorer-column="${column}"]`);
       const handle = header.locator(`[data-explorer-resize-column="${column}"]`);
+      await header.scrollIntoViewIfNeeded();
       for (const width of [maxWidth, minWidth]) {
         const [headerBounds, handleBounds] = await Promise.all([
           header.boundingBox(),
@@ -1254,6 +1256,25 @@ test('Find Recipes centers and resizes Rating and marker columns in Search and Q
           .toBe(width);
       }
     }
+
+    await expect
+      .poll(async () => {
+        const response = await request.get(
+          `${config.apiUrl}/rest/v1/explorer_state?select=state&context_key=eq.recipes-find`,
+          {
+            headers: {
+              apikey: config.anonKey,
+              Authorization: `Bearer ${user.accessToken}`,
+            },
+          },
+        );
+        expect(response.ok(), await response.text()).toBeTruthy();
+        const [saved] = (await response.json()) as {
+          state: { display_preferences: { column_widths: Record<string, number> } };
+        }[];
+        return saved?.state.display_preferences.column_widths;
+      })
+      .toMatchObject({ score: 64, starred: 56, hearted: 56 });
 
     await page.goto('/recipes/find?tab=search&view=details');
     await expect(row).toHaveCount(1);
@@ -1823,19 +1844,20 @@ test('Find mobile Details aligns active markers with recipe titles @e2e', async 
           const gridContent = gridStack.locator('.recipe-grid-marker-content');
           const markerStack = gridStack.locator('.recipe-marker-indicators');
           const gridRating = gridStack.locator('.recipe-grid-rating-indicator');
-          const [gridStackBounds, gridContentBounds] = await Promise.all([
-            gridStack.boundingBox(),
-            gridContent.boundingBox(),
-          ]);
-          const gridRatingBounds = fixture.hasRating ? await gridRating.boundingBox() : null;
           await expect(card).toHaveCount(1);
           await expect(card).toHaveAttribute('data-stripe-cell', /^(odd|even)$/);
+          await expect(gridStack).toBeVisible();
           await expect(gridStack).toHaveCSS('border-radius', '9999px');
           await expect(gridStack).toHaveCSS('min-height', '32px');
           await expect(gridStack).toHaveCSS('min-width', '32px');
           await expect(card.locator('.find-recipes-grid-metadata')).not.toContainText('Rating');
           await expect(markerStack.locator('svg')).toHaveCount(fixture.markerCount);
           await expect(gridRating).toHaveCount(fixture.hasRating ? 1 : 0);
+          const [gridStackBounds, gridContentBounds] = await Promise.all([
+            gridStack.boundingBox(),
+            gridContent.boundingBox(),
+          ]);
+          const gridRatingBounds = fixture.hasRating ? await gridRating.boundingBox() : null;
           expect(gridStackBounds).not.toBeNull();
           expect(gridContentBounds).not.toBeNull();
           if (!gridStackBounds || !gridContentBounds) {
@@ -2341,7 +2363,7 @@ test('List column preferences do not change recipe Grid cards @e2e', async ({ pa
     await page.goto(`/publications/${tinId}?view=grid`);
     const tinMetadata = page.locator('.find-recipes-grid-metadata').first();
     await expect(tinMetadata).toHaveText('Tried ~ 20 min');
-    await expect(tinMetadata).toHaveCSS('color', 'rgb(40, 36, 32)');
+    await expect(tinMetadata).toHaveCSS('color', 'rgb(36, 40, 32)');
     expect(missingKeyWarnings).toEqual([]);
   } finally {
     await deleteTestUser(request, user);
@@ -2356,6 +2378,8 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
   const user = await createTestUser(request);
   const otherUser = await createTestUser(request);
   const config = await getLocalSupabaseConfig();
+  const longRecipeName =
+    `Apricot roast ${'with a very long title that wraps on a narrow screen '.repeat(3)}`.trim();
 
   try {
     const publicationResponse = await request.post(
@@ -2476,7 +2500,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
         data: {
           p_recipe_id: null,
           p_expected_version: null,
-          p_name: 'Apricot roast with a very long title that wraps on a narrow screen',
+          p_name: longRecipeName,
           p_food_type_id: null,
           p_state: 'tried',
           p_verdict_id: null,
@@ -2578,7 +2602,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       {
         operator: 'is_not',
         value: [ingredientId],
-        expectedNames: ['Apricot roast with a very long title that wraps on a narrow screen'],
+        expectedNames: [longRecipeName],
       },
     ];
     for (const exactFilter of exactIngredientFilters) {
@@ -2649,7 +2673,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       {
         field: 'recipe_url',
         value: 'https://source.example.test/apricot-roast',
-        expectedName: 'Apricot roast with a very long title that wraps on a narrow screen',
+        expectedName: longRecipeName,
         expectedFacet: [
           {
             facet_value: '__blank__',
@@ -2736,9 +2760,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       recipe_name: string;
       total_count: number;
     }[];
-    expect(firstPageResults.map(({ recipe_name }) => recipe_name)).toEqual([
-      'Apricot roast with a very long title that wraps on a narrow screen',
-    ]);
+    expect(firstPageResults.map(({ recipe_name }) => recipe_name)).toEqual([longRecipeName]);
     expect(firstPageResults[0]?.total_count).toBe(2);
 
     const secondPage = await request.post(`${config.apiUrl}/rest/v1/rpc/search_recipes`, {
@@ -2950,27 +2972,19 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       await expect(nameFilterButton).toHaveAttribute('aria-expanded', 'true');
       await expect(page.getByRole('group', { name: 'Name values' })).toBeVisible();
       await expect(page.getByLabel('Searchable saffron rice')).toBeChecked();
-      await page
-        .getByLabel('Apricot roast with a very long title that wraps on a narrow screen')
-        .uncheck();
+      await page.getByLabel(longRecipeName).uncheck();
       await page
         .locator('.recipe-column-filter-popover')
         .getByRole('button', { name: 'Apply' })
         .click();
       await expect(page.getByText('1 recipe found')).toBeVisible();
       await expect(page.getByRole('link', { name: 'Searchable saffron rice' })).toBeVisible();
-      await expect(
-        page.getByRole('link', {
-          name: 'Apricot roast with a very long title that wraps on a narrow screen',
-        }),
-      ).toHaveCount(0);
+      await expect(page.getByRole('link', { name: longRecipeName })).toHaveCount(0);
 
       await page.getByRole('button', { name: 'Filter Name' }).click();
       await page.getByRole('button', { name: 'Deselect all' }).click();
       await page.getByRole('button', { name: 'Select all' }).click();
-      await expect(
-        page.getByLabel('Apricot roast with a very long title that wraps on a narrow screen'),
-      ).toBeChecked();
+      await expect(page.getByLabel(longRecipeName)).toBeChecked();
       await expect(page.getByLabel('Searchable saffron rice')).toBeChecked();
       await page.getByRole('button', { name: 'Apply', exact: true }).click();
       await expect(page.getByText('2 recipes found')).toBeVisible();
@@ -3325,7 +3339,7 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
     );
     const noTimeGridCard = page
       .locator('.find-recipes-grid li')
-      .filter({ hasText: 'Apricot roast with a very long title that wraps on a narrow screen' });
+      .filter({ hasText: longRecipeName });
     const gridCardHeights = await page
       .locator('.find-recipes-grid li')
       .evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().height)));
@@ -3344,16 +3358,17 @@ test('Find Recipes searches indexed sources and isolates accounts @e2e', async (
       page.locator('.find-recipes-list tbody tr').first().locator('.find-recipes-mobile-metadata'),
     ).toHaveText('Search Source Magazine ~ Tried');
     const clippedTitle = page
-      .locator('.find-recipes-mobile-title')
-      .filter({ hasText: 'Apricot roast with a very long title that wraps on a narrow screen' })
-      .first();
+      .locator('.find-recipes-list:visible .find-recipes-mobile-title:visible')
+      .filter({ hasText: longRecipeName });
+    await expect(clippedTitle).toHaveCount(1);
+    await expect(clippedTitle).toBeVisible();
     await expect(clippedTitle).toHaveCSS('white-space', 'nowrap');
     await expect(clippedTitle).toHaveCSS('text-overflow', 'ellipsis');
-    expect(
-      await clippedTitle.evaluate((element) => {
-        return element.scrollWidth > element.clientWidth;
-      }),
-    ).toBeTruthy();
+    const clippedTitleWidths = await clippedTitle.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(clippedTitleWidths.scrollWidth).toBeGreaterThan(clippedTitleWidths.clientWidth);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBeTruthy();

@@ -163,7 +163,10 @@ async function addUpdate(
   kind: 'Fix' | 'Feature',
   useTouch: boolean,
 ) {
-  await page.getByRole('textbox', { name: 'Add update' }).fill(body);
+  await waitForUpdatesInteractionReady(page, useTouch);
+  const draft = page.getByRole('textbox', { name: 'Add update' });
+  await draft.fill(body);
+  await expect(draft).toHaveValue(body);
   const picker = page
     .locator('.admin-update-row.is-new')
     .getByRole('combobox', { name: '+ Add tag' });
@@ -176,6 +179,66 @@ async function addUpdate(
     await option.click();
   }
   await expect(updateRow(page, body)).toBeVisible({ timeout: 15_000 });
+}
+
+async function waitForUpdatesInteractionReady(
+  page: import('@playwright/test').Page,
+  useTouch: boolean,
+) {
+  const picker = page
+    .locator('.admin-update-row.is-new')
+    .getByRole('combobox', { name: '+ Add tag' });
+  const option = page.getByRole('option', { name: 'Fix', exact: true });
+
+  await expect
+    .poll(
+      async () => {
+        if (await option.isVisible()) {
+          return true;
+        }
+        if (useTouch) {
+          await picker.tap();
+        } else {
+          await picker.click();
+        }
+        return option.isVisible();
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(option).toBeHidden();
+}
+
+async function cleanupTestUpdates(
+  request: import('@playwright/test').APIRequestContext,
+  apiUrl: string,
+  anonKey: string,
+  admin: TestUser,
+  marker: string,
+) {
+  const headers = {
+    apikey: anonKey,
+    Authorization: `Bearer ${admin.accessToken}`,
+  };
+  const updatesResponse = await request.get(
+    `${apiUrl}/rest/v1/app_updates?select=id,revision&body_markdown=like.${encodeURIComponent(`*${marker}*`)}`,
+    { headers },
+  );
+  if (!updatesResponse.ok()) {
+    throw new Error(`Could not load test updates for cleanup: ${await updatesResponse.text()}`);
+  }
+
+  const updates = (await updatesResponse.json()) as { id: string; revision: number }[];
+  for (const update of updates) {
+    const deleteResponse = await request.post(`${apiUrl}/rest/v1/rpc/admin_update_delete`, {
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      data: { p_id: update.id, p_revision: update.revision },
+    });
+    if (!deleteResponse.ok()) {
+      throw new Error(`Could not delete test update: ${await deleteResponse.text()}`);
+    }
+  }
 }
 
 async function expectDialogCentered(
@@ -357,10 +420,11 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
   request,
 }, testInfo) => {
   test.setTimeout(60_000);
+  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
   const admin = await createAdminTestUser(request);
+  const runId = `${Date.now()}-${testInfo.project.name.replace(/\s/gu, '-')}`;
 
   try {
-    const runId = `${Date.now()}-${testInfo.project.name.replace(/\s/gu, '-')}`;
     const initialText = `Track compact update editing ${runId}.`;
     const initialBody = `${initialText}\n\n- Keep nested lists\n  - readable`;
     const savedBody = `${initialBody}\n  - keyboard item`;
@@ -382,6 +446,8 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await expect(page.getByRole('button', { name: 'Add update' })).toHaveCount(0);
     await expect(page.getByText('Done', { exact: true })).toBeVisible();
     await expect(page.getByText('Type', { exact: true })).toBeVisible();
+    const useTouch = testInfo.project.name === 'Fold 6';
+    await waitForUpdatesInteractionReady(page, useTouch);
 
     const addRow = page.locator('.admin-update-row.is-new');
     const addField = page.getByRole('textbox', { name: 'Add update' });
@@ -462,6 +528,7 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await page.reload();
     await expect(page.getByRole('tabpanel', { name: 'Updates' })).toBeVisible();
     await expect(savedRow.getByRole('combobox', { name: 'Change' })).toBeVisible();
+    await waitForUpdatesInteractionReady(page, useTouch);
 
     const textField = row.getByRole('textbox', { name: 'Update text' });
     await textField.click();
@@ -648,7 +715,11 @@ test('admins can manage classified updates and versioned completion @e2e @a11y',
     await deleteDialog.getByRole('button', { name: 'Delete update', exact: true }).click();
     await expect(row).toHaveCount(0, { timeout: 15_000 });
   } finally {
-    await deleteTestUser(request, admin);
+    try {
+      await cleanupTestUpdates(request, apiUrl, anonKey, admin, runId);
+    } finally {
+      await deleteTestUser(request, admin);
+    }
   }
 });
 
@@ -657,8 +728,10 @@ test('admins reflow update text by available content width @e2e', async ({
   request,
 }, testInfo) => {
   test.setTimeout(60_000);
+  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
   const admin = await createAdminTestUser(request);
-  const body = `Reflow ${Date.now()}-${testInfo.project.name}: Keep update text readable when the row width changes.`;
+  const runId = `${Date.now()}-${testInfo.project.name.replace(/\s/gu, '-')}`;
+  const body = `Reflow ${runId}: Keep update text readable when the row width changes.`;
 
   try {
     await signInAs(page, admin);
@@ -792,7 +865,11 @@ test('admins reflow update text by available content width @e2e', async ({
     await deleteDialog.getByRole('button', { name: 'Delete update', exact: true }).click();
     await expect(row).toHaveCount(0);
   } finally {
-    await deleteTestUser(request, admin);
+    try {
+      await cleanupTestUpdates(request, apiUrl, anonKey, admin, runId);
+    } finally {
+      await deleteTestUser(request, admin);
+    }
   }
 });
 
@@ -801,8 +878,9 @@ test('admins can reorder incomplete updates with pointer, touch, and keyboard @e
   request,
 }, testInfo) => {
   test.setTimeout(60_000);
-  const admin = await createAdminTestUser(request);
+  const config = await getLocalSupabaseConfig();
   const runId = `${Date.now()}-${testInfo.project.name.replace(/\s/gu, '-')}`;
+  const admin = await createAdminTestUser(request);
   const first = `First update ${runId} with a longer note to verify wrapped rows keep their position during reorder.`;
   const second = `Second update ${runId}`;
   const third = `Third update ${runId}`;
@@ -840,6 +918,25 @@ test('admins can reorder incomplete updates with pointer, touch, and keyboard @e
     await expect(page.locator('.admin-updates [role="status"]')).toHaveText(
       `${third} moved to position 2.`,
     );
+    const reorderedIds = await Promise.all(
+      [second, third, first].map(async (body) => {
+        const id = await updateRow(page, body).getAttribute('data-admin-update-id');
+        if (!id) throw new Error('Expected each reordered update to have a persisted ID.');
+        return id;
+      }),
+    );
+    const persistedOrderResponse = await request.get(
+      `${config.apiUrl}/rest/v1/app_updates?select=id,sort_order&id=in.(${reorderedIds.join(',')})&order=sort_order.asc`,
+      {
+        headers: {
+          apikey: config.anonKey,
+          Authorization: `Bearer ${admin.accessToken}`,
+        },
+      },
+    );
+    expect(persistedOrderResponse.ok(), await persistedOrderResponse.text()).toBeTruthy();
+    const persistedOrder = (await persistedOrderResponse.json()) as { id: string }[];
+    expect(persistedOrder.map(({ id }) => id)).toEqual(reorderedIds);
     await expect
       .poll(() => updateOrder(page, [first, second, third]))
       .toEqual([second, third, first]);
@@ -901,7 +998,11 @@ test('admins can reorder incomplete updates with pointer, touch, and keyboard @e
       await expect(row).toHaveCount(0);
     }
   } finally {
-    await deleteTestUser(request, admin);
+    try {
+      await cleanupTestUpdates(request, config.apiUrl, config.anonKey, admin, runId);
+    } finally {
+      await deleteTestUser(request, admin);
+    }
   }
 });
 

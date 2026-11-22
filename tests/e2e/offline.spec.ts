@@ -466,8 +466,12 @@ test('an online not-found response removes its stale offline snapshot @e2e', asy
     });
     expect(trashResponse.ok(), await trashResponse.text()).toBe(true);
 
-    const unavailable = await page.goto(`/recipes/${recipe.id}`);
-    expect(unavailable?.status()).toBe(404);
+    await page.goto(`/recipes/${recipe.id}`);
+    await expect(page.getByRole('heading', { name: 'Recipe not found' })).toBeVisible();
+    await expect(page.locator('head meta[name="robots"]').first()).toHaveAttribute(
+      'content',
+      'noindex',
+    );
     await page.context().setOffline(true);
     await page.goto(`/recipes/${recipe.id}`);
     await expect(page.getByRole('heading', { name: 'You are offline' })).toBeVisible();

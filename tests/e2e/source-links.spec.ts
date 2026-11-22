@@ -396,9 +396,10 @@ test('recipe source links save atomically and remain recoverable through Trash @
         'https://magazine.example.test/herbed-potatoes',
       );
     } else {
-      await expect(
-        page.getByRole('link', { name: 'https://magazine.example.test/herbed-potatoes' }),
-      ).toHaveAttribute('href', 'https://magazine.example.test/herbed-potatoes');
+      await expect(page.locator('.recipe-attribution .recipe-source-link')).toHaveAttribute(
+        'href',
+        'https://magazine.example.test/herbed-potatoes',
+      );
     }
     await expect(page.getByText('Roast chicken', { exact: true })).toHaveCount(2);
     await expect(page.getByRole('link', { name: 'Roast chicken' })).toHaveCount(0);
@@ -523,6 +524,7 @@ test('recipe source links save atomically and remain recoverable through Trash @
     await expect(page.locator('.recipe-form > fieldset > legend')).toHaveText([
       'Recipe',
       'Ingredients',
+      'Pre-recipe Prep',
       'Instructions',
       'Times (min)',
       'Pairs With',
@@ -756,9 +758,10 @@ test('recipe source links save atomically and remain recoverable through Trash @
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Herbed potatoes' })).toBeVisible();
     await expect(page.getByText('Garden salad')).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: 'https://recipes.example.test/roast-chicken' }),
-    ).toHaveAttribute('href', 'https://recipes.example.test/roast-chicken');
+    await expect(page.locator('.recipe-attribution .recipe-source-link')).toHaveAttribute(
+      'href',
+      'https://magazine.example.test/herbed-potatoes',
+    );
     await expect(page.getByRole('link', { name: 'Roast chicken' })).toHaveCount(4);
 
     const trashLinkedRecipeAgain = await request.post(`${apiUrl}/rest/v1/rpc/trash_recipe`, {

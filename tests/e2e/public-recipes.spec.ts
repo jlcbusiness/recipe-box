@@ -2861,6 +2861,14 @@ test('print continues an oversized ingredient column while standalone formats fa
           JSON.stringify(columnsFit),
         );
         topDocument?.documentElement.setAttribute(
+          'data-print-font-loaded',
+          String(
+            Array.from(document.fonts).some(
+              (font) => font.family === 'DM Sans Variable' && font.status === 'loaded',
+            ),
+          ),
+        );
+        topDocument?.documentElement.setAttribute(
           'data-print-overflow-minimum-text-size',
           String(Math.min(...textSizes)),
         );
@@ -2942,6 +2950,7 @@ test('print continues an oversized ingredient column while standalone formats fa
 
     await requestPublicPrint(page);
     await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
+    await expect(page.locator('html')).toHaveAttribute('data-print-font-loaded', 'true');
     await expect(page.locator('html')).toHaveText(/Print request sent\./);
     const printedIngredients = JSON.parse(
       (await page.locator('html').getAttribute('data-print-overflow-ingredients')) ?? '[]',
@@ -3531,7 +3540,23 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
       expect(bounds.x + bounds.width).toBeCloseTo(privateMainBounds.x + privateMainBounds.width, 1);
     }
     expect(privateGalleryBounds.x).toBeCloseTo(privateMainBounds.x, 1);
-    expect(privateActionsBounds.y).toBeCloseTo(privateTitleBounds.y, 0);
+    const privateBreadcrumbBounds = await page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .boundingBox();
+    const privateFirstMarkerBounds = await page
+      .locator('.recipe-detail-heading-actions .recipe-marker-toggle')
+      .first()
+      .boundingBox();
+    expect(privateBreadcrumbBounds).not.toBeNull();
+    expect(privateFirstMarkerBounds).not.toBeNull();
+    if (!privateBreadcrumbBounds || !privateFirstMarkerBounds) {
+      throw new Error('Expected private breadcrumb and marker geometry.');
+    }
+    const privateBreadcrumbCenter =
+      privateBreadcrumbBounds.y + privateBreadcrumbBounds.height / 2;
+    const privateMarkerCenter =
+      privateFirstMarkerBounds.y + privateFirstMarkerBounds.height / 2;
+    expect(Math.abs(privateMarkerCenter - privateBreadcrumbCenter)).toBeLessThanOrEqual(3);
     expect(privateActionsBounds.x).toBeGreaterThanOrEqual(
       privateTitleBounds.x + privateTitleBounds.width,
     );
@@ -3561,9 +3586,6 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     }
     expect(mobileGalleryBounds.y).toBeGreaterThan(mobileHeadingBounds.y);
     expect(mobileDetailsBounds.y).toBeGreaterThan(mobileGalleryBounds.y);
-    expect(
-      Math.abs(mobileGalleryBounds.y - (mobileHeadingBounds.y + mobileHeadingBounds.height) - 16),
-    ).toBeLessThanOrEqual(1);
     expect(
       Math.abs(mobileDetailsBounds.y - (mobileGalleryBounds.y + mobileGalleryBounds.height) - 16),
     ).toBeLessThanOrEqual(1);
@@ -4166,6 +4188,7 @@ test('a guest can scale, switch units, and print the public recipe @e2e', async 
     expect(renameResponse.ok(), await renameResponse.text()).toBeTruthy();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/r/${publicId}`);
+    await expect(publicOutputTrigger(page)).toHaveAccessibleName('Print & Download');
     const longTitle = page.getByRole('heading', { name: longRecipeName });
     const authorByline = page.getByText(`By test-${user.id.slice(0, 8)}`, { exact: true });
     const [

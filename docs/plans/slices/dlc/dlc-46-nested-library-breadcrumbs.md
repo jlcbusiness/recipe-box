@@ -92,6 +92,10 @@ navigation.
   `notFound()` checks. With Next.js 16.4.6, a streamed not-found page may retain
   HTTP 200; tests verify its `noindex` marker and the absence of private content
   rather than requiring a 404 status.
+- When a private recipe navigation returns a successful HTML not-found page
+  with `noindex`, the service worker removes that recipe's cached offline
+  snapshot so a streamed HTTP 200 cannot leave stale private content available
+  offline.
 
 ## Open decisions
 

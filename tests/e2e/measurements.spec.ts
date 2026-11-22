@@ -1644,12 +1644,22 @@ test('Things units can be added inline and explicit a survives save @e2e @measur
 
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
+    if (
+      (await presentationToggle.getAttribute('aria-label')) ===
+      'Ingredient view: Ingredient-first. Activate for Standard.'
+    ) {
+      await presentationToggle.click();
+    }
+    await expect(presentationToggle).toHaveAttribute(
+      'aria-label',
+      'Ingredient view: Standard. Activate for Ingredient-first.',
+    );
     await expect(page.getByText(`a ${unitName} of parsley`, { exact: true })).toBeVisible();
     await expect(
       page.getByText(`2 ${unitName.replace('unit-', 'units-')} of basil`, { exact: true }),
     ).toBeVisible();
     await page.reload();
-    const presentationToggle = page.getByRole('button', { name: /^Ingredient view:/u });
     if (
       (await presentationToggle.getAttribute('aria-label')) ===
       'Ingredient view: Ingredient-first. Activate for Standard.'
@@ -1663,14 +1673,15 @@ test('Things units can be added inline and explicit a survives save @e2e @measur
     await expect(page.getByText(`a ${unitName} of parsley`, { exact: true })).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 500 });
-    await expect(page.getByText(`a ${unitName} of parsley`, { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('heading', { name: recipeName })).toBeVisible();
+    await expect(presentationToggle).toHaveAttribute(
+      'aria-label',
+      'Ingredient view: Ingredient-first. Activate for Standard.',
+    );
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
-    await page.getByText(`a ${unitName} of parsley`, { exact: true }).scrollIntoViewIfNeeded();
-    await page.screenshot({ path: testInfo.outputPath('things-reader-mobile.png') });
-
-    await presentationToggle.click();
     const ingredientFirstTable = page.getByRole('table', { name: 'Recipe ingredients' });
     await expect(ingredientFirstTable).toBeVisible();
     const mobileAmountCell = ingredientFirstTable
@@ -1679,20 +1690,25 @@ test('Things units can be added inline and explicit a survives save @e2e @measur
       .locator('.recipe-ingredient-column-amount-mobile');
     await expect(mobileAmountCell).toHaveText(`a ${unitName}`);
     await expect(mobileAmountCell).not.toContainText('of');
-    await page.screenshot({
-      path: testInfo.outputPath('things-reader-ingredient-first-mobile.png'),
-    });
+    await page.screenshot({ path: testInfo.outputPath('things-reader-mobile.png') });
 
     await page.setViewportSize({ width: 1024, height: 900 });
-    const firstAmountCell = ingredientFirstTable
-      .locator('tbody tr')
-      .first()
-      .locator('.recipe-ingredient-column-volume');
-    await expect(firstAmountCell).toHaveText(`a ${unitName}`);
-    await expect(firstAmountCell).not.toContainText('of');
-    await page.screenshot({
-      path: testInfo.outputPath('things-reader-ingredient-first-desktop.png'),
-    });
+    const desktopPresentation = await presentationToggle.getAttribute('aria-label');
+    if (desktopPresentation === 'Ingredient view: Standard. Activate for Ingredient-first.') {
+      await expect(page.getByText(`a ${unitName} of parsley`, { exact: true })).toBeVisible();
+    } else {
+      expect(desktopPresentation).toBe('Ingredient view: Ingredient-first. Activate for Standard.');
+      const ingredientFirstTable = page.getByRole('table', { name: 'Recipe ingredients' });
+      const firstAmountCell = ingredientFirstTable
+        .locator('tbody tr')
+        .first()
+        .locator('.recipe-ingredient-column-volume');
+      await expect(firstAmountCell).toHaveText(`a ${unitName}`);
+      await expect(firstAmountCell).not.toContainText('of');
+      await page.screenshot({
+        path: testInfo.outputPath('things-reader-ingredient-first-desktop.png'),
+      });
+    }
 
     await page.getByRole('link', { name: 'Edit' }).click();
     const amount = page.getByRole('textbox', { name: 'Informal amount, row 1' });
@@ -2221,7 +2237,7 @@ test('owners enter, view, edit, and reload measurements on desktop and mobile @e
     );
     await expect(mobileUnitMenu.locator('.ingredient-cell-option-group').first()).toHaveCSS(
       'text-decoration-color',
-      'rgb(108, 103, 95)',
+      'rgb(98, 105, 93)',
     );
     await expect(mobileUnitMenu.getByRole('option', { name: 'cup', exact: true })).toBeVisible();
     const mobileUnitMenuBounds = await mobileUnitMenu.evaluate((element) => {

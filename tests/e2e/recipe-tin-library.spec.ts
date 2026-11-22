@@ -70,15 +70,15 @@ async function expectBreadcrumbAlignedWithHeading(
 
 async function expectRecipeActionsAlignedWithBreadcrumb(page: import('@playwright/test').Page) {
   const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
-  const actions = page.locator('.recipe-detail-heading-actions');
-  const [breadcrumbBox, actionsBox] = await Promise.all([
+  const firstMarker = page.locator('.recipe-detail-heading-actions .recipe-marker-toggle').first();
+  const [breadcrumbBox, firstMarkerBox] = await Promise.all([
     breadcrumb.boundingBox(),
-    actions.boundingBox(),
+    firstMarker.boundingBox(),
   ]);
-  if (!breadcrumbBox || !actionsBox) throw new Error('Expected recipe header geometry');
+  if (!breadcrumbBox || !firstMarkerBox) throw new Error('Expected recipe header geometry');
   const breadcrumbCenter = breadcrumbBox.y + breadcrumbBox.height / 2;
-  const actionsCenter = actionsBox.y + actionsBox.height / 2;
-  expect(Math.abs(breadcrumbCenter - actionsCenter)).toBeLessThanOrEqual(3);
+  const firstMarkerCenter = firstMarkerBox.y + firstMarkerBox.height / 2;
+  expect(Math.abs(breadcrumbCenter - firstMarkerCenter)).toBeLessThanOrEqual(3);
 }
 
 async function expectRecipeSectionDividerCloseToHeading(page: import('@playwright/test').Page) {
@@ -976,6 +976,7 @@ test('Recipe Tin stays first after Library sorting and remains type-filterable @
     await expect(resultLinks.nth(0)).toHaveText('Recipe Tin');
     await expect(resultLinks.nth(1)).toHaveText('Zebra Cookbook');
     await expect(resultLinks.nth(2)).toHaveText('Aardvark Cookbook');
+    await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
     const libraryA11y = await new AxeBuilder({ page }).analyze();
     expect(libraryA11y.violations).toEqual([]);
     await expectNoHorizontalOverflow(page);

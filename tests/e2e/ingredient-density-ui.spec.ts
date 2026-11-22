@@ -1168,7 +1168,7 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
       await volumeAmount.fill('10000000');
       const longDerivedValue = await weightAmount.inputValue();
       expect(longDerivedValue.replace(/\D/g, '').length).toBeGreaterThanOrEqual(10);
-      await expect(weightAmount).toHaveAttribute('size', '14');
+      await expect(weightAmount).toHaveAttribute('size', '16');
       await expect(weightAmount).toHaveCSS('padding-right', '21px');
       const textIconGap = await derivedTextIconGap('Weight amount, row 1');
       expect(textIconGap).toBeGreaterThanOrEqual(3.5);
@@ -1281,7 +1281,7 @@ test('recipe editor derives the missing unit and preserves manual overrides @e2e
       const shortWeightBounds = await weightAmount.boundingBox();
       await volumeAmount.fill('10000000');
       await expect(weightAmount).toHaveValue('2,400,000,000');
-      await expect(weightAmount).toHaveAttribute('size', '14');
+      await expect(weightAmount).toHaveAttribute('size', '16');
       await expect(weightAmount).toHaveCSS('padding-right', '21px');
       const longAmountScreenshot = testInfo.outputPath('recipe-density-long-derived-desktop.png');
       await page.screenshot({ path: longAmountScreenshot, fullPage: true });

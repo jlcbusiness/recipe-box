@@ -327,14 +327,21 @@ test('Advanced Rules stages, validates, cancels, and compacts only on apply @e2e
     await page.locator('.recipe-filter-apply').click();
     await expect(page.getByText('3 recipes found', { exact: true })).toBeVisible();
     await expect(page).toHaveURL(/[?&]query_submitted=1/);
-    await page.getByRole('tab', { name: 'Search', exact: true }).click();
+    const searchTab = page.getByRole('tab', { name: 'Search', exact: true });
+    await searchTab.click();
+    await expect(searchTab).toHaveAttribute('aria-selected', 'true');
     await expect(page).not.toHaveURL(/[?&]filter=/);
     await page.getByRole('searchbox', { name: 'Search recipes' }).fill('alpha');
     await page.getByRole('button', { name: 'Search', exact: true }).click();
     await expect(page).toHaveURL(/[?&]query_submitted=1/);
-    await page.getByRole('tab', { name: 'Query', exact: true }).click();
+    const queryTab = page.getByRole('tab', { name: 'Query', exact: true });
+    await queryTab.click();
+    await expect(queryTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/[?&]tab=query(?:&|$)/);
     await expect(page).toHaveURL(/[?&]query_submitted=1/);
-    await page.locator('.recipe-filter-add').click();
+    const addFilterButton = page.locator('.recipe-filter-add');
+    await expect(addFilterButton).toBeVisible();
+    await addFilterButton.click();
     const addedField = page.locator('.recipe-filter-field-control').last();
     await expect(addedField).toHaveClass(/is-staged-changed/);
     const addedFieldStatusId = await addedField.getAttribute('aria-describedby');
@@ -758,9 +765,11 @@ test('mobile Hand mirrors Search and Query attached controls @e2e', async ({
           await page.goto(`/recipes/find?tab=${tab}&view=${view}&sort=name`);
           await expect(page.locator('.private-shell')).toHaveAttribute('data-hand', hand);
           const controls = page.locator('.explorer-list-preferences-toolbar');
+          await expect(controls).toBeVisible();
           const buttons = controls.locator(
             '.recipe-explorer-view-controls button, .recipe-explorer-view-controls a, .explorer-list-preferences-trigger',
           );
+          await expect(buttons.first()).toBeVisible();
           const labels = await buttons.evaluateAll((elements) =>
             elements.map((element) => ({
               label: element.getAttribute('aria-label') ?? '',

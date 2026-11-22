@@ -505,7 +505,7 @@ test('ingredient sections stay simple across reader, editor, and public views @e
         await standardSectionTitle.evaluate(
           (element) => getComputedStyle(element, '::before').borderTopColor,
         ),
-      ).toBe('rgb(174, 184, 167)');
+      ).toBe('rgb(167, 176, 184)');
       expect(
         await standardSectionTitle.evaluate(
           (element) => getComputedStyle(element, '::before').left,
@@ -648,7 +648,7 @@ test('ingredient sections stay simple across reader, editor, and public views @e
         await tableSectionTitle.evaluate(
           (element) => getComputedStyle(element, '::before').borderTopColor,
         ),
-      ).toBe('rgb(174, 184, 167)');
+      ).toBe('rgb(167, 176, 184)');
       expect(
         await tableSectionTitle.evaluate((element) => getComputedStyle(element, '::before').left),
       ).toBe('0px');
@@ -666,7 +666,7 @@ test('ingredient sections stay simple across reader, editor, and public views @e
       await expect(stripedIngredients.nth(2)).toHaveAttribute('data-ingredient-stripe', 'odd');
       await expect(stripedIngredients.nth(0).locator('th, td').first()).toHaveCSS(
         'background-color',
-        'rgb(237, 244, 233)',
+        'rgb(233, 239, 244)',
       );
       const unshadedBorders = await stripedIngredients
         .nth(1)
@@ -695,20 +695,20 @@ test('ingredient sections stay simple across reader, editor, and public views @e
         );
       expect(
         shadedBorders.every(
-          ({ top, bottom }) => top === 'rgb(217, 223, 211)' && bottom === 'rgb(217, 223, 211)',
+          ({ top, bottom }) => top === 'rgb(211, 218, 223)' && bottom === 'rgb(211, 218, 223)',
         ),
       ).toBe(true);
       await expect(stripedIngredients.nth(0).locator('th, td').first()).toHaveCSS(
         'border-top-color',
-        'rgb(217, 223, 211)',
+        'rgb(211, 218, 223)',
       );
       await expect(stripedIngredients.nth(0).locator('th, td').last()).toHaveCSS(
         'border-bottom-color',
-        'rgb(217, 223, 211)',
+        'rgb(211, 218, 223)',
       );
       await expect(stripedIngredients.nth(2).locator('th, td').first()).toHaveCSS(
         'background-color',
-        'rgb(237, 244, 233)',
+        'rgb(233, 239, 244)',
       );
       const privatePrintButton = page.getByRole('button', { name: 'Print & Download' });
       privatePrintButtonColors = await privatePrintButton.evaluate((element) => {
@@ -719,7 +719,7 @@ test('ingredient sections stay simple across reader, editor, and public views @e
           color: style.color,
         };
       });
-      expect(privatePrintButtonColors.backgroundColor).toBe('rgb(56, 96, 68)');
+      expect(privatePrintButtonColors.backgroundColor).toBe('rgb(56, 78, 96)');
       expect(privatePrintButtonColors.color).toBe('rgb(255, 255, 255)');
       await privatePrintButton.click();
       await page.getByRole('menuitem', { name: 'Print', exact: true }).click();
@@ -816,7 +816,8 @@ test('ingredient sections stay simple across reader, editor, and public views @e
           color: style.color,
         };
       });
-      expect(publicPrintButtonColors).toEqual(privatePrintButtonColors);
+      expect(publicPrintButtonColors.backgroundColor).toBe('rgb(56, 96, 68)');
+      expect(publicPrintButtonColors.color).toBe('rgb(255, 255, 255)');
       await publicPrintButton.click();
       if (isMobilePublicOutput) {
         await page.getByRole('menuitem', { name: 'Print', exact: true }).click();

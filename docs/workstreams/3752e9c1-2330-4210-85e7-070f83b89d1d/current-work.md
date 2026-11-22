@@ -278,6 +278,62 @@
   showed the earlier rule was overridden by the later base style. Rating and
   Made feedback checks now pass in Chromium and Fold 6; typecheck, targeted
   Biome lint, and `git diff --check` also pass.
+- Resumed on 2026-11-22 in session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36.
+- 2026-11-22: Full-app E2E exposed a stale offline recipe after a streamed
+  HTTP 200 not-found response and a private print-title alignment defect.
+  The service worker now purges the matching snapshot on a noindex HTML
+  response, and print CSS restores a single-column detail heading. Focused
+  Chromium/Fold 6 checks pass for offline invalidation, trash/restore,
+  ingredient themes, and public recipe print behavior; the responsive public
+  action check passed four repeated runs after waiting for its mobile label.
+  The full suite still has 33 failures, so end-to-end verification is not
+  complete.
+- 2026-11-22: A fresh 494-test run completed with 449 passed, 31 failed,
+  10 skipped, and 4 not run. The narrow Cook-mode test's width-equality and
+  compact mobile unit-picker assertions conflicted with the documented
+  left-alignment, no-page-overflow, and 48px mobile-target contracts; replacing
+  them with contract-aligned checks made Chromium and Fold 6 both pass.
+- 2026-11-22: The latest full-suite result in the handoff was 458 passed,
+  26 failed, and 10 skipped. Admin Updates remained green; focused explorer
+  checks passed 7 cases with one expected desktop-only skip. Fixed the long
+  density-derived amount/icon overlap by reserving input width and reallocating
+  a small amount of table width from Preparation; Chromium and Fold 6 passed.
+  Updated the Things-unit test to verify `a` in Standard and Ingredient-first
+  presentation at the viewport where each mode is initialized; both projects
+  passed.
+- 2026-11-22: The Find Details column-minimum test passed in Chromium and Fold
+  6. The indexed-source Search test's title-overflow assertion was selecting a
+  hidden, zero-width route wrapper; it now scopes to the visible title and
+  passes in both projects. Typecheck and `git diff --check` passed; targeted
+  Biome exited 0 with four pre-existing `innerText` warnings.
+- 2026-11-22: The complete `explorer-state.spec.ts` run passed 28 tests with
+  two expected skips across Chromium and Fold 6. Typecheck and
+  `git diff --check` passed. A fresh full E2E run has started; results are
+  pending.
+- 2026-11-22: The fresh 494-test E2E run completed with 469 passed, 15 failed,
+  and 10 skipped. The remaining 15 failures are nine distinct test cases:
+  Library compact picklists; Find column resize handles and mobile marker
+  bounds; reader row geometry; recipe classification; the reported-fixes
+  footer; Fold 6 advanced-rules focus, print-column fit, and Find mobile
+  metadata.
+- 2026-11-22: The Library compact-picklist test and both Find geometry tests
+  now pass in Chromium and Fold 6. The resize test scrolls offscreen headers
+  into view before measuring and dragging, then waits for saved widths before
+  switching tabs. The mobile Grid test waits for each card and indicator before
+  measuring. A Fold 6 chooser-border assertion failed once, then passed in a
+  diagnostic rerun and the final two-project run; no product CSS change was
+  needed. Six distinct failures remain unverified by a new full run.
+- 2026-11-22: Resolved the remaining full-suite failures. The mobile Cook-mode
+  row was 57px because 48px checkbox/unit targets sat inside cells with 8px of
+  vertical padding; mobile control cells now omit that padding while ingredient
+  text cells retain their shared-reader spacing. The focus-order test now waits
+  for visible controls and confirms the Query tab is selected before using its
+  controls. The Recipe Tin accessibility check waits for the Library heading
+  before running axe. Focused reader/parity checks passed in both projects, and
+  the Advanced Rules test passed four repeated runs across Chromium and Fold 6.
+  The final 504-test run completed with 494 passed, 10 skipped, and no failures.
+  Typecheck, formatting checks for the changed CSS and tests, and
+  `git diff --check` passed.
 
 ## Save Point
 
@@ -302,17 +358,11 @@
   overlap. When Rating is present, the visible gap from the Heart control's
   outer edge to the Made pot matches the pot-to-Rating gap within 1px; its
   48px hit area stays fixed. Align the visible pot bottom with the Heart
-  control's outer bottom edge.
+  control's outer bottom edge. The final full E2E run completed 504 tests:
+  494 passed, 10 skipped, and no failures.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** The 16px desktop spacing is verified. At 320px, focused
-  Chromium and Fold 6 E2E checks verify the screenshot-two order and 4px
-  visible gaps through Rating; without Rating, Star, Heart, and Made remain
-  adjacent and Duplicate stays aligned with Edit at the far right. Made
-  feedback remains right-aligned between the controls and photos. With Rating,
-  the gap from the Heart control's outer edge to the pot matches the
-  pot-to-Rating gap within 1px. The pot bottom aligns with the Heart control's
-  outer bottom edge. The mobile Rating hand and palm are each shifted down an
-  additional 1px without moving the 36px trigger.
+- **Current step:** Run the pending production build when the active
+  development server can be stopped safely.
 - **Last verified result:** The focused database suite passes 61 assertions;
   6 Made-action unit tests and typecheck passed in the previous step. CSS-only
   Biome and `git diff --check` pass. Browser simulations at 1504px and 390px
@@ -350,14 +400,25 @@
   feedback E2E cases passed in Chromium and Fold 6 after moving the mobile
   feedback offset below the base rule. Typecheck, targeted Biome lint, and
   `git diff --check` passed again. The integrated browser remained on the
-  sign-in page, so a final authenticated screenshot was not available. See the latest
-  [trace](./trace.md).
+  sign-in page, so a final authenticated screenshot was not available.
+  Focused explorer checks passed 7 cases with one expected skip; the density
+  and Things-unit checks passed 2/2 on Chromium and Fold 6. Typecheck and
+  `git diff --check` passed. The indexed-source Search test passed on Chromium
+  and Fold 6 after the title assertion was scoped to visible DOM. The Find
+  score/marker resize and mobile marker geometry tests also pass in both
+  projects after the readiness, scroll, and persistence checks were corrected.
+  Targeted Biome exited 0 with four existing `innerText` warnings, and
+  `git diff --check` passed. See the latest [trace](./trace.md).
+- **Latest E2E status:** The final full run completed 504 tests in 26.6 minutes:
+  494 passed, 10 skipped, and no failures. The remaining reader, focus-order,
+  and library-heading issues were fixed and verified.
 - **Known validation limits:** No real Will not try recipe was available, so
   the glyph was checked in a temporary browser state without changing data.
   The production build was not rerun while an already-running Next dev server
-  was in use. The targeted CSS Biome check and E2E Biome lint pass; full
-  Biome `check` still reports a pre-existing formatting difference in the
-  palm-centering assertion near `recipes.spec.ts:1623`. The Markdown lint
+  was in use. Focused formatter checks on the changed CSS and E2E tests pass.
+  Broader Biome checks still report existing CSS specificity warnings and
+  formatting differences in unrelated `recipes.spec.ts` geometry assertions.
+  The Markdown lint
   script scans all 200 files even when paths are supplied and reports 82
   repository-wide findings; the modified product docs, checklist, and
   current-work record had no diagnostics, while older DLC 49 trace entries do.
@@ -366,8 +427,7 @@
   could not exceed a 256px viewport; full-row
   behavior at 320px was verified by Playwright E2E.
 - **Next action:** Run the production build when the active dev server can be
-  stopped safely; the local server was still responding on port 3000.
+  stopped safely.
 - **Checklist:** [checklist.md](./checklist.md)
-- **Trace:** [trace.md](./trace.md); latest section is from session
-  `3752e9c1-2330-4210-85e7-070f83b89d1d`, covering the mobile feedback
-  adjustment, focused Chromium/Fold 6 checks, and remaining validation limits.
+- **Trace:** [trace.md](./trace.md); latest section records the Find geometry
+  fixes and focused checks.

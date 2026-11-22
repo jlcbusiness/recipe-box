@@ -72,3 +72,5 @@
   controls and photos; run focused Chromium and Fold 6 E2E checks.
 - [ ] Re-run the production build after the refinements when the active
   development server can be stopped safely.
+- [x] Triage the remaining full-app E2E failures and rerun the suite. The final
+  504-test run completed with 494 passed, 10 skipped, and no failures.

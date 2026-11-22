@@ -683,12 +683,12 @@
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
   .recipe-ingredient-measurements-col {
-  width: calc(37.5% - 100px - (32px + 2mm));
+  width: calc(39% - 100px - (32px + 2mm));
 }
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
   .recipe-ingredient-preparation-col {
-  width: 16%;
+  width: 14.5%;
 }
 
 .recipe-ingredient-table:has(.recipe-measurement-input-wrap.is-density-derived-long)
@@ -875,6 +875,10 @@
   min-width: 0;
 }
 
+.recipe-measurement-input-wrap.is-density-derived-long {
+  max-width: none;
+}
+
 .recipe-measurement-input-wrap.is-density-derived input {
   padding-right: 21px;
 }
@@ -911,7 +915,7 @@
   .recipe-ingredient-desktop
   .recipe-measurement-control
   input.recipe-measurement-quantity.is-density-derived {
-  max-width: min(10em, 100%);
+  max-width: 10em;
 }
 
 .recipe-measurement-units {

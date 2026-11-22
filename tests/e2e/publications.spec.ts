@@ -248,7 +248,7 @@ test('publication metadata edits preserve type, support all source fields, and d
     await expect(dialog.getByLabel('Name', { exact: true })).toHaveCSS('border-top-width', '1px');
     await expect(dialog.getByLabel('Name', { exact: true })).toHaveCSS(
       'border-top-color',
-      'rgb(155, 165, 150)',
+      'rgb(150, 158, 165)',
     );
     await expect(dialog.getByLabel('Name', { exact: true })).toHaveCSS(
       'background-color',
@@ -614,7 +614,7 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
       .getByRole('button', { name: 'Apply' })
       .click();
     await expect(page).toHaveURL((url) => url.searchParams.getAll('filter').length === 0);
-    await page.getByRole('button', { name: 'Filter Recipe Count' }).click();
+    await page.getByRole('button', { name: 'Filter Recipes' }).click();
     const recipeCountPopover = page.locator('.publication-column-filter-popover');
     const recipeCountInput = recipeCountPopover.getByRole('textbox');
     await expect(recipeCountInput).toHaveAttribute('inputmode', 'text');
@@ -630,6 +630,10 @@ test('Library Explorer defaults to Grid on desktop and exposes compact control p
       const [filter] = url.searchParams.getAll('filter').map((value) => JSON.parse(value));
       return filter?.field === 'recipe_count' && filter?.value === 4;
     });
+    const unfilteredUrl = new URL(page.url());
+    unfilteredUrl.searchParams.delete('filter');
+    await page.goto(unfilteredUrl.toString());
+    await expect(page.getByRole('link', { name: 'Explorer Cookbook' })).toBeVisible();
     await page.getByRole('button', { name: 'Choose List columns' }).click();
     const columnOptions = page.getByRole('group', { name: 'List columns' });
     await columnOptions.getByLabel('Tags').check();
@@ -877,7 +881,10 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     await page.setViewportSize({ width: 1024, height: 900 });
 
     const createRecipe = async (name: string) => {
-      await page.getByRole('link', { name: 'Library', exact: true }).click();
+      await page
+        .getByRole('navigation', { name: 'Main navigation' })
+        .getByRole('link', { name: 'Library', exact: true })
+        .click();
       await page.getByRole('link', { name: 'Recipe Tin', exact: true }).click();
       await page.getByRole('link', { name: 'Add Recipe' }).click();
       await page.locator('.recipe-form').getByLabel('Name').fill(name);
@@ -899,7 +906,10 @@ test('Library Explorer filters, sorts, and shows compact publication metadata @e
     expect(trashResponse.ok()).toBe(true);
     expect(activeRecipeId).not.toBe(trashedRecipeId);
 
-    await page.getByRole('link', { name: 'Library', exact: true }).click();
+    await page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('link', { name: 'Library', exact: true })
+      .click();
     await expect(page.locator('.publication-explorer-grid')).toBeVisible();
     await page.getByRole('link', { name: 'Switch to List view' }).click();
     await expect(page).toHaveURL(/view=list/);
@@ -1356,11 +1366,12 @@ test('an owner can create a publication, assign a recipe, and return it to the R
     await expect(recipePhotoDialog.locator('.recipe-photo-grid-item')).toHaveCount(1);
     await recipePhotoDialog.getByRole('button', { name: 'Done' }).click();
     await page.goto(recipeUrl);
-    const recipeLink = page.getByRole('link', { name: 'The Home Cook' });
+    const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+    const recipeLink = breadcrumb.getByRole('link', { name: 'The Home Cook' });
     await expect(recipeLink).toBeVisible();
     const attribution = page.locator('.recipe-detail-title > .recipe-attribution');
     await expect(attribution).toContainText('p. 142-145');
-    await expect(attribution.locator('cite')).toHaveCSS('font-style', 'italic');
+    await expect(attribution).not.toContainText('The Home Cook');
     await recipeLink.click();
     await expect(page.getByRole('heading', { name: 'The Home Cook' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Roasted tomato soup' })).toBeVisible();
@@ -1431,11 +1442,11 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await expect(publicationNameHeader).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
       await expect(publicationTable.locator('thead tr')).toHaveCSS(
         'background-color',
-        'rgb(255, 253, 248)',
+        'rgb(244, 247, 249)',
       );
       await expect(publicationTable.locator('tbody tr:first-child')).toHaveCSS(
         'background-color',
-        'rgba(88, 99, 108, 0.08)',
+        'color(srgb 0.219608 0.305882 0.376471 / 0.08)',
       );
       await expect(publicationTable.locator('tbody tr:first-child td:first-child')).toHaveCSS(
         'background-color',
@@ -1471,7 +1482,10 @@ test('an owner can create a publication, assign a recipe, and return it to the R
       await page.setViewportSize({ width, height: 844 });
       await expect(page.locator('.publication-recipe-list thead')).toBeHidden();
       await expect(mobilePublicationRow).toHaveCSS('display', 'flex');
-      await expect(mobilePublicationRow).toHaveCSS('background-color', 'rgba(56, 96, 68, 0.08)');
+      await expect(mobilePublicationRow).toHaveCSS(
+        'background-color',
+        'color(srgb 0.219608 0.305882 0.376471 / 0.08)',
+      );
       await expect(mobilePublicationRow).toHaveCSS('flex-wrap', 'wrap');
       const mobileNameCell = mobilePublicationRow.locator('[data-explorer-column="name"]');
       const mobileStateCell = mobilePublicationRow.locator('[data-explorer-column="state"]');

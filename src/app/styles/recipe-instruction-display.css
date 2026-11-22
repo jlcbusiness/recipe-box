@@ -393,6 +393,19 @@
     min-width: 22.333px;
   }
 
+  .recipe-ingredient-first-table-cook-mode
+    tbody
+    tr[data-ingredient-stripe]
+    > :is(
+      .recipe-cook-checkbox-cell,
+      .recipe-ingredient-column-volume,
+      .recipe-ingredient-column-weight,
+      .recipe-ingredient-column-divide,
+      .recipe-ingredient-column-amount-mobile
+    ) {
+    padding-block: 0;
+  }
+
   .recipe-ingredient-first-table-cook-mode td.recipe-cook-checkbox-cell {
     padding: 0;
   }

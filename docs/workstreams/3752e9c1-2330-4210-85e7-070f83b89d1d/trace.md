@@ -669,4 +669,129 @@
   rather than disturbing the active development server.
 - Last recorded action: updated the checklist and save point with the passing
   feedback checks and remaining build limitation.
+
+## Session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36 — Full-app E2E triage (2026-11-22)
+
+- The full Playwright run completed 504 tests: 458 passed, 33 failed,
+  10 skipped, and 3 not run. The serial `--last-failed --workers=1` rerun
+  covered 36 tests: 31 failed, 2 passed, and 3 not run.
+- Fixed offline snapshot invalidation for successful HTML not-found responses
+  that carry `noindex`, including streamed HTTP 200 responses. Fixed private
+  print heading alignment by resetting the more-specific detail heading to a
+  single-column block layout.
+- Updated offline, public recipe, and ingredient-theme assertions. The focused
+  offline invalidation, trash/restore, themed ingredient, and public recipe
+  checks passed in Chromium and Fold 6; the responsive public recipe check
+  passed four consecutive runs after waiting for the mobile action label.
+- `npm run typecheck`, targeted Biome lint, and `git diff --check` passed.
+  The full suite remains incomplete with 33 failures. Updated DLC 46 and the
+  visual-design offline contract to document snapshot invalidation.
+- `npm run test:e2e -- --last-failed --workers=1 --reporter=line` exited 1
+  with `Error: No tests found`. The latest focused run had superseded the
+  full-run failure selection, so this command did not reproduce the earlier
+  failure list.
+- `npm run test:e2e -- --list --reporter=line` successfully discovered 495
+  tagged E2E test entries; `git diff --check` passed.
+- `npm run test:e2e -- --reporter=line` completed 494 tests: 449 passed,
+  31 failed, 10 skipped, and 4 did not run (26.3 minutes). Distinct failures
+  included explorer layout/state, admin updates, density/measurement/nutrition
+  flows, recipe search, cook mode, editor flows, and public print geometry.
+- Reviewed the Cook-mode contract and failure snapshot. Removed the test's
+  unsupported equality between table and outer-section widths, retained
+  left-edge alignment, and asserted no page-level horizontal overflow. Replaced
+  the two mobile unit-picker height checks with the documented minimum 48px
+  target.
+- The focused reader/cook-mode test passed on Chromium and Fold 6 (2/2).
+  `npm run typecheck` and `git diff --check` passed; targeted Biome lint exited
+  0 with existing warnings elsewhere in `recipes.spec.ts`.
+- Last recorded action: updated the Cook-mode test and workstream status. The
+  full suite has not been rerun after this test-only correction.
+
+## Session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36 — Continued E2E triage (2026-11-22)
+
+- Focused `explorer-state.spec.ts` on Chromium and Fold 6: 7 passed and 1
+  expected desktop-only skip. The first targeted Biome check found one
+  formatter difference; it was corrected. Typecheck and `git diff --check`
+  passed.
+- Reproduced long density-derived amount/icon overlap in Chromium (measured
+  text-to-icon gap `-7.89px`; Fold 6 passed). Reserved two additional input
+  characters for long derived values, expanded the amount column by reallocating
+  Preparation width, and removed the wrapper's circular percentage cap. The
+  focused density test passed 2/2 on Chromium and Fold 6.
+- The Things-unit test timed out while expecting Standard wording in a
+  mobile-initialized Ingredient-first view. It now verifies Standard output
+  after desktop initialization and reloads at the mobile viewport before
+  checking the Ingredient-first amount cell. The focused test passed 2/2 with
+  the normal timeout.
+- `npm run typecheck` and `git diff --check` passed. Targeted Biome exited 0
+  with 13 warnings on unchanged CSS rules and an unrelated unused test
+  parameter.
+- The latest full-suite count provided in the handoff is 458 passed, 26 failed,
+  and 10 skipped. The full suite has not been rerun after these focused fixes.
+- Last recorded action: verified the Things-unit E2E in Chromium and Fold 6;
+  remaining failure families still require triage.
+
+## Session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36 — Search overflow triage (2026-11-22)
+
+- `npx playwright test tests/e2e/recipe-search.spec.ts --project=chromium --project='Fold 6' --grep='Find Details honors column minimums and scrolls instead of compressing' --workers=1`: 2 passed.
+- The same command targeting `Find Recipes searches indexed sources and isolates accounts` first failed at the mobile title overflow assertion. A geometry probe showed the locator targeted a title under a hidden zero-width route wrapper; scoping to visible Find titles and using a reliably long recipe fixture fixed the assertion. Rerun: 2 passed.
+- `npm run typecheck`: passed.
+- `npx biome check tests/e2e/recipe-search.spec.ts`: passed with four existing `innerText` warnings.
+- `git diff --check`: passed.
+- Last recorded action: verified the Search overflow regression in Chromium and Fold 6; the remaining full-suite failures still require triage.
+
+## Session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36 — Refreshing full E2E results (2026-11-22)
+
+- `npx playwright test tests/e2e/explorer-state.spec.ts --project=chromium --project='Fold 6' --workers=1`: 28 passed, 2 expected skips.
+- `npm run typecheck`: passed.
+- `git diff --check`: passed.
+- `npm run test:e2e -- --workers=2`: started; full-suite results are pending.
+- Last recorded action: launched the fresh full E2E run to establish the remaining failures after focused fixes.
+
+## Session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36 — Fresh full E2E result (2026-11-22)
+
+- `npm run test:e2e -- --workers=2`: completed 494 tests in 27.2 minutes with 469 passed, 15 failed, and 10 skipped.
+- The 15 failures reduce to nine test cases: Library compact picklists; Find Rating/marker column resize handles; Find mobile marker geometry; reader row height; recipe classification display; reported-fixes footer alignment; Fold 6 advanced-rules focus; Fold 6 public print-column fit; and Fold 6 Find mobile metadata.
+- Last recorded action: recorded the new full-suite result and began failure-by-failure triage.
+
+## Session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36 — Find geometry triage (2026-11-22)
+
+- Focused Library compact-picklist E2E: passed in Chromium and Fold 6.
+- The Find Rating/marker resize test first failed because the Rating header was
+  offscreen. Added `scrollIntoViewIfNeeded()` before geometry checks and drags.
+  Its first rerun passed Chromium but exposed a Fold 6 width-persistence race;
+  the test now polls the saved `recipes-find` widths before switching tabs.
+  Final run: 2 passed.
+- The Find mobile marker test failed while reading Grid indicator bounds before
+  waiting for the card and indicator to render. Moved readiness assertions
+  before geometry reads. A subsequent Fold 6 chooser-border assertion failed
+  once; a diagnostic rerun and the final run passed without product CSS edits.
+  Final run: 2 passed.
+- `npx biome check tests/e2e/recipe-search.spec.ts && git diff --check`: exited
+  0; Biome reported four existing `innerText` warnings.
+- Last recorded action: verified both Find geometry tests in Chromium and Fold
+  6; six distinct full-suite failures remain and the full suite has not been
+  rerun.
+
+## Session 8ba5d6e4-739c-4867-9bd8-6d5ddd9d9c36 — Final E2E regression fixes (2026-11-22)
+
+- The remaining Fold 6 reader test measured a 57px Cook-mode row; inspection
+  showed that 48px checkbox/unit targets had 8px of vertical cell padding.
+  Removing padding from every row cell broke the private/shared reader-parity
+  test, so the CSS was narrowed to the mobile checkbox and unit-control cells;
+  ingredient-text cells retain their 4px vertical padding.
+- Updated the focus-order test to wait for visible controls. The full run then
+  exposed that its final Search-to-Query click was followed by an assertion on
+  the already-true `query_submitted=1` parameter rather than Query selection;
+  the test now waits for `aria-selected="true"`, `tab=query`, and a visible
+  Add-filter control. The Recipe Tin axe check also waits for the Library h1.
+- `npx playwright test tests/e2e/recipes.spec.ts tests/e2e/public-recipes.spec.ts --project=chromium --project='Fold 6' --grep='recipe reader sorts transiently and cooks without changing saved rows|private and shared Ingredient-first readers match text and Cook-mode spacing' --workers=1`: 4 passed.
+- `npx playwright test tests/e2e/advanced-rules.spec.ts tests/e2e/recipe-tin-library.spec.ts --project=chromium --project='Fold 6' --grep='Advanced Rules stages, validates, cancels, and compacts only on apply|Recipe Tin stays first after Library sorting and remains type-filterable' --workers=1`: 4 passed.
+- `npx playwright test tests/e2e/advanced-rules.spec.ts --project=chromium --project='Fold 6' --grep='Advanced Rules stages, validates, cancels, and compacts only on apply' --repeat-each=2 --workers=1`: 4 passed.
+- Final `npx playwright test`: 504 tests completed in 26.6 minutes; 494 passed, 10 skipped, and none failed.
+- `npm run typecheck`: passed. Focused Biome formatting checks and
+  `git diff --check`: passed. Broader Biome checks still report existing
+  warnings/formatting differences outside the edited hunks.
+- Last recorded action: verified the complete E2E suite after the targeted
+  reader, focus-order, and heading-readiness fixes.
 *** End of File

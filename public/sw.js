@@ -75,12 +75,17 @@ async function fetchNavigation(request) {
   const url = new URL(request.url);
   try {
     const response = await fetch(request);
+    const hasNoindexRobotsDirective =
+      recipePathPattern.test(url.pathname) &&
+      response.ok &&
+      (await responseHasNoindexRobotsDirective(response));
     if (
       recipePathPattern.test(url.pathname) &&
       ([401, 404, 410].includes(response.status) ||
         response.type === 'opaqueredirect' ||
         response.redirected ||
-        (response.url && new URL(response.url).pathname !== url.pathname))
+        (response.url && new URL(response.url).pathname !== url.pathname) ||
+        hasNoindexRobotsDirective)
     ) {
       await removeOfflineRecipe(url.pathname);
     }
@@ -94,6 +99,34 @@ async function fetchNavigation(request) {
     }
     return offlineUnavailableResponse();
   }
+}
+
+async function responseHasNoindexRobotsDirective(response) {
+  if (!response.headers.get('content-type')?.toLowerCase().includes('text/html')) return false;
+  const body = response.clone().body;
+  if (!body) return false;
+
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let head = '';
+  try {
+    while (head.length < 32_768) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      head += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+
+  return (head.match(/<meta\b[^>]*>/gi) ?? []).some((tag) => {
+    const name = /\bname\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    const content = /\bcontent\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    return (
+      name?.toLowerCase() === 'robots' &&
+      content?.split(',').some((directive) => directive.trim().toLowerCase() === 'noindex')
+    );
+  });
 }
 
 async function readOfflineEntries() {

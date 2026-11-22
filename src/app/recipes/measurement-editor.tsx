@@ -427,6 +427,7 @@ export function MeasurementEditor({
       measurement.quantity.length + (measurement.derivedFromDensity ? 1 : 0),
     );
     const isLongDensityDerived = measurement.derivedFromDensity && inputSize >= 12;
+    const displayedInputSize = inputSize + (isLongDensityDerived ? 2 : 0);
     return (
       <div className="recipe-measurement-control">
         <label htmlFor={inputId}>
@@ -445,7 +446,7 @@ export function MeasurementEditor({
             className={`recipe-measurement-quantity${measurement.derivedFromDensity ? ' is-density-derived' : ''}`}
             id={inputId}
             inputMode="text"
-            size={inputSize}
+            size={displayedInputSize}
             type="text"
             value={measurement.quantity}
             onChange={(event) => updateMeasurement(type, { quantity: event.target.value })}

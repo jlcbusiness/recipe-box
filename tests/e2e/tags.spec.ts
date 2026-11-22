@@ -504,6 +504,10 @@ test('recipes can assign, edit, and remove private tags @e2e @a11y', async ({ pa
     const detailHeadingBounds = await page.locator('.recipe-detail-heading').boundingBox();
     const detailActions = page.locator('.recipe-detail-heading-actions');
     const detailActionsBounds = await detailActions.boundingBox();
+    const breadcrumbBounds = await page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .boundingBox();
+    const firstMarkerBounds = await detailActions.locator('.recipe-marker-toggle').first().boundingBox();
     expect(detailTagsBounds).not.toBeNull();
     expect(detailTitleBounds).not.toBeNull();
     expect(detailHeadingBounds).not.toBeNull();
@@ -518,7 +522,14 @@ test('recipes can assign, edit, and remove private tags @e2e @a11y', async ({ pa
       detailHeadingBounds &&
       detailTagsBounds
     ) {
-      expect(Math.abs(detailActionsBounds.y - detailTitleBounds.y)).toBeLessThanOrEqual(1);
+      expect(breadcrumbBounds).not.toBeNull();
+      expect(firstMarkerBounds).not.toBeNull();
+      if (!breadcrumbBounds || !firstMarkerBounds) {
+        throw new Error('Expected recipe breadcrumb and marker geometry.');
+      }
+      const breadcrumbCenter = breadcrumbBounds.y + breadcrumbBounds.height / 2;
+      const firstMarkerCenter = firstMarkerBounds.y + firstMarkerBounds.height / 2;
+      expect(Math.abs(firstMarkerCenter - breadcrumbCenter)).toBeLessThanOrEqual(3);
       expect(detailActionsBounds.x).toBeGreaterThanOrEqual(
         detailTitleBounds.x + detailTitleBounds.width,
       );

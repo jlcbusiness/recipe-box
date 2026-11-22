@@ -284,9 +284,15 @@ test('editor explains Main and gives empty Preparation a usable width with left-
     await page.goto(`${page.url()}/edit`);
     const footer = page.locator('.recipe-form-actions');
     const cancel = footer.getByRole('link', { name: 'Cancel', exact: true });
+    await footer.scrollIntoViewIfNeeded();
     const footerBox = await footer.boundingBox();
     const cancelBox = await cancel.boundingBox();
-    expect(cancelBox?.x).toBeCloseTo(footerBox?.x ?? -1, 0);
+    expect(footerBox).not.toBeNull();
+    expect(cancelBox).not.toBeNull();
+    if (!footerBox || !cancelBox) {
+      throw new Error('Expected the recipe action footer and Cancel link to have measurable bounds.');
+    }
+    expect(cancelBox.x).toBeCloseTo(footerBox.x, 0);
     const addReference = await page
       .getByRole('button', { name: 'Add reference', exact: true })
       .boundingBox();

@@ -496,7 +496,7 @@ test('an account can sign in, use the private shell, and sign out @e2e @a11y', a
     await expect(page.getByRole('heading', { name: 'Recipe Tin' })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     const themedLibraryLink = page.locator('.private-nav-links a[href="/publications"]');
-    await expect(themedLibraryLink).toHaveCSS('background-color', 'rgb(244, 239, 233)');
+    await expect(themedLibraryLink).toHaveCSS('background-color', 'rgb(237, 244, 233)');
     const themedLibraryColors = await themedLibraryLink.evaluate((link) => {
       const books = link.querySelectorAll('svg > rect, svg > path:last-child');
       if (books.length !== 2) {

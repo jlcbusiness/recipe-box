@@ -172,6 +172,41 @@ const outputStyles = `
     min-width: 0;
     table-layout: fixed;
   }
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-volume,
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-weight,
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-preparation,
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-divide {
+    display: table-column !important;
+    visibility: visible !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-ingredient {
+    width: 45% !important;
+  }
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-volume {
+    width: 18% !important;
+  }
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-weight {
+    width: 15% !important;
+  }
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-preparation {
+    width: 17% !important;
+  }
+  .recipe-output-column .recipe-ingredient-first-table col.recipe-ingredient-column-divide {
+    width: 5% !important;
+  }
+  .recipe-output-column .recipe-ingredient-first-table .recipe-ingredient-column-volume,
+  .recipe-output-column .recipe-ingredient-first-table .recipe-ingredient-column-weight,
+  .recipe-output-column .recipe-ingredient-first-table .recipe-ingredient-column-preparation,
+  .recipe-output-column .recipe-ingredient-first-table .recipe-ingredient-column-divide {
+    visibility: visible !important;
+    line-height: 1.28 !important;
+    white-space: normal !important;
+  }
+  .recipe-output-column .recipe-ingredient-first-table .recipe-ingredient-column-amount-mobile {
+    display: none !important;
+  }
   .recipe-output-column th, .recipe-output-column td {
     padding: 2px 4px;
     border-bottom: 1px solid #d5d7d1;
@@ -881,6 +916,45 @@ async function inlineStylesheetAssets(
   });
 }
 
+async function getPrintFontFaceStyles(signal: AbortSignal): Promise<string> {
+  const fontFaceRules: string[] = [];
+  for (const stylesheet of Array.from(document.styleSheets)) {
+    if (
+      stylesheet.ownerNode instanceof HTMLStyleElement &&
+      stylesheet.ownerNode.textContent === outputStyles
+    ) {
+      continue;
+    }
+    if (stylesheet.href && new URL(stylesheet.href).origin !== window.location.origin) continue;
+
+    let rules: CSSRule[];
+    try {
+      rules = Array.from(stylesheet.cssRules);
+    } catch {
+      throw new Error('The recipe font could not be embedded for printing.');
+    }
+    const fontRules = rules
+      .filter(
+        (rule) =>
+          rule.type === CSSRule.FONT_FACE_RULE && rule.cssText.includes('"DM Sans Variable"'),
+      )
+      .map((rule) => rule.cssText);
+    if (fontRules.length > 0) {
+      fontFaceRules.push(
+        await inlineStylesheetAssets(
+          fontRules.join('\n'),
+          stylesheet.href ?? document.baseURI,
+          signal,
+        ),
+      );
+    }
+  }
+  if (fontFaceRules.length === 0) {
+    throw new Error('The recipe font is unavailable for printing.');
+  }
+  return fontFaceRules.join('\n');
+}
+
 async function getStandaloneStyles(signal: AbortSignal): Promise<string> {
   const stylesheetRules: string[] = [];
   for (const stylesheet of Array.from(document.styleSheets)) {
@@ -1020,13 +1094,18 @@ function serializeHtml(
 </html>`;
 }
 
-function serializePrintHtml(title: string, pages: OutputPage[], wrapperClass: string): string {
+function serializePrintHtml(
+  title: string,
+  pages: OutputPage[],
+  wrapperClass: string,
+  fontFaceStyles = '',
+): string {
   const printPages = document.createElement('div');
   printPages.className = 'recipe-output-print-pages';
   for (const { paper } of pages) {
     printPages.append(paper.cloneNode(true));
   }
-  return serializeHtml(title, printPages, outputStyles, wrapperClass);
+  return serializeHtml(title, printPages, `${fontFaceStyles}\n${outputStyles}`, wrapperClass);
 }
 
 export async function generateRecipeOutputDocument(
@@ -1297,7 +1376,8 @@ export async function generateRecipeOutputDocument(
       progress,
     );
     throwIfAborted(signal);
-    const printHtml = serializePrintHtml(title, pages, privateContentClass);
+    const fontFaceStyles = await getPrintFontFaceStyles(signal);
+    const printHtml = serializePrintHtml(title, pages, privateContentClass, fontFaceStyles);
     return {
       format,
       html: null,

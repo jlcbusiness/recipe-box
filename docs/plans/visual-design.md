@@ -1297,7 +1297,9 @@ when the checkbox rail is present. Place the checkbox
 input 3px from the table edge and 6px from the ingredient text while keeping
 its hit area 48px tall on mobile. On desktop, keep the target compact so Cook
 mode does not expand short ingredient rows. Vertically center Ingredient-first
-table cells in both private and shared readers.
+table cells in both private and shared readers. In mobile Cook mode, keep short
+ingredient rows close to the 48px controls by omitting vertical padding from
+the checkbox and unit-control cells; wrapped content may grow the row.
 In the private reader's automatic same-system display, fractions at or above
 `1/4` stay in their current unit unless they equal exactly one smaller unit or
 the immediate smaller unit expresses the amount as a fraction from `1/4` up to
@@ -1496,10 +1498,12 @@ not add an in-app install prompt. When offline, the root page lists at most 10
 recently viewed active recipes as native links. An offline detail is a
 read-only snapshot with the app's responsive recipe styling and a visible
 status notice. It omits photos, scripts, forms, and server-dependent controls.
-Uncached routes show a generic offline message. Sign out clears private
-snapshots before ending the server session; if cleanup fails, the Account menu
-keeps the session active and offers retry. Physical-device installation steps
-remain part of Slice 25.
+An online private-recipe navigation that renders not-found invalidates its
+offline snapshot, including streamed HTML responses that retain HTTP 200 and
+carry `noindex`. Uncached routes show a generic offline message. Sign out
+clears private snapshots before ending the server session; if cleanup fails,
+the Account menu keeps the session active and offers retry. Physical-device
+installation steps remain part of Slice 25.
 
 ## Public Recipe View (Slice 22 current implementation)
 

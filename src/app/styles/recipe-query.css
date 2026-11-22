@@ -1728,6 +1728,10 @@
 .explorer-list-preferences:not([data-visible-columns~="pairs_with"])
   [data-explorer-column="pairs_with"],
 .explorer-list-preferences:not([data-visible-columns~="opinion"]) [data-explorer-column="opinion"],
+.explorer-list-preferences:not([data-visible-columns~="made_count"])
+  [data-explorer-column="made_count"],
+.explorer-list-preferences:not([data-visible-columns~="last_made_at"])
+  [data-explorer-column="last_made_at"],
 .explorer-list-preferences:not([data-visible-columns~="meal_type"])
   [data-explorer-column="meal_type"],
 .explorer-list-preferences:not([data-visible-columns~="food_type"])

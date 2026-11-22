@@ -798,7 +798,7 @@ test('recipe nutrition inherits ingredient defaults and edits per-serving values
     const staleIngredientDialog = page.getByRole('dialog', {
       name: `Nutrition for ${ingredientName}`,
     });
-    const staleProtein = staleIngredientDialog.getByRole('spinbutton', { name: /Protein/u });
+    const staleProtein = staleIngredientDialog.getByRole('textbox', { name: /Protein/u });
     await expect(staleProtein).toHaveValue('14');
     await expect(
       staleProtein.locator('xpath=ancestor::div[contains(@class, "factRow")]'),

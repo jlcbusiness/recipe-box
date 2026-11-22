@@ -437,6 +437,9 @@ test('Publication recipe details center Rating and marker columns @e2e', async (
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/publications/${publicationId}?view=details`);
     const mobileRecipeRow = table.locator('tbody tr');
+    await expect(
+      mobileRecipeRow.locator('td[data-explorer-column="name"] .mobile-details-title-text'),
+    ).toBeVisible();
     const mobileTitleBounds = await mobileRecipeRow
       .locator('td[data-explorer-column="name"] .mobile-details-title-text')
       .boundingBox();
@@ -530,13 +533,6 @@ test('Publication recipe details center Rating and marker columns @e2e', async (
       const gridContent = gridStack.locator('.recipe-grid-marker-content');
       const markerStack = gridStack.locator('.recipe-marker-indicators');
       const gridRating = gridStack.locator('.recipe-grid-rating-indicator');
-      const [gridStackBounds, gridContentBounds, markerStackBounds, gridRatingBounds] =
-        await Promise.all([
-          gridStack.boundingBox(),
-          gridContent.boundingBox(),
-          markerStack.boundingBox(),
-          gridRating.boundingBox(),
-        ]);
       await expect(gridStack).toHaveCount(1);
       await expect(gridCard).toHaveCount(1);
       await expect(gridCard).toHaveAttribute('data-stripe-cell', /^(odd|even)$/);
@@ -549,6 +545,13 @@ test('Publication recipe details center Rating and marker columns @e2e', async (
       await expect(gridStack).toHaveCSS('min-height', '32px');
       await expect(gridStack).toHaveCSS('min-width', '32px');
       await expect(page.locator('.find-recipes-grid-metadata')).not.toContainText('Rating');
+      const [gridStackBounds, gridContentBounds, markerStackBounds, gridRatingBounds] =
+        await Promise.all([
+          gridStack.boundingBox(),
+          gridContent.boundingBox(),
+          markerStack.boundingBox(),
+          gridRating.boundingBox(),
+        ]);
       expect(gridStackBounds).not.toBeNull();
       expect(gridContentBounds).not.toBeNull();
       expect(markerStackBounds).not.toBeNull();
@@ -1263,12 +1266,15 @@ test('Find Recipes exposes all recipe columns beside the view controls @e2e', as
 
     await page.goto('/recipes/find?view=list');
     const viewAndSortControls = page.getByRole('group', { name: 'View and sort controls' });
+    await expect(viewAndSortControls.locator('button, a')).toHaveCount(3);
     const controlLabels = await viewAndSortControls
       .locator('button, a')
       .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-label')));
-    expect(controlLabels[0]).toBe('Switch to Grid view');
-    expect(controlLabels[1]).toMatch(/^Sort by /u);
-    expect(controlLabels[2]).toMatch(/^Sort (ascending|descending)$/u);
+    expect(controlLabels).toContain('Switch to Grid view');
+    expect(controlLabels.filter((label) => label?.startsWith('Sort by '))).toHaveLength(1);
+    expect(controlLabels.some((label) => /^Sort (ascending|descending)$/u.test(label ?? ''))).toBe(
+      true,
+    );
     await expect(viewAndSortControls.locator('button, a').first()).toHaveCSS(
       'border-left-width',
       '1px',
@@ -1419,6 +1425,8 @@ test('publication recipe mobile filters follow visible columns @e2e', async ({ p
     await signIn(page, user.email, user.password);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/publications/${publicationId}?view=details`);
+    await expect(page.locator('.explorer-list-preferences-toolbar-content')).toBeVisible();
+    await expect(page.locator('.publication-mobile-actions')).toBeVisible();
 
     const toolbarContentBounds = await page
       .locator('.explorer-list-preferences-toolbar-content')
@@ -1615,6 +1623,7 @@ test('publication recipe explorers restore only their route-owned state @e2e', a
       new RegExp(`/publications/${firstPublicationId}\\?sort=updated_at&direction=desc&view=grid$`),
     );
     const viewControls = page.getByRole('group', { name: 'View and sort controls' });
+    await expect(viewControls.locator('button, a')).toHaveCount(3);
     const viewControlBounds = await viewControls.locator('button, a').evaluateAll((elements) =>
       elements.map((element) => {
         const { x, y, width, height, right } = element.getBoundingClientRect();

@@ -37,8 +37,12 @@ test('Magazine recipes keep a free-text citation and online URL @e2e @a11y', asy
     await page.getByLabel('Url').fill(recipeUrl);
     await page.getByRole('button', { name: 'Save recipe' }).click();
     await expect(page.getByRole('heading', { name: 'Roasted carrots' })).toBeVisible();
+    const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
+    await expect(
+      breadcrumb.getByRole('link', { name: 'Seasonal Table', exact: true }),
+    ).toBeVisible();
     await expect(page.locator('.recipe-attribution')).toContainText(citation);
-    await expect(page.locator('.recipe-attribution')).toContainText('Seasonal Table');
+    await expect(page.locator('.recipe-attribution')).not.toContainText('Seasonal Table');
 
     const mobileUrlLink = page.getByRole('link', { name: 'View online' });
     await page.setViewportSize({ width: 390, height: 844 });

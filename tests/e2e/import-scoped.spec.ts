@@ -35,6 +35,9 @@ function createScopedArchive(
     ...recipe,
     saved_from_public_id: recipe.saved_from_public_id ?? null,
     total_time_minutes: recipe.total_time_minutes ?? 0,
+    prep_ahead_markdown: recipe.prep_ahead_markdown ?? '',
+    made_count: recipe.made_count ?? (recipe.state === 'tried' ? 1 : 0),
+    last_made_at: recipe.last_made_at ?? null,
   }));
   data.records.media_assets = mediaAssets;
   const dataBytes = strToU8(JSON.stringify(data));

@@ -13,6 +13,9 @@ compact and does not expand short ingredient rows. Ingredient-first cells are
 vertically centered in both private and shared tables, with matching cell
 padding and text line-height plus visible rules around tinted stripe rows.
 Mobile unit controls retain 48px hit areas; desktop controls remain compact.
+Short mobile Cook-mode rows stay close to those 48px targets by omitting
+vertical padding from checkbox and unit-control cells; wrapped content may
+grow a row.
 
 ## Source requirements and authority
 

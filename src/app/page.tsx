@@ -51,7 +51,7 @@ export function HomePageView({
 }
 
 export const metadata = {
-  title: 'Account - Sign In',
+  title: { absolute: 'Recipe Box - Account - Sign In' },
 };
 
 export default async function HomePage({

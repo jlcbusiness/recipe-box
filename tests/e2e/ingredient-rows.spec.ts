@@ -889,7 +889,9 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await expect(topSaveButton).toBeVisible();
     await expect(page.locator('.recipe-form-actions .recipe-primary-button')).toHaveCount(0);
     const saveButtonBounds = await topSaveButton.boundingBox();
-    const instructionsBounds = await page.locator('.recipe-instruction-section').boundingBox();
+    const instructionsBounds = await page
+      .locator('.recipe-instruction-section:not(.recipe-pre-instruction-section)')
+      .boundingBox();
     const timeSectionBounds = await page.locator('.recipe-time-fieldset').boundingBox();
     expect(saveButtonBounds).not.toBeNull();
     expect(instructionsBounds).not.toBeNull();
@@ -1342,13 +1344,13 @@ test('desktop rows reorder by pointer and Ctrl+Arrow and reload @e2e @a11y @ingr
     await reloadedRows.nth(1).hover();
     await expect(deleteBasil).toHaveCSS('opacity', '1');
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(deleteBasil).toHaveCSS('color', 'rgb(108, 103, 95)');
+    await expect(deleteBasil).toHaveCSS('color', 'rgb(98, 105, 93)');
     await deleteBasil.focus();
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await deleteBasil.hover();
     await expect(deleteBasil).toHaveCSS('width', '32px');
     await expect(deleteBasil).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(deleteBasil).toHaveCSS('color', 'rgb(108, 103, 95)');
+    await expect(deleteBasil).toHaveCSS('color', 'rgb(98, 105, 93)');
     await deleteBasil.click();
     await expect(reloadedRows).toHaveCount(3);
     await expect(reloadedGrid).not.toContainText('Basil');
