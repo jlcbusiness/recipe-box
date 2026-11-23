@@ -2632,15 +2632,11 @@ test('multi-page recipe output contains separated instruction photos and creates
           document.querySelectorAll<HTMLElement>('.recipe-output-page'),
         );
         const stepNumbers = Array.from(
-          document.querySelectorAll<HTMLOListElement>(
-            '.recipe-output-page ol.recipe-instruction-list',
+          document.querySelectorAll<HTMLElement>(
+            '.recipe-output-page .recipe-output-step-number',
           ),
-        ).flatMap((list) => {
-          const reset = Number.parseInt(list.style.counterReset.split(' ').at(-1) ?? '', 10);
-          const firstStep = reset + 1;
-          if (list.start !== firstStep) return [-1];
-          return Array.from(list.children, (_, index) => firstStep + index);
-        });
+          (stepNumber) => Number.parseInt(stepNumber.textContent?.replace(/\.$/u, '') ?? '', 10),
+        );
         const ingredientPageTexts = outputPages.map(
           (page) =>
             page
@@ -2740,8 +2736,8 @@ test('multi-page recipe output contains separated instruction photos and creates
       }
 
       const photo = document.createElement('span');
-      photo.className = 'recipe-instruction-photo is-left';
-      photo.style.cssText = 'float:left;width:120px;height:280px;background:#d5d7d1;';
+      photo.className = 'recipe-instruction-photo';
+      photo.style.cssText = 'width:120px;height:280px;background:#d5d7d1;';
       const paragraph = firstStep.querySelector('p');
       (paragraph ?? firstStep).append(photo);
       const summary = document.querySelector<HTMLElement>('.recipe-public-summary');
@@ -2876,7 +2872,7 @@ test('multi-page recipe output contains separated instruction photos and creates
     );
     await expect(page.locator('html')).toHaveAttribute('data-print-metadata-line-count', '1');
     await expect(page.locator('html')).toHaveAttribute('data-print-reader-layout', 'false');
-    await expect(page.locator('html')).toHaveAttribute('data-print-photo-float', 'none');
+    await expect(page.locator('html')).toHaveAttribute('data-print-photo-float', 'right');
     await expect(page.locator('html')).toHaveAttribute('data-print-unit-cursor', 'default');
   } finally {
     await deleteTestUser(request, user);
@@ -2935,6 +2931,12 @@ test('print expands instruction-only pages after ingredient pagination @e2e', as
           ),
           (list) => getComputedStyle(list).listStyleType,
         );
+        const visibleStepNumbers = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.recipe-output-page .recipe-output-step-number',
+          ),
+          (stepNumber) => stepNumber.textContent?.trim() ?? '',
+        );
         topDocument?.documentElement.setAttribute(
           'data-print-ingredient-pages',
           JSON.stringify(ingredientTexts),
@@ -2950,6 +2952,10 @@ test('print expands instruction-only pages after ingredient pagination @e2e', as
         topDocument?.documentElement.setAttribute(
           'data-print-instruction-list-styles',
           JSON.stringify(listStyles),
+        );
+        topDocument?.documentElement.setAttribute(
+          'data-print-visible-step-numbers',
+          JSON.stringify(visibleStepNumbers),
         );
         topDocument?.documentElement.setAttribute('data-print-requested', 'true');
         window.dispatchEvent(new Event('afterprint'));
@@ -3028,13 +3034,18 @@ test('print expands instruction-only pages after ingredient pagination @e2e', as
       (await page.locator('html').getAttribute('data-print-step-item-displays')) ?? '[]',
     ) as string[];
     expect(stepItemDisplays.length).toBeGreaterThan(1);
-    expect(stepItemDisplays.every((display) => display === 'list-item')).toBe(true);
+    expect(stepItemDisplays.every((display) => display === 'block')).toBe(true);
 
     const listStyles = JSON.parse(
       (await page.locator('html').getAttribute('data-print-instruction-list-styles')) ?? '[]',
     ) as string[];
     expect(listStyles.length).toBeGreaterThan(1);
-    expect(listStyles.every((listStyle) => listStyle === 'decimal')).toBe(true);
+    expect(listStyles.every((listStyle) => listStyle === 'none')).toBe(true);
+    expect(
+      JSON.parse(
+        (await page.locator('html').getAttribute('data-print-visible-step-numbers')) ?? '[]',
+      ),
+    ).toEqual(Array.from({ length: 60 }, (_, index) => `${index + 1}.`));
   } finally {
     await deleteTestUser(request, user);
   }
@@ -3062,7 +3073,11 @@ test('print continues an oversized ingredient column while standalone formats fa
         const instructionTexts = pages.flatMap((outputPage) =>
           Array.from(
             outputPage.querySelectorAll('.recipe-output-instruction-column li'),
-            (item) => item.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+            (item) => {
+              const content = item.cloneNode(true) as HTMLElement;
+              content.querySelector('.recipe-output-step-number')?.remove();
+              return content.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+            },
           ),
         );
         const pageNumbers = pages.map(

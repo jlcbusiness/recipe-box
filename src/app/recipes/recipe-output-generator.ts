@@ -149,10 +149,28 @@ const outputStyles = `
   .recipe-output-column .recipe-prep-ahead-body code { overflow-wrap: anywhere; }
   .recipe-output-column ol, .recipe-output-column ul { margin: 0; padding-left: 20px; }
   .recipe-output-column li + li { margin-top: 5px; }
-  .recipe-output-column .recipe-instruction-list > li { display: list-item; }
+  .recipe-output-column .recipe-instruction-list > li {
+    display: block;
+    position: relative;
+  }
   .recipe-output-column .recipe-instruction-list {
-    list-style: decimal;
+    list-style: none;
     line-height: 1.45;
+    padding-left: 28px;
+  }
+  .recipe-output-column .recipe-output-step-number {
+    position: absolute;
+    left: -28px;
+    width: 20px;
+    text-align: right;
+  }
+  .recipe-output-column .recipe-instruction-list > li:has(.recipe-instruction-photo) {
+    clear: both;
+  }
+  .recipe-output-column .recipe-instruction-list > li::after {
+    display: block;
+    clear: both;
+    content: "";
   }
   .recipe-output-column .recipe-instruction-list > li:has(.recipe-instruction-photo) + li {
     margin-top: 0;
@@ -160,10 +178,29 @@ const outputStyles = `
   .recipe-output-column .recipe-instruction-photo {
     display: block;
     max-width: 100%;
-    clear: both;
-    float: none !important;
-    margin: 12px 0;
+    float: right;
+    margin: 12px 0 12px 12px;
     cursor: default;
+  }
+  .recipe-output-column .recipe-instruction-photo.is-left {
+    float: left;
+    margin: 12px 12px 12px 0;
+  }
+  .recipe-output-column .recipe-instruction-photo.is-nowrap,
+  .recipe-output-column .recipe-instruction-photo.is-width-constrained {
+    clear: both;
+    float: none;
+    margin: 12px 0 12px auto;
+  }
+  .recipe-output-column .recipe-instruction-photo.is-nowrap.is-left,
+  .recipe-output-column .recipe-instruction-photo.is-width-constrained.is-left {
+    margin-right: auto;
+    margin-left: 0;
+  }
+  .recipe-output-column .recipe-instruction-photo.is-center {
+    clear: both;
+    float: none;
+    margin: 12px auto;
   }
   .recipe-output-column .recipe-instruction-list p:has(.recipe-instruction-photo) { margin-bottom: 0; }
   .recipe-output-column .recipe-reader-unit-trigger,
@@ -612,7 +649,6 @@ function createOutputPage(
       instructionsList = document.createElement('ol');
       instructionsList.className = sourceList.className;
       instructionsList.start = stepStart + 1;
-      instructionsList.style.counterReset = `recipe-instruction ${stepStart}`;
       section.querySelector('ol.recipe-instruction-list')?.replaceWith(instructionsList);
     }
     instructionColumn.append(section);
@@ -1287,7 +1323,13 @@ export async function generateRecipeOutputDocument(
       for (const step of steps) {
         const source = sourceSteps[step.index];
         if (!source || !outputPage.instructionsList) continue;
-        outputPage.instructionsList.append(cloneReadableNode(source, settings));
+        const outputStep = cloneReadableNode(source, settings);
+        const stepNumber = document.createElement('span');
+        stepNumber.className = 'recipe-output-step-number';
+        stepNumber.setAttribute('aria-hidden', 'true');
+        stepNumber.textContent = `${step.index + 1}.`;
+        outputStep.prepend(stepNumber);
+        outputPage.instructionsList.append(outputStep);
       }
       return outputPage;
     });
