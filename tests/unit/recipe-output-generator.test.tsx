@@ -3,9 +3,16 @@
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { createImagePdf } from '../../src/app/recipes/recipe-output-generator';
+import { createImagePdf, isRecipeFontFamily } from '../../src/app/recipes/recipe-output-generator';
 
 describe('recipe image PDF generation', () => {
+  it('matches the recipe font family across CSS quote styles', () => {
+    expect(isRecipeFontFamily("'DM Sans Variable'")).toBe(true);
+    expect(isRecipeFontFamily('"DM Sans Variable"')).toBe(true);
+    expect(isRecipeFontFamily('DM Sans Variable')).toBe(true);
+    expect(isRecipeFontFamily('"Other Font"')).toBe(false);
+  });
+
   it('creates a readable landscape Letter PDF with each raster page', async () => {
     const jpeg = await sharp({
       create: {

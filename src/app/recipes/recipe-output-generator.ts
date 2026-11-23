@@ -37,6 +37,13 @@ const PNG_PAGE_WIDTH = (RECIPE_OUTPUT_PAGE.widthPoints / 72) * RECIPE_OUTPUT_PAG
 const PNG_PAGE_HEIGHT = (RECIPE_OUTPUT_PAGE.heightPoints / 72) * RECIPE_OUTPUT_PAGE.dpi;
 const MINIMUM_FONT_SIZE = (RECIPE_OUTPUT_PAGE.minimumTextMillimeters / 25.4) * CSS_PIXELS_PER_INCH;
 const INSTRUCTION_LAYOUT_SAFETY_MARGIN = 8;
+const RECIPE_FONT_FAMILY = 'DM Sans Variable';
+
+export function isRecipeFontFamily(fontFamily: string): boolean {
+  const value = fontFamily.trim();
+  const quotedFamily = /^(['"])(.*)\1$/u.exec(value)?.[2];
+  return (quotedFamily ?? value) === RECIPE_FONT_FAMILY;
+}
 
 const outputStyles = `
   * { box-sizing: border-box; }
@@ -934,10 +941,8 @@ async function getPrintFontFaceStyles(signal: AbortSignal): Promise<string> {
       throw new Error('The recipe font could not be embedded for printing.');
     }
     const fontRules = rules
-      .filter(
-        (rule) =>
-          rule.type === CSSRule.FONT_FACE_RULE && rule.cssText.includes('"DM Sans Variable"'),
-      )
+      .filter((rule): rule is CSSFontFaceRule => rule instanceof CSSFontFaceRule)
+      .filter((rule) => isRecipeFontFamily(rule.style.getPropertyValue('font-family')))
       .map((rule) => rule.cssText);
     if (fontRules.length > 0) {
       fontFaceRules.push(
