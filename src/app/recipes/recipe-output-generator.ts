@@ -107,6 +107,7 @@ const outputStyles = `
     gap: 18px;
   }
   .recipe-output-columns.is-instruction-only { grid-template-columns: minmax(0, 1fr); }
+  .recipe-output-columns.is-instruction-only .recipe-output-ingredient-column { display: none; }
   .recipe-output-column { min-width: 0; min-height: 0; overflow: hidden; }
   .recipe-output-column > .recipe-detail-section { margin: 0; border: 0; padding: 0; }
   .recipe-output-column .recipe-nutrition-section .recipe-nutrition-string { display: block; }
@@ -148,8 +149,11 @@ const outputStyles = `
   .recipe-output-column .recipe-prep-ahead-body code { overflow-wrap: anywhere; }
   .recipe-output-column ol, .recipe-output-column ul { margin: 0; padding-left: 20px; }
   .recipe-output-column li + li { margin-top: 5px; }
-  .recipe-output-column .recipe-instruction-list > li { display: flow-root; }
-  .recipe-output-column .recipe-instruction-list { line-height: 1.45; }
+  .recipe-output-column .recipe-instruction-list > li { display: list-item; }
+  .recipe-output-column .recipe-instruction-list {
+    list-style: decimal;
+    line-height: 1.45;
+  }
   .recipe-output-column .recipe-instruction-list > li:has(.recipe-instruction-photo) + li {
     margin-top: 0;
   }
@@ -579,7 +583,9 @@ function createOutputPage(
 
   const columns = document.createElement('div');
   columns.className = 'recipe-output-columns';
-  if (!ingredientSource) columns.classList.add('is-instruction-only');
+  if (!ingredientSource || ingredientContent === null) {
+    columns.classList.add('is-instruction-only');
+  }
   const ingredientColumn = document.createElement('section');
   ingredientColumn.className = 'recipe-output-column recipe-output-ingredient-column';
   const instructionColumn = document.createElement('section');

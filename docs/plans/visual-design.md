@@ -1477,6 +1477,8 @@ paginated header combines timing and equipment into a compact wrapping
 metadata summary, separated from attribution by 8px. Labels and values keep
 consistent alignment and breathing room. Instruction photos use balanced
 12px vertical margins, and their list numbering continues across page breaks.
+When ingredient pagination ends before the instructions, remaining
+instruction-only pages use the full content width.
 Ingredient-set headings remain visually distinct from ingredient names, with
 preparation specifics on a separate indented line. Standalone HTML stays
 responsive and unpaginated, with a larger label/value scale and the same

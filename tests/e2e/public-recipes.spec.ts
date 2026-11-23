@@ -2883,6 +2883,163 @@ test('multi-page recipe output contains separated instruction photos and creates
   }
 });
 
+test('print expands instruction-only pages after ingredient pagination @e2e', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000);
+  const user = await createTestUser(request);
+  const config = await getLocalSupabaseConfig();
+
+  try {
+    const recipe = await createRecipe(
+      request,
+      config,
+      user,
+      'Print overflow layout',
+      undefined,
+      true,
+    );
+    const publicId = await getPublicId(request, config, recipe.id);
+
+    await page.addInitScript(() => {
+      window.print = () => {
+        const topDocument = window.top?.document;
+        const outputPages = Array.from(
+          document.querySelectorAll<HTMLElement>('.recipe-output-page'),
+        );
+        const ingredientTexts = outputPages.map(
+          (outputPage) =>
+            outputPage
+              .querySelector('.recipe-output-ingredient-column')
+              ?.textContent?.replace(/\s+/g, ' ')
+              .trim() ?? '',
+        );
+        const instructionWidthRatios = outputPages.map((outputPage) => {
+          const columns = outputPage.querySelector<HTMLElement>('.recipe-output-columns');
+          const instructions = outputPage.querySelector<HTMLElement>(
+            '.recipe-output-instruction-column',
+          );
+          if (!columns || !instructions) return 0;
+          return instructions.getBoundingClientRect().width / columns.getBoundingClientRect().width;
+        });
+        const stepItemDisplays = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.recipe-output-page ol.recipe-instruction-list > li',
+          ),
+          (step) => getComputedStyle(step).display,
+        );
+        const listStyles = Array.from(
+          document.querySelectorAll<HTMLOListElement>(
+            '.recipe-output-page ol.recipe-instruction-list',
+          ),
+          (list) => getComputedStyle(list).listStyleType,
+        );
+        topDocument?.documentElement.setAttribute(
+          'data-print-ingredient-pages',
+          JSON.stringify(ingredientTexts),
+        );
+        topDocument?.documentElement.setAttribute(
+          'data-print-instruction-width-ratios',
+          JSON.stringify(instructionWidthRatios),
+        );
+        topDocument?.documentElement.setAttribute(
+          'data-print-step-item-displays',
+          JSON.stringify(stepItemDisplays),
+        );
+        topDocument?.documentElement.setAttribute(
+          'data-print-instruction-list-styles',
+          JSON.stringify(listStyles),
+        );
+        topDocument?.documentElement.setAttribute('data-print-requested', 'true');
+        window.dispatchEvent(new Event('afterprint'));
+      };
+    });
+
+    await page.goto(`/r/${publicId}`);
+    await expect(
+      page.getByRole('heading', { name: 'Print overflow layout - serves 4' }),
+    ).toBeVisible();
+    await page.evaluate(() => {
+      const ingredients = document.querySelector<HTMLElement>(
+        'main.recipes-main [aria-labelledby="ingredients-title"]',
+      );
+      const list = ingredients?.querySelector<HTMLOListElement>('ol.recipe-ingredient-list');
+      const tableBody = ingredients?.querySelector<HTMLTableSectionElement>(
+        '.recipe-ingredient-first-table tbody',
+      );
+      if (!ingredients || (!list && !tableBody)) {
+        throw new Error('Expected the recipe ingredient list to be available.');
+      }
+
+      for (let index = 1; index <= 18; index += 1) {
+        const label = `Print layout ingredient ${index} with a long preparation note that wraps at the minimum readable text size`;
+        if (list) {
+          const item = document.createElement('li');
+          item.textContent = label;
+          list.append(item);
+        } else if (tableBody) {
+          const row = document.createElement('tr');
+          const name = document.createElement('th');
+          name.scope = 'row';
+          name.textContent = label;
+          row.append(
+            name,
+            document.createElement('td'),
+            document.createElement('td'),
+            document.createElement('td'),
+            document.createElement('td'),
+          );
+          tableBody.append(row);
+        }
+      }
+
+      const instructionList = document.querySelector<HTMLOListElement>(
+        'main.recipes-main .recipe-instruction-list',
+      );
+      if (!instructionList) {
+        throw new Error('Expected the recipe instruction list to be available.');
+      }
+      for (let index = 2; index <= 60; index += 1) {
+        const step = document.createElement('li');
+        step.textContent = `Additional instruction ${index}: stir gently while scraping the bottom and sides of the pan, then check the texture before serving.`;
+        instructionList.append(step);
+      }
+    });
+
+    await requestPublicPrint(page);
+    await expect(page.locator('html')).toHaveAttribute('data-print-requested', 'true');
+
+    const ingredientPages = JSON.parse(
+      (await page.locator('html').getAttribute('data-print-ingredient-pages')) ?? '[]',
+    ) as string[];
+    const ingredientPageCount = ingredientPages.filter(Boolean).length;
+    expect(ingredientPageCount).toBeGreaterThan(1);
+    expect(ingredientPages.length).toBeGreaterThan(ingredientPageCount);
+
+    const instructionWidthRatios = JSON.parse(
+      (await page.locator('html').getAttribute('data-print-instruction-width-ratios')) ?? '[]',
+    ) as number[];
+    for (const [index, ingredientText] of ingredientPages.entries()) {
+      if (!ingredientText) expect(instructionWidthRatios[index]).toBeGreaterThanOrEqual(0.99);
+    }
+
+    const stepItemDisplays = JSON.parse(
+      (await page.locator('html').getAttribute('data-print-step-item-displays')) ?? '[]',
+    ) as string[];
+    expect(stepItemDisplays.length).toBeGreaterThan(1);
+    expect(stepItemDisplays.every((display) => display === 'list-item')).toBe(true);
+
+    const listStyles = JSON.parse(
+      (await page.locator('html').getAttribute('data-print-instruction-list-styles')) ?? '[]',
+    ) as string[];
+    expect(listStyles.length).toBeGreaterThan(1);
+    expect(listStyles.every((listStyle) => listStyle === 'decimal')).toBe(true);
+  } finally {
+    await deleteTestUser(request, user);
+  }
+});
+
 test('print continues an oversized ingredient column while standalone formats fail clearly @e2e', async ({
   page,
   request,
