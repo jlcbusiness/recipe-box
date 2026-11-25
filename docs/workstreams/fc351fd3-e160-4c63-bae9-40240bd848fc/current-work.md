@@ -72,18 +72,34 @@
   that column. Added the column with a deterministic existing-tag backfill and
   a pgTAP regression test. The local migration and focused test passed; no
   hosted database migration was run.
+- 2026-11-25: Created [chicken.jsonc](../../../uploads/chicken.jsonc) with the
+  12 requested recipe names and current schema labels. Mapped `Try` state to
+  `want_to_try`, `No Try` to `will_not_try`, and `On Occasion` to `Specific
+  occasion`; strict-schema validation passed.
+- 2026-11-25: Added the supplied ingredient lists to nine chicken recipes and
+  left the other three without invented ingredients. The current Recipe JSON
+  schema accepts all 12 recipes. The dated strict example still expects legacy
+  `amount_min` fields, so it is not valid for current measurement payloads.
+- 2026-11-25: Clarified ingredient uniqueness to compare ingredient identity
+  and normalized detail, allowing distinct mustard varieties in one section.
+  Updated editor and bundle-import validation, added a database migration and
+  regression tests. Focused unit tests, typecheck, and Biome pass; the pgTAP
+  test has not been run against the new migration. The chicken JSONC linter
+  also accepts all 12 recipes.
 
 ## Save Point
 
-- **Goal/status:** Recipe JSON import is implemented; the production tagged-import
-  failure is fixed in a local migration and covered by a passing focused test.
+- **Goal/status:** Recipe JSON import is implemented; ingredient identity now
+  includes detail in editor and bundle validation, with a database migration
+  and regression tests added.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** Local migration/test validation is complete; production
-  migration remains unapplied.
-- **Last verified result:** `npx supabase test db supabase/tests/database_import_tags.test.sql`
-  passed both assertions after the new migration was applied to the local stack.
-- **Next action:** Before any hosted change, inspect remote migration history
-  and preview the push; no remote database was checked or changed.
+- **Current step:** The distinct-detail constraint migration and pgTAP test are
+  added but have not been applied or run against a database.
+- **Last verified result:** 74 focused unit tests passed; typecheck, Biome, and
+  the chicken JSONC linter passed. The focused pgTAP test is present but unrun.
+- **Next action:** Run the pgTAP test against a database with the new migration
+  applied. Before any hosted change, inspect remote migration history and
+  preview the push; no remote database was checked or changed.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); latest focused checkpoint is the
   2026-11-25 tagged-import failure investigation.

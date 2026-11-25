@@ -157,11 +157,24 @@ describe('ingredient row rules', () => {
 
   it('rejects canonical duplicates within a set but allows the same ingredient in another set', () => {
     const duplicateRows = [
-      { ingredientSetId: 'main', ingredientId: 'onion-id', ingredientName: 'Onion' },
-      { ingredientSetId: 'main', ingredientId: 'onion-id', ingredientName: 'Onion' },
+      {
+        ingredientSetId: 'main',
+        ingredientId: 'onion-id',
+        ingredientName: 'Onion',
+        detail: 'yellow',
+      },
+      {
+        ingredientSetId: 'main',
+        ingredientId: 'onion-id',
+        ingredientName: 'Onion',
+        detail: 'yellow',
+      },
     ];
 
     expect(validateIngredientRowUniqueness(duplicateRows)).not.toBeNull();
+    expect(
+      validateIngredientRowUniqueness([duplicateRows[0], { ...duplicateRows[1], detail: 'red' }]),
+    ).toBeNull();
     expect(
       validateIngredientRowUniqueness([
         duplicateRows[0],
@@ -170,8 +183,8 @@ describe('ingredient row rules', () => {
     ).toBeNull();
     expect(
       validateIngredientRowUniqueness([
-        { ingredientSetId: 'main', ingredientId: null, ingredientName: 'Carrot' },
-        { ingredientSetId: 'main', ingredientId: null, ingredientName: ' carrot ' },
+        { ingredientSetId: 'main', ingredientId: null, ingredientName: 'Carrot', detail: '' },
+        { ingredientSetId: 'main', ingredientId: null, ingredientName: ' carrot ', detail: ' ' },
       ]),
     ).not.toBeNull();
   });

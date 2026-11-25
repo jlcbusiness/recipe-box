@@ -24,3 +24,8 @@
 - [x] Run focused validation and update the checkpoint, including known
   repository-wide lint limitations.
 - [x] Fix the database import failure caused by the missing tag sort-order column and verify tagged imports.
+- [x] Create and strictly validate the `chicken.jsonc` recipe list with the current state and enthusiasm labels.
+- [x] Add the supplied ingredient lists to the specified chicken recipes and validate the updated import file.
+- [x] Treat ingredients with the same name but different details as distinct within a section across editor and bundle-import validation.
+- [x] Update the database uniqueness constraint and add unit and pgTAP regression tests for distinct ingredient details.
+- [ ] Run the pgTAP regression test against a database with the new migration applied.

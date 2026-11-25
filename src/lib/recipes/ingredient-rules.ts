@@ -223,19 +223,21 @@ export function validateIngredientRowUniqueness(
     ingredientSetId: string;
     ingredientId: string | null;
     ingredientName: string;
+    detail: string;
   }[],
 ): string | null {
   const seen = new Set<string>();
   for (const row of rows) {
     const identity = row.ingredientId
       ? `id:${row.ingredientId.toLocaleLowerCase()}`
-      : `name:${row.ingredientName.trim().normalize('NFKC').toLocaleLowerCase()}`;
+      : `name:${row.ingredientName.trim().normalize('NFKC').toLocaleLowerCase('en-US')}`;
     if (identity === 'name:') {
       continue;
     }
-    const key = `${row.ingredientSetId.toLocaleLowerCase()}|${identity}`;
+    const detail = row.detail.trim().normalize('NFKC').toLocaleLowerCase('en-US');
+    const key = JSON.stringify([row.ingredientSetId.toLocaleLowerCase(), identity, detail]);
     if (seen.has(key)) {
-      return 'An ingredient can appear only once in each section.';
+      return 'An ingredient with the same name and detail can appear only once in each section.';
     }
     seen.add(key);
   }

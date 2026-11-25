@@ -225,7 +225,11 @@ function validateIngredientPortionFields(records: PortableData['records']) {
       throw new Error('The bundle contains an invalid ingredient Size value.');
     }
 
-    const uniqueKey = `${String(ingredient.ingredient_set_id)}\u0000${String(ingredient.ingredient_id)}`;
+    const uniqueKey = [
+      String(ingredient.ingredient_set_id),
+      String(ingredient.ingredient_id),
+      normalizeImportName(String(ingredient.detail ?? '')),
+    ].join('\u0000');
     if (uniqueIngredientRows.has(uniqueKey)) {
       throw new Error('The bundle repeats an ingredient within the same section.');
     }

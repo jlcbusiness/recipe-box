@@ -134,3 +134,25 @@ launchers, a bundled standard schema, and an optional downloaded strict schema.
 - Applied the migration to the local stack with `npx supabase migration up`;
   the focused pgTAP test passed (2 assertions).
 - No hosted migration list, dry-run, or database write was performed.
+
+## 2026-11-25 — Session fc351fd3-e160-4c63-bae9-40240bd848fc (focused checkpoint)
+
+- Compared the provided recipe list against `soups.jsonc`, the JSONC template,
+  and the account-specific strict schema. Confirmed the enthusiasm values and
+  state/occasion label mappings.
+- Created `uploads/chicken.jsonc` with 12 minimal recipes and preserved the
+  supplied names.
+- Ran the strict recipe JSON linter; all 12 recipes passed. Confirmed the
+  `uploads/` directory remains Git-ignored.
+
+## 2026-11-25 — Session fc351fd3-e160-4c63-bae9-40240bd848fc (focused checkpoint)
+
+- Added the supplied ingredients to the nine named recipes with lists; left
+  Chicken L'orange, Bunky Makes Spatchcocked "Yardbird", and Duck Breast With
+  Fig-Orange Sauce without invented ingredient data.
+- Validated against the current Recipe JSON schema; all 12 recipes passed, and
+  a parsed-content check confirmed ingredient arrays on the nine requested
+  recipes only.
+- Confirmed the dated strict schema snapshot is stale for measurements because
+  it requires legacy `amount_min` fields. It was not used to rewrite the
+  current scalar measurement format.

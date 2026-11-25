@@ -773,6 +773,42 @@ describe('import bundle validation', () => {
     expect(() => validateImportBundleFiles(invalid)).toThrow(/ingredient set/i);
   });
 
+  it('allows the same ingredient with different details in one section', () => {
+    const setId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const ingredientId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const createEntries = (details: [string, string]) =>
+      createBundleEntries({
+        schemaVersion: 16,
+        scope: { type: 'recipe', id: recipeId },
+        recipe: { id: recipeId, name: 'Mustard chicken', publication_id: null },
+        records: {
+          recipe_ingredient_sets: [{ id: setId, recipe_id: recipeId, label: 'Main', position: 0 }],
+          ingredients: [{ id: ingredientId, name: 'Mustard' }],
+          recipe_ingredients: details.map((detail, index) => ({
+            id: `dddddddd-dddd-4ddd-8ddd-dddddddddd0${index + 1}`,
+            recipe_id: recipeId,
+            ingredient_id: ingredientId,
+            ingredient_set_id: setId,
+            position: index,
+            is_main: false,
+            detail,
+            preparation: '',
+            alternate_note: '',
+            portion_one_ratio: null,
+            size_value: null,
+            size_unit: null,
+            nutrition_serving_size_override: null,
+            nutrition_overrides: {},
+          })),
+        },
+      });
+
+    expect(() => validateImportBundleFiles(createEntries(['Dijon', 'whole-grain']))).not.toThrow();
+    expect(() => validateImportBundleFiles(createEntries(['Dijon', ' dijon ']))).toThrow(
+      /repeats an ingredient within the same section/i,
+    );
+  });
+
   it('accepts publication roots and preserves out-of-scope relationship display text', () => {
     const publicationEntries = createBundleEntries({
       scope: { type: 'publication', id: assetId },
