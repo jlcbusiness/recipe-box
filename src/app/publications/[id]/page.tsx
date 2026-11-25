@@ -155,7 +155,6 @@ export default async function PublicationPage({
             title="Add Recipe"
           >
             <Plus aria-hidden="true" size={18} />
-            <span className="publication-new-recipe-label">Add Recipe</span>
           </Link>
           <PublicationTransferMenu publicationId={publication.id} />
         </div>

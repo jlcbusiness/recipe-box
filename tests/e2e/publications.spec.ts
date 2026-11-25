@@ -149,7 +149,7 @@ test('publication actions stay compact and share a keyboard-operable transfer me
       page.getByRole('link', { name: 'Add Recipe' }),
       page.getByRole('button', { name: 'Publication transfer options' }),
     ];
-    for (const width of [1920, 1024, 800, 761, 721]) {
+    for (const width of [1920, 1024, 800, 761, 721, 720, 641]) {
       await page.setViewportSize({ width, height: 900 });
       for (const button of actionButtons) {
         expect((await button.boundingBox())?.width).toBeLessThanOrEqual(48);
@@ -172,8 +172,61 @@ test('publication actions stay compact and share a keyboard-operable transfer me
     await expect(page.getByRole('menuitem', { name: 'Export publication' })).toBeFocused();
     await page.keyboard.press('ArrowDown');
     await expect(page.getByRole('menuitem', { name: 'Import recipe' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    const jsonMenuItem = page.getByRole('menuitem', { name: 'Import JSON' });
+    await expect(jsonMenuItem).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    const jsonSubmenu = page.getByRole('menu', { name: 'Import JSON actions' });
+    await expect(jsonSubmenu.getByRole('menuitem', { name: 'Import JSON file' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(
+      jsonSubmenu.getByRole('menuitem', { name: 'Download JSON template' }),
+    ).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(jsonMenuItem).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(transfer).toBeFocused();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await transfer.click();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowRight');
+    await expectNoHorizontalOverflow(page);
+    const mobileSubmenu = await page
+      .getByRole('menu', { name: 'Import JSON actions' })
+      .boundingBox();
+    expect(mobileSubmenu).not.toBeNull();
+    expect(mobileSubmenu?.x).toBeGreaterThanOrEqual(0);
+    expect((mobileSubmenu?.x ?? 0) + (mobileSubmenu?.width ?? 0)).toBeLessThanOrEqual(390);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+
+    const downloads: Array<{ name: string; menuitem: string }> = [
+      {
+        name: 'recipe-template-\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.jsonc',
+        menuitem: 'Download JSON template',
+      },
+      {
+        name: 'recipe-schema-\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.json',
+        menuitem: 'Download JSON schema',
+      },
+      {
+        name: 'recipe-schema-strict-\\d{4}-\\d{2}-\\d{2}-\\d{2}\\.\\d{2}\\.json',
+        menuitem: 'Download strict schema',
+      },
+    ];
+    for (const item of downloads) {
+      await transfer.click();
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowRight');
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('menuitem', { name: item.menuitem }).click();
+      const download = await downloadPromise;
+      expect(download.suggestedFilename()).toMatch(new RegExp(`^${item.name}$`));
+      await expect(transfer).toBeFocused();
+    }
   } finally {
     await deleteTestUser(request, user);
   }

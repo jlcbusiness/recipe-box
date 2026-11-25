@@ -6,7 +6,7 @@ import { validateImportBundleFiles } from './rules';
 
 const exportBucket = 'recipe-exports';
 const importPathPattern =
-  /^([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/imports\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.zip$/i;
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/imports\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.(zip|json|jsonc)$/i;
 
 export class ImportBundleError extends Error {
   constructor(
@@ -18,9 +18,27 @@ export class ImportBundleError extends Error {
 }
 
 export function isOwnedImportArchivePath(accountId: string, path: unknown): path is string {
+  return isOwnedImportPath(accountId, path, ['zip']);
+}
+
+export function isOwnedRecipeJsonImportPath(accountId: string, path: unknown): path is string {
+  return isOwnedImportPath(accountId, path, ['json', 'jsonc']);
+}
+
+export function isOwnedImportPath(
+  accountId: string,
+  path: unknown,
+  extensions: readonly ('zip' | 'json' | 'jsonc')[] = ['zip', 'json', 'jsonc'],
+): path is string {
   if (typeof path !== 'string') return false;
   const match = importPathPattern.exec(path);
-  return !!match && match[1].toLowerCase() === accountId.toLowerCase();
+  const extension = match?.[3]?.toLowerCase();
+  return (
+    !!match &&
+    match[1].toLowerCase() === accountId.toLowerCase() &&
+    extension !== undefined &&
+    extensions.some((allowedExtension) => allowedExtension === extension)
+  );
 }
 
 export async function readStoredImportBundle(

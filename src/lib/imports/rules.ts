@@ -23,6 +23,9 @@ import {
   validateNutritionValues,
 } from '../recipes/nutrition-rules';
 import { isRecipeScore } from '../recipes/recipe-rules';
+import { normalizeImportName } from './normalize-import-name.mjs';
+
+export { normalizeImportName } from './normalize-import-name.mjs';
 
 const imagePathPattern =
   /^images\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/(full|thumbnail|source-full|source-thumbnail)\.webp$/i;
@@ -1242,10 +1245,6 @@ export type ImportMatch = {
   existingIds: string[];
   kind: 'recipe' | 'publication';
 };
-
-export function normalizeImportName(value: string): string {
-  return value.normalize('NFKC').trim().toLocaleLowerCase('en-US');
-}
 
 export function findImportMatches(
   incoming: PortableData,

@@ -238,6 +238,7 @@
 
 .publication-transfer-menu-panel button {
   display: flex;
+  width: 100%;
   min-width: 0;
   min-height: 40px;
   align-items: center;
@@ -258,6 +259,23 @@
 .publication-transfer-menu-panel button:focus-visible {
   background: var(--tin-wash);
   color: var(--leaf);
+}
+
+.publication-transfer-json-submenu {
+  position: relative;
+}
+
+.publication-transfer-json-submenu-trigger {
+  justify-content: flex-start;
+}
+
+.publication-transfer-json-submenu-trigger > span {
+  flex: 1;
+}
+
+.publication-transfer-json-submenu-panel {
+  top: 0;
+  right: calc(100% + 4px);
 }
 
 .publication-transfer-hidden-trigger {
@@ -298,7 +316,18 @@
   gap: 8px;
 }
 
-@media (min-width: 721px) {
+.publication-detail-actions .database-import-trigger span,
+.publication-detail-actions .export-action-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@media (min-width: 641px) {
   .publication-detail-actions .publication-edit-action,
   .publication-detail-actions .publication-new-recipe,
   .publication-detail-actions .publication-transfer-menu-trigger {
@@ -309,23 +338,17 @@
     justify-content: center;
     padding: 0;
   }
-
-  .publication-detail-actions .publication-edit-label,
-  .publication-detail-actions .publication-new-recipe-label,
-  .publication-detail-actions .database-import-trigger span,
-  .publication-detail-actions .export-action-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    clip-path: inset(50%);
-  }
 }
 
 .publication-detail-mobile-controls {
   display: none;
+}
+
+@media (max-width: 720px) {
+  .publication-transfer-json-submenu-panel {
+    top: calc(100% + 2px);
+    right: 0;
+  }
 }
 
 .publication-edit-action {

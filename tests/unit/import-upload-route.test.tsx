@@ -31,6 +31,18 @@ function deleteRequest(path: unknown) {
   });
 }
 
+function postRequest(body?: unknown) {
+  return new Request('http://localhost/api/imports/uploads', {
+    method: 'POST',
+    ...(body === undefined
+      ? {}
+      : {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+  });
+}
+
 describe('import upload route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,7 +53,7 @@ describe('import upload route', () => {
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
     });
 
-    const response = await POST();
+    const response = await POST(postRequest());
 
     expect(response.status).toBe(401);
     expect(createAdminClient).not.toHaveBeenCalled();
@@ -63,7 +75,7 @@ describe('import upload route', () => {
       from: vi.fn(() => ({ insert })),
     });
 
-    const response = await POST();
+    const response = await POST(postRequest());
     const body = await response.json();
 
     expect(response.status).toBe(201);
@@ -91,12 +103,32 @@ describe('import upload route', () => {
       })),
     });
 
-    const response = await POST();
+    const response = await POST(postRequest());
     const body = await response.json();
 
     expect(response.status).toBe(503);
     expect(body.token).toBeUndefined();
     expect(remove).toHaveBeenCalledOnce();
+  });
+
+  it('creates owner-scoped JSONC uploads for recipe JSON imports', async () => {
+    const createSignedUploadUrl = vi.fn().mockResolvedValue({
+      data: { token: 'json-upload-token' },
+      error: null,
+    });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    createClient.mockResolvedValue(authenticatedClient());
+    createAdminClient.mockReturnValue({
+      storage: { from: vi.fn(() => ({ createSignedUploadUrl })) },
+      from: vi.fn(() => ({ insert })),
+    });
+
+    const response = await POST(postRequest({ type: 'recipe-json', extension: 'jsonc' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.path).toMatch(new RegExp(`^${accountId}/imports/[0-9a-f-]+\\.jsonc$`));
+    expect(createSignedUploadUrl).toHaveBeenCalledWith(body.path, { upsert: false });
   });
 
   it('removes only an authenticated owner upload and clears its cleanup queue entry', async () => {

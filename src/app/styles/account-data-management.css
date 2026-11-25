@@ -460,6 +460,15 @@
   overflow-wrap: anywhere;
 }
 
+.recipe-json-import-recipe-list {
+  box-sizing: border-box;
+  max-height: 180px;
+  margin: 0;
+  padding: 0 4px 0 28px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
 .database-import-conflicts .database-import-field,
 .database-import-destination {
   display: grid;

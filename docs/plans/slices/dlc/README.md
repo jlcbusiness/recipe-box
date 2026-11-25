@@ -207,6 +207,13 @@ version 1.21.0.
   daily marks, count, latest make time, Find filters, and hidden-by-default
   columns in Find and publication recipe lists.
 
+### Phase 19: Text-only recipe import
+
+- **DLC 50 (implemented locally):** [Text-only Recipe JSON Import](dlc-50-recipe-json-import.md)
+  imports one or more name-only or fully authored recipes into the publication
+  currently open. It adds downloadable JSON template and schema files to the
+  publication transfer menu and uses add-only conflict choices.
+
 ## Sequencing notes
 
 - DLC 25's implementation establishes the current recipe-editor baseline for

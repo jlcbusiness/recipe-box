@@ -440,8 +440,7 @@
     border-radius: 0 3px 3px 0;
   }
 
-  .publication-mobile-actions .export-action-label,
-  .publication-mobile-actions .publication-edit-label {
+  .publication-mobile-actions .export-action-label {
     display: none;
   }
 

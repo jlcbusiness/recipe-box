@@ -272,6 +272,13 @@ question. Its output is a decision-log entry, not shipped code.
   lists, output/privacy boundaries, and toolbar behavior. It shifts the
   private-detail composition established by DLC 44.
 
+### Phase 19: Text-only recipe import
+
+- **DLC 50 (implemented locally):** [Text-only Recipe JSON Import](slices/dlc/dlc-50-recipe-json-import.md)
+  imports one or more name-only or fully authored recipes into the publication
+  currently open. It adds downloadable JSON template and schema files to the
+  publication transfer menu and uses add-only conflict choices.
+
 ## Completion Rule
 
 A slice is complete only when its stated demonstration works, the automated

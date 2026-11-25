@@ -716,6 +716,8 @@ test('App data, publication detail, and recipe detail expose accessible export a
       await page.keyboard.press('Home');
       await expect(exportOption).toBeFocused();
       await page.keyboard.press('End');
+      await expect(transferMenu.getByRole('menuitem', { name: 'Import JSON' })).toBeFocused();
+      await page.keyboard.press('ArrowUp');
       await expect(importOption).toBeFocused();
       await page.keyboard.press('Escape');
       await expect(transferMenu).toHaveCount(0);
@@ -735,13 +737,15 @@ test('App data, publication detail, and recipe detail expose accessible export a
       )
       .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
     expect(new Set(publicationActionTops).size).toBe(1);
+    await expect(
+      page.locator('.publication-edit-label, .publication-new-recipe-label'),
+    ).toHaveCount(0);
     const publicationExportX = (await publicationExport.boundingBox())?.x ?? 0;
     const publicationEditX = (await publicationEdit.boundingBox())?.x ?? 0;
     expect(isMobile ? publicationExportX : publicationEditX).toBeLessThan(
       isMobile ? publicationEditX : publicationExportX,
     );
     if (isMobile) {
-      await expect(publicationEdit.locator('.publication-edit-label')).toBeHidden();
       await expect(page.locator('.publication-mobile-add-label')).toBeHidden();
       const exportBounds = await publicationExport.boundingBox();
       const transferActions = page.locator('.publication-mobile-transfer-actions:visible');
@@ -822,7 +826,6 @@ test('App data, publication detail, and recipe detail expose accessible export a
       await page.setViewportSize({ width: 352, height: 864 });
     } else {
       await expect(publicationExport).toHaveAttribute('aria-label', 'Publication transfer options');
-      await expect(publicationEdit.locator('.publication-edit-label')).toHaveCSS('width', '1px');
     }
     const publicationExportBackground = await publicationExport.evaluate(
       (element) => getComputedStyle(element).backgroundColor,

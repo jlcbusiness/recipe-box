@@ -261,8 +261,29 @@ async function openRecipeImport(page: import('@playwright/test').Page, isMobile:
   if (isMobile) {
     await importOption.tap();
   } else {
-    await page.keyboard.press('End');
+    await page.keyboard.press('ArrowDown');
     await expect(importOption).toBeFocused();
+    await page.keyboard.press('Enter');
+  }
+}
+
+async function openRecipeJsonImport(page: import('@playwright/test').Page, isMobile: boolean) {
+  await activate(
+    page,
+    page.getByRole('button', { name: 'Publication transfer options' }),
+    isMobile,
+  );
+  const menu = page.getByRole('menu', { name: 'Publication transfer actions' });
+  const jsonOption = menu.getByRole('menuitem', { name: 'Import JSON' });
+  if (isMobile) {
+    await jsonOption.tap();
+    await page.getByRole('menuitem', { name: 'Import JSON file' }).tap();
+  } else {
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(jsonOption).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('menuitem', { name: 'Import JSON file' })).toBeFocused();
     await page.keyboard.press('Enter');
   }
 }
@@ -624,6 +645,103 @@ test('imports publication and recipe bundles from their entry points @e2e @a11y'
     await expect(page.getByText(`${newRecipeName} (Imported)`)).toBeVisible();
   } finally {
     await concurrentPage?.close();
+    await deleteTestUser(request, user);
+  }
+});
+
+test('imports JSONC into the active publication and handles add-only recipe conflicts @e2e @a11y', async ({
+  page,
+  request,
+}, testInfo) => {
+  const user = await createTestUser(request);
+  const { apiUrl, anonKey } = await getLocalSupabaseConfig();
+  const publicationName = `JSON import publication ${randomUUID()}`;
+  const recipeName = `JSON import recipe ${randomUUID()}`;
+  const isMobile = testInfo.project.name === 'Fold 6';
+
+  try {
+    const publicationResponse = await request.post(`${apiUrl}/rest/v1/rpc/create_publication`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${user.accessToken}` },
+      data: {
+        p_name: publicationName,
+        p_publication_type: 'book',
+        p_author: null,
+        p_edition: null,
+        p_isbn: null,
+        p_retailer_url: null,
+        p_issue: null,
+        p_site_url: null,
+      },
+    });
+    expect(publicationResponse.ok(), await publicationResponse.text()).toBeTruthy();
+    const publicationId = (await publicationResponse.json()) as string;
+    await signIn(page, user.email, user.password);
+    await page.goto(`/publications/${publicationId}`);
+
+    const importJsonc = async () => {
+      await openRecipeJsonImport(page, isMobile);
+      const dialog = page.getByRole('dialog', { name: 'Import JSON file' });
+      await dialog.getByLabel('Recipe JSON file').setInputFiles({
+        name: 'recipes.jsonc',
+        mimeType: 'application/json',
+        buffer: Buffer.from(
+          `// Added to the open publication\n{"format":"recipe-box-recipe-json","schema_version":1,"recipes":[{"name":${JSON.stringify(recipeName)}}]}`,
+        ),
+      });
+      await expect(dialog.getByRole('list', { name: 'Incoming recipes' })).toContainText(
+        recipeName,
+      );
+      if (isMobile) await expectNoHorizontalOverflow(page);
+      if (testInfo.project.name === 'chromium') {
+        const accessibility = await new AxeBuilder({ page })
+          .include('.recipe-json-import-dialog')
+          .analyze();
+        expect(accessibility.violations).toEqual([]);
+      }
+      return dialog;
+    };
+
+    let dialog = await importJsonc();
+    await expect(dialog.getByRole('button', { name: 'Import JSON', exact: true })).toBeEnabled();
+    await activate(
+      page,
+      dialog.getByRole('button', { name: 'Import JSON', exact: true }),
+      isMobile,
+    );
+    await expect(dialog).not.toBeVisible();
+    await expect(
+      page.getByText('Imported 1 recipe(s). Kept 0 existing recipe(s).', { exact: true }),
+    ).toBeVisible();
+
+    dialog = await importJsonc();
+    const keepChoice = dialog.getByRole('group', {
+      name: `Import choice for ${recipeName}`,
+    });
+    await expect(dialog.getByText(`Existing recipe in ${publicationName}.`)).toBeVisible();
+    await chooseRecipeAction(keepChoice, 'Keep existing');
+    await activate(
+      page,
+      dialog.getByRole('button', { name: 'Import JSON', exact: true }),
+      isMobile,
+    );
+    await expect(
+      page.getByText('No changes were made; all matching recipes were kept.', { exact: true }),
+    ).toBeVisible();
+
+    dialog = await importJsonc();
+    const duplicateChoice = dialog.getByRole('group', {
+      name: `Import choice for ${recipeName}`,
+    });
+    await chooseRecipeAction(duplicateChoice, 'Create duplicate');
+    await activate(
+      page,
+      dialog.getByRole('button', { name: 'Import JSON', exact: true }),
+      isMobile,
+    );
+    await expect(
+      page.getByText('Imported 1 recipe(s). Kept 0 existing recipe(s).', { exact: true }),
+    ).toBeVisible();
+  } finally {
     await deleteTestUser(request, user);
   }
 });

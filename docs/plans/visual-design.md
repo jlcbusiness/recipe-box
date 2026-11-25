@@ -934,13 +934,16 @@ disconnected controls have equal 8px gaps above 340px and compact uniformly to
 4px at 340px.
 and below, without horizontal overflow.
 
-On desktop and mobile, one 40px transfer-menu button offers `Export publication`
-and `Import recipe`; Edit and Add Recipe remain compact, icon-only actions so
-the publication title and source link retain priority.
+On desktop and mobile, one 40px transfer-menu button offers `Export publication`,
+the ZIP-based `Import recipe`, and an `Import JSON` submenu. The submenu contains
+the JSON file import, a commented JSONC template download, and standard and
+strict JSON Schema downloads. Edit and Add Recipe remain compact, icon-only
+actions so the publication title and source link retain priority.
 Use the same export-arrow icon as recipe Export, not a sort-direction icon, and
 keep the publication actions 40px square.
-The menu supports keyboard navigation and returns focus to its trigger when
-closed. On App data, export feedback overlays below the Export and Import
+ArrowRight opens the JSON submenu; ArrowLeft or Escape closes it and returns
+focus to the submenu trigger. Escape from the top-level menu returns focus to
+the transfer-menu trigger. On App data, export feedback overlays below the Export and Import
 actions, above Wipe all account data, without moving or covering those
 controls. Other export feedback stays beneath its action without moving the
 action row or following content. Settings keeps its 48px mobile target while
@@ -962,6 +965,8 @@ Source publication resolution is automatic, and new or duplicate recipes can
 select an active destination publication; Replace retains the matched recipe's
 current publication. Dialog actions retain visible keyboard focus, and the
 mobile action rows fit without page-level horizontal overflow.
+JSON import accepts `.json` or `.jsonc`, previews add-only conflicts, and
+places committed recipes in the publication whose transfer menu opened it.
 
 ### Account content reset (DLC 24)
 

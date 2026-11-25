@@ -13,6 +13,8 @@
 .env
 .env.*
 !.env.example
+uploads/
+examples/
 
 # Node.js and browser test output
 .next*/
