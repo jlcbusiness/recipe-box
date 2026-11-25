@@ -156,3 +156,26 @@ launchers, a bundled standard schema, and an optional downloaded strict schema.
 - Confirmed the dated strict schema snapshot is stale for measurements because
   it requires legacy `amount_min` fields. It was not used to rewrite the
   current scalar measurement format.
+
+## 2026-11-25 — Session fc351fd3-e160-4c63-bae9-40240bd848fc (focused checkpoint)
+
+- Read the read-only recipe list attachment; it matches the supplied recipe
+  names, metadata, sections, and ingredient text.
+- Created `uploads/meat.jsonc` with nine recipes; all are tagged `TO BE EDITED`.
+  The Wellington also has the `DEPENDENT` tag because it references the
+  separately listed Port Wine Reduction.
+- Ran `npm run lint:recipe-json -- uploads/meat.jsonc`; all nine recipes passed.
+- Excluded the trailing `p heavy P'` text after the Steak Au Poivre cream
+  instruction as a paste artifact; no recipe meaning could be inferred from it.
+
+## 2026-11-25 — Session fc351fd3-e160-4c63-bae9-40240bd848fc (focused correction)
+
+- Updated the Wellington puff pastry entry to use a 17.3 oz weight
+  measurement and `2 sheets` as the alternate note.
+- Ran `npm run lint:recipe-json -- uploads/meat.jsonc`; all nine recipes passed.
+
+## 2026-11-25 — Session fc351fd3-e160-4c63-bae9-40240bd848fc (focused correction)
+
+- Applied the larger-amount convention to the 6-to-8 sprig thyme range, using
+  8 sprigs and retaining the bouquet instruction as its alternate note.
+- Ran `npm run lint:recipe-json -- uploads/meat.jsonc`; all nine recipes passed.

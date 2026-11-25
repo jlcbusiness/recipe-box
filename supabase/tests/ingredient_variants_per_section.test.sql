@@ -3,7 +3,7 @@ begin;
 set local role postgres;
 set local search_path = extensions, public;
 
-select plan(3);
+select plan(4);
 
 insert into auth.users (
   id,
@@ -45,16 +45,11 @@ values (
   'Mustard'
 );
 
-insert into public.recipe_ingredient_sets (
-  id, account_id, recipe_id, label, position
-)
-values (
-  '51000000-0000-4000-8000-000000000004',
-  '51000000-0000-4000-8000-000000000001',
-  '51000000-0000-4000-8000-000000000002',
-  'Main',
-  0
-);
+update public.recipe_ingredient_sets
+set id = '51000000-0000-4000-8000-000000000004'
+where account_id = '51000000-0000-4000-8000-000000000001'
+  and recipe_id = '51000000-0000-4000-8000-000000000002'
+  and label = 'Main';
 
 select lives_ok(
   $$
@@ -111,6 +106,66 @@ select is(
   ),
   2,
   'both distinct mustard variants remain saved'
+);
+
+select set_config('request.jwt.claim.sub', '51000000-0000-4000-8000-000000000001', true);
+
+select lives_ok(
+  $$
+    select * from public.save_recipe_with_time_entries(
+      null,
+      null,
+      'Mustard variants',
+      null::uuid,
+      'want_to_try',
+      null::uuid,
+      null::uuid,
+      null::text,
+      null::text,
+      null::integer,
+      '',
+      array[]::uuid[],
+      array[]::uuid[],
+      array[]::uuid[],
+      jsonb_build_array(
+        jsonb_build_object(
+          'recipe_ingredient_id', '51000000-0000-4000-8000-000000000006',
+          'ingredient_id', '51000000-0000-4000-8000-000000000003',
+          'ingredient_set_id', '51000000-0000-4000-8000-000000000005',
+          'detail', 'Dijon',
+          'nutrition_serving_size_override', null,
+          'nutrition_overrides', '{}'::jsonb,
+          'measurements', '[]'::jsonb
+        ),
+        jsonb_build_object(
+          'recipe_ingredient_id', '51000000-0000-4000-8000-000000000007',
+          'ingredient_id', '51000000-0000-4000-8000-000000000003',
+          'ingredient_set_id', '51000000-0000-4000-8000-000000000005',
+          'detail', 'whole-grain',
+          'nutrition_serving_size_override', null,
+          'nutrition_overrides', '{}'::jsonb,
+          'measurements', '[]'::jsonb
+        )
+      ),
+      '[]'::jsonb,
+      null::uuid,
+      null::text,
+      null::text,
+      '{"site_listing":null,"pairings":[],"references":[]}'::jsonb,
+      array[]::uuid[],
+      jsonb_build_array(jsonb_build_object(
+        'id', '51000000-0000-4000-8000-000000000005',
+        'label', 'Main',
+        'position', 0
+      )),
+      null::smallint,
+      null::integer,
+      null::text,
+      '{}'::jsonb,
+      '[]'::jsonb
+    )
+  $$,
+  'the save RPC permits same-name ingredients with different details'
 );
 
 select * from finish();

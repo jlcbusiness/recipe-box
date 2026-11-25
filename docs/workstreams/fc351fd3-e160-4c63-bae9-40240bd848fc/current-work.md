@@ -86,26 +86,46 @@
   regression tests. Focused unit tests, typecheck, and Biome pass; the pgTAP
   test has not been run against the new migration. The chicken JSONC linter
   also accepts all 12 recipes.
-- 2026-11-25: The user confirmed the hosted ingredient-detail migration was
-  applied, but the CLI cannot independently read remote history because this
-  checkout is not linked to a Supabase project. Added safe SQLSTATE logging for
-  otherwise generic recipe-save RPC failures; the focused save tests,
-  typecheck, and Biome pass. The production save failure remains unverified.
+- 2026-11-25: The user confirmed the hosted table-constraint migration was
+  applied. The first remote-history lookup failed because this checkout was
+  unlinked; an explicit project reference was used later for verification.
+  Added safe SQLSTATE logging for generic recipe-save RPC failures; focused save
+  tests, typecheck, and Biome pass.
+- 2026-11-25: The pasted Postgres log identified a second name-only duplicate
+  check inside `save_recipe_with_ingredient_sets`; it raised SQLSTATE 23505
+  despite the table constraint allowing distinct details. Added a guarded
+  migration to include normalized detail in the RPC check and extended the
+  pgTAP test to call the save RPC with two mustard variants. Both pending
+  migrations applied locally, and all four pgTAP assertions passed.
+- 2026-11-25: The user applied the RPC-validation migration to production.
+  Hosted migration history confirms versions 20270105000000 and 20270106000000
+  are applied. A production save retry has not yet been checked.
+- 2026-11-25: Created `uploads/meat.jsonc` with the nine requested recipes,
+  mapped their states and reasons, added the `TO BE EDITED` tag to each, and
+  added ingredient sections and data for the five recipes with supplied
+  ingredients. The focused JSON linter passed for all nine recipes.
+- 2026-11-25: Corrected Wellington's puff pastry to use 17.3 oz as its weight
+  measurement and `2 sheets` as the alternate note. The focused JSON linter
+  passed again.
+- 2026-11-25: Applied the larger-amount convention to the thyme range, using
+  8 sprigs and retaining the bouquet instruction as its alternate note. The
+  focused JSON linter passed again.
 
 ## Save Point
 
-- **Goal/status:** Recipe JSON import is implemented; ingredient identity now
-  includes detail in editor and bundle validation, with a database migration,
-  regression tests, and save-error SQLSTATE logging added.
+- **Goal/status:** Recipe JSON import and detail-aware ingredient uniqueness
+  are implemented; the table and save-RPC migrations are applied locally and
+  their hosted migration records are verified.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** Distinct ingredient details are permitted in code and the
-  migration exists; the reported production save failure still needs its SQLSTATE.
-- **Last verified result:** 74 focused ingredient tests and 10 focused save
-  tests passed; typecheck, Biome, and the chicken JSONC linter passed. The pgTAP
-  test is present but unrun.
-- **Next action:** Deploy the save-error logging change, retry saving Lime-Mezcal
-  Wings, and inspect its SQLSTATE. The remote migration history was not checked
-  because this checkout is not linked; no hosted database was changed.
+- **Current step:** The requested `meat.jsonc` template is complete. A
+  production save retry for Lime-Mezcal Wings remains unverified.
+- **Last verified result:** 74 focused ingredient tests, 10 focused save tests,
+  and all four focused pgTAP assertions passed; typecheck, Biome, the chicken
+  JSONC linter, and the `meat.jsonc` linter passed after the puff pastry and
+  thyme quantity corrections. Hosted migration history confirms both related
+  versions are applied.
+- **Next action:** Retry saving Lime-Mezcal Wings. If it still fails, inspect the
+  new SQLSTATE log; this session did not attempt a production save.
 - **Checklist:** [checklist.md](./checklist.md)
-- **Trace:** [trace.md](./trace.md); latest focused checkpoint is the
-  2026-11-25 tagged-import failure investigation.
+- **Trace:** [trace.md](./trace.md); latest checkpoint records the creation
+  and lint of `meat.jsonc`.

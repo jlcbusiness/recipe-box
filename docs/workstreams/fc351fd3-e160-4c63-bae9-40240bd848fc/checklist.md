@@ -28,5 +28,8 @@
 - [x] Add the supplied ingredient lists to the specified chicken recipes and validate the updated import file.
 - [x] Treat ingredients with the same name but different details as distinct within a section across editor and bundle-import validation.
 - [x] Update the database uniqueness constraint and add unit and pgTAP regression tests for distinct ingredient details.
-- [ ] Run the pgTAP regression test against a database with the new migration applied.
+- [x] Update the save RPC duplicate check to include normalized ingredient detail.
+- [x] Run the focused pgTAP regression test against the updated local database.
 - [x] Add safe SQLSTATE logging for unclassified recipe-save RPC failures.
+- [x] Create and lint `uploads/meat.jsonc` with the nine requested recipes,
+  ingredient sections, tags, and `will_not_try` reasons.
