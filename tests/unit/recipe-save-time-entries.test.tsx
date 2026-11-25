@@ -73,6 +73,24 @@ describe('recipe save time entries', () => {
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
+  it('logs the SQLSTATE when the save RPC returns an unclassified error', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: '23505', message: 'duplicate key' },
+    });
+    const getUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: { id: 'account-id' } }, error: null });
+    createClient.mockResolvedValue({ auth: { getUser }, rpc });
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(saveRecipe(undefined, createFormData())).resolves.toEqual({
+      error: 'Unable to save this recipe. Check the selected options and try again.',
+    });
+
+    expect(errorLog).toHaveBeenCalledWith('Recipe save RPC failed.', { code: '23505' });
+  });
+
   it('preserves protected source identity while normalizing recipe references', async () => {
     const sourcePublicId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
     const formData = createFormData([], {

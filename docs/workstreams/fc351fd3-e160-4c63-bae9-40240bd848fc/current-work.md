@@ -86,20 +86,26 @@
   regression tests. Focused unit tests, typecheck, and Biome pass; the pgTAP
   test has not been run against the new migration. The chicken JSONC linter
   also accepts all 12 recipes.
+- 2026-11-25: The user confirmed the hosted ingredient-detail migration was
+  applied, but the CLI cannot independently read remote history because this
+  checkout is not linked to a Supabase project. Added safe SQLSTATE logging for
+  otherwise generic recipe-save RPC failures; the focused save tests,
+  typecheck, and Biome pass. The production save failure remains unverified.
 
 ## Save Point
 
 - **Goal/status:** Recipe JSON import is implemented; ingredient identity now
-  includes detail in editor and bundle validation, with a database migration
-  and regression tests added.
+  includes detail in editor and bundle validation, with a database migration,
+  regression tests, and save-error SQLSTATE logging added.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** The distinct-detail constraint migration and pgTAP test are
-  added but have not been applied or run against a database.
-- **Last verified result:** 74 focused unit tests passed; typecheck, Biome, and
-  the chicken JSONC linter passed. The focused pgTAP test is present but unrun.
-- **Next action:** Run the pgTAP test against a database with the new migration
-  applied. Before any hosted change, inspect remote migration history and
-  preview the push; no remote database was checked or changed.
+- **Current step:** Distinct ingredient details are permitted in code and the
+  migration exists; the reported production save failure still needs its SQLSTATE.
+- **Last verified result:** 74 focused ingredient tests and 10 focused save
+  tests passed; typecheck, Biome, and the chicken JSONC linter passed. The pgTAP
+  test is present but unrun.
+- **Next action:** Deploy the save-error logging change, retry saving Lime-Mezcal
+  Wings, and inspect its SQLSTATE. The remote migration history was not checked
+  because this checkout is not linked; no hosted database was changed.
 - **Checklist:** [checklist.md](./checklist.md)
 - **Trace:** [trace.md](./trace.md); latest focused checkpoint is the
   2026-11-25 tagged-import failure investigation.

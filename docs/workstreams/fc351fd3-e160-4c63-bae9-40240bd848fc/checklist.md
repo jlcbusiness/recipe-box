@@ -29,3 +29,4 @@
 - [x] Treat ingredients with the same name but different details as distinct within a section across editor and bundle-import validation.
 - [x] Update the database uniqueness constraint and add unit and pgTAP regression tests for distinct ingredient details.
 - [ ] Run the pgTAP regression test against a database with the new migration applied.
+- [x] Add safe SQLSTATE logging for unclassified recipe-save RPC failures.

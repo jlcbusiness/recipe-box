@@ -543,6 +543,7 @@ export async function saveRecipe(
     if (error.code === 'P0002') {
       return { error: 'This recipe is no longer available.' };
     }
+    console.error('Recipe save RPC failed.', { code: error.code });
     return { error: 'Unable to save this recipe. Check the selected options and try again.' };
   }
 
