@@ -67,19 +67,23 @@
   Repository-wide lint still reports six formatter errors and 145 warnings in
   unrelated code; focused Markdown lint reports the known decision-log
   line-length issue and a pre-existing visual-design code-span issue.
+- 2026-11-25: The production Postgres log identified the tagged-import failure:
+  the database import RPC inserts `tags.sort_order`, but the tags table lacked
+  that column. Added the column with a deterministic existing-tag backfill and
+  a pgTAP regression test. The local migration and focused test passed; no
+  hosted database migration was run.
 
 ## Save Point
 
-- **Goal/status:** Implement the approved text-only recipe JSON import slice;
-  implemented locally and focused acceptance passed.
+- **Goal/status:** Recipe JSON import is implemented; the production tagged-import
+  failure is fixed in a local migration and covered by a passing focused test.
 - **Repository/branch:** `/home/joshlamont/Code/recipe-box`, `main`.
-- **Current step:** Final checkpoint recorded; no feature implementation work remains.
-- **Last verified result:** Four targeted browser tests passed across Chromium
-  and Fold 6; focused unit tests, typecheck, changed-file Biome checks,
-  cross-platform CLI smoke tests, and `git diff --check` passed.
-- **Next action:** No feature work remains. Repository-wide lint findings are
-  unrelated baseline items and should be handled separately if desired.
+- **Current step:** Local migration/test validation is complete; production
+  migration remains unapplied.
+- **Last verified result:** `npx supabase test db supabase/tests/database_import_tags.test.sql`
+  passed both assertions after the new migration was applied to the local stack.
+- **Next action:** Before any hosted change, inspect remote migration history
+  and preview the push; no remote database was checked or changed.
 - **Checklist:** [checklist.md](./checklist.md)
-- **Trace:** [trace.md](./trace.md); session
-  fc351fd3-e160-4c63-bae9-40240bd848fc, final record is the implementation
-  and acceptance checkpoint.
+- **Trace:** [trace.md](./trace.md); latest focused checkpoint is the
+  2026-11-25 tagged-import failure investigation.

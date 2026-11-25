@@ -23,3 +23,4 @@
 - [x] Add focused unit, API/browser, and cross-platform CLI tests.
 - [x] Run focused validation and update the checkpoint, including known
   repository-wide lint limitations.
+- [x] Fix the database import failure caused by the missing tag sort-order column and verify tagged imports.

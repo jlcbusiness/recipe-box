@@ -121,3 +121,16 @@ launchers, a bundled standard schema, and an optional downloaded strict schema.
   records — no issues in the candidate or workstream records; the known long
   decision-log line remains.
 - `git diff --check` — passed.
+## 2026-11-25 — Session fc351fd3-e160-4c63-bae9-40240bd848fc (focused checkpoint)
+
+- Read the user-provided production Postgres log; it identifies `tags.sort_order`
+  as the undefined column in the database import RPC.
+- Compared the tag table migration, import RPC, and portable export/import
+  contract; the RPC and portable contract both use `sort_order`, but no schema
+  migration had added it.
+- Added `20270104000000_add_tag_sort_order.sql` with an alphabetical backfill
+  and `supabase/tests/database_import_tags.test.sql` to exercise a tagged
+  database import.
+- Applied the migration to the local stack with `npx supabase migration up`;
+  the focused pgTAP test passed (2 assertions).
+- No hosted migration list, dry-run, or database write was performed.
